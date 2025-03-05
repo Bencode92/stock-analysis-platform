@@ -3,15 +3,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Éléments DOM
     const searchInput = document.getElementById('stockSearch');
     const searchBtn = document.getElementById('searchBtn');
-    const timeBtns = document.querySelectorAll('.time-btn');
     const currentPrice = document.querySelector('.current-price');
     const priceChange = document.querySelector('.price-change');
     const stockInfoTitle = document.querySelector('.stock-info h2');
     const exchangeElement = document.querySelector('.exchange');
     const marketIndicator = document.querySelector('.market-indicator');
     const marketStatusText = document.querySelector('.market-status span');
-    const chartSection = document.querySelector('.chart-section');
-    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const aiAnalysisContent = document.getElementById('ai-analysis-content');
+    const currentTimeElement = document.getElementById('current-time');
+    const updateTimeElement = document.getElementById('update-time');
     
     // Métriques
     const openPrice = document.getElementById('open-price');
@@ -25,13 +25,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Variables globales
     let currentSymbol = 'AAPL'; // Par défaut on affiche Apple
-    let currentTimeRange = '1W'; // Par défaut on affiche 1 semaine
-    let tradingViewWidget = null;
     let stockData = null; // Stockage des données actuelles pour l'action
-    let tvReadyCallbacks = []; // Callbacks pour l'initialisation de TradingView
-    let isTvReady = false; // Indique si TradingView est prêt
-    let isFullscreen = false; // Indique si le graphique est en plein écran
-    let lastTradingViewData = null; // Dernières données récupérées depuis TradingView
     
     // Liste des actions populaires pour suggestion
     const popularStocks = [
@@ -40,8 +34,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialisation
     function init() {
-        // Initialiser le graphique TradingView (avant de récupérer les données)
-        initTradingViewWidget();
+        // Charger les données en temps réel pour Apple
+        fetchStockData(currentSymbol);
         
         // Configurer les écouteurs d'événements
         setupEventListeners();
@@ -54,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Mettre à jour régulièrement l'heure et les données
         setInterval(updateMarketTime, 1000);
-        setInterval(syncDataFromTradingView, 10000); // Rafraîchir toutes les 10 secondes
+        setInterval(() => fetchStockData(currentSymbol), 60000); // Rafraîchir toutes les minutes
     }
     
     // Afficher des suggestions de stocks populaires sous la barre de recherche
@@ -98,6 +92,56 @@ document.addEventListener('DOMContentLoaded', function() {
                 .stock-suggestions a:hover {
                     text-decoration: underline;
                 }
+                .ai-content {
+                    padding: 15px;
+                    line-height: 1.5;
+                }
+                .ai-section {
+                    margin-bottom: 15px;
+                }
+                .ai-heading {
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                    color: var(--primary-color);
+                }
+                .ai-text {
+                    margin-bottom: 10px;
+                }
+                .ai-recommendation {
+                    font-weight: bold;
+                    margin-top: 10px;
+                    padding: 10px;
+                    border-radius: 5px;
+                    background-color: rgba(255, 255, 255, 0.05);
+                }
+                .positive-trend {
+                    color: var(--gain-color);
+                }
+                .negative-trend {
+                    color: var(--loss-color);
+                }
+                .neutral-trend {
+                    color: var(--text-bright);
+                }
+                .ai-metrics {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 15px;
+                    margin-top: 15px;
+                }
+                .ai-metric {
+                    display: flex;
+                    flex-direction: column;
+                    min-width: 100px;
+                }
+                .ai-metric-label {
+                    font-size: 0.8rem;
+                    color: var(--text-muted);
+                }
+                .ai-metric-value {
+                    font-size: 1rem;
+                    font-weight: bold;
+                }
             `;
             document.head.appendChild(style);
         }
@@ -122,70 +166,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
-        
-        // Sélecteurs de période
-        timeBtns.forEach(btn => {
-            btn.addEventListener('click', function() {
-                timeBtns.forEach(b => b.classList.remove('active'));
-                this.classList.add('active');
-                
-                currentTimeRange = this.getAttribute('data-range');
-                updateTradingViewInterval(currentTimeRange);
-                
-                // Mettre à jour les performances après un court délai
-                setTimeout(() => {
-                    syncDataFromTradingView();
-                }, 300);
-            });
-        });
-        
-        // Bouton plein écran
-        if (fullscreenBtn) {
-            fullscreenBtn.addEventListener('click', toggleFullscreen);
-            
-            // Créer un bouton de sortie du mode plein écran
-            const exitBtn = document.createElement('button');
-            exitBtn.className = 'fullscreen-exit-btn';
-            exitBtn.textContent = 'Quitter le plein écran';
-            exitBtn.addEventListener('click', toggleFullscreen);
-            chartSection.appendChild(exitBtn);
-        }
-        
-        // Écouteur pour la touche Échap pour quitter le mode plein écran
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' && isFullscreen) {
-                toggleFullscreen();
-            }
-        });
-    }
-    
-    // Basculer en mode plein écran
-    function toggleFullscreen() {
-        if (!isFullscreen) {
-            // Passer en mode plein écran
-            chartSection.classList.add('fullscreen-chart');
-            fullscreenBtn.textContent = 'Quitter le plein écran';
-            
-            // Recharger le widget TradingView pour qu'il s'adapte à la nouvelle taille
-            if (isTvReady) {
-                tradingViewWidget.resize(window.innerWidth, window.innerHeight - 60);
-            }
-            
-            isFullscreen = true;
-        } else {
-            // Quitter le mode plein écran
-            chartSection.classList.remove('fullscreen-chart');
-            fullscreenBtn.textContent = 'Agrandir le graphique';
-            
-            // Recharger le widget TradingView pour qu'il s'adapte à la taille normale
-            if (isTvReady) {
-                setTimeout(() => {
-                    tradingViewWidget.resize();
-                }, 100);
-            }
-            
-            isFullscreen = false;
-        }
     }
     
     // Mettre à jour l'heure de marché
@@ -197,14 +177,11 @@ document.addEventListener('DOMContentLoaded', function() {
             second: '2-digit'
         });
         
-        document.querySelector('.market-time').textContent = timeStr;
+        if(currentTimeElement) currentTimeElement.textContent = timeStr;
         
         // Mettre à jour également l'heure de la source des données
         const dateTimeStr = now.toLocaleDateString('fr-FR') + ' ' + timeStr;
-        const updateTimeElement = document.querySelector('.update-time');
-        if (updateTimeElement) {
-            updateTimeElement.textContent = dateTimeStr;
-        }
+        if(updateTimeElement) updateTimeElement.textContent = dateTimeStr;
         
         // Vérifier si le marché français (Euronext) est ouvert
         const hour = now.getHours();
@@ -239,304 +216,384 @@ document.addEventListener('DOMContentLoaded', function() {
             // Mettre à jour l'affichage du symbole dans le champ de recherche
             searchInput.value = symbol;
             
-            // Mettre à jour le graphique TradingView avec le nouveau symbole
-            updateTradingViewSymbol(symbol);
+            // Récupérer les données pour ce symbole
+            fetchStockData(symbol);
             
-            // Les données seront récupérées automatiquement depuis TradingView
-            // après le chargement du graphique
-            console.log(`Recherche effectuée pour: ${symbol}, avec plage temporelle: ${currentTimeRange}`);
+            console.log(`Recherche effectuée pour: ${symbol}`);
         }
     }
     
-    // Récupérer les données directement depuis TradingView
-    function syncDataFromTradingView() {
-        if (!tradingViewWidget || !isTvReady) return;
-        
+    // Récupérer les données de stock via OpenAI
+    async function fetchStockData(symbol) {
         try {
-            // Obtenir le symbole actuel de TradingView
-            let symbolInfo = tradingViewWidget.chart().symbolInfo();
-            if (!symbolInfo) return;
+            // Afficher un indicateur de chargement
+            aiAnalysisContent.innerHTML = '<p>Chargement des données et analyse en cours...</p>';
             
-            // Extraire les données de symbole propres (sans le préfixe d'échange)
-            const symbolParts = symbolInfo.name.split(':');
-            const cleanSymbol = symbolParts.length > 1 ? symbolParts[1] : symbolInfo.name;
-            const exchange = symbolParts.length > 1 ? symbolParts[0] : getExchangePrefix(cleanSymbol);
+            // Utiliser l'API OpenAI pour obtenir des données et une analyse
+            const response = await fetchFromOpenAI(symbol);
             
-            // Utiliser la méthode d'accès aux données de prix de TradingView
-            tradingViewWidget.activeChart().getTradesSubscription().getLastDailyBarCloseTime((lastClose) => {
-                tradingViewWidget.activeChart().getTradesSubscription().getMarkPrice((currentPrice) => {
-                    if (!currentPrice) {
-                        console.log('Impossible de récupérer le prix actuel depuis TradingView');
-                        return;
-                    }
-                    
-                    // Obtenir les données supplémentaires via des méthodes alternatives
-                    const symbolDetails = tradingViewWidget.activeChart().getSymbolInfo();
-                    
-                    // Créer un objet avec les données récupérées de TradingView
-                    const tradingViewData = {
-                        symbol: cleanSymbol,
-                        name: symbolDetails?.description || getCompanyName(cleanSymbol),
-                        exchange: exchange,
-                        price: currentPrice.toFixed(2),
-                        previousClose: lastClose ? lastClose.toFixed(2) : getSimulatedValue(cleanSymbol, 'previousClose')
-                    };
-                    
-                    // Compléter les données manquantes
-                    completeTradingViewData(tradingViewData, cleanSymbol);
-                    
-                    // Mettre à jour l'UI avec ces données
-                    updateUIFromTradingView(tradingViewData);
-                    
-                    // Sauvegarder les dernières données pour référence future
-                    lastTradingViewData = tradingViewData;
-                });
-            });
+            // Mettre à jour l'interface utilisateur avec ces données
+            updateUI(response);
+            
         } catch (error) {
-            console.error('Erreur lors de la récupération des données depuis TradingView:', error);
-            // En cas d'erreur, utiliser des données simulées comme fallback
-            fallbackToSimulatedData(currentSymbol);
+            console.error('Erreur lors de la récupération des données:', error);
+            aiAnalysisContent.innerHTML = '<p>Erreur lors de la récupération des données. Veuillez réessayer.</p>';
+            
+            // En cas d'erreur, fallback sur des données simulées
+            const simulatedData = getSimulatedStockData(symbol);
+            updateUI(simulatedData);
         }
     }
     
-    // Compléter les données manquantes avec des données simulées
-    function completeTradingViewData(tradingViewData, symbol) {
-        if (!tradingViewData) return null;
-        
-        // Calcul du changement de prix basé sur le prix précédent
-        const prevClose = parseFloat(tradingViewData.previousClose || 0);
-        const currentPrice = parseFloat(tradingViewData.price || 0);
-        let changeValue = 0;
-        let changePercent = 0;
-        
-        if (prevClose > 0 && currentPrice > 0) {
-            changeValue = currentPrice - prevClose;
-            changePercent = (changeValue / prevClose) * 100;
-            tradingViewData.change = changeValue.toFixed(2);
-            tradingViewData.changePercent = changePercent.toFixed(2);
-        } else {
-            // Si les valeurs ne sont pas disponibles, utiliser des valeurs simulées
-            tradingViewData.change = getSimulatedValue(symbol, 'change');
-            tradingViewData.changePercent = getSimulatedValue(symbol, 'changePercent');
+    // Interroger OpenAI pour les données et l'analyse
+    async function fetchFromOpenAI(symbol) {
+        try {
+            // Construire la requête pour OpenAI
+            const prompt = `Fournir les données financières actuelles et une analyse pour ${symbol} au format JSON structuré. 
+                Inclure les champs suivants: 
+                - symbol: le symbole de l'action
+                - name: le nom complet de l'entreprise
+                - exchange: la bourse sur laquelle l'action est cotée (NASDAQ, NYSE, etc.)
+                - price: le prix actuel estimé (valeur numérique)
+                - change: la variation en dollars (valeur numérique avec signe)
+                - changePercent: la variation en pourcentage (valeur numérique avec signe)
+                - dayHigh, dayLow, open, previousClose: les valeurs clés du jour (valeurs numériques)
+                - volume: le volume d'échanges (format comme "42.8M")
+                - marketCap: la capitalisation boursière (format comme "2.95T")
+                - peRatio: le ratio P/E (valeur numérique)
+                - dividend: le rendement du dividende (format comme "0.51%")
+                - performance: {dayChange, weekChange, monthChange, threeMonthChange, yearChange} (valeurs numériques avec signes)
+                - analysis: {
+                    sentiment: "positif", "neutre" ou "négatif"
+                    overview: résumé court de l'entreprise et sa position dans son secteur
+                    riskLevel: évaluation du niveau de risque ("faible", "modéré", "élevé")
+                    technicalAnalysis: analyse technique courte
+                    fundamentalAnalysis: analyse fondamentale courte
+                    recommendation: recommandation générale sur cette action
+                    keyFactors: liste de 3-4 facteurs clés à surveiller
+                    news: tableau de 3 actualités récentes avec titre, source et temps relatif
+                }
+                Assurez-vous que la réponse est uniquement en JSON valide sans texte supplémentaire.`;
+                
+            // Appel à l'API OpenAI
+            const aiResponse = await chat_with_openai({
+                content: prompt
+            });
+            
+            // Extraire le JSON de la réponse
+            const jsonMatch = aiResponse.content.match(/```json\s*([\s\S]*?)\s*```/) || 
+                              aiResponse.content.match(/{[\s\S]*}/);
+            
+            let jsonData;
+            if (jsonMatch) {
+                jsonData = JSON.parse(jsonMatch[0].replace(/```json|```/g, ''));
+            } else {
+                // Si le JSON n'est pas correctement formaté, essayer de parser la réponse entière
+                try {
+                    jsonData = JSON.parse(aiResponse.content);
+                } catch (e) {
+                    throw new Error("Impossible de parser la réponse JSON d'OpenAI");
+                }
+            }
+            
+            return jsonData;
+            
+        } catch (error) {
+            console.error("Erreur lors de la communication avec OpenAI:", error);
+            throw error;
         }
-        
-        // Compléter les autres métriques
-        tradingViewData.open = getSimulatedValue(symbol, 'open');
-        tradingViewData.dayHigh = getSimulatedValue(symbol, 'dayHigh');
-        tradingViewData.dayLow = getSimulatedValue(symbol, 'dayLow');
-        tradingViewData.volume = getSimulatedValue(symbol, 'volume');
-        tradingViewData.marketCap = getSimulatedValue(symbol, 'marketCap');
-        tradingViewData.peRatio = getSimulatedValue(symbol, 'peRatio');
-        tradingViewData.dividend = getSimulatedValue(symbol, 'dividend');
-        
-        // Données de performance
-        tradingViewData.dayChange = parseFloat(changePercent.toFixed(2)) || getSimulatedPerformance(symbol, 'dayChange');
-        tradingViewData.weekChange = getSimulatedPerformance(symbol, 'weekChange');
-        tradingViewData.monthChange = getSimulatedPerformance(symbol, 'monthChange');
-        tradingViewData.threeMonthChange = getSimulatedPerformance(symbol, 'threeMonthChange');
-        tradingViewData.yearChange = getSimulatedPerformance(symbol, 'yearChange');
-        
-        return tradingViewData;
     }
     
-    // Obtenir une valeur simulée à partir des données préconfigurées
-    function getSimulatedValue(symbol, field) {
-        // Référence de données préconfigurées pour les valeurs simulées
+    // Fonction simulant un appel à OpenAI (pour la démo et comme fallback)
+    async function chat_with_openai(params) {
+        try {
+            // Tentative d'utiliser le vrai MCP OpenAI s'il est disponible
+            return await window.chat_with_openai(params);
+        } catch (error) {
+            console.log("Utilisation de données simulées car OpenAI n'est pas disponible", error);
+            
+            // Simulation de réponse en cas d'échec ou pour la démo
+            const stockInfo = getSimulatedStockData(params.content.includes("AAPL") ? "AAPL" : 
+                              params.content.includes("MSFT") ? "MSFT" : 
+                              params.content.includes("GOOGL") ? "GOOGL" : "UNKNOWN");
+            
+            return {
+                content: JSON.stringify(stockInfo)
+            };
+        }
+    }
+    
+    // Générer des données simulées pour un symbole
+    function getSimulatedStockData(symbol) {
+        // Données préconfigurées pour les titres populaires
         const stocksData = {
             'AAPL': {
-                basePrice: 189.97,
-                name: 'Apple Inc.',
-                open: '188.85',
-                previousClose: '188.45',
-                dayHigh: '190.23',
-                dayLow: '187.68',
-                volume: '42.8M',
-                marketCap: '2.95T',
-                peRatio: '31.2',
-                dividend: '0.51%'
+                symbol: "AAPL",
+                name: "Apple Inc.",
+                exchange: "NASDAQ",
+                price: 189.97,
+                change: 1.52,
+                changePercent: 0.81,
+                open: 188.45,
+                previousClose: 188.45,
+                dayHigh: 190.23,
+                dayLow: 187.68,
+                volume: "42.8M",
+                marketCap: "2.95T",
+                peRatio: 31.2,
+                dividend: "0.51%",
+                performance: {
+                    dayChange: 0.81,
+                    weekChange: 2.45,
+                    monthChange: 5.32,
+                    threeMonthChange: 12.78,
+                    yearChange: 18.45
+                },
+                analysis: {
+                    sentiment: "positif",
+                    overview: "Apple Inc. est un leader mondial de la technologie, spécialisé dans les produits électroniques grand public, les logiciels et les services en ligne. L'entreprise maintient une position dominante dans son secteur, avec des produits phares comme l'iPhone, l'iPad, les Mac et les services comme Apple Music et Apple TV+.",
+                    riskLevel: "faible",
+                    technicalAnalysis: "L'action AAPL montre une tendance haussière soutenue avec un support solide autour de 180$. Les moyennes mobiles 50 et 200 jours confirment une configuration technique positive, avec un RSI qui n'indique pas de surachat excessif.",
+                    fundamentalAnalysis: "Apple présente des fondamentaux solides avec un bilan robuste et une trésorerie importante. Ses marges bénéficiaires restent parmi les meilleures du secteur technologique, et la diversification vers les services contribue à améliorer la récurrence des revenus.",
+                    recommendation: "Les perspectives d'Apple restent positives à long terme grâce à un écosystème solide et une fidélité client exceptionnelle. L'action constitue une base solide pour un portefeuille diversifié.",
+                    keyFactors: [
+                        "Cycle de renouvellement de l'iPhone 15",
+                        "Croissance du segment des services",
+                        "Développements en réalité augmentée",
+                        "Expansion sur les marchés émergents"
+                    ],
+                    news: [
+                        {
+                            title: "Apple annonce un nouveau MacBook Pro avec une puce avancée",
+                            source: "Bloomberg",
+                            time: "Il y a 32 minutes"
+                        },
+                        {
+                            title: "Les actions d'Apple montent suite à des prévisions positives sur les ventes d'iPhone",
+                            source: "CNBC",
+                            time: "Il y a 1 heure"
+                        },
+                        {
+                            title: "Apple continue de renforcer ses investissements dans l'IA",
+                            source: "Financial Times",
+                            time: "Il y a 3 heures"
+                        }
+                    ]
+                }
             },
             'MSFT': {
-                basePrice: 428.73,
-                name: 'Microsoft Corporation',
-                open: '426.50',
-                previousClose: '425.35',
-                dayHigh: '430.25',
-                dayLow: '425.10',
-                volume: '18.5M',
-                marketCap: '3.18T',
-                peRatio: '36.4',
-                dividend: '0.73%'
+                symbol: "MSFT",
+                name: "Microsoft Corporation",
+                exchange: "NASDAQ",
+                price: 428.73,
+                change: 0.51,
+                changePercent: 0.12,
+                open: 426.50,
+                previousClose: 425.35,
+                dayHigh: 430.25,
+                dayLow: 425.10,
+                volume: "18.5M",
+                marketCap: "3.18T",
+                peRatio: 36.4,
+                dividend: "0.73%",
+                performance: {
+                    dayChange: 0.12,
+                    weekChange: 1.85,
+                    monthChange: 4.25,
+                    threeMonthChange: 9.35,
+                    yearChange: 22.67
+                },
+                analysis: {
+                    sentiment: "positif",
+                    overview: "Microsoft est un leader mondial des logiciels, du cloud computing et des services technologiques. Sous la direction de Satya Nadella, l'entreprise a réussi une transformation remarquable en se concentrant sur le cloud et l'intelligence artificielle.",
+                    riskLevel: "faible",
+                    technicalAnalysis: "MSFT présente une tendance haussière de long terme. Les indicateurs techniques montrent une forte dynamique avec des supports solides. Le titre évolue confortablement au-dessus de ses moyennes mobiles principales.",
+                    fundamentalAnalysis: "Microsoft affiche une croissance robuste de ses revenus et bénéfices, notamment grâce à Azure et aux services cloud. La transition vers un modèle d'abonnement pour Office 365 a considérablement amélioré la stabilité des revenus.",
+                    recommendation: "Microsoft représente un investissement de haute qualité avec des perspectives de croissance solides dans le cloud et l'IA. La position dominante de l'entreprise dans le secteur B2B offre une sécurité supplémentaire.",
+                    keyFactors: [
+                        "Croissance d'Azure et du cloud computing",
+                        "Intégration de l'IA dans les produits Microsoft",
+                        "Développement de la division gaming (Xbox)",
+                        "Innovations en informatique quantique"
+                    ],
+                    news: [
+                        {
+                            title: "Microsoft investit 1,5 milliard de dollars dans une entreprise d'IA au Moyen-Orient",
+                            source: "Reuters",
+                            time: "Il y a 2 heures"
+                        },
+                        {
+                            title: "Les résultats trimestriels de Microsoft dépassent les attentes grâce au cloud",
+                            source: "Wall Street Journal",
+                            time: "Il y a 1 jour"
+                        },
+                        {
+                            title: "Microsoft annonce de nouvelles fonctionnalités IA pour Office 365",
+                            source: "TechCrunch",
+                            time: "Il y a 2 jours"
+                        }
+                    ]
+                }
             },
             'GOOGL': {
-                basePrice: 149.82,
-                name: 'Alphabet Inc.',
-                open: '148.90',
-                previousClose: '148.45',
-                dayHigh: '150.75',
-                dayLow: '148.30',
-                volume: '23.2M',
-                marketCap: '1.87T',
-                peRatio: '25.8',
-                dividend: '0.00%'
+                symbol: "GOOGL",
+                name: "Alphabet Inc. (Google)",
+                exchange: "NASDAQ",
+                price: 149.82,
+                change: 1.52,
+                changePercent: 1.02,
+                open: 148.90,
+                previousClose: 148.45,
+                dayHigh: 150.75,
+                dayLow: 148.30,
+                volume: "23.2M",
+                marketCap: "1.87T",
+                peRatio: 25.8,
+                dividend: "0.00%",
+                performance: {
+                    dayChange: 1.02,
+                    weekChange: -0.45,
+                    monthChange: -2.14,
+                    threeMonthChange: 5.43,
+                    yearChange: 11.26
+                },
+                analysis: {
+                    sentiment: "positif",
+                    overview: "Alphabet (Google) domine le marché de la recherche en ligne et de la publicité numérique. L'entreprise investit massivement dans l'IA, le cloud computing et les technologies de pointe via ses nombreuses filiales et projets.",
+                    riskLevel: "modéré",
+                    technicalAnalysis: "L'action GOOGL montre une tendance haussière à long terme avec quelques signes de consolidation à court terme. Le support à 145$ semble solide, et le titre reste au-dessus de sa moyenne mobile à 200 jours.",
+                    fundamentalAnalysis: "Alphabet maintient une croissance constante de ses revenus publicitaires tout en développant des secteurs comme le cloud. Sa position dominante dans la recherche en ligne lui confère un avantage concurrentiel durable.",
+                    recommendation: "Malgré les risques réglementaires, Alphabet reste un acteur incontournable du secteur technologique avec de solides perspectives de croissance dans l'IA et le cloud.",
+                    keyFactors: [
+                        "Développements en IA et machine learning",
+                        "Croissance de Google Cloud",
+                        "Pressions réglementaires antitrust",
+                        "Diversification des revenus au-delà de la publicité"
+                    ],
+                    news: [
+                        {
+                            title: "Google présente sa nouvelle génération de modèles d'IA",
+                            source: "The Verge",
+                            time: "Il y a 5 heures"
+                        },
+                        {
+                            title: "Google Cloud annonce un partenariat majeur avec une entreprise de santé",
+                            source: "CNBC",
+                            time: "Il y a 1 jour"
+                        },
+                        {
+                            title: "L'UE lance une nouvelle enquête sur les pratiques de Google",
+                            source: "Financial Times",
+                            time: "Il y a 3 jours"
+                        }
+                    ]
+                }
             }
-            // Autres stocks peuvent être ajoutés ici
         };
         
         // Si le symbole est dans nos données préconfigurées, utiliser ces valeurs
-        if (stocksData[symbol] && stocksData[symbol][field] !== undefined) {
-            return stocksData[symbol][field];
+        if (stocksData[symbol]) {
+            return stocksData[symbol];
         }
         
-        // Sinon, générer des valeurs raisonnables en fonction du champ demandé
-        // Ceci est une simulation pour la démo
-        const basePrice = lastTradingViewData?.price || 100;
-        
-        switch (field) {
-            case 'open':
-                return (parseFloat(basePrice) * 0.998).toFixed(2);
-            case 'previousClose':
-                return (parseFloat(basePrice) * 0.995).toFixed(2);
-            case 'dayHigh':
-                return (parseFloat(basePrice) * 1.005).toFixed(2);
-            case 'dayLow':
-                return (parseFloat(basePrice) * 0.995).toFixed(2);
-            case 'volume':
-                return `${Math.floor(Math.random() * 100)}M`;
-            case 'marketCap':
-                return `${Math.floor(Math.random() * 1000)}B`;
-            case 'peRatio':
-                return (15 + Math.random() * 20).toFixed(1);
-            case 'dividend':
-                return `${(Math.random() * 3).toFixed(2)}%`;
-            case 'change':
-                return (parseFloat(basePrice) * 0.005 * (Math.random() > 0.5 ? 1 : -1)).toFixed(2);
-            case 'changePercent':
-                return (0.5 * (Math.random() > 0.5 ? 1 : -1)).toFixed(2);
-            default:
-                return '0';
-        }
-    }
-    
-    // Obtenir des performances simulées pour les différentes périodes
-    function getSimulatedPerformance(symbol, period) {
-        // Performance préconfigurées
-        const performanceData = {
-            'AAPL': {
-                dayChange: 0.81,
-                weekChange: 2.45,
-                monthChange: 5.32,
-                threeMonthChange: 12.78,
-                yearChange: 18.45
-            },
-            'MSFT': {
-                dayChange: 0.12,
-                weekChange: 1.85,
-                monthChange: 4.25,
-                threeMonthChange: 9.35,
-                yearChange: 22.67
-            },
-            'GOOGL': {
-                dayChange: 1.02,
-                weekChange: -0.45,
-                monthChange: -2.14,
-                threeMonthChange: 5.43,
-                yearChange: 11.26
-            },
-            'AMZN': {
-                dayChange: 2.15,
-                weekChange: 3.27,
-                monthChange: 5.70,
-                threeMonthChange: 10.23,
-                yearChange: 18.92
-            }
-            // Ajoutez d'autres symboles au besoin
-        };
-        
-        // Si le symbole est dans nos données préconfigurées, utiliser ces valeurs
-        if (performanceData[symbol] && performanceData[symbol][period] !== undefined) {
-            return performanceData[symbol][period];
-        }
-        
-        // Générer des performances aléatoires mais réalistes en fonction de la période
-        switch (period) {
-            case 'dayChange':
-                return parseFloat((Math.random() * 3 - 1).toFixed(2));
-            case 'weekChange':
-                return parseFloat((Math.random() * 6 - 2).toFixed(2));
-            case 'monthChange':
-                return parseFloat((Math.random() * 10 - 3).toFixed(2));
-            case 'threeMonthChange':
-                return parseFloat((Math.random() * 20 - 5).toFixed(2));
-            case 'yearChange':
-                return parseFloat((Math.random() * 40 - 10).toFixed(2));
-            default:
-                return 0;
-        }
-    }
-    
-    // En cas d'erreur, fallback sur les données simulées
-    function fallbackToSimulatedData(symbol) {
-        console.log('Utilisation de données simulées pour', symbol);
-        
-        // Créer des données simulées
-        const simulatedData = {
+        // Sinon, générer des données génériques
+        return {
             symbol: symbol,
             name: getCompanyName(symbol),
             exchange: getExchangePrefix(symbol),
-            price: getSimulatedValue(symbol, 'price') || '100.00',
-            change: getSimulatedValue(symbol, 'change'),
-            changePercent: getSimulatedValue(symbol, 'changePercent'),
-            open: getSimulatedValue(symbol, 'open'),
-            previousClose: getSimulatedValue(symbol, 'previousClose'),
-            dayHigh: getSimulatedValue(symbol, 'dayHigh'),
-            dayLow: getSimulatedValue(symbol, 'dayLow'),
-            volume: getSimulatedValue(symbol, 'volume'),
-            marketCap: getSimulatedValue(symbol, 'marketCap'),
-            peRatio: getSimulatedValue(symbol, 'peRatio'),
-            dividend: getSimulatedValue(symbol, 'dividend'),
-            dayChange: getSimulatedPerformance(symbol, 'dayChange'),
-            weekChange: getSimulatedPerformance(symbol, 'weekChange'),
-            monthChange: getSimulatedPerformance(symbol, 'monthChange'),
-            threeMonthChange: getSimulatedPerformance(symbol, 'threeMonthChange'),
-            yearChange: getSimulatedPerformance(symbol, 'yearChange')
+            price: (100 + Math.random() * 900).toFixed(2),
+            change: (Math.random() * 6 - 3).toFixed(2),
+            changePercent: (Math.random() * 3 - 1.5).toFixed(2),
+            open: (100 + Math.random() * 895).toFixed(2),
+            previousClose: (100 + Math.random() * 890).toFixed(2),
+            dayHigh: (100 + Math.random() * 910).toFixed(2),
+            dayLow: (100 + Math.random() * 880).toFixed(2),
+            volume: `${Math.floor(Math.random() * 100)}M`,
+            marketCap: `${Math.floor(Math.random() * 1000)}B`,
+            peRatio: (15 + Math.random() * 20).toFixed(1),
+            dividend: `${(Math.random() * 3).toFixed(2)}%`,
+            performance: {
+                dayChange: parseFloat((Math.random() * 3 - 1.5).toFixed(2)),
+                weekChange: parseFloat((Math.random() * 6 - 3).toFixed(2)),
+                monthChange: parseFloat((Math.random() * 10 - 5).toFixed(2)),
+                threeMonthChange: parseFloat((Math.random() * 20 - 10).toFixed(2)),
+                yearChange: parseFloat((Math.random() * 40 - 20).toFixed(2))
+            },
+            analysis: {
+                sentiment: ["positif", "neutre", "négatif"][Math.floor(Math.random() * 3)],
+                overview: `${symbol} est une entreprise opérant dans son secteur d'activité principal. L'entreprise se positionne sur son marché face à ses concurrents directs.`,
+                riskLevel: ["faible", "modéré", "élevé"][Math.floor(Math.random() * 3)],
+                technicalAnalysis: `L'analyse technique de ${symbol} montre des tendances de prix qui peuvent indiquer des mouvements futurs en fonction du contexte de marché actuel.`,
+                fundamentalAnalysis: `Les fondamentaux de ${symbol} incluent sa structure financière, ses revenus et sa position concurrentielle dans son secteur.`,
+                recommendation: `Compte tenu des conditions actuelles du marché et des performances spécifiques de ${symbol}, les investisseurs pourraient envisager d'évaluer cette action dans le cadre d'une stratégie d'investissement diversifiée.`,
+                keyFactors: [
+                    "Performance du secteur",
+                    "Innovations et développement produit",
+                    "Contexte macroéconomique",
+                    "Positionnement concurrentiel"
+                ],
+                news: [
+                    {
+                        title: `${symbol} annonce de nouveaux développements stratégiques`,
+                        source: "Reuters",
+                        time: "Il y a 1 jour"
+                    },
+                    {
+                        title: `Résultats trimestriels pour ${symbol}`,
+                        source: "Bloomberg",
+                        time: "Il y a 3 jours"
+                    },
+                    {
+                        title: `Analyse sectorielle incluant ${symbol}`,
+                        source: "Financial Times",
+                        time: "Il y a 5 jours"
+                    }
+                ]
+            }
         };
-        
-        // Mettre à jour l'interface utilisateur avec ces données
-        updateUIFromTradingView(simulatedData);
     }
     
-    // Mettre à jour l'interface utilisateur avec les données de TradingView
-    function updateUIFromTradingView(tvData) {
-        if (!tvData) return;
+    // Mettre à jour l'interface utilisateur avec les données reçues
+    function updateUI(data) {
+        if (!data) return;
+        
+        // Stocker les données pour référence
+        stockData = data;
         
         // Mise à jour du titre et info de l'action
-        stockInfoTitle.textContent = `${tvData.name} (${tvData.symbol})`;
-        exchangeElement.textContent = tvData.exchange;
+        stockInfoTitle.textContent = `${data.name} (${data.symbol})`;
+        exchangeElement.textContent = data.exchange;
         
         // Mise à jour du logo (si possible)
         try {
             const logoElement = document.querySelector('.company-logo');
             if (logoElement) {
                 // Nettoyer le nom de l'entreprise pour l'URL du logo
-                const companyName = tvData.name.toLowerCase().split(' ')[0].replace(/[^a-zA-Z0-9]/g, '');
+                const companyName = data.name.toLowerCase().split(' ')[0].replace(/[^a-zA-Z0-9]/g, '');
                 logoElement.src = `https://logo.clearbit.com/${companyName}.com`;
                 logoElement.onerror = function() {
-                    this.src = `https://via.placeholder.com/40x40?text=${tvData.symbol}`;
+                    this.src = `https://via.placeholder.com/40x40?text=${data.symbol}`;
                 };
             }
         } catch (error) {
             console.log('Erreur lors de la mise à jour du logo', error);
         }
         
-        // Mise à jour du prix et de la variation
-        currentPrice.textContent = `$${tvData.price}`;
+        // Formater les valeurs numériques si nécessaires
+        const priceValue = typeof data.price === 'number' ? data.price.toFixed(2) : data.price;
+        const changeValue = typeof data.change === 'number' ? data.change.toFixed(2) : data.change;
+        const changePercentValue = typeof data.changePercent === 'number' ? data.changePercent.toFixed(2) : data.changePercent;
         
-        const changeValue = parseFloat(tvData.change);
-        const changeText = `${changeValue >= 0 ? '+' : ''}${tvData.change} (${changeValue >= 0 ? '+' : ''}${tvData.changePercent}%)`;
+        // Mise à jour du prix et de la variation
+        currentPrice.textContent = `$${priceValue}`;
+        
+        // Déterminer si la variation est positive ou négative
+        const isPositive = parseFloat(changeValue) >= 0;
+        const changeText = `${isPositive ? '+' : ''}${changeValue} (${isPositive ? '+' : ''}${changePercentValue}%)`;
         priceChange.textContent = changeText;
         
         // Appliquer les classes CSS pour les couleurs
-        if (changeValue >= 0) {
+        if (isPositive) {
             priceChange.classList.remove('negative');
             priceChange.classList.add('positive');
         } else {
@@ -545,78 +602,112 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Mise à jour des métriques avec coloration
-        const openVal = tvData.open ? parseFloat(tvData.open) : 0;
-        const prevCloseVal = tvData.previousClose ? parseFloat(tvData.previousClose) : 0;
-        const dayHighVal = tvData.dayHigh ? parseFloat(tvData.dayHigh) : 0;
-        const dayLowVal = tvData.dayLow ? parseFloat(tvData.dayLow) : 0;
-        const priceVal = tvData.price ? parseFloat(tvData.price) : 0;
-        
-        updateMetricWithColor(openPrice, tvData.open, openVal - prevCloseVal);
-        updateMetricWithColor(prevClose, tvData.previousClose);
-        updateMetricWithColor(dayHigh, tvData.dayHigh, dayHighVal - priceVal);
-        updateMetricWithColor(dayLow, tvData.dayLow, dayLowVal - priceVal);
+        updateMetricWithColor(openPrice, data.open, parseFloat(data.open) - parseFloat(data.previousClose));
+        updateMetricWithColor(prevClose, data.previousClose);
+        updateMetricWithColor(dayHigh, data.dayHigh, parseFloat(data.dayHigh) - parseFloat(data.price));
+        updateMetricWithColor(dayLow, data.dayLow, parseFloat(data.dayLow) - parseFloat(data.price));
         
         // Métriques sans coloration
-        if (volume) volume.textContent = tvData.volume;
-        if (marketCap) marketCap.textContent = tvData.marketCap;
-        if (peRatio) peRatio.textContent = tvData.peRatio;
-        if (dividend) dividend.textContent = tvData.dividend;
+        if (volume) volume.textContent = data.volume;
+        if (marketCap) marketCap.textContent = data.marketCap;
+        if (peRatio) peRatio.textContent = data.peRatio;
+        if (dividend) dividend.textContent = data.dividend;
         
-        // Mise à jour des performances en fonction de la période sélectionnée
-        updatePerformanceBars(tvData);
+        // Mise à jour des performances
+        updatePerformanceBars(data.performance);
+        
+        // Mise à jour de l'analyse OpenAI
+        updateAIAnalysis(data.analysis);
+        
+        // Mise à jour des actualités
+        updateNews(data.analysis.news);
     }
     
-    // Mettre à jour le symbole dans TradingView
-    function updateTradingViewSymbol(symbol) {
-        if (tradingViewWidget && isTvReady) {
-            // Construire la chaîne du symbole avec le bon préfixe de bourse
-            const fullSymbol = `${getExchangePrefix(symbol)}:${symbol}`;
-            tradingViewWidget.chart().setSymbol(fullSymbol, function() {
-                console.log(`Symbole TradingView mis à jour: ${fullSymbol}`);
-                // Attendre un moment pour que les données soient chargées, puis synchroniser
-                setTimeout(syncDataFromTradingView, 1000);
-            });
-        } else {
-            // Si TradingView n'est pas encore prêt, ajouter à la file d'attente
-            tvReadyCallbacks.push(() => {
-                const fullSymbol = `${getExchangePrefix(symbol)}:${symbol}`;
-                tradingViewWidget.chart().setSymbol(fullSymbol);
-                // Attendre un moment pour que les données soient chargées, puis synchroniser
-                setTimeout(syncDataFromTradingView, 1000);
-            });
-        }
+    // Mettre à jour l'affichage de l'analyse OpenAI
+    function updateAIAnalysis(analysis) {
+        if (!aiAnalysisContent || !analysis) return;
+        
+        const sentimentClass = analysis.sentiment === 'positif' ? 'positive-trend' : 
+                               analysis.sentiment === 'négatif' ? 'negative-trend' : 
+                               'neutral-trend';
+        
+        const riskClass = analysis.riskLevel === 'faible' ? 'positive-trend' : 
+                         analysis.riskLevel === 'élevé' ? 'negative-trend' : 
+                         'neutral-trend';
+        
+        // Construire le HTML pour l'analyse
+        const html = `
+            <div class="ai-section">
+                <div class="ai-heading">Aperçu de l'entreprise</div>
+                <div class="ai-text">${analysis.overview}</div>
+            </div>
+            
+            <div class="ai-section">
+                <div class="ai-heading">Analyse technique</div>
+                <div class="ai-text">${analysis.technicalAnalysis}</div>
+            </div>
+            
+            <div class="ai-section">
+                <div class="ai-heading">Analyse fondamentale</div>
+                <div class="ai-text">${analysis.fundamentalAnalysis}</div>
+            </div>
+            
+            <div class="ai-metrics">
+                <div class="ai-metric">
+                    <span class="ai-metric-label">Sentiment de marché</span>
+                    <span class="ai-metric-value ${sentimentClass}">${analysis.sentiment.charAt(0).toUpperCase() + analysis.sentiment.slice(1)}</span>
+                </div>
+                
+                <div class="ai-metric">
+                    <span class="ai-metric-label">Niveau de risque</span>
+                    <span class="ai-metric-value ${riskClass}">${analysis.riskLevel.charAt(0).toUpperCase() + analysis.riskLevel.slice(1)}</span>
+                </div>
+            </div>
+            
+            <div class="ai-section">
+                <div class="ai-heading">Facteurs clés à surveiller</div>
+                <ul>
+                    ${analysis.keyFactors.map(factor => `<li>${factor}</li>`).join('')}
+                </ul>
+            </div>
+            
+            <div class="ai-recommendation">
+                ${analysis.recommendation}
+            </div>
+        `;
+        
+        aiAnalysisContent.innerHTML = html;
     }
     
-    // Mettre à jour l'intervalle de temps dans TradingView
-    function updateTradingViewInterval(timeRange) {
-        if (tradingViewWidget && isTvReady) {
-            const interval = getIntervalFromTimeRange(timeRange);
-            tradingViewWidget.chart().setResolution(interval, function() {
-                console.log(`Intervalle TradingView mis à jour: ${interval}`);
-                // Rafraîchir les données après un changement d'intervalle
-                setTimeout(syncDataFromTradingView, 500);
-            });
-        } else {
-            // Si TradingView n'est pas encore prêt, ajouter à la file d'attente
-            tvReadyCallbacks.push(() => {
-                const interval = getIntervalFromTimeRange(timeRange);
-                tradingViewWidget.chart().setResolution(interval);
-                // Rafraîchir les données après un changement d'intervalle
-                setTimeout(syncDataFromTradingView, 500);
-            });
-        }
+    // Mettre à jour les actualités
+    function updateNews(news) {
+        const newsContainer = document.getElementById('news-container');
+        if (!newsContainer || !news || !Array.isArray(news)) return;
+        
+        // Construire le HTML pour les actualités
+        const newsHtml = news.map(item => `
+            <article class="news-item">
+                <div class="news-meta">
+                    <span class="news-source">${item.source}</span>
+                    <span class="news-time">${item.time}</span>
+                </div>
+                <h4 class="news-title">${item.title}</h4>
+            </article>
+        `).join('');
+        
+        newsContainer.innerHTML = newsHtml;
     }
     
     // Mettre à jour une métrique avec coloration
     function updateMetricWithColor(element, value, changeValue = null) {
         if (!element) return;
         
-        // Formater avec le symbole $ si c'est un prix
-        if (typeof value === 'string' && !value.includes('%')) {
-            element.textContent = value.startsWith('$') ? value : `$${value}`;
-        } else {
-            element.textContent = value;
-        }
+        // Formater avec le symbole $ si c'est un prix et si c'est un nombre
+        const formattedValue = typeof value === 'number' ? `$${value.toFixed(2)}` : 
+                              (typeof value === 'string' && !value.includes('%') && !value.includes('$')) ? 
+                              `$${value}` : value;
+        
+        element.textContent = formattedValue;
         
         // Si un changeValue est fourni, appliquer la coloration
         if (changeValue !== null) {
@@ -636,41 +727,23 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Mettre à jour les barres de performance
-    function updatePerformanceBars(data) {
-        // Mettre à jour les barres de performances
-        updatePerformanceBar('day', data.dayChange);
-        updatePerformanceBar('week', data.weekChange);
-        updatePerformanceBar('month', data.monthChange);
-        updatePerformanceBar('three-months', data.threeMonthChange);
-        updatePerformanceBar('year', data.yearChange);
+    function updatePerformanceBars(performance) {
+        if (!performance) return;
         
-        // Mettre en évidence la période actuellement sélectionnée
-        const selectedPeriod = getPerformancePeriodFromTimeRange(currentTimeRange);
-        if (selectedPeriod) {
-            const items = document.querySelectorAll('.performance-item');
-            items.forEach(item => {
-                if (item.classList.contains(`${selectedPeriod}-performance`)) {
-                    item.style.fontWeight = 'bold';
-                    item.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
-                } else {
-                    item.style.fontWeight = 'normal';
-                    item.style.backgroundColor = 'transparent';
-                }
-            });
-        }
-    }
-    
-    // Obtenir la période de performance correspondant à l'intervalle de temps
-    function getPerformancePeriodFromTimeRange(timeRange) {
-        switch (timeRange) {
-            case '1D': return 'day';
-            case '1W': return 'week';
-            case '1M': return 'month';
-            case '3M': return 'three-months';
-            case '1Y': return 'year';
-            case 'ALL': return 'year';
-            default: return null;
-        }
+        // Jour
+        updatePerformanceBar('day', performance.dayChange);
+        
+        // Semaine
+        updatePerformanceBar('week', performance.weekChange);
+        
+        // Mois
+        updatePerformanceBar('month', performance.monthChange);
+        
+        // 3 Mois
+        updatePerformanceBar('three-months', performance.threeMonthChange);
+        
+        // Année
+        updatePerformanceBar('year', performance.yearChange);
     }
     
     // Mettre à jour une barre de performance spécifique
@@ -678,119 +751,32 @@ document.addEventListener('DOMContentLoaded', function() {
         const performanceValue = document.querySelector(`.${period}-performance .performance-value`);
         const performanceBar = document.querySelector(`.${period}-performance .performance-bar`);
         
-        if (!performanceValue || !performanceBar || changeValue === undefined) return;
-        
-        performanceValue.textContent = `${changeValue >= 0 ? '+' : ''}${changeValue}%`;
-        
-        // Appliquer les classes CSS pour les couleurs
-        if (changeValue >= 0) {
-            performanceValue.classList.remove('negative');
-            performanceValue.classList.add('positive');
-            performanceBar.classList.remove('negative');
-            performanceBar.classList.add('positive');
-        } else {
-            performanceValue.classList.remove('positive');
-            performanceValue.classList.add('negative');
-            performanceBar.classList.remove('positive');
-            performanceBar.classList.add('negative');
-        }
-        
-        // Calculer la largeur de la barre (max 100%)
-        const width = Math.min(Math.abs(changeValue) * 5, 100);
-        performanceBar.style.width = `${width}%`;
-    }
-    
-    // Nettoyer le widget TradingView existant
-    function destroyTradingViewWidget() {
-        const container = document.getElementById('tradingview-chart');
-        if (container) {
-            while (container.firstChild) {
-                container.removeChild(container.firstChild);
+        if (performanceValue && performanceBar && changeValue !== undefined) {
+            // S'assurer que changeValue est un nombre
+            const numericChange = typeof changeValue === 'string' ? parseFloat(changeValue) : changeValue;
+            
+            performanceValue.textContent = `${numericChange >= 0 ? '+' : ''}${numericChange}%`;
+            
+            // Appliquer les classes CSS pour les couleurs
+            if (numericChange >= 0) {
+                performanceValue.classList.remove('negative');
+                performanceValue.classList.add('positive');
+                performanceBar.classList.remove('negative');
+                performanceBar.classList.add('positive');
+            } else {
+                performanceValue.classList.remove('positive');
+                performanceValue.classList.add('negative');
+                performanceBar.classList.remove('positive');
+                performanceBar.classList.add('negative');
             }
+            
+            // Calculer la largeur de la barre (max 100%)
+            const width = Math.min(Math.abs(numericChange) * 5, 100);
+            performanceBar.style.width = `${width}%`;
         }
-        isTvReady = false;
     }
     
-    // Initialiser le graphique TradingView
-    function initTradingViewWidget() {
-        // Nettoyer le conteneur
-        destroyTradingViewWidget();
-        
-        // Construire la chaîne du symbole avec le bon préfixe de bourse
-        const fullSymbol = `${getExchangePrefix(currentSymbol)}:${currentSymbol}`;
-        
-        // Widget TradingView pour le graphique principal
-        tradingViewWidget = new TradingView.widget({
-            "container_id": "tradingview-chart",
-            "width": "100%",
-            "height": "100%",
-            "symbol": fullSymbol,
-            "interval": getIntervalFromTimeRange(currentTimeRange),
-            "timezone": "Europe/Paris",
-            "theme": "dark",
-            "style": "1",
-            "locale": "fr",
-            "toolbar_bg": "#1e1e1e",
-            "enable_publishing": false,
-            "withdateranges": true,
-            "hide_side_toolbar": false,
-            "allow_symbol_change": true,
-            "studies": [
-                "RSI@tv-basicstudies",
-                "MAExp@tv-basicstudies",
-                "MACD@tv-basicstudies"
-            ],
-            "hide_top_toolbar": false,
-            "hide_legend": false,
-            "save_image": false,
-            // Important: Gérer le changement de symbole dans le widget TradingView
-            "symbol_change": true,
-            "symbol_search": true,
-            "overrides": {
-                "mainSeriesProperties.showCountdown": true,
-                "paneProperties.background": "#131722",
-                "paneProperties.vertGridProperties.color": "#363c4e",
-                "paneProperties.horzGridProperties.color": "#363c4e",
-                "symbolWatermarkProperties.transparency": 90,
-                "scalesProperties.textColor" : "#AAA"
-            }
-        });
-        
-        // Attendre que le widget soit chargé pour attacher des écouteurs d'événements
-        tradingViewWidget.onChartReady(() => {
-            console.log('TradingView chart is ready');
-            isTvReady = true;
-            
-            // Attacher l'écouteur d'événements pour le changement de symbole
-            tradingViewWidget.chart().onSymbolChanged().subscribe(null, (symbolData) => {
-                if (symbolData) {
-                    // Extraire le symbole sans préfixe d'échange
-                    const symbolParts = symbolData.name.split(':');
-                    const cleanSymbol = symbolParts.length > 1 ? symbolParts[1] : symbolData.name;
-                    
-                    // Ne mettre à jour que si le symbole a réellement changé
-                    if (cleanSymbol !== currentSymbol) {
-                        currentSymbol = cleanSymbol;
-                        searchInput.value = cleanSymbol;
-                        
-                        // Synchroniser les données depuis TradingView
-                        syncDataFromTradingView();
-                        
-                        console.log(`Symbole modifié depuis TradingView: ${cleanSymbol}`);
-                    }
-                }
-            });
-            
-            // Exécuter les callbacks en attente
-            tvReadyCallbacks.forEach(callback => callback());
-            tvReadyCallbacks = [];
-            
-            // Synchroniser les données initiales
-            syncDataFromTradingView();
-        });
-    }
-    
-    // Obtenir le préfixe d'échange pour TradingView
+    // Obtenir le préfixe d'échange pour un symbole
     function getExchangePrefix(symbol) {
         // Si c'est une action française (se termine par .PA)
         if (symbol.endsWith('.PA')) {
@@ -819,19 +805,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Retourner le préfixe d'échange si connu, sinon NYSE par défaut
         return exchangeMap[symbol] || 'NYSE';
-    }
-    
-    // Convertir la plage de temps en intervalle TradingView
-    function getIntervalFromTimeRange(timeRange) {
-        switch (timeRange) {
-            case '1D': return '5';      // 5 minutes
-            case '1W': return '60';     // 60 minutes (1 heure)
-            case '1M': return 'D';      // Daily (1 jour)
-            case '3M': return 'D';      // Daily (1 jour)
-            case '1Y': return 'W';      // Weekly (1 semaine)
-            case 'ALL': return 'M';     // Monthly (1 mois)
-            default: return 'D';        // Daily par défaut
-        }
     }
     
     // Obtenir le nom d'une entreprise basé sur son symbole
