@@ -6,8 +6,6 @@
     <title>StockPro - Analyse en Temps Réel du Marché</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
-    <!-- TradingView Widget -->
-    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -41,7 +39,7 @@
                 <div class="market-status">
                     <div class="market-indicator green"></div>
                     <span>Marché ouvert</span>
-                    <span class="market-time">15:17:00</span>
+                    <span class="market-time" id="current-time">--:--:--</span>
                 </div>
             </header>
 
@@ -60,23 +58,14 @@
                 </div>
             </section>
 
-            <!-- Primary Chart -->
-            <section class="chart-section">
-                <div class="chart-header">
-                    <div class="time-selector">
-                        <button class="time-btn" data-range="1D">1J</button>
-                        <button class="time-btn active" data-range="1W">1S</button>
-                        <button class="time-btn" data-range="1M">1M</button>
-                        <button class="time-btn" data-range="3M">3M</button>
-                        <button class="time-btn" data-range="1Y">1A</button>
-                        <button class="time-btn" data-range="ALL">MAX</button>
-                    </div>
-                    <div class="chart-controls">
-                        <button id="refresh-btn" class="action-button"><i class="fas fa-sync-alt"></i> Actualiser</button>
-                        <button id="fullscreen-btn" class="action-button">Agrandir le graphique</button>
+            <!-- Main Info Display -->
+            <section class="main-info-display">
+                <div class="card">
+                    <h3>Analyse OpenAI</h3>
+                    <div id="ai-analysis-content" class="ai-content">
+                        <p>Chargement de l'analyse en cours...</p>
                     </div>
                 </div>
-                <div id="tradingview-chart" class="chart-container"></div>
             </section>
 
             <!-- Dashboard Grid -->
@@ -165,7 +154,7 @@
                 <!-- Real-time News -->
                 <section class="dashboard-card news-card">
                     <h3>Actualités récentes</h3>
-                    <div class="news-list">
+                    <div class="news-list" id="news-container">
                         <article class="news-item">
                             <div class="news-meta">
                                 <span class="news-source">Bloomberg</span>
@@ -194,12 +183,12 @@
                 <section class="dashboard-card source-card">
                     <h3>Source des données</h3>
                     <p class="source-info">
-                        Les données de marché sont extraites en temps réel via TradingView et enrichies par l'analyse OpenAI.
-                        <span class="data-highlight">Dernière synchronisation: <span class="sync-time">05/03/2025 15:17:00</span></span>
+                        Les données de marché sont fournies par l'API OpenAI avec analyse en temps réel des tendances financières.
+                        Mise à jour toutes les minutes.
                     </p>
                     <div class="last-update">
                         <span>Dernière mise à jour:</span>
-                        <span class="update-time">05/03/2025 15:17:00</span>
+                        <span class="update-time" id="update-time">--:--:--</span>
                     </div>
                     <div class="data-disclaimer">
                         Les données sont fournies à titre informatif uniquement et ne constituent pas un conseil en investissement.
@@ -210,7 +199,6 @@
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/3.9.1/chart.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
