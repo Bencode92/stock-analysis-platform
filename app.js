@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const exchangeElement = document.querySelector('.exchange');
     const marketIndicator = document.querySelector('.market-indicator');
     const marketStatusText = document.querySelector('.market-status span');
+    const chartSection = document.querySelector('.chart-section');
+    const fullscreenBtn = document.querySelector('.control-btn:last-child');
     
     // Métriques
     const openPrice = document.getElementById('open-price');
@@ -28,6 +30,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let stockData = null; // Stockage des données actuelles pour l'action
     let tvReadyCallbacks = []; // Callbacks pour l'initialisation de TradingView
     let isTvReady = false; // Indique si TradingView est prêt
+    let isFullscreen = false; // Indique si le graphique est en plein écran
     
     // Liste des actions populaires pour suggestion
     const popularStocks = [
@@ -97,6 +100,39 @@ document.addEventListener('DOMContentLoaded', function() {
                 .stock-suggestions a:hover {
                     text-decoration: underline;
                 }
+                
+                /* Styles pour le mode plein écran */
+                .fullscreen-chart {
+                    position: fixed !important;
+                    top: 0 !important;
+                    left: 0 !important;
+                    width: 100vw !important;
+                    height: 100vh !important;
+                    z-index: 9999 !important;
+                    background-color: var(--bg-color) !important;
+                }
+                
+                .fullscreen-chart .chart-container {
+                    height: calc(100vh - 60px) !important;
+                }
+                
+                .fullscreen-exit-btn {
+                    position: absolute;
+                    top: 15px;
+                    right: 15px;
+                    background: rgba(0, 0, 0, 0.5);
+                    color: white;
+                    border: none;
+                    border-radius: 4px;
+                    padding: 8px 12px;
+                    cursor: pointer;
+                    z-index: 10000;
+                    display: none;
+                }
+                
+                .fullscreen-chart .fullscreen-exit-btn {
+                    display: block;
+                }
             `;
             document.head.appendChild(style);
         }
@@ -137,6 +173,56 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         });
+        
+        // Bouton plein écran
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener('click', toggleFullscreen);
+            
+            // Créer un bouton de sortie du mode plein écran
+            const exitBtn = document.createElement('button');
+            exitBtn.className = 'fullscreen-exit-btn';
+            exitBtn.innerHTML = '<i class="fas fa-compress"></i> Quitter';
+            exitBtn.addEventListener('click', toggleFullscreen);
+            chartSection.appendChild(exitBtn);
+        }
+        
+        // Écouteur pour la touche Échap pour quitter le mode plein écran
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && isFullscreen) {
+                toggleFullscreen();
+            }
+        });
+    }
+    
+    // Basculer en mode plein écran
+    function toggleFullscreen() {
+        if (!isFullscreen) {
+            // Passer en mode plein écran
+            chartSection.classList.add('fullscreen-chart');
+            
+            // Recharger le widget TradingView pour qu'il s'adapte à la nouvelle taille
+            if (isTvReady) {
+                tradingViewWidget.resize(window.innerWidth, window.innerHeight - 60);
+            }
+            
+            // Mettre à jour l'icône du bouton et l'état
+            fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
+            isFullscreen = true;
+        } else {
+            // Quitter le mode plein écran
+            chartSection.classList.remove('fullscreen-chart');
+            
+            // Recharger le widget TradingView pour qu'il s'adapte à la taille normale
+            if (isTvReady) {
+                setTimeout(() => {
+                    tradingViewWidget.resize();
+                }, 100);
+            }
+            
+            // Mettre à jour l'icône du bouton et l'état
+            fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
+            isFullscreen = false;
+        }
     }
     
     // Mettre à jour l'heure de marché
