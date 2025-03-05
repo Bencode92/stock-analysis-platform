@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinanceAI - Analyse d'Actions et ETF</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><i class="fas fa-chart-line"></i> FinanceAI</h1>
+            <p class="tagline">Analyse intelligente de vos investissements</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <section class="search-section">
+            <h2>Rechercher un titre</h2>
+            <div class="search-box">
+                <input type="text" id="stockSymbol" placeholder="Entrez un symbole boursier (ex: AAPL, MSFT, SPY...)" autofocus>
+                <button id="searchBtn"><i class="fas fa-search"></i> Rechercher</button>
+            </div>
+            <div class="popular-searches">
+                <span>Populaires:</span>
+                <a href="#" class="stock-tag" data-symbol="AAPL">AAPL</a>
+                <a href="#" class="stock-tag" data-symbol="MSFT">MSFT</a>
+                <a href="#" class="stock-tag" data-symbol="GOOGL">GOOGL</a>
+                <a href="#" class="stock-tag" data-symbol="AMZN">AMZN</a>
+                <a href="#" class="stock-tag" data-symbol="SPY">SPY</a>
+            </div>
+        </section>
+
+        <section id="watchlistSection" class="watchlist-section">
+            <div class="section-header">
+                <h2>Ma Liste de Suivi</h2>
+                <button id="refreshBtn" class="refresh-btn"><i class="fas fa-sync-alt"></i> Actualiser</button>
+            </div>
+            <div class="table-container">
+                <table id="watchlistTable">
+                    <thead>
+                        <tr>
+                            <th>Symbole</th>
+                            <th>Nom</th>
+                            <th>Dernier Prix</th>
+                            <th>Variation J</th>
+                            <th>Variation 1M</th>
+                            <th>Variation 3M</th>
+                            <th>Variation 6M</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="watchlistBody">
+                        <!-- Les données seront insérées ici dynamiquement -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="emptyWatchlist" class="empty-state">
+                <i class="fas fa-search"></i>
+                <p>Votre liste de suivi est vide. Recherchez une action ou un ETF pour commencer.</p>
+            </div>
+        </section>
+
+        <section id="stockDetailSection" class="stock-detail-section hidden">
+            <div class="section-header">
+                <h2 id="stockDetailName">Détails du Titre</h2>
+                <div class="actions">
+                    <button id="addToWatchlistBtn" class="action-btn"><i class="fas fa-plus"></i> Ajouter à la liste</button>
+                    <button id="backBtn" class="action-btn secondary"><i class="fas fa-arrow-left"></i> Retour</button>
+                </div>
+            </div>
+
+            <div class="stock-overview">
+                <div class="stock-price-info">
+                    <div class="current-price" id="currentPrice">--</div>
+                    <div class="price-change" id="priceChange">--</div>
+                </div>
+                <div class="stock-meta" id="stockMeta">
+                    <!-- Informations sur l'entreprise insérées ici -->
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <div class="chart-header">
+                    <h3>Évolution du prix</h3>
+                    <div class="time-selector">
+                        <button class="time-btn active" data-range="1M">1M</button>
+                        <button class="time-btn" data-range="3M">3M</button>
+                        <button class="time-btn" data-range="6M">6M</button>
+                        <button class="time-btn" data-range="1Y">1A</button>
+                        <button class="time-btn" data-range="5Y">5A</button>
+                    </div>
+                </div>
+                <div id="priceChart" class="price-chart"></div>
+            </div>
+
+            <div class="key-metrics">
+                <div class="metric-card">
+                    <h4>Prix ouverture</h4>
+                    <p id="openPrice">--</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Plus haut du jour</h4>
+                    <p id="dayHigh">--</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Plus bas du jour</h4>
+                    <p id="dayLow">--</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Volume</h4>
+                    <p id="volume">--</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Capitalisation</h4>
+                    <p id="marketCap">--</p>
+                </div>
+                <div class="metric-card">
+                    <h4>P/E Ratio</h4>
+                    <p id="peRatio">--</p>
+                </div>
+                <div class="metric-card">
+                    <h4>Dividende (%)</h4>
+                    <p id="dividend">--</p>
+                </div>
+                <div class="metric-card">
+                    <h4>52 sem. haut</h4>
+                    <p id="fiftyTwoWeekHigh">--</p>
+                </div>
+            </div>
+
+            <div class="analysis-section">
+                <div class="section-header">
+                    <h3>Analyse IA</h3>
+                    <button id="generateAnalysisBtn" class="action-btn"><i class="fas fa-brain"></i> Générer une analyse</button>
+                </div>
+                <div id="analysisLoading" class="analysis-loading hidden">
+                    <div class="spinner"></div>
+                    <p>Génération de l'analyse en cours...</p>
+                </div>
+                <div id="analysisResult" class="analysis-result hidden">
+                    <div class="recommendation-box">
+                        <h4>Recommandation</h4>
+                        <div class="recommendation" id="recommendation">
+                            <!-- Recommandation ici -->
+                        </div>
+                    </div>
+                    <div class="analysis-content">
+                        <div class="analysis-summary">
+                            <h4>Résumé</h4>
+                            <p id="analysisSummary"><!-- Résumé de l'analyse ici --></p>
+                        </div>
+                        <div class="analysis-factors">
+                            <h4>Facteurs clés</h4>
+                            <div id="analysisFactors">
+                                <!-- Facteurs clés ici -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="noAnalysis" class="empty-state">
+                    <i class="fas fa-chart-bar"></i>
+                    <p>Cliquez sur "Générer une analyse" pour obtenir une évaluation complète basée sur l'environnement actuel du marché.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>&copy; 2025 FinanceAI. Cette plateforme est fournie à titre informatif uniquement et ne constitue pas un conseil financier.</p>
+        </div>
+    </footer>
+
+    <!-- Modal pour les messages -->
+    <div id="messageModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <p id="modalMessage"></p>
+        </div>
+    </div>
+
+    <!-- Chargement des scripts JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/3.9.1/chart.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
