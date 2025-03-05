@@ -9,8 +9,8 @@
     --text-muted: #888888;
     --text-bright: #ffffff;
     --border-color: #333333;
-    --gain-color: #ffffff;
-    --loss-color: #cccccc;
+    --gain-color: #00ff00;
+    --loss-color: #ff0000;
     --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
@@ -165,7 +165,7 @@ body {
 }
 
 .green {
-    background-color: var(--primary-color);
+    background-color: var(--gain-color);
 }
 
 .red {
@@ -233,12 +233,12 @@ body {
 
 .positive {
     color: var(--gain-color);
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgba(0, 255, 0, 0.1);
 }
 
 .negative {
     color: var(--loss-color);
-    background-color: rgba(200, 200, 200, 0.1);
+    background-color: rgba(255, 0, 0, 0.1);
 }
 
 /* Chart Section */
@@ -354,6 +354,14 @@ body {
     font-weight: 600;
 }
 
+.metric-value.positive {
+    color: var(--gain-color);
+}
+
+.metric-value.negative {
+    color: var(--loss-color);
+}
+
 /* Performance Card */
 .performance-card {
     height: 100%;
@@ -405,6 +413,14 @@ body {
     font-weight: 600;
     width: 60px;
     text-align: right;
+}
+
+.performance-value.positive {
+    color: var(--gain-color);
+}
+
+.performance-value.negative {
+    color: var(--loss-color);
 }
 
 /* News Card */
