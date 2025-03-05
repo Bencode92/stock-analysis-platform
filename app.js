@@ -1,4 +1,4 @@
-// StockPro - Application d'analyse d'actions en temps réel (Apple)
+// StockPro - Application d'analyse d'actions en temps réel
 document.addEventListener('DOMContentLoaded', function() {
     // Éléments DOM
     const searchInput = document.getElementById('stockSearch');
@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function setupEventListeners() {
         // Bouton de recherche
         searchBtn.addEventListener('click', function() {
-            const symbol = searchInput.value.trim();
+            const symbol = searchInput.value.trim().toUpperCase();
             if (symbol) {
                 searchStock(symbol);
             }
@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Recherche à la pression de Entrée
         searchInput.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
-                const symbol = searchInput.value.trim();
+                const symbol = searchInput.value.trim().toUpperCase();
                 if (symbol) {
                     searchStock(symbol);
                 }
@@ -95,21 +95,27 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Chercher et afficher les données pour un nouveau titre
     function searchStock(symbol) {
-        currentSymbol = symbol.toUpperCase();
-        fetchRealTimeData(currentSymbol);
-        
-        // Mettre à jour le graphique TradingView
-        if (tradingViewWidget) {
-            destroyTradingViewWidget();
+        // Vérifier si le symbole est différent du symbole actuel
+        if (currentSymbol !== symbol) {
+            currentSymbol = symbol;
+            
+            // Mettre à jour l'affichage du symbole dans le champ de recherche
+            searchInput.value = symbol;
+            
+            // Récupérer les données pour ce symbole
+            fetchRealTimeData(symbol);
+            
+            // Mettre à jour le graphique TradingView
+            updateTradingViewChart(symbol, currentTimeRange);
+            
+            console.log(`Recherche effectuée pour: ${symbol}, avec plage temporelle: ${currentTimeRange}`);
         }
-        initTradingViewChart();
     }
     
-    // Récupérer les données en temps réel via Puppeteer (simulé pour cette démo)
+    // Récupérer les données en temps réel
     async function fetchRealTimeData(symbol) {
         try {
-            // Dans une implémentation réelle, nous utiliserions Puppeteer pour scraper Yahoo Finance
-            // Exemple de code Puppeteer (qui serait exécuté côté serveur) :
+            // Dans une implémentation réelle avec Puppeteer, nous ferions:
             /*
             await puppeteer_navigate({
                 url: `https://finance.yahoo.com/quote/${symbol}`
@@ -128,7 +134,7 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             */
             
-            // Pour cette démo, nous utilisons des données simulées pour Apple
+            // Pour cette démo, nous utilisons des données simulées
             const stockData = await getSimulatedStockData(symbol);
             
             // Mettre à jour l'interface utilisateur
@@ -136,7 +142,13 @@ document.addEventListener('DOMContentLoaded', function() {
             
         } catch (error) {
             console.error('Erreur lors de la récupération des données:', error);
+            showErrorMessage(`Impossible de récupérer les données pour ${symbol}. Veuillez réessayer.`);
         }
+    }
+    
+    // Afficher un message d'erreur
+    function showErrorMessage(message) {
+        alert(message); // Pour cette démo, un simple alert suffira
     }
     
     // Simuler des données de stock pour la démo
@@ -144,23 +156,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Ajouter un peu de variation aléatoire pour simuler des mises à jour en temps réel
         const randomFactor = Math.random() * 0.02 - 0.01; // -1% à +1%
         
-        // Données préconfigurées pour Apple
-        if (symbol === 'AAPL') {
-            const basePrice = 189.97;
-            const currentPriceValue = basePrice * (1 + randomFactor);
-            const priceChangeValue = currentPriceValue - basePrice;
-            const priceChangePercent = (priceChangeValue / basePrice) * 100;
-            
-            return {
-                symbol: 'AAPL',
+        // Données préconfigurées pour les titres populaires
+        const stocksData = {
+            'AAPL': {
+                basePrice: 189.97,
                 name: 'Apple Inc.',
-                price: currentPriceValue.toFixed(2),
-                change: priceChangeValue.toFixed(2),
-                changePercent: priceChangePercent.toFixed(2),
-                open: (basePrice * 0.998).toFixed(2),
-                previousClose: (basePrice * 0.995).toFixed(2),
-                dayHigh: (currentPriceValue * 1.005).toFixed(2),
-                dayLow: (currentPriceValue * 0.995).toFixed(2),
                 volume: '42.8M',
                 marketCap: '2.95T',
                 peRatio: '31.2',
@@ -171,23 +171,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 threeMonthChange: 12.78,
                 yearChange: 18.45,
                 exchange: 'NASDAQ'
-            };
-        } else if (symbol === 'MSFT') {
-            const basePrice = 428.73;
-            const currentPriceValue = basePrice * (1 + randomFactor);
-            const priceChangeValue = currentPriceValue - basePrice;
-            const priceChangePercent = (priceChangeValue / basePrice) * 100;
-            
-            return {
-                symbol: 'MSFT',
+            },
+            'MSFT': {
+                basePrice: 428.73,
                 name: 'Microsoft Corporation',
-                price: currentPriceValue.toFixed(2),
-                change: priceChangeValue.toFixed(2),
-                changePercent: priceChangePercent.toFixed(2),
-                open: (basePrice * 0.998).toFixed(2),
-                previousClose: (basePrice * 0.995).toFixed(2),
-                dayHigh: (currentPriceValue * 1.005).toFixed(2),
-                dayLow: (currentPriceValue * 0.995).toFixed(2),
                 volume: '18.5M',
                 marketCap: '3.18T',
                 peRatio: '36.4',
@@ -198,23 +185,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 threeMonthChange: 9.35,
                 yearChange: 22.67,
                 exchange: 'NASDAQ'
-            };
-        } else if (symbol === 'GOOGL') {
-            const basePrice = 149.82;
-            const currentPriceValue = basePrice * (1 + randomFactor);
-            const priceChangeValue = currentPriceValue - basePrice;
-            const priceChangePercent = (priceChangeValue / basePrice) * 100;
-            
-            return {
-                symbol: 'GOOGL',
+            },
+            'GOOGL': {
+                basePrice: 149.82,
                 name: 'Alphabet Inc.',
-                price: currentPriceValue.toFixed(2),
-                change: priceChangeValue.toFixed(2),
-                changePercent: priceChangePercent.toFixed(2),
-                open: (basePrice * 0.998).toFixed(2),
-                previousClose: (basePrice * 0.995).toFixed(2),
-                dayHigh: (currentPriceValue * 1.005).toFixed(2),
-                dayLow: (currentPriceValue * 0.995).toFixed(2),
                 volume: '23.2M',
                 marketCap: '1.87T',
                 peRatio: '25.8',
@@ -225,9 +199,96 @@ document.addEventListener('DOMContentLoaded', function() {
                 threeMonthChange: 5.43,
                 yearChange: 11.26,
                 exchange: 'NASDAQ'
+            },
+            'AMZN': {
+                basePrice: 178.75,
+                name: 'Amazon.com Inc.',
+                volume: '35.6M',
+                marketCap: '1.86T',
+                peRatio: '60.8',
+                dividend: '0.00%',
+                dayChange: 2.15,
+                weekChange: 3.27,
+                monthChange: 5.70,
+                threeMonthChange: 10.23,
+                yearChange: 18.92,
+                exchange: 'NASDAQ'
+            },
+            'TSLA': {
+                basePrice: 175.34,
+                name: 'Tesla Inc.',
+                volume: '85.3M',
+                marketCap: '558B',
+                peRatio: '50.2',
+                dividend: '0.00%',
+                dayChange: -1.25,
+                weekChange: -3.78,
+                monthChange: -6.20,
+                threeMonthChange: 8.45,
+                yearChange: -15.30,
+                exchange: 'NASDAQ'
+            },
+            'META': {
+                basePrice: 485.58,
+                name: 'Meta Platforms Inc.',
+                volume: '15.7M',
+                marketCap: '1.24T',
+                peRatio: '27.5',
+                dividend: '0.00%',
+                dayChange: 1.85,
+                weekChange: 2.67,
+                monthChange: 7.90,
+                threeMonthChange: 14.35,
+                yearChange: 45.20,
+                exchange: 'NASDAQ'
+            },
+            'BRK.B': {
+                basePrice: 408.83,
+                name: 'Berkshire Hathaway Inc.',
+                volume: '3.2M',
+                marketCap: '890B',
+                peRatio: '8.7',
+                dividend: '0.00%',
+                dayChange: 0.35,
+                weekChange: 1.20,
+                monthChange: 2.80,
+                threeMonthChange: 5.75,
+                yearChange: 15.40,
+                exchange: 'NYSE'
+            }
+        };
+        
+        // Si nous avons des données préconfigurées pour ce symbole
+        if (stocksData[symbol]) {
+            const stockInfo = stocksData[symbol];
+            const basePrice = stockInfo.basePrice;
+            const currentPriceValue = basePrice * (1 + randomFactor);
+            const priceChangeValue = currentPriceValue - basePrice;
+            const priceChangePercent = (priceChangeValue / basePrice) * 100;
+            
+            return {
+                symbol: symbol,
+                name: stockInfo.name,
+                price: currentPriceValue.toFixed(2),
+                change: priceChangeValue.toFixed(2),
+                changePercent: priceChangePercent.toFixed(2),
+                open: (basePrice * 0.998).toFixed(2),
+                previousClose: (basePrice * 0.995).toFixed(2),
+                dayHigh: (currentPriceValue * 1.005).toFixed(2),
+                dayLow: (currentPriceValue * 0.995).toFixed(2),
+                volume: stockInfo.volume,
+                marketCap: stockInfo.marketCap,
+                peRatio: stockInfo.peRatio,
+                dividend: stockInfo.dividend,
+                dayChange: stockInfo.dayChange,
+                weekChange: stockInfo.weekChange,
+                monthChange: stockInfo.monthChange,
+                threeMonthChange: stockInfo.threeMonthChange,
+                yearChange: stockInfo.yearChange,
+                exchange: stockInfo.exchange
             };
         } else {
-            // Génération aléatoire pour d'autres symboles
+            // Génération aléatoire pour les symboles inconnus
             const basePrice = 100 + Math.random() * 900;
             const currentPriceValue = basePrice * (1 + randomFactor);
             const priceChangeValue = currentPriceValue - basePrice;
@@ -267,9 +328,11 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const logoElement = document.querySelector('.company-logo');
             if (logoElement) {
-                logoElement.src = `https://logo.clearbit.com/${stockData.name.toLowerCase().replace(/[^a-zA-Z0-9]/g, '')}.com`;
+                // Nettoyer le nom de l'entreprise pour l'URL du logo
+                const companyName = stockData.name.toLowerCase().split(' ')[0].replace(/[^a-zA-Z0-9]/g, '');
+                logoElement.src = `https://logo.clearbit.com/${companyName}.com`;
                 logoElement.onerror = function() {
-                    this.src = 'https://via.placeholder.com/40x40?text=' + stockData.symbol;
+                    this.src = `https://via.placeholder.com/40x40?text=${stockData.symbol}`;
                 };
             }
         } catch (error) {
@@ -352,8 +415,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Nettoyer le widget TradingView existant
     function destroyTradingViewWidget() {
         const container = document.getElementById('tradingview-chart');
-        while (container.firstChild) {
-            container.removeChild(container.firstChild);
+        if (container) {
+            while (container.firstChild) {
+                container.removeChild(container.firstChild);
+            }
         }
     }
     
@@ -362,12 +427,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // Nettoyer le conteneur
         destroyTradingViewWidget();
         
+        // Construire la chaîne du symbole avec le bon préfixe de bourse
+        const fullSymbol = `${getExchangePrefix(currentSymbol)}:${currentSymbol}`;
+        
         // Widget TradingView pour le graphique principal
         tradingViewWidget = new TradingView.widget({
             "container_id": "tradingview-chart",
             "width": "100%",
             "height": "100%",
-            "symbol": `${getExchangePrefix(currentSymbol)}:${currentSymbol}`,
+            "symbol": fullSymbol,
             "interval": getIntervalFromTimeRange(currentTimeRange),
             "timezone": "Europe/Paris",
             "theme": "dark",
@@ -385,7 +453,36 @@ document.addEventListener('DOMContentLoaded', function() {
             ],
             "hide_top_toolbar": false,
             "hide_legend": false,
-            "save_image": false
+            "save_image": false,
+            // Important: Gérer le changement de symbole dans le widget TradingView
+            "symbol_change": true,
+            "symbol_search": true,
+            "overrides": {
+                "mainSeriesProperties.showCountdown": true,
+                "paneProperties.background": "#131722",
+                "paneProperties.vertGridProperties.color": "#363c4e",
+                "paneProperties.horzGridProperties.color": "#363c4e",
+                "symbolWatermarkProperties.transparency": 90,
+                "scalesProperties.textColor" : "#AAA"
+            },
+            // Événement de changement de symbole pour synchroniser avec notre app
+            "saved_data": {
+                "events": {
+                    "onSymbolChange": function(symbolData) {
+                        if (symbolData && symbolData.name) {
+                            // Extrait le symbole après les deux points si présent (NASDAQ:AAPL -> AAPL)
+                            const cleanSymbol = symbolData.name.includes(':') 
+                                ? symbolData.name.split(':')[1] 
+                                : symbolData.name;
+                            
+                            // Mettre à jour l'application avec le nouveau symbole
+                            if (cleanSymbol !== currentSymbol) {
+                                searchStock(cleanSymbol);
+                            }
+                        }
+                    }
+                }
+            }
         });
     }
     
@@ -396,12 +493,15 @@ document.addEventListener('DOMContentLoaded', function() {
             destroyTradingViewWidget();
         }
         
+        // Construire la chaîne du symbole avec le bon préfixe de bourse
+        const fullSymbol = `${getExchangePrefix(symbol)}:${symbol}`;
+        
         // Widget TradingView pour le graphique principal
         tradingViewWidget = new TradingView.widget({
             "container_id": "tradingview-chart",
             "width": "100%",
             "height": "100%",
-            "symbol": `${getExchangePrefix(symbol)}:${symbol}`,
+            "symbol": fullSymbol,
             "interval": getIntervalFromTimeRange(timeRange),
             "timezone": "Europe/Paris",
             "theme": "dark",
@@ -419,66 +519,65 @@ document.addEventListener('DOMContentLoaded', function() {
             ],
             "hide_top_toolbar": false,
             "hide_legend": false,
-            "save_image": false
+            "save_image": false,
+            // Important: Gérer le changement de symbole dans le widget TradingView
+            "symbol_change": true,
+            "symbol_search": true,
+            "overrides": {
+                "mainSeriesProperties.showCountdown": true,
+                "paneProperties.background": "#131722",
+                "paneProperties.vertGridProperties.color": "#363c4e",
+                "paneProperties.horzGridProperties.color": "#363c4e",
+                "symbolWatermarkProperties.transparency": 90,
+                "scalesProperties.textColor" : "#AAA"
+            },
+            // Événement de changement de symbole pour synchroniser avec notre app
+            "saved_data": {
+                "events": {
+                    "onSymbolChange": function(symbolData) {
+                        if (symbolData && symbolData.name) {
+                            // Extrait le symbole après les deux points si présent (NASDAQ:AAPL -> AAPL)
+                            const cleanSymbol = symbolData.name.includes(':') 
+                                ? symbolData.name.split(':')[1] 
+                                : symbolData.name;
+                            
+                            // Mettre à jour l'application avec le nouveau symbole
+                            if (cleanSymbol !== currentSymbol) {
+                                searchStock(cleanSymbol);
+                            }
+                        }
+                    }
+                }
+            }
         });
+        
+        console.log(`Widget TradingView mis à jour pour ${fullSymbol}, intervalle: ${getIntervalFromTimeRange(timeRange)}`);
     }
     
     // Obtenir le préfixe d'échange pour TradingView
     function getExchangePrefix(symbol) {
-        // Par défaut, on utilise NASDAQ pour les actions connues, NYSE pour les autres
-        const knownSymbols = {
-            'AAPL': 'NASDAQ',
-            'MSFT': 'NASDAQ',
-            'GOOGL': 'NASDAQ',
-            'GOOG': 'NASDAQ',
-            'AMZN': 'NASDAQ',
-            'META': 'NASDAQ',
-            'TSLA': 'NASDAQ',
-            'NVDA': 'NASDAQ',
-            'NFLX': 'NASDAQ',
-            'INTC': 'NASDAQ',
-            'CSCO': 'NASDAQ',
-            'ADBE': 'NASDAQ',
-            'PYPL': 'NASDAQ',
-            'CMCSA': 'NASDAQ',
-            'PEP': 'NASDAQ',
-            'COST': 'NASDAQ',
-            'AVGO': 'NASDAQ',
-            'TXN': 'NASDAQ',
-            'QCOM': 'NASDAQ',
-            'TMUS': 'NASDAQ',
-            'SBUX': 'NASDAQ',
-            'AMGN': 'NASDAQ',
-            'CHTR': 'NASDAQ',
-            'INTU': 'NASDAQ',
-            'ISRG': 'NASDAQ',
-            'MDLZ': 'NASDAQ',
-            'GILD': 'NASDAQ',
-            'BKNG': 'NASDAQ',
-            'ADI': 'NASDAQ',
-            'ADP': 'NASDAQ',
-            'REGN': 'NASDAQ',
-            'BIIB': 'NASDAQ',
-            'FISV': 'NASDAQ',
-            'ATVI': 'NASDAQ',
-            'JD': 'NASDAQ',
-            'ILMN': 'NASDAQ',
-            'VRTX': 'NASDAQ',
-            'LRCX': 'NASDAQ',
-            'MU': 'NASDAQ',
-            'CSX': 'NASDAQ',
-            'ALGN': 'NASDAQ',
-            'ADSK': 'NASDAQ',
-            'MNST': 'NASDAQ',
-            'IDXX': 'NASDAQ',
-            'WDAY': 'NASDAQ',
-            'CDNS': 'NASDAQ',
-            'MAR': 'NASDAQ',
-            'MELI': 'NASDAQ',
-            'ORLY': 'NASDAQ',
+        // Liste plus complète de symboles pour les bourses principales
+        const exchangeMap = {
+            // Symboles NASDAQ (pour les 100 principales)
+            'AAPL': 'NASDAQ', 'MSFT': 'NASDAQ', 'AMZN': 'NASDAQ', 'GOOGL': 'NASDAQ', 'GOOG': 'NASDAQ',
+            'META': 'NASDAQ', 'NVDA': 'NASDAQ', 'TSLA': 'NASDAQ', 'AVGO': 'NASDAQ', 'PEP': 'NASDAQ',
+            'COST': 'NASDAQ', 'CSCO': 'NASDAQ', 'TMUS': 'NASDAQ', 'ADBE': 'NASDAQ', 'CMCSA': 'NASDAQ',
+            'TXN': 'NASDAQ', 'INTC': 'NASDAQ', 'QCOM': 'NASDAQ', 'AMD': 'NASDAQ', 'INTU': 'NASDAQ',
+            'AMGN': 'NASDAQ', 'HON': 'NASDAQ', 'SBUX': 'NASDAQ', 'GILD': 'NASDAQ', 'ADI': 'NASDAQ',
+            'MDLZ': 'NASDAQ', 'AMAT': 'NASDAQ', 'ISRG': 'NASDAQ', 'REGN': 'NASDAQ', 'NFLX': 'NASDAQ',
+            
+            // Symboles NYSE (pour certaines principales)
+            'JPM': 'NYSE', 'V': 'NYSE', 'JNJ': 'NYSE', 'UNH': 'NYSE', 'HD': 'NYSE',
+            'PG': 'NYSE', 'XOM': 'NYSE', 'BAC': 'NYSE', 'MA': 'NYSE', 'DIS': 'NYSE',
+            'CVX': 'NYSE', 'MRK': 'NYSE', 'KO': 'NYSE', 'PFE': 'NYSE', 'T': 'NYSE',
+            'WMT': 'NYSE', 'VZ': 'NYSE', 'CRM': 'NYSE', 'ABT': 'NYSE', 'ORCL': 'NYSE',
+            
+            // Classes d'actions spéciales
+            'BRK.A': 'NYSE', 'BRK.B': 'NYSE'
         };
         
-        return knownSymbols[symbol] || 'NYSE';
+        // Retourner le préfixe d'échange si connu, sinon NYSE par défaut
+        return exchangeMap[symbol] || 'NYSE';
     }
     
     // Convertir la plage de temps en intervalle TradingView
@@ -496,28 +595,42 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Obtenir le nom d'une entreprise basé sur son symbole
     function getCompanyName(symbol) {
+        // Liste plus complète de noms d'entreprises
         const companies = {
+            // NASDAQ
             'AAPL': 'Apple Inc.',
             'MSFT': 'Microsoft Corporation',
-            'GOOGL': 'Alphabet Inc.',
-            'GOOG': 'Alphabet Inc.',
             'AMZN': 'Amazon.com Inc.',
+            'GOOGL': 'Alphabet Inc. (Class A)',
+            'GOOG': 'Alphabet Inc. (Class C)',
             'META': 'Meta Platforms Inc.',
-            'TSLA': 'Tesla Inc.',
             'NVDA': 'NVIDIA Corporation',
-            'BRK.A': 'Berkshire Hathaway Inc.',
+            'TSLA': 'Tesla Inc.',
+            'AVGO': 'Broadcom Inc.',
+            'PEP': 'PepsiCo Inc.',
+            'COST': 'Costco Wholesale Corporation',
+            'CSCO': 'Cisco Systems Inc.',
+            'TMUS': 'T-Mobile US Inc.',
+            'ADBE': 'Adobe Inc.',
+            'CMCSA': 'Comcast Corporation',
+            'NFLX': 'Netflix Inc.',
+            
+            // NYSE
             'JPM': 'JPMorgan Chase & Co.',
             'V': 'Visa Inc.',
             'JNJ': 'Johnson & Johnson',
-            'WMT': 'Walmart Inc.',
-            'PG': 'Procter & Gamble Co.',
-            'MA': 'Mastercard Inc.',
             'UNH': 'UnitedHealth Group Inc.',
             'HD': 'Home Depot Inc.',
+            'PG': 'Procter & Gamble Co.',
+            'XOM': 'Exxon Mobil Corporation',
             'BAC': 'Bank of America Corp.',
+            'MA': 'Mastercard Inc.',
             'DIS': 'Walt Disney Co.',
-            'PFE': 'Pfizer Inc.',
-            'XOM': 'Exxon Mobil Corporation'
+            'WMT': 'Walmart Inc.',
+            
+            // Classes d'actions spéciales
+            'BRK.A': 'Berkshire Hathaway Inc. (Class A)',
+            'BRK.B': 'Berkshire Hathaway Inc. (Class B)'
         };
         
         return companies[symbol] || `${symbol} Corp.`;
