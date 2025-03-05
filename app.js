@@ -236,23 +236,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Récupérer les données en temps réel
     async function fetchRealTimeData(symbol) {
         try {
-            // Dans une implémentation réelle avec Puppeteer, nous ferions:
+            // Dans une implémentation réelle avec OpenAI, nous ferions quelque chose comme:
             /*
-            await puppeteer_navigate({
-                url: `https://finance.yahoo.com/quote/${symbol}`
+            const response = await chat-with-openai({
+                content: `Fournir les données financières actuelles pour le symbole ${symbol} en format JSON, 
+                          incluant le prix actuel, la variation en pourcentage, le volume, etc.`
             });
             
-            const stockPrice = await puppeteer_evaluate({
-                script: `
-                    document.querySelector('[data-field="regularMarketPrice"]').textContent
-                `
-            });
-            
-            const priceChangePercent = await puppeteer_evaluate({
-                script: `
-                    document.querySelector('[data-field="regularMarketChangePercent"]').textContent
-                `
-            });
+            // Parser la réponse JSON d'OpenAI
+            const aiData = JSON.parse(response.choices[0].message.content);
             */
             
             // Pour cette démo, nous utilisons des données simulées
@@ -472,6 +464,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const priceChangeValue = currentPriceValue - basePrice;
             const priceChangePercent = (priceChangeValue / basePrice) * 100;
             
+            // Simuler une réponse enrichie par OpenAI
+            const aiAnalysis = await simulateOpenAIAnalysis(symbol, stockInfo);
+            
             return {
                 symbol: symbol,
                 name: stockInfo.name,
@@ -491,7 +486,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 monthChange: stockInfo.monthChange,
                 threeMonthChange: stockInfo.threeMonthChange,
                 yearChange: stockInfo.yearChange,
-                exchange: stockInfo.exchange
+                exchange: stockInfo.exchange,
+                aiAnalysis: aiAnalysis
             };
         } else {
             // Génération aléatoire pour les symboles inconnus
@@ -503,7 +499,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Déterminer si c'est une action française (se termine par .PA)
             const isEuronext = symbol.endsWith('.PA');
             
-            return {
+            const simulatedData = {
                 symbol: symbol,
                 name: getCompanyName(symbol),
                 price: currentPriceValue.toFixed(2),
@@ -524,7 +520,52 @@ document.addEventListener('DOMContentLoaded', function() {
                 yearChange: parseFloat((Math.random() * 40 - 15).toFixed(2)),
                 exchange: isEuronext ? 'EURONEXT' : getExchangePrefix(symbol)
             };
+            
+            // Simuler une réponse enrichie par OpenAI
+            simulatedData.aiAnalysis = await simulateOpenAIAnalysis(symbol, simulatedData);
+            
+            return simulatedData;
         }
+    }
+    
+    // Simuler une analyse OpenAI pour l'action
+    async function simulateOpenAIAnalysis(symbol, stockData) {
+        // Cette fonction simule une analyse enrichie qui serait fournie par OpenAI
+        const sentiments = ["positif", "neutre", "négatif"];
+        const sentiment = sentiments[Math.floor(Math.random() * 3)];
+        
+        const riskLevels = ["faible", "modéré", "élevé"];
+        const riskLevel = riskLevels[Math.floor(Math.random() * 3)];
+        
+        const changeValue = parseFloat(stockData.changePercent) || stockData.dayChange;
+        let recommendationText = "";
+        
+        if (changeValue > 3) {
+            recommendationText = "L'action montre une forte performance récente. Analysez les facteurs fondamentaux avant de prendre une décision.";
+        } else if (changeValue > 0) {
+            recommendationText = "L'action se comporte de manière stable avec une légère tendance positive.";
+        } else if (changeValue > -3) {
+            recommendationText = "L'action montre une légère faiblesse. Surveillez les prochains indicateurs économiques.";
+        } else {
+            recommendationText = "L'action montre des signes de faiblesse significative. Une analyse approfondie est recommandée.";
+        }
+        
+        return {
+            sentiment: sentiment,
+            riskLevel: riskLevel,
+            recommendation: recommendationText,
+            sectors: {
+                technology: Math.random() * 100,
+                finance: Math.random() * 100,
+                healthcare: Math.random() * 100
+            },
+            keyFactors: [
+                "Environnement macroéconomique",
+                "Innovation produit",
+                "Parts de marché",
+                "Contexte réglementaire"
+            ]
+        };
     }
     
     // Mettre à jour l'interface utilisateur avec les données reçues
@@ -578,6 +619,17 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Mise à jour des performances en fonction de la période sélectionnée
         updatePerformanceBars(stockData);
+        
+        // Mettre à jour les actualités si on a des données d'analyse IA
+        if (stockData.aiAnalysis) {
+            updateNewsWithAIInsights(stockData);
+        }
+    }
+    
+    // Mettre à jour la section des actualités avec des insights AI
+    function updateNewsWithAIInsights(stockData) {
+        // Cette fonction pourrait être implémentée pour afficher des actualités générées par OpenAI
+        // Pour l'instant, nous ne faisons rien car ce n'est pas demandé explicitement
     }
     
     // Mettre à jour une métrique avec coloration
