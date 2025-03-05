@@ -25,16 +25,24 @@ document.addEventListener('DOMContentLoaded', function() {
     let tradingViewWidget = null;
     let stockData = null; // Stockage des données actuelles pour l'action
     
+    // Liste des actions populaires pour suggestion
+    const popularStocks = [
+        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'TSLA', 'NVDA', 'JPM', 'V', 'BRK.B'
+    ];
+    
     // Initialisation
     function init() {
         // Charger les données en temps réel pour Apple
         fetchRealTimeData(currentSymbol);
         
         // Initialiser le graphique TradingView
-        initTradingViewChart();
+        initTradingViewWidget();
         
         // Configurer les écouteurs d'événements
         setupEventListeners();
+        
+        // Afficher les suggestions de stocks populaires
+        showPopularStocksSuggestions();
         
         // Mettre à jour l'heure de marché
         updateMarketTime();
@@ -42,6 +50,52 @@ document.addEventListener('DOMContentLoaded', function() {
         // Mettre à jour régulièrement l'heure et les données
         setInterval(updateMarketTime, 1000);
         setInterval(() => fetchRealTimeData(currentSymbol), 60000); // Rafraîchir toutes les minutes
+    }
+    
+    // Afficher des suggestions de stocks populaires sous la barre de recherche
+    function showPopularStocksSuggestions() {
+        const searchContainer = document.querySelector('.search-container');
+        
+        if (!document.querySelector('.stock-suggestions')) {
+            const suggestionsDiv = document.createElement('div');
+            suggestionsDiv.className = 'stock-suggestions';
+            suggestionsDiv.innerHTML = '<span>Populaires: </span>';
+            
+            popularStocks.forEach(symbol => {
+                const stockLink = document.createElement('a');
+                stockLink.href = '#';
+                stockLink.textContent = symbol;
+                stockLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    searchStock(symbol);
+                });
+                suggestionsDiv.appendChild(stockLink);
+            });
+            
+            searchContainer.parentNode.insertBefore(suggestionsDiv, searchContainer.nextSibling);
+            
+            // Ajouter un style CSS pour les suggestions
+            const style = document.createElement('style');
+            style.textContent = `
+                .stock-suggestions {
+                    padding: 5px 20px;
+                    font-size: 0.8rem;
+                    color: var(--text-muted);
+                }
+                .stock-suggestions span {
+                    margin-right: 5px;
+                }
+                .stock-suggestions a {
+                    color: var(--primary-color);
+                    margin-right: 10px;
+                    text-decoration: none;
+                }
+                .stock-suggestions a:hover {
+                    text-decoration: underline;
+                }
+            `;
+            document.head.appendChild(style);
+        }
     }
     
     // Configurer les écouteurs d'événements
@@ -71,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.classList.add('active');
                 
                 currentTimeRange = this.getAttribute('data-range');
-                updateTradingViewChart(currentSymbol, currentTimeRange);
+                updateTradingViewWidget(currentSymbol, currentTimeRange);
                 
                 // Mettre à jour les performances pour refléter la période sélectionnée
                 if (stockData) {
@@ -113,7 +167,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fetchRealTimeData(symbol);
             
             // Mettre à jour le graphique TradingView
-            updateTradingViewChart(symbol, currentTimeRange);
+            updateTradingViewWidget(symbol, currentTimeRange);
             
             console.log(`Recherche effectuée pour: ${symbol}, avec plage temporelle: ${currentTimeRange}`);
         }
@@ -262,6 +316,48 @@ document.addEventListener('DOMContentLoaded', function() {
                 threeMonthChange: 5.75,
                 yearChange: 15.40,
                 exchange: 'NYSE'
+            },
+            'NVDA': {
+                basePrice: 875.28,
+                name: 'NVIDIA Corporation',
+                volume: '57.2M',
+                marketCap: '2.15T',
+                peRatio: '73.4',
+                dividend: '0.04%',
+                dayChange: 3.25,
+                weekChange: 7.80,
+                monthChange: 12.50,
+                threeMonthChange: 35.75,
+                yearChange: 218.40,
+                exchange: 'NASDAQ'
+            },
+            'JPM': {
+                basePrice: 187.42,
+                name: 'JPMorgan Chase & Co.',
+                volume: '8.5M',
+                marketCap: '541B',
+                peRatio: '11.6',
+                dividend: '2.31%',
+                dayChange: -0.72,
+                weekChange: -1.85,
+                monthChange: 1.35,
+                threeMonthChange: 5.80,
+                yearChange: 24.30,
+                exchange: 'NYSE'
+            },
+            'V': {
+                basePrice: 279.56,
+                name: 'Visa Inc.',
+                volume: '5.8M',
+                marketCap: '598B',
+                peRatio: '32.5',
+                dividend: '0.69%',
+                dayChange: 0.67,
+                weekChange: 1.25,
+                monthChange: 3.85,
+                threeMonthChange: 8.60,
+                yearChange: 13.50,
+                exchange: 'NYSE'
             }
         };
         
@@ -354,7 +450,13 @@ document.addEventListener('DOMContentLoaded', function() {
         priceChange.textContent = changeText;
         
         // Appliquer les classes CSS pour les couleurs
-        applyColorClasses(priceChange, changeValue);
+        if (changeValue >= 0) {
+            priceChange.classList.remove('negative');
+            priceChange.classList.add('positive');
+        } else {
+            priceChange.classList.remove('positive');
+            priceChange.classList.add('negative');
+        }
         
         // Mise à jour des métriques avec coloration
         updateMetricWithColor(openPrice, stockData.open, parseFloat(stockData.open) - parseFloat(stockData.previousClose));
@@ -385,22 +487,17 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Si un changeValue est fourni, appliquer la coloration
         if (changeValue !== null) {
-            applyColorClasses(element, changeValue);
+            if (changeValue > 0) {
+                element.classList.remove('negative');
+                element.classList.add('positive');
+            } else if (changeValue < 0) {
+                element.classList.remove('positive');
+                element.classList.add('negative');
+            } else {
+                element.classList.remove('positive', 'negative');
+            }
         } else {
             // Supprimer les classes de coloration si aucun changement n'est spécifié
-            element.classList.remove('positive', 'negative');
-        }
-    }
-    
-    // Appliquer les classes CSS pour les couleurs
-    function applyColorClasses(element, value) {
-        if (value > 0) {
-            element.classList.remove('negative');
-            element.classList.add('positive');
-        } else if (value < 0) {
-            element.classList.remove('positive');
-            element.classList.add('negative');
-        } else {
             element.classList.remove('positive', 'negative');
         }
     }
@@ -431,13 +528,15 @@ document.addEventListener('DOMContentLoaded', function() {
         if (performanceValue && performanceBar) {
             performanceValue.textContent = `${changeValue >= 0 ? '+' : ''}${changeValue}%`;
             
-            applyColorClasses(performanceValue, changeValue);
-            
-            // Appliquer les bonnes classes à la barre
+            // Appliquer les classes CSS pour les couleurs
             if (changeValue >= 0) {
+                performanceValue.classList.remove('negative');
+                performanceValue.classList.add('positive');
                 performanceBar.classList.remove('negative');
                 performanceBar.classList.add('positive');
             } else {
+                performanceValue.classList.remove('positive');
+                performanceValue.classList.add('negative');
                 performanceBar.classList.remove('positive');
                 performanceBar.classList.add('negative');
             }
@@ -459,7 +558,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Initialiser le graphique TradingView
-    function initTradingViewChart() {
+    function initTradingViewWidget() {
         // Nettoyer le conteneur
         destroyTradingViewWidget();
         
@@ -525,7 +624,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Mettre à jour le graphique TradingView avec le symbole et la plage de temps spécifiés
-    function updateTradingViewChart(symbol, timeRange) {
+    function updateTradingViewWidget(symbol, timeRange) {
         // Détruire et recréer le widget avec les nouveaux paramètres
         destroyTradingViewWidget();
         
