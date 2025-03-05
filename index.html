@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockPro - Analyse Avancée d'Apple</title>
+    <title>StockPro - Analyse en Temps Réel d'Apple</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
     <!-- TradingView Widget -->
@@ -89,35 +89,35 @@
                     <div class="metrics-grid">
                         <div class="metric">
                             <span class="metric-label">Ouverture</span>
-                            <span class="metric-value">$188.45</span>
+                            <span class="metric-value" id="open-price">$188.45</span>
                         </div>
                         <div class="metric">
                             <span class="metric-label">Clôture préc.</span>
-                            <span class="metric-value">$188.45</span>
+                            <span class="metric-value" id="prev-close">$188.45</span>
                         </div>
                         <div class="metric">
                             <span class="metric-label">Plus haut</span>
-                            <span class="metric-value">$190.23</span>
+                            <span class="metric-value" id="day-high">$190.23</span>
                         </div>
                         <div class="metric">
                             <span class="metric-label">Plus bas</span>
-                            <span class="metric-value">$187.68</span>
+                            <span class="metric-value" id="day-low">$187.68</span>
                         </div>
                         <div class="metric">
                             <span class="metric-label">Volume</span>
-                            <span class="metric-value">42.8M</span>
+                            <span class="metric-value" id="volume">42.8M</span>
                         </div>
                         <div class="metric">
                             <span class="metric-label">Cap. boursière</span>
-                            <span class="metric-value">2.95T</span>
+                            <span class="metric-value" id="market-cap">2.95T</span>
                         </div>
                         <div class="metric">
                             <span class="metric-label">P/E</span>
-                            <span class="metric-value">31.2</span>
+                            <span class="metric-value" id="pe-ratio">31.2</span>
                         </div>
                         <div class="metric">
                             <span class="metric-label">Dividende</span>
-                            <span class="metric-value">0.51%</span>
+                            <span class="metric-value" id="dividend">0.51%</span>
                         </div>
                     </div>
                 </section>
@@ -126,35 +126,35 @@
                 <section class="dashboard-card performance-card">
                     <h3>Performance</h3>
                     <div class="performance-grid">
-                        <div class="performance-item">
+                        <div class="performance-item day-performance">
                             <span class="period">1 jour</span>
                             <div class="performance-bar-container">
                                 <div class="performance-bar positive" style="width: 81%"></div>
                             </div>
                             <span class="performance-value positive">+0.81%</span>
                         </div>
-                        <div class="performance-item">
+                        <div class="performance-item week-performance">
                             <span class="period">1 semaine</span>
                             <div class="performance-bar-container">
                                 <div class="performance-bar positive" style="width: 65%"></div>
                             </div>
                             <span class="performance-value positive">+2.45%</span>
                         </div>
-                        <div class="performance-item">
+                        <div class="performance-item month-performance">
                             <span class="period">1 mois</span>
                             <div class="performance-bar-container">
                                 <div class="performance-bar positive" style="width: 70%"></div>
                             </div>
                             <span class="performance-value positive">+5.32%</span>
                         </div>
-                        <div class="performance-item">
+                        <div class="performance-item three-months-performance">
                             <span class="period">3 mois</span>
                             <div class="performance-bar-container">
                                 <div class="performance-bar positive" style="width: 85%"></div>
                             </div>
                             <span class="performance-value positive">+12.78%</span>
                         </div>
-                        <div class="performance-item">
+                        <div class="performance-item year-performance">
                             <span class="period">1 an</span>
                             <div class="performance-bar-container">
                                 <div class="performance-bar positive" style="width: 93%"></div>
@@ -192,10 +192,20 @@
                     </div>
                 </section>
 
-                <!-- Comparable Chart -->
-                <section class="dashboard-card comparison-card">
-                    <h3>Comparaison par période</h3>
-                    <div id="comparison-chart" class="comparison-container"></div>
+                <!-- Data Source Credit -->
+                <section class="dashboard-card source-card">
+                    <h3>Source des données</h3>
+                    <p class="source-info">
+                        Les données de marché sont extraites en temps réel via Puppeteer à partir de sources financières publiques.
+                        Mise à jour toutes les minutes.
+                    </p>
+                    <div class="last-update">
+                        <span>Dernière mise à jour:</span>
+                        <span class="update-time">05/03/2025 16:25:10</span>
+                    </div>
+                    <div class="data-disclaimer">
+                        Les données sont fournies à titre informatif uniquement et ne constituent pas un conseil en investissement.
+                    </div>
                 </section>
             </div>
         </main>
