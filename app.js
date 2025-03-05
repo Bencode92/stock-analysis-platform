@@ -8,6 +8,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const priceChange = document.querySelector('.price-change');
     const stockInfoTitle = document.querySelector('.stock-info h2');
     const exchangeElement = document.querySelector('.exchange');
+    const marketIndicator = document.querySelector('.market-indicator');
+    const marketStatusText = document.querySelector('.market-status span');
     
     // Métriques
     const openPrice = document.getElementById('open-price');
@@ -24,6 +26,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentTimeRange = '1W'; // Par défaut on affiche 1 semaine
     let tradingViewWidget = null;
     let stockData = null; // Stockage des données actuelles pour l'action
+    let tvReadyCallbacks = []; // Callbacks pour l'initialisation de TradingView
+    let isTvReady = false; // Indique si TradingView est prêt
     
     // Liste des actions populaires pour suggestion
     const popularStocks = [
@@ -125,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.classList.add('active');
                 
                 currentTimeRange = this.getAttribute('data-range');
-                updateTradingViewWidget(currentSymbol, currentTimeRange);
+                updateTradingViewInterval(currentTimeRange);
                 
                 // Mettre à jour les performances pour refléter la période sélectionnée
                 if (stockData) {
@@ -152,6 +156,29 @@ document.addEventListener('DOMContentLoaded', function() {
         if (updateTimeElement) {
             updateTimeElement.textContent = dateTimeStr;
         }
+        
+        // Vérifier si le marché français (Euronext) est ouvert
+        const hour = now.getHours();
+        const minute = now.getMinutes();
+        const dayOfWeek = now.getDay(); // 0 = dimanche, 6 = samedi
+        
+        // Marché français: ouvert de 9h00 à 17h30, du lundi au vendredi
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        const isBeforeOpen = hour < 9;
+        const isAfterClose = hour > 17 || (hour === 17 && minute >= 30);
+        
+        const isMarketOpen = !isWeekend && !isBeforeOpen && !isAfterClose;
+        
+        // Mettre à jour l'indicateur et le texte
+        if (isMarketOpen) {
+            marketIndicator.classList.remove('red');
+            marketIndicator.classList.add('green');
+            marketStatusText.textContent = 'Marché ouvert';
+        } else {
+            marketIndicator.classList.remove('green');
+            marketIndicator.classList.add('red');
+            marketStatusText.textContent = 'Marché fermé';
+        }
     }
     
     // Chercher et afficher les données pour un nouveau titre
@@ -166,10 +193,43 @@ document.addEventListener('DOMContentLoaded', function() {
             // Récupérer les données pour ce symbole
             fetchRealTimeData(symbol);
             
-            // Mettre à jour le graphique TradingView
-            updateTradingViewWidget(symbol, currentTimeRange);
+            // Mettre à jour le graphique TradingView avec le nouveau symbole
+            updateTradingViewSymbol(symbol);
             
             console.log(`Recherche effectuée pour: ${symbol}, avec plage temporelle: ${currentTimeRange}`);
+        }
+    }
+    
+    // Mettre à jour le symbole dans TradingView
+    function updateTradingViewSymbol(symbol) {
+        if (tradingViewWidget && isTvReady) {
+            // Construire la chaîne du symbole avec le bon préfixe de bourse
+            const fullSymbol = `${getExchangePrefix(symbol)}:${symbol}`;
+            tradingViewWidget.chart().setSymbol(fullSymbol, function() {
+                console.log(`Symbole TradingView mis à jour: ${fullSymbol}`);
+            });
+        } else {
+            // Si TradingView n'est pas encore prêt, ajouter à la file d'attente
+            tvReadyCallbacks.push(() => {
+                const fullSymbol = `${getExchangePrefix(symbol)}:${symbol}`;
+                tradingViewWidget.chart().setSymbol(fullSymbol);
+            });
+        }
+    }
+    
+    // Mettre à jour l'intervalle de temps dans TradingView
+    function updateTradingViewInterval(timeRange) {
+        if (tradingViewWidget && isTvReady) {
+            const interval = getIntervalFromTimeRange(timeRange);
+            tradingViewWidget.chart().setResolution(interval, function() {
+                console.log(`Intervalle TradingView mis à jour: ${interval}`);
+            });
+        } else {
+            // Si TradingView n'est pas encore prêt, ajouter à la file d'attente
+            tvReadyCallbacks.push(() => {
+                const interval = getIntervalFromTimeRange(timeRange);
+                tradingViewWidget.chart().setResolution(interval);
+            });
         }
     }
     
@@ -358,6 +418,49 @@ document.addEventListener('DOMContentLoaded', function() {
                 threeMonthChange: 8.60,
                 yearChange: 13.50,
                 exchange: 'NYSE'
+            },
+            // Actions française - Euronext Paris
+            'OR.PA': {
+                basePrice: 408.15,
+                name: 'L\'Oréal S.A.',
+                volume: '0.3M',
+                marketCap: '219B',
+                peRatio: '38.4',
+                dividend: '1.27%',
+                dayChange: 0.85,
+                weekChange: 2.15,
+                monthChange: 3.45,
+                threeMonthChange: 7.25,
+                yearChange: 12.50,
+                exchange: 'EURONEXT'
+            },
+            'BNP.PA': {
+                basePrice: 64.74,
+                name: 'BNP Paribas S.A.',
+                volume: '1.5M',
+                marketCap: '74B',
+                peRatio: '9.8',
+                dividend: '4.65%',
+                dayChange: -0.35,
+                weekChange: -1.20,
+                monthChange: 2.80,
+                threeMonthChange: 5.40,
+                yearChange: 18.30,
+                exchange: 'EURONEXT'
+            },
+            'AIR.PA': {
+                basePrice: 142.94,
+                name: 'Airbus SE',
+                volume: '0.8M',
+                marketCap: '112B',
+                peRatio: '26.3',
+                dividend: '1.58%',
+                dayChange: 1.20,
+                weekChange: 2.65,
+                monthChange: 4.35,
+                threeMonthChange: 8.75,
+                yearChange: 14.20,
+                exchange: 'EURONEXT'
             }
         };
         
@@ -397,6 +500,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const priceChangeValue = currentPriceValue - basePrice;
             const priceChangePercent = (priceChangeValue / basePrice) * 100;
             
+            // Déterminer si c'est une action française (se termine par .PA)
+            const isEuronext = symbol.endsWith('.PA');
+            
             return {
                 symbol: symbol,
                 name: getCompanyName(symbol),
@@ -416,7 +522,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 monthChange: parseFloat((Math.random() * 15 - 5).toFixed(2)),
                 threeMonthChange: parseFloat((Math.random() * 25 - 10).toFixed(2)),
                 yearChange: parseFloat((Math.random() * 40 - 15).toFixed(2)),
-                exchange: getExchangePrefix(symbol)
+                exchange: isEuronext ? 'EURONEXT' : getExchangePrefix(symbol)
             };
         }
     }
@@ -470,7 +576,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (peRatio) peRatio.textContent = stockData.peRatio;
         if (dividend) dividend.textContent = stockData.dividend;
         
-        // Mise à jour des performances
+        // Mise à jour des performances en fonction de la période sélectionnée
         updatePerformanceBars(stockData);
     }
     
@@ -504,6 +610,30 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Mettre à jour les barres de performance
     function updatePerformanceBars(stockData) {
+        // Mettre à jour les barres de performances selon la plage de temps sélectionnée
+        let selectedPerformanceValue;
+        
+        switch (currentTimeRange) {
+            case '1D':
+                selectedPerformanceValue = stockData.dayChange;
+                break;
+            case '1W':
+                selectedPerformanceValue = stockData.weekChange;
+                break;
+            case '1M':
+                selectedPerformanceValue = stockData.monthChange;
+                break;
+            case '3M':
+                selectedPerformanceValue = stockData.threeMonthChange;
+                break;
+            case '1Y':
+            case 'ALL':
+                selectedPerformanceValue = stockData.yearChange;
+                break;
+            default:
+                selectedPerformanceValue = stockData.dayChange;
+        }
+        
         // Jour
         updatePerformanceBar('day', stockData.dayChange);
         
@@ -555,6 +685,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 container.removeChild(container.firstChild);
             }
         }
+        isTvReady = false;
     }
     
     // Initialiser le graphique TradingView
@@ -603,95 +734,43 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Attendre que le widget soit chargé pour attacher des écouteurs d'événements
-        if (window.TradingView && tradingViewWidget) {
-            tradingViewWidget.onChartReady(() => {
-                // Attacher l'écouteur d'événements pour le changement de symbole
-                tradingViewWidget.chart().onSymbolChanged().subscribe(null, (symbolData) => {
-                    if (symbolData) {
-                        // Extraire le symbole sans préfixe d'échange
-                        const cleanSymbol = symbolData.name.includes(':') 
-                            ? symbolData.name.split(':')[1] 
-                            : symbolData.name;
+        tradingViewWidget.onChartReady(() => {
+            console.log('TradingView chart is ready');
+            isTvReady = true;
+            
+            // Attacher l'écouteur d'événements pour le changement de symbole
+            tradingViewWidget.chart().onSymbolChanged().subscribe(null, (symbolData) => {
+                if (symbolData) {
+                    // Extraire le symbole sans préfixe d'échange
+                    const symbolParts = symbolData.name.split(':');
+                    const cleanSymbol = symbolParts.length > 1 ? symbolParts[1] : symbolData.name;
+                    
+                    // Ne mettre à jour que si le symbole a réellement changé
+                    if (cleanSymbol !== currentSymbol) {
+                        currentSymbol = cleanSymbol;
+                        searchInput.value = cleanSymbol;
                         
-                        // Ne mettre à jour que si le symbole a réellement changé
-                        if (cleanSymbol !== currentSymbol) {
-                            searchStock(cleanSymbol);
-                        }
+                        // Mettre à jour les données
+                        fetchRealTimeData(cleanSymbol);
+                        
+                        console.log(`Symbole modifié depuis TradingView: ${cleanSymbol}`);
                     }
-                });
+                }
             });
-        }
-    }
-    
-    // Mettre à jour le graphique TradingView avec le symbole et la plage de temps spécifiés
-    function updateTradingViewWidget(symbol, timeRange) {
-        // Détruire et recréer le widget avec les nouveaux paramètres
-        destroyTradingViewWidget();
-        
-        // Construire la chaîne du symbole avec le bon préfixe de bourse
-        const fullSymbol = `${getExchangePrefix(symbol)}:${symbol}`;
-        
-        // Widget TradingView pour le graphique principal
-        tradingViewWidget = new TradingView.widget({
-            "container_id": "tradingview-chart",
-            "width": "100%",
-            "height": "100%",
-            "symbol": fullSymbol,
-            "interval": getIntervalFromTimeRange(timeRange),
-            "timezone": "Europe/Paris",
-            "theme": "dark",
-            "style": "1",
-            "locale": "fr",
-            "toolbar_bg": "#1e1e1e",
-            "enable_publishing": false,
-            "withdateranges": true,
-            "hide_side_toolbar": false,
-            "allow_symbol_change": true,
-            "studies": [
-                "RSI@tv-basicstudies",
-                "MAExp@tv-basicstudies",
-                "MACD@tv-basicstudies"
-            ],
-            "hide_top_toolbar": false,
-            "hide_legend": false,
-            "save_image": false,
-            "symbol_change": true,
-            "symbol_search": true,
-            "overrides": {
-                "mainSeriesProperties.showCountdown": true,
-                "paneProperties.background": "#131722",
-                "paneProperties.vertGridProperties.color": "#363c4e",
-                "paneProperties.horzGridProperties.color": "#363c4e",
-                "symbolWatermarkProperties.transparency": 90,
-                "scalesProperties.textColor" : "#AAA"
-            }
+            
+            // Exécuter les callbacks en attente
+            tvReadyCallbacks.forEach(callback => callback());
+            tvReadyCallbacks = [];
         });
-        
-        // Attendre que le widget soit chargé pour attacher des écouteurs d'événements
-        if (window.TradingView && tradingViewWidget) {
-            tradingViewWidget.onChartReady(() => {
-                // Attacher l'écouteur d'événements pour le changement de symbole
-                tradingViewWidget.chart().onSymbolChanged().subscribe(null, (symbolData) => {
-                    if (symbolData) {
-                        // Extraire le symbole sans préfixe d'échange
-                        const cleanSymbol = symbolData.name.includes(':') 
-                            ? symbolData.name.split(':')[1] 
-                            : symbolData.name;
-                        
-                        // Ne mettre à jour que si le symbole a réellement changé
-                        if (cleanSymbol !== currentSymbol) {
-                            searchStock(cleanSymbol);
-                        }
-                    }
-                });
-            });
-        }
-        
-        console.log(`Widget TradingView mis à jour pour ${fullSymbol}, intervalle: ${getIntervalFromTimeRange(timeRange)}`);
     }
     
     // Obtenir le préfixe d'échange pour TradingView
     function getExchangePrefix(symbol) {
+        // Si c'est une action française (se termine par .PA)
+        if (symbol.endsWith('.PA')) {
+            return 'EURONEXT';
+        }
+        
         // Liste plus complète de symboles pour les bourses principales
         const exchangeMap = {
             // Symboles NASDAQ (pour les 100 principales)
@@ -720,17 +799,23 @@ document.addEventListener('DOMContentLoaded', function() {
     function getIntervalFromTimeRange(timeRange) {
         switch (timeRange) {
             case '1D': return '5';      // 5 minutes
-            case '1W': return '60';     // 60 minutes
-            case '1M': return 'D';      // Daily
-            case '3M': return 'D';      // Daily
-            case '1Y': return 'W';      // Weekly
-            case 'ALL': return 'M';     // Monthly
+            case '1W': return '60';     // 60 minutes (1 heure)
+            case '1M': return 'D';      // Daily (1 jour)
+            case '3M': return 'D';      // Daily (1 jour)
+            case '1Y': return 'W';      // Weekly (1 semaine)
+            case 'ALL': return 'M';     // Monthly (1 mois)
             default: return 'D';        // Daily par défaut
         }
     }
     
     // Obtenir le nom d'une entreprise basé sur son symbole
     function getCompanyName(symbol) {
+        // Si c'est une action française (se termine par .PA)
+        if (symbol.endsWith('.PA')) {
+            const baseName = symbol.replace('.PA', '');
+            return `${baseName} S.A.`;
+        }
+        
         // Liste plus complète de noms d'entreprises
         const companies = {
             // NASDAQ
@@ -766,7 +851,17 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Classes d'actions spéciales
             'BRK.A': 'Berkshire Hathaway Inc. (Class A)',
-            'BRK.B': 'Berkshire Hathaway Inc. (Class B)'
+            'BRK.B': 'Berkshire Hathaway Inc. (Class B)',
+            
+            // Actions françaises (Euronext Paris)
+            'OR.PA': 'L\'Oréal S.A.',
+            'BNP.PA': 'BNP Paribas S.A.',
+            'AIR.PA': 'Airbus SE',
+            'MC.PA': 'LVMH Moët Hennessy Louis Vuitton SE',
+            'SAN.PA': 'Sanofi S.A.',
+            'CS.PA': 'AXA S.A.',
+            'BN.PA': 'Danone S.A.',
+            'CAP.PA': 'Capgemini SE'
         };
         
         return companies[symbol] || `${symbol} Corp.`;
