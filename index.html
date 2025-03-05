@@ -3,181 +3,205 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TradingHub - Analyse d'Actions en Temps Réel</title>
+    <title>StockPro - Analyse Avancée d'Apple</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
     <!-- TradingView Widget -->
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 </head>
 <body>
-    <header>
-        <div class="container">
-            <h1><i class="fas fa-chart-line"></i> TradingHub</h1>
-            <p class="tagline">Données de marché en temps réel et analyse professionnelle</p>
-        </div>
-    </header>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1><i class="fas fa-chart-line"></i> StockPro</h1>
+            </div>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="active"><a href="#"><i class="fas fa-home"></i> Accueil</a></li>
+                    <li><a href="#"><i class="fas fa-chart-bar"></i> Tableaux de bord</a></li>
+                    <li><a href="#"><i class="fas fa-list"></i> Watchlist</a></li>
+                    <li><a href="#"><i class="fas fa-newspaper"></i> Actualités</a></li>
+                    <li><a href="#"><i class="fas fa-bell"></i> Alertes</a></li>
+                    <li><a href="#"><i class="fas fa-cog"></i> Paramètres</a></li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <p>© 2025 StockPro</p>
+            </div>
+        </aside>
 
-    <main class="container">
-        <section class="search-section">
-            <h2>Rechercher un titre</h2>
-            <div class="search-box">
-                <input type="text" id="stockSymbol" placeholder="Entrez un symbole boursier (ex: AAPL, MSFT, SPY...)" autofocus>
-                <button id="searchBtn"><i class="fas fa-search"></i> Rechercher</button>
-            </div>
-            <div class="popular-searches">
-                <span>Populaires:</span>
-                <a href="#" class="stock-tag" data-symbol="AAPL">AAPL</a>
-                <a href="#" class="stock-tag" data-symbol="MSFT">MSFT</a>
-                <a href="#" class="stock-tag" data-symbol="GOOGL">GOOGL</a>
-                <a href="#" class="stock-tag" data-symbol="AMZN">AMZN</a>
-                <a href="#" class="stock-tag" data-symbol="SPY">SPY</a>
-                <a href="#" class="stock-tag" data-symbol="BTC">BTC-USD</a>
-                <a href="#" class="stock-tag" data-symbol="ETH">ETH-USD</a>
-            </div>
-        </section>
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="main-header">
+                <div class="search-container">
+                    <input type="text" id="stockSearch" placeholder="Rechercher une action..." value="AAPL">
+                    <button id="searchBtn"><i class="fas fa-search"></i></button>
+                </div>
+                <div class="market-status">
+                    <div class="market-indicator green"></div>
+                    <span>Marché ouvert</span>
+                    <span class="market-time">16:24:35</span>
+                </div>
+            </header>
 
-        <section id="marketOverview" class="market-overview">
-            <div class="section-header">
-                <h2>Aperçu du marché</h2>
-                <span id="marketTime">Dernière mise à jour: --</span>
-            </div>
-            <div class="market-indices">
-                <div class="index-card">
-                    <h3>S&P 500</h3>
-                    <div class="index-value" id="sp500Value">--</div>
-                    <div class="index-change" id="sp500Change">--</div>
+            <!-- Stock Header -->
+            <section class="stock-header">
+                <div class="stock-info">
+                    <img src="https://logo.clearbit.com/apple.com" alt="Apple logo" class="company-logo">
+                    <div>
+                        <h2>Apple Inc. (AAPL)</h2>
+                        <span class="exchange">NASDAQ</span>
+                    </div>
                 </div>
-                <div class="index-card">
-                    <h3>Nasdaq</h3>
-                    <div class="index-value" id="nasdaqValue">--</div>
-                    <div class="index-change" id="nasdaqChange">--</div>
+                <div class="stock-price">
+                    <div class="current-price">$189.97</div>
+                    <div class="price-change positive">+1.52 (+0.81%)</div>
                 </div>
-                <div class="index-card">
-                    <h3>Dow Jones</h3>
-                    <div class="index-value" id="dowValue">--</div>
-                    <div class="index-change" id="dowChange">--</div>
-                </div>
-                <div class="index-card">
-                    <h3>CAC 40</h3>
-                    <div class="index-value" id="cacValue">--</div>
-                    <div class="index-change" id="cacChange">--</div>
-                </div>
-            </div>
-            <div id="tradingViewWidget" class="tradingview-widget"></div>
-        </section>
+            </section>
 
-        <section id="watchlistSection" class="watchlist-section">
-            <div class="section-header">
-                <h2>Ma Liste de Suivi</h2>
-                <button id="refreshBtn" class="refresh-btn"><i class="fas fa-sync-alt"></i> Actualiser</button>
-            </div>
-            <div class="table-container">
-                <table id="watchlistTable">
-                    <thead>
-                        <tr>
-                            <th>Symbole</th>
-                            <th>Nom</th>
-                            <th>Dernier Prix</th>
-                            <th>Variation J</th>
-                            <th>Variation 1M</th>
-                            <th>Variation 3M</th>
-                            <th>Variation 6M</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="watchlistBody">
-                        <!-- Les données seront insérées ici dynamiquement -->
-                    </tbody>
-                </table>
-            </div>
-            <div id="emptyWatchlist" class="empty-state">
-                <i class="fas fa-search"></i>
-                <p>Votre liste de suivi est vide. Recherchez une action ou un ETF pour commencer.</p>
-            </div>
-        </section>
+            <!-- Primary Chart -->
+            <section class="chart-section">
+                <div class="chart-header">
+                    <div class="time-selector">
+                        <button class="time-btn" data-range="1D">1J</button>
+                        <button class="time-btn active" data-range="1W">1S</button>
+                        <button class="time-btn" data-range="1M">1M</button>
+                        <button class="time-btn" data-range="3M">3M</button>
+                        <button class="time-btn" data-range="1Y">1A</button>
+                        <button class="time-btn" data-range="ALL">MAX</button>
+                    </div>
+                    <div class="chart-controls">
+                        <button class="control-btn"><i class="fas fa-draw-polygon"></i></button>
+                        <button class="control-btn"><i class="fas fa-ruler"></i></button>
+                        <button class="control-btn"><i class="fas fa-crosshairs"></i></button>
+                        <button class="control-btn"><i class="fas fa-expand"></i></button>
+                    </div>
+                </div>
+                <div id="tradingview-chart" class="chart-container"></div>
+            </section>
 
-        <section id="stockDetailSection" class="stock-detail-section hidden">
-            <div class="section-header">
-                <h2 id="stockDetailName">Détails du Titre</h2>
-                <div class="actions">
-                    <button id="addToWatchlistBtn" class="action-btn"><i class="fas fa-plus"></i> Ajouter à la liste</button>
-                    <button id="backBtn" class="action-btn secondary"><i class="fas fa-arrow-left"></i> Retour</button>
-                </div>
+            <!-- Dashboard Grid -->
+            <div class="dashboard-grid">
+                <!-- Key Metrics -->
+                <section class="dashboard-card metrics-card">
+                    <h3>Métriques clés</h3>
+                    <div class="metrics-grid">
+                        <div class="metric">
+                            <span class="metric-label">Ouverture</span>
+                            <span class="metric-value">$188.45</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Clôture préc.</span>
+                            <span class="metric-value">$188.45</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Plus haut</span>
+                            <span class="metric-value">$190.23</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Plus bas</span>
+                            <span class="metric-value">$187.68</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Volume</span>
+                            <span class="metric-value">42.8M</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Cap. boursière</span>
+                            <span class="metric-value">2.95T</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">P/E</span>
+                            <span class="metric-value">31.2</span>
+                        </div>
+                        <div class="metric">
+                            <span class="metric-label">Dividende</span>
+                            <span class="metric-value">0.51%</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Period Performance -->
+                <section class="dashboard-card performance-card">
+                    <h3>Performance</h3>
+                    <div class="performance-grid">
+                        <div class="performance-item">
+                            <span class="period">1 jour</span>
+                            <div class="performance-bar-container">
+                                <div class="performance-bar positive" style="width: 81%"></div>
+                            </div>
+                            <span class="performance-value positive">+0.81%</span>
+                        </div>
+                        <div class="performance-item">
+                            <span class="period">1 semaine</span>
+                            <div class="performance-bar-container">
+                                <div class="performance-bar positive" style="width: 65%"></div>
+                            </div>
+                            <span class="performance-value positive">+2.45%</span>
+                        </div>
+                        <div class="performance-item">
+                            <span class="period">1 mois</span>
+                            <div class="performance-bar-container">
+                                <div class="performance-bar positive" style="width: 70%"></div>
+                            </div>
+                            <span class="performance-value positive">+5.32%</span>
+                        </div>
+                        <div class="performance-item">
+                            <span class="period">3 mois</span>
+                            <div class="performance-bar-container">
+                                <div class="performance-bar positive" style="width: 85%"></div>
+                            </div>
+                            <span class="performance-value positive">+12.78%</span>
+                        </div>
+                        <div class="performance-item">
+                            <span class="period">1 an</span>
+                            <div class="performance-bar-container">
+                                <div class="performance-bar positive" style="width: 93%"></div>
+                            </div>
+                            <span class="performance-value positive">+18.45%</span>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Real-time News -->
+                <section class="dashboard-card news-card">
+                    <h3>Actualités récentes</h3>
+                    <div class="news-list">
+                        <article class="news-item">
+                            <div class="news-meta">
+                                <span class="news-source">Bloomberg</span>
+                                <span class="news-time">Il y a 32 minutes</span>
+                            </div>
+                            <h4 class="news-title">Apple annonce un nouveau MacBook Pro avec une puce avancée</h4>
+                        </article>
+                        <article class="news-item">
+                            <div class="news-meta">
+                                <span class="news-source">CNBC</span>
+                                <span class="news-time">Il y a 1 heure</span>
+                            </div>
+                            <h4 class="news-title">Les actions d'Apple montent suite à des prévisions positives sur les ventes d'iPhone</h4>
+                        </article>
+                        <article class="news-item">
+                            <div class="news-meta">
+                                <span class="news-source">Financial Times</span>
+                                <span class="news-time">Il y a 3 heures</span>
+                            </div>
+                            <h4 class="news-title">Apple continue de renforcer ses investissements dans l'IA</h4>
+                        </article>
+                    </div>
+                </section>
+
+                <!-- Comparable Chart -->
+                <section class="dashboard-card comparison-card">
+                    <h3>Comparaison par période</h3>
+                    <div id="comparison-chart" class="comparison-container"></div>
+                </section>
             </div>
-
-            <div class="stock-overview">
-                <div class="stock-price-info">
-                    <div class="current-price" id="currentPrice">--</div>
-                    <div class="price-change" id="priceChange">--</div>
-                </div>
-                <div class="stock-meta" id="stockMeta">
-                    <!-- Informations sur l'entreprise insérées ici -->
-                </div>
-            </div>
-
-            <div id="advancedChart" class="advanced-chart">
-                <!-- TradingView Advanced Chart sera inséré ici -->
-            </div>
-
-            <div class="key-metrics">
-                <div class="metric-card">
-                    <h4>Prix ouverture</h4>
-                    <p id="openPrice">--</p>
-                </div>
-                <div class="metric-card">
-                    <h4>Plus haut du jour</h4>
-                    <p id="dayHigh">--</p>
-                </div>
-                <div class="metric-card">
-                    <h4>Plus bas du jour</h4>
-                    <p id="dayLow">--</p>
-                </div>
-                <div class="metric-card">
-                    <h4>Volume</h4>
-                    <p id="volume">--</p>
-                </div>
-                <div class="metric-card">
-                    <h4>Capitalisation</h4>
-                    <p id="marketCap">--</p>
-                </div>
-                <div class="metric-card">
-                    <h4>P/E Ratio</h4>
-                    <p id="peRatio">--</p>
-                </div>
-                <div class="metric-card">
-                    <h4>Dividende (%)</h4>
-                    <p id="dividend">--</p>
-                </div>
-                <div class="metric-card">
-                    <h4>52 sem. haut</h4>
-                    <p id="fiftyTwoWeekHigh">--</p>
-                </div>
-            </div>
-
-            <div class="news-section">
-                <h3>Actualités récentes</h3>
-                <div id="newsContainer" class="news-container">
-                    <!-- Les actualités seront insérées ici dynamiquement -->
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <footer>
-        <div class="container">
-            <p>&copy; 2025 TradingHub. Les données sont fournies à titre informatif uniquement et ne constituent pas un conseil financier.</p>
-        </div>
-    </footer>
-
-    <!-- Modal pour les messages -->
-    <div id="messageModal" class="modal">
-        <div class="modal-content">
-            <span class="close-modal">&times;</span>
-            <p id="modalMessage"></p>
-        </div>
+        </main>
     </div>
 
-    <!-- Chargement des scripts JS -->
+    <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/3.9.1/chart.min.js"></script>
     <script src="app.js"></script>
 </body>
