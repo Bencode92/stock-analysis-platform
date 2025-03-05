@@ -6,6 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const timeBtns = document.querySelectorAll('.time-btn');
     const currentPrice = document.querySelector('.current-price');
     const priceChange = document.querySelector('.price-change');
+    const stockInfoTitle = document.querySelector('.stock-info h2');
     
     // Métriques
     const openPrice = document.getElementById('open-price');
@@ -20,6 +21,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Variables globales
     let currentSymbol = 'AAPL'; // Par défaut on affiche Apple
     let currentTimeRange = '1W'; // Par défaut on affiche 1 semaine
+    let tradingViewWidget = null;
     
     // Initialisation
     function init() {
@@ -28,9 +30,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Initialiser le graphique TradingView
         initTradingViewChart();
-        
-        // Initialiser le graphique de comparaison
-        initComparisonChart();
         
         // Configurer les écouteurs d'événements
         setupEventListeners();
@@ -85,16 +84,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         document.querySelector('.market-time').textContent = timeStr;
+        
+        // Mettre à jour également l'heure de la source des données
+        const dateTimeStr = now.toLocaleDateString('fr-FR') + ' ' + timeStr;
+        const updateTimeElement = document.querySelector('.update-time');
+        if (updateTimeElement) {
+            updateTimeElement.textContent = dateTimeStr;
+        }
     }
     
     // Chercher et afficher les données pour un nouveau titre
     function searchStock(symbol) {
         currentSymbol = symbol.toUpperCase();
         fetchRealTimeData(currentSymbol);
-        updateTradingViewChart(currentSymbol, currentTimeRange);
         
-        // Mettre à jour le titre de la page
-        document.querySelector('.stock-info h2').textContent = `${getCompanyName(currentSymbol)} (${currentSymbol})`;
+        // Mettre à jour le graphique TradingView
+        if (tradingViewWidget) {
+            destroyTradingViewWidget();
+        }
+        initTradingViewChart();
     }
     
     // Récupérer les données en temps réel via Puppeteer (simulé pour cette démo)
@@ -161,7 +169,62 @@ document.addEventListener('DOMContentLoaded', function() {
                 weekChange: 2.45,
                 monthChange: 5.32,
                 threeMonthChange: 12.78,
-                yearChange: 18.45
+                yearChange: 18.45,
+                exchange: 'NASDAQ'
+            };
+        } else if (symbol === 'MSFT') {
+            const basePrice = 428.73;
+            const currentPriceValue = basePrice * (1 + randomFactor);
+            const priceChangeValue = currentPriceValue - basePrice;
+            const priceChangePercent = (priceChangeValue / basePrice) * 100;
+            
+            return {
+                symbol: 'MSFT',
+                name: 'Microsoft Corporation',
+                price: currentPriceValue.toFixed(2),
+                change: priceChangeValue.toFixed(2),
+                changePercent: priceChangePercent.toFixed(2),
+                open: (basePrice * 0.998).toFixed(2),
+                previousClose: (basePrice * 0.995).toFixed(2),
+                dayHigh: (currentPriceValue * 1.005).toFixed(2),
+                dayLow: (currentPriceValue * 0.995).toFixed(2),
+                volume: '18.5M',
+                marketCap: '3.18T',
+                peRatio: '36.4',
+                dividend: '0.73%',
+                dayChange: 0.12,
+                weekChange: 1.85,
+                monthChange: 4.25,
+                threeMonthChange: 9.35,
+                yearChange: 22.67,
+                exchange: 'NASDAQ'
+            };
+        } else if (symbol === 'GOOGL') {
+            const basePrice = 149.82;
+            const currentPriceValue = basePrice * (1 + randomFactor);
+            const priceChangeValue = currentPriceValue - basePrice;
+            const priceChangePercent = (priceChangeValue / basePrice) * 100;
+            
+            return {
+                symbol: 'GOOGL',
+                name: 'Alphabet Inc.',
+                price: currentPriceValue.toFixed(2),
+                change: priceChangeValue.toFixed(2),
+                changePercent: priceChangePercent.toFixed(2),
+                open: (basePrice * 0.998).toFixed(2),
+                previousClose: (basePrice * 0.995).toFixed(2),
+                dayHigh: (currentPriceValue * 1.005).toFixed(2),
+                dayLow: (currentPriceValue * 0.995).toFixed(2),
+                volume: '23.2M',
+                marketCap: '1.87T',
+                peRatio: '25.8',
+                dividend: '0.00%',
+                dayChange: 1.02,
+                weekChange: -0.45,
+                monthChange: -2.14,
+                threeMonthChange: 5.43,
+                yearChange: 11.26,
+                exchange: 'NASDAQ'
             };
         } else {
             // Génération aléatoire pour d'autres symboles
@@ -188,13 +251,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 weekChange: parseFloat((Math.random() * 8 - 3).toFixed(2)),
                 monthChange: parseFloat((Math.random() * 15 - 5).toFixed(2)),
                 threeMonthChange: parseFloat((Math.random() * 25 - 10).toFixed(2)),
-                yearChange: parseFloat((Math.random() * 40 - 15).toFixed(2))
+                yearChange: parseFloat((Math.random() * 40 - 15).toFixed(2)),
+                exchange: 'NYSE'
             };
         }
     }
     
     // Mettre à jour l'interface utilisateur avec les données reçues
     function updateUI(stockData) {
+        // Mise à jour du titre et info de l'action
+        stockInfoTitle.textContent = `${stockData.name} (${stockData.symbol})`;
+        document.querySelector('.exchange').textContent = stockData.exchange;
+        
+        // Mise à jour du logo (si possible)
+        try {
+            const logoElement = document.querySelector('.company-logo');
+            if (logoElement) {
+                logoElement.src = `https://logo.clearbit.com/${stockData.name.toLowerCase().replace(/[^a-zA-Z0-9]/g, '')}.com`;
+                logoElement.onerror = function() {
+                    this.src = 'https://via.placeholder.com/40x40?text=' + stockData.symbol;
+                };
+            }
+        } catch (error) {
+            console.log('Erreur lors de la mise à jour du logo', error);
+        }
+        
         // Mise à jour du prix et de la variation
         currentPrice.textContent = `$${stockData.price}`;
         
@@ -268,15 +349,26 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // Nettoyer le widget TradingView existant
+    function destroyTradingViewWidget() {
+        const container = document.getElementById('tradingview-chart');
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
+    }
+    
     // Initialiser le graphique TradingView
     function initTradingViewChart() {
+        // Nettoyer le conteneur
+        destroyTradingViewWidget();
+        
         // Widget TradingView pour le graphique principal
-        new TradingView.widget({
+        tradingViewWidget = new TradingView.widget({
             "container_id": "tradingview-chart",
             "width": "100%",
             "height": "100%",
-            "symbol": "NASDAQ:AAPL",
-            "interval": "D",
+            "symbol": `${getExchangePrefix(currentSymbol)}:${currentSymbol}`,
+            "interval": getIntervalFromTimeRange(currentTimeRange),
             "timezone": "Europe/Paris",
             "theme": "dark",
             "style": "1",
@@ -299,30 +391,107 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Mettre à jour le graphique TradingView avec le symbole et la plage de temps spécifiés
     function updateTradingViewChart(symbol, timeRange) {
-        // Dans une version réelle, nous pourrions utiliser l'API TradingView pour cela
-        // Pour cette démo, nous simulons le changement en rechargeant le widget
-        
-        // Conversion de notre plage de temps vers le format TradingView
-        let interval;
-        switch (timeRange) {
-            case '1D': interval = '5'; break;  // 5 minutes
-            case '1W': interval = '60'; break; // 60 minutes
-            case '1M': interval = 'D'; break;  // Daily
-            case '3M': interval = 'D'; break;  // Daily
-            case '1Y': interval = 'W'; break;  // Weekly
-            case 'ALL': interval = 'M'; break; // Monthly
-            default: interval = 'D';
+        // Détruire et recréer le widget avec les nouveaux paramètres
+        if (tradingViewWidget) {
+            destroyTradingViewWidget();
         }
         
-        // Dans une implémentation réelle, nous remplacerions le widget ici
-        console.log(`Mise à jour du graphique pour ${symbol} avec l'intervalle ${interval}`);
+        // Widget TradingView pour le graphique principal
+        tradingViewWidget = new TradingView.widget({
+            "container_id": "tradingview-chart",
+            "width": "100%",
+            "height": "100%",
+            "symbol": `${getExchangePrefix(symbol)}:${symbol}`,
+            "interval": getIntervalFromTimeRange(timeRange),
+            "timezone": "Europe/Paris",
+            "theme": "dark",
+            "style": "1",
+            "locale": "fr",
+            "toolbar_bg": "#1e1e1e",
+            "enable_publishing": false,
+            "withdateranges": true,
+            "hide_side_toolbar": false,
+            "allow_symbol_change": true,
+            "studies": [
+                "RSI@tv-basicstudies",
+                "MAExp@tv-basicstudies",
+                "MACD@tv-basicstudies"
+            ],
+            "hide_top_toolbar": false,
+            "hide_legend": false,
+            "save_image": false
+        });
     }
     
-    // Initialiser le graphique de comparaison pour les différentes périodes
-    function initComparisonChart() {
-        // Dans une version réelle, nous utiliserions Chart.js ou un autre outil
-        // Pour cette démo, nous nous contentons d'initialiser les barres de performance
-        fetchRealTimeData(currentSymbol);
+    // Obtenir le préfixe d'échange pour TradingView
+    function getExchangePrefix(symbol) {
+        // Par défaut, on utilise NASDAQ pour les actions connues, NYSE pour les autres
+        const knownSymbols = {
+            'AAPL': 'NASDAQ',
+            'MSFT': 'NASDAQ',
+            'GOOGL': 'NASDAQ',
+            'GOOG': 'NASDAQ',
+            'AMZN': 'NASDAQ',
+            'META': 'NASDAQ',
+            'TSLA': 'NASDAQ',
+            'NVDA': 'NASDAQ',
+            'NFLX': 'NASDAQ',
+            'INTC': 'NASDAQ',
+            'CSCO': 'NASDAQ',
+            'ADBE': 'NASDAQ',
+            'PYPL': 'NASDAQ',
+            'CMCSA': 'NASDAQ',
+            'PEP': 'NASDAQ',
+            'COST': 'NASDAQ',
+            'AVGO': 'NASDAQ',
+            'TXN': 'NASDAQ',
+            'QCOM': 'NASDAQ',
+            'TMUS': 'NASDAQ',
+            'SBUX': 'NASDAQ',
+            'AMGN': 'NASDAQ',
+            'CHTR': 'NASDAQ',
+            'INTU': 'NASDAQ',
+            'ISRG': 'NASDAQ',
+            'MDLZ': 'NASDAQ',
+            'GILD': 'NASDAQ',
+            'BKNG': 'NASDAQ',
+            'ADI': 'NASDAQ',
+            'ADP': 'NASDAQ',
+            'REGN': 'NASDAQ',
+            'BIIB': 'NASDAQ',
+            'FISV': 'NASDAQ',
+            'ATVI': 'NASDAQ',
+            'JD': 'NASDAQ',
+            'ILMN': 'NASDAQ',
+            'VRTX': 'NASDAQ',
+            'LRCX': 'NASDAQ',
+            'MU': 'NASDAQ',
+            'CSX': 'NASDAQ',
+            'ALGN': 'NASDAQ',
+            'ADSK': 'NASDAQ',
+            'MNST': 'NASDAQ',
+            'IDXX': 'NASDAQ',
+            'WDAY': 'NASDAQ',
+            'CDNS': 'NASDAQ',
+            'MAR': 'NASDAQ',
+            'MELI': 'NASDAQ',
+            'ORLY': 'NASDAQ',
+        };
+        
+        return knownSymbols[symbol] || 'NYSE';
+    }
+    
+    // Convertir la plage de temps en intervalle TradingView
+    function getIntervalFromTimeRange(timeRange) {
+        switch (timeRange) {
+            case '1D': return '5';      // 5 minutes
+            case '1W': return '60';     // 60 minutes
+            case '1M': return 'D';      // Daily
+            case '3M': return 'D';      // Daily
+            case '1Y': return 'W';      // Weekly
+            case 'ALL': return 'M';     // Monthly
+            default: return 'D';        // Daily par défaut
+        }
     }
     
     // Obtenir le nom d'une entreprise basé sur son symbole
@@ -331,6 +500,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'AAPL': 'Apple Inc.',
             'MSFT': 'Microsoft Corporation',
             'GOOGL': 'Alphabet Inc.',
+            'GOOG': 'Alphabet Inc.',
             'AMZN': 'Amazon.com Inc.',
             'META': 'Meta Platforms Inc.',
             'TSLA': 'Tesla Inc.',
