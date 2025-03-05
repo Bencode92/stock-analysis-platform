@@ -9,8 +9,9 @@
     --text-muted: #888888;
     --text-bright: #ffffff;
     --border-color: #333333;
-    --gain-color: #00ff00;
-    --loss-color: #ff0000;
+    --gain-color: #12ff56;
+    --loss-color: #ff2c2c;
+    --highlight-color: #5e76ff;
     --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
@@ -139,6 +140,7 @@ body {
     padding: 8px 12px;
     color: var(--text-color);
     border-radius: 4px 0 0 4px;
+    font-size: 1rem;
 }
 
 .search-container button {
@@ -155,27 +157,32 @@ body {
     align-items: center;
     color: var(--text-muted);
     font-size: 0.9rem;
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 5px 12px;
+    border-radius: 20px;
 }
 
 .market-indicator {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
     margin-right: 8px;
 }
 
 .green {
     background-color: var(--gain-color);
+    box-shadow: 0 0 8px var(--gain-color);
 }
 
 .red {
     background-color: var(--loss-color);
+    box-shadow: 0 0 8px var(--loss-color);
 }
 
 .market-time {
     margin-left: 10px;
     font-weight: 500;
-    color: var(--text-color);
+    color: var(--text-bright);
 }
 
 /* Stock Header */
@@ -183,7 +190,7 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 15px 20px;
+    padding: 20px;
     background-color: var(--bg-light);
     border-bottom: 1px solid var(--border-color);
 }
@@ -194,51 +201,57 @@ body {
 }
 
 .company-logo {
-    width: 40px;
-    height: 40px;
-    border-radius: 4px;
-    margin-right: 15px;
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    margin-right: 20px;
     background-color: white;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
 }
 
 .stock-info h2 {
     color: var(--text-bright);
-    font-size: 1.2rem;
-    margin-bottom: 2px;
+    font-size: 1.4rem;
+    margin-bottom: 5px;
 }
 
 .exchange {
-    color: var(--text-muted);
-    font-size: 0.85rem;
+    color: var(--highlight-color);
+    font-size: 0.9rem;
+    font-weight: 500;
 }
 
 .stock-price {
     text-align: right;
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 12px 18px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
 .current-price {
-    font-size: 1.8rem;
+    font-size: 2rem;
     font-weight: 700;
     color: var(--text-bright);
-    margin-bottom: 4px;
+    margin-bottom: 8px;
 }
 
 .price-change {
-    font-size: 0.9rem;
-    font-weight: 500;
-    padding: 2px 8px;
-    border-radius: 3px;
+    font-size: 1rem;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 20px;
     display: inline-block;
 }
 
 .positive {
     color: var(--gain-color);
-    background-color: rgba(0, 255, 0, 0.1);
+    background-color: rgba(18, 255, 86, 0.1);
 }
 
 .negative {
     color: var(--loss-color);
-    background-color: rgba(255, 0, 0, 0.1);
+    background-color: rgba(255, 44, 44, 0.1);
 }
 
 /* Chart Section */
@@ -253,23 +266,27 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 10px 20px;
+    padding: 15px 20px;
     background-color: var(--bg-light);
     border-bottom: 1px solid var(--border-color);
 }
 
 .time-selector {
     display: flex;
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 25px;
+    padding: 3px;
 }
 
 .time-btn {
     background: none;
     border: none;
     color: var(--text-muted);
-    padding: 5px 10px;
+    padding: 8px 15px;
     font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.2s;
+    border-radius: 20px;
 }
 
 .time-btn:hover {
@@ -277,15 +294,15 @@ body {
 }
 
 .time-btn.active {
-    color: var(--primary-color);
+    color: var(--secondary-color);
     font-weight: 600;
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 3px;
+    background-color: var(--primary-color);
 }
 
 .chart-controls {
     display: flex;
     align-items: center;
+    gap: 10px;
 }
 
 .control-btn {
@@ -302,21 +319,33 @@ body {
     color: var(--text-bright);
 }
 
-/* Fullscreen Button */
-.fullscreen-button {
+/* Action Button */
+.action-button {
     background-color: var(--primary-color);
     color: var(--secondary-color);
     border: none;
-    padding: 8px 15px;
-    border-radius: 4px;
+    padding: 10px 15px;
+    border-radius: 25px;
     cursor: pointer;
-    font-weight: 500;
-    margin-left: 10px;
+    font-weight: 600;
+    font-size: 0.9rem;
     transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
-.fullscreen-button:hover {
+.action-button:hover {
     background-color: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+.action-button:active {
+    transform: translateY(0);
+}
+
+.action-button i {
+    font-size: 0.9rem;
 }
 
 /* Fullscreen state */
@@ -341,16 +370,19 @@ body {
     background-color: var(--primary-color);
     color: var(--secondary-color);
     border: none;
-    border-radius: 4px;
-    padding: 8px 15px;
+    border-radius: 25px;
+    padding: 10px 15px;
     cursor: pointer;
     z-index: 10000;
-    font-weight: 500;
+    font-weight: 600;
+    font-size: 0.9rem;
     display: none;
 }
 
 .fullscreen-chart .fullscreen-exit-btn {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .chart-container {
@@ -368,16 +400,16 @@ body {
 
 .dashboard-card {
     background-color: var(--card-bg);
-    border-radius: 5px;
-    padding: 15px;
+    border-radius: 10px;
+    padding: 20px;
     box-shadow: var(--shadow);
     border: 1px solid var(--border-color);
 }
 
 .dashboard-card h3 {
     color: var(--text-bright);
-    font-size: 1.1rem;
-    margin-bottom: 15px;
+    font-size: 1.2rem;
+    margin-bottom: 20px;
     padding-bottom: 10px;
     border-bottom: 1px solid var(--border-color);
 }
@@ -386,23 +418,26 @@ body {
 .metrics-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 15px;
+    gap: 18px;
 }
 
 .metric {
     display: flex;
     flex-direction: column;
+    padding: 10px;
+    background-color: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
 }
 
 .metric-label {
     color: var(--text-muted);
     font-size: 0.85rem;
-    margin-bottom: 5px;
+    margin-bottom: 8px;
 }
 
 .metric-value {
     color: var(--text-bright);
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: 600;
 }
 
@@ -422,48 +457,59 @@ body {
 .performance-grid {
     display: flex;
     flex-direction: column;
-    height: calc(100% - 45px);
+    height: calc(100% - 60px);
     justify-content: space-between;
 }
 
 .performance-item {
     display: flex;
     align-items: center;
-    margin-bottom: 15px;
+    margin-bottom: 18px;
+    padding: 10px;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.performance-item:hover {
+    background-color: rgba(255, 255, 255, 0.05);
 }
 
 .period {
-    width: 80px;
+    width: 90px;
     color: var(--text-muted);
     font-size: 0.9rem;
+    font-weight: 500;
 }
 
 .performance-bar-container {
     flex: 1;
-    height: 8px;
+    height: 10px;
     background-color: var(--bg-light);
-    border-radius: 4px;
+    border-radius: 5px;
     margin: 0 15px;
     overflow: hidden;
 }
 
 .performance-bar {
     height: 100%;
-    border-radius: 4px;
+    border-radius: 5px;
+    transition: width 0.5s ease-in-out;
 }
 
 .performance-bar.positive {
     background-color: var(--gain-color);
+    box-shadow: 0 0 8px rgba(18, 255, 86, 0.5);
 }
 
 .performance-bar.negative {
     background-color: var(--loss-color);
+    box-shadow: 0 0 8px rgba(255, 44, 44, 0.5);
 }
 
 .performance-value {
-    font-size: 0.9rem;
-    font-weight: 600;
-    width: 60px;
+    font-size: 1rem;
+    font-weight: 700;
+    width: 70px;
     text-align: right;
 }
 
@@ -486,8 +532,14 @@ body {
 }
 
 .news-item {
-    padding: 12px 0;
+    padding: 15px 0;
     border-bottom: 1px solid var(--border-color);
+    transition: all 0.2s;
+}
+
+.news-item:hover {
+    background-color: rgba(255, 255, 255, 0.03);
+    padding-left: 10px;
 }
 
 .news-item:last-child {
@@ -502,7 +554,7 @@ body {
 
 .news-source {
     font-size: 0.85rem;
-    color: var(--primary-color);
+    color: var(--highlight-color);
     font-weight: 600;
 }
 
@@ -512,7 +564,7 @@ body {
 }
 
 .news-title {
-    font-size: 1rem;
+    font-size: 1.05rem;
     color: var(--text-color);
     font-weight: 500;
 }
@@ -530,6 +582,19 @@ body {
 .source-info {
     margin-bottom: 15px;
     color: var(--text-color);
+    line-height: 1.7;
+}
+
+.data-highlight {
+    display: block;
+    margin-top: 10px;
+    color: var(--highlight-color);
+    font-weight: 500;
+}
+
+.sync-time {
+    color: var(--text-bright);
+    font-weight: 600;
 }
 
 .last-update {
@@ -538,10 +603,13 @@ body {
     margin-bottom: 10px;
     color: var(--text-muted);
     font-size: 0.9rem;
+    background-color: rgba(0, 0, 0, 0.2);
+    padding: 8px 15px;
+    border-radius: 6px;
 }
 
 .update-time {
-    color: var(--text-color);
+    color: var(--text-bright);
     font-weight: 500;
 }
 
@@ -550,6 +618,7 @@ body {
     color: var(--text-muted);
     font-style: italic;
     margin-top: 15px;
+    text-align: center;
 }
 
 /* Responsive */
