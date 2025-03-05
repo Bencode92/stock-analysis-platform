@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let tvReadyCallbacks = []; // Callbacks pour l'initialisation de TradingView
     let isTvReady = false; // Indique si TradingView est prêt
     let isFullscreen = false; // Indique si le graphique est en plein écran
+    let lastTradingViewData = null; // Dernières données récupérées depuis TradingView
     
     // Liste des actions populaires pour suggestion
     const popularStocks = [
@@ -39,10 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialisation
     function init() {
-        // Charger les données en temps réel pour Apple
-        fetchRealTimeData(currentSymbol);
-        
-        // Initialiser le graphique TradingView
+        // Initialiser le graphique TradingView (avant de récupérer les données)
         initTradingViewWidget();
         
         // Configurer les écouteurs d'événements
@@ -56,7 +54,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Mettre à jour régulièrement l'heure et les données
         setInterval(updateMarketTime, 1000);
-        setInterval(() => fetchRealTimeData(currentSymbol), 60000); // Rafraîchir toutes les minutes
+        setInterval(syncDataFromTradingView, 10000); // Rafraîchir toutes les 10 secondes
     }
     
     // Afficher des suggestions de stocks populaires sous la barre de recherche
@@ -134,10 +132,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 currentTimeRange = this.getAttribute('data-range');
                 updateTradingViewInterval(currentTimeRange);
                 
-                // Mettre à jour les performances pour refléter la période sélectionnée
-                if (stockData) {
-                    updatePerformanceBars(stockData);
-                }
+                // Mettre à jour les performances après un court délai
+                setTimeout(() => {
+                    syncDataFromTradingView();
+                }, 300);
             });
         });
         
@@ -241,399 +239,289 @@ document.addEventListener('DOMContentLoaded', function() {
             // Mettre à jour l'affichage du symbole dans le champ de recherche
             searchInput.value = symbol;
             
-            // Récupérer les données pour ce symbole
-            fetchRealTimeData(symbol);
-            
             // Mettre à jour le graphique TradingView avec le nouveau symbole
             updateTradingViewSymbol(symbol);
             
+            // Les données seront récupérées automatiquement depuis TradingView
+            // après le chargement du graphique
             console.log(`Recherche effectuée pour: ${symbol}, avec plage temporelle: ${currentTimeRange}`);
         }
     }
     
-    // Mettre à jour le symbole dans TradingView
-    function updateTradingViewSymbol(symbol) {
-        if (tradingViewWidget && isTvReady) {
-            // Construire la chaîne du symbole avec le bon préfixe de bourse
-            const fullSymbol = `${getExchangePrefix(symbol)}:${symbol}`;
-            tradingViewWidget.chart().setSymbol(fullSymbol, function() {
-                console.log(`Symbole TradingView mis à jour: ${fullSymbol}`);
-            });
-        } else {
-            // Si TradingView n'est pas encore prêt, ajouter à la file d'attente
-            tvReadyCallbacks.push(() => {
-                const fullSymbol = `${getExchangePrefix(symbol)}:${symbol}`;
-                tradingViewWidget.chart().setSymbol(fullSymbol);
-            });
-        }
-    }
-    
-    // Mettre à jour l'intervalle de temps dans TradingView
-    function updateTradingViewInterval(timeRange) {
-        if (tradingViewWidget && isTvReady) {
-            const interval = getIntervalFromTimeRange(timeRange);
-            tradingViewWidget.chart().setResolution(interval, function() {
-                console.log(`Intervalle TradingView mis à jour: ${interval}`);
-            });
-        } else {
-            // Si TradingView n'est pas encore prêt, ajouter à la file d'attente
-            tvReadyCallbacks.push(() => {
-                const interval = getIntervalFromTimeRange(timeRange);
-                tradingViewWidget.chart().setResolution(interval);
-            });
-        }
-    }
-    
-    // Récupérer les données en temps réel
-    async function fetchRealTimeData(symbol) {
-        try {
-            // Dans une implémentation réelle avec OpenAI, nous ferions quelque chose comme:
-            /*
-            const response = await chat-with-openai({
-                content: `Fournir les données financières actuelles pour le symbole ${symbol} en format JSON, 
-                          incluant le prix actuel, la variation en pourcentage, le volume, etc.`
-            });
-            
-            // Parser la réponse JSON d'OpenAI
-            const aiData = JSON.parse(response.choices[0].message.content);
-            */
-            
-            // Pour cette démo, nous utilisons des données simulées
-            stockData = await getSimulatedStockData(symbol);
-            
-            // Mettre à jour l'interface utilisateur
-            updateUI(stockData);
-            
-        } catch (error) {
-            console.error('Erreur lors de la récupération des données:', error);
-            showErrorMessage(`Impossible de récupérer les données pour ${symbol}. Veuillez réessayer.`);
-        }
-    }
-    
-    // Afficher un message d'erreur
-    function showErrorMessage(message) {
-        alert(message); // Pour cette démo, un simple alert suffira
-    }
-    
-    // Simuler des données de stock pour la démo
-    async function getSimulatedStockData(symbol) {
-        // Ajouter un peu de variation aléatoire pour simuler des mises à jour en temps réel
-        const randomFactor = Math.random() * 0.02 - 0.01; // -1% à +1%
+    // Récupérer les données directement depuis TradingView
+    function syncDataFromTradingView() {
+        if (!tradingViewWidget || !isTvReady) return;
         
-        // Données préconfigurées pour les titres populaires
+        try {
+            // Obtenir le symbole actuel de TradingView
+            let symbolInfo = tradingViewWidget.chart().symbolInfo();
+            if (!symbolInfo) return;
+            
+            // Extraire les données de symbole propres (sans le préfixe d'échange)
+            const symbolParts = symbolInfo.name.split(':');
+            const cleanSymbol = symbolParts.length > 1 ? symbolParts[1] : symbolInfo.name;
+            const exchange = symbolParts.length > 1 ? symbolParts[0] : getExchangePrefix(cleanSymbol);
+            
+            // Utiliser la méthode d'accès aux données de prix de TradingView
+            tradingViewWidget.activeChart().getTradesSubscription().getLastDailyBarCloseTime((lastClose) => {
+                tradingViewWidget.activeChart().getTradesSubscription().getMarkPrice((currentPrice) => {
+                    if (!currentPrice) {
+                        console.log('Impossible de récupérer le prix actuel depuis TradingView');
+                        return;
+                    }
+                    
+                    // Obtenir les données supplémentaires via des méthodes alternatives
+                    const symbolDetails = tradingViewWidget.activeChart().getSymbolInfo();
+                    
+                    // Créer un objet avec les données récupérées de TradingView
+                    const tradingViewData = {
+                        symbol: cleanSymbol,
+                        name: symbolDetails?.description || getCompanyName(cleanSymbol),
+                        exchange: exchange,
+                        price: currentPrice.toFixed(2),
+                        previousClose: lastClose ? lastClose.toFixed(2) : getSimulatedValue(cleanSymbol, 'previousClose')
+                    };
+                    
+                    // Compléter les données manquantes
+                    completeTradingViewData(tradingViewData, cleanSymbol);
+                    
+                    // Mettre à jour l'UI avec ces données
+                    updateUIFromTradingView(tradingViewData);
+                    
+                    // Sauvegarder les dernières données pour référence future
+                    lastTradingViewData = tradingViewData;
+                });
+            });
+        } catch (error) {
+            console.error('Erreur lors de la récupération des données depuis TradingView:', error);
+            // En cas d'erreur, utiliser des données simulées comme fallback
+            fallbackToSimulatedData(currentSymbol);
+        }
+    }
+    
+    // Compléter les données manquantes avec des données simulées
+    function completeTradingViewData(tradingViewData, symbol) {
+        if (!tradingViewData) return null;
+        
+        // Calcul du changement de prix basé sur le prix précédent
+        const prevClose = parseFloat(tradingViewData.previousClose || 0);
+        const currentPrice = parseFloat(tradingViewData.price || 0);
+        let changeValue = 0;
+        let changePercent = 0;
+        
+        if (prevClose > 0 && currentPrice > 0) {
+            changeValue = currentPrice - prevClose;
+            changePercent = (changeValue / prevClose) * 100;
+            tradingViewData.change = changeValue.toFixed(2);
+            tradingViewData.changePercent = changePercent.toFixed(2);
+        } else {
+            // Si les valeurs ne sont pas disponibles, utiliser des valeurs simulées
+            tradingViewData.change = getSimulatedValue(symbol, 'change');
+            tradingViewData.changePercent = getSimulatedValue(symbol, 'changePercent');
+        }
+        
+        // Compléter les autres métriques
+        tradingViewData.open = getSimulatedValue(symbol, 'open');
+        tradingViewData.dayHigh = getSimulatedValue(symbol, 'dayHigh');
+        tradingViewData.dayLow = getSimulatedValue(symbol, 'dayLow');
+        tradingViewData.volume = getSimulatedValue(symbol, 'volume');
+        tradingViewData.marketCap = getSimulatedValue(symbol, 'marketCap');
+        tradingViewData.peRatio = getSimulatedValue(symbol, 'peRatio');
+        tradingViewData.dividend = getSimulatedValue(symbol, 'dividend');
+        
+        // Données de performance
+        tradingViewData.dayChange = parseFloat(changePercent.toFixed(2)) || getSimulatedPerformance(symbol, 'dayChange');
+        tradingViewData.weekChange = getSimulatedPerformance(symbol, 'weekChange');
+        tradingViewData.monthChange = getSimulatedPerformance(symbol, 'monthChange');
+        tradingViewData.threeMonthChange = getSimulatedPerformance(symbol, 'threeMonthChange');
+        tradingViewData.yearChange = getSimulatedPerformance(symbol, 'yearChange');
+        
+        return tradingViewData;
+    }
+    
+    // Obtenir une valeur simulée à partir des données préconfigurées
+    function getSimulatedValue(symbol, field) {
+        // Référence de données préconfigurées pour les valeurs simulées
         const stocksData = {
             'AAPL': {
                 basePrice: 189.97,
                 name: 'Apple Inc.',
+                open: '188.85',
+                previousClose: '188.45',
+                dayHigh: '190.23',
+                dayLow: '187.68',
                 volume: '42.8M',
                 marketCap: '2.95T',
                 peRatio: '31.2',
-                dividend: '0.51%',
-                dayChange: 0.81,
-                weekChange: 2.45,
-                monthChange: 5.32,
-                threeMonthChange: 12.78,
-                yearChange: 18.45,
-                exchange: 'NASDAQ'
+                dividend: '0.51%'
             },
             'MSFT': {
                 basePrice: 428.73,
                 name: 'Microsoft Corporation',
+                open: '426.50',
+                previousClose: '425.35',
+                dayHigh: '430.25',
+                dayLow: '425.10',
                 volume: '18.5M',
                 marketCap: '3.18T',
                 peRatio: '36.4',
-                dividend: '0.73%',
-                dayChange: 0.12,
-                weekChange: 1.85,
-                monthChange: 4.25,
-                threeMonthChange: 9.35,
-                yearChange: 22.67,
-                exchange: 'NASDAQ'
+                dividend: '0.73%'
             },
             'GOOGL': {
                 basePrice: 149.82,
                 name: 'Alphabet Inc.',
+                open: '148.90',
+                previousClose: '148.45',
+                dayHigh: '150.75',
+                dayLow: '148.30',
                 volume: '23.2M',
                 marketCap: '1.87T',
                 peRatio: '25.8',
-                dividend: '0.00%',
+                dividend: '0.00%'
+            }
+            // Autres stocks peuvent être ajoutés ici
+        };
+        
+        // Si le symbole est dans nos données préconfigurées, utiliser ces valeurs
+        if (stocksData[symbol] && stocksData[symbol][field] !== undefined) {
+            return stocksData[symbol][field];
+        }
+        
+        // Sinon, générer des valeurs raisonnables en fonction du champ demandé
+        // Ceci est une simulation pour la démo
+        const basePrice = lastTradingViewData?.price || 100;
+        
+        switch (field) {
+            case 'open':
+                return (parseFloat(basePrice) * 0.998).toFixed(2);
+            case 'previousClose':
+                return (parseFloat(basePrice) * 0.995).toFixed(2);
+            case 'dayHigh':
+                return (parseFloat(basePrice) * 1.005).toFixed(2);
+            case 'dayLow':
+                return (parseFloat(basePrice) * 0.995).toFixed(2);
+            case 'volume':
+                return `${Math.floor(Math.random() * 100)}M`;
+            case 'marketCap':
+                return `${Math.floor(Math.random() * 1000)}B`;
+            case 'peRatio':
+                return (15 + Math.random() * 20).toFixed(1);
+            case 'dividend':
+                return `${(Math.random() * 3).toFixed(2)}%`;
+            case 'change':
+                return (parseFloat(basePrice) * 0.005 * (Math.random() > 0.5 ? 1 : -1)).toFixed(2);
+            case 'changePercent':
+                return (0.5 * (Math.random() > 0.5 ? 1 : -1)).toFixed(2);
+            default:
+                return '0';
+        }
+    }
+    
+    // Obtenir des performances simulées pour les différentes périodes
+    function getSimulatedPerformance(symbol, period) {
+        // Performance préconfigurées
+        const performanceData = {
+            'AAPL': {
+                dayChange: 0.81,
+                weekChange: 2.45,
+                monthChange: 5.32,
+                threeMonthChange: 12.78,
+                yearChange: 18.45
+            },
+            'MSFT': {
+                dayChange: 0.12,
+                weekChange: 1.85,
+                monthChange: 4.25,
+                threeMonthChange: 9.35,
+                yearChange: 22.67
+            },
+            'GOOGL': {
                 dayChange: 1.02,
                 weekChange: -0.45,
                 monthChange: -2.14,
                 threeMonthChange: 5.43,
-                yearChange: 11.26,
-                exchange: 'NASDAQ'
+                yearChange: 11.26
             },
             'AMZN': {
-                basePrice: 178.75,
-                name: 'Amazon.com Inc.',
-                volume: '35.6M',
-                marketCap: '1.86T',
-                peRatio: '60.8',
-                dividend: '0.00%',
                 dayChange: 2.15,
                 weekChange: 3.27,
                 monthChange: 5.70,
                 threeMonthChange: 10.23,
-                yearChange: 18.92,
-                exchange: 'NASDAQ'
-            },
-            'TSLA': {
-                basePrice: 175.34,
-                name: 'Tesla Inc.',
-                volume: '85.3M',
-                marketCap: '558B',
-                peRatio: '50.2',
-                dividend: '0.00%',
-                dayChange: -1.25,
-                weekChange: -3.78,
-                monthChange: -6.20,
-                threeMonthChange: 8.45,
-                yearChange: -15.30,
-                exchange: 'NASDAQ'
-            },
-            'META': {
-                basePrice: 485.58,
-                name: 'Meta Platforms Inc.',
-                volume: '15.7M',
-                marketCap: '1.24T',
-                peRatio: '27.5',
-                dividend: '0.00%',
-                dayChange: 1.85,
-                weekChange: 2.67,
-                monthChange: 7.90,
-                threeMonthChange: 14.35,
-                yearChange: 45.20,
-                exchange: 'NASDAQ'
-            },
-            'BRK.B': {
-                basePrice: 408.83,
-                name: 'Berkshire Hathaway Inc.',
-                volume: '3.2M',
-                marketCap: '890B',
-                peRatio: '8.7',
-                dividend: '0.00%',
-                dayChange: 0.35,
-                weekChange: 1.20,
-                monthChange: 2.80,
-                threeMonthChange: 5.75,
-                yearChange: 15.40,
-                exchange: 'NYSE'
-            },
-            'NVDA': {
-                basePrice: 875.28,
-                name: 'NVIDIA Corporation',
-                volume: '57.2M',
-                marketCap: '2.15T',
-                peRatio: '73.4',
-                dividend: '0.04%',
-                dayChange: 3.25,
-                weekChange: 7.80,
-                monthChange: 12.50,
-                threeMonthChange: 35.75,
-                yearChange: 218.40,
-                exchange: 'NASDAQ'
-            },
-            'JPM': {
-                basePrice: 187.42,
-                name: 'JPMorgan Chase & Co.',
-                volume: '8.5M',
-                marketCap: '541B',
-                peRatio: '11.6',
-                dividend: '2.31%',
-                dayChange: -0.72,
-                weekChange: -1.85,
-                monthChange: 1.35,
-                threeMonthChange: 5.80,
-                yearChange: 24.30,
-                exchange: 'NYSE'
-            },
-            'V': {
-                basePrice: 279.56,
-                name: 'Visa Inc.',
-                volume: '5.8M',
-                marketCap: '598B',
-                peRatio: '32.5',
-                dividend: '0.69%',
-                dayChange: 0.67,
-                weekChange: 1.25,
-                monthChange: 3.85,
-                threeMonthChange: 8.60,
-                yearChange: 13.50,
-                exchange: 'NYSE'
-            },
-            // Actions française - Euronext Paris
-            'OR.PA': {
-                basePrice: 408.15,
-                name: 'L\'Oréal S.A.',
-                volume: '0.3M',
-                marketCap: '219B',
-                peRatio: '38.4',
-                dividend: '1.27%',
-                dayChange: 0.85,
-                weekChange: 2.15,
-                monthChange: 3.45,
-                threeMonthChange: 7.25,
-                yearChange: 12.50,
-                exchange: 'EURONEXT'
-            },
-            'BNP.PA': {
-                basePrice: 64.74,
-                name: 'BNP Paribas S.A.',
-                volume: '1.5M',
-                marketCap: '74B',
-                peRatio: '9.8',
-                dividend: '4.65%',
-                dayChange: -0.35,
-                weekChange: -1.20,
-                monthChange: 2.80,
-                threeMonthChange: 5.40,
-                yearChange: 18.30,
-                exchange: 'EURONEXT'
-            },
-            'AIR.PA': {
-                basePrice: 142.94,
-                name: 'Airbus SE',
-                volume: '0.8M',
-                marketCap: '112B',
-                peRatio: '26.3',
-                dividend: '1.58%',
-                dayChange: 1.20,
-                weekChange: 2.65,
-                monthChange: 4.35,
-                threeMonthChange: 8.75,
-                yearChange: 14.20,
-                exchange: 'EURONEXT'
+                yearChange: 18.92
             }
+            // Ajoutez d'autres symboles au besoin
         };
         
-        // Si nous avons des données préconfigurées pour ce symbole
-        if (stocksData[symbol]) {
-            const stockInfo = stocksData[symbol];
-            const basePrice = stockInfo.basePrice;
-            const currentPriceValue = basePrice * (1 + randomFactor);
-            const priceChangeValue = currentPriceValue - basePrice;
-            const priceChangePercent = (priceChangeValue / basePrice) * 100;
-            
-            // Simuler une réponse enrichie par OpenAI
-            const aiAnalysis = await simulateOpenAIAnalysis(symbol, stockInfo);
-            
-            return {
-                symbol: symbol,
-                name: stockInfo.name,
-                price: currentPriceValue.toFixed(2),
-                change: priceChangeValue.toFixed(2),
-                changePercent: priceChangePercent.toFixed(2),
-                open: (basePrice * 0.998).toFixed(2),
-                previousClose: (basePrice * 0.995).toFixed(2),
-                dayHigh: (currentPriceValue * 1.005).toFixed(2),
-                dayLow: (currentPriceValue * 0.995).toFixed(2),
-                volume: stockInfo.volume,
-                marketCap: stockInfo.marketCap,
-                peRatio: stockInfo.peRatio,
-                dividend: stockInfo.dividend,
-                dayChange: stockInfo.dayChange,
-                weekChange: stockInfo.weekChange,
-                monthChange: stockInfo.monthChange,
-                threeMonthChange: stockInfo.threeMonthChange,
-                yearChange: stockInfo.yearChange,
-                exchange: stockInfo.exchange,
-                aiAnalysis: aiAnalysis
-            };
-        } else {
-            // Génération aléatoire pour les symboles inconnus
-            const basePrice = 100 + Math.random() * 900;
-            const currentPriceValue = basePrice * (1 + randomFactor);
-            const priceChangeValue = currentPriceValue - basePrice;
-            const priceChangePercent = (priceChangeValue / basePrice) * 100;
-            
-            // Déterminer si c'est une action française (se termine par .PA)
-            const isEuronext = symbol.endsWith('.PA');
-            
-            const simulatedData = {
-                symbol: symbol,
-                name: getCompanyName(symbol),
-                price: currentPriceValue.toFixed(2),
-                change: priceChangeValue.toFixed(2),
-                changePercent: priceChangePercent.toFixed(2),
-                open: (basePrice * 0.998).toFixed(2),
-                previousClose: (basePrice * 0.995).toFixed(2),
-                dayHigh: (currentPriceValue * 1.005).toFixed(2),
-                dayLow: (currentPriceValue * 0.995).toFixed(2),
-                volume: `${Math.floor(Math.random() * 100)}M`,
-                marketCap: `${(Math.random() * 1000).toFixed(2)}B`,
-                peRatio: `${(Math.random() * 50 + 5).toFixed(1)}`,
-                dividend: `${(Math.random() * 5).toFixed(2)}%`,
-                dayChange: parseFloat((Math.random() * 5 - 2).toFixed(2)),
-                weekChange: parseFloat((Math.random() * 8 - 3).toFixed(2)),
-                monthChange: parseFloat((Math.random() * 15 - 5).toFixed(2)),
-                threeMonthChange: parseFloat((Math.random() * 25 - 10).toFixed(2)),
-                yearChange: parseFloat((Math.random() * 40 - 15).toFixed(2)),
-                exchange: isEuronext ? 'EURONEXT' : getExchangePrefix(symbol)
-            };
-            
-            // Simuler une réponse enrichie par OpenAI
-            simulatedData.aiAnalysis = await simulateOpenAIAnalysis(symbol, simulatedData);
-            
-            return simulatedData;
+        // Si le symbole est dans nos données préconfigurées, utiliser ces valeurs
+        if (performanceData[symbol] && performanceData[symbol][period] !== undefined) {
+            return performanceData[symbol][period];
+        }
+        
+        // Générer des performances aléatoires mais réalistes en fonction de la période
+        switch (period) {
+            case 'dayChange':
+                return parseFloat((Math.random() * 3 - 1).toFixed(2));
+            case 'weekChange':
+                return parseFloat((Math.random() * 6 - 2).toFixed(2));
+            case 'monthChange':
+                return parseFloat((Math.random() * 10 - 3).toFixed(2));
+            case 'threeMonthChange':
+                return parseFloat((Math.random() * 20 - 5).toFixed(2));
+            case 'yearChange':
+                return parseFloat((Math.random() * 40 - 10).toFixed(2));
+            default:
+                return 0;
         }
     }
     
-    // Simuler une analyse OpenAI pour l'action
-    async function simulateOpenAIAnalysis(symbol, stockData) {
-        // Cette fonction simule une analyse enrichie qui serait fournie par OpenAI
-        const sentiments = ["positif", "neutre", "négatif"];
-        const sentiment = sentiments[Math.floor(Math.random() * 3)];
+    // En cas d'erreur, fallback sur les données simulées
+    function fallbackToSimulatedData(symbol) {
+        console.log('Utilisation de données simulées pour', symbol);
         
-        const riskLevels = ["faible", "modéré", "élevé"];
-        const riskLevel = riskLevels[Math.floor(Math.random() * 3)];
-        
-        const changeValue = parseFloat(stockData.changePercent) || stockData.dayChange;
-        let recommendationText = "";
-        
-        if (changeValue > 3) {
-            recommendationText = "L'action montre une forte performance récente. Analysez les facteurs fondamentaux avant de prendre une décision.";
-        } else if (changeValue > 0) {
-            recommendationText = "L'action se comporte de manière stable avec une légère tendance positive.";
-        } else if (changeValue > -3) {
-            recommendationText = "L'action montre une légère faiblesse. Surveillez les prochains indicateurs économiques.";
-        } else {
-            recommendationText = "L'action montre des signes de faiblesse significative. Une analyse approfondie est recommandée.";
-        }
-        
-        return {
-            sentiment: sentiment,
-            riskLevel: riskLevel,
-            recommendation: recommendationText,
-            sectors: {
-                technology: Math.random() * 100,
-                finance: Math.random() * 100,
-                healthcare: Math.random() * 100
-            },
-            keyFactors: [
-                "Environnement macroéconomique",
-                "Innovation produit",
-                "Parts de marché",
-                "Contexte réglementaire"
-            ]
+        // Créer des données simulées
+        const simulatedData = {
+            symbol: symbol,
+            name: getCompanyName(symbol),
+            exchange: getExchangePrefix(symbol),
+            price: getSimulatedValue(symbol, 'price') || '100.00',
+            change: getSimulatedValue(symbol, 'change'),
+            changePercent: getSimulatedValue(symbol, 'changePercent'),
+            open: getSimulatedValue(symbol, 'open'),
+            previousClose: getSimulatedValue(symbol, 'previousClose'),
+            dayHigh: getSimulatedValue(symbol, 'dayHigh'),
+            dayLow: getSimulatedValue(symbol, 'dayLow'),
+            volume: getSimulatedValue(symbol, 'volume'),
+            marketCap: getSimulatedValue(symbol, 'marketCap'),
+            peRatio: getSimulatedValue(symbol, 'peRatio'),
+            dividend: getSimulatedValue(symbol, 'dividend'),
+            dayChange: getSimulatedPerformance(symbol, 'dayChange'),
+            weekChange: getSimulatedPerformance(symbol, 'weekChange'),
+            monthChange: getSimulatedPerformance(symbol, 'monthChange'),
+            threeMonthChange: getSimulatedPerformance(symbol, 'threeMonthChange'),
+            yearChange: getSimulatedPerformance(symbol, 'yearChange')
         };
+        
+        // Mettre à jour l'interface utilisateur avec ces données
+        updateUIFromTradingView(simulatedData);
     }
     
-    // Mettre à jour l'interface utilisateur avec les données reçues
-    function updateUI(stockData) {
+    // Mettre à jour l'interface utilisateur avec les données de TradingView
+    function updateUIFromTradingView(tvData) {
+        if (!tvData) return;
+        
         // Mise à jour du titre et info de l'action
-        stockInfoTitle.textContent = `${stockData.name} (${stockData.symbol})`;
-        exchangeElement.textContent = stockData.exchange;
+        stockInfoTitle.textContent = `${tvData.name} (${tvData.symbol})`;
+        exchangeElement.textContent = tvData.exchange;
         
         // Mise à jour du logo (si possible)
         try {
             const logoElement = document.querySelector('.company-logo');
             if (logoElement) {
                 // Nettoyer le nom de l'entreprise pour l'URL du logo
-                const companyName = stockData.name.toLowerCase().split(' ')[0].replace(/[^a-zA-Z0-9]/g, '');
+                const companyName = tvData.name.toLowerCase().split(' ')[0].replace(/[^a-zA-Z0-9]/g, '');
                 logoElement.src = `https://logo.clearbit.com/${companyName}.com`;
                 logoElement.onerror = function() {
-                    this.src = `https://via.placeholder.com/40x40?text=${stockData.symbol}`;
+                    this.src = `https://via.placeholder.com/40x40?text=${tvData.symbol}`;
                 };
             }
         } catch (error) {
@@ -641,10 +529,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Mise à jour du prix et de la variation
-        currentPrice.textContent = `$${stockData.price}`;
+        currentPrice.textContent = `$${tvData.price}`;
         
-        const changeValue = parseFloat(stockData.change);
-        const changeText = `${changeValue >= 0 ? '+' : ''}${stockData.change} (${changeValue >= 0 ? '+' : ''}${stockData.changePercent}%)`;
+        const changeValue = parseFloat(tvData.change);
+        const changeText = `${changeValue >= 0 ? '+' : ''}${tvData.change} (${changeValue >= 0 ? '+' : ''}${tvData.changePercent}%)`;
         priceChange.textContent = changeText;
         
         // Appliquer les classes CSS pour les couleurs
@@ -657,30 +545,66 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Mise à jour des métriques avec coloration
-        updateMetricWithColor(openPrice, stockData.open, parseFloat(stockData.open) - parseFloat(stockData.previousClose));
-        updateMetricWithColor(prevClose, stockData.previousClose);
-        updateMetricWithColor(dayHigh, stockData.dayHigh, parseFloat(stockData.dayHigh) - parseFloat(stockData.price));
-        updateMetricWithColor(dayLow, stockData.dayLow, parseFloat(stockData.dayLow) - parseFloat(stockData.price));
+        const openVal = tvData.open ? parseFloat(tvData.open) : 0;
+        const prevCloseVal = tvData.previousClose ? parseFloat(tvData.previousClose) : 0;
+        const dayHighVal = tvData.dayHigh ? parseFloat(tvData.dayHigh) : 0;
+        const dayLowVal = tvData.dayLow ? parseFloat(tvData.dayLow) : 0;
+        const priceVal = tvData.price ? parseFloat(tvData.price) : 0;
+        
+        updateMetricWithColor(openPrice, tvData.open, openVal - prevCloseVal);
+        updateMetricWithColor(prevClose, tvData.previousClose);
+        updateMetricWithColor(dayHigh, tvData.dayHigh, dayHighVal - priceVal);
+        updateMetricWithColor(dayLow, tvData.dayLow, dayLowVal - priceVal);
         
         // Métriques sans coloration
-        if (volume) volume.textContent = stockData.volume;
-        if (marketCap) marketCap.textContent = stockData.marketCap;
-        if (peRatio) peRatio.textContent = stockData.peRatio;
-        if (dividend) dividend.textContent = stockData.dividend;
+        if (volume) volume.textContent = tvData.volume;
+        if (marketCap) marketCap.textContent = tvData.marketCap;
+        if (peRatio) peRatio.textContent = tvData.peRatio;
+        if (dividend) dividend.textContent = tvData.dividend;
         
         // Mise à jour des performances en fonction de la période sélectionnée
-        updatePerformanceBars(stockData);
-        
-        // Mettre à jour les actualités si on a des données d'analyse IA
-        if (stockData.aiAnalysis) {
-            updateNewsWithAIInsights(stockData);
+        updatePerformanceBars(tvData);
+    }
+    
+    // Mettre à jour le symbole dans TradingView
+    function updateTradingViewSymbol(symbol) {
+        if (tradingViewWidget && isTvReady) {
+            // Construire la chaîne du symbole avec le bon préfixe de bourse
+            const fullSymbol = `${getExchangePrefix(symbol)}:${symbol}`;
+            tradingViewWidget.chart().setSymbol(fullSymbol, function() {
+                console.log(`Symbole TradingView mis à jour: ${fullSymbol}`);
+                // Attendre un moment pour que les données soient chargées, puis synchroniser
+                setTimeout(syncDataFromTradingView, 1000);
+            });
+        } else {
+            // Si TradingView n'est pas encore prêt, ajouter à la file d'attente
+            tvReadyCallbacks.push(() => {
+                const fullSymbol = `${getExchangePrefix(symbol)}:${symbol}`;
+                tradingViewWidget.chart().setSymbol(fullSymbol);
+                // Attendre un moment pour que les données soient chargées, puis synchroniser
+                setTimeout(syncDataFromTradingView, 1000);
+            });
         }
     }
     
-    // Mettre à jour la section des actualités avec des insights AI
-    function updateNewsWithAIInsights(stockData) {
-        // Cette fonction pourrait être implémentée pour afficher des actualités générées par OpenAI
-        // Pour l'instant, nous ne faisons rien car ce n'est pas demandé explicitement
+    // Mettre à jour l'intervalle de temps dans TradingView
+    function updateTradingViewInterval(timeRange) {
+        if (tradingViewWidget && isTvReady) {
+            const interval = getIntervalFromTimeRange(timeRange);
+            tradingViewWidget.chart().setResolution(interval, function() {
+                console.log(`Intervalle TradingView mis à jour: ${interval}`);
+                // Rafraîchir les données après un changement d'intervalle
+                setTimeout(syncDataFromTradingView, 500);
+            });
+        } else {
+            // Si TradingView n'est pas encore prêt, ajouter à la file d'attente
+            tvReadyCallbacks.push(() => {
+                const interval = getIntervalFromTimeRange(timeRange);
+                tradingViewWidget.chart().setResolution(interval);
+                // Rafraîchir les données après un changement d'intervalle
+                setTimeout(syncDataFromTradingView, 500);
+            });
+        }
     }
     
     // Mettre à jour une métrique avec coloration
@@ -712,45 +636,41 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Mettre à jour les barres de performance
-    function updatePerformanceBars(stockData) {
-        // Mettre à jour les barres de performances selon la plage de temps sélectionnée
-        let selectedPerformanceValue;
+    function updatePerformanceBars(data) {
+        // Mettre à jour les barres de performances
+        updatePerformanceBar('day', data.dayChange);
+        updatePerformanceBar('week', data.weekChange);
+        updatePerformanceBar('month', data.monthChange);
+        updatePerformanceBar('three-months', data.threeMonthChange);
+        updatePerformanceBar('year', data.yearChange);
         
-        switch (currentTimeRange) {
-            case '1D':
-                selectedPerformanceValue = stockData.dayChange;
-                break;
-            case '1W':
-                selectedPerformanceValue = stockData.weekChange;
-                break;
-            case '1M':
-                selectedPerformanceValue = stockData.monthChange;
-                break;
-            case '3M':
-                selectedPerformanceValue = stockData.threeMonthChange;
-                break;
-            case '1Y':
-            case 'ALL':
-                selectedPerformanceValue = stockData.yearChange;
-                break;
-            default:
-                selectedPerformanceValue = stockData.dayChange;
+        // Mettre en évidence la période actuellement sélectionnée
+        const selectedPeriod = getPerformancePeriodFromTimeRange(currentTimeRange);
+        if (selectedPeriod) {
+            const items = document.querySelectorAll('.performance-item');
+            items.forEach(item => {
+                if (item.classList.contains(`${selectedPeriod}-performance`)) {
+                    item.style.fontWeight = 'bold';
+                    item.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                } else {
+                    item.style.fontWeight = 'normal';
+                    item.style.backgroundColor = 'transparent';
+                }
+            });
         }
-        
-        // Jour
-        updatePerformanceBar('day', stockData.dayChange);
-        
-        // Semaine
-        updatePerformanceBar('week', stockData.weekChange);
-        
-        // Mois
-        updatePerformanceBar('month', stockData.monthChange);
-        
-        // 3 Mois
-        updatePerformanceBar('three-months', stockData.threeMonthChange);
-        
-        // Année
-        updatePerformanceBar('year', stockData.yearChange);
+    }
+    
+    // Obtenir la période de performance correspondant à l'intervalle de temps
+    function getPerformancePeriodFromTimeRange(timeRange) {
+        switch (timeRange) {
+            case '1D': return 'day';
+            case '1W': return 'week';
+            case '1M': return 'month';
+            case '3M': return 'three-months';
+            case '1Y': return 'year';
+            case 'ALL': return 'year';
+            default: return null;
+        }
     }
     
     // Mettre à jour une barre de performance spécifique
@@ -758,26 +678,26 @@ document.addEventListener('DOMContentLoaded', function() {
         const performanceValue = document.querySelector(`.${period}-performance .performance-value`);
         const performanceBar = document.querySelector(`.${period}-performance .performance-bar`);
         
-        if (performanceValue && performanceBar) {
-            performanceValue.textContent = `${changeValue >= 0 ? '+' : ''}${changeValue}%`;
-            
-            // Appliquer les classes CSS pour les couleurs
-            if (changeValue >= 0) {
-                performanceValue.classList.remove('negative');
-                performanceValue.classList.add('positive');
-                performanceBar.classList.remove('negative');
-                performanceBar.classList.add('positive');
-            } else {
-                performanceValue.classList.remove('positive');
-                performanceValue.classList.add('negative');
-                performanceBar.classList.remove('positive');
-                performanceBar.classList.add('negative');
-            }
-            
-            // Calculer la largeur de la barre (max 100%)
-            const width = Math.min(Math.abs(changeValue) * 5, 100);
-            performanceBar.style.width = `${width}%`;
+        if (!performanceValue || !performanceBar || changeValue === undefined) return;
+        
+        performanceValue.textContent = `${changeValue >= 0 ? '+' : ''}${changeValue}%`;
+        
+        // Appliquer les classes CSS pour les couleurs
+        if (changeValue >= 0) {
+            performanceValue.classList.remove('negative');
+            performanceValue.classList.add('positive');
+            performanceBar.classList.remove('negative');
+            performanceBar.classList.add('positive');
+        } else {
+            performanceValue.classList.remove('positive');
+            performanceValue.classList.add('negative');
+            performanceBar.classList.remove('positive');
+            performanceBar.classList.add('negative');
         }
+        
+        // Calculer la largeur de la barre (max 100%)
+        const width = Math.min(Math.abs(changeValue) * 5, 100);
+        performanceBar.style.width = `${width}%`;
     }
     
     // Nettoyer le widget TradingView existant
@@ -853,8 +773,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         currentSymbol = cleanSymbol;
                         searchInput.value = cleanSymbol;
                         
-                        // Mettre à jour les données
-                        fetchRealTimeData(cleanSymbol);
+                        // Synchroniser les données depuis TradingView
+                        syncDataFromTradingView();
                         
                         console.log(`Symbole modifié depuis TradingView: ${cleanSymbol}`);
                     }
@@ -864,6 +784,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Exécuter les callbacks en attente
             tvReadyCallbacks.forEach(callback => callback());
             tvReadyCallbacks = [];
+            
+            // Synchroniser les données initiales
+            syncDataFromTradingView();
         });
     }
     
