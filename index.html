@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockPro - Analyse en Temps Réel d'Actions</title>
+    <title>StockPro - Analyse en Temps Réel du Marché</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
     <!-- TradingView Widget -->
@@ -41,7 +41,7 @@
                 <div class="market-status">
                     <div class="market-indicator green"></div>
                     <span>Marché ouvert</span>
-                    <span class="market-time">16:24:35</span>
+                    <span class="market-time">15:17:00</span>
                 </div>
             </header>
 
@@ -72,10 +72,8 @@
                         <button class="time-btn" data-range="ALL">MAX</button>
                     </div>
                     <div class="chart-controls">
-                        <button class="control-btn"><i class="fas fa-draw-polygon"></i></button>
-                        <button class="control-btn"><i class="fas fa-ruler"></i></button>
-                        <button class="control-btn"><i class="fas fa-crosshairs"></i></button>
-                        <button id="fullscreen-btn" class="fullscreen-button">Agrandir le graphique</button>
+                        <button id="refresh-btn" class="action-button"><i class="fas fa-sync-alt"></i> Actualiser</button>
+                        <button id="fullscreen-btn" class="action-button">Agrandir le graphique</button>
                     </div>
                 </div>
                 <div id="tradingview-chart" class="chart-container"></div>
@@ -196,12 +194,12 @@
                 <section class="dashboard-card source-card">
                     <h3>Source des données</h3>
                     <p class="source-info">
-                        Les données de marché sont fournies par l'API OpenAI avec analyse en temps réel des tendances financières.
-                        Mise à jour toutes les minutes.
+                        Les données de marché sont extraites en temps réel via TradingView et enrichies par l'analyse OpenAI.
+                        <span class="data-highlight">Dernière synchronisation: <span class="sync-time">05/03/2025 15:17:00</span></span>
                     </p>
                     <div class="last-update">
                         <span>Dernière mise à jour:</span>
-                        <span class="update-time">05/03/2025 16:25:10</span>
+                        <span class="update-time">05/03/2025 15:17:00</span>
                     </div>
                     <div class="data-disclaimer">
                         Les données sont fournies à titre informatif uniquement et ne constituent pas un conseil en investissement.
