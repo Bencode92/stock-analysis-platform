@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentPrice = document.querySelector('.current-price');
     const priceChange = document.querySelector('.price-change');
     const stockInfoTitle = document.querySelector('.stock-info h2');
+    const exchangeElement = document.querySelector('.exchange');
     
     // Métriques
     const openPrice = document.getElementById('open-price');
@@ -22,6 +23,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentSymbol = 'AAPL'; // Par défaut on affiche Apple
     let currentTimeRange = '1W'; // Par défaut on affiche 1 semaine
     let tradingViewWidget = null;
+    let stockData = null; // Stockage des données actuelles pour l'action
     
     // Initialisation
     function init() {
@@ -70,6 +72,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 currentTimeRange = this.getAttribute('data-range');
                 updateTradingViewChart(currentSymbol, currentTimeRange);
+                
+                // Mettre à jour les performances pour refléter la période sélectionnée
+                if (stockData) {
+                    updatePerformanceBars(stockData);
+                }
             });
         });
     }
@@ -135,7 +142,7 @@ document.addEventListener('DOMContentLoaded', function() {
             */
             
             // Pour cette démo, nous utilisons des données simulées
-            const stockData = await getSimulatedStockData(symbol);
+            stockData = await getSimulatedStockData(symbol);
             
             // Mettre à jour l'interface utilisateur
             updateUI(stockData);
@@ -313,7 +320,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 monthChange: parseFloat((Math.random() * 15 - 5).toFixed(2)),
                 threeMonthChange: parseFloat((Math.random() * 25 - 10).toFixed(2)),
                 yearChange: parseFloat((Math.random() * 40 - 15).toFixed(2)),
-                exchange: 'NYSE'
+                exchange: getExchangePrefix(symbol)
             };
         }
     }
@@ -322,7 +329,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateUI(stockData) {
         // Mise à jour du titre et info de l'action
         stockInfoTitle.textContent = `${stockData.name} (${stockData.symbol})`;
-        document.querySelector('.exchange').textContent = stockData.exchange;
+        exchangeElement.textContent = stockData.exchange;
         
         // Mise à jour du logo (si possible)
         try {
@@ -346,19 +353,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const changeText = `${changeValue >= 0 ? '+' : ''}${stockData.change} (${changeValue >= 0 ? '+' : ''}${stockData.changePercent}%)`;
         priceChange.textContent = changeText;
         
-        if (changeValue >= 0) {
-            priceChange.classList.remove('negative');
-            priceChange.classList.add('positive');
-        } else {
-            priceChange.classList.remove('positive');
-            priceChange.classList.add('negative');
-        }
+        // Appliquer les classes CSS pour les couleurs
+        applyColorClasses(priceChange, changeValue);
         
-        // Mise à jour des métriques
-        if (openPrice) openPrice.textContent = `$${stockData.open}`;
-        if (prevClose) prevClose.textContent = `$${stockData.previousClose}`;
-        if (dayHigh) dayHigh.textContent = `$${stockData.dayHigh}`;
-        if (dayLow) dayLow.textContent = `$${stockData.dayLow}`;
+        // Mise à jour des métriques avec coloration
+        updateMetricWithColor(openPrice, stockData.open, parseFloat(stockData.open) - parseFloat(stockData.previousClose));
+        updateMetricWithColor(prevClose, stockData.previousClose);
+        updateMetricWithColor(dayHigh, stockData.dayHigh, parseFloat(stockData.dayHigh) - parseFloat(stockData.price));
+        updateMetricWithColor(dayLow, stockData.dayLow, parseFloat(stockData.dayLow) - parseFloat(stockData.price));
+        
+        // Métriques sans coloration
         if (volume) volume.textContent = stockData.volume;
         if (marketCap) marketCap.textContent = stockData.marketCap;
         if (peRatio) peRatio.textContent = stockData.peRatio;
@@ -366,6 +370,39 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Mise à jour des performances
         updatePerformanceBars(stockData);
+    }
+    
+    // Mettre à jour une métrique avec coloration
+    function updateMetricWithColor(element, value, changeValue = null) {
+        if (!element) return;
+        
+        // Formater avec le symbole $ si c'est un prix
+        if (typeof value === 'string' && !value.includes('%')) {
+            element.textContent = value.startsWith('$') ? value : `$${value}`;
+        } else {
+            element.textContent = value;
+        }
+        
+        // Si un changeValue est fourni, appliquer la coloration
+        if (changeValue !== null) {
+            applyColorClasses(element, changeValue);
+        } else {
+            // Supprimer les classes de coloration si aucun changement n'est spécifié
+            element.classList.remove('positive', 'negative');
+        }
+    }
+    
+    // Appliquer les classes CSS pour les couleurs
+    function applyColorClasses(element, value) {
+        if (value > 0) {
+            element.classList.remove('negative');
+            element.classList.add('positive');
+        } else if (value < 0) {
+            element.classList.remove('positive');
+            element.classList.add('negative');
+        } else {
+            element.classList.remove('positive', 'negative');
+        }
     }
     
     // Mettre à jour les barres de performance
@@ -394,14 +431,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (performanceValue && performanceBar) {
             performanceValue.textContent = `${changeValue >= 0 ? '+' : ''}${changeValue}%`;
             
+            applyColorClasses(performanceValue, changeValue);
+            
+            // Appliquer les bonnes classes à la barre
             if (changeValue >= 0) {
-                performanceValue.classList.remove('negative');
-                performanceValue.classList.add('positive');
                 performanceBar.classList.remove('negative');
                 performanceBar.classList.add('positive');
             } else {
-                performanceValue.classList.remove('positive');
-                performanceValue.classList.add('negative');
                 performanceBar.classList.remove('positive');
                 performanceBar.classList.add('negative');
             }
@@ -464,34 +500,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 "paneProperties.horzGridProperties.color": "#363c4e",
                 "symbolWatermarkProperties.transparency": 90,
                 "scalesProperties.textColor" : "#AAA"
-            },
-            // Événement de changement de symbole pour synchroniser avec notre app
-            "saved_data": {
-                "events": {
-                    "onSymbolChange": function(symbolData) {
-                        if (symbolData && symbolData.name) {
-                            // Extrait le symbole après les deux points si présent (NASDAQ:AAPL -> AAPL)
-                            const cleanSymbol = symbolData.name.includes(':') 
-                                ? symbolData.name.split(':')[1] 
-                                : symbolData.name;
-                            
-                            // Mettre à jour l'application avec le nouveau symbole
-                            if (cleanSymbol !== currentSymbol) {
-                                searchStock(cleanSymbol);
-                            }
-                        }
-                    }
-                }
             }
         });
+        
+        // Attendre que le widget soit chargé pour attacher des écouteurs d'événements
+        if (window.TradingView && tradingViewWidget) {
+            tradingViewWidget.onChartReady(() => {
+                // Attacher l'écouteur d'événements pour le changement de symbole
+                tradingViewWidget.chart().onSymbolChanged().subscribe(null, (symbolData) => {
+                    if (symbolData) {
+                        // Extraire le symbole sans préfixe d'échange
+                        const cleanSymbol = symbolData.name.includes(':') 
+                            ? symbolData.name.split(':')[1] 
+                            : symbolData.name;
+                        
+                        // Ne mettre à jour que si le symbole a réellement changé
+                        if (cleanSymbol !== currentSymbol) {
+                            searchStock(cleanSymbol);
+                        }
+                    }
+                });
+            });
+        }
     }
     
     // Mettre à jour le graphique TradingView avec le symbole et la plage de temps spécifiés
     function updateTradingViewChart(symbol, timeRange) {
         // Détruire et recréer le widget avec les nouveaux paramètres
-        if (tradingViewWidget) {
-            destroyTradingViewWidget();
-        }
+        destroyTradingViewWidget();
         
         // Construire la chaîne du symbole avec le bon préfixe de bourse
         const fullSymbol = `${getExchangePrefix(symbol)}:${symbol}`;
@@ -520,7 +556,6 @@ document.addEventListener('DOMContentLoaded', function() {
             "hide_top_toolbar": false,
             "hide_legend": false,
             "save_image": false,
-            // Important: Gérer le changement de symbole dans le widget TradingView
             "symbol_change": true,
             "symbol_search": true,
             "overrides": {
@@ -530,26 +565,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 "paneProperties.horzGridProperties.color": "#363c4e",
                 "symbolWatermarkProperties.transparency": 90,
                 "scalesProperties.textColor" : "#AAA"
-            },
-            // Événement de changement de symbole pour synchroniser avec notre app
-            "saved_data": {
-                "events": {
-                    "onSymbolChange": function(symbolData) {
-                        if (symbolData && symbolData.name) {
-                            // Extrait le symbole après les deux points si présent (NASDAQ:AAPL -> AAPL)
-                            const cleanSymbol = symbolData.name.includes(':') 
-                                ? symbolData.name.split(':')[1] 
-                                : symbolData.name;
-                            
-                            // Mettre à jour l'application avec le nouveau symbole
-                            if (cleanSymbol !== currentSymbol) {
-                                searchStock(cleanSymbol);
-                            }
-                        }
-                    }
-                }
             }
         });
+        
+        // Attendre que le widget soit chargé pour attacher des écouteurs d'événements
+        if (window.TradingView && tradingViewWidget) {
+            tradingViewWidget.onChartReady(() => {
+                // Attacher l'écouteur d'événements pour le changement de symbole
+                tradingViewWidget.chart().onSymbolChanged().subscribe(null, (symbolData) => {
+                    if (symbolData) {
+                        // Extraire le symbole sans préfixe d'échange
+                        const cleanSymbol = symbolData.name.includes(':') 
+                            ? symbolData.name.split(':')[1] 
+                            : symbolData.name;
+                        
+                        // Ne mettre à jour que si le symbole a réellement changé
+                        if (cleanSymbol !== currentSymbol) {
+                            searchStock(cleanSymbol);
+                        }
+                    }
+                });
+            });
+        }
         
         console.log(`Widget TradingView mis à jour pour ${fullSymbol}, intervalle: ${getIntervalFromTimeRange(timeRange)}`);
     }
