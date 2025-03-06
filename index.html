@@ -8,6 +8,8 @@
     <link rel="stylesheet" href="styles.css">
     <!-- TradingView Widget -->
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <!-- Chart.js pour les graphiques -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 </head>
 <body>
     <div class="app-container">
@@ -23,6 +25,7 @@
                     <li><a href="#chart"><i class="fas fa-chart-bar"></i> Graphiques</a></li>
                     <li><a href="#news"><i class="fas fa-newspaper"></i> Actualités</a></li>
                     <li><a href="#portfolio"><i class="fas fa-briefcase"></i> Portefeuille</a></li>
+                    <li><a href="#sectors"><i class="fas fa-industry"></i> Secteurs</a></li>
                     <li><a href="#settings"><i class="fas fa-cog"></i> Paramètres</a></li>
                 </ul>
             </nav>
@@ -102,11 +105,78 @@
                 </div>
             </section>
 
-            <!-- Recommended Portfolio Section -->
+            <!-- Sectors Analysis Section -->
+            <section id="sectors-analysis" class="sectors-section">
+                <h2><i class="fas fa-industry"></i> Analyse sectorielle basée sur l'actualité</h2>
+                <div class="sectors-container">
+                    <div class="bullish-sectors">
+                        <h3>Secteurs haussiers <i class="fas fa-arrow-up"></i></h3>
+                        <div class="sectors-list" id="bullishSectors">
+                            <!-- Filled dynamically -->
+                            <div class="sector-item">
+                                <div class="sector-name">Automobile & VE <i class="fas fa-arrow-up"></i></div>
+                                <div class="sector-reason">La décision de la Maison Blanche concernant le report des droits de douane a un impact positif direct sur les constructeurs automobiles, particulièrement ceux investis dans les véhicules électriques.</div>
+                            </div>
+                            <div class="sector-item">
+                                <div class="sector-name">Technologie <i class="fas fa-arrow-up"></i></div>
+                                <div class="sector-reason">Les résultats attendus de sociétés comme Broadcom et le développement continu de l'IA poussent le secteur vers le haut, malgré les tensions sino-américaines.</div>
+                            </div>
+                            <div class="sector-item">
+                                <div class="sector-name">Énergie renouvelable <i class="fas fa-arrow-up"></i></div>
+                                <div class="sector-reason">Les initiatives de transition énergétique continuent de favoriser les entreprises du secteur, particulièrement dans le contexte des tensions géopolitiques actuelles.</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bearish-sectors">
+                        <h3>Secteurs baissiers <i class="fas fa-arrow-down"></i></h3>
+                        <div class="sectors-list" id="bearishSectors">
+                            <!-- Filled dynamically -->
+                            <div class="sector-item">
+                                <div class="sector-name">Obligations <i class="fas fa-arrow-down"></i></div>
+                                <div class="sector-reason">La hausse historique des rendements obligataires européens indique une pression à la baisse sur les prix des obligations, impactant les détenteurs d'obligations à long terme.</div>
+                            </div>
+                            <div class="sector-item">
+                                <div class="sector-name">Immobilier <i class="fas fa-arrow-down"></i></div>
+                                <div class="sector-reason">La hausse des taux d'intérêt et l'incertitude concernant les décisions de la BCE exercent une pression sur le secteur immobilier, particulièrement sensible aux variations de taux.</div>
+                            </div>
+                            <div class="sector-item">
+                                <div class="sector-name">Importateurs chinois <i class="fas fa-arrow-down"></i></div>
+                                <div class="sector-reason">Les tensions commerciales croissantes entre les États-Unis et la Chine menacent les entreprises fortement dépendantes des importations chinoises, créant de l'incertitude pour leurs modèles d'approvisionnement.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Recommended Portfolio Section with visualization -->
             <section id="recommended-portfolio" class="portfolio-section">
                 <h2><i class="fas fa-briefcase"></i> Portefeuille recommandé du jour</h2>
                 <div class="portfolio-description">
-                    <p>En fonction des actualités financières du jour, voici notre sélection de titres qui pourraient bien performer dans le contexte actuel.</p>
+                    <p>En fonction des actualités financières du jour et de l'analyse sectorielle, voici notre allocation d'actifs optimale qui combine actions, ETF et crypto-monnaies pour profiter des tendances actuelles.</p>
+                </div>
+                <div class="portfolio-container">
+                    <div class="portfolio-chart">
+                        <div class="portfolio-pie-chart">
+                            <div class="pie-chart-container">
+                                <canvas id="portfolioChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="portfolio-table-container">
+                        <table class="portfolio-table">
+                            <thead>
+                                <tr>
+                                    <th>Actif</th>
+                                    <th>Type</th>
+                                    <th>Allocation</th>
+                                    <th>Raison</th>
+                                </tr>
+                            </thead>
+                            <tbody id="portfolioTableBody">
+                                <!-- Filled dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
                 <div class="portfolio-grid">
                     <div class="stock-recommendation-card" data-symbol="GOOGL">
@@ -303,7 +373,7 @@
             <!-- Data Source Credit -->
             <section class="data-source-section">
                 <div class="source-info">
-                    <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel. Actualités fournies par Perplexity AI.</p>
+                    <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel. Actualités et analyses sectorielles fournies par Perplexity AI.</p>
                     <div class="last-update">
                         <span>Dernière mise à jour:</span>
                         <span class="update-time">06/03/2025 16:25:10</span>
@@ -317,7 +387,6 @@
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/3.9.1/chart.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
