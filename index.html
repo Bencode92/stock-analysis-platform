@@ -11,244 +11,307 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h1><i class="fas fa-chart-line"></i> StockPro</h1>
+        <!-- Header avec logo et recherche -->
+        <header class="main-header">
+            <div class="logo">
+                <i class="fas fa-chart-line"></i> 
+                <span>StockPro</span>
             </div>
-            <nav class="sidebar-nav">
-                <ul>
-                    <li class="active"><a href="#"><i class="fas fa-home"></i> Accueil</a></li>
-                    <li><a href="#"><i class="fas fa-chart-bar"></i> Tableaux de bord</a></li>
-                    <li><a href="#"><i class="fas fa-list"></i> Watchlist</a></li>
-                    <li><a href="#"><i class="fas fa-newspaper"></i> Actualités</a></li>
-                    <li><a href="#"><i class="fas fa-bell"></i> Alertes</a></li>
-                    <li><a href="#"><i class="fas fa-cog"></i> Paramètres</a></li>
-                </ul>
-            </nav>
-            <div class="sidebar-footer">
-                <p>© 2025 StockPro</p>
+            <div class="search-container">
+                <input type="text" id="stockSearch" placeholder="Rechercher une action..." value="AAPL">
+                <button id="searchBtn"><i class="fas fa-search"></i></button>
             </div>
-        </aside>
+            <div class="market-status">
+                <div class="market-indicator green"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time" id="current-time">--:--:--</span>
+            </div>
+        </header>
 
-        <!-- Main Content -->
-        <main class="main-content">
-            <header class="main-header">
-                <div class="search-container">
-                    <input type="text" id="stockSearch" placeholder="Rechercher une action..." value="AAPL">
-                    <button id="searchBtn"><i class="fas fa-search"></i></button>
-                </div>
-                <div class="market-status">
-                    <div class="market-indicator green"></div>
-                    <span>Marché ouvert</span>
-                    <span class="market-time" id="current-time">--:--:--</span>
-                </div>
-            </header>
+        <!-- Section principale -->
+        <main class="main-section">
+            <!-- Tableaux des actifs -->
+            <div class="assets-table-container">
+                <h3>Actifs populaires</h3>
+                <table class="assets-table">
+                    <thead>
+                        <tr>
+                            <th>Symbole</th>
+                            <th>Prix</th>
+                            <th>Variation 24h</th>
+                            <th>Marché</th>
+                        </tr>
+                    </thead>
+                    <tbody id="assets-list">
+                        <!-- Cette partie sera remplie dynamiquement par JavaScript -->
+                    </tbody>
+                </table>
+            </div>
 
-            <!-- Stock Header -->
-            <section class="stock-header">
-                <div class="stock-info">
-                    <img src="https://logo.clearbit.com/apple.com" alt="Apple logo" class="company-logo">
-                    <div>
-                        <h2>Apple Inc. (AAPL)</h2>
-                        <span class="exchange">NASDAQ</span>
+            <!-- Graphique et infos -->
+            <div class="chart-and-info">
+                <!-- En-tête d'action avec logo et prix -->
+                <div class="stock-header">
+                    <div class="stock-info">
+                        <img src="https://logo.clearbit.com/apple.com" alt="Apple logo" class="company-logo">
+                        <div>
+                            <h2>Apple Inc. (AAPL)</h2>
+                            <span class="exchange">NASDAQ</span>
+                        </div>
                     </div>
-                </div>
-                <div class="stock-price">
-                    <div class="current-price">$189.97</div>
-                    <div class="price-change positive">+1.52 (+0.81%)</div>
-                </div>
-            </section>
-
-            <!-- Main Info Display -->
-            <section class="main-info-display">
-                <div class="chart-header">
-                    <div class="time-selector">
-                        <button class="time-btn" data-range="1D">1J</button>
-                        <button class="time-btn active" data-range="1W">1S</button>
-                        <button class="time-btn" data-range="1M">1M</button>
-                        <button class="time-btn" data-range="3M">3M</button>
-                        <button class="time-btn" data-range="1Y">1A</button>
-                        <button class="time-btn" data-range="ALL">MAX</button>
-                    </div>
-                    <div class="chart-controls">
-                        <button class="control-btn"><i class="fas fa-draw-polygon"></i></button>
-                        <button class="control-btn"><i class="fas fa-ruler"></i></button>
-                        <button class="control-btn"><i class="fas fa-crosshairs"></i></button>
-                        <button id="fullscreen-btn" class="fullscreen-button">Agrandir le graphique</button>
+                    <div class="stock-price">
+                        <div class="current-price">$189.97</div>
+                        <div class="price-change positive">+1.52 (+0.81%)</div>
                     </div>
                 </div>
-                <div id="tradingview-chart" class="chart-container"></div>
-            </section>
 
-            <!-- AI Analysis Section -->
-            <section class="ai-analysis-section">
-                <div class="ai-analysis-header">
-                    <h3>Analyse Intelligence Artificielle</h3>
-                    <button id="refresh-analysis" class="refresh-button">
-                        <i class="fas fa-sync-alt"></i> Actualiser
-                    </button>
+                <!-- Graphique avec contrôles -->
+                <div class="chart-container-wrapper">
+                    <div class="chart-controls-header">
+                        <div class="time-selector">
+                            <button class="time-btn" data-range="1D">1J</button>
+                            <button class="time-btn active" data-range="1W">1S</button>
+                            <button class="time-btn" data-range="1M">1M</button>
+                            <button class="time-btn" data-range="3M">3M</button>
+                            <button class="time-btn" data-range="1Y">1A</button>
+                            <button class="time-btn" data-range="ALL">MAX</button>
+                        </div>
+                        <div class="chart-options">
+                            <button class="option-btn"><i class="fas fa-ruler"></i></button>
+                            <button class="option-btn"><i class="fas fa-crosshairs"></i></button>
+                            <button id="fullscreen-btn" class="fullscreen-button">Plein écran</button>
+                        </div>
+                    </div>
+                    <div id="tradingview-chart" class="chart-container"></div>
                 </div>
-                <div class="ai-tabs">
-                    <button class="ai-tab-btn active" data-tab="openai">OpenAI</button>
-                    <button class="ai-tab-btn" data-tab="perplexity">Perplexity</button>
+
+                <!-- Onglets d'information -->
+                <div class="info-tabs">
+                    <div class="tabs-header">
+                        <button class="tab-btn active" data-tab="overview">Aperçu</button>
+                        <button class="tab-btn" data-tab="metrics">Métriques</button>
+                        <button class="tab-btn" data-tab="ai-analysis">Analyse IA</button>
+                        <button class="tab-btn" data-tab="news">Actualités</button>
+                    </div>
+
+                    <!-- Contenu des onglets -->
+                    <div class="tab-content-container">
+                        <!-- Onglet Aperçu -->
+                        <div id="overview" class="tab-content active">
+                            <div class="overview-grid">
+                                <div class="overview-item">
+                                    <span class="overview-label">Ouverture</span>
+                                    <span class="overview-value" id="open-price">$188.45</span>
+                                </div>
+                                <div class="overview-item">
+                                    <span class="overview-label">Clôture préc.</span>
+                                    <span class="overview-value" id="prev-close">$188.45</span>
+                                </div>
+                                <div class="overview-item">
+                                    <span class="overview-label">Plus haut</span>
+                                    <span class="overview-value" id="day-high">$190.23</span>
+                                </div>
+                                <div class="overview-item">
+                                    <span class="overview-label">Plus bas</span>
+                                    <span class="overview-value" id="day-low">$187.68</span>
+                                </div>
+                                <div class="overview-item">
+                                    <span class="overview-label">Volume</span>
+                                    <span class="overview-value" id="volume">42.8M</span>
+                                </div>
+                                <div class="overview-item">
+                                    <span class="overview-label">Cap. boursière</span>
+                                    <span class="overview-value" id="market-cap">2.95T</span>
+                                </div>
+                                <div class="overview-item">
+                                    <span class="overview-label">P/E</span>
+                                    <span class="overview-value" id="pe-ratio">31.2</span>
+                                </div>
+                                <div class="overview-item">
+                                    <span class="overview-label">Dividende</span>
+                                    <span class="overview-value" id="dividend">0.51%</span>
+                                </div>
+                            </div>
+
+                            <!-- Performances -->
+                            <div class="performance-section">
+                                <h3>Performance</h3>
+                                <div class="performance-grid">
+                                    <div class="performance-item day-performance">
+                                        <span class="period">1 jour</span>
+                                        <div class="performance-bar-container">
+                                            <div class="performance-bar positive" style="width: 81%"></div>
+                                        </div>
+                                        <span class="performance-value positive">+0.81%</span>
+                                    </div>
+                                    <div class="performance-item week-performance">
+                                        <span class="period">1 semaine</span>
+                                        <div class="performance-bar-container">
+                                            <div class="performance-bar positive" style="width: 65%"></div>
+                                        </div>
+                                        <span class="performance-value positive">+2.45%</span>
+                                    </div>
+                                    <div class="performance-item month-performance">
+                                        <span class="period">1 mois</span>
+                                        <div class="performance-bar-container">
+                                            <div class="performance-bar positive" style="width: 70%"></div>
+                                        </div>
+                                        <span class="performance-value positive">+5.32%</span>
+                                    </div>
+                                    <div class="performance-item three-months-performance">
+                                        <span class="period">3 mois</span>
+                                        <div class="performance-bar-container">
+                                            <div class="performance-bar positive" style="width: 85%"></div>
+                                        </div>
+                                        <span class="performance-value positive">+12.78%</span>
+                                    </div>
+                                    <div class="performance-item year-performance">
+                                        <span class="period">1 an</span>
+                                        <div class="performance-bar-container">
+                                            <div class="performance-bar positive" style="width: 93%"></div>
+                                        </div>
+                                        <span class="performance-value positive">+18.45%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Onglet Métriques -->
+                        <div id="metrics" class="tab-content">
+                            <div class="metrics-grid">
+                                <div class="metric-card">
+                                    <h4>Valorisation</h4>
+                                    <div class="metric-item">
+                                        <span class="metric-label">P/E</span>
+                                        <span class="metric-value">31.2</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">P/S</span>
+                                        <span class="metric-value">7.5</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">P/B</span>
+                                        <span class="metric-value">35.8</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">EV/EBITDA</span>
+                                        <span class="metric-value">22.4</span>
+                                    </div>
+                                </div>
+                                <div class="metric-card">
+                                    <h4>Financier</h4>
+                                    <div class="metric-item">
+                                        <span class="metric-label">Marge brute</span>
+                                        <span class="metric-value">43.2%</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">Marge d'exploitation</span>
+                                        <span class="metric-value">30.1%</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">ROE</span>
+                                        <span class="metric-value">125.8%</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">ROA</span>
+                                        <span class="metric-value">20.4%</span>
+                                    </div>
+                                </div>
+                                <div class="metric-card">
+                                    <h4>Croissance</h4>
+                                    <div class="metric-item">
+                                        <span class="metric-label">Revenu (YoY)</span>
+                                        <span class="metric-value">5.8%</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">Bénéfice (YoY)</span>
+                                        <span class="metric-value">8.1%</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">Cash-flow libre (YoY)</span>
+                                        <span class="metric-value">12.4%</span>
+                                    </div>
+                                </div>
+                                <div class="metric-card">
+                                    <h4>Dividende</h4>
+                                    <div class="metric-item">
+                                        <span class="metric-label">Rendement</span>
+                                        <span class="metric-value">0.51%</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">Ratio de distribution</span>
+                                        <span class="metric-value">15.2%</span>
+                                    </div>
+                                    <div class="metric-item">
+                                        <span class="metric-label">Croissance 5 ans</span>
+                                        <span class="metric-value">7.3%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Onglet Analyse IA -->
+                        <div id="ai-analysis" class="tab-content">
+                            <div class="ai-header">
+                                <div class="ai-source-tabs">
+                                    <button class="ai-tab-btn active" data-ai="openai">OpenAI</button>
+                                    <button class="ai-tab-btn" data-ai="perplexity">Perplexity</button>
+                                </div>
+                                <button id="refresh-analysis" class="refresh-button">
+                                    <i class="fas fa-sync-alt"></i> Actualiser
+                                </button>
+                            </div>
+                            <div id="ai-analysis-content" class="ai-content">
+                                <div class="ai-status">
+                                    <div class="ai-loader">
+                                        <div class="spinner"></div>
+                                    </div>
+                                    <div class="ai-message">Analyse en cours...</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Onglet Actualités -->
+                        <div id="news" class="tab-content">
+                            <div class="news-list" id="news-container">
+                                <article class="news-item">
+                                    <div class="news-meta">
+                                        <span class="news-source">Bloomberg</span>
+                                        <span class="news-time">Il y a 32 minutes</span>
+                                    </div>
+                                    <h4 class="news-title">Apple annonce un nouveau MacBook Pro avec une puce avancée</h4>
+                                </article>
+                                <article class="news-item">
+                                    <div class="news-meta">
+                                        <span class="news-source">CNBC</span>
+                                        <span class="news-time">Il y a 1 heure</span>
+                                    </div>
+                                    <h4 class="news-title">Les actions d'Apple montent suite à des prévisions positives sur les ventes d'iPhone</h4>
+                                </article>
+                                <article class="news-item">
+                                    <div class="news-meta">
+                                        <span class="news-source">Financial Times</span>
+                                        <span class="news-time">Il y a 3 heures</span>
+                                    </div>
+                                    <h4 class="news-title">Apple continue de renforcer ses investissements dans l'IA</h4>
+                                </article>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="ai-content" id="ai-analysis-content">
-                    <div id="openai-tab" class="ai-tab-content active">
-                        <div class="ai-status">
-                            <div class="ai-loader">
-                                <div class="spinner"></div>
-                            </div>
-                            <div class="ai-message">Analyse en cours...</div>
-                        </div>
-                        <div class="ai-result">
-                            <div class="ai-summary"></div>
-                            <div class="ai-details"></div>
-                        </div>
-                    </div>
-                    <div id="perplexity-tab" class="ai-tab-content">
-                        <div class="ai-status">
-                            <div class="ai-loader">
-                                <div class="spinner"></div>
-                            </div>
-                            <div class="ai-message">Analyse en cours...</div>
-                        </div>
-                        <div class="ai-result">
-                            <div class="ai-summary"></div>
-                            <div class="ai-details"></div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Dashboard Grid -->
-            <div class="dashboard-grid">
-                <!-- Key Metrics -->
-                <section class="dashboard-card metrics-card">
-                    <h3>Métriques clés</h3>
-                    <div class="metrics-grid">
-                        <div class="metric">
-                            <span class="metric-label">Ouverture</span>
-                            <span class="metric-value" id="open-price">$188.45</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Clôture préc.</span>
-                            <span class="metric-value" id="prev-close">$188.45</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Plus haut</span>
-                            <span class="metric-value" id="day-high">$190.23</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Plus bas</span>
-                            <span class="metric-value" id="day-low">$187.68</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Volume</span>
-                            <span class="metric-value" id="volume">42.8M</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Cap. boursière</span>
-                            <span class="metric-value" id="market-cap">2.95T</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">P/E</span>
-                            <span class="metric-value" id="pe-ratio">31.2</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Dividende</span>
-                            <span class="metric-value" id="dividend">0.51%</span>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Period Performance -->
-                <section class="dashboard-card performance-card">
-                    <h3>Performance</h3>
-                    <div class="performance-grid">
-                        <div class="performance-item day-performance">
-                            <span class="period">1 jour</span>
-                            <div class="performance-bar-container">
-                                <div class="performance-bar positive" style="width: 81%"></div>
-                            </div>
-                            <span class="performance-value positive">+0.81%</span>
-                        </div>
-                        <div class="performance-item week-performance">
-                            <span class="period">1 semaine</span>
-                            <div class="performance-bar-container">
-                                <div class="performance-bar positive" style="width: 65%"></div>
-                            </div>
-                            <span class="performance-value positive">+2.45%</span>
-                        </div>
-                        <div class="performance-item month-performance">
-                            <span class="period">1 mois</span>
-                            <div class="performance-bar-container">
-                                <div class="performance-bar positive" style="width: 70%"></div>
-                            </div>
-                            <span class="performance-value positive">+5.32%</span>
-                        </div>
-                        <div class="performance-item three-months-performance">
-                            <span class="period">3 mois</span>
-                            <div class="performance-bar-container">
-                                <div class="performance-bar positive" style="width: 85%"></div>
-                            </div>
-                            <span class="performance-value positive">+12.78%</span>
-                        </div>
-                        <div class="performance-item year-performance">
-                            <span class="period">1 an</span>
-                            <div class="performance-bar-container">
-                                <div class="performance-bar positive" style="width: 93%"></div>
-                            </div>
-                            <span class="performance-value positive">+18.45%</span>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Real-time News -->
-                <section class="dashboard-card news-card">
-                    <h3>Actualités récentes</h3>
-                    <div class="news-list" id="news-container">
-                        <article class="news-item">
-                            <div class="news-meta">
-                                <span class="news-source">Bloomberg</span>
-                                <span class="news-time">Il y a 32 minutes</span>
-                            </div>
-                            <h4 class="news-title">Apple annonce un nouveau MacBook Pro avec une puce avancée</h4>
-                        </article>
-                        <article class="news-item">
-                            <div class="news-meta">
-                                <span class="news-source">CNBC</span>
-                                <span class="news-time">Il y a 1 heure</span>
-                            </div>
-                            <h4 class="news-title">Les actions d'Apple montent suite à des prévisions positives sur les ventes d'iPhone</h4>
-                        </article>
-                        <article class="news-item">
-                            <div class="news-meta">
-                                <span class="news-source">Financial Times</span>
-                                <span class="news-time">Il y a 3 heures</span>
-                            </div>
-                            <h4 class="news-title">Apple continue de renforcer ses investissements dans l'IA</h4>
-                        </article>
-                    </div>
-                </section>
-
-                <!-- Data Source Credit -->
-                <section class="dashboard-card source-card">
-                    <h3>Source des données</h3>
-                    <p class="source-info">
-                        Les données de marché sont fournies par TradingView. Les analyses sont générées par OpenAI et Perplexity.
-                        Mise à jour toutes les minutes.
-                    </p>
-                    <div class="last-update">
-                        <span>Dernière mise à jour:</span>
-                        <span class="update-time" id="update-time">--:--:--</span>
-                    </div>
-                    <div class="data-disclaimer">
-                        Les données sont fournies à titre informatif uniquement et ne constituent pas un conseil en investissement.
-                    </div>
-                </section>
             </div>
         </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <div class="data-source">
+                <span>Données fournies par TradingView. Analyses générées par OpenAI et Perplexity.</span>
+                <span>Dernière mise à jour: <span id="update-time">--:--:--</span></span>
+            </div>
+            <div class="disclaimer">
+                Les données sont fournies à titre informatif uniquement et ne constituent pas un conseil en investissement.
+            </div>
+        </footer>
     </div>
 
     <!-- Scripts -->
