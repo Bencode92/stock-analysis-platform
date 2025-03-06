@@ -401,8 +401,16 @@ p {
 
 .impact-level {
     height: 100%;
-    background-color: var(--primary-color);
     border-radius: 2px;
+}
+
+/* Couleurs des barres d'impact selon le sentiment */
+.impact-level.positive {
+    background-color: var(--gain-color);
+}
+
+.impact-level.negative {
+    background-color: var(--loss-color);
 }
 
 /* Sectors Section */
