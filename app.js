@@ -139,17 +139,17 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             // Dans une implémentation réelle, vous appelleriez ici les API Perplexity
             // Pour cette démonstration, nous utilisons des données simulées
-            const [newsResponse, sectorsResponse, portfolioResponse] = await Promise.all([
-                simulatePerplexityNewsAPI(),
-                simulatePerplexitySectorsAPI(),
-                simulatePerplexityPortfolioAPI()
-            ]);
+            const newsResponse = await simulatePerplexityNewsAPI();
             
             // Filtrer pour ne garder que les actualités les plus importantes
             newsData = filterImportantNews(newsResponse.news);
             
-            // Enregistrer les données sectorielles et de portefeuille
+            // Obtenir les analyses sectorielles basées sur les actualités
+            const sectorsResponse = await simulatePerplexitySectorsAPI();
             sectorData = sectorsResponse;
+            
+            // Obtenir un portefeuille optimisé via OpenAI basé sur les actualités
+            const portfolioResponse = await generatePortfolioWithOpenAI(newsData, sectorData);
             portfolioData = portfolioResponse;
             
             // Mettre à jour l'affichage des trois sections ensemble
@@ -170,6 +170,105 @@ document.addEventListener('DOMContentLoaded', function() {
             displayErrorState();
             
             // Propager l'erreur pour que les gestionnaires de promesses puissent la capturer
+            throw error;
+        }
+    }
+
+    // Générer un portefeuille optimisé avec OpenAI basé sur les actualités et les secteurs
+    async function generatePortfolioWithOpenAI(newsData, sectorData) {
+        try {
+            // Préparer les données à envoyer à OpenAI
+            const prompt = prepareOpenAIPrompt(newsData, sectorData);
+            
+            // Appeler l'API OpenAI
+            const response = await chat_with_openai({
+                content: prompt
+            });
+            
+            // Analyser la réponse d'OpenAI pour extraire le portefeuille recommandé
+            const portfolio = parseOpenAIResponse(response);
+            
+            console.log("Portfolio optimisé généré avec OpenAI:", portfolio);
+            
+            return portfolio;
+            
+        } catch (error) {
+            console.error("Erreur lors de la génération du portefeuille avec OpenAI:", error);
+            // En cas d'erreur, utiliser des données de simulation
+            return simulatePerplexityPortfolioAPI();
+        }
+    }
+    
+    // Préparer le prompt pour OpenAI
+    function prepareOpenAIPrompt(newsData, sectorData) {
+        // Extraire les informations pertinentes des actualités
+        const newsContext = newsData.map(news => 
+            `Titre: ${news.title}\nSource: ${news.source}\nRésumé: ${news.summary}\nImpact: ${news.impact}/50\nSentiment: ${news.sentiment}`
+        ).join('\n\n');
+        
+        // Extraire les informations des secteurs
+        const bullishSectors = sectorData.bullish.map(sector => 
+            `${sector.name}: ${sector.reason}`
+        ).join('\n');
+        
+        const bearishSectors = sectorData.bearish.map(sector => 
+            `${sector.name}: ${sector.reason}`
+        ).join('\n');
+        
+        // Construire le prompt complet
+        return `Tu es un expert en marchés financiers. À partir des actualités et analyses sectorielles suivantes, génère un portefeuille d'investissement optimisé.
+
+ACTUALITÉS RÉCENTES:
+${newsContext}
+
+SECTEURS HAUSSIERS:
+${bullishSectors}
+
+SECTEURS BAISSIERS:
+${bearishSectors}
+
+Génère un portefeuille diversifié avec les caractéristiques suivantes:
+1. 3 actions (type: stock) - allocation totale ~45%
+2. 3 ETF (type: etf) - allocation totale ~30%
+3. 2 crypto-monnaies (type: crypto) - allocation totale ~25%
+4. Pour chaque actif, fournis: nom, symbole, allocation (%) et justification
+
+Réponds uniquement au format JSON comme ci-dessous:
+[
+  {
+    "name": "Nom de l'entreprise/ETF/Crypto",
+    "symbol": "SYMB",
+    "type": "stock/etf/crypto",
+    "allocation": XX,
+    "reason": "Justification concise de l'inclusion"
+  },
+  ...
+]`;
+    }
+    
+    // Analyser la réponse d'OpenAI pour extraire le portefeuille recommandé
+    function parseOpenAIResponse(response) {
+        try {
+            // Tenter d'extraire le JSON de la réponse
+            const jsonMatch = response.match(/\[\s*\{.*\}\s*\]/s);
+            
+            if (jsonMatch) {
+                const jsonStr = jsonMatch[0];
+                return JSON.parse(jsonStr);
+            }
+            
+            // Si aucun JSON n'est trouvé, essayer de chercher un tableau
+            const arrayMatch = response.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            if (arrayMatch) {
+                return JSON.parse(arrayMatch[0]);
+            }
+            
+            // Si l'analyse échoue, retourner null
+            console.error("Impossible d'extraire un JSON valide de la réponse d'OpenAI");
+            throw new Error("Format de réponse invalide");
+            
+        } catch (error) {
+            console.error("Erreur lors de l'analyse de la réponse d'OpenAI:", error);
             throw error;
         }
     }
@@ -211,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <tr>
                     <td colspan="4" class="portfolio-loading">
                         <div class="spinner"></div>
-                        <p>Génération du portefeuille optimisé...</p>
+                        <p>Génération du portefeuille optimisé avec OpenAI...</p>
                     </td>
                 </tr>
             `;
@@ -340,9 +439,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         <h3>${topNews.title}</h3>
                         <p>${topNews.summary}</p>
                         <div class="news-impact">
-                            <span class="impact-label">Impact:</span>
+                            <span class="impact-label">Impact: ${topNews.sentiment === 'positive' ? 'Positif' : 'Négatif'}</span>
                             <div class="impact-meter">
-                                <div class="impact-level" style="width: ${(topNews.impact / 50) * 100}%"></div>
+                                <div class="impact-level ${topNews.sentiment === 'positive' ? 'positive' : 'negative'}" style="width: ${(topNews.impact / 50) * 100}%"></div>
                             </div>
                         </div>
                     </div>
@@ -362,9 +461,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         <h3>${news.title}</h3>
                         <p>${news.summary}</p>
                         <div class="news-impact">
-                            <span class="impact-label">Impact:</span>
+                            <span class="impact-label">Impact: ${news.sentiment === 'positive' ? 'Positif' : 'Négatif'}</span>
                             <div class="impact-meter">
-                                <div class="impact-level" style="width: ${(news.impact / 50) * 100}%"></div>
+                                <div class="impact-level ${news.sentiment === 'positive' ? 'positive' : 'negative'}" style="width: ${(news.impact / 50) * 100}%"></div>
                             </div>
                         </div>
                     </div>
@@ -524,56 +623,64 @@ document.addEventListener('DOMContentLoaded', function() {
                             source: "Financial Times",
                             summary: "La Banque Centrale Européenne a décidé de maintenir ses taux d'intérêt inchangés lors de sa réunion de politique monétaire d'aujourd'hui, malgré les signaux de ralentissement de l'économie européenne.",
                             timestamp: getRandomTime(2),
-                            impact: 45
+                            impact: 45,
+                            sentiment: "negative"
                         },
                         {
                             title: "Les actions américaines en baisse suite aux inquiétudes sur l'inflation",
                             source: "CNBC",
                             summary: "Wall Street enregistre une baisse après la publication des derniers chiffres de l'inflation, supérieurs aux attentes des analystes, ravivant les craintes d'un maintien prolongé des taux élevés.",
                             timestamp: getRandomTime(4),
-                            impact: 40
+                            impact: 40,
+                            sentiment: "negative"
                         },
                         {
                             title: "Nvidia établit un nouveau record historique porté par l'IA",
                             source: "Bloomberg",
                             summary: "Le titre Nvidia a atteint un nouveau sommet aujourd'hui, porté par des prévisions optimistes sur la demande de puces pour l'intelligence artificielle et des partenariats stratégiques annoncés avec les géants de la tech.",
                             timestamp: getRandomTime(1),
-                            impact: 38
+                            impact: 38,
+                            sentiment: "positive"
                         },
                         {
                             title: "Le pétrole chute suite aux tensions au Moyen-Orient",
                             source: "Reuters",
                             summary: "Les cours du pétrole brut ont chuté de plus de 3% aujourd'hui malgré les tensions géopolitiques au Moyen-Orient, en raison des inquiétudes concernant la demande mondiale.",
                             timestamp: getRandomTime(5),
-                            impact: 35
+                            impact: 35,
+                            sentiment: "negative"
                         },
                         {
                             title: "Amazon dévoile sa nouvelle stratégie logistique pour réduire les délais de livraison",
                             source: "Wall Street Journal",
                             summary: "Le géant du e-commerce annonce un investissement massif dans l'automatisation de ses centres de distribution, visant à réduire significativement ses délais de livraison sur l'ensemble du territoire européen.",
                             timestamp: getRandomTime(8),
-                            impact: 30
+                            impact: 30,
+                            sentiment: "positive"
                         },
                         {
                             title: "Les crypto-monnaies rebondissent après les commentaires de la SEC",
                             source: "CoinDesk",
                             summary: "Bitcoin et Ethereum ont enregistré une hausse significative suite aux déclarations du président de la SEC suggérant un assouplissement potentiel de la réglementation sur les actifs numériques.",
                             timestamp: getRandomTime(3),
-                            impact: 28
+                            impact: 28,
+                            sentiment: "positive"
                         },
                         {
                             title: "L'or atteint un nouveau sommet historique",
                             source: "Bloomberg",
                             summary: "Le métal précieux a franchi la barre des 2 300 dollars l'once, un niveau jamais atteint, porté par les incertitudes économiques mondiales et la baisse des rendements obligataires.",
                             timestamp: getRandomTime(6),
-                            impact: 25
+                            impact: 25,
+                            sentiment: "positive"
                         },
                         {
                             title: "La Chine annonce de nouvelles mesures de relance économique",
                             source: "South China Morning Post",
                             summary: "Le gouvernement chinois a dévoilé un plan de relance économique comprenant des réductions d'impôts et des investissements dans les infrastructures pour atteindre son objectif de croissance annuelle.",
                             timestamp: getRandomTime(10),
-                            impact: 22
+                            impact: 22,
+                            sentiment: "positive"
                         }
                     ]
                 });
