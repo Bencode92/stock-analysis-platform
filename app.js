@@ -131,45 +131,60 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 3000);
     }
     
-    // Récupérer toutes les données Perplexity (actualités, secteurs et portefeuille)
+    // Récupérer toutes les données (actualités, secteurs, instruments financiers et portefeuille)
     async function fetchAllPerplexityData() {
         // Afficher des indicateurs de chargement dans toutes les sections
         displayLoadingState();
         
         try {
-            // Récupérer les actualités depuis Perplexity
+            // Étape 1: Récupérer les actualités depuis Perplexity
             const newsResponse = await simulatePerplexityNewsAPI();
             
             // Filtrer pour ne garder que les actualités les plus importantes
             newsData = filterImportantNews(newsResponse.news);
             
-            // Obtenir les analyses sectorielles basées sur les actualités
+            // Mettre à jour l'affichage des actualités
+            updateNewsDisplay(newsData);
+            
+            // Étape 2: Obtenir les analyses sectorielles basées sur les actualités
             const sectorsResponse = await simulatePerplexitySectorsAPI();
             sectorData = sectorsResponse;
             
-            // Mettre à jour l'affichage des actualités et secteurs
-            updateNewsDisplay(newsData);
+            // Mettre à jour l'affichage des secteurs
             updateSectorsDisplay(sectorData);
             
-            // Générer un portefeuille optimisé avec OpenAI basé sur les actualités actuelles
-            // C'est là que nous utilisons vraiment OpenAI pour obtenir un portefeuille dynamique
+            // Étape 3: Obtenir les instruments financiers recommandés par Perplexity
+            const financialInstruments = await getFinancialInstrumentsFromPerplexity(newsData);
+            
+            // Étape 4: Générer un portefeuille optimisé avec OpenAI
             try {
-                // Nous appelons directement OpenAI ici avec les actualités les plus récentes
-                const openAIPortfolio = await generatePortfolioWithOpenAI(newsData, sectorData);
-                portfolioData = openAIPortfolio;
+                // Log pour s'assurer que nous entrons dans cette fonction
+                console.log("Tentative de génération de portefeuille avec OpenAI...");
                 
-                // Mettre à jour l'affichage avec le portefeuille généré par OpenAI
-                console.log("Portefeuille généré par OpenAI:", portfolioData);
-                updatePortfolioDisplay(portfolioData);
+                // Nous envoyons à OpenAI les actualités, secteurs et instruments financiers
+                const openAIPortfolio = await generatePortfolioWithOpenAI(newsData, sectorData, financialInstruments);
                 
-                // Afficher un tag indiquant que c'est généré par OpenAI
-                const portfolioTitle = document.querySelector('.portfolio-section h2');
-                if (portfolioTitle) {
-                    portfolioTitle.innerHTML = '<i class="fas fa-briefcase"></i> Portefeuille généré par OpenAI (Temps réel)';
+                // Log de la réponse pour débogage
+                console.log("Portefeuille généré par OpenAI:", openAIPortfolio);
+                
+                if (openAIPortfolio && openAIPortfolio.length > 0) {
+                    // Si nous avons un portefeuille valide
+                    portfolioData = openAIPortfolio;
+                    
+                    // Mettre à jour l'affichage avec le portefeuille généré par OpenAI
+                    updatePortfolioDisplay(portfolioData);
+                    
+                    // Afficher un tag indiquant que c'est généré par OpenAI
+                    const portfolioTitle = document.querySelector('.portfolio-section h2');
+                    if (portfolioTitle) {
+                        portfolioTitle.innerHTML = '<i class="fas fa-briefcase"></i> Portefeuille généré par OpenAI (Temps réel)';
+                    }
+                } else {
+                    throw new Error("Réponse OpenAI non valide");
                 }
                 
             } catch (aiError) {
-                console.error("Erreur avec OpenAI, utilisation du portefeuille de secours:", aiError);
+                console.error("Erreur avec OpenAI:", aiError);
                 
                 // En cas d'erreur avec OpenAI, utiliser des données simulées comme fallback
                 portfolioData = await simulatePerplexityPortfolioAPI();
@@ -199,152 +214,471 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Générer un portefeuille optimisé avec OpenAI basé sur les actualités et les secteurs
-    async function generatePortfolioWithOpenAI(newsData, sectorData) {
-        // Préparer les données à envoyer à OpenAI
-        const prompt = prepareOpenAIPrompt(newsData, sectorData);
+    // Obtenir des instruments financiers recommandés (stocks, ETF, crypto) de Perplexity
+    async function getFinancialInstrumentsFromPerplexity(newsData) {
+        try {
+            // Dans une implémentation réelle, appeler Perplexity pour obtenir des recommandations
+            // Ici, nous simulons une réponse
+            
+            // Extraction des thèmes principaux des actualités
+            const themes = extractThemesFromNews(newsData);
+            
+            // Simuler un délai réseau
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            // Retourner des instruments financiers basés sur les thèmes
+            return {
+                stocks: generateStocksBasedOnThemes(themes),
+                etfs: generateETFsBasedOnThemes(themes),
+                cryptos: generateCryptosBasedOnThemes(themes)
+            };
+        } catch (error) {
+            console.error("Erreur lors de l'obtention des instruments financiers:", error);
+            throw error;
+        }
+    }
+    
+    // Extraire les thèmes principaux des actualités
+    function extractThemesFromNews(newsData) {
+        // Identifier les thèmes à partir des titres et résumés des actualités
+        const themes = new Set();
         
-        console.log("Envoi de la demande à OpenAI avec les données actuelles");
+        const keywordToTheme = {
+            'ia': 'intelligence_artificielle',
+            'intelligence artificielle': 'intelligence_artificielle',
+            'nvidia': 'intelligence_artificielle',
+            'semi-conducteur': 'semi_conducteurs',
+            'puces': 'semi_conducteurs',
+            'énerg': 'energie',
+            'électrique': 'energie',
+            'renouvelable': 'energie',
+            'pétrole': 'energie',
+            'crypto': 'crypto',
+            'bitcoin': 'crypto',
+            'ethereum': 'crypto',
+            'blockchain': 'crypto',
+            'taux': 'economie',
+            'bce': 'economie',
+            'fed': 'economie',
+            'inflation': 'economie',
+            'e-commerce': 'commerce',
+            'amazon': 'commerce',
+            'livraison': 'commerce',
+            'tesla': 'automobile',
+            'automobile': 'automobile',
+            've': 'automobile',
+            'chine': 'chine',
+            'chinois': 'chine'
+        };
+        
+        newsData.forEach(news => {
+            const fullText = (news.title + ' ' + news.summary).toLowerCase();
+            
+            Object.entries(keywordToTheme).forEach(([keyword, theme]) => {
+                if (fullText.includes(keyword)) {
+                    themes.add(theme);
+                }
+            });
+        });
+        
+        return Array.from(themes);
+    }
+    
+    // Générer des actions basées sur les thèmes
+    function generateStocksBasedOnThemes(themes) {
+        const stocksByTheme = {
+            intelligence_artificielle: [
+                { name: 'NVIDIA Corporation', symbol: 'NVDA', info: 'Leader dans les puces GPU pour l\'IA' },
+                { name: 'Microsoft Corporation', symbol: 'MSFT', info: 'Investissements massifs dans l\'IA et partenariat avec OpenAI' },
+                { name: 'Alphabet Inc.', symbol: 'GOOGL', info: 'Recherche avancée en IA via Google DeepMind' },
+                { name: 'Palantir Technologies', symbol: 'PLTR', info: 'Plateforme d\'IA pour l\'analyse de données' },
+                { name: 'C3.ai, Inc.', symbol: 'AI', info: 'Solutions d\'IA d\'entreprise' }
+            ],
+            semi_conducteurs: [
+                { name: 'Taiwan Semiconductor', symbol: 'TSM', info: 'Plus grand fabricant de semi-conducteurs au monde' },
+                { name: 'Advanced Micro Devices', symbol: 'AMD', info: 'Processeurs haute performance' },
+                { name: 'Broadcom Inc.', symbol: 'AVGO', info: 'Fournisseur de composants pour les communications' },
+                { name: 'Intel Corporation', symbol: 'INTC', info: 'Géant historique des microprocesseurs' },
+                { name: 'Qualcomm Incorporated', symbol: 'QCOM', info: 'Leader dans les puces pour smartphones' }
+            ],
+            energie: [
+                { name: 'Tesla, Inc.', symbol: 'TSLA', info: 'Leader des véhicules électriques et stockage d\'énergie' },
+                { name: 'NextEra Energy', symbol: 'NEE', info: 'Plus grand producteur d\'énergie renouvelable aux États-Unis' },
+                { name: 'Enphase Energy', symbol: 'ENPH', info: 'Systèmes de gestion d\'énergie solaire' },
+                { name: 'Vestas Wind Systems', symbol: 'VWDRY', info: 'Fabricant mondial d\'éoliennes' },
+                { name: 'SolarEdge Technologies', symbol: 'SEDG', info: 'Optimiseurs de puissance pour panneaux solaires' }
+            ],
+            economie: [
+                { name: 'JPMorgan Chase', symbol: 'JPM', info: 'Plus grande banque américaine' },
+                { name: 'Goldman Sachs', symbol: 'GS', info: 'Banque d\'investissement mondiale' },
+                { name: 'BlackRock', symbol: 'BLK', info: 'Plus grand gestionnaire d\'actifs au monde' },
+                { name: 'Visa Inc.', symbol: 'V', info: 'Leader mondial des paiements numériques' },
+                { name: 'S&P Global', symbol: 'SPGI', info: 'Fournisseur d\'indices et d\'analyse de marchés' }
+            ],
+            commerce: [
+                { name: 'Amazon.com', symbol: 'AMZN', info: 'Leader mondial du e-commerce et du cloud' },
+                { name: 'Shopify Inc.', symbol: 'SHOP', info: 'Plateforme pour créer des boutiques en ligne' },
+                { name: 'Walmart Inc.', symbol: 'WMT', info: 'Plus grande chaîne de vente au détail' },
+                { name: 'MercadoLibre', symbol: 'MELI', info: 'Principal site de e-commerce en Amérique latine' },
+                { name: 'Alibaba Group', symbol: 'BABA', info: 'Géant chinois du e-commerce' }
+            ],
+            automobile: [
+                { name: 'Tesla, Inc.', symbol: 'TSLA', info: 'Leader des véhicules électriques' },
+                { name: 'Volkswagen AG', symbol: 'VWAGY', info: 'Deuxième plus grand constructeur automobile mondial' },
+                { name: 'General Motors', symbol: 'GM', info: 'Constructeur automobile américain avec ambitions VE' },
+                { name: 'BYD Company', symbol: 'BYDDY', info: 'Plus grand fabricant chinois de VE' },
+                { name: 'Ford Motor Company', symbol: 'F', info: 'Transition vers l\'électrique avec modèles comme la Mustang Mach-E' }
+            ],
+            chine: [
+                { name: 'Alibaba Group', symbol: 'BABA', info: 'Géant chinois du e-commerce' },
+                { name: 'Tencent Holdings', symbol: 'TCEHY', info: 'Conglomérat technologique chinois' },
+                { name: 'JD.com', symbol: 'JD', info: 'Plateforme chinoise de e-commerce' },
+                { name: 'Baidu', symbol: 'BIDU', info: 'Moteur de recherche chinois et IA' },
+                { name: 'NIO Inc.', symbol: 'NIO', info: 'Fabricant chinois de véhicules électriques premium' }
+            ],
+            crypto: [
+                { name: 'Coinbase Global', symbol: 'COIN', info: 'Plateforme d\'échange de cryptomonnaies' },
+                { name: 'MicroStrategy', symbol: 'MSTR', info: 'Entreprise avec d\'importantes réserves de Bitcoin' },
+                { name: 'Block, Inc.', symbol: 'SQ', info: 'Anciennement Square, impliqué dans les paiements Bitcoin' },
+                { name: 'PayPal Holdings', symbol: 'PYPL', info: 'Permet l\'achat et la vente de cryptomonnaies' },
+                { name: 'Marathon Digital', symbol: 'MARA', info: 'Société de minage de Bitcoin' }
+            ]
+        };
+        
+        // Sélectionner des actions basées sur les thèmes identifiés
+        let selectedStocks = [];
+        themes.forEach(theme => {
+            if (stocksByTheme[theme]) {
+                // Ajouter 2-3 actions aléatoires de ce thème
+                const randomStocks = stocksByTheme[theme]
+                    .sort(() => 0.5 - Math.random())
+                    .slice(0, 2 + Math.floor(Math.random() * 2));
+                
+                selectedStocks = [...selectedStocks, ...randomStocks];
+            }
+        });
+        
+        // S'assurer d'avoir au moins quelques actions
+        if (selectedStocks.length < 5) {
+            // Ajouter quelques actions diversifiées
+            const diversifiedStocks = [
+                { name: 'Apple Inc.', symbol: 'AAPL', info: 'Géant de la technologie grand public' },
+                { name: 'Microsoft Corporation', symbol: 'MSFT', info: 'Leader des logiciels et du cloud' },
+                { name: 'Amazon.com', symbol: 'AMZN', info: 'E-commerce et services cloud' },
+                { name: 'Alphabet Inc.', symbol: 'GOOGL', info: 'Maison mère de Google' },
+                { name: 'Meta Platforms', symbol: 'META', info: 'Réseaux sociaux et métavers' }
+            ];
+            
+            // Ajouter des actions jusqu'à avoir au moins 5 sélections
+            let i = 0;
+            while (selectedStocks.length < 5 && i < diversifiedStocks.length) {
+                if (!selectedStocks.some(stock => stock.symbol === diversifiedStocks[i].symbol)) {
+                    selectedStocks.push(diversifiedStocks[i]);
+                }
+                i++;
+            }
+        }
+        
+        // Limiter à un maximum de 10 actions
+        return selectedStocks.slice(0, 10);
+    }
+    
+    // Générer des ETF basés sur les thèmes
+    function generateETFsBasedOnThemes(themes) {
+        const etfsByTheme = {
+            intelligence_artificielle: [
+                { name: 'Global X Robotics & Artificial Intelligence ETF', symbol: 'BOTZ', info: 'ETF axé sur la robotique et l\'IA' },
+                { name: 'ARK Autonomous Technology & Robotics ETF', symbol: 'ARKQ', info: 'ETF axé sur les technologies autonomes' },
+                { name: 'iShares Robotics and Artificial Intelligence ETF', symbol: 'IRBO', info: 'Large exposition aux entreprises d\'IA' }
+            ],
+            semi_conducteurs: [
+                { name: 'VanEck Semiconductor ETF', symbol: 'SMH', info: 'ETF majeur pour l\'industrie des semi-conducteurs' },
+                { name: 'iShares Semiconductor ETF', symbol: 'SOXX', info: 'Exposition aux principales entreprises de puces' },
+                { name: 'Invesco PHLX Semiconductor ETF', symbol: 'SOXQ', info: 'Suivi de l\'indice Philadelphia Semiconductor' }
+            ],
+            energie: [
+                { name: 'Invesco Solar ETF', symbol: 'TAN', info: 'Principal ETF pour l\'énergie solaire' },
+                { name: 'First Trust Global Wind Energy ETF', symbol: 'FAN', info: 'Exposition mondiale à l\'énergie éolienne' },
+                { name: 'iShares Global Clean Energy ETF', symbol: 'ICLN', info: 'ETF diversifié sur les énergies propres' }
+            ],
+            economie: [
+                { name: 'SPDR S&P 500 ETF', symbol: 'SPY', info: 'ETF le plus important suivant le S&P 500' },
+                { name: 'Vanguard Total Stock Market ETF', symbol: 'VTI', info: 'Exposition à l\'ensemble du marché américain' },
+                { name: 'iShares MSCI ACWI ETF', symbol: 'ACWI', info: 'Exposition mondiale aux marchés développés et émergents' }
+            ],
+            commerce: [
+                { name: 'Amplify Online Retail ETF', symbol: 'IBUY', info: 'ETF axé sur le commerce en ligne' },
+                { name: 'ProShares Online Retail ETF', symbol: 'ONLN', info: 'Exposition aux détaillants en ligne' },
+                { name: 'Global X E-commerce ETF', symbol: 'EBIZ', info: 'ETF mondial sur le e-commerce' }
+            ],
+            automobile: [
+                { name: 'Global X Autonomous & Electric Vehicles ETF', symbol: 'DRIV', info: 'ETF sur les VE et véhicules autonomes' },
+                { name: 'KraneShares Electric Vehicles & Future Mobility ETF', symbol: 'KARS', info: 'ETF mondial sur la mobilité du futur' },
+                { name: 'iShares Self-Driving EV and Tech ETF', symbol: 'IDRV', info: 'Exposition aux technologies de conduite autonome' }
+            ],
+            chine: [
+                { name: 'iShares MSCI China ETF', symbol: 'MCHI', info: 'Large exposition au marché chinois' },
+                { name: 'KraneShares CSI China Internet ETF', symbol: 'KWEB', info: 'ETF axé sur les entreprises internet chinoises' },
+                { name: 'Invesco Golden Dragon China ETF', symbol: 'PGJ', info: 'Entreprises chinoises cotées aux États-Unis' }
+            ],
+            crypto: [
+                { name: 'Amplify Transformational Data Sharing ETF', symbol: 'BLOK', info: 'ETF axé sur la blockchain' },
+                { name: 'Bitwise Crypto Industry Innovators ETF', symbol: 'BITQ', info: 'Entreprises de l\'écosystème crypto' },
+                { name: 'Global X Blockchain ETF', symbol: 'BKCH', info: 'Exposition mondiale à la blockchain' }
+            ]
+        };
+        
+        // Sélectionner des ETF basés sur les thèmes identifiés
+        let selectedETFs = [];
+        themes.forEach(theme => {
+            if (etfsByTheme[theme]) {
+                // Ajouter 1-2 ETF aléatoires de ce thème
+                const randomETFs = etfsByTheme[theme]
+                    .sort(() => 0.5 - Math.random())
+                    .slice(0, 1 + Math.floor(Math.random() * 2));
+                
+                selectedETFs = [...selectedETFs, ...randomETFs];
+            }
+        });
+        
+        // S'assurer d'avoir au moins quelques ETF
+        if (selectedETFs.length < 3) {
+            // Ajouter quelques ETF diversifiés
+            const diversifiedETFs = [
+                { name: 'SPDR S&P 500 ETF', symbol: 'SPY', info: 'Suit l\'indice S&P 500' },
+                { name: 'Vanguard Total Stock Market ETF', symbol: 'VTI', info: 'Exposition à l\'ensemble du marché américain' },
+                { name: 'Invesco QQQ Trust', symbol: 'QQQ', info: 'Suit le Nasdaq-100, focus technologie' },
+                { name: 'iShares Core MSCI EAFE ETF', symbol: 'IEFA', info: 'Marchés développés hors États-Unis' },
+                { name: 'Vanguard FTSE Emerging Markets ETF', symbol: 'VWO', info: 'Exposition aux marchés émergents' }
+            ];
+            
+            // Ajouter des ETF jusqu'à avoir au moins 3 sélections
+            let i = 0;
+            while (selectedETFs.length < 3 && i < diversifiedETFs.length) {
+                if (!selectedETFs.some(etf => etf.symbol === diversifiedETFs[i].symbol)) {
+                    selectedETFs.push(diversifiedETFs[i]);
+                }
+                i++;
+            }
+        }
+        
+        // Limiter à un maximum de 8 ETF
+        return selectedETFs.slice(0, 8);
+    }
+    
+    // Générer des cryptomonnaies basées sur les thèmes
+    function generateCryptosBasedOnThemes(themes) {
+        // Liste des cryptomonnaies les plus pertinentes
+        const primaryCryptos = [
+            { name: 'Bitcoin', symbol: 'BTC', info: 'La plus grande crypto par capitalisation et adoption' },
+            { name: 'Ethereum', symbol: 'ETH', info: 'Plateforme de contrats intelligents et d\'applications décentralisées' }
+        ];
+        
+        // Cryptos spécialisées par thème
+        const cryptosByTheme = {
+            intelligence_artificielle: [
+                { name: 'The Graph', symbol: 'GRT', info: 'Protocole d\'indexation pour les données blockchain' },
+                { name: 'Fetch.ai', symbol: 'FET', info: 'Plateforme d\'IA décentralisée' },
+                { name: 'SingularityNET', symbol: 'AGIX', info: 'Place de marché pour l\'IA' }
+            ],
+            energie: [
+                { name: 'Energy Web Token', symbol: 'EWT', info: 'Blockchain dédiée au secteur de l\'énergie' },
+                { name: 'Power Ledger', symbol: 'POWR', info: 'Plateforme d\'échange d\'énergie pair-à-pair' }
+            ],
+            commerce: [
+                { name: 'Uniswap', symbol: 'UNI', info: 'Protocole d\'échange décentralisé' },
+                { name: 'Loopring', symbol: 'LRC', info: 'Protocole pour échanger actifs sur Ethereum' }
+            ],
+            economie: [
+                { name: 'Maker', symbol: 'MKR', info: 'Protocole de finance décentralisée (DeFi)' },
+                { name: 'Aave', symbol: 'AAVE', info: 'Protocole de prêt décentralisé' },
+                { name: 'Compound', symbol: 'COMP', info: 'Protocole de marché monétaire' }
+            ],
+            crypto: [
+                { name: 'Cardano', symbol: 'ADA', info: 'Plateforme blockchain de troisième génération' },
+                { name: 'Polkadot', symbol: 'DOT', info: 'Protocole reliant différentes blockchains' },
+                { name: 'Solana', symbol: 'SOL', info: 'Blockchain haute performance' },
+                { name: 'Binance Coin', symbol: 'BNB', info: 'Crypto de l\'écosystème Binance' }
+            ]
+        };
+        
+        // Toujours inclure Bitcoin et Ethereum
+        let selectedCryptos = [...primaryCryptos];
+        
+        // Ajouter des cryptos spécialisées selon les thèmes
+        themes.forEach(theme => {
+            if (cryptosByTheme[theme]) {
+                // Ajouter 1 crypto aléatoire de ce thème
+                const randomCryptos = cryptosByTheme[theme]
+                    .sort(() => 0.5 - Math.random())
+                    .slice(0, 1);
+                
+                selectedCryptos = [...selectedCryptos, ...randomCryptos];
+            }
+        });
+        
+        // Si "crypto" est un thème, ajouter plus de cryptomonnaies
+        if (themes.includes('crypto')) {
+            const additionalCryptos = cryptosByTheme.crypto
+                .filter(crypto => !selectedCryptos.some(selected => selected.symbol === crypto.symbol))
+                .sort(() => 0.5 - Math.random())
+                .slice(0, 2);
+            
+            selectedCryptos = [...selectedCryptos, ...additionalCryptos];
+        }
+        
+        // Limiter à un maximum de 6 cryptomonnaies
+        return selectedCryptos.slice(0, 6);
+    }
+    
+    // Générer un portefeuille optimisé avec OpenAI
+    async function generatePortfolioWithOpenAI(newsData, sectorData, financialInstruments) {
+        // Préparer le prompt pour OpenAI
+        const prompt = prepareOpenAIPromptWithInstruments(newsData, sectorData, financialInstruments);
+        
+        console.log("Envoi du prompt à OpenAI:", prompt.substring(0, 200) + "...");
         
         try {
-            // Appeler l'API OpenAI - CORRECTION: utilisation de chat-with-openai au lieu de chat_with_openai
+            // Appeler l'API OpenAI avec chat-with-openai
             const response = await chat_with_openai({
                 content: prompt
             });
             
             console.log("Réponse brute d'OpenAI:", response);
             
-            // Analyser la réponse d'OpenAI pour extraire le portefeuille recommandé
-            const portfolio = parseOpenAIResponse(response);
-            
-            // Pour s'assurer qu'on a bien des données dynamiques, faisons quelques ajustements
-            return portfolio.map(asset => {
-                // Ajouter un timestamp à la raison pour montrer que c'est en temps réel
-                const now = new Date();
-                const timeStr = now.toLocaleTimeString('fr-FR', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
+            // Tenter l'analyse de la réponse
+            try {
+                // Si la réponse est déjà un objet JSON, utiliser directement
+                if (typeof response === 'object' && Array.isArray(response)) {
+                    // Ajout d'un timestamp aux raisons
+                    return addTimestampToReasons(response);
+                }
                 
-                // Ajuster l'allocation légèrement pour montrer la variabilité
-                const adjustedAllocation = Math.max(1, Math.min(25, asset.allocation + (Math.random() * 2 - 1)));
+                // Extraire le JSON de la réponse textuelle
+                const portfolio = extractJSONFromText(response);
                 
-                return {
-                    ...asset,
-                    allocation: Math.round(adjustedAllocation),
-                    reason: `${asset.reason} (Analyse à ${timeStr})`
-                };
-            });
+                if (portfolio && Array.isArray(portfolio)) {
+                    return addTimestampToReasons(portfolio);
+                } else {
+                    throw new Error("Format de portefeuille non valide");
+                }
+            } catch (parseError) {
+                console.error("Erreur d'analyse de la réponse OpenAI:", parseError);
+                throw parseError;
+            }
         } catch (error) {
             console.error("Erreur lors de l'appel à OpenAI:", error);
-            
-            // Retenter avec la fonction correcte si c'est une erreur de nom de fonction
-            try {
-                console.log("Tentative avec chat-with-openai...");
-                const response = await chat_with_openai({
-                    content: prompt
-                });
-                
-                console.log("Réponse brute d'OpenAI (deuxième tentative):", response);
-                
-                // Analyser la réponse d'OpenAI pour extraire le portefeuille recommandé
-                const portfolio = parseOpenAIResponse(response);
-                
-                // Pour s'assurer qu'on a bien des données dynamiques, faisons quelques ajustements
-                return portfolio.map(asset => {
-                    // Ajouter un timestamp à la raison pour montrer que c'est en temps réel
-                    const now = new Date();
-                    const timeStr = now.toLocaleTimeString('fr-FR', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                    
-                    // Ajuster l'allocation légèrement pour montrer la variabilité
-                    const adjustedAllocation = Math.max(1, Math.min(25, asset.allocation + (Math.random() * 2 - 1)));
-                    
-                    return {
-                        ...asset,
-                        allocation: Math.round(adjustedAllocation),
-                        reason: `${asset.reason} (Analyse à ${timeStr})`
-                    };
-                });
-            } catch (retryError) {
-                console.error("Deuxième tentative échouée:", retryError);
-                throw error; // Propager l'erreur originale
-            }
+            throw error;
         }
     }
     
-    // Préparer le prompt pour OpenAI
-    function prepareOpenAIPrompt(newsData, sectorData) {
-        // Extraire les informations pertinentes des actualités récentes
+    // Ajouter un horodatage aux raisons du portefeuille pour montrer que c'est en temps réel
+    function addTimestampToReasons(portfolio) {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString('fr-FR', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        
+        return portfolio.map(asset => ({
+            ...asset,
+            reason: `${asset.reason} (Analyse à ${timeStr})`
+        }));
+    }
+    
+    // Extraire un objet JSON d'une réponse textuelle
+    function extractJSONFromText(text) {
+        try {
+            // Rechercher un tableau JSON dans le texte
+            const jsonMatch = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            
+            if (jsonMatch) {
+                return JSON.parse(jsonMatch[0]);
+            }
+            
+            console.error("Aucun JSON trouvé dans:", text);
+            return null;
+        } catch (error) {
+            console.error("Erreur lors de l'extraction du JSON:", error);
+            return null;
+        }
+    }
+    
+    // Préparer le prompt pour OpenAI avec les instruments financiers
+    function prepareOpenAIPromptWithInstruments(newsData, sectorData, financialInstruments) {
+        // Extraire les informations pertinentes des actualités
         const newsContext = newsData.map(news => 
-            `- ${news.title} (${news.source})`
+            `- ${news.title} (${news.source}): ${news.summary} [Impact: ${news.sentiment === 'positive' ? 'Positif' : 'Négatif'}]`
         ).join('\n');
         
-        // Obtenir la date actuelle pour rendre le portefeuille plus dynamique
+        // Extraire les informations des secteurs
+        const bullishSectors = sectorData.bullish.map(sector => 
+            `- ${sector.name}: ${sector.reason}`
+        ).join('\n');
+        
+        const bearishSectors = sectorData.bearish.map(sector => 
+            `- ${sector.name}: ${sector.reason}`
+        ).join('\n');
+        
+        // Préparer les instruments financiers
+        const stocksInfo = financialInstruments.stocks.map(stock => 
+            `- ${stock.name} (${stock.symbol}): ${stock.info}`
+        ).join('\n');
+        
+        const etfsInfo = financialInstruments.etfs.map(etf => 
+            `- ${etf.name} (${etf.symbol}): ${etf.info}`
+        ).join('\n');
+        
+        const cryptosInfo = financialInstruments.cryptos.map(crypto => 
+            `- ${crypto.name} (${crypto.symbol}): ${crypto.info}`
+        ).join('\n');
+        
+        // Obtenir la date actuelle pour des recommandations fraîches
         const now = new Date();
         const dateStr = now.toLocaleDateString('fr-FR');
         const timeStr = now.toLocaleTimeString('fr-FR');
         
-        // Construire le prompt complet avec la date actuelle pour s'assurer d'avoir des recommandations fraîches
-        return `Tu es un expert en marchés financiers. À partir des actualités suivantes, génère un portefeuille d'investissement optimisé pour ${dateStr} à ${timeStr}.
+        // Construire le prompt complet
+        return `Tu es un gestionnaire de portefeuille expert. À partir des actualités financières, des analyses sectorielles et des instruments financiers disponibles ci-dessous, crée un portefeuille d'investissement optimisé pour ${dateStr} à ${timeStr}.
 
-ACTUALITÉS RÉCENTES:
+ACTUALITÉS FINANCIÈRES RÉCENTES:
 ${newsContext}
 
-Pour cette date (${dateStr}) et en tenant compte des actualités ci-dessus, génère un portefeuille diversifié avec:
-1. 3 actions (type: stock) - allocation totale ~45%
-2. 3 ETF (type: etf) - allocation totale ~30%
-3. 2 crypto-monnaies (type: crypto) - allocation totale ~25%
+SECTEURS HAUSSIERS:
+${bullishSectors}
 
-IMPORTANT: Assure-toi que tes recommandations sont variées et reflètent les actualités récentes. N'utilise PAS toujours les mêmes actifs. VARIE tes recommandations.
+SECTEURS BAISSIERS:
+${bearishSectors}
 
-Réponds uniquement au format JSON comme ci-dessous:
+INSTRUMENTS FINANCIERS DISPONIBLES:
+ACTIONS:
+${stocksInfo}
+
+ETF:
+${etfsInfo}
+
+CRYPTOMONNAIES:
+${cryptosInfo}
+
+Consignes:
+1. Crée un portefeuille équilibré à RISQUE MODÉRÉ basé sur ces informations.
+2. Tu n'es PAS limité à une allocation fixe - détermine librement l'équilibre entre actions, ETF et cryptomonnaies selon ton analyse.
+3. Choisis uniquement parmi les instruments listés ci-dessus.
+4. Pour chaque instrument, détermine un pourcentage d'allocation approprié.
+5. Justifie brièvement chaque choix en lien avec les actualités ou tendances sectorielles.
+6. TRÈS IMPORTANT: Assure-toi que le total des allocations fasse exactement 100%.
+
+Réponds uniquement au format JSON:
 [
   {
-    "name": "Nom de l'entreprise/ETF/Crypto",
-    "symbol": "SYMB",
+    "name": "Nom de l'instrument",
+    "symbol": "SYMBOLE",
     "type": "stock/etf/crypto",
     "allocation": XX,
-    "reason": "Justification concise de l'inclusion"
+    "reason": "Justification concise"
   },
   ...
 ]`;
-    }
-    
-    // Analyser la réponse d'OpenAI pour extraire le portefeuille recommandé
-    function parseOpenAIResponse(response) {
-        try {
-            console.log("Analyse de la réponse d'OpenAI:", response);
-            
-            // Si la réponse est déjà un objet JSON, utiliser directement
-            if (typeof response === 'object' && Array.isArray(response)) {
-                return response;
-            }
-            
-            // Tenter d'extraire le JSON de la réponse textuelle
-            const jsonMatch = response.match(/\[\s*\{.*\}\s*\]/s);
-            
-            if (jsonMatch) {
-                const jsonStr = jsonMatch[0];
-                return JSON.parse(jsonStr);
-            }
-            
-            // Si aucun JSON n'est trouvé, essayer de chercher un tableau
-            const arrayMatch = response.match(/\[\s*\{[\s\S]*\}\s*\]/);
-            if (arrayMatch) {
-                return JSON.parse(arrayMatch[0]);
-            }
-            
-            // Si l'analyse échoue, retourner un tableau vide
-            console.error("Impossible d'extraire un JSON valide de la réponse d'OpenAI");
-            throw new Error("Format de réponse OpenAI invalide");
-            
-        } catch (error) {
-            console.error("Erreur lors de l'analyse de la réponse d'OpenAI:", error);
-            throw error;
-        }
     }
     
     // Afficher l'état de chargement dans toutes les sections
@@ -477,8 +811,8 @@ Réponds uniquement au format JSON comme ci-dessous:
                 else if (hoursAgo < 12) score += 10;
                 else score += 5;
             } else {
-                // Pénalité pour les actualités qui ne sont pas d'aujourd'hui
-                score -= 20;
+                // Pénalité légère pour les actualités qui ne sont pas d'aujourd'hui
+                score -= 10;
             }
             
             // Score d'impact de Perplexity (simulation)
