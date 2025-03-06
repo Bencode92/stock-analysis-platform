@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const aiAnalysisContent = document.getElementById('ai-analysis-content');
     const currentTimeElement = document.getElementById('current-time');
     const updateTimeElement = document.getElementById('update-time');
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
     
     // Métriques
     const openPrice = document.getElementById('open-price');
@@ -26,6 +27,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Variables globales
     let currentSymbol = 'AAPL'; // Par défaut on affiche Apple
     let stockData = null; // Stockage des données actuelles pour l'action
+    let widget = null; // Instance du widget TradingView
     
     // Liste des actions populaires pour suggestion
     const popularStocks = [
@@ -34,6 +36,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialisation
     function init() {
+        // Initialiser le graphique TradingView
+        initTradingViewChart();
+        
         // Charger les données en temps réel pour Apple
         fetchStockData(currentSymbol);
         
@@ -46,9 +51,143 @@ document.addEventListener('DOMContentLoaded', function() {
         // Mettre à jour l'heure de marché
         updateMarketTime();
         
+        // Configurer le mode plein écran
+        setupFullscreenMode();
+        
         // Mettre à jour régulièrement l'heure et les données
         setInterval(updateMarketTime, 1000);
         setInterval(() => fetchStockData(currentSymbol), 60000); // Rafraîchir toutes les minutes
+    }
+    
+    // Initialiser le graphique TradingView
+    function initTradingViewChart() {
+        const chartContainer = document.getElementById('tradingview-chart');
+        
+        if (chartContainer) {
+            widget = new TradingView.widget({
+                container_id: 'tradingview-chart',
+                symbol: 'NASDAQ:AAPL',
+                interval: 'D',
+                timezone: 'Europe/Paris',
+                theme: 'dark',
+                style: '1',
+                locale: 'fr',
+                toolbar_bg: '#0a0a14', // Couleur de fond pour le toolbar (noir avec nuance bleue)
+                enable_publishing: false,
+                allow_symbol_change: false,
+                save_image: true,
+                hide_side_toolbar: false,
+                studies: [
+                    "MASimple@tv-basicstudies",
+                    "RSI@tv-basicstudies"
+                ],
+                studies_overrides: {
+                    "volume.volume.color.0": "#ff2c2c", // Rouge pour le volume négatif
+                    "volume.volume.color.1": "#12ff56", // Vert pour le volume positif
+                },
+                disabled_features: [
+                    "header_symbol_search",
+                    "symbol_search_hot_key"
+                ],
+                enabled_features: [
+                    "use_localstorage_for_settings"
+                ],
+                overrides: {
+                    // Couleurs de fond et de grille
+                    "paneProperties.background": "#0a0a14", // Noir avec nuance bleue
+                    "paneProperties.vertGridProperties.color": "rgba(28, 48, 80, 0.2)", // Bleu très foncé
+                    "paneProperties.horzGridProperties.color": "rgba(28, 48, 80, 0.2)", // Bleu très foncé
+                    
+                    // Couleurs des chandeliers
+                    "mainSeriesProperties.candleStyle.upColor": "#12ff56", // Vert vif
+                    "mainSeriesProperties.candleStyle.downColor": "#ff2c2c", // Rouge vif
+                    "mainSeriesProperties.candleStyle.wickUpColor": "#12ff56", // Vert vif
+                    "mainSeriesProperties.candleStyle.wickDownColor": "#ff2c2c", // Rouge vif
+                    "mainSeriesProperties.candleStyle.borderUpColor": "#12ff56", // Vert vif
+                    "mainSeriesProperties.candleStyle.borderDownColor": "#ff2c2c", // Rouge vif
+                    
+                    // Barre de volume
+                    "volumePaneSize": "medium",
+                    
+                    // Accentuation de couleurs
+                    "scalesProperties.lineColor": "#1c3050", // Bleu foncé
+                    "scalesProperties.textColor": "#8894a8", // Gris bleuté
+                    
+                    // Surlignement
+                    "mainSeriesProperties.areaStyle.color1": "rgba(28, 118, 255, 0.2)", // Bleu primaire avec alpha
+                    "mainSeriesProperties.areaStyle.color2": "rgba(28, 118, 255, 0.05)", // Bleu primaire avec alpha plus faible
+                    "mainSeriesProperties.areaStyle.linecolor": "#1c76ff", // Bleu primaire
+                }
+            });
+            
+            // Attendre que le widget soit prêt
+            widget.onChartReady(function() {
+                console.log("TradingView chart ready");
+                
+                // Écouter le changement de symbole
+                widget.chart().onSymbolChanged().subscribe(null, function(symbolData) {
+                    const newSymbol = symbolData.ticker.split(':')[1];
+                    console.log("Symbol changed to:", newSymbol);
+                    if (newSymbol !== currentSymbol) {
+                        searchStock(newSymbol);
+                    }
+                });
+            });
+        }
+    }
+    
+    // Configurer le mode plein écran
+    function setupFullscreenMode() {
+        if (fullscreenBtn) {
+            fullscreenBtn.addEventListener('click', toggleFullscreen);
+            
+            // Créer un bouton pour quitter le plein écran
+            const exitButton = document.createElement('button');
+            exitButton.className = 'fullscreen-exit-btn';
+            exitButton.id = 'exit-fullscreen';
+            exitButton.innerHTML = 'Quitter le plein écran <i class="fas fa-compress-alt"></i>';
+            exitButton.addEventListener('click', toggleFullscreen);
+            
+            const chartSection = document.querySelector('.main-info-display');
+            if (chartSection) {
+                chartSection.appendChild(exitButton);
+            }
+            
+            // Écouter la touche Échap
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && document.querySelector('.fullscreen-chart')) {
+                    toggleFullscreen();
+                }
+            });
+        }
+    }
+    
+    // Basculer le mode plein écran
+    function toggleFullscreen() {
+        const chartSection = document.querySelector('.main-info-display');
+        const exitButton = document.getElementById('exit-fullscreen');
+        
+        if (chartSection) {
+            chartSection.classList.toggle('fullscreen-chart');
+            
+            if (chartSection.classList.contains('fullscreen-chart')) {
+                fullscreenBtn.textContent = 'Quitter le plein écran';
+                document.body.style.overflow = 'hidden'; // Empêcher le défilement
+                
+                // Redimensionner le graphique
+                if (widget) {
+                    widget.resize();
+                }
+            } else {
+                fullscreenBtn.textContent = 'Agrandir le graphique';
+                document.body.style.overflow = ''; // Rétablir le défilement
+                
+                // Redimensionner le graphique
+                if (widget) {
+                    widget.resize();
+                }
+            }
+        }
     }
     
     // Afficher des suggestions de stocks populaires sous la barre de recherche
@@ -72,78 +211,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             searchContainer.parentNode.insertBefore(suggestionsDiv, searchContainer.nextSibling);
-            
-            // Ajouter un style CSS pour les suggestions
-            const style = document.createElement('style');
-            style.textContent = `
-                .stock-suggestions {
-                    padding: 5px 20px;
-                    font-size: 0.8rem;
-                    color: var(--text-muted);
-                }
-                .stock-suggestions span {
-                    margin-right: 5px;
-                }
-                .stock-suggestions a {
-                    color: var(--primary-color);
-                    margin-right: 10px;
-                    text-decoration: none;
-                }
-                .stock-suggestions a:hover {
-                    text-decoration: underline;
-                }
-                .ai-content {
-                    padding: 15px;
-                    line-height: 1.5;
-                }
-                .ai-section {
-                    margin-bottom: 15px;
-                }
-                .ai-heading {
-                    font-weight: bold;
-                    margin-bottom: 5px;
-                    color: var(--primary-color);
-                }
-                .ai-text {
-                    margin-bottom: 10px;
-                }
-                .ai-recommendation {
-                    font-weight: bold;
-                    margin-top: 10px;
-                    padding: 10px;
-                    border-radius: 5px;
-                    background-color: rgba(255, 255, 255, 0.05);
-                }
-                .positive-trend {
-                    color: var(--gain-color);
-                }
-                .negative-trend {
-                    color: var(--loss-color);
-                }
-                .neutral-trend {
-                    color: var(--text-bright);
-                }
-                .ai-metrics {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 15px;
-                    margin-top: 15px;
-                }
-                .ai-metric {
-                    display: flex;
-                    flex-direction: column;
-                    min-width: 100px;
-                }
-                .ai-metric-label {
-                    font-size: 0.8rem;
-                    color: var(--text-muted);
-                }
-                .ai-metric-value {
-                    font-size: 1rem;
-                    font-weight: bold;
-                }
-            `;
-            document.head.appendChild(style);
         }
     }
     
@@ -165,6 +232,76 @@ document.addEventListener('DOMContentLoaded', function() {
                     searchStock(symbol);
                 }
             }
+        });
+        
+        // Tabs pour l'analyse IA
+        const aiTabs = document.querySelectorAll('.ai-tab-btn');
+        const aiContents = document.querySelectorAll('.ai-tab-content');
+        
+        aiTabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Enlever la classe active de tous les tabs
+                aiTabs.forEach(t => t.classList.remove('active'));
+                aiContents.forEach(c => c.classList.remove('active'));
+                
+                // Ajouter la classe active au tab cliqué
+                this.classList.add('active');
+                
+                // Afficher le contenu correspondant
+                const tabId = this.getAttribute('data-tab');
+                document.getElementById(`${tabId}-tab`).classList.add('active');
+            });
+        });
+        
+        // Bouton d'actualisation
+        const refreshBtn = document.getElementById('refresh-analysis');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', function() {
+                fetchStockData(currentSymbol);
+            });
+        }
+        
+        // Boutons de période
+        const timeButtons = document.querySelectorAll('.time-btn');
+        timeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Enlever la classe active de tous les boutons
+                timeButtons.forEach(btn => btn.classList.remove('active'));
+                
+                // Ajouter la classe active au bouton cliqué
+                this.classList.add('active');
+                
+                // Changer l'intervalle du graphique TradingView
+                const range = this.getAttribute('data-range');
+                if (widget) {
+                    let interval = 'D'; // Défaut: jour
+                    
+                    switch(range) {
+                        case '1D':
+                            interval = '30'; // 30 minutes
+                            break;
+                        case '1W':
+                            interval = 'D'; // Jour
+                            break;
+                        case '1M':
+                            interval = 'W'; // Semaine
+                            break;
+                        case '3M':
+                            interval = 'W'; // Semaine
+                            break;
+                        case '1Y':
+                            interval = 'M'; // Mois
+                            break;
+                        case 'ALL':
+                            interval = 'M'; // Mois
+                            break;
+                    }
+                    
+                    widget.chart().setResolution(interval, function() {
+                        console.log("Interval changed to:", interval);
+                    });
+                }
+            });
         });
     }
     
@@ -216,6 +353,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Mettre à jour l'affichage du symbole dans le champ de recherche
             searchInput.value = symbol;
             
+            // Mettre à jour le graphique TradingView
+            updateTradingViewSymbol(symbol);
+            
             // Récupérer les données pour ce symbole
             fetchStockData(symbol);
             
@@ -223,11 +363,43 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // Mettre à jour le symbole sur TradingView
+    function updateTradingViewSymbol(symbol) {
+        if (widget) {
+            // Déterminer l'échange pour le préfixe TradingView
+            let exchange = 'NASDAQ';
+            
+            if (symbol.endsWith('.PA')) {
+                exchange = 'EURONEXT';
+                // Nettoyer le symbole pour TradingView (sans .PA)
+                symbol = symbol.replace('.PA', '');
+            } else {
+                exchange = getExchangePrefix(symbol);
+            }
+            
+            const tvSymbol = `${exchange}:${symbol}`;
+            
+            console.log(`Setting TradingView symbol to: ${tvSymbol}`);
+            
+            widget.chart().setSymbol(tvSymbol, function() {
+                console.log("Symbol updated to:", tvSymbol);
+            });
+        }
+    }
+    
     // Récupérer les données de stock via OpenAI
     async function fetchStockData(symbol) {
         try {
             // Afficher un indicateur de chargement
-            aiAnalysisContent.innerHTML = '<p>Chargement des données et analyse en cours...</p>';
+            if (aiAnalysisContent) {
+                aiAnalysisContent.innerHTML = `
+                    <div class="ai-status">
+                        <div class="ai-loader">
+                            <div class="spinner"></div>
+                        </div>
+                        <div class="ai-message">Analyse en cours...</div>
+                    </div>`;
+            }
             
             // Utiliser l'API OpenAI pour obtenir des données et une analyse
             const response = await fetchFromOpenAI(symbol);
@@ -237,7 +409,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
         } catch (error) {
             console.error('Erreur lors de la récupération des données:', error);
-            aiAnalysisContent.innerHTML = '<p>Erreur lors de la récupération des données. Veuillez réessayer.</p>';
+            if (aiAnalysisContent) {
+                aiAnalysisContent.innerHTML = '<p>Erreur lors de la récupération des données. Veuillez réessayer.</p>';
+            }
             
             // En cas d'erreur, fallback sur des données simulées
             const simulatedData = getSimulatedStockData(symbol);
@@ -628,8 +802,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!aiAnalysisContent || !analysis) return;
         
         const sentimentClass = analysis.sentiment === 'positif' ? 'positive-trend' : 
-                               analysis.sentiment === 'négatif' ? 'negative-trend' : 
-                               'neutral-trend';
+                              analysis.sentiment === 'négatif' ? 'negative-trend' : 
+                              'neutral-trend';
         
         const riskClass = analysis.riskLevel === 'faible' ? 'positive-trend' : 
                          analysis.riskLevel === 'élevé' ? 'negative-trend' : 
