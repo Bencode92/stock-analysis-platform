@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockPro - Analyse en Temps Réel du Marché</title>
+    <title>StockPro - Analyse en Temps Réel d'Actions</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
     <!-- TradingView Widget -->
@@ -11,234 +11,313 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Header Top Bar -->
-        <header class="top-header">
-            <div class="logo">
-                <i class="fas fa-chart-line"></i> StockPro
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1><i class="fas fa-chart-line"></i> StockPro</h1>
             </div>
-            <div class="search-container">
-                <input type="text" id="stockSearch" placeholder="Rechercher une action ou un ETF...">
-                <button id="searchBtn"><i class="fas fa-search"></i></button>
+            <nav class="sidebar-nav">
+                <ul>
+                    <li class="active"><a href="#"><i class="fas fa-home"></i> Accueil</a></li>
+                    <li><a href="#watchlist"><i class="fas fa-list"></i> Watchlist</a></li>
+                    <li><a href="#chart"><i class="fas fa-chart-bar"></i> Graphiques</a></li>
+                    <li><a href="#news"><i class="fas fa-newspaper"></i> Actualités</a></li>
+                    <li><a href="#portfolio"><i class="fas fa-briefcase"></i> Portefeuille</a></li>
+                    <li><a href="#settings"><i class="fas fa-cog"></i> Paramètres</a></li>
+                </ul>
+            </nav>
+            <div class="sidebar-footer">
+                <p>© 2025 StockPro</p>
             </div>
-            <div class="market-status">
-                <div class="market-indicator green"></div>
-                <span>Marché ouvert</span>
-                <span class="market-time" id="current-time">--:--:--</span>
-            </div>
-        </header>
+        </aside>
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Stocks List Section -->
-            <section class="stocks-list-section">
-                <div class="stocks-header">
-                    <h2>Actions</h2>
-                    <div class="filters">
-                        <button class="filter-btn active" data-filter="watchlist">Ma liste</button>
-                        <button class="filter-btn" data-filter="trending">Populaires</button>
-                        <button class="filter-btn" data-filter="gainers">Hausse</button>
-                        <button class="filter-btn" data-filter="losers">Baisse</button>
-                    </div>
+            <header class="main-header">
+                <div class="search-container">
+                    <input type="text" id="stockSearch" placeholder="Rechercher une action..." value="AAPL">
+                    <button id="searchBtn"><i class="fas fa-search"></i></button>
                 </div>
-                <div class="stocks-table-container">
-                    <table class="stocks-table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Nom</th>
-                                <th>Prix</th>
-                                <th>24h %</th>
-                                <th>7j %</th>
-                                <th>Vol. 24h</th>
-                                <th>Cap. marché</th>
-                            </tr>
-                        </thead>
-                        <tbody id="stocks-tbody">
-                            <!-- Les données seront injectées ici par JavaScript -->
-                        </tbody>
-                    </table>
+                <div class="market-status">
+                    <div class="market-indicator green"></div>
+                    <span>Marché ouvert</span>
+                    <span class="market-time">16:24:35</span>
+                </div>
+            </header>
+
+            <!-- News Section -->
+            <section id="breaking-news" class="news-section">
+                <h2><i class="fas fa-newspaper"></i> Actualités financières du jour</h2>
+                <div class="news-grid">
+                    <div class="news-card major-news">
+                        <div class="news-content">
+                            <div class="news-meta">
+                                <span class="news-source">Maison Blanche</span>
+                                <span class="news-time">Aujourd'hui</span>
+                            </div>
+                            <h3>Exemption de droits de douane sur les véhicules</h3>
+                            <p>La Maison Blanche a annoncé un report d'un mois sur les nouveaux tarifs automobiles. Cette exemption a entraîné une hausse des actions, avec le DAX en hausse de 3,5%, le STOXX 50 en hausse de 1,9%, et le Hang Seng en hausse de 2,87%.</p>
+                        </div>
+                    </div>
+                    <div class="news-card">
+                        <div class="news-content">
+                            <div class="news-meta">
+                                <span class="news-source">Marchés Européens</span>
+                                <span class="news-time">Aujourd'hui</span>
+                            </div>
+                            <h3>Flambée historique du marché obligataire européen</h3>
+                            <p>Le marché obligataire européen a connu une journée historique avec une hausse de 30 points de base du rendement allemand à 10 ans, un record depuis 1990.</p>
+                        </div>
+                    </div>
+                    <div class="news-card">
+                        <div class="news-content">
+                            <div class="news-meta">
+                                <span class="news-source">BCE</span>
+                                <span class="news-time">Aujourd'hui</span>
+                            </div>
+                            <h3>Décision de la BCE attendue aujourd'hui</h3>
+                            <p>La BCE est prévue pour maintenir ses taux inchangés, mais il y a une attente pour une baisse de 25 points de base, ce qui pourrait avoir des conséquences importantes sur les marchés.</p>
+                        </div>
+                    </div>
+                    <div class="news-card">
+                        <div class="news-content">
+                            <div class="news-meta">
+                                <span class="news-source">Entreprises</span>
+                                <span class="news-time">Aujourd'hui</span>
+                            </div>
+                            <h3>Résultats d'entreprises attendus</h3>
+                            <p>Les résultats de Broadcom, Costco, Merck, Canadian Natural Resources, et Deutsche Post sont attendus aujourd'hui et pourraient influencer les marchés.</p>
+                        </div>
+                    </div>
+                    <div class="news-card">
+                        <div class="news-content">
+                            <div class="news-meta">
+                                <span class="news-source">Relations US-Chine</span>
+                                <span class="news-time">Aujourd'hui</span>
+                            </div>
+                            <h3>Tensions commerciales entre les États-Unis et la Chine</h3>
+                            <p>La Chine a promis de se battre "jusqu'au bout" si les États-Unis poursuivent leur guerre commerciale. Les autorités chinoises ont annoncé un objectif de croissance ambitieux de 5% pour 2025.</p>
+                        </div>
+                    </div>
                 </div>
             </section>
 
-            <!-- Chart & Info Section -->
-            <section class="chart-info-section">
-                <div class="stock-header">
-                    <div class="stock-info">
-                        <img src="https://logo.clearbit.com/apple.com" alt="Apple logo" class="company-logo">
-                        <div>
-                            <h2>Apple Inc. (AAPL)</h2>
-                            <span class="exchange">NASDAQ</span>
+            <!-- Recommended Portfolio Section -->
+            <section id="recommended-portfolio" class="portfolio-section">
+                <h2><i class="fas fa-briefcase"></i> Portefeuille recommandé du jour</h2>
+                <div class="portfolio-description">
+                    <p>En fonction des actualités financières du jour, voici notre sélection de titres qui pourraient bien performer dans le contexte actuel.</p>
+                </div>
+                <div class="portfolio-grid">
+                    <div class="stock-recommendation-card" data-symbol="GOOGL">
+                        <div class="stock-header">
+                            <img src="https://logo.clearbit.com/google.com" alt="Alphabet" class="company-logo">
+                            <div>
+                                <h3>Alphabet (GOOGL)</h3>
+                                <span class="exchange">NASDAQ</span>
+                            </div>
                         </div>
+                        <div class="stock-recommendation">
+                            <span class="recommendation-tag buy">ACHETER</span>
+                        </div>
+                        <p class="recommendation-reason">Leader dans l'intelligence artificielle avec ses modèles génératifs. L'IA est une tendance en pleine expansion, et Alphabet est bien positionné pour profiter de cette croissance.</p>
+                        <button class="view-details-btn" data-symbol="GOOGL">Voir détails</button>
                     </div>
-                    <div class="stock-price">
-                        <div class="current-price">$189.97</div>
-                        <div class="price-change positive">+1.52 (+0.81%)</div>
+                    
+                    <div class="stock-recommendation-card" data-symbol="MSFT">
+                        <div class="stock-header">
+                            <img src="https://logo.clearbit.com/microsoft.com" alt="Microsoft" class="company-logo">
+                            <div>
+                                <h3>Microsoft (MSFT)</h3>
+                                <span class="exchange">NASDAQ</span>
+                            </div>
+                        </div>
+                        <div class="stock-recommendation">
+                            <span class="recommendation-tag buy">ACHETER</span>
+                        </div>
+                        <p class="recommendation-reason">Leader dans l'infonuagique public et l'IA. Azure a connu une croissance de 30% en 2024. Positions de monopole dans divers domaines assurant une stabilité financière.</p>
+                        <button class="view-details-btn" data-symbol="MSFT">Voir détails</button>
+                    </div>
+                    
+                    <div class="stock-recommendation-card" data-symbol="TSM">
+                        <div class="stock-header">
+                            <img src="https://logo.clearbit.com/tsmc.com" alt="Taiwan Semiconductor" class="company-logo">
+                            <div>
+                                <h3>Taiwan Semiconductor (TSM)</h3>
+                                <span class="exchange">NYSE</span>
+                            </div>
+                        </div>
+                        <div class="stock-recommendation">
+                            <span class="recommendation-tag buy">ACHETER</span>
+                        </div>
+                        <p class="recommendation-reason">Fournisseur crucial de puces pour l'IA. Croissance annuelle composée de 45% prévue pour les puces liées à l'IA au cours des cinq prochaines années.</p>
+                        <button class="view-details-btn" data-symbol="TSM">Voir détails</button>
+                    </div>
+                    
+                    <div class="stock-recommendation-card" data-symbol="PEP">
+                        <div class="stock-header">
+                            <img src="https://logo.clearbit.com/pepsi.com" alt="Pepsi" class="company-logo">
+                            <div>
+                                <h3>Pepsi (PEP)</h3>
+                                <span class="exchange">NASDAQ</span>
+                            </div>
+                        </div>
+                        <div class="stock-recommendation">
+                            <span class="recommendation-tag buy">ACHETER</span>
+                        </div>
+                        <p class="recommendation-reason">Bénéficie de vents de dos à long terme dans le secteur des collations et initiatives de croissance dans des sous-catégories de boissons attrayantes.</p>
+                        <button class="view-details-btn" data-symbol="PEP">Voir détails</button>
+                    </div>
+                    
+                    <div class="stock-recommendation-card" data-symbol="ASML">
+                        <div class="stock-header">
+                            <img src="https://logo.clearbit.com/asml.com" alt="ASML" class="company-logo">
+                            <div>
+                                <h3>ASML (ASML)</h3>
+                                <span class="exchange">NASDAQ</span>
+                            </div>
+                        </div>
+                        <div class="stock-recommendation">
+                            <span class="recommendation-tag buy">ACHETER</span>
+                        </div>
+                        <p class="recommendation-reason">Rôle crucial dans la production de puces pour les technologies IA, en particulier avec sa technologie de lithographie avancée.</p>
+                        <button class="view-details-btn" data-symbol="ASML">Voir détails</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Stock Detail Section (initially hidden) -->
+            <section id="stockDetailSection" class="stock-detail-section hidden">
+                <div class="section-header">
+                    <h2 id="stockDetailName">Détails du Titre</h2>
+                    <div class="actions">
+                        <button id="addToWatchlistBtn" class="action-btn"><i class="fas fa-plus"></i> Ajouter à la liste</button>
+                        <button id="backBtn" class="action-btn secondary"><i class="fas fa-arrow-left"></i> Retour</button>
                     </div>
                 </div>
 
-                <div class="tabs-container">
-                    <div class="tabs">
-                        <button class="tab-btn active" data-tab="chart">Graphique</button>
-                        <button class="tab-btn" data-tab="metrics">Métriques</button>
-                        <button class="tab-btn" data-tab="analysis">Analyse IA</button>
-                        <button class="tab-btn" data-tab="news">Actualités</button>
+                <div class="stock-overview">
+                    <div class="stock-price-info">
+                        <div class="current-price" id="currentPrice">--</div>
+                        <div class="price-change" id="priceChange">--</div>
+                    </div>
+                    <div class="stock-meta" id="stockMeta">
+                        <!-- Informations sur l'entreprise insérées ici -->
                     </div>
                 </div>
 
-                <div class="tab-content active" id="chart-tab">
-                    <div class="chart-controls">
-                        <div class="time-selector">
-                            <button class="time-btn" data-range="1D">1J</button>
-                            <button class="time-btn active" data-range="1W">1S</button>
-                            <button class="time-btn" data-range="1M">1M</button>
-                            <button class="time-btn" data-range="3M">3M</button>
-                            <button class="time-btn" data-range="1Y">1A</button>
-                            <button class="time-btn" data-range="ALL">MAX</button>
-                        </div>
-                        <button id="fullscreen-btn" class="fullscreen-button">
-                            <i class="fas fa-expand"></i>
-                        </button>
-                    </div>
-                    <div id="tradingview-chart" class="chart-container"></div>
+                <div id="tradingview-chart" class="chart-container">
+                    <!-- TradingView Chart -->
                 </div>
 
-                <div class="tab-content" id="metrics-tab">
-                    <div class="metrics-grid">
-                        <div class="metric">
-                            <span class="metric-label">Ouverture</span>
-                            <span class="metric-value" id="open-price">$188.45</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Clôture préc.</span>
-                            <span class="metric-value" id="prev-close">$188.45</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Plus haut</span>
-                            <span class="metric-value" id="day-high">$190.23</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Plus bas</span>
-                            <span class="metric-value" id="day-low">$187.68</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Volume</span>
-                            <span class="metric-value" id="volume">42.8M</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Cap. boursière</span>
-                            <span class="metric-value" id="market-cap">2.95T</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">P/E</span>
-                            <span class="metric-value" id="pe-ratio">31.2</span>
-                        </div>
-                        <div class="metric">
-                            <span class="metric-label">Dividende</span>
-                            <span class="metric-value" id="dividend">0.51%</span>
-                        </div>
+                <div class="key-metrics">
+                    <div class="metric-card">
+                        <h4>Prix ouverture</h4>
+                        <p id="open-price">--</p>
                     </div>
+                    <div class="metric-card">
+                        <h4>Clôture préc.</h4>
+                        <p id="prev-close">--</p>
+                    </div>
+                    <div class="metric-card">
+                        <h4>Plus haut du jour</h4>
+                        <p id="day-high">--</p>
+                    </div>
+                    <div class="metric-card">
+                        <h4>Plus bas du jour</h4>
+                        <p id="day-low">--</p>
+                    </div>
+                    <div class="metric-card">
+                        <h4>Volume</h4>
+                        <p id="volume">--</p>
+                    </div>
+                    <div class="metric-card">
+                        <h4>Capitalisation</h4>
+                        <p id="market-cap">--</p>
+                    </div>
+                    <div class="metric-card">
+                        <h4>P/E Ratio</h4>
+                        <p id="pe-ratio">--</p>
+                    </div>
+                    <div class="metric-card">
+                        <h4>Dividende (%)</h4>
+                        <p id="dividend">--</p>
+                    </div>
+                </div>
 
-                    <h3>Performance</h3>
+                <!-- Performance metrics -->
+                <div class="performance-section">
+                    <h3>Performance historique</h3>
                     <div class="performance-grid">
                         <div class="performance-item day-performance">
                             <span class="period">1 jour</span>
                             <div class="performance-bar-container">
-                                <div class="performance-bar positive" style="width: 81%"></div>
+                                <div class="performance-bar positive" style="width: 0%"></div>
                             </div>
-                            <span class="performance-value positive">+0.81%</span>
+                            <span class="performance-value positive">--</span>
                         </div>
                         <div class="performance-item week-performance">
                             <span class="period">1 semaine</span>
                             <div class="performance-bar-container">
-                                <div class="performance-bar positive" style="width: 65%"></div>
+                                <div class="performance-bar positive" style="width: 0%"></div>
                             </div>
-                            <span class="performance-value positive">+2.45%</span>
+                            <span class="performance-value positive">--</span>
                         </div>
                         <div class="performance-item month-performance">
                             <span class="period">1 mois</span>
                             <div class="performance-bar-container">
-                                <div class="performance-bar positive" style="width: 70%"></div>
+                                <div class="performance-bar positive" style="width: 0%"></div>
                             </div>
-                            <span class="performance-value positive">+5.32%</span>
+                            <span class="performance-value positive">--</span>
                         </div>
                         <div class="performance-item three-months-performance">
                             <span class="period">3 mois</span>
                             <div class="performance-bar-container">
-                                <div class="performance-bar positive" style="width: 85%"></div>
+                                <div class="performance-bar positive" style="width: 0%"></div>
                             </div>
-                            <span class="performance-value positive">+12.78%</span>
+                            <span class="performance-value positive">--</span>
                         </div>
                         <div class="performance-item year-performance">
                             <span class="period">1 an</span>
                             <div class="performance-bar-container">
-                                <div class="performance-bar positive" style="width: 93%"></div>
+                                <div class="performance-bar positive" style="width: 0%"></div>
                             </div>
-                            <span class="performance-value positive">+18.45%</span>
+                            <span class="performance-value positive">--</span>
                         </div>
-                    </div>
-                </div>
-
-                <div class="tab-content" id="analysis-tab">
-                    <div class="ai-tabs">
-                        <button class="ai-tab-btn active" data-tab="openai">OpenAI</button>
-                        <button class="ai-tab-btn" data-tab="perplexity">Perplexity</button>
-                    </div>
-                    <div class="ai-content" id="ai-analysis-content">
-                        <div id="openai-tab" class="ai-tab-content active">
-                            <div class="ai-status">
-                                <div class="ai-loader">
-                                    <div class="spinner"></div>
-                                </div>
-                                <div class="ai-message">Analyse en cours...</div>
-                            </div>
-                            <div class="ai-result">
-                                <div class="ai-summary"></div>
-                                <div class="ai-details"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="tab-content" id="news-tab">
-                    <div class="news-list" id="news-container">
-                        <article class="news-item">
-                            <div class="news-meta">
-                                <span class="news-source">Bloomberg</span>
-                                <span class="news-time">Il y a 32 minutes</span>
-                            </div>
-                            <h4 class="news-title">Apple annonce un nouveau MacBook Pro avec une puce avancée</h4>
-                        </article>
-                        <article class="news-item">
-                            <div class="news-meta">
-                                <span class="news-source">CNBC</span>
-                                <span class="news-time">Il y a 1 heure</span>
-                            </div>
-                            <h4 class="news-title">Les actions d'Apple montent suite à des prévisions positives sur les ventes d'iPhone</h4>
-                        </article>
-                        <article class="news-item">
-                            <div class="news-meta">
-                                <span class="news-source">Financial Times</span>
-                                <span class="news-time">Il y a 3 heures</span>
-                            </div>
-                            <h4 class="news-title">Apple continue de renforcer ses investissements dans l'IA</h4>
-                        </article>
                     </div>
                 </div>
             </section>
-        </main>
+            
+            <!-- Chart Settings -->
+            <div id="chartSettings" class="chart-settings hidden">
+                <div class="time-selector">
+                    <button class="time-btn active" data-range="1D">1J</button>
+                    <button class="time-btn" data-range="1W">1S</button>
+                    <button class="time-btn" data-range="1M">1M</button>
+                    <button class="time-btn" data-range="3M">3M</button>
+                    <button class="time-btn" data-range="1Y">1A</button>
+                    <button class="time-btn" data-range="ALL">MAX</button>
+                </div>
+            </div>
 
-        <footer class="app-footer">
-            <div class="source-info">
-                Les données sont fournies par TradingView. Les analyses sont générées par OpenAI et Perplexity.
-                <span>Dernière mise à jour: <span id="update-time">--:--:--</span></span>
-            </div>
-            <div class="disclaimer">
-                Les données sont fournies à titre informatif uniquement et ne constituent pas un conseil en investissement.
-            </div>
-        </footer>
+            <!-- Data Source Credit -->
+            <section class="data-source-section">
+                <div class="source-info">
+                    <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel. Actualités fournies par Perplexity AI.</p>
+                    <div class="last-update">
+                        <span>Dernière mise à jour:</span>
+                        <span class="update-time">06/03/2025 16:25:10</span>
+                    </div>
+                </div>
+                <div class="data-disclaimer">
+                    Les données sont fournies à titre informatif uniquement et ne constituent pas un conseil en investissement.
+                </div>
+            </section>
+        </main>
     </div>
 
     <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chart.js/3.9.1/chart.min.js"></script>
     <script src="app.js"></script>
 </body>
 </html>
