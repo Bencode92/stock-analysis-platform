@@ -11,9 +11,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const marketStatusText = document.querySelector('.market-status span');
     const aiAnalysisContent = document.getElementById('ai-analysis-content');
     const currentTimeElement = document.getElementById('current-time');
-    const updateTimeElement = document.getElementById('update-time');
+    const updateTimeElement = document.querySelector('.update-time');
     const fullscreenBtn = document.getElementById('fullscreen-btn');
     const stocksTableBody = document.getElementById('stocks-tbody');
+    const bullishSectorsContainer = document.getElementById('bullishSectors');
+    const bearishSectorsContainer = document.getElementById('bearishSectors');
+    const portfolioTableBody = document.getElementById('portfolioTableBody');
+    const portfolioChartCanvas = document.getElementById('portfolioChart');
     
     // Métriques
     const openPrice = document.getElementById('open-price');
@@ -30,6 +34,9 @@ document.addEventListener('DOMContentLoaded', function() {
     let stockData = null; // Stockage des données actuelles pour l'action
     let widget = null; // Instance du widget TradingView
     let allStocksData = {}; // Pour stocker les données de toutes les actions
+    let portfolioChart = null; // Pour stocker l'instance du graphique Chart.js
+    let sectorData = {}; // Pour stocker les données des secteurs
+    let portfolioData = {}; // Pour stocker les données du portefeuille recommandé
     
     // Liste des actions populaires pour suggestion
     const popularStocks = [
@@ -57,6 +64,15 @@ document.addEventListener('DOMContentLoaded', function() {
         // Configurer le mode plein écran
         setupFullscreenMode();
         
+        // Initialiser le graphique du portefeuille
+        initPortfolioChart();
+        
+        // Charger les données des secteurs
+        loadSectorData();
+        
+        // Charger les données du portefeuille recommandé
+        loadPortfolioData();
+        
         // Mettre à jour régulièrement l'heure et les données
         setInterval(updateMarketTime, 1000);
         setInterval(() => fetchStockData(currentSymbol, false), 60000); // Rafraîchir toutes les minutes
@@ -71,14 +87,16 @@ document.addEventListener('DOMContentLoaded', function() {
     // Charger les données pour toutes les actions populaires
     async function loadAllStocksData() {
         // Afficher un indicateur de chargement dans le tableau
-        stocksTableBody.innerHTML = `
-            <tr>
-                <td colspan="7" style="text-align: center; padding: 20px;">
-                    <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(28, 118, 255, 0.3); border-top-color: var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite;"></div>
-                    <p style="margin-top: 10px;">Chargement des données...</p>
-                </td>
-            </tr>
-        `;
+        if (stocksTableBody) {
+            stocksTableBody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 20px;">
+                        <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(28, 118, 255, 0.3); border-top-color: var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <p style="margin-top: 10px;">Chargement des données...</p>
+                    </td>
+                </tr>
+            `;
+        }
         
         // Créer un tableau pour stocker toutes les promesses de requêtes
         const promises = [];
@@ -143,23 +161,25 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         });
         
-        stocksTableBody.innerHTML = tableHtml;
-        
-        // Ajouter des écouteurs d'événements pour chaque ligne
-        document.querySelectorAll('#stocks-tbody tr').forEach(row => {
-            row.addEventListener('click', function() {
-                const symbol = this.getAttribute('data-symbol');
-                if (symbol) {
-                    searchStock(symbol);
-                    
-                    // Mettre à jour la classe selected-stock
-                    document.querySelectorAll('#stocks-tbody tr').forEach(r => {
-                        r.classList.remove('selected-stock');
-                    });
-                    this.classList.add('selected-stock');
-                }
+        if (stocksTableBody) {
+            stocksTableBody.innerHTML = tableHtml;
+            
+            // Ajouter des écouteurs d'événements pour chaque ligne
+            document.querySelectorAll('#stocks-tbody tr').forEach(row => {
+                row.addEventListener('click', function() {
+                    const symbol = this.getAttribute('data-symbol');
+                    if (symbol) {
+                        searchStock(symbol);
+                        
+                        // Mettre à jour la classe selected-stock
+                        document.querySelectorAll('#stocks-tbody tr').forEach(r => {
+                            r.classList.remove('selected-stock');
+                        });
+                        this.classList.add('selected-stock');
+                    }
+                });
             });
-        });
+        }
     }
     
     // Convertir la capitalisation boursière en nombre pour le tri
@@ -255,6 +275,253 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // Initialiser le graphique du portefeuille en camembert
+    function initPortfolioChart() {
+        if (!portfolioChartCanvas) return;
+        
+        // Configuration du graphique en camembert
+        const data = {
+            // Labels provisoires, seront remplacés par les données réelles
+            labels: ['Actions', 'ETF', 'Crypto'],
+            datasets: [{
+                data: [60, 30, 10], // Valeurs provisoires
+                backgroundColor: [
+                    '#ffffff', // Blanc pour les actions
+                    '#cccccc', // Gris clair pour les ETF
+                    '#888888'  // Gris foncé pour les crypto
+                ],
+                borderColor: '#0a0a14', // Couleur de fond de la plateforme
+                borderWidth: 1
+            }]
+        };
+        
+        // Options du graphique
+        const options = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'right',
+                    labels: {
+                        color: '#e0e0e0', // Couleur du texte pour les labels
+                        font: {
+                            size: 12
+                        },
+                        generateLabels: function(chart) {
+                            const data = chart.data;
+                            if (data.labels.length && data.datasets.length) {
+                                return data.labels.map(function(label, i) {
+                                    const meta = chart.getDatasetMeta(0);
+                                    const style = meta.controller.getStyle(i);
+                                    
+                                    return {
+                                        text: `${label} (${data.datasets[0].data[i]}%)`,
+                                        fillStyle: style.backgroundColor,
+                                        strokeStyle: style.borderColor,
+                                        lineWidth: style.borderWidth,
+                                        hidden: isNaN(data.datasets[0].data[i]) || meta.data[i].hidden,
+                                        index: i
+                                    };
+                                });
+                            }
+                            return [];
+                        }
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            return `${label}: ${value}%`;
+                        }
+                    }
+                }
+            }
+        };
+        
+        // Créer le graphique
+        portfolioChart = new Chart(portfolioChartCanvas, {
+            type: 'pie',
+            data: data,
+            options: options
+        });
+    }
+    
+    // Charger les données des secteurs
+    function loadSectorData() {
+        // Simulation des données de secteurs
+        sectorData = {
+            bullish: [
+                {
+                    name: "Automobile & VE",
+                    reason: "La décision de la Maison Blanche concernant le report des droits de douane a un impact positif direct sur les constructeurs automobiles, particulièrement ceux investis dans les véhicules électriques."
+                },
+                {
+                    name: "Technologie",
+                    reason: "Les résultats attendus de sociétés comme Broadcom et le développement continu de l'IA poussent le secteur vers le haut, malgré les tensions sino-américaines."
+                },
+                {
+                    name: "Énergie renouvelable",
+                    reason: "Les initiatives de transition énergétique continuent de favoriser les entreprises du secteur, particulièrement dans le contexte des tensions géopolitiques actuelles."
+                }
+            ],
+            bearish: [
+                {
+                    name: "Obligations",
+                    reason: "La hausse historique des rendements obligataires européens indique une pression à la baisse sur les prix des obligations, impactant les détenteurs d'obligations à long terme."
+                },
+                {
+                    name: "Immobilier",
+                    reason: "La hausse des taux d'intérêt et l'incertitude concernant les décisions de la BCE exercent une pression sur le secteur immobilier, particulièrement sensible aux variations de taux."
+                },
+                {
+                    name: "Importateurs chinois",
+                    reason: "Les tensions commerciales croissantes entre les États-Unis et la Chine menacent les entreprises fortement dépendantes des importations chinoises, créant de l'incertitude pour leurs modèles d'approvisionnement."
+                }
+            ]
+        };
+        
+        // Mise à jour de l'affichage des secteurs
+        updateSectorsDisplay();
+    }
+    
+    // Charger les données du portefeuille recommandé
+    function loadPortfolioData() {
+        // Simulation des données du portefeuille
+        portfolioData = [
+            {
+                name: "Tesla, Inc.",
+                symbol: "TSLA",
+                type: "stock",
+                allocation: 15,
+                reason: "Bénéficie directement du report des droits de douane avec une forte présence sur le marché européen et chinois. Le secteur automobile et VE est haussier."
+            },
+            {
+                name: "NVIDIA Corporation",
+                symbol: "NVDA",
+                type: "stock",
+                allocation: 18,
+                reason: "Leader dans les puces IA avec des résultats exceptionnels. Profite de la tendance haussière du secteur technologique malgré les tensions commerciales."
+            },
+            {
+                name: "Microsoft Corporation",
+                symbol: "MSFT",
+                type: "stock",
+                allocation: 12,
+                reason: "Position dominante dans le cloud et l'IA, moins impacté par les tensions sino-américaines grâce à sa diversification géographique."
+            },
+            {
+                name: "Vestas Wind Systems",
+                symbol: "VWS.CO",
+                type: "stock",
+                allocation: 8,
+                reason: "Leader mondial de l'énergie éolienne, bénéficiant de la tendance favorable aux énergies renouvelables et des initiatives de transition énergétique."
+            },
+            {
+                name: "Invesco Solar ETF",
+                symbol: "TAN",
+                type: "etf",
+                allocation: 10,
+                reason: "Exposition au secteur de l'énergie solaire, profitant de la tendance positive du secteur des énergies renouvelables."
+            },
+            {
+                name: "Global X Autonomous & Electric Vehicles ETF",
+                symbol: "DRIV",
+                type: "etf",
+                allocation: 12,
+                reason: "Exposition diversifiée au secteur des VE et de la conduite autonome, bénéficiant des décisions favorables sur les droits de douane."
+            },
+            {
+                name: "ARK Innovation ETF",
+                symbol: "ARKK",
+                type: "etf",
+                allocation: 10,
+                reason: "Exposition aux entreprises disruptives dans les secteurs de la technologie et de l'innovation, alignée avec les tendances haussières identifiées."
+            },
+            {
+                name: "Bitcoin",
+                symbol: "BTC",
+                type: "crypto",
+                allocation: 10,
+                reason: "Valeur refuge numérique dans un contexte de tensions géopolitiques et d'incertitude sur les marchés obligataires traditionnels."
+            },
+            {
+                name: "Ethereum",
+                symbol: "ETH",
+                type: "crypto",
+                allocation: 5,
+                reason: "Bénéficie du développement croissant des applications décentralisées et du potentiel d'adoption des technologies blockchain."
+            }
+        ];
+        
+        // Mise à jour de l'affichage du portefeuille
+        updatePortfolioDisplay();
+    }
+    
+    // Mise à jour de l'affichage des secteurs
+    function updateSectorsDisplay() {
+        if (!bullishSectorsContainer || !bearishSectorsContainer) return;
+        
+        // Construire le HTML pour les secteurs haussiers
+        let bullishHTML = '';
+        sectorData.bullish.forEach(sector => {
+            bullishHTML += `
+                <div class="sector-item">
+                    <div class="sector-name">${sector.name} <i class="fas fa-arrow-up"></i></div>
+                    <div class="sector-reason">${sector.reason}</div>
+                </div>
+            `;
+        });
+        
+        // Construire le HTML pour les secteurs baissiers
+        let bearishHTML = '';
+        sectorData.bearish.forEach(sector => {
+            bearishHTML += `
+                <div class="sector-item">
+                    <div class="sector-name">${sector.name} <i class="fas fa-arrow-down"></i></div>
+                    <div class="sector-reason">${sector.reason}</div>
+                </div>
+            `;
+        });
+        
+        // Mise à jour des conteneurs
+        bullishSectorsContainer.innerHTML = bullishHTML;
+        bearishSectorsContainer.innerHTML = bearishHTML;
+    }
+    
+    // Mise à jour de l'affichage du portefeuille
+    function updatePortfolioDisplay() {
+        if (!portfolioTableBody || !portfolioChart) return;
+        
+        // Construire le HTML pour le tableau du portefeuille
+        let tableHTML = '';
+        portfolioData.forEach(asset => {
+            tableHTML += `
+                <tr>
+                    <td>${asset.name} (${asset.symbol})</td>
+                    <td><span class="asset-type ${asset.type}">${asset.type.toUpperCase()}</span></td>
+                    <td class="allocation">${asset.allocation}%</td>
+                    <td class="rationale">${asset.reason}</td>
+                </tr>
+            `;
+        });
+        
+        // Mise à jour du tableau
+        portfolioTableBody.innerHTML = tableHTML;
+        
+        // Préparation des données pour le graphique en camembert
+        // Regrouper par type d'actif
+        const stocksTotal = portfolioData.filter(asset => asset.type === 'stock').reduce((sum, asset) => sum + asset.allocation, 0);
+        const etfTotal = portfolioData.filter(asset => asset.type === 'etf').reduce((sum, asset) => sum + asset.allocation, 0);
+        const cryptoTotal = portfolioData.filter(asset => asset.type === 'crypto').reduce((sum, asset) => sum + asset.allocation, 0);
+        
+        // Mise à jour du graphique
+        portfolioChart.data.labels = ['Actions', 'ETF', 'Crypto'];
+        portfolioChart.data.datasets[0].data = [stocksTotal, etfTotal, cryptoTotal];
+        portfolioChart.update();
+    }
+    
     // Configurer le mode plein écran
     function setupFullscreenMode() {
         if (fullscreenBtn) {
@@ -312,22 +579,26 @@ document.addEventListener('DOMContentLoaded', function() {
     // Configurer les écouteurs d'événements
     function setupEventListeners() {
         // Bouton de recherche
-        searchBtn.addEventListener('click', function() {
-            const symbol = searchInput.value.trim().toUpperCase();
-            if (symbol) {
-                searchStock(symbol);
-            }
-        });
-        
-        // Recherche à la pression de Entrée
-        searchInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
+        if (searchBtn) {
+            searchBtn.addEventListener('click', function() {
                 const symbol = searchInput.value.trim().toUpperCase();
                 if (symbol) {
                     searchStock(symbol);
                 }
-            }
-        });
+            });
+        }
+        
+        // Recherche à la pression de Entrée
+        if (searchInput) {
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const symbol = searchInput.value.trim().toUpperCase();
+                    if (symbol) {
+                        searchStock(symbol);
+                    }
+                }
+            });
+        }
         
         // Navigation par onglets
         const tabButtons = document.querySelectorAll('.tab-btn');
@@ -397,6 +668,55 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         });
+        
+        // Ajouter des écouteurs pour les boutons "Voir détails" dans les recommandations
+        document.querySelectorAll('.view-details-btn').forEach(button => {
+            button.addEventListener('click', function() {
+                const symbol = this.getAttribute('data-symbol');
+                if (symbol) {
+                    // Cacher la section portefeuille
+                    const portfolioSection = document.getElementById('recommended-portfolio');
+                    if (portfolioSection) portfolioSection.classList.add('hidden');
+                    
+                    // Cacher les actualités
+                    const newsSection = document.getElementById('breaking-news');
+                    if (newsSection) newsSection.classList.add('hidden');
+                    
+                    // Cacher l'analyse sectorielle
+                    const sectorsSection = document.getElementById('sectors-analysis');
+                    if (sectorsSection) sectorsSection.classList.add('hidden');
+                    
+                    // Afficher les détails du titre
+                    const detailSection = document.getElementById('stockDetailSection');
+                    if (detailSection) detailSection.classList.remove('hidden');
+                    
+                    // Rechercher le titre
+                    searchStock(symbol);
+                }
+            });
+        });
+        
+        // Bouton Retour dans les détails d'action
+        const backButton = document.getElementById('backBtn');
+        if (backButton) {
+            backButton.addEventListener('click', function() {
+                // Cacher les détails du titre
+                const detailSection = document.getElementById('stockDetailSection');
+                if (detailSection) detailSection.classList.add('hidden');
+                
+                // Afficher la section portefeuille
+                const portfolioSection = document.getElementById('recommended-portfolio');
+                if (portfolioSection) portfolioSection.classList.remove('hidden');
+                
+                // Afficher les actualités
+                const newsSection = document.getElementById('breaking-news');
+                if (newsSection) newsSection.classList.remove('hidden');
+                
+                // Afficher l'analyse sectorielle
+                const sectorsSection = document.getElementById('sectors-analysis');
+                if (sectorsSection) sectorsSection.classList.remove('hidden');
+            });
+        }
     }
     
     // Filtrer les actions selon le critère sélectionné
@@ -477,23 +797,25 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
-        stocksTableBody.innerHTML = tableHtml;
-        
-        // Ajouter des écouteurs d'événements pour chaque ligne
-        document.querySelectorAll('#stocks-tbody tr').forEach(row => {
-            row.addEventListener('click', function() {
-                const symbol = this.getAttribute('data-symbol');
-                if (symbol) {
-                    searchStock(symbol);
-                    
-                    // Mettre à jour la classe selected-stock
-                    document.querySelectorAll('#stocks-tbody tr').forEach(r => {
-                        r.classList.remove('selected-stock');
-                    });
-                    this.classList.add('selected-stock');
-                }
+        if (stocksTableBody) {
+            stocksTableBody.innerHTML = tableHtml;
+            
+            // Ajouter des écouteurs d'événements pour chaque ligne
+            document.querySelectorAll('#stocks-tbody tr').forEach(row => {
+                row.addEventListener('click', function() {
+                    const symbol = this.getAttribute('data-symbol');
+                    if (symbol) {
+                        searchStock(symbol);
+                        
+                        // Mettre à jour la classe selected-stock
+                        document.querySelectorAll('#stocks-tbody tr').forEach(r => {
+                            r.classList.remove('selected-stock');
+                        });
+                        this.classList.add('selected-stock');
+                    }
+                });
             });
-        });
+        }
     }
     
     // Convertir le volume en nombre pour le tri
@@ -539,14 +861,16 @@ document.addEventListener('DOMContentLoaded', function() {
         const isMarketOpen = !isWeekend && !isBeforeOpen && !isAfterClose;
         
         // Mettre à jour l'indicateur et le texte
-        if (isMarketOpen) {
-            marketIndicator.classList.remove('red');
-            marketIndicator.classList.add('green');
-            marketStatusText.textContent = 'Marché ouvert';
-        } else {
-            marketIndicator.classList.remove('green');
-            marketIndicator.classList.add('red');
-            marketStatusText.textContent = 'Marché fermé';
+        if (marketIndicator && marketStatusText) {
+            if (isMarketOpen) {
+                marketIndicator.classList.remove('red');
+                marketIndicator.classList.add('green');
+                marketStatusText.textContent = 'Marché ouvert';
+            } else {
+                marketIndicator.classList.remove('green');
+                marketIndicator.classList.add('red');
+                marketStatusText.textContent = 'Marché fermé';
+            }
         }
     }
     
@@ -557,7 +881,7 @@ document.addEventListener('DOMContentLoaded', function() {
             currentSymbol = symbol;
             
             // Mettre à jour l'affichage du symbole dans le champ de recherche
-            searchInput.value = symbol;
+            if (searchInput) searchInput.value = symbol;
             
             // Mettre à jour le graphique TradingView
             updateTradingViewSymbol(symbol);
@@ -921,9 +1245,11 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateUI(data) {
         if (!data) return;
         
-        // Mise à jour du titre et info de l'action
-        stockInfoTitle.textContent = `${data.name} (${data.symbol})`;
-        exchangeElement.textContent = data.exchange;
+        // Mise à jour du titre de la section détail
+        const stockDetailName = document.getElementById('stockDetailName');
+        if (stockDetailName) {
+            stockDetailName.textContent = `${data.name} (${data.symbol})`;
+        }
         
         // Mise à jour du logo (si possible)
         try {
@@ -946,20 +1272,25 @@ document.addEventListener('DOMContentLoaded', function() {
         const changePercentValue = typeof data.changePercent === 'number' ? data.changePercent.toFixed(2) : data.changePercent;
         
         // Mise à jour du prix et de la variation
-        currentPrice.textContent = `$${priceValue}`;
+        if (currentPrice) {
+            currentPrice.textContent = `$${priceValue}`;
+        }
         
         // Déterminer si la variation est positive ou négative
         const isPositive = parseFloat(changeValue) >= 0;
         const changeText = `${isPositive ? '+' : ''}${changeValue} (${isPositive ? '+' : ''}${changePercentValue}%)`;
-        priceChange.textContent = changeText;
         
-        // Appliquer les classes CSS pour les couleurs
-        if (isPositive) {
-            priceChange.classList.remove('negative');
-            priceChange.classList.add('positive');
-        } else {
-            priceChange.classList.remove('positive');
-            priceChange.classList.add('negative');
+        if (priceChange) {
+            priceChange.textContent = changeText;
+            
+            // Appliquer les classes CSS pour les couleurs
+            if (isPositive) {
+                priceChange.classList.remove('negative');
+                priceChange.classList.add('positive');
+            } else {
+                priceChange.classList.remove('positive');
+                priceChange.classList.add('negative');
+            }
         }
         
         // Mise à jour des métriques avec coloration
@@ -1230,6 +1561,14 @@ document.addEventListener('DOMContentLoaded', function() {
         return companies[symbol] || `${symbol} Corp.`;
     }
     
+    // Interroger Perplexity pour l'analyse sectorielle (simulation)
+    async function queryPerplexityForSectorAnalysis() {
+        // Dans un environnement réel, vous devriez interroger l'API Perplexity ici
+        // Pour cette démo, nous utilisons simplement les données statiques
+        console.log("Interrogation de Perplexity pour l'analyse sectorielle...");
+        return sectorData;
+    }
+    
     // Ajouter une classe CSS pour indiquer la ligne sélectionnée dans le tableau
     const style = document.createElement('style');
     style.textContent = `
@@ -1245,6 +1584,12 @@ document.addEventListener('DOMContentLoaded', function() {
             bottom: 0;
             width: 3px;
             background-color: var(--primary-color);
+        }
+        
+        /* Animation pour le chargement */
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
     `;
     document.head.appendChild(style);
