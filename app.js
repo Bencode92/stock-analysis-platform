@@ -25,6 +25,9 @@ document.addEventListener('DOMContentLoaded', function() {
         // Mettre à jour l'heure
         updateMarketTime();
         
+        // Ajouter le bouton de rafraîchissement global dans le header
+        createHeaderRefreshButton();
+        
         // Initialiser le graphique du portefeuille
         initPortfolioChart();
         
@@ -36,6 +39,96 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Mettre à jour régulièrement l'heure (uniquement l'heure)
         setInterval(updateMarketTime, 1000);
+    }
+    
+    // Ajouter un bouton de rafraîchissement dans le header
+    function createHeaderRefreshButton() {
+        const header = document.querySelector('.main-header');
+        if (!header) return;
+        
+        // Créer un conteneur pour le bouton
+        const refreshContainer = document.createElement('div');
+        refreshContainer.className = 'header-refresh-container';
+        
+        // Créer le bouton
+        const refreshButton = document.createElement('button');
+        refreshButton.id = 'globalRefreshButton';
+        refreshButton.className = 'header-refresh-button';
+        refreshButton.innerHTML = '<i class="fas fa-sync-alt"></i> Actualiser les données';
+        
+        // Ajouter le bouton au header
+        refreshContainer.appendChild(refreshButton);
+        header.appendChild(refreshContainer);
+        
+        // Ajouter l'écouteur d'événement
+        refreshButton.addEventListener('click', function() {
+            handleGlobalRefresh(this);
+        });
+    }
+    
+    // Gestionnaire pour le bouton de rafraîchissement global
+    function handleGlobalRefresh(button) {
+        if (!button) return;
+        
+        // Ajouter un effet visuel pendant le chargement
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-sync-alt refresh-spinning"></i> Mise à jour en cours...';
+        button.disabled = true;
+        button.classList.add('refreshing');
+        
+        // Rafraîchir toutes les données
+        fetchAllPerplexityData()
+            .then(() => {
+                // Restaurer l'apparence du bouton
+                setTimeout(() => {
+                    button.innerHTML = originalText;
+                    button.disabled = false;
+                    button.classList.remove('refreshing');
+                    
+                    // Afficher un message de confirmation
+                    showNotification('Données mises à jour avec succès', 'success');
+                }, 500);
+            })
+            .catch((error) => {
+                console.error('Erreur lors de la mise à jour globale:', error);
+                
+                // Restaurer l'apparence du bouton
+                button.innerHTML = '<i class="fas fa-sync-alt"></i> Réessayer';
+                button.disabled = false;
+                button.classList.remove('refreshing');
+                
+                // Afficher un message d'erreur
+                showNotification('Erreur lors de la mise à jour des données', 'error');
+            });
+    }
+    
+    // Affiche une notification
+    function showNotification(message, type = 'success') {
+        // Créer l'élément de notification
+        const notification = document.createElement('div');
+        notification.className = `notification ${type}`;
+        notification.textContent = message;
+        
+        // Ajouter un icône selon le type
+        const icon = document.createElement('i');
+        icon.className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+        notification.prepend(icon);
+        
+        // Ajouter au corps du document
+        document.body.appendChild(notification);
+        
+        // Animation d'entrée
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 10);
+        
+        // Disparaître après 3 secondes
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 3000);
     }
     
     // Récupérer toutes les données Perplexity (actualités, secteurs et portefeuille)
@@ -75,6 +168,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // En cas d'erreur, afficher un message dans chaque section
             displayErrorState();
+            
+            // Propager l'erreur pour que les gestionnaires de promesses puissent la capturer
+            throw error;
         }
     }
     
@@ -679,92 +775,6 @@ document.addEventListener('DOMContentLoaded', function() {
             item.addEventListener('click', function() {
                 highlightSector(this);
             });
-        });
-        
-        // Créer un bouton principal de mise à jour pour toutes les données
-        createMainRefreshButton();
-    }
-    
-    // Créer un bouton principal de mise à jour pour toutes les données
-    function createMainRefreshButton() {
-        // Créer le bouton
-        const mainRefreshButton = document.createElement('button');
-        mainRefreshButton.className = 'main-refresh-button';
-        mainRefreshButton.innerHTML = `
-            <i class="fas fa-sync-alt"></i>
-            <span>Mettre à jour les données</span>
-        `;
-        
-        // Styles du bouton
-        mainRefreshButton.style.position = 'fixed';
-        mainRefreshButton.style.bottom = '20px';
-        mainRefreshButton.style.right = '20px';
-        mainRefreshButton.style.backgroundColor = 'var(--primary-color)';
-        mainRefreshButton.style.color = '#ffffff';
-        mainRefreshButton.style.border = 'none';
-        mainRefreshButton.style.borderRadius = '30px';
-        mainRefreshButton.style.padding = '12px 20px';
-        mainRefreshButton.style.display = 'flex';
-        mainRefreshButton.style.alignItems = 'center';
-        mainRefreshButton.style.gap = '8px';
-        mainRefreshButton.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.3)';
-        mainRefreshButton.style.cursor = 'pointer';
-        mainRefreshButton.style.zIndex = '100';
-        mainRefreshButton.style.transition = 'all 0.2s ease';
-        
-        // Écouteur d'événement
-        mainRefreshButton.addEventListener('click', function() {
-            // Ajouter un effet visuel pendant le chargement
-            this.innerHTML = `<i class="fas fa-sync-alt refresh-spinning"></i><span>Mise à jour en cours...</span>`;
-            this.style.opacity = '0.8';
-            this.disabled = true;
-            
-            // Rafraîchir toutes les données depuis Perplexity
-            fetchAllPerplexityData().then(() => {
-                // Restaurer l'apparence du bouton
-                setTimeout(() => {
-                    this.innerHTML = `<i class="fas fa-sync-alt"></i><span>Mettre à jour les données</span>`;
-                    this.style.opacity = '1';
-                    this.disabled = false;
-                    
-                    // Afficher un message de confirmation
-                    const confirmMsg = document.createElement('div');
-                    confirmMsg.textContent = 'Données mises à jour avec succès';
-                    confirmMsg.style.position = 'fixed';
-                    confirmMsg.style.bottom = '80px';
-                    confirmMsg.style.right = '20px';
-                    confirmMsg.style.backgroundColor = 'rgba(0, 200, 83, 0.8)';
-                    confirmMsg.style.color = '#ffffff';
-                    confirmMsg.style.padding = '10px 15px';
-                    confirmMsg.style.borderRadius = '4px';
-                    confirmMsg.style.zIndex = '100';
-                    document.body.appendChild(confirmMsg);
-                    
-                    // Supprimer le message après 3 secondes
-                    setTimeout(() => {
-                        document.body.removeChild(confirmMsg);
-                    }, 3000);
-                }, 500);
-            }).catch(() => {
-                // En cas d'erreur, restaurer l'apparence du bouton
-                this.innerHTML = `<i class="fas fa-sync-alt"></i><span>Réessayer</span>`;
-                this.style.opacity = '1';
-                this.disabled = false;
-            });
-        });
-        
-        // Ajouter au document
-        document.body.appendChild(mainRefreshButton);
-        
-        // Hover effect
-        mainRefreshButton.addEventListener('mouseover', function() {
-            this.style.transform = 'translateY(-2px)';
-            this.style.boxShadow = '0 6px 12px rgba(0, 0, 0, 0.4)';
-        });
-        
-        mainRefreshButton.addEventListener('mouseout', function() {
-            this.style.transform = 'translateY(0)';
-            this.style.boxShadow = '0 4px 10px rgba(0, 0, 0, 0.3)';
         });
     }
     
