@@ -16,6 +16,18 @@
     --subheading-size: 1.2rem;
     --body-size: 1rem;
     --small-size: 0.85rem;
+    
+    /* New color variables for the portfolio chart */
+    --chart-color-1: #ffffff;
+    --chart-color-2: #cccccc;
+    --chart-color-3: #888888;
+    --chart-color-4: #555555;
+    --chart-color-5: #333333;
+    
+    /* New color variables for sector types */
+    --stock-color: #ffffff;
+    --etf-color: #cccccc;
+    --crypto-color: #888888;
 }
 
 /* Base styles */
@@ -331,6 +343,105 @@ p {
     line-height: 1.5;
 }
 
+/* Sectors Section */
+.sectors-section {
+    padding: 20px;
+    margin: 0 20px 20px 20px;
+    background-color: var(--card-bg);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+}
+
+.sectors-section h2 {
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    font-size: var(--heading-size);
+}
+
+.sectors-section h2 i {
+    margin-right: 10px;
+}
+
+.sectors-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.bullish-sectors, .bearish-sectors {
+    background-color: var(--bg-light);
+    border-radius: 8px;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+}
+
+.bullish-sectors h3, .bearish-sectors h3 {
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.bullish-sectors h3 {
+    color: var(--gain-color);
+}
+
+.bearish-sectors h3 {
+    color: var(--loss-color);
+}
+
+.bullish-sectors h3 i, .bearish-sectors h3 i {
+    font-size: 1.1rem;
+}
+
+.sectors-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.sector-item {
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sector-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.sector-name {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-bright);
+}
+
+.sector-name i {
+    font-size: 0.9rem;
+}
+
+.bullish-sectors .sector-name i {
+    color: var(--gain-color);
+}
+
+.bearish-sectors .sector-name i {
+    color: var(--loss-color);
+}
+
+.sector-reason {
+    font-size: var(--small-size);
+    color: var(--text-color);
+    line-height: 1.5;
+}
+
 /* Portfolio Section */
 .portfolio-section {
     padding: 20px;
@@ -363,7 +474,78 @@ p {
 .portfolio-container {
     display: flex;
     gap: 30px;
-    align-items: flex-start;
+    margin-bottom: 30px;
+}
+
+/* Portfolio Table */
+.portfolio-table-container {
+    flex: 1.5;
+    background-color: var(--bg-light);
+    border-radius: 8px;
+    padding: 15px;
+    border: 1px solid var(--border-color);
+    overflow: auto;
+    max-height: 400px;
+}
+
+.portfolio-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.portfolio-table th, .portfolio-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.portfolio-table th {
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: var(--small-size);
+    text-transform: uppercase;
+}
+
+.portfolio-table td {
+    font-size: var(--body-size);
+}
+
+.portfolio-table td:first-child {
+    font-weight: 600;
+    color: var(--text-bright);
+}
+
+.asset-type {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.asset-type.stock {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--stock-color);
+}
+
+.asset-type.etf {
+    background-color: rgba(204, 204, 204, 0.1);
+    color: var(--etf-color);
+}
+
+.asset-type.crypto {
+    background-color: rgba(136, 136, 136, 0.1);
+    color: var(--crypto-color);
+}
+
+.allocation {
+    font-weight: 600;
+}
+
+.rationale {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    max-width: 300px;
 }
 
 .portfolio-chart {
@@ -372,16 +554,29 @@ p {
     height: 300px;
     background-color: var(--bg-light);
     border-radius: 8px;
+    border: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 20px;
+    padding: 15px;
 }
 
-.portfolio-list {
-    flex: 2;
+/* Portfolio Pie Chart */
+.portfolio-pie-chart {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
+.pie-chart-container {
+    width: 100%;
+    height: 100%;
+    position: relative;
+}
+
+/* Existing Portfolio Grid */
 .portfolio-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -475,47 +670,6 @@ p {
 
 .view-details-btn:hover {
     background-color: rgba(255, 255, 255, 0.1);
-}
-
-/* Portfolio Pie Chart */
-.portfolio-pie-chart {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.pie-chart-container {
-    width: 250px;
-    height: 250px;
-    position: relative;
-}
-
-.pie-chart-legend {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-top: 20px;
-    gap: 15px;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    margin-right: 15px;
-}
-
-.legend-color {
-    width: 12px;
-    height: 12px;
-    border-radius: 2px;
-    margin-right: 6px;
-}
-
-.legend-label {
-    font-size: var(--small-size);
-    color: var(--text-color);
 }
 
 /* Stock Detail */
@@ -801,6 +955,8 @@ p {
     
     .portfolio-chart {
         width: 100%;
+        height: 350px;
+        margin-bottom: 20px;
     }
     
     .news-grid {
@@ -809,6 +965,10 @@ p {
     
     .news-card.major-news {
         grid-column: 1;
+    }
+    
+    .sectors-container {
+        grid-template-columns: 1fr;
     }
 }
 
