@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const currentTimeElement = document.getElementById('current-time');
     const updateTimeElement = document.getElementById('update-time');
     const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const stocksTableBody = document.getElementById('stocks-tbody');
     
     // Métriques
     const openPrice = document.getElementById('open-price');
@@ -28,10 +29,12 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentSymbol = 'AAPL'; // Par défaut on affiche Apple
     let stockData = null; // Stockage des données actuelles pour l'action
     let widget = null; // Instance du widget TradingView
+    let allStocksData = {}; // Pour stocker les données de toutes les actions
     
     // Liste des actions populaires pour suggestion
     const popularStocks = [
-        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'TSLA', 'NVDA', 'JPM', 'V', 'BRK.B'
+        'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META', 'TSLA', 'NVDA', 'JPM', 'V', 'BRK.B',
+        'WMT', 'JNJ', 'PG', 'UNH', 'HD', 'BAC', 'KO', 'INTC', 'DIS', 'CSCO'
     ];
     
     // Initialisation
@@ -39,14 +42,14 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initialiser le graphique TradingView
         initTradingViewChart();
         
+        // Initialiser le tableau des actions
+        initStocksList();
+        
         // Charger les données en temps réel pour Apple
         fetchStockData(currentSymbol);
         
         // Configurer les écouteurs d'événements
         setupEventListeners();
-        
-        // Afficher les suggestions de stocks populaires
-        showPopularStocksSuggestions();
         
         // Mettre à jour l'heure de marché
         updateMarketTime();
@@ -56,7 +59,123 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Mettre à jour régulièrement l'heure et les données
         setInterval(updateMarketTime, 1000);
-        setInterval(() => fetchStockData(currentSymbol), 60000); // Rafraîchir toutes les minutes
+        setInterval(() => fetchStockData(currentSymbol, false), 60000); // Rafraîchir toutes les minutes
+    }
+    
+    // Initialiser les données du tableau des actions
+    function initStocksList() {
+        // Charger et afficher les données pour toutes les actions populaires
+        loadAllStocksData();
+    }
+    
+    // Charger les données pour toutes les actions populaires
+    async function loadAllStocksData() {
+        // Afficher un indicateur de chargement dans le tableau
+        stocksTableBody.innerHTML = `
+            <tr>
+                <td colspan="7" style="text-align: center; padding: 20px;">
+                    <div style="display: inline-block; width: 30px; height: 30px; border: 3px solid rgba(28, 118, 255, 0.3); border-top-color: var(--primary-color); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                    <p style="margin-top: 10px;">Chargement des données...</p>
+                </td>
+            </tr>
+        `;
+        
+        // Créer un tableau pour stocker toutes les promesses de requêtes
+        const promises = [];
+        
+        // Pour chaque action populaire, créer une promesse pour récupérer les données
+        popularStocks.forEach(symbol => {
+            promises.push(
+                fetchSimulatedStockData(symbol)
+                    .then(data => {
+                        allStocksData[symbol] = data;
+                        return data;
+                    })
+                    .catch(error => {
+                        console.error(`Erreur lors de la récupération des données pour ${symbol}:`, error);
+                        return null;
+                    })
+            );
+        });
+        
+        // Attendre que toutes les promesses soient résolues
+        await Promise.all(promises);
+        
+        // Afficher les données dans le tableau
+        updateStocksTable();
+    }
+    
+    // Mettre à jour le tableau des actions avec les données disponibles
+    function updateStocksTable() {
+        if (!stocksTableBody) return;
+        
+        // Trier les actions par capitalisation boursière (du plus grand au plus petit)
+        const sortedStocks = Object.values(allStocksData).sort((a, b) => {
+            // Convertir la capitalisation boursière en nombre pour le tri
+            const capA = convertMarketCapToNumber(a.marketCap);
+            const capB = convertMarketCapToNumber(b.marketCap);
+            return capB - capA;
+        });
+        
+        // Générer le HTML pour chaque ligne du tableau
+        let tableHtml = '';
+        sortedStocks.forEach((stock, index) => {
+            const isPositiveDay = parseFloat(stock.changePercent) >= 0;
+            const isPositiveWeek = parseFloat(stock.performance.weekChange) >= 0;
+            
+            tableHtml += `
+                <tr data-symbol="${stock.symbol}" class="${stock.symbol === currentSymbol ? 'selected-stock' : ''}">
+                    <td>${index + 1}</td>
+                    <td>
+                        <div class="stock-name">
+                            <img class="stock-icon" src="https://logo.clearbit.com/${stock.name.toLowerCase().split(' ')[0].replace(/[^a-zA-Z0-9]/g, '')}.com" 
+                                 onerror="this.src='https://via.placeholder.com/24x24?text=${stock.symbol.charAt(0)}'">
+                            <span class="stock-symbol">${stock.symbol}</span>
+                            <span class="stock-fullname">${stock.name.split(' ')[0]}</span>
+                        </div>
+                    </td>
+                    <td>$${typeof stock.price === 'number' ? stock.price.toFixed(2) : stock.price}</td>
+                    <td class="${isPositiveDay ? 'positive' : 'negative'}">${isPositiveDay ? '+' : ''}${stock.changePercent}%</td>
+                    <td class="${isPositiveWeek ? 'positive' : 'negative'}">${isPositiveWeek ? '+' : ''}${stock.performance.weekChange}%</td>
+                    <td>${stock.volume}</td>
+                    <td>${stock.marketCap}</td>
+                </tr>
+            `;
+        });
+        
+        stocksTableBody.innerHTML = tableHtml;
+        
+        // Ajouter des écouteurs d'événements pour chaque ligne
+        document.querySelectorAll('#stocks-tbody tr').forEach(row => {
+            row.addEventListener('click', function() {
+                const symbol = this.getAttribute('data-symbol');
+                if (symbol) {
+                    searchStock(symbol);
+                    
+                    // Mettre à jour la classe selected-stock
+                    document.querySelectorAll('#stocks-tbody tr').forEach(r => {
+                        r.classList.remove('selected-stock');
+                    });
+                    this.classList.add('selected-stock');
+                }
+            });
+        });
+    }
+    
+    // Convertir la capitalisation boursière en nombre pour le tri
+    function convertMarketCapToNumber(marketCap) {
+        if (!marketCap) return 0;
+        
+        const value = parseFloat(marketCap.replace(/[^0-9.]/g, ''));
+        const unit = marketCap.slice(-1).toUpperCase();
+        
+        switch (unit) {
+            case 'T': return value * 1000000000000;
+            case 'B': return value * 1000000000;
+            case 'M': return value * 1000000;
+            case 'K': return value * 1000;
+            default: return value;
+        }
     }
     
     // Initialiser le graphique TradingView
@@ -74,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 locale: 'fr',
                 toolbar_bg: '#0a0a14', // Couleur de fond pour le toolbar (noir avec nuance bleue)
                 enable_publishing: false,
-                allow_symbol_change: false,
+                allow_symbol_change: true,
                 save_image: true,
                 hide_side_toolbar: false,
                 studies: [
@@ -145,10 +264,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const exitButton = document.createElement('button');
             exitButton.className = 'fullscreen-exit-btn';
             exitButton.id = 'exit-fullscreen';
-            exitButton.innerHTML = 'Quitter le plein écran <i class="fas fa-compress-alt"></i>';
+            exitButton.innerHTML = '<i class="fas fa-compress-alt"></i> Quitter';
             exitButton.addEventListener('click', toggleFullscreen);
             
-            const chartSection = document.querySelector('.main-info-display');
+            const chartSection = document.querySelector('#chart-tab');
             if (chartSection) {
                 chartSection.appendChild(exitButton);
             }
@@ -164,14 +283,14 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Basculer le mode plein écran
     function toggleFullscreen() {
-        const chartSection = document.querySelector('.main-info-display');
+        const chartTab = document.querySelector('#chart-tab');
         const exitButton = document.getElementById('exit-fullscreen');
         
-        if (chartSection) {
-            chartSection.classList.toggle('fullscreen-chart');
+        if (chartTab) {
+            chartTab.classList.toggle('fullscreen-chart');
             
-            if (chartSection.classList.contains('fullscreen-chart')) {
-                fullscreenBtn.textContent = 'Quitter le plein écran';
+            if (chartTab.classList.contains('fullscreen-chart')) {
+                fullscreenBtn.innerHTML = '<i class="fas fa-compress"></i>';
                 document.body.style.overflow = 'hidden'; // Empêcher le défilement
                 
                 // Redimensionner le graphique
@@ -179,7 +298,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     widget.resize();
                 }
             } else {
-                fullscreenBtn.textContent = 'Agrandir le graphique';
+                fullscreenBtn.innerHTML = '<i class="fas fa-expand"></i>';
                 document.body.style.overflow = ''; // Rétablir le défilement
                 
                 // Redimensionner le graphique
@@ -187,30 +306,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     widget.resize();
                 }
             }
-        }
-    }
-    
-    // Afficher des suggestions de stocks populaires sous la barre de recherche
-    function showPopularStocksSuggestions() {
-        const searchContainer = document.querySelector('.search-container');
-        
-        if (!document.querySelector('.stock-suggestions')) {
-            const suggestionsDiv = document.createElement('div');
-            suggestionsDiv.className = 'stock-suggestions';
-            suggestionsDiv.innerHTML = '<span>Populaires: </span>';
-            
-            popularStocks.forEach(symbol => {
-                const stockLink = document.createElement('a');
-                stockLink.href = '#';
-                stockLink.textContent = symbol;
-                stockLink.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    searchStock(symbol);
-                });
-                suggestionsDiv.appendChild(stockLink);
-            });
-            
-            searchContainer.parentNode.insertBefore(suggestionsDiv, searchContainer.nextSibling);
         }
     }
     
@@ -234,75 +329,186 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Tabs pour l'analyse IA
-        const aiTabs = document.querySelectorAll('.ai-tab-btn');
-        const aiContents = document.querySelectorAll('.ai-tab-content');
+        // Navigation par onglets
+        const tabButtons = document.querySelectorAll('.tab-btn');
+        const tabContents = document.querySelectorAll('.tab-content');
         
-        aiTabs.forEach(tab => {
-            tab.addEventListener('click', function() {
-                // Enlever la classe active de tous les tabs
-                aiTabs.forEach(t => t.classList.remove('active'));
-                aiContents.forEach(c => c.classList.remove('active'));
-                
-                // Ajouter la classe active au tab cliqué
-                this.classList.add('active');
-                
-                // Afficher le contenu correspondant
-                const tabId = this.getAttribute('data-tab');
-                document.getElementById(`${tabId}-tab`).classList.add('active');
-            });
-        });
-        
-        // Bouton d'actualisation
-        const refreshBtn = document.getElementById('refresh-analysis');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', function() {
-                fetchStockData(currentSymbol);
-            });
-        }
-        
-        // Boutons de période
-        const timeButtons = document.querySelectorAll('.time-btn');
-        timeButtons.forEach(button => {
+        tabButtons.forEach(button => {
             button.addEventListener('click', function() {
-                // Enlever la classe active de tous les boutons
-                timeButtons.forEach(btn => btn.classList.remove('active'));
+                // Désactiver tous les onglets
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                tabContents.forEach(content => content.classList.remove('active'));
                 
-                // Ajouter la classe active au bouton cliqué
+                // Activer l'onglet sélectionné
+                const tabId = this.getAttribute('data-tab');
                 this.classList.add('active');
+                document.getElementById(`${tabId}-tab`).classList.add('active');
                 
-                // Changer l'intervalle du graphique TradingView
-                const range = this.getAttribute('data-range');
-                if (widget) {
-                    let interval = 'D'; // Défaut: jour
-                    
-                    switch(range) {
-                        case '1D':
-                            interval = '30'; // 30 minutes
-                            break;
-                        case '1W':
-                            interval = 'D'; // Jour
-                            break;
-                        case '1M':
-                            interval = 'W'; // Semaine
-                            break;
-                        case '3M':
-                            interval = 'W'; // Semaine
-                            break;
-                        case '1Y':
-                            interval = 'M'; // Mois
-                            break;
-                        case 'ALL':
-                            interval = 'M'; // Mois
-                            break;
-                    }
-                    
-                    widget.chart().setResolution(interval, function() {
-                        console.log("Interval changed to:", interval);
-                    });
+                // Si c'est l'onglet du graphique, redimensionner TradingView
+                if (tabId === 'chart' && widget) {
+                    setTimeout(() => widget.resize(), 100);
                 }
             });
         });
+        
+        // Filtre des actions
+        const filterButtons = document.querySelectorAll('.filter-btn');
+        
+        filterButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Désactiver tous les filtres
+                filterButtons.forEach(btn => btn.classList.remove('active'));
+                
+                // Activer le filtre sélectionné
+                this.classList.add('active');
+                
+                // Appliquer le filtre
+                const filter = this.getAttribute('data-filter');
+                filterStocks(filter);
+            });
+        });
+        
+        // Boutons de période (1J, 1S, 1M, etc.)
+        const timeButtons = document.querySelectorAll('.time-btn');
+        
+        timeButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                // Désactiver tous les boutons
+                timeButtons.forEach(btn => btn.classList.remove('active'));
+                
+                // Activer le bouton sélectionné
+                this.classList.add('active');
+                
+                // Changer l'intervalle du graphique
+                if (widget) {
+                    const range = this.getAttribute('data-range');
+                    let interval = 'D';
+                    
+                    switch(range) {
+                        case '1D': interval = '15'; break;
+                        case '1W': interval = 'D'; break;
+                        case '1M': interval = 'W'; break;
+                        case '3M': interval = 'W'; break;
+                        case '1Y': interval = 'M'; break;
+                        case 'ALL': interval = 'M'; break;
+                    }
+                    
+                    widget.chart().setResolution(interval);
+                }
+            });
+        });
+    }
+    
+    // Filtrer les actions selon le critère sélectionné
+    function filterStocks(filter) {
+        if (!allStocksData || Object.keys(allStocksData).length === 0) return;
+        
+        let filteredStocks;
+        
+        switch(filter) {
+            case 'trending':
+                // Actions les plus populaires (par volume)
+                filteredStocks = Object.values(allStocksData).sort((a, b) => {
+                    const volumeA = convertVolumeToNumber(a.volume);
+                    const volumeB = convertVolumeToNumber(b.volume);
+                    return volumeB - volumeA;
+                });
+                break;
+                
+            case 'gainers':
+                // Actions en plus forte hausse
+                filteredStocks = Object.values(allStocksData).sort((a, b) => {
+                    return parseFloat(b.changePercent) - parseFloat(a.changePercent);
+                }).filter(stock => parseFloat(stock.changePercent) > 0);
+                break;
+                
+            case 'losers':
+                // Actions en plus forte baisse
+                filteredStocks = Object.values(allStocksData).sort((a, b) => {
+                    return parseFloat(a.changePercent) - parseFloat(b.changePercent);
+                }).filter(stock => parseFloat(stock.changePercent) < 0);
+                break;
+                
+            case 'watchlist':
+            default:
+                // Ma liste (par défaut, toutes les actions par capitalisation boursière)
+                filteredStocks = Object.values(allStocksData).sort((a, b) => {
+                    const capA = convertMarketCapToNumber(a.marketCap);
+                    const capB = convertMarketCapToNumber(b.marketCap);
+                    return capB - capA;
+                });
+                break;
+        }
+        
+        // Générer le HTML pour le tableau
+        let tableHtml = '';
+        
+        if (filteredStocks.length === 0) {
+            tableHtml = `
+                <tr>
+                    <td colspan="7" style="text-align: center; padding: 20px;">
+                        Aucune donnée disponible pour ce filtre.
+                    </td>
+                </tr>
+            `;
+        } else {
+            filteredStocks.forEach((stock, index) => {
+                const isPositiveDay = parseFloat(stock.changePercent) >= 0;
+                const isPositiveWeek = parseFloat(stock.performance.weekChange) >= 0;
+                
+                tableHtml += `
+                    <tr data-symbol="${stock.symbol}" class="${stock.symbol === currentSymbol ? 'selected-stock' : ''}">
+                        <td>${index + 1}</td>
+                        <td>
+                            <div class="stock-name">
+                                <img class="stock-icon" src="https://logo.clearbit.com/${stock.name.toLowerCase().split(' ')[0].replace(/[^a-zA-Z0-9]/g, '')}.com" 
+                                     onerror="this.src='https://via.placeholder.com/24x24?text=${stock.symbol.charAt(0)}'">
+                                <span class="stock-symbol">${stock.symbol}</span>
+                                <span class="stock-fullname">${stock.name.split(' ')[0]}</span>
+                            </div>
+                        </td>
+                        <td>$${typeof stock.price === 'number' ? stock.price.toFixed(2) : stock.price}</td>
+                        <td class="${isPositiveDay ? 'positive' : 'negative'}">${isPositiveDay ? '+' : ''}${stock.changePercent}%</td>
+                        <td class="${isPositiveWeek ? 'positive' : 'negative'}">${isPositiveWeek ? '+' : ''}${stock.performance.weekChange}%</td>
+                        <td>${stock.volume}</td>
+                        <td>${stock.marketCap}</td>
+                    </tr>
+                `;
+            });
+        }
+        
+        stocksTableBody.innerHTML = tableHtml;
+        
+        // Ajouter des écouteurs d'événements pour chaque ligne
+        document.querySelectorAll('#stocks-tbody tr').forEach(row => {
+            row.addEventListener('click', function() {
+                const symbol = this.getAttribute('data-symbol');
+                if (symbol) {
+                    searchStock(symbol);
+                    
+                    // Mettre à jour la classe selected-stock
+                    document.querySelectorAll('#stocks-tbody tr').forEach(r => {
+                        r.classList.remove('selected-stock');
+                    });
+                    this.classList.add('selected-stock');
+                }
+            });
+        });
+    }
+    
+    // Convertir le volume en nombre pour le tri
+    function convertVolumeToNumber(volume) {
+        if (!volume) return 0;
+        
+        const value = parseFloat(volume.replace(/[^0-9.]/g, ''));
+        const unit = volume.slice(-1).toUpperCase();
+        
+        switch (unit) {
+            case 'B': return value * 1000000000;
+            case 'M': return value * 1000000;
+            case 'K': return value * 1000;
+            default: return value;
+        }
     }
     
     // Mettre à jour l'heure de marché
@@ -356,8 +562,22 @@ document.addEventListener('DOMContentLoaded', function() {
             // Mettre à jour le graphique TradingView
             updateTradingViewSymbol(symbol);
             
-            // Récupérer les données pour ce symbole
-            fetchStockData(symbol);
+            // Marquer la ligne correspondante dans le tableau
+            document.querySelectorAll('#stocks-tbody tr').forEach(row => {
+                if (row.getAttribute('data-symbol') === symbol) {
+                    row.classList.add('selected-stock');
+                } else {
+                    row.classList.remove('selected-stock');
+                }
+            });
+            
+            // Si les données sont déjà disponibles, les utiliser
+            if (allStocksData[symbol]) {
+                updateUI(allStocksData[symbol]);
+            } else {
+                // Sinon, récupérer les données
+                fetchStockData(symbol, true);
+            }
             
             console.log(`Recherche effectuée pour: ${symbol}`);
         }
@@ -381,16 +601,16 @@ document.addEventListener('DOMContentLoaded', function() {
             
             console.log(`Setting TradingView symbol to: ${tvSymbol}`);
             
-            widget.chart().setSymbol(tvSymbol, function() {
+            widget.setSymbol(tvSymbol, 'D', function() {
                 console.log("Symbol updated to:", tvSymbol);
             });
         }
     }
     
-    // Récupérer les données de stock via OpenAI
-    async function fetchStockData(symbol) {
+    // Récupérer les données de stock
+    async function fetchStockData(symbol, updateTable = true) {
         try {
-            // Afficher un indicateur de chargement
+            // Afficher un indicateur de chargement dans l'onglet d'analyse
             if (aiAnalysisContent) {
                 aiAnalysisContent.innerHTML = `
                     <div class="ai-status">
@@ -401,100 +621,37 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>`;
             }
             
-            // Utiliser l'API OpenAI pour obtenir des données et une analyse
-            const response = await fetchFromOpenAI(symbol);
+            // Pour cette démo, utiliser des données simulées
+            const stockData = await fetchSimulatedStockData(symbol);
             
-            // Mettre à jour l'interface utilisateur avec ces données
-            updateUI(response);
+            // Mettre à jour l'interface utilisateur
+            updateUI(stockData);
+            
+            // Stocker les données pour référence future
+            allStocksData[symbol] = stockData;
+            
+            // Mettre à jour le tableau si nécessaire
+            if (updateTable) {
+                updateStocksTable();
+            }
             
         } catch (error) {
             console.error('Erreur lors de la récupération des données:', error);
             if (aiAnalysisContent) {
                 aiAnalysisContent.innerHTML = '<p>Erreur lors de la récupération des données. Veuillez réessayer.</p>';
             }
-            
-            // En cas d'erreur, fallback sur des données simulées
-            const simulatedData = getSimulatedStockData(symbol);
-            updateUI(simulatedData);
         }
     }
     
-    // Interroger OpenAI pour les données et l'analyse
-    async function fetchFromOpenAI(symbol) {
-        try {
-            // Construire la requête pour OpenAI
-            const prompt = `Fournir les données financières actuelles et une analyse pour ${symbol} au format JSON structuré. 
-                Inclure les champs suivants: 
-                - symbol: le symbole de l'action
-                - name: le nom complet de l'entreprise
-                - exchange: la bourse sur laquelle l'action est cotée (NASDAQ, NYSE, etc.)
-                - price: le prix actuel estimé (valeur numérique)
-                - change: la variation en dollars (valeur numérique avec signe)
-                - changePercent: la variation en pourcentage (valeur numérique avec signe)
-                - dayHigh, dayLow, open, previousClose: les valeurs clés du jour (valeurs numériques)
-                - volume: le volume d'échanges (format comme "42.8M")
-                - marketCap: la capitalisation boursière (format comme "2.95T")
-                - peRatio: le ratio P/E (valeur numérique)
-                - dividend: le rendement du dividende (format comme "0.51%")
-                - performance: {dayChange, weekChange, monthChange, threeMonthChange, yearChange} (valeurs numériques avec signes)
-                - analysis: {
-                    sentiment: "positif", "neutre" ou "négatif"
-                    overview: résumé court de l'entreprise et sa position dans son secteur
-                    riskLevel: évaluation du niveau de risque ("faible", "modéré", "élevé")
-                    technicalAnalysis: analyse technique courte
-                    fundamentalAnalysis: analyse fondamentale courte
-                    recommendation: recommandation générale sur cette action
-                    keyFactors: liste de 3-4 facteurs clés à surveiller
-                    news: tableau de 3 actualités récentes avec titre, source et temps relatif
-                }
-                Assurez-vous que la réponse est uniquement en JSON valide sans texte supplémentaire.`;
-                
-            // Appel à l'API OpenAI
-            const aiResponse = await chat_with_openai({
-                content: prompt
-            });
-            
-            // Extraire le JSON de la réponse
-            const jsonMatch = aiResponse.content.match(/```json\s*([\s\S]*?)\s*```/) || 
-                              aiResponse.content.match(/{[\s\S]*}/);
-            
-            let jsonData;
-            if (jsonMatch) {
-                jsonData = JSON.parse(jsonMatch[0].replace(/```json|```/g, ''));
-            } else {
-                // Si le JSON n'est pas correctement formaté, essayer de parser la réponse entière
-                try {
-                    jsonData = JSON.parse(aiResponse.content);
-                } catch (e) {
-                    throw new Error("Impossible de parser la réponse JSON d'OpenAI");
-                }
-            }
-            
-            return jsonData;
-            
-        } catch (error) {
-            console.error("Erreur lors de la communication avec OpenAI:", error);
-            throw error;
-        }
-    }
-    
-    // Fonction simulant un appel à OpenAI (pour la démo et comme fallback)
-    async function chat_with_openai(params) {
-        try {
-            // Tentative d'utiliser le vrai MCP OpenAI s'il est disponible
-            return await window.chat_with_openai(params);
-        } catch (error) {
-            console.log("Utilisation de données simulées car OpenAI n'est pas disponible", error);
-            
-            // Simulation de réponse en cas d'échec ou pour la démo
-            const stockInfo = getSimulatedStockData(params.content.includes("AAPL") ? "AAPL" : 
-                              params.content.includes("MSFT") ? "MSFT" : 
-                              params.content.includes("GOOGL") ? "GOOGL" : "UNKNOWN");
-            
-            return {
-                content: JSON.stringify(stockInfo)
-            };
-        }
+    // Simuler la récupération de données (pour la démo)
+    async function fetchSimulatedStockData(symbol) {
+        return new Promise((resolve) => {
+            // Simuler un temps de chargement
+            setTimeout(() => {
+                const data = getSimulatedStockData(symbol);
+                resolve(data);
+            }, 300); // Délai aléatoire entre 300ms et 1s
+        });
     }
     
     // Générer des données simulées pour un symbole
@@ -670,33 +827,57 @@ document.addEventListener('DOMContentLoaded', function() {
             return stocksData[symbol];
         }
         
-        // Sinon, générer des données génériques
+        // Sinon, générer des données aléatoires mais réalistes
+        const seed = symbol.charCodeAt(0) + symbol.charCodeAt(symbol.length - 1);
+        const rand = () => (Math.sin(seed * 9999) + 1) / 2;
+        
+        const price = (50 + rand() * 950).toFixed(2);
+        const changePercent = (rand() * 10 - 5).toFixed(2);
+        const change = (price * changePercent / 100).toFixed(2);
+        const open = (price * (1 - rand() * 0.02)).toFixed(2);
+        const prevClose = (price * (1 - changePercent / 100)).toFixed(2);
+        const dayHigh = (price * (1 + rand() * 0.02)).toFixed(2);
+        const dayLow = (price * (1 - rand() * 0.03)).toFixed(2);
+        
+        const volume = `${Math.floor(rand() * 100)}M`;
+        const marketCap = `${(rand() * 100 > 95) ? ((rand() * 3).toFixed(2) + 'T') : ((rand() * 300).toFixed(2) + 'B')}`;
+        const peRatio = (10 + rand() * 40).toFixed(1);
+        const dividend = `${(rand() * 4).toFixed(2)}%`;
+        
+        const weekChange = (rand() * 12 - 6).toFixed(2);
+        const monthChange = (rand() * 20 - 10).toFixed(2);
+        const threeMonthChange = (rand() * 30 - 15).toFixed(2);
+        const yearChange = (rand() * 40 - 20).toFixed(2);
+        
+        const sentiment = rand() > 0.6 ? "positif" : (rand() > 0.3 ? "neutre" : "négatif");
+        const riskLevel = rand() > 0.7 ? "faible" : (rand() > 0.4 ? "modéré" : "élevé");
+        
         return {
             symbol: symbol,
             name: getCompanyName(symbol),
             exchange: getExchangePrefix(symbol),
-            price: (100 + Math.random() * 900).toFixed(2),
-            change: (Math.random() * 6 - 3).toFixed(2),
-            changePercent: (Math.random() * 3 - 1.5).toFixed(2),
-            open: (100 + Math.random() * 895).toFixed(2),
-            previousClose: (100 + Math.random() * 890).toFixed(2),
-            dayHigh: (100 + Math.random() * 910).toFixed(2),
-            dayLow: (100 + Math.random() * 880).toFixed(2),
-            volume: `${Math.floor(Math.random() * 100)}M`,
-            marketCap: `${Math.floor(Math.random() * 1000)}B`,
-            peRatio: (15 + Math.random() * 20).toFixed(1),
-            dividend: `${(Math.random() * 3).toFixed(2)}%`,
+            price: parseFloat(price),
+            change: parseFloat(change),
+            changePercent: parseFloat(changePercent),
+            open: parseFloat(open),
+            previousClose: parseFloat(prevClose),
+            dayHigh: parseFloat(dayHigh),
+            dayLow: parseFloat(dayLow),
+            volume: volume,
+            marketCap: marketCap,
+            peRatio: parseFloat(peRatio),
+            dividend: dividend,
             performance: {
-                dayChange: parseFloat((Math.random() * 3 - 1.5).toFixed(2)),
-                weekChange: parseFloat((Math.random() * 6 - 3).toFixed(2)),
-                monthChange: parseFloat((Math.random() * 10 - 5).toFixed(2)),
-                threeMonthChange: parseFloat((Math.random() * 20 - 10).toFixed(2)),
-                yearChange: parseFloat((Math.random() * 40 - 20).toFixed(2))
+                dayChange: parseFloat(changePercent),
+                weekChange: parseFloat(weekChange),
+                monthChange: parseFloat(monthChange),
+                threeMonthChange: parseFloat(threeMonthChange),
+                yearChange: parseFloat(yearChange)
             },
             analysis: {
-                sentiment: ["positif", "neutre", "négatif"][Math.floor(Math.random() * 3)],
+                sentiment: sentiment,
                 overview: `${symbol} est une entreprise opérant dans son secteur d'activité principal. L'entreprise se positionne sur son marché face à ses concurrents directs.`,
-                riskLevel: ["faible", "modéré", "élevé"][Math.floor(Math.random() * 3)],
+                riskLevel: riskLevel,
                 technicalAnalysis: `L'analyse technique de ${symbol} montre des tendances de prix qui peuvent indiquer des mouvements futurs en fonction du contexte de marché actuel.`,
                 fundamentalAnalysis: `Les fondamentaux de ${symbol} incluent sa structure financière, ses revenus et sa position concurrentielle dans son secteur.`,
                 recommendation: `Compte tenu des conditions actuelles du marché et des performances spécifiques de ${symbol}, les investisseurs pourraient envisager d'évaluer cette action dans le cadre d'une stratégie d'investissement diversifiée.`,
@@ -727,12 +908,18 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     }
     
+    // Générer aléatoirement des données pour tous les titres populaires
+    function generateRandomDataForAllStocks() {
+        const result = {};
+        popularStocks.forEach(symbol => {
+            result[symbol] = getSimulatedStockData(symbol);
+        });
+        return result;
+    }
+    
     // Mettre à jour l'interface utilisateur avec les données reçues
     function updateUI(data) {
         if (!data) return;
-        
-        // Stocker les données pour référence
-        stockData = data;
         
         // Mise à jour du titre et info de l'action
         stockInfoTitle.textContent = `${data.name} (${data.symbol})`;
@@ -746,7 +933,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const companyName = data.name.toLowerCase().split(' ')[0].replace(/[^a-zA-Z0-9]/g, '');
                 logoElement.src = `https://logo.clearbit.com/${companyName}.com`;
                 logoElement.onerror = function() {
-                    this.src = `https://via.placeholder.com/40x40?text=${data.symbol}`;
+                    this.src = `https://via.placeholder.com/40x40?text=${data.symbol.charAt(0)}`;
                 };
             }
         } catch (error) {
@@ -1008,6 +1195,8 @@ document.addEventListener('DOMContentLoaded', function() {
             'ADBE': 'Adobe Inc.',
             'CMCSA': 'Comcast Corporation',
             'NFLX': 'Netflix Inc.',
+            'INTC': 'Intel Corporation',
+            'AMD': 'Advanced Micro Devices, Inc.',
             
             // NYSE
             'JPM': 'JPMorgan Chase & Co.',
@@ -1021,6 +1210,7 @@ document.addEventListener('DOMContentLoaded', function() {
             'MA': 'Mastercard Inc.',
             'DIS': 'Walt Disney Co.',
             'WMT': 'Walmart Inc.',
+            'KO': 'Coca-Cola Company',
             
             // Classes d'actions spéciales
             'BRK.A': 'Berkshire Hathaway Inc. (Class A)',
@@ -1039,6 +1229,25 @@ document.addEventListener('DOMContentLoaded', function() {
         
         return companies[symbol] || `${symbol} Corp.`;
     }
+    
+    // Ajouter une classe CSS pour indiquer la ligne sélectionnée dans le tableau
+    const style = document.createElement('style');
+    style.textContent = `
+        .selected-stock {
+            background-color: rgba(28, 118, 255, 0.15) !important;
+            position: relative;
+        }
+        .selected-stock:after {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background-color: var(--primary-color);
+        }
+    `;
+    document.head.appendChild(style);
     
     // Démarrer l'application
     init();
