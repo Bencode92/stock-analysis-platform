@@ -3,51 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StockPro - Analyse en Temps Réel d'Actions</title>
+    <title>TradePulse - Analyse en Temps Réel</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles.css">
-    <!-- TradingView Widget -->
-    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
-    <!-- Chart.js pour les graphiques -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h1><i class="fas fa-chart-line"></i> StockPro</h1>
+        <!-- Main Header -->
+        <header class="main-header">
+            <div class="site-title">
+                <i class="fas fa-chart-line"></i>
+                <span>TradePulse</span>
             </div>
-            <nav class="sidebar-nav">
-                <ul>
-                    <li class="active"><a href="#"><i class="fas fa-home"></i> Accueil</a></li>
-                    <li><a href="#watchlist"><i class="fas fa-list"></i> Watchlist</a></li>
-                    <li><a href="#chart"><i class="fas fa-chart-bar"></i> Graphiques</a></li>
-                    <li><a href="#news"><i class="fas fa-newspaper"></i> Actualités</a></li>
-                    <li><a href="#portfolio"><i class="fas fa-briefcase"></i> Portefeuille</a></li>
-                    <li><a href="#sectors"><i class="fas fa-industry"></i> Secteurs</a></li>
-                    <li><a href="#settings"><i class="fas fa-cog"></i> Paramètres</a></li>
-                </ul>
-            </nav>
-            <div class="sidebar-footer">
-                <p>© 2025 StockPro</p>
+            <div class="search-container">
+                <input type="text" id="stockSearch" placeholder="Rechercher une action..." value="AAPL">
+                <button id="searchBtn"><i class="fas fa-search"></i></button>
             </div>
-        </aside>
+            <div class="market-status">
+                <div class="market-indicator green"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time">16:24:35</span>
+            </div>
+        </header>
 
         <!-- Main Content -->
         <main class="main-content">
-            <header class="main-header">
-                <div class="search-container">
-                    <input type="text" id="stockSearch" placeholder="Rechercher une action..." value="AAPL">
-                    <button id="searchBtn"><i class="fas fa-search"></i></button>
-                </div>
-                <div class="market-status">
-                    <div class="market-indicator green"></div>
-                    <span>Marché ouvert</span>
-                    <span class="market-time">16:24:35</span>
-                </div>
-            </header>
-
             <!-- News Section -->
             <section id="breaking-news" class="news-section">
                 <h2><i class="fas fa-newspaper"></i> Actualités financières du jour</h2>
@@ -112,7 +93,6 @@
                     <div class="bullish-sectors">
                         <h3>Secteurs haussiers <i class="fas fa-arrow-up"></i></h3>
                         <div class="sectors-list" id="bullishSectors">
-                            <!-- Filled dynamically -->
                             <div class="sector-item">
                                 <div class="sector-name">Automobile & VE <i class="fas fa-arrow-up"></i></div>
                                 <div class="sector-reason">La décision de la Maison Blanche concernant le report des droits de douane a un impact positif direct sur les constructeurs automobiles, particulièrement ceux investis dans les véhicules électriques.</div>
@@ -130,7 +110,6 @@
                     <div class="bearish-sectors">
                         <h3>Secteurs baissiers <i class="fas fa-arrow-down"></i></h3>
                         <div class="sectors-list" id="bearishSectors">
-                            <!-- Filled dynamically -->
                             <div class="sector-item">
                                 <div class="sector-name">Obligations <i class="fas fa-arrow-down"></i></div>
                                 <div class="sector-reason">La hausse historique des rendements obligataires européens indique une pression à la baisse sur les prix des obligations, impactant les détenteurs d'obligations à long terme.</div>
@@ -157,9 +136,7 @@
                 <div class="portfolio-container">
                     <div class="portfolio-chart">
                         <div class="portfolio-pie-chart">
-                            <div class="pie-chart-container">
-                                <canvas id="portfolioChart"></canvas>
-                            </div>
+                            <canvas id="portfolioChart"></canvas>
                         </div>
                     </div>
                     <div class="portfolio-table-container">
@@ -173,214 +150,69 @@
                                 </tr>
                             </thead>
                             <tbody id="portfolioTableBody">
-                                <!-- Filled dynamically -->
+                                <tr class="portfolio-asset" data-symbol="TSLA">
+                                    <td>Tesla, Inc. (TSLA)</td>
+                                    <td><span class="asset-type stock">STOCK</span></td>
+                                    <td class="allocation">15%</td>
+                                    <td class="rationale">Bénéficie directement du report des droits de douane avec une forte présence sur le marché européen et chinois.</td>
+                                </tr>
+                                <tr class="portfolio-asset" data-symbol="NVDA">
+                                    <td>NVIDIA Corporation (NVDA)</td>
+                                    <td><span class="asset-type stock">STOCK</span></td>
+                                    <td class="allocation">18%</td>
+                                    <td class="rationale">Leader dans les puces IA avec des résultats exceptionnels. Profite de la tendance haussière du secteur technologique.</td>
+                                </tr>
+                                <tr class="portfolio-asset" data-symbol="MSFT">
+                                    <td>Microsoft Corporation (MSFT)</td>
+                                    <td><span class="asset-type stock">STOCK</span></td>
+                                    <td class="allocation">12%</td>
+                                    <td class="rationale">Position dominante dans le cloud et l'IA, moins impacté par les tensions sino-américaines.</td>
+                                </tr>
+                                <tr class="portfolio-asset" data-symbol="TAN">
+                                    <td>Invesco Solar ETF (TAN)</td>
+                                    <td><span class="asset-type etf">ETF</span></td>
+                                    <td class="allocation">10%</td>
+                                    <td class="rationale">Exposition au secteur de l'énergie solaire, profitant de la tendance positive du secteur des énergies renouvelables.</td>
+                                </tr>
+                                <tr class="portfolio-asset" data-symbol="DRIV">
+                                    <td>Global X EV ETF (DRIV)</td>
+                                    <td><span class="asset-type etf">ETF</span></td>
+                                    <td class="allocation">10%</td>
+                                    <td class="rationale">Exposition diversifiée au secteur des VE et de la conduite autonome, bénéficiant des décisions favorables.</td>
+                                </tr>
+                                <tr class="portfolio-asset" data-symbol="ARKK">
+                                    <td>ARK Innovation ETF (ARKK)</td>
+                                    <td><span class="asset-type etf">ETF</span></td>
+                                    <td class="allocation">10%</td>
+                                    <td class="rationale">Exposition aux entreprises disruptives dans les secteurs de la technologie et de l'innovation.</td>
+                                </tr>
+                                <tr class="portfolio-asset" data-symbol="BTC">
+                                    <td>Bitcoin (BTC)</td>
+                                    <td><span class="asset-type crypto">CRYPTO</span></td>
+                                    <td class="allocation">15%</td>
+                                    <td class="rationale">Valeur refuge numérique dans un contexte de tensions géopolitiques et d'incertitude sur les marchés.</td>
+                                </tr>
+                                <tr class="portfolio-asset" data-symbol="ETH">
+                                    <td>Ethereum (ETH)</td>
+                                    <td><span class="asset-type crypto">CRYPTO</span></td>
+                                    <td class="allocation">10%</td>
+                                    <td class="rationale">Bénéficie du développement des applications décentralisées et du potentiel d'adoption des technologies blockchain.</td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
-                <div class="portfolio-grid">
-                    <div class="stock-recommendation-card" data-symbol="GOOGL">
-                        <div class="stock-header">
-                            <img src="https://logo.clearbit.com/google.com" alt="Alphabet" class="company-logo">
-                            <div>
-                                <h3>Alphabet (GOOGL)</h3>
-                                <span class="exchange">NASDAQ</span>
-                            </div>
-                        </div>
-                        <div class="stock-recommendation">
-                            <span class="recommendation-tag buy">ACHETER</span>
-                        </div>
-                        <p class="recommendation-reason">Leader dans l'intelligence artificielle avec ses modèles génératifs. L'IA est une tendance en pleine expansion, et Alphabet est bien positionné pour profiter de cette croissance.</p>
-                        <button class="view-details-btn" data-symbol="GOOGL">Voir détails</button>
-                    </div>
-                    
-                    <div class="stock-recommendation-card" data-symbol="MSFT">
-                        <div class="stock-header">
-                            <img src="https://logo.clearbit.com/microsoft.com" alt="Microsoft" class="company-logo">
-                            <div>
-                                <h3>Microsoft (MSFT)</h3>
-                                <span class="exchange">NASDAQ</span>
-                            </div>
-                        </div>
-                        <div class="stock-recommendation">
-                            <span class="recommendation-tag buy">ACHETER</span>
-                        </div>
-                        <p class="recommendation-reason">Leader dans l'infonuagique public et l'IA. Azure a connu une croissance de 30% en 2024. Positions de monopole dans divers domaines assurant une stabilité financière.</p>
-                        <button class="view-details-btn" data-symbol="MSFT">Voir détails</button>
-                    </div>
-                    
-                    <div class="stock-recommendation-card" data-symbol="TSM">
-                        <div class="stock-header">
-                            <img src="https://logo.clearbit.com/tsmc.com" alt="Taiwan Semiconductor" class="company-logo">
-                            <div>
-                                <h3>Taiwan Semiconductor (TSM)</h3>
-                                <span class="exchange">NYSE</span>
-                            </div>
-                        </div>
-                        <div class="stock-recommendation">
-                            <span class="recommendation-tag buy">ACHETER</span>
-                        </div>
-                        <p class="recommendation-reason">Fournisseur crucial de puces pour l'IA. Croissance annuelle composée de 45% prévue pour les puces liées à l'IA au cours des cinq prochaines années.</p>
-                        <button class="view-details-btn" data-symbol="TSM">Voir détails</button>
-                    </div>
-                    
-                    <div class="stock-recommendation-card" data-symbol="PEP">
-                        <div class="stock-header">
-                            <img src="https://logo.clearbit.com/pepsi.com" alt="Pepsi" class="company-logo">
-                            <div>
-                                <h3>Pepsi (PEP)</h3>
-                                <span class="exchange">NASDAQ</span>
-                            </div>
-                        </div>
-                        <div class="stock-recommendation">
-                            <span class="recommendation-tag buy">ACHETER</span>
-                        </div>
-                        <p class="recommendation-reason">Bénéficie de vents de dos à long terme dans le secteur des collations et initiatives de croissance dans des sous-catégories de boissons attrayantes.</p>
-                        <button class="view-details-btn" data-symbol="PEP">Voir détails</button>
-                    </div>
-                    
-                    <div class="stock-recommendation-card" data-symbol="ASML">
-                        <div class="stock-header">
-                            <img src="https://logo.clearbit.com/asml.com" alt="ASML" class="company-logo">
-                            <div>
-                                <h3>ASML (ASML)</h3>
-                                <span class="exchange">NASDAQ</span>
-                            </div>
-                        </div>
-                        <div class="stock-recommendation">
-                            <span class="recommendation-tag buy">ACHETER</span>
-                        </div>
-                        <p class="recommendation-reason">Rôle crucial dans la production de puces pour les technologies IA, en particulier avec sa technologie de lithographie avancée.</p>
-                        <button class="view-details-btn" data-symbol="ASML">Voir détails</button>
-                    </div>
-                </div>
             </section>
-
-            <!-- Stock Detail Section (initially hidden) -->
-            <section id="stockDetailSection" class="stock-detail-section hidden">
-                <div class="section-header">
-                    <h2 id="stockDetailName">Détails du Titre</h2>
-                    <div class="actions">
-                        <button id="addToWatchlistBtn" class="action-btn"><i class="fas fa-plus"></i> Ajouter à la liste</button>
-                        <button id="backBtn" class="action-btn secondary"><i class="fas fa-arrow-left"></i> Retour</button>
-                    </div>
-                </div>
-
-                <div class="stock-overview">
-                    <div class="stock-price-info">
-                        <div class="current-price" id="currentPrice">--</div>
-                        <div class="price-change" id="priceChange">--</div>
-                    </div>
-                    <div class="stock-meta" id="stockMeta">
-                        <!-- Informations sur l'entreprise insérées ici -->
-                    </div>
-                </div>
-
-                <div id="tradingview-chart" class="chart-container">
-                    <!-- TradingView Chart -->
-                </div>
-
-                <div class="key-metrics">
-                    <div class="metric-card">
-                        <h4>Prix ouverture</h4>
-                        <p id="open-price">--</p>
-                    </div>
-                    <div class="metric-card">
-                        <h4>Clôture préc.</h4>
-                        <p id="prev-close">--</p>
-                    </div>
-                    <div class="metric-card">
-                        <h4>Plus haut du jour</h4>
-                        <p id="day-high">--</p>
-                    </div>
-                    <div class="metric-card">
-                        <h4>Plus bas du jour</h4>
-                        <p id="day-low">--</p>
-                    </div>
-                    <div class="metric-card">
-                        <h4>Volume</h4>
-                        <p id="volume">--</p>
-                    </div>
-                    <div class="metric-card">
-                        <h4>Capitalisation</h4>
-                        <p id="market-cap">--</p>
-                    </div>
-                    <div class="metric-card">
-                        <h4>P/E Ratio</h4>
-                        <p id="pe-ratio">--</p>
-                    </div>
-                    <div class="metric-card">
-                        <h4>Dividende (%)</h4>
-                        <p id="dividend">--</p>
-                    </div>
-                </div>
-
-                <!-- Performance metrics -->
-                <div class="performance-section">
-                    <h3>Performance historique</h3>
-                    <div class="performance-grid">
-                        <div class="performance-item day-performance">
-                            <span class="period">1 jour</span>
-                            <div class="performance-bar-container">
-                                <div class="performance-bar positive" style="width: 0%"></div>
-                            </div>
-                            <span class="performance-value positive">--</span>
-                        </div>
-                        <div class="performance-item week-performance">
-                            <span class="period">1 semaine</span>
-                            <div class="performance-bar-container">
-                                <div class="performance-bar positive" style="width: 0%"></div>
-                            </div>
-                            <span class="performance-value positive">--</span>
-                        </div>
-                        <div class="performance-item month-performance">
-                            <span class="period">1 mois</span>
-                            <div class="performance-bar-container">
-                                <div class="performance-bar positive" style="width: 0%"></div>
-                            </div>
-                            <span class="performance-value positive">--</span>
-                        </div>
-                        <div class="performance-item three-months-performance">
-                            <span class="period">3 mois</span>
-                            <div class="performance-bar-container">
-                                <div class="performance-bar positive" style="width: 0%"></div>
-                            </div>
-                            <span class="performance-value positive">--</span>
-                        </div>
-                        <div class="performance-item year-performance">
-                            <span class="period">1 an</span>
-                            <div class="performance-bar-container">
-                                <div class="performance-bar positive" style="width: 0%"></div>
-                            </div>
-                            <span class="performance-value positive">--</span>
-                        </div>
-                    </div>
-                </div>
-            </section>
-            
-            <!-- Chart Settings -->
-            <div id="chartSettings" class="chart-settings hidden">
-                <div class="time-selector">
-                    <button class="time-btn active" data-range="1D">1J</button>
-                    <button class="time-btn" data-range="1W">1S</button>
-                    <button class="time-btn" data-range="1M">1M</button>
-                    <button class="time-btn" data-range="3M">3M</button>
-                    <button class="time-btn" data-range="1Y">1A</button>
-                    <button class="time-btn" data-range="ALL">MAX</button>
-                </div>
-            </div>
 
             <!-- Data Source Credit -->
             <section class="data-source-section">
                 <div class="source-info">
-                    <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel. Actualités et analyses sectorielles fournies par Perplexity AI.</p>
-                    <div class="last-update">
-                        <span>Dernière mise à jour:</span>
-                        <span class="update-time">06/03/2025 16:25:10</span>
-                    </div>
+                    <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel</p>
+                    <p><i class="fas fa-robot"></i> Analyses sectorielles fournies par Perplexity AI</p>
+                    <p><i class="fas fa-clock"></i> Dernière mise à jour: <span class="update-time">06/03/2025 16:25:10</span></p>
                 </div>
                 <div class="data-disclaimer">
-                    Les données sont fournies à titre informatif uniquement et ne constituent pas un conseil en investissement.
+                    Les données et analyses sont fournies à titre informatif uniquement et ne constituent pas un conseil en investissement. Avant de prendre toute décision d'investissement, consultez un professionnel qualifié.
                 </div>
             </section>
         </main>
