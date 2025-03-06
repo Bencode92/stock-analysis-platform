@@ -1,8 +1,6 @@
 // TradePulse - Application d'analyse financière en temps réel
 document.addEventListener('DOMContentLoaded', function() {
     // Éléments DOM
-    const searchInput = document.getElementById('stockSearch');
-    const searchBtn = document.getElementById('searchBtn');
     const marketIndicator = document.querySelector('.market-indicator');
     const marketStatusText = document.querySelector('.market-status span');
     const marketTimeElement = document.querySelector('.market-time');
@@ -27,141 +25,11 @@ document.addEventListener('DOMContentLoaded', function() {
         // Initialiser le graphique du portefeuille
         initPortfolioChart();
         
-        // Charger les données de Perplexity
-        loadPerplexityData();
-        
         // Configurer les écouteurs d'événements
         setupEventListeners();
         
         // Mettre à jour régulièrement l'heure
         setInterval(updateMarketTime, 1000);
-        
-        // Vérifier régulièrement si une mise à jour des données est nécessaire
-        setInterval(checkPerplexityUpdate, 300000); // 5 minutes
-    }
-    
-    // Vérifier si une mise à jour de Perplexity est nécessaire
-    function checkPerplexityUpdate() {
-        const now = new Date();
-        if (!lastPerplexityUpdate || (now - lastPerplexityUpdate) > perplexityUpdateInterval) {
-            console.log("Actualisation des données Perplexity nécessaire");
-            loadPerplexityData();
-        }
-    }
-    
-    // Chargement des données Perplexity
-    function loadPerplexityData() {
-        console.log("Chargement des données de Perplexity...");
-        
-        // Pour la démo, nous utilisons des données simulées
-        // Dans une application réelle, vous appelleriez l'API de Perplexity ici
-        
-        // Simulation des données des secteurs
-        sectorData = {
-            bullish: [
-                {
-                    name: "Automobile & VE",
-                    reason: "La décision de la Maison Blanche concernant le report des droits de douane a un impact positif direct sur les constructeurs automobiles, particulièrement ceux investis dans les véhicules électriques."
-                },
-                {
-                    name: "Technologie",
-                    reason: "Les résultats attendus de sociétés comme Broadcom et le développement continu de l'IA poussent le secteur vers le haut, malgré les tensions sino-américaines."
-                },
-                {
-                    name: "Énergie renouvelable",
-                    reason: "Les initiatives de transition énergétique continuent de favoriser les entreprises du secteur, particulièrement dans le contexte des tensions géopolitiques actuelles."
-                }
-            ],
-            bearish: [
-                {
-                    name: "Obligations",
-                    reason: "La hausse historique des rendements obligataires européens indique une pression à la baisse sur les prix des obligations, impactant les détenteurs d'obligations à long terme."
-                },
-                {
-                    name: "Immobilier",
-                    reason: "La hausse des taux d'intérêt et l'incertitude concernant les décisions de la BCE exercent une pression sur le secteur immobilier, particulièrement sensible aux variations de taux."
-                },
-                {
-                    name: "Importateurs chinois",
-                    reason: "Les tensions commerciales croissantes entre les États-Unis et la Chine menacent les entreprises fortement dépendantes des importations chinoises, créant de l'incertitude pour leurs modèles d'approvisionnement."
-                }
-            ]
-        };
-        
-        // Simulation des données du portefeuille
-        portfolioData = [
-            {
-                name: "Tesla, Inc.",
-                symbol: "TSLA",
-                type: "stock",
-                allocation: 15
-            },
-            {
-                name: "NVIDIA Corporation",
-                symbol: "NVDA",
-                type: "stock",
-                allocation: 18
-            },
-            {
-                name: "Microsoft Corporation",
-                symbol: "MSFT",
-                type: "stock",
-                allocation: 12
-            },
-            {
-                name: "Invesco Solar ETF",
-                symbol: "TAN",
-                type: "etf",
-                allocation: 10
-            },
-            {
-                name: "Global X Autonomous & Electric Vehicles ETF",
-                symbol: "DRIV",
-                type: "etf",
-                allocation: 10
-            },
-            {
-                name: "ARK Innovation ETF",
-                symbol: "ARKK",
-                type: "etf",
-                allocation: 10
-            },
-            {
-                name: "Bitcoin",
-                symbol: "BTC",
-                type: "crypto",
-                allocation: 15
-            },
-            {
-                name: "Ethereum",
-                symbol: "ETH",
-                type: "crypto",
-                allocation: 10
-            }
-        ];
-        
-        // Mise à jour de l'affichage
-        updateSectorsDisplay();
-        updatePortfolioChart();
-        
-        // Mise à jour de la date de dernière actualisation
-        lastPerplexityUpdate = new Date();
-        
-        // Mise à jour de l'heure de dernière mise à jour affichée
-        if (updateTimeElement) {
-            const now = new Date();
-            const formattedDateTime = formatDateTime(now);
-            updateTimeElement.textContent = formattedDateTime;
-        }
-    }
-    
-    // Formater la date et l'heure
-    function formatDateTime(date) {
-        return date.toLocaleDateString('fr-FR') + ' ' + date.toLocaleTimeString('fr-FR', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        });
     }
     
     // Initialiser le graphique du portefeuille
@@ -180,8 +48,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 data: [stocksTotal, etfTotal, cryptoTotal],
                 backgroundColor: [
                     '#1E90FF', // Bleu électrique pour les actions
-                    '#00a0ff', // Bleu clair pour les ETF
-                    '#4fc3f7'  // Bleu très clair pour les crypto
+                    '#00BFFF', // Bleu ciel profond pour les ETF
+                    '#87CEFA'  // Bleu ciel clair pour les crypto
                 ],
                 borderWidth: 0
             }]
@@ -240,112 +108,19 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Mise à jour du graphique du portefeuille
-    function updatePortfolioChart() {
-        if (!portfolioChart || !portfolioData || portfolioData.length === 0) return;
-        
-        // Regrouper par type d'actif
-        const stocksTotal = portfolioData
-            .filter(asset => asset.type === 'stock')
-            .reduce((sum, asset) => sum + asset.allocation, 0);
-            
-        const etfTotal = portfolioData
-            .filter(asset => asset.type === 'etf')
-            .reduce((sum, asset) => sum + asset.allocation, 0);
-            
-        const cryptoTotal = portfolioData
-            .filter(asset => asset.type === 'crypto')
-            .reduce((sum, asset) => sum + asset.allocation, 0);
-        
-        // Mettre à jour les données du graphique
-        portfolioChart.data.datasets[0].data = [stocksTotal, etfTotal, cryptoTotal];
-        portfolioChart.update();
-    }
-    
-    // Mise à jour de l'affichage des secteurs
-    function updateSectorsDisplay() {
-        if (!bullishSectorsContainer || !bearishSectorsContainer || !sectorData) return;
-        
-        // Construire le HTML pour les secteurs haussiers
-        let bullishHTML = '';
-        if (sectorData.bullish && sectorData.bullish.length > 0) {
-            sectorData.bullish.forEach(sector => {
-                bullishHTML += `
-                    <div class="sector-item">
-                        <div class="sector-name">${sector.name} <i class="fas fa-arrow-up"></i></div>
-                        <div class="sector-reason">${sector.reason}</div>
-                    </div>
-                `;
-            });
-        } else {
-            bullishHTML = `
-                <div class="sector-empty">Aucun secteur haussier identifié aujourd'hui</div>
-            `;
-        }
-        
-        // Construire le HTML pour les secteurs baissiers
-        let bearishHTML = '';
-        if (sectorData.bearish && sectorData.bearish.length > 0) {
-            sectorData.bearish.forEach(sector => {
-                bearishHTML += `
-                    <div class="sector-item">
-                        <div class="sector-name">${sector.name} <i class="fas fa-arrow-down"></i></div>
-                        <div class="sector-reason">${sector.reason}</div>
-                    </div>
-                `;
-            });
-        } else {
-            bearishHTML = `
-                <div class="sector-empty">Aucun secteur baissier identifié aujourd'hui</div>
-            `;
-        }
-        
-        // Mise à jour des conteneurs
-        bullishSectorsContainer.innerHTML = bullishHTML;
-        bearishSectorsContainer.innerHTML = bearishHTML;
-    }
-    
     // Configurer les écouteurs d'événements
     function setupEventListeners() {
-        // Recherche d'action
-        if (searchBtn) {
-            searchBtn.addEventListener('click', function() {
-                const symbol = searchInput.value.trim().toUpperCase();
-                if (symbol) {
-                    alert(`Recherche pour ${symbol} - Cette fonctionnalité est simplifiée dans cette version`);
-                }
-            });
-        }
-        
-        // Recherche avec la touche Entrée
-        if (searchInput) {
-            searchInput.addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    const symbol = searchInput.value.trim().toUpperCase();
-                    if (symbol) {
-                        alert(`Recherche pour ${symbol} - Cette fonctionnalité est simplifiée dans cette version`);
-                    }
-                }
-            });
-        }
-        
         // Interaction avec les éléments du portefeuille
         document.querySelectorAll('.portfolio-asset').forEach(row => {
             row.addEventListener('click', function() {
-                const symbol = this.getAttribute('data-symbol');
-                if (symbol) {
-                    alert(`Vous avez sélectionné ${symbol} - Cette fonctionnalité est simplifiée dans cette version`);
-                }
+                highlightAsset(this);
             });
         });
         
         // Interaction avec les secteurs
         document.querySelectorAll('.sector-item').forEach(item => {
             item.addEventListener('click', function() {
-                const sectorName = this.querySelector('.sector-name').textContent.split(' ')[0];
-                if (sectorName) {
-                    alert(`Secteur sélectionné: ${sectorName} - Cette fonctionnalité est simplifiée dans cette version`);
-                }
+                highlightSector(this);
             });
         });
         
@@ -365,14 +140,84 @@ document.addEventListener('DOMContentLoaded', function() {
             button.addEventListener('click', function() {
                 this.classList.add('refresh-spinning');
                 
-                // Recharger les données
-                loadPerplexityData();
+                // Animation de rafraîchissement
+                const sectionId = header.closest('section').id;
+                animateRefresh(sectionId);
                 
                 // Arrêter l'animation après un délai
                 setTimeout(() => {
                     this.classList.remove('refresh-spinning');
                 }, 1000);
             });
+        });
+    }
+    
+    // Mettre en évidence un actif du portefeuille lorsque cliqué
+    function highlightAsset(element) {
+        // Retirer la mise en évidence des autres éléments
+        document.querySelectorAll('.portfolio-asset').forEach(row => {
+            row.style.backgroundColor = '';
+        });
+        
+        // Appliquer la mise en évidence
+        element.style.backgroundColor = 'rgba(30, 144, 255, 0.15)';
+        
+        // Faire défiler pour centrer l'élément si nécessaire
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    // Mettre en évidence un secteur lorsque cliqué
+    function highlightSector(element) {
+        // Retirer la mise en évidence des autres éléments
+        document.querySelectorAll('.sector-item').forEach(item => {
+            item.style.backgroundColor = '';
+            item.style.padding = '';
+            item.style.borderRadius = '';
+            item.style.margin = '';
+        });
+        
+        // Appliquer la mise en évidence
+        element.style.backgroundColor = 'rgba(30, 144, 255, 0.15)';
+        element.style.padding = '0.5rem';
+        element.style.borderRadius = '4px';
+        element.style.margin = '-0.5rem';
+        
+        // Faire défiler pour centrer l'élément si nécessaire
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    // Animation de rafraîchissement pour une section
+    function animateRefresh(sectionId) {
+        const section = document.getElementById(sectionId);
+        if (!section) return;
+        
+        // Ajouter une classe pour l'animation
+        section.classList.add('refresh-animation');
+        
+        // Retirer la classe après l'animation
+        setTimeout(() => {
+            section.classList.remove('refresh-animation');
+            
+            // Mettre à jour l'heure de dernière mise à jour
+            updateLastUpdateTime();
+        }, 600);
+    }
+    
+    // Mettre à jour l'heure de dernière mise à jour
+    function updateLastUpdateTime() {
+        if (updateTimeElement) {
+            const now = new Date();
+            const formattedDateTime = formatDateTime(now);
+            updateTimeElement.textContent = formattedDateTime;
+        }
+    }
+    
+    // Formater la date et l'heure
+    function formatDateTime(date) {
+        return date.toLocaleDateString('fr-FR') + ' ' + date.toLocaleTimeString('fr-FR', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit'
         });
     }
     
@@ -416,6 +261,21 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     }
+    
+    // Ajouter une classe CSS pour l'animation de rafraîchissement
+    const style = document.createElement('style');
+    style.textContent = `
+        .refresh-animation {
+            animation: pulse-animation 0.6s ease-in-out;
+        }
+        
+        @keyframes pulse-animation {
+            0% { opacity: 1; }
+            50% { opacity: 0.6; }
+            100% { opacity: 1; }
+        }
+    `;
+    document.head.appendChild(style);
     
     // Démarrer l'application
     init();
