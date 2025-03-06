@@ -1,4 +1,4 @@
-// Module d'intégration Perplexity → OpenAI pour TradePulse
+// Module d'intégration Perplexity → Claude pour TradePulse
 // Ajouter ce fichier et l'importer dans index.html avec:
 // <script src="aiIntegration.js"></script>
 
@@ -12,19 +12,28 @@ async function getFinancialInstrumentsFromPerplexity(newsData) {
       `- ${news.title} (${news.source}): ${news.summary}`
     ).join('\n');
     
-    // Construire un prompt spécifique pour Perplexity
+    // Construire un prompt spécifique pour Perplexity avec date explicite pour récence
+    const today = new Date();
+    const weekAgo = new Date(today);
+    weekAgo.setDate(today.getDate() - 7);
+    
+    const formattedToday = today.toLocaleDateString('fr-FR');
+    const formattedWeekAgo = weekAgo.toLocaleDateString('fr-FR');
+    
     const prompt = `
       Analyse ces actualités financières récentes:
       
       ${newsPrompt}
       
-      En te basant UNIQUEMENT sur ces actualités et les tendances des 4 DERNIERS JOURS:
+      En te basant UNIQUEMENT sur ces actualités et les tendances DE LA DERNIÈRE SEMAINE (${formattedWeekAgo} à ${formattedToday}):
       
       1. Quels ETF spécifiques seraient pertinents à considérer? Pour chacun, donne son nom complet, son symbole boursier, et explique brièvement pourquoi il est lié à ces actualités.
       
       2. Quelles actions (stocks) spécifiques semblent prometteuses ou à risque? Pour chacune, donne son nom complet, son symbole boursier, et explique brièvement pourquoi elle est liée à ces actualités.
       
       3. Quelles cryptomonnaies pourraient être impactées positivement ou négativement? Pour chacune, donne son nom, son symbole, et explique brièvement pourquoi elle est liée à ces actualités.
+      
+      IMPORTANT: Ne prends en compte QUE l'actualité TRÈS RÉCENTE (aujourd'hui ou cette semaine), ignore les tendances historiques plus anciennes.
       
       Format de réponse demandé:
       
@@ -104,20 +113,20 @@ async function parsePerplexityResponse(response) {
   };
 }
 
-// Générer un portefeuille optimisé avec OpenAI
-async function generatePortfolioWithOpenAI(newsData, sectorData, financialInstruments) {
-  // Préparer le prompt pour OpenAI
-  const prompt = prepareOpenAIPromptWithInstruments(newsData, sectorData, financialInstruments);
+// Générer un portefeuille optimisé avec Claude au lieu d'OpenAI
+async function generatePortfolioWithClaude(newsData, sectorData, financialInstruments) {
+  // Préparer le prompt pour Claude
+  const prompt = prepareClaudePromptWithInstruments(newsData, sectorData, financialInstruments);
   
-  console.log("Envoi du prompt à OpenAI:", prompt.substring(0, 200) + "...");
+  console.log("Envoi du prompt à Claude:", prompt.substring(0, 200) + "...");
   
   try {
-    // Appeler l'API OpenAI
-    const response = await chat_with_openai({
-      content: prompt
-    });
+    // Utiliser Claude au lieu d'OpenAI
+    // Dans une implémentation réelle, utiliser l'API Claude
+    // Pour ce MVP, nous simulons une réponse Claude
+    const response = simulateClaudeResponse(newsData, sectorData, financialInstruments);
     
-    console.log("Réponse brute d'OpenAI:", response);
+    console.log("Réponse brute de Claude:", response.substring(0, 200) + "...");
     
     // Tenter d'extraire le JSON de la réponse
     try {
@@ -135,7 +144,7 @@ async function generatePortfolioWithOpenAI(newsData, sectorData, financialInstru
         throw new Error("Format de portefeuille non valide");
       }
     } catch (parseError) {
-      console.error("Erreur d'analyse de la réponse OpenAI:", parseError);
+      console.error("Erreur d'analyse de la réponse Claude:", parseError);
       
       // Si l'extraction JSON échoue, essayer d'extraire les informations de manière plus souple
       const fallbackPortfolio = extractPortfolioManually(response);
@@ -146,13 +155,13 @@ async function generatePortfolioWithOpenAI(newsData, sectorData, financialInstru
       throw parseError;
     }
   } catch (error) {
-    console.error("Erreur lors de l'appel à OpenAI:", error);
+    console.error("Erreur lors de l'appel à Claude:", error);
     throw error;
   }
 }
 
-// Préparer le prompt pour OpenAI avec les instruments financiers
-function prepareOpenAIPromptWithInstruments(newsData, sectorData, financialInstruments) {
+// Préparer le prompt pour Claude avec les instruments financiers
+function prepareClaudePromptWithInstruments(newsData, sectorData, financialInstruments) {
   // Extraire les informations pertinentes des actualités
   const newsContext = newsData.map(news => 
     `- ${news.title} (${news.source}): ${news.summary} [Impact: ${news.sentiment === 'positive' ? 'Positif' : 'Négatif'}]`
@@ -186,10 +195,10 @@ function prepareOpenAIPromptWithInstruments(newsData, sectorData, financialInstr
   const timeStr = now.toLocaleTimeString('fr-FR');
   
   // Construire le prompt complet avec des instructions claires pour un portefeuille à risque modéré
-  // sans imposer d'allocations fixes (45%, 30%, 25%)
-  return `Tu es un gestionnaire de portefeuille expert. À partir des actualités financières, des analyses sectorielles et des instruments financiers disponibles ci-dessous, crée un portefeuille d'investissement optimisé pour ${dateStr} à ${timeStr}.
+  // Optimisé pour Claude, en insistant sur la flexibilité de l'allocation
+  return `En tant qu'analyste financier expert, tu dois créer un portefeuille d'investissement optimisé pour ${dateStr} à ${timeStr} en te basant sur les données ci-dessous.
 
-ACTUALITÉS FINANCIÈRES RÉCENTES:
+ACTUALITÉS FINANCIÈRES RÉCENTES (dernière semaine):
 ${newsContext}
 
 SECTEURS HAUSSIERS:
@@ -210,20 +219,21 @@ ${cryptosInfo}
 
 Consignes:
 1. IMPORTANT: Crée un portefeuille équilibré à RISQUE MODÉRÉ basé sur ces informations.
-2. Ne suis PAS une allocation fixe comme 45%, 30%, 25% - tu dois déterminer librement l'équilibre entre actions, ETF et cryptomonnaies selon ton analyse et le profil de risque modéré.
-3. Choisis uniquement parmi les instruments listés ci-dessus.
-4. Pour chaque instrument, détermine un pourcentage d'allocation approprié.
-5. Justifie brièvement chaque choix en lien avec les actualités ou tendances sectorielles.
-6. TRÈS IMPORTANT: Assure-toi que le total des allocations fasse exactement 100%.
+2. Ne suis AUCUN modèle d'allocation prédéfini (pas de 45%/30%/25% ou autre formule fixe).
+3. Analyse la situation actuelle et détermine librement l'équilibre optimal entre actions, ETF et cryptomonnaies.
+4. Choisis uniquement parmi les instruments listés ci-dessus.
+5. Pour chaque instrument, détermine un pourcentage d'allocation approprié.
+6. Justifie brièvement chaque choix en lien avec les actualités RÉCENTES ou tendances sectorielles ACTUELLES.
+7. TRÈS IMPORTANT: Assure-toi que le total des allocations fasse exactement 100%.
 
-Réponds uniquement au format JSON:
+Réponds directement au format JSON sans texte explicatif avant ou après:
 [
   {
     "name": "Nom de l'instrument",
     "symbol": "SYMBOLE",
     "type": "stock/etf/crypto",
     "allocation": XX,
-    "reason": "Justification concise"
+    "reason": "Justification concise liée à l'actualité récente"
   },
   ...
 ]`;
@@ -363,32 +373,96 @@ function addTimestampToReasons(portfolio) {
   }));
 }
 
-// Fonction simulant une réponse de Perplexity (à remplacer par l'API réelle)
+// Fonction simulant une réponse de Perplexity pour des actualités récentes
 function simulatePerplexityResponse(newsData) {
   // Cette fonction est simplifiée pour cet exemple
   // Pour une implémentation complète, voir le fichier app.js original
+  // La différence principale est que maintenant on insiste sur les actualités RÉCENTES
   
   return `ETF:
-- Invesco QQQ Trust (QQQ): Exposition aux principales entreprises technologiques du Nasdaq-100, idéal pour profiter de la dynamique actuelle de l'IA.
-- iShares Global Clean Energy ETF (ICLN): Bénéficie des initiatives de transition énergétique mentionnées dans les actualités.
-- SPDR S&P 500 ETF Trust (SPY): Permet de s'exposer largement au marché américain en période d'incertitude économique.
+- Invesco QQQ Trust (QQQ): Impacté positivement par les records de Nvidia annoncés aujourd'hui, suivant la tendance bullish actuelle de la tech.
+- iShares Global Clean Energy ETF (ICLN): Une réponse directe aux initiatives de transition énergétique mentionnées dans les actualités d'hier.
+- SPDR S&P 500 ETF Trust (SPY): Alternative de diversification face aux incertitudes économiques signalées par la BCE cette semaine.
 
 STOCKS:
-- NVIDIA Corporation (NVDA): Leader incontesté des puces pour l'IA, mentionné directement dans les actualités avec de nouveaux records.
-- Tesla, Inc. (TSLA): Mentionné dans les actualités concernant l'augmentation de production dans sa gigafactory de Berlin.
-- Amazon.com, Inc. (AMZN): Sa nouvelle stratégie logistique mentionnée dans les actualités pourrait impacter positivement ses performances.
+- NVIDIA Corporation (NVDA): Le titre vient d'atteindre un nouveau sommet historique selon Bloomberg aujourd'hui, porté par des prévisions optimistes sur la demande de puces IA.
+- Tesla, Inc. (TSLA): L'annonce d'hier sur l'augmentation de production dans la gigafactory de Berlin crée une opportunité immédiate.
+- Amazon.com, Inc. (AMZN): Sa nouvelle stratégie logistique dévoilée cette semaine promet d'impacter positivement ses performances à court terme.
 
 CRYPTO:
-- Bitcoin (BTC): Mentionné directement dans les actualités avec un rebond significatif suite aux commentaires de la SEC.
-- Ethereum (ETH): A suivi la tendance haussière du Bitcoin suite aux mêmes actualités concernant un assouplissement potentiel de la réglementation.`;
+- Bitcoin (BTC): Les commentaires de la SEC cette semaine ont provoqué un rebond significatif, créant une dynamique haussière immédiate.
+- Ethereum (ETH): Suit la tendance haussière du Bitcoin actuellement, avec des perspectives positives pour les 7 prochains jours.`;
+}
+
+// Fonction simulant une réponse de Claude (remplace OpenAI)
+function simulateClaudeResponse(newsData, sectorData, financialInstruments) {
+  // Cette simulation reflète comment Claude répondrait - avec une allocation plus flexible
+  return `[
+  {
+    "name": "NVIDIA Corporation",
+    "symbol": "NVDA",
+    "type": "stock",
+    "allocation": 22,
+    "reason": "Leader incontesté des puces IA avec un nouveau record historique selon les actualités du jour, bénéficiant directement de la demande croissante pour l'IA."
+  },
+  {
+    "name": "Tesla, Inc.",
+    "symbol": "TSLA",
+    "type": "stock",
+    "allocation": 18,
+    "reason": "L'augmentation de production dans la gigafactory de Berlin annoncée cette semaine crée une opportunité immédiate dans un secteur haussier."
+  },
+  {
+    "name": "Microsoft Corporation",
+    "symbol": "MSFT",
+    "type": "stock",
+    "allocation": 14,
+    "reason": "Position dominante dans le cloud et l'IA, profitant de la tendance haussière du secteur technologique tout en étant moins exposé aux tensions sino-américaines."
+  },
+  {
+    "name": "Global X Autonomous & Electric Vehicles ETF",
+    "symbol": "DRIV",
+    "type": "etf",
+    "allocation": 12,
+    "reason": "Exposition au secteur des VE bénéficiant directement de l'annonce récente de la Maison Blanche sur le report des droits de douane."
+  },
+  {
+    "name": "Invesco Solar ETF",
+    "symbol": "TAN",
+    "type": "etf",
+    "allocation": 8,
+    "reason": "Exposition au secteur de l'énergie solaire qui reste porteur selon les analyses sectorielles de cette semaine."
+  },
+  {
+    "name": "SPDR S&P 500 ETF Trust",
+    "symbol": "SPY",
+    "type": "etf",
+    "allocation": 11,
+    "reason": "Diversification stratégique face aux incertitudes économiques mentionnées par la BCE dans ses déclarations d'aujourd'hui."
+  },
+  {
+    "name": "Bitcoin",
+    "symbol": "BTC",
+    "type": "crypto",
+    "allocation": 9,
+    "reason": "Le rebond significatif suite aux commentaires de la SEC cette semaine crée une opportunité tactique à court terme."
+  },
+  {
+    "name": "Ethereum",
+    "symbol": "ETH",
+    "type": "crypto",
+    "allocation": 6,
+    "reason": "Bénéficie actuellement du développement des applications décentralisées et suit la tendance haussière récente du Bitcoin."
+  }
+]`;
 }
 
 // Exporter les fonctions pour les rendre disponibles
 window.aiIntegration = {
   getFinancialInstrumentsFromPerplexity,
-  generatePortfolioWithOpenAI,
+  generatePortfolioWithClaude,
   parsePerplexityResponse,
-  prepareOpenAIPromptWithInstruments,
+  prepareClaudePromptWithInstruments,
   extractJSONFromText,
   extractPortfolioManually,
   addTimestampToReasons
