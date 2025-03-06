@@ -1,5 +1,5 @@
 :root {
-    --primary-color: #1E90FF; /* Electric blue instead of white */
+    --primary-color: #1E90FF; /* Bleu électrique */
     --primary-dark: #0078e7;
     --secondary-color: #000000;
     --bg-color: #111111;
@@ -9,25 +9,18 @@
     --text-muted: #888888;
     --text-bright: #ffffff;
     --border-color: #333333;
-    --gain-color: #00c853; /* Green for positive values */
-    --loss-color: #ff3d00; /* Red for negative values */
+    --gain-color: #00c853; /* Vert pour les valeurs positives */
+    --loss-color: #ff3d00; /* Rouge pour les valeurs négatives */
     --shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
     --heading-size: 1.5rem;
     --subheading-size: 1.2rem;
     --body-size: 1rem;
     --small-size: 0.85rem;
     
-    /* Chart color variables for the portfolio chart */
-    --chart-color-1: #1E90FF; /* Electric blue */
-    --chart-color-2: #0066ff;
-    --chart-color-3: #00a0ff;
-    --chart-color-4: #4fc3f7;
-    --chart-color-5: #00bcd4;
-    
-    /* Asset type color variables */
-    --stock-color: #1E90FF; /* Electric blue */
-    --etf-color: #00a0ff;
-    --crypto-color: #4fc3f7;
+    /* Couleurs du camembert (éventail de bleus) */
+    --chart-color-1: #1E90FF; /* Bleu électrique */
+    --chart-color-2: #00BFFF; /* Bleu ciel profond */
+    --chart-color-3: #87CEFA; /* Bleu ciel clair */
 }
 
 /* Base styles */
@@ -51,6 +44,7 @@ h1, h2, h3, h4, h5, h6 {
     letter-spacing: 0.5px;
     line-height: 1.3;
     font-weight: 600;
+    color: var(--primary-color); /* Tous les titres en bleu électrique */
 }
 
 h2 {
@@ -65,7 +59,7 @@ h3 {
 
 .app-container {
     display: flex;
-    flex-direction: column; /* Changed to column to remove sidebar */
+    flex-direction: column;
     min-height: 100vh;
 }
 
@@ -86,12 +80,12 @@ p {
     font-weight: 500;
 }
 
-/* Main Header (simplified) */
+/* Main Header (simplifié) */
 .main-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 2rem;
+    padding: 1.5rem 2rem;
     background-color: var(--secondary-color);
     border-bottom: 1px solid var(--border-color);
     position: sticky;
@@ -102,43 +96,14 @@ p {
 .site-title {
     display: flex;
     align-items: center;
-    gap: 0.8rem;
+    gap: 1rem;
     color: var(--primary-color);
-    font-size: 1.8rem;
+    font-size: 2rem;
     font-weight: 700;
 }
 
 .site-title i {
-    font-size: 1.6rem;
-}
-
-.search-container {
-    display: flex;
-    width: 350px;
-}
-
-.search-container input {
-    flex: 1;
-    background-color: var(--bg-light);
-    border: 1px solid var(--border-color);
-    padding: 0.8rem 1rem;
-    color: var(--text-color);
-    border-radius: 4px 0 0 4px;
-    font-size: var(--body-size);
-}
-
-.search-container button {
-    background-color: var(--primary-color);
-    color: var(--secondary-color);
-    border: none;
-    padding: 0.8rem 1rem;
-    border-radius: 0 4px 4px 0;
-    cursor: pointer;
-    transition: all 0.2s;
-}
-
-.search-container button:hover {
-    background-color: var(--primary-dark);
+    font-size: 1.8rem;
 }
 
 .market-status {
@@ -146,14 +111,13 @@ p {
     align-items: center;
     color: var(--text-muted);
     font-size: var(--body-size);
-    gap: 0.5rem;
+    gap: 0.8rem;
 }
 
 .market-indicator {
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
-    margin-right: 8px;
 }
 
 .green {
@@ -165,9 +129,9 @@ p {
 }
 
 .market-time {
-    margin-left: 10px;
+    margin-left: 0.5rem;
     font-weight: 500;
-    color: var(--text-color);
+    color: var(--text-bright);
 }
 
 /* Main Content */
@@ -184,6 +148,7 @@ p {
     padding: 1.5rem;
     box-shadow: var(--shadow);
     margin-bottom: 2rem;
+    border: 1px solid var(--primary-color);
 }
 
 .news-section h2 {
@@ -255,7 +220,7 @@ p {
 .news-card h3 {
     margin-bottom: 0.8rem;
     font-size: var(--subheading-size);
-    color: var(--text-bright);
+    color: var(--primary-color);
 }
 
 .news-card p {
@@ -272,6 +237,7 @@ p {
     padding: 1.5rem;
     box-shadow: var(--shadow);
     margin-bottom: 2rem;
+    border: 1px solid var(--primary-color);
 }
 
 .sectors-section h2 {
@@ -299,7 +265,16 @@ p {
     background-color: var(--bg-light);
     border-radius: 8px;
     padding: 1.2rem;
-    border: 1px solid var(--border-color);
+}
+
+/* Bordure verte pour les secteurs haussiers */
+.bullish-sectors {
+    border: 2px solid var(--gain-color);
+}
+
+/* Bordure rouge pour les secteurs baissiers */
+.bearish-sectors {
+    border: 2px solid var(--loss-color);
 }
 
 .bullish-sectors h3, .bearish-sectors h3 {
@@ -382,6 +357,7 @@ p {
     padding: 1.5rem;
     box-shadow: var(--shadow);
     margin-bottom: 2rem;
+    border: 1px solid var(--primary-color);
 }
 
 .portfolio-section h2 {
@@ -448,7 +424,7 @@ p {
 
 .portfolio-table td:first-child {
     font-weight: 600;
-    color: var(--text-bright);
+    color: var(--primary-color); /* Noms d'actifs en bleu électrique */
 }
 
 .portfolio-asset {
@@ -471,17 +447,17 @@ p {
 
 .asset-type.stock {
     background-color: rgba(30, 144, 255, 0.1);
-    color: var(--stock-color);
+    color: var(--chart-color-1);
 }
 
 .asset-type.etf {
-    background-color: rgba(0, 160, 255, 0.1);
-    color: var(--etf-color);
+    background-color: rgba(0, 191, 255, 0.1);
+    color: var(--chart-color-2);
 }
 
 .asset-type.crypto {
-    background-color: rgba(79, 195, 247, 0.1);
-    color: var(--crypto-color);
+    background-color: rgba(135, 206, 250, 0.1);
+    color: var(--chart-color-3);
 }
 
 .allocation {
@@ -531,6 +507,7 @@ p {
     font-size: var(--small-size);
     color: var(--text-muted);
     text-align: center;
+    border: 1px solid var(--border-color);
 }
 
 .source-info {
@@ -657,10 +634,6 @@ p {
         flex-direction: column;
         padding: 1rem;
         gap: 1rem;
-    }
-    
-    .search-container {
-        width: 100%;
     }
     
     .market-status {
