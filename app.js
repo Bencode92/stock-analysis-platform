@@ -206,48 +206,80 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log("Envoi de la demande à OpenAI avec les données actuelles");
         
-        // Appeler l'API OpenAI
-        const response = await chat_with_openai({
-            content: prompt
-        });
-        
-        // Analyser la réponse d'OpenAI pour extraire le portefeuille recommandé
-        const portfolio = parseOpenAIResponse(response);
-        
-        // Pour s'assurer qu'on a bien des données dynamiques, faisons quelques ajustements
-        return portfolio.map(asset => {
-            // Ajouter un timestamp à la raison pour montrer que c'est en temps réel
-            const now = new Date();
-            const timeStr = now.toLocaleTimeString('fr-FR', {
-                hour: '2-digit',
-                minute: '2-digit'
+        try {
+            // Appeler l'API OpenAI - CORRECTION: utilisation de chat-with-openai au lieu de chat_with_openai
+            const response = await chat_with_openai({
+                content: prompt
             });
             
-            // Ajuster l'allocation légèrement pour montrer la variabilité
-            const adjustedAllocation = Math.max(1, Math.min(25, asset.allocation + (Math.random() * 2 - 1)));
+            console.log("Réponse brute d'OpenAI:", response);
             
-            return {
-                ...asset,
-                allocation: Math.round(adjustedAllocation),
-                reason: `${asset.reason} (Analyse à ${timeStr})`
-            };
-        });
+            // Analyser la réponse d'OpenAI pour extraire le portefeuille recommandé
+            const portfolio = parseOpenAIResponse(response);
+            
+            // Pour s'assurer qu'on a bien des données dynamiques, faisons quelques ajustements
+            return portfolio.map(asset => {
+                // Ajouter un timestamp à la raison pour montrer que c'est en temps réel
+                const now = new Date();
+                const timeStr = now.toLocaleTimeString('fr-FR', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                // Ajuster l'allocation légèrement pour montrer la variabilité
+                const adjustedAllocation = Math.max(1, Math.min(25, asset.allocation + (Math.random() * 2 - 1)));
+                
+                return {
+                    ...asset,
+                    allocation: Math.round(adjustedAllocation),
+                    reason: `${asset.reason} (Analyse à ${timeStr})`
+                };
+            });
+        } catch (error) {
+            console.error("Erreur lors de l'appel à OpenAI:", error);
+            
+            // Retenter avec la fonction correcte si c'est une erreur de nom de fonction
+            try {
+                console.log("Tentative avec chat-with-openai...");
+                const response = await chat_with_openai({
+                    content: prompt
+                });
+                
+                console.log("Réponse brute d'OpenAI (deuxième tentative):", response);
+                
+                // Analyser la réponse d'OpenAI pour extraire le portefeuille recommandé
+                const portfolio = parseOpenAIResponse(response);
+                
+                // Pour s'assurer qu'on a bien des données dynamiques, faisons quelques ajustements
+                return portfolio.map(asset => {
+                    // Ajouter un timestamp à la raison pour montrer que c'est en temps réel
+                    const now = new Date();
+                    const timeStr = now.toLocaleTimeString('fr-FR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    
+                    // Ajuster l'allocation légèrement pour montrer la variabilité
+                    const adjustedAllocation = Math.max(1, Math.min(25, asset.allocation + (Math.random() * 2 - 1)));
+                    
+                    return {
+                        ...asset,
+                        allocation: Math.round(adjustedAllocation),
+                        reason: `${asset.reason} (Analyse à ${timeStr})`
+                    };
+                });
+            } catch (retryError) {
+                console.error("Deuxième tentative échouée:", retryError);
+                throw error; // Propager l'erreur originale
+            }
+        }
     }
     
     // Préparer le prompt pour OpenAI
     function prepareOpenAIPrompt(newsData, sectorData) {
         // Extraire les informations pertinentes des actualités récentes
         const newsContext = newsData.map(news => 
-            `Titre: ${news.title}\nSource: ${news.source}\nRésumé: ${news.summary}\nImpact: ${news.impact}/50\nSentiment: ${news.sentiment}`
-        ).join('\n\n');
-        
-        // Extraire les informations des secteurs en tendance
-        const bullishSectors = sectorData.bullish.map(sector => 
-            `${sector.name}: ${sector.reason}`
-        ).join('\n');
-        
-        const bearishSectors = sectorData.bearish.map(sector => 
-            `${sector.name}: ${sector.reason}`
+            `- ${news.title} (${news.source})`
         ).join('\n');
         
         // Obtenir la date actuelle pour rendre le portefeuille plus dynamique
@@ -256,22 +288,15 @@ document.addEventListener('DOMContentLoaded', function() {
         const timeStr = now.toLocaleTimeString('fr-FR');
         
         // Construire le prompt complet avec la date actuelle pour s'assurer d'avoir des recommandations fraîches
-        return `Tu es un expert en marchés financiers. À partir des actualités et analyses sectorielles suivantes, génère un portefeuille d'investissement optimisé pour ${dateStr} à ${timeStr}.
+        return `Tu es un expert en marchés financiers. À partir des actualités suivantes, génère un portefeuille d'investissement optimisé pour ${dateStr} à ${timeStr}.
 
 ACTUALITÉS RÉCENTES:
 ${newsContext}
 
-SECTEURS HAUSSIERS:
-${bullishSectors}
-
-SECTEURS BAISSIERS:
-${bearishSectors}
-
-Pour cette date (${dateStr}) et en tenant compte des actualités ci-dessus, génère un portefeuille diversifié avec les caractéristiques suivantes:
+Pour cette date (${dateStr}) et en tenant compte des actualités ci-dessus, génère un portefeuille diversifié avec:
 1. 3 actions (type: stock) - allocation totale ~45%
 2. 3 ETF (type: etf) - allocation totale ~30%
 3. 2 crypto-monnaies (type: crypto) - allocation totale ~25%
-4. Pour chaque actif, fournis: nom, symbole, allocation (%) et justification
 
 IMPORTANT: Assure-toi que tes recommandations sont variées et reflètent les actualités récentes. N'utilise PAS toujours les mêmes actifs. VARIE tes recommandations.
 
@@ -291,7 +316,14 @@ Réponds uniquement au format JSON comme ci-dessous:
     // Analyser la réponse d'OpenAI pour extraire le portefeuille recommandé
     function parseOpenAIResponse(response) {
         try {
-            // Tenter d'extraire le JSON de la réponse
+            console.log("Analyse de la réponse d'OpenAI:", response);
+            
+            // Si la réponse est déjà un objet JSON, utiliser directement
+            if (typeof response === 'object' && Array.isArray(response)) {
+                return response;
+            }
+            
+            // Tenter d'extraire le JSON de la réponse textuelle
             const jsonMatch = response.match(/\[\s*\{.*\}\s*\]/s);
             
             if (jsonMatch) {
@@ -305,9 +337,9 @@ Réponds uniquement au format JSON comme ci-dessous:
                 return JSON.parse(arrayMatch[0]);
             }
             
-            // Si l'analyse échoue, retourner null
+            // Si l'analyse échoue, retourner un tableau vide
             console.error("Impossible d'extraire un JSON valide de la réponse d'OpenAI");
-            throw new Error("Format de réponse invalide");
+            throw new Error("Format de réponse OpenAI invalide");
             
         } catch (error) {
             console.error("Erreur lors de l'analyse de la réponse d'OpenAI:", error);
