@@ -150,46 +150,49 @@
                     document.querySelector('.loading-state').style.display = 'flex';
                     document.querySelector('.results').style.display = 'none';
                     
-                    // Simuler un appel API à Perplexity (à remplacer par l'appel réel)
-                    setTimeout(() => {
-                        fetchPerplexityResults(query);
-                    }, 1500);
+                    // Appel à l'API Perplexity via l'instance globale
+                    if (window.perplexityIntegration) {
+                        try {
+                            window.perplexityIntegration.search(query)
+                                .then(data => {
+                                    // Mettre à jour l'interface avec les résultats
+                                    updateResultsUI(data);
+                                    
+                                    // Masquer le chargement et afficher les résultats
+                                    document.querySelector('.loading-state').style.display = 'none';
+                                    document.querySelector('.results').style.display = 'block';
+                                })
+                                .catch(error => {
+                                    console.error('Erreur lors de la recherche:', error);
+                                    handleSearchError();
+                                });
+                        } catch (error) {
+                            console.error('Erreur lors de la recherche:', error);
+                            handleSearchError();
+                        }
+                    } else {
+                        // Fallback si l'intégration n'est pas disponible
+                        console.warn('L\'intégration Perplexity n\'est pas disponible, utilisation des données simulées');
+                        setTimeout(() => {
+                            const simulatedData = simulatePerplexityResponse(query);
+                            updateResultsUI(simulatedData);
+                            document.querySelector('.loading-state').style.display = 'none';
+                            document.querySelector('.results').style.display = 'block';
+                        }, 1500);
+                    }
                 }
             });
         });
         
-        // Fonction pour récupérer les résultats de Perplexity (simulé pour le moment)
-        async function fetchPerplexityResults(query) {
-            try {
-                // Dans un environnement de production, ce serait un appel à l'API Perplexity
-                // const response = await fetch('/api/perplexity/search', {
-                //    method: 'POST',
-                //    headers: { 'Content-Type': 'application/json' },
-                //    body: JSON.stringify({ query: query })
-                // });
-                // const data = await response.json();
-                
-                // Pour le développement, utilisons des données simulées
-                const data = simulatePerplexityResponse(query);
-                
-                // Mettre à jour l'interface avec les résultats
-                updateResultsUI(data);
-                
-                // Masquer le chargement et afficher les résultats
-                document.querySelector('.loading-state').style.display = 'none';
-                document.querySelector('.results').style.display = 'block';
-                
-            } catch (error) {
-                console.error('Erreur lors de la recherche:', error);
-                document.querySelector('.loading-state').style.display = 'none';
-                // Afficher un message d'erreur
-                document.getElementById('answerContent').innerHTML = 
-                    `<div class="error-message">
-                        <i class="fas fa-exclamation-circle"></i>
-                        <p>Une erreur s'est produite lors de la recherche. Veuillez réessayer.</p>
-                     </div>`;
-                document.querySelector('.results').style.display = 'block';
-            }
+        // Gestion des erreurs de recherche
+        function handleSearchError() {
+            document.querySelector('.loading-state').style.display = 'none';
+            document.getElementById('answerContent').innerHTML = 
+                `<div class="error-message">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>Une erreur s'est produite lors de la recherche. Veuillez réessayer.</p>
+                 </div>`;
+            document.querySelector('.results').style.display = 'block';
         }
         
         // Fonction pour mettre à jour l'interface avec les résultats
@@ -231,7 +234,7 @@
             });
         }
         
-        // Fonction de simulation de réponse Perplexity (à remplacer par l'appel API réel)
+        // Fonction de simulation de réponse Perplexity (comme fallback)
         function simulatePerplexityResponse(query) {
             // Normaliser la requête pour la correspondance
             const normalizedQuery = query.toLowerCase();
