@@ -3,482 +3,65 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TradePulse - Analyse Financière IA</title>
+    <title>TradePulse - Intelligence Financière</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="jeton-style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="landing-style.css">
 </head>
 <body>
-    <!-- Floating Menu -->
-    <div class="floating-menu">
-        <i class="fas fa-bars"></i>
-        <span>Menu</span>
+    <div class="landing-container">
+        <div class="date-display">
+            <div class="date-inner" id="currentDate">07.03.2025</div>
+        </div>
+        
+        <div class="site-brand">
+            <div class="pulse-dot"></div>
+            <h1>TRADEPULSE</h1>
+            <div class="tagline">POWERED BY PERPLEXITY AI</div>
+        </div>
+        
+        <a href="actualites.html" class="start-button">
+            <div class="button-inner">START</div>
+        </a>
+
+        <footer class="landing-footer">
+            <p>© 2025 TradePulse | Finance Intelligence Platform</p>
+        </footer>
     </div>
 
-    <!-- Header Section (Fixed) -->
-    <header class="main-header">
-        <div class="site-title">
-            <i class="fas fa-chart-line"></i>
-            <span>TradePulse</span>
-        </div>
-        <div class="market-status">
-            <div class="market-indicator green"></div>
-            <span>Marché ouvert</span>
-            <span class="market-time">16:24:35</span>
-        </div>
-    </header>
-
-    <!-- Main Content (Scrollable Sections) -->
-    <main>
-        <!-- Hero Section with Date -->
-        <section id="intro" class="intro-section">
-            <div class="current-date-large" id="currentDateLarge">2025</div>
-            <div class="tagline">Analyser. Décider. Investir.</div>
-            <a href="#news" class="start-button-large">START</a>
-        </section>
-
-        <!-- News & Events Combined Section -->
-        <section id="news" class="section-fullscreen news-events-section">
-            <div class="section-navigation">
-                <h2 class="section-title-alt">Actualités & Événements</h2>
-                <div class="portfolio-nav">
-                    <a href="#portfolio" class="next-section-button">
-                        <span>Portefeuille</span>
-                        <i class="fas fa-arrow-right"></i>
-                    </a>
-                </div>
-            </div>
-            
-            <div class="section-content">
-                <!-- News Section -->
-                <div class="content-block">
-                    <h3 class="block-title">Actualités du jour</h3>
-                    <div class="news-grid reveal">
-                        <div class="news-card major-news">
-                            <div class="news-content">
-                                <div class="news-meta">
-                                    <span class="news-source">Maison Blanche</span>
-                                    <div class="news-date-time">
-                                        <i class="fas fa-calendar-alt"></i>
-                                        <span class="news-date">07/03/2025</span>
-                                        <span class="news-time">08:15</span>
-                                    </div>
-                                </div>
-                                <h3>Exemption de droits de douane sur les véhicules</h3>
-                                <p>La Maison Blanche a annoncé un report d'un mois sur les nouveaux tarifs automobiles. Cette exemption a entraîné une hausse des actions, avec le DAX en hausse de 3,5%, le STOXX 50 en hausse de 1,9%, et le Hang Seng en hausse de 2,87%.</p>
-                            </div>
-                        </div>
-                        <div class="news-card">
-                            <div class="news-content">
-                                <div class="news-meta">
-                                    <span class="news-source">Marchés Européens</span>
-                                    <div class="news-date-time">
-                                        <i class="fas fa-calendar-alt"></i>
-                                        <span class="news-date">07/03/2025</span>
-                                        <span class="news-time">09:30</span>
-                                    </div>
-                                </div>
-                                <h3>Flambée historique du marché obligataire européen</h3>
-                                <p>Le marché obligataire européen a connu une journée historique avec une hausse de 30 points de base du rendement allemand à 10 ans, un record depuis 1990.</p>
-                            </div>
-                        </div>
-                        <div class="news-card">
-                            <div class="news-content">
-                                <div class="news-meta">
-                                    <span class="news-source">BCE</span>
-                                    <div class="news-date-time">
-                                        <i class="fas fa-calendar-alt"></i>
-                                        <span class="news-date">07/03/2025</span>
-                                        <span class="news-time">07:45</span>
-                                    </div>
-                                </div>
-                                <h3>Décision de la BCE attendue aujourd'hui</h3>
-                                <p>La BCE est prévue pour maintenir ses taux inchangés, mais il y a une attente pour une baisse de 25 points de base, ce qui pourrait avoir des conséquences importantes sur les marchés.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Events Section -->
-                <div class="content-block">
-                    <h3 class="block-title">Événements à fort impact</h3>
-                    <div class="events-grid reveal">
-                        <div class="event-card critical-impact">
-                            <div class="event-header">
-                                <div class="event-title">
-                                    <i class="fas fa-chart-line"></i>
-                                    <h3>Décision de taux de la BCE</h3>
-                                </div>
-                                <div class="event-score">
-                                    <div class="impact-label">Impact</div>
-                                    <div class="impact-value">8/10</div>
-                                </div>
-                            </div>
-                            <div class="event-details">
-                                <div class="event-info">
-                                    <span class="event-market-type">actions</span>
-                                    <span class="event-timing">immédiat</span>
-                                </div>
-                                <div class="event-datetime">
-                                    <i class="fas fa-calendar-day"></i>
-                                    <span class="event-date">07/03/2025</span>
-                                    <i class="fas fa-clock"></i>
-                                    <span class="event-time">13:45</span>
-                                </div>
-                                <p class="event-explanation">La BCE maintient ses taux d'intérêt, impactant les marchés européens et le secteur bancaire.</p>
-                                <div class="event-symbols">
-                                    <span class="symbols-label">Symboles affectés:</span>
-                                    <div class="symbols-list">
-                                        <span class="symbol-tag">EURO STOXX</span>
-                                        <span class="symbol-tag">BNP.PA</span>
-                                        <span class="symbol-tag">DB</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="event-card high-impact">
-                            <div class="event-header">
-                                <div class="event-title">
-                                    <i class="fas fa-money-bill-transfer"></i>
-                                    <h3>Publication des chiffres de l'emploi américain</h3>
-                                </div>
-                                <div class="event-score">
-                                    <div class="impact-label">Impact</div>
-                                    <div class="impact-value">7/10</div>
-                                </div>
-                            </div>
-                            <div class="event-details">
-                                <div class="event-info">
-                                    <span class="event-market-type">forex</span>
-                                    <span class="event-timing">court terme</span>
-                                </div>
-                                <div class="event-datetime">
-                                    <i class="fas fa-calendar-day"></i>
-                                    <span class="event-date">08/03/2025</span>
-                                    <i class="fas fa-clock"></i>
-                                    <span class="event-time">14:30</span>
-                                </div>
-                                <p class="event-explanation">Des données sur l'emploi meilleures que prévu renforcent le dollar face aux autres devises.</p>
-                                <div class="event-symbols">
-                                    <span class="symbols-label">Symboles affectés:</span>
-                                    <div class="symbols-list">
-                                        <span class="symbol-tag">EUR/USD</span>
-                                        <span class="symbol-tag">GBP/USD</span>
-                                        <span class="symbol-tag">USD/JPY</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Sectors Analysis -->
-                <div class="content-block">
-                    <h3 class="block-title">Tendances sectorielles</h3>
-                    <div class="sectors-container reveal">
-                        <div class="bullish-sectors">
-                            <h3>Secteurs haussiers <i class="fas fa-arrow-up"></i></h3>
-                            <div class="sectors-list" id="bullishSectors">
-                                <div class="sector-item">
-                                    <div class="sector-name">Automobile & VE <i class="fas fa-arrow-up"></i></div>
-                                    <div class="sector-reason">La décision de la Maison Blanche concernant le report des droits de douane a un impact positif direct sur les constructeurs automobiles, particulièrement ceux investis dans les véhicules électriques.</div>
-                                </div>
-                                <div class="sector-item">
-                                    <div class="sector-name">Technologie <i class="fas fa-arrow-up"></i></div>
-                                    <div class="sector-reason">Les résultats attendus de sociétés comme Broadcom et le développement continu de l'IA poussent le secteur vers le haut, malgré les tensions sino-américaines.</div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="bearish-sectors">
-                            <h3>Secteurs baissiers <i class="fas fa-arrow-down"></i></h3>
-                            <div class="sectors-list" id="bearishSectors">
-                                <div class="sector-item">
-                                    <div class="sector-name">Obligations <i class="fas fa-arrow-down"></i></div>
-                                    <div class="sector-reason">La hausse historique des rendements obligataires européens indique une pression à la baisse sur les prix des obligations, impactant les détenteurs d'obligations à long terme.</div>
-                                </div>
-                                <div class="sector-item">
-                                    <div class="sector-name">Immobilier <i class="fas fa-arrow-down"></i></div>
-                                    <div class="sector-reason">La hausse des taux d'intérêt et l'incertitude concernant les décisions de la BCE exercent une pression sur le secteur immobilier, particulièrement sensible aux variations de taux.</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Portfolio Selection Section -->
-        <section id="portfolio" class="section-fullscreen portfolio-selection-section">
-            <div class="section-navigation">
-                <h2 class="section-title-alt">Portefeuille IA</h2>
-            </div>
-            
-            <div class="section-content centered-content">
-                <div class="portfolio-description reveal">
-                    <p>Notre modèle Perplexity AI génère des allocations d'actifs optimales qui combinent actions, ETF, crypto-monnaies et obligations pour profiter des tendances actuelles du marché.</p>
-                </div>
-                
-                <div class="strategy-selection reveal">
-                    <h3 class="selection-title">Sélectionnez votre stratégie</h3>
-                    <div class="strategy-buttons">
-                        <a href="#aggressive" class="strategy-button active" id="btn-aggressive">
-                            <div class="strategy-icon"><i class="fas fa-rocket"></i></div>
-                            <div class="strategy-label">Agressif</div>
-                            <div class="strategy-description">Croissance maximale, risque élevé</div>
-                        </a>
-                        <a href="#moderate" class="strategy-button" id="btn-moderate">
-                            <div class="strategy-icon"><i class="fas fa-balance-scale"></i></div>
-                            <div class="strategy-label">Modéré</div>
-                            <div class="strategy-description">Équilibre croissance et stabilité</div>
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Aggressive Portfolio Section -->
-        <section id="aggressive" class="section-fullscreen portfolio-details-section">
-            <div class="section-navigation">
-                <h2 class="section-title-alt">Portefeuille Agressif</h2>
-                <div class="portfolio-nav">
-                    <a href="#portfolio" class="next-section-button reverse">
-                        <i class="fas fa-arrow-left"></i>
-                        <span>Retour</span>
-                    </a>
-                </div>
-            </div>
-            
-            <div class="section-content">
-                <div class="portfolio-visualizations reveal">
-                    <div class="portfolio-chart">
-                        <canvas id="aggressiveChart"></canvas>
-                    </div>
-                    <div class="portfolio-highlights" id="aggressive-highlights">
-                        <div class="highlight-card">
-                            <div class="highlight-icon">
-                                <i class="fas fa-bolt"></i>
-                            </div>
-                            <div class="highlight-content">
-                                <h3>NVIDIA Corporation</h3>
-                                <p class="highlight-symbol">NVDA</p>
-                                <p class="highlight-allocation">25%</p>
-                            </div>
-                        </div>
-                        <div class="highlight-card">
-                            <div class="highlight-icon">
-                                <i class="fas fa-car"></i>
-                            </div>
-                            <div class="highlight-content">
-                                <h3>Tesla, Inc.</h3>
-                                <p class="highlight-symbol">TSLA</p>
-                                <p class="highlight-allocation">22%</p>
-                            </div>
-                        </div>
-                        <div class="highlight-card">
-                            <div class="highlight-icon">
-                                <i class="fas fa-shopping-cart"></i>
-                            </div>
-                            <div class="highlight-content">
-                                <h3>Amazon.com, Inc.</h3>
-                                <p class="highlight-symbol">AMZN</p>
-                                <p class="highlight-allocation">18%</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Moderate Portfolio Section -->
-        <section id="moderate" class="section-fullscreen portfolio-details-section">
-            <div class="section-navigation">
-                <h2 class="section-title-alt">Portefeuille Modéré</h2>
-                <div class="portfolio-nav">
-                    <a href="#portfolio" class="next-section-button reverse">
-                        <i class="fas fa-arrow-left"></i>
-                        <span>Retour</span>
-                    </a>
-                </div>
-            </div>
-            
-            <div class="section-content">
-                <div class="portfolio-visualizations reveal">
-                    <div class="portfolio-chart">
-                        <canvas id="moderateChart"></canvas>
-                    </div>
-                    <div class="portfolio-highlights" id="moderate-highlights">
-                        <div class="highlight-card">
-                            <div class="highlight-icon">
-                                <i class="fas fa-window"></i>
-                            </div>
-                            <div class="highlight-content">
-                                <h3>Microsoft Corporation</h3>
-                                <p class="highlight-symbol">MSFT</p>
-                                <p class="highlight-allocation">15%</p>
-                            </div>
-                        </div>
-                        <div class="highlight-card">
-                            <div class="highlight-icon">
-                                <i class="fas fa-chart-pie"></i>
-                            </div>
-                            <div class="highlight-content">
-                                <h3>SPDR S&P 500 ETF Trust</h3>
-                                <p class="highlight-symbol">SPY</p>
-                                <p class="highlight-allocation">20%</p>
-                            </div>
-                        </div>
-                        <div class="highlight-card">
-                            <div class="highlight-icon">
-                                <i class="fas fa-landmark"></i>
-                            </div>
-                            <div class="highlight-content">
-                                <h3>iShares 20+ Year Treasury Bond ETF</h3>
-                                <p class="highlight-symbol">TLT</p>
-                                <p class="highlight-allocation">15%</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Footer Section -->
-        <footer class="site-footer">
-            <div class="footer-content">
-                <div class="data-disclaimer">
-                    Les données et analyses sont fournies à titre informatif uniquement et ne constituent pas un conseil en investissement. Avant de prendre toute décision d'investissement, consultez un professionnel qualifié.
-                </div>
-                <div class="data-source-info">
-                    <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel</p>
-                    <p><i class="fas fa-robot"></i> Analyses sectorielles et portefeuille optimisé fournis par Perplexity AI</p>
-                    <p><i class="fas fa-clock"></i> Dernière mise à jour: <span class="update-time">07/03/2025 10:15:53</span></p>
-                </div>
-            </div>
-        </footer>
-    </main>
-
-    <!-- Scripts -->
-    <script src="connectivity.js"></script>
-    <script src="aiIntegration.js"></script>
-    <script src="init.js"></script>
-    <script src="app.js"></script>
-    <script src="marketEvents.js"></script>
     <script>
-        // Update current date in large format
-        document.addEventListener('DOMContentLoaded', function() {
-            // Set current date
-            const currentDate = new Date();
-            const options = { year: 'numeric', month: 'numeric', day: 'numeric' };
-            const formattedDate = currentDate.toLocaleDateString('fr-FR', options).replace(/\//g, '.');
-            document.getElementById('currentDateLarge').textContent = formattedDate;
+        // Update date in the format DD.MM.YYYY
+        function updateDate() {
+            const now = new Date();
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
             
-            // Smooth scrolling for navigation
-            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-                anchor.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    
-                    // Handle portfolio strategy buttons
-                    if (this.classList.contains('strategy-button')) {
-                        document.querySelectorAll('.strategy-button').forEach(btn => {
-                            btn.classList.remove('active');
-                        });
-                        this.classList.add('active');
-                    }
-                    
-                    document.querySelector(this.getAttribute('href')).scrollIntoView({
-                        behavior: 'smooth'
-                    });
-                });
-            });
-            
-            // Scroll animation
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('active');
-                    }
-                });
-            }, {threshold: 0.1});
-            
-            document.querySelectorAll('.reveal').forEach(el => {
-                observer.observe(el);
-            });
-            
-            // Initialize portfolio charts
-            initPortfolioCharts();
+            document.getElementById('currentDate').innerText = `${day}.${month}.${year}`;
+        }
+        
+        // Initialize date on page load
+        document.addEventListener('DOMContentLoaded', updateDate);
+        
+        // Animate the start button when hovered
+        const startButton = document.querySelector('.start-button');
+        startButton.addEventListener('mouseenter', function() {
+            this.classList.add('pulse');
         });
         
-        // Initialize charts for different portfolio strategies
-        function initPortfolioCharts() {
-            // Aggressive Chart
-            const aggressiveCtx = document.getElementById('aggressiveChart').getContext('2d');
-            const aggressiveChart = new Chart(aggressiveCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['NVDA', 'TSLA', 'AMZN', 'QQQ', 'ICLN', 'BTC', 'ETH'],
-                    datasets: [{
-                        data: [25, 22, 18, 10, 8, 12, 5],
-                        backgroundColor: [
-                            '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
-                            '#B3FFC7', '#CCFFD6', '#00CC6A'
-                        ],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '70%',
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'right',
-                            labels: {
-                                color: '#00FF87',
-                                font: {
-                                    size: 12
-                                }
-                            }
-                        }
-                    }
-                }
-            });
+        startButton.addEventListener('mouseleave', function() {
+            this.classList.remove('pulse');
+        });
+        
+        // Add page transition on button click
+        startButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.body.classList.add('fade-out');
             
-            // Moderate Chart
-            const moderateCtx = document.getElementById('moderateChart').getContext('2d');
-            const moderateChart = new Chart(moderateCtx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['MSFT', 'AMZN', 'NVDA', 'SPY', 'QQQ', 'TLT', 'LQD', 'BTC'],
-                    datasets: [{
-                        data: [15, 12, 10, 20, 15, 15, 8, 5],
-                        backgroundColor: [
-                            '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
-                            '#B3FFC7', '#CCFFD6', '#00CC6A', '#00994F'
-                        ],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    cutout: '70%',
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'right',
-                            labels: {
-                                color: '#00FF87',
-                                font: {
-                                    size: 12
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
+            setTimeout(() => {
+                window.location.href = this.getAttribute('href');
+            }, 800); // Transition time
+        });
     </script>
 </body>
 </html>
