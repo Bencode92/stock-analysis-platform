@@ -1,0 +1,223 @@
+/* landing-style.css - Style for the landing page inspired by Into The Trenches */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --background-color: #011627; /* Bleu nuit */
+    --text-color: #FFFFFF;
+    --accent-color: #00FF87; /* Vert néon */
+    --accent-glow: 0 0 10px rgba(0, 255, 135, 0.6);
+    --transition-time: 0.8s;
+}
+
+@font-face {
+    font-family: 'Digital';
+    src: url('https://fonts.cdnfonts.com/css/ds-digital') format('woff2');
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--background-color);
+    color: var(--text-color);
+    height: 100vh;
+    overflow: hidden;
+    transition: opacity var(--transition-time) ease;
+}
+
+body.fade-out {
+    opacity: 0;
+}
+
+.landing-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    padding: 2rem;
+    max-width: 100%;
+    text-align: center;
+}
+
+/* Date display styling */
+.date-display {
+    position: absolute;
+    top: 10vh;
+    font-family: 'Digital', monospace;
+    font-size: clamp(3rem, 8vw, 6rem);
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    color: var(--accent-color);
+    text-shadow: var(--accent-glow);
+    opacity: 0;
+    animation: fadeIn 1.5s ease forwards 0.5s;
+}
+
+.date-inner {
+    position: relative;
+}
+
+.date-inner::after {
+    content: '';
+    position: absolute;
+    bottom: -10px;
+    left: 10%;
+    width: 80%;
+    height: 2px;
+    background: var(--accent-color);
+    box-shadow: var(--accent-glow);
+}
+
+/* Brand styling */
+.site-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 10vh;
+    opacity: 0;
+    animation: fadeIn 1.5s ease forwards 1s;
+}
+
+.site-brand h1 {
+    font-size: clamp(3rem, 12vw, 8rem);
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.tagline {
+    font-size: clamp(0.8rem, 3vw, 1.2rem);
+    letter-spacing: 0.2em;
+    font-weight: 300;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.pulse-dot {
+    width: 20px;
+    height: 20px;
+    background-color: var(--accent-color);
+    border-radius: 50%;
+    margin-bottom: 20px;
+    box-shadow: var(--accent-glow);
+    animation: pulse 2s infinite;
+}
+
+/* Start button styling */
+.start-button {
+    position: relative;
+    display: inline-block;
+    padding: 1.2rem 3.5rem;
+    font-size: clamp(1.2rem, 3vw, 1.8rem);
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    color: var(--text-color);
+    background-color: transparent;
+    border: 2px solid var(--accent-color);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    opacity: 0;
+    animation: fadeIn 1.5s ease forwards 1.5s;
+    box-shadow: 0 0 20px rgba(0, 255, 135, 0.2);
+}
+
+.start-button:hover {
+    color: var(--background-color);
+    box-shadow: 0 0 25px rgba(0, 255, 135, 0.4);
+}
+
+.start-button::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background-color: var(--accent-color);
+    transition: all 0.4s ease;
+    z-index: -1;
+}
+
+.start-button:hover::before {
+    left: 0;
+}
+
+.start-button.pulse {
+    animation: buttonPulse 1s;
+}
+
+/* Footer styling */
+.landing-footer {
+    position: absolute;
+    bottom: 2rem;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+    opacity: 0;
+    animation: fadeIn 1.5s ease forwards 2s;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.2);
+        opacity: 0.7;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes buttonPulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 15px rgba(0, 255, 135, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(0, 255, 135, 0);
+    }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .landing-container {
+        padding: 1rem;
+    }
+    
+    .date-display {
+        top: 5vh;
+    }
+}
+
+@media (max-height: 600px) {
+    .date-display {
+        top: 5vh;
+    }
+    
+    .site-brand {
+        margin-bottom: 5vh;
+    }
+}
