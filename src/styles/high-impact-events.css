@@ -1,0 +1,218 @@
+/* src/styles/high-impact-events.css */
+/* Styles pour la section des événements à fort impact */
+
+.events-section {
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+  margin-bottom: 2rem;
+  border: 1px solid var(--primary-color);
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.events-section h2 {
+  margin-bottom: 0;
+  display: flex;
+  align-items: center;
+  font-size: var(--heading-size);
+  color: var(--primary-color);
+}
+
+.events-section h2 i {
+  margin-right: 0.8rem;
+  color: var(--primary-color);
+}
+
+.section-controls {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.events-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.5rem;
+}
+
+.event-card {
+  background-color: var(--bg-light);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border-left: 4px solid transparent;
+  position: relative;
+  cursor: pointer;
+}
+
+.event-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+}
+
+.event-card.expanded {
+  grid-column: 1 / -1;
+}
+
+/* Classes d'impact avec leurs couleurs correspondantes */
+.event-card.critical-impact {
+  border-left-color: #ff3d00; /* Rouge intense */
+}
+
+.event-card.high-impact {
+  border-left-color: #ff9100; /* Orange */
+}
+
+.event-card.medium-impact {
+  border-left-color: #ffd600; /* Jaune */
+}
+
+.event-card.low-impact {
+  border-left-color: #64dd17; /* Vert */
+}
+
+.event-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.event-title {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.event-title i {
+  font-size: 1.2rem;
+  color: var(--primary-color);
+}
+
+.event-title h3 {
+  margin: 0;
+  font-size: var(--subheading-size);
+  color: var(--text-bright);
+}
+
+.event-score {
+  background-color: rgba(0, 0, 0, 0.2);
+  padding: 0.5rem 0.8rem;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.impact-label {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.impact-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+/* Couleurs des scores d'impact */
+.critical-impact .impact-value {
+  color: #ff3d00; /* Rouge intense */
+}
+
+.high-impact .impact-value {
+  color: #ff9100; /* Orange */
+}
+
+.medium-impact .impact-value {
+  color: #ffd600; /* Jaune */
+}
+
+.low-impact .impact-value {
+  color: #64dd17; /* Vert */
+}
+
+.event-details {
+  padding: 1rem;
+}
+
+.event-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.8rem;
+}
+
+.event-market-type, .event-timing {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  background-color: rgba(30, 144, 255, 0.1);
+  color: var(--primary-color);
+}
+
+.event-explanation {
+  margin-bottom: 1rem;
+  line-height: 1.5;
+  color: var(--text-color);
+}
+
+.event-symbols {
+  margin-top: 0.8rem;
+}
+
+.symbols-label {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 0.4rem;
+}
+
+.symbols-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.symbol-tag {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.3rem 0.5rem;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--text-bright);
+}
+
+.events-empty {
+  grid-column: 1 / -1;
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  background-color: var(--bg-light);
+  border-radius: 8px;
+}
+
+/* Styles responsive */
+@media (max-width: 768px) {
+  .events-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .event-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .event-score {
+    align-self: flex-end;
+  }
+}
