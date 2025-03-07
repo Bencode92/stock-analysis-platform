@@ -1,20 +1,23 @@
 /* jeton-style.css - Design inspiré de Jeton.com pour TradePulse */
 
 :root {
-  --primary-color: #C19A6B; /* Or vieilli */
-  --primary-light: #D4B182;
-  --primary-dark: #A8865D;
-  --text-color: #E0E0E0;
-  --text-light: #B0B0B0;
-  --background-color: #004F59; /* Bleu pétrole */
-  --background-dark: #00363C;
+  --primary-color: #00FF87; /* Vert néon */
+  --primary-light: #4DFFA4;
+  --primary-dark: #00CC6A;
+  --text-color: #FFFFFF;
+  --text-light: #CCD9E0;
+  --background-color: #011627; /* Bleu nuit */
+  --background-dark: #010D18;
   --section-padding: 0 2rem;
   --transition-speed: 0.5s;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 15px 25px rgba(0, 0, 0, 0.3);
-  --card-bg: #00424A;
-  --card-bg-hover: #003A40;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 15px 25px rgba(0, 0, 0, 0.6);
+  --card-bg: #01253F;
+  --card-bg-hover: #022e4d;
+  --card-border: rgba(0, 255, 135, 0.1);
+  --card-border-hover: rgba(0, 255, 135, 0.3);
+  --neon-glow: 0 0 10px rgba(0, 255, 135, 0.3), 0 0 20px rgba(0, 255, 135, 0.1);
 }
 
 /* Base styles */
@@ -46,15 +49,15 @@ body::after {
   width: 100%;
   height: 100%;
   background-image: 
-    radial-gradient(circle at 15% 15%, rgba(193, 154, 107, 0.03) 0%, transparent 20%),
-    radial-gradient(circle at 85% 85%, rgba(193, 154, 107, 0.03) 0%, transparent 20%);
+    radial-gradient(circle at 15% 15%, rgba(0, 255, 135, 0.05) 0%, transparent 20%),
+    radial-gradient(circle at 85% 85%, rgba(0, 255, 135, 0.05) 0%, transparent 20%);
   z-index: -1;
-  opacity: 0.5;
+  opacity: 0.6;
 }
 
 /* Header styling */
 .main-header {
-  background-color: rgba(0, 79, 89, 0.9);
+  background-color: rgba(1, 22, 39, 0.9);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   padding: 1.2rem 2rem;
@@ -68,7 +71,7 @@ body::after {
   align-items: center;
   box-shadow: var(--shadow-sm);
   transition: all 0.3s ease;
-  border-bottom: 1px solid rgba(193, 154, 107, 0.2);
+  border-bottom: 1px solid rgba(0, 255, 135, 0.1);
 }
 
 .main-header.scrolled {
@@ -83,6 +86,7 @@ body::after {
   font-size: 1.8rem;
   font-weight: 700;
   color: var(--primary-color);
+  text-shadow: 0 0 5px rgba(0, 255, 135, 0.5);
 }
 
 .site-title i {
@@ -95,10 +99,10 @@ body::after {
   gap: 0.8rem;
   font-size: 0.9rem;
   color: var(--text-light);
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(1, 13, 24, 0.7);
   padding: 0.5rem 1rem;
   border-radius: 30px;
-  border: 1px solid rgba(193, 154, 107, 0.2);
+  border: 1px solid rgba(0, 255, 135, 0.15);
 }
 
 .market-indicator {
@@ -109,8 +113,15 @@ body::after {
 }
 
 .market-indicator.green {
-  background-color: #4CAF50;
-  box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+  background-color: var(--primary-color);
+  box-shadow: 0 0 10px var(--primary-color);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
 }
 
 .market-time {
@@ -133,16 +144,16 @@ body::after {
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-md), var(--neon-glow);
   cursor: pointer;
   transition: all 0.3s ease;
   font-weight: 600;
 }
 
 .floating-menu:hover {
-  background: var(--primary-dark);
+  background: var(--primary-light);
   transform: translateX(-50%) translateY(-5px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-lg), 0 0 15px rgba(0, 255, 135, 0.5);
 }
 
 /* Section styling for full-page sections */
@@ -181,6 +192,7 @@ body::after {
   color: var(--primary-color);
   margin-bottom: 1.5rem;
   line-height: 1.1;
+  text-shadow: 0 0 15px rgba(0, 255, 135, 0.3);
 }
 
 .hero-subtitle {
@@ -200,13 +212,13 @@ body::after {
   font-size: 1.1rem;
   text-decoration: none;
   transition: all 0.3s ease;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-md), var(--neon-glow);
 }
 
 .cta-button:hover {
   background: var(--primary-light);
   transform: translateY(-5px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-lg), 0 0 20px rgba(0, 255, 135, 0.5);
 }
 
 /* Scroll indicator */
@@ -248,6 +260,7 @@ body::after {
   text-align: center;
   margin-bottom: 4rem;
   color: var(--primary-color);
+  text-shadow: 0 0 10px rgba(0, 255, 135, 0.2);
 }
 
 /* News Cards */
@@ -265,14 +278,14 @@ body::after {
   box-shadow: var(--shadow-md);
   transition: all 0.3s ease;
   height: 100%;
-  border: 1px solid rgba(193, 154, 107, 0.1);
+  border: 1px solid var(--card-border);
 }
 
 .news-card:hover {
   transform: translateY(-10px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-lg), var(--neon-glow);
   background: var(--card-bg-hover);
-  border-color: rgba(193, 154, 107, 0.3);
+  border-color: var(--card-border-hover);
 }
 
 .news-content {
@@ -317,7 +330,7 @@ body::after {
 
 .news-card.major-news {
   grid-column: 1 / -1;
-  background: linear-gradient(to right, rgba(193, 154, 107, 0.1), var(--card-bg));
+  background: linear-gradient(to right, rgba(0, 255, 135, 0.1), var(--card-bg));
   border-left: 4px solid var(--primary-color);
 }
 
@@ -336,12 +349,14 @@ body::after {
   box-shadow: var(--shadow-md);
   transition: all 0.3s ease;
   border-left: 4px solid transparent;
+  border: 1px solid var(--card-border);
 }
 
 .event-card:hover {
   transform: translateY(-10px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-lg), var(--neon-glow);
   background: var(--card-bg-hover);
+  border-color: var(--card-border-hover);
 }
 
 .event-card.critical-impact {
@@ -357,12 +372,12 @@ body::after {
 }
 
 .event-card.low-impact {
-  border-left-color: #64dd17;
+  border-left-color: var(--primary-color);
 }
 
 .event-header {
   padding: 1.2rem;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(1, 13, 24, 0.5);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -386,7 +401,7 @@ body::after {
 }
 
 .event-score {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(1, 13, 24, 0.7);
   padding: 0.5rem 0.8rem;
   border-radius: 4px;
   text-align: center;
@@ -417,7 +432,7 @@ body::after {
 }
 
 .low-impact .impact-value {
-  color: #64dd17;
+  color: var(--primary-color);
 }
 
 .event-details {
@@ -434,7 +449,7 @@ body::after {
   font-size: 0.8rem;
   padding: 0.3rem 0.6rem;
   border-radius: 4px;
-  background: rgba(193, 154, 107, 0.1);
+  background: rgba(0, 255, 135, 0.1);
   color: var(--primary-color);
 }
 
@@ -467,14 +482,14 @@ body::after {
   font-weight: 600;
   padding: 0.3rem 0.6rem;
   border-radius: 4px;
-  background: rgba(193, 154, 107, 0.15);
+  background: rgba(0, 255, 135, 0.15);
   color: var(--primary-color);
-  border: 1px solid rgba(193, 154, 107, 0.2);
+  border: 1px solid rgba(0, 255, 135, 0.2);
   transition: all 0.2s;
 }
 
 .symbol-tag:hover {
-  background: rgba(193, 154, 107, 0.3);
+  background: rgba(0, 255, 135, 0.3);
 }
 
 /* Sectors styling */
@@ -490,13 +505,13 @@ body::after {
   padding: 2rem;
   box-shadow: var(--shadow-md);
   transition: all 0.3s ease;
-  border: 1px solid rgba(193, 154, 107, 0.1);
+  border: 1px solid var(--card-border);
 }
 
 .bullish-sectors:hover, .bearish-sectors:hover {
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-lg), var(--neon-glow);
   transform: translateY(-5px);
-  border-color: rgba(193, 154, 107, 0.3);
+  border-color: var(--card-border-hover);
 }
 
 .bullish-sectors h3, .bearish-sectors h3 {
@@ -508,7 +523,7 @@ body::after {
 }
 
 .bullish-sectors h3 {
-  color: #4CAF50;
+  color: var(--primary-color);
 }
 
 .bearish-sectors h3 {
@@ -521,12 +536,13 @@ body::after {
   background: var(--background-dark);
   border-radius: 12px;
   transition: all 0.3s ease;
-  border: 1px solid rgba(193, 154, 107, 0.1);
+  border: 1px solid var(--card-border);
 }
 
 .sector-item:hover {
-  border-color: rgba(193, 154, 107, 0.3);
+  border-color: var(--card-border-hover);
   transform: scale(1.03);
+  box-shadow: var(--shadow-md);
 }
 
 .sector-name {
@@ -565,13 +581,13 @@ body::after {
   padding: 2rem;
   box-shadow: var(--shadow-md);
   height: 400px;
-  border: 1px solid rgba(193, 154, 107, 0.1);
+  border: 1px solid var(--card-border);
   transition: all 0.3s ease;
 }
 
 .portfolio-chart:hover {
-  box-shadow: var(--shadow-lg);
-  border-color: rgba(193, 154, 107, 0.3);
+  box-shadow: var(--shadow-lg), var(--neon-glow);
+  border-color: var(--card-border-hover);
 }
 
 .portfolio-highlights {
@@ -589,17 +605,17 @@ body::after {
   align-items: center;
   gap: 1.5rem;
   transition: all 0.3s ease;
-  border: 1px solid rgba(193, 154, 107, 0.1);
+  border: 1px solid var(--card-border);
 }
 
 .highlight-card:hover {
   transform: translateX(10px);
-  box-shadow: var(--shadow-lg);
-  border-color: rgba(193, 154, 107, 0.3);
+  box-shadow: var(--shadow-lg), var(--neon-glow);
+  border-color: var(--card-border-hover);
 }
 
 .highlight-icon {
-  background: rgba(193, 154, 107, 0.15);
+  background: rgba(0, 255, 135, 0.15);
   border-radius: 50%;
   width: 60px;
   height: 60px;
@@ -642,17 +658,17 @@ body::after {
   text-align: center;
   box-shadow: var(--shadow-md);
   transition: transform var(--transition-speed);
-  border: 1px solid rgba(193, 154, 107, 0.1);
+  border: 1px solid var(--card-border);
 }
 
 .feature-card:hover {
   transform: translateY(-10px);
-  box-shadow: var(--shadow-lg);
-  border-color: rgba(193, 154, 107, 0.3);
+  box-shadow: var(--shadow-lg), var(--neon-glow);
+  border-color: var(--card-border-hover);
 }
 
 .feature-icon {
-  background: rgba(193, 154, 107, 0.15);
+  background: rgba(0, 255, 135, 0.15);
   width: 80px;
   height: 80px;
   border-radius: 50%;
@@ -698,13 +714,13 @@ body::after {
   text-decoration: none;
   margin-bottom: 4rem;
   transition: all 0.3s ease;
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-md), var(--neon-glow);
 }
 
 .start-button:hover {
   background: var(--primary-light);
   transform: translateY(-5px);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-lg), 0 0 20px rgba(0, 255, 135, 0.5);
 }
 
 .data-disclaimer {
