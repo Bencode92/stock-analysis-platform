@@ -1,6 +1,7 @@
 // src/hooks/useFinancialData.js
 import { useState, useEffect, useCallback } from 'react';
 import { perplexityService, claudeService } from '../../services/api';
+import { marketEventsService } from '../../services/marketEventsService';
 
 /**
  * Hook personnalisé pour gérer les données financières en temps réel
@@ -16,6 +17,7 @@ export function useFinancialData() {
     cryptos: [] 
   });
   const [portfolioData, setPortfolioData] = useState([]);
+  const [highImpactEvents, setHighImpactEvents] = useState([]);
   const [lastUpdateTime, setLastUpdateTime] = useState(null);
   
   // États pour les chargements et erreurs
@@ -23,14 +25,16 @@ export function useFinancialData() {
     news: true,
     sectors: true,
     instruments: true,
-    portfolio: true
+    portfolio: true,
+    events: true
   });
   
   const [hasError, setHasError] = useState({
     news: false,
     sectors: false,
     instruments: false,
-    portfolio: false
+    portfolio: false,
+    events: false
   });
   
   // Fonction pour récupérer les actualités
@@ -93,6 +97,26 @@ export function useFinancialData() {
     }
   }, []);
   
+  // Fonction pour obtenir les événements à fort impact
+  const fetchHighImpactEvents = useCallback(async (news) => {
+    setIsLoading(prev => ({ ...prev, events: true }));
+    setHasError(prev => ({ ...prev, events: false }));
+    
+    try {
+      console.log("Analyse des événements à fort impact en cours...");
+      const events = await marketEventsService.getHighImpactEvents(news);
+      console.log(`Événements à fort impact identifiés: ${events.length}`);
+      setHighImpactEvents(events);
+      return events;
+    } catch (error) {
+      console.error('Erreur lors de l\'analyse des événements à fort impact:', error);
+      setHasError(prev => ({ ...prev, events: true }));
+      throw error;
+    } finally {
+      setIsLoading(prev => ({ ...prev, events: false }));
+    }
+  }, []);
+  
   // Fonction pour générer le portefeuille optimisé
   const generatePortfolio = useCallback(async (news, sectors, instruments) => {
     setIsLoading(prev => ({ ...prev, portfolio: true }));
@@ -126,10 +150,11 @@ export function useFinancialData() {
       // Étape 1: Récupérer les actualités
       const news = await fetchNews();
       
-      // Étape 2: Récupérer l'analyse sectorielle et les instruments financiers en parallèle
-      const [sectors, instruments] = await Promise.all([
+      // Étape 2: Récupérer l'analyse sectorielle, les instruments financiers et les événements en parallèle
+      const [sectors, instruments, events] = await Promise.all([
         fetchSectorAnalysis(news),
-        fetchFinancialInstruments(news)
+        fetchFinancialInstruments(news),
+        fetchHighImpactEvents(news)
       ]);
       
       // Étape 3: Générer le portefeuille optimisé
@@ -145,7 +170,7 @@ export function useFinancialData() {
       console.error('Erreur lors du rafraîchissement des données:', error);
       throw error;
     }
-  }, [fetchNews, fetchSectorAnalysis, fetchFinancialInstruments, generatePortfolio]);
+  }, [fetchNews, fetchSectorAnalysis, fetchFinancialInstruments, fetchHighImpactEvents, generatePortfolio]);
   
   // Fonction pour vérifier si les données sont périmées (plus de 15 minutes)
   const areDataStale = useCallback(() => {
@@ -186,6 +211,7 @@ export function useFinancialData() {
     sectorData,
     financialInstruments,
     portfolioData,
+    highImpactEvents,
     lastUpdateTime,
     
     // États
@@ -198,6 +224,7 @@ export function useFinancialData() {
     fetchNews,
     fetchSectorAnalysis,
     fetchFinancialInstruments,
+    fetchHighImpactEvents,
     generatePortfolio
   };
 }
