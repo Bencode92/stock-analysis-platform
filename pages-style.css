@@ -230,6 +230,38 @@ body.fade-out {
     color: rgba(255, 255, 255, 0.8);
 }
 
+/* Loading State */
+.loading-card, .loading-row {
+    background-color: rgba(0, 255, 135, 0.05);
+    border: 1px solid rgba(0, 255, 135, 0.1);
+    border-radius: 5px;
+    padding: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 150px;
+}
+
+.loading-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.loading-indicator .pulse-dot {
+    width: 20px;
+    height: 20px;
+    margin-right: 0;
+    animation: pulse 1.5s infinite;
+}
+
+.loading-indicator p {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+}
+
 /* Events Section */
 .events-section {
     margin-bottom: var(--section-spacing);
@@ -671,6 +703,47 @@ body.fade-out {
 
 .allocation {
     font-weight: 700;
+}
+
+/* Perplexity Integration Special Styling */
+.perplexity-badge {
+    display: inline-flex;
+    align-items: center;
+    background-color: rgba(0, 255, 135, 0.1);
+    border: 1px solid rgba(0, 255, 135, 0.3);
+    border-radius: 4px;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.8rem;
+    color: var(--accent-color);
+    margin-right: 1rem;
+}
+
+.perplexity-badge i {
+    margin-right: 0.4rem;
+}
+
+.ai-generated {
+    position: relative;
+}
+
+.ai-generated::after {
+    content: 'AI';
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    font-size: 0.6rem;
+    background-color: var(--accent-color);
+    color: var(--background-color);
+    border-radius: 3px;
+    padding: 0.1rem 0.3rem;
+    font-weight: 700;
+}
+
+.last-update {
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+    margin-top: 0.5rem;
 }
 
 /* Page footer */
