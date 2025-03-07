@@ -6,8 +6,19 @@
 
 // Configuration de l'API
 const API_CONFIG = {
-    // Les endpoints seront configurés par l'environnement serveur
-    updatesInterval: 60 * 60 * 1000, // Mise à jour toutes les heures
+    // URL du serveur proxy (à modifier selon votre configuration)
+    baseUrl: 'https://tradepulse-api.onrender.com', // URL de production
+    // baseUrl: 'http://localhost:3000', // URL de développement local
+    
+    // Endpoints
+    endpoints: {
+        news: '/api/perplexity/news',
+        portfolios: '/api/perplexity/portfolios',
+        search: '/api/perplexity/search'
+    },
+    
+    // Intervalle de mise à jour (en millisecondes)
+    updatesInterval: 30 * 60 * 1000, // Mise à jour toutes les 30 minutes
 };
 
 // Classe principale pour l'intégration de Perplexity
@@ -46,7 +57,231 @@ class PerplexityIntegration {
             console.log('Intégration Perplexity initialisée avec succès');
         } catch (error) {
             console.error('Erreur lors de l\'initialisation de l\'intégration Perplexity:', error);
+            
+            // Charger des données de secours en cas d'échec
+            this.loadFallbackData();
         }
+    }
+    
+    /**
+     * Charge des données de secours en cas d'erreur avec l'API
+     */
+    loadFallbackData() {
+        console.log('Chargement des données de secours...');
+        
+        // Simuler des données pour le développement
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('fr-FR');
+        
+        this.newsData = {
+            us: [
+                {
+                    source: "Federal Reserve",
+                    date: dateStr,
+                    time: "08:30",
+                    title: "La Fed annonce un maintien des taux directeurs",
+                    content: "La Réserve fédérale américaine maintient ses taux directeurs inchangés, signalant une stabilité de la politique monétaire américaine. Les marchés réagissent positivement à cette décision attendue."
+                },
+                {
+                    source: "Markets US",
+                    date: dateStr,
+                    time: "10:15",
+                    title: "Résultats trimestriels supérieurs aux attentes pour le secteur technologique",
+                    content: "Les grandes entreprises technologiques américaines ont présenté des résultats trimestriels largement supérieurs aux attentes des analystes, témoignant de la robustesse du secteur malgré l'environnement économique incertain."
+                },
+                {
+                    source: "Treasury Department",
+                    date: dateStr,
+                    time: "14:45",
+                    title: "Baisse des rendements obligataires américains",
+                    content: "Les rendements des bons du Trésor américain ont diminué suite aux commentaires de la Fed, indiquant une confiance accrue des investisseurs dans la stabilité économique à moyen terme."
+                }
+            ],
+            france: [
+                {
+                    source: "Banque de France",
+                    date: dateStr,
+                    time: "09:00",
+                    title: "Révision à la hausse des prévisions de croissance",
+                    content: "La Banque de France a revu à la hausse ses prévisions de croissance pour l'année en cours, citant une reprise plus vigoureuse que prévu dans les secteurs des services et de l'industrie."
+                },
+                {
+                    source: "CAC 40",
+                    date: dateStr,
+                    time: "13:30",
+                    title: "Le CAC 40 atteint un nouveau sommet historique",
+                    content: "L'indice principal de la Bourse de Paris a franchi un nouveau record, porté par les performances exceptionnelles des valeurs du luxe et de l'aéronautique."
+                },
+                {
+                    source: "Ministère de l'Économie",
+                    date: dateStr,
+                    time: "11:15",
+                    title: "Nouvelles mesures fiscales pour soutenir l'innovation",
+                    content: "Le gouvernement français annonce un renforcement des incitations fiscales pour les entreprises investissant dans la recherche et développement, visant à stimuler l'innovation et la compétitivité internationale."
+                }
+            ],
+            lastUpdated: now.toISOString()
+        };
+        
+        this.portfolios = {
+            agressif: [
+                {
+                    name: "NVIDIA Corporation",
+                    symbol: "NVDA",
+                    type: "STOCK",
+                    allocation: 25,
+                    reason: "Leader incontesté des puces IA avec un nouveau record historique selon les actualités du jour, bénéficiant directement de la demande croissante pour l'IA."
+                },
+                {
+                    name: "Tesla, Inc.",
+                    symbol: "TSLA",
+                    type: "STOCK",
+                    allocation: 22,
+                    reason: "L'augmentation de production dans la gigafactory de Berlin annoncée cette semaine crée une opportunité immédiate dans un secteur haussier."
+                },
+                {
+                    name: "Amazon.com, Inc.",
+                    symbol: "AMZN",
+                    type: "STOCK",
+                    allocation: 18,
+                    reason: "Sa nouvelle stratégie logistique annoncée cette semaine promet d'améliorer ses performances à court terme."
+                },
+                {
+                    name: "Invesco QQQ Trust",
+                    symbol: "QQQ",
+                    type: "ETF",
+                    allocation: 10,
+                    reason: "Exposition aux grandes entreprises technologiques qui bénéficient de la tendance haussière actuelle du secteur tech."
+                },
+                {
+                    name: "iShares Global Clean Energy ETF",
+                    symbol: "ICLN",
+                    type: "ETF",
+                    allocation: 8,
+                    reason: "Profite des initiatives de transition énergétique mentionnées dans les actualités récentes."
+                },
+                {
+                    name: "Bitcoin",
+                    symbol: "BTC",
+                    type: "CRYPTO",
+                    allocation: 12,
+                    reason: "Le rebond significatif suite aux commentaires de la SEC cette semaine crée une opportunité tactique à court terme."
+                },
+                {
+                    name: "Ethereum",
+                    symbol: "ETH",
+                    type: "CRYPTO",
+                    allocation: 5,
+                    reason: "Bénéficie actuellement du développement des applications décentralisées et suit la tendance haussière récente du Bitcoin."
+                }
+            ],
+            modere: [
+                {
+                    name: "Microsoft Corporation",
+                    symbol: "MSFT",
+                    type: "STOCK",
+                    allocation: 15,
+                    reason: "Position dominante dans le cloud et l'IA, profitant de la tendance haussière du secteur technologique avec un profil de risque modéré."
+                },
+                {
+                    name: "Amazon.com, Inc.",
+                    symbol: "AMZN",
+                    type: "STOCK",
+                    allocation: 12,
+                    reason: "Sa nouvelle stratégie logistique dévoilée cette semaine et sa diversification sectorielle offrent un bon équilibre risque/rendement."
+                },
+                {
+                    name: "SPDR S&P 500 ETF Trust",
+                    symbol: "SPY",
+                    type: "ETF",
+                    allocation: 20,
+                    reason: "Diversification large sur le marché américain pour réduire la volatilité globale du portefeuille."
+                },
+                {
+                    name: "Invesco QQQ Trust",
+                    symbol: "QQQ",
+                    type: "ETF",
+                    allocation: 15,
+                    reason: "Exposition contrôlée au secteur technologique pour capturer la croissance sans risque excessif."
+                },
+                {
+                    name: "iShares 20+ Year Treasury Bond ETF",
+                    symbol: "TLT",
+                    type: "BOND",
+                    allocation: 15,
+                    reason: "Protection contre la volatilité des marchés actions dans un contexte d'incertitude économique."
+                },
+                {
+                    name: "NVIDIA Corporation",
+                    symbol: "NVDA",
+                    type: "STOCK",
+                    allocation: 10,
+                    reason: "Exposition limitée au leader des puces IA pour bénéficier de la croissance sans surpondération."
+                },
+                {
+                    name: "iShares iBoxx $ Investment Grade Corporate Bond ETF",
+                    symbol: "LQD",
+                    type: "BOND",
+                    allocation: 8,
+                    reason: "Rendements supérieurs aux bons du Trésor avec un risque modéré."
+                },
+                {
+                    name: "Bitcoin",
+                    symbol: "BTC",
+                    type: "CRYPTO",
+                    allocation: 5,
+                    reason: "Exposition limitée pour diversification, suite aux commentaires positifs de la SEC cette semaine."
+                }
+            ],
+            stable: [
+                {
+                    name: "Vanguard Total Bond Market ETF",
+                    symbol: "BND",
+                    type: "BOND",
+                    allocation: 25,
+                    reason: "Large diversification obligataire offrant stabilité et préservation du capital dans le contexte actuel."
+                },
+                {
+                    name: "Johnson & Johnson",
+                    symbol: "JNJ",
+                    type: "STOCK",
+                    allocation: 15,
+                    reason: "Valeur défensive peu corrélée aux turbulences du marché, offrant stabilité et dividendes dans un contexte d'incertitude."
+                },
+                {
+                    name: "Microsoft Corporation",
+                    symbol: "MSFT",
+                    type: "STOCK",
+                    allocation: 10,
+                    reason: "Entreprise à forte capitalisation avec solides fondamentaux et flux de trésorerie stable, offrant à la fois sécurité et croissance modérée."
+                },
+                {
+                    name: "SPDR S&P 500 ETF Trust",
+                    symbol: "SPY",
+                    type: "ETF",
+                    allocation: 15,
+                    reason: "Exposition large au marché avec une volatilité moindre que les secteurs individuels."
+                },
+                {
+                    name: "iShares 20+ Year Treasury Bond ETF",
+                    symbol: "TLT",
+                    type: "BOND",
+                    allocation: 20,
+                    reason: "Protection maximale contre l'incertitude des marchés, particulièrement utile suite aux annonces récentes de la BCE."
+                },
+                {
+                    name: "iShares iBoxx $ Investment Grade Corporate Bond ETF",
+                    symbol: "LQD",
+                    type: "BOND",
+                    allocation: 15,
+                    reason: "Rendement prévisible avec risque limité grâce aux obligations d'entreprises de qualité."
+                }
+            ],
+            lastUpdated: now.toISOString()
+        };
+        
+        // Mise à jour des affichages sur le site
+        this.updateUI();
     }
     
     /**
@@ -56,18 +291,20 @@ class PerplexityIntegration {
         console.log('Mise à jour des données depuis Perplexity...');
         
         try {
-            // Mettre à jour les actualités
-            await this.updateNews();
-            
-            // Mettre à jour les portefeuilles
-            await this.updatePortfolios();
+            // Mettre à jour les actualités et les portefeuilles en parallèle
+            const [newsData, portfoliosData] = await Promise.all([
+                this.updateNews(),
+                this.updatePortfolios()
+            ]);
             
             // Mise à jour des affichages sur le site
             this.updateUI();
             
             console.log('Données mises à jour avec succès');
+            return { newsData, portfoliosData };
         } catch (error) {
             console.error('Erreur lors de la mise à jour des données:', error);
+            throw error;
         }
     }
     
@@ -76,85 +313,28 @@ class PerplexityIntegration {
      */
     async updateNews() {
         try {
-            // Cette fonction sera remplacée par un appel à l'API Perplexity en production
-            // Actuellement, nous utilisons des données simulées
+            console.log('Récupération des actualités depuis l\'API...');
             
-            // Dans un environnement de production, vous utiliseriez:
-            /*
-            const response = await fetch('/api/perplexity/news', {
+            // Appel à l'API via le proxy
+            const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.news}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    prompt: "Donne-moi un résumé des actualités financières du jour concernant les marchés US et français. Format: 3 actualités principales par marché, avec impact potentiel sur les investissements. Sois précis et factuel."
-                })
+                body: JSON.stringify({})
             });
             
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+            
+            // Récupération et traitement des données
             const data = await response.json();
             
-            // Traiter la réponse de Perplexity
-            const newsContent = data.response;
+            // Mise à jour des données d'actualités
+            this.newsData = data;
             
-            // Parser le contenu pour extraire les actualités US et françaises
-            // Logique de parsing ici
-            */
-            
-            // Simulons des données pour le développement
-            const now = new Date();
-            const dateStr = now.toLocaleDateString('fr-FR');
-            
-            this.newsData = {
-                us: [
-                    {
-                        source: "Federal Reserve",
-                        date: dateStr,
-                        time: "08:30",
-                        title: "La Fed annonce un maintien des taux directeurs",
-                        content: "La Réserve fédérale américaine maintient ses taux directeurs inchangés, signalant une stabilité de la politique monétaire américaine. Les marchés réagissent positivement à cette décision attendue."
-                    },
-                    {
-                        source: "Markets US",
-                        date: dateStr,
-                        time: "10:15",
-                        title: "Résultats trimestriels supérieurs aux attentes pour le secteur technologique",
-                        content: "Les grandes entreprises technologiques américaines ont présenté des résultats trimestriels largement supérieurs aux attentes des analystes, témoignant de la robustesse du secteur malgré l'environnement économique incertain."
-                    },
-                    {
-                        source: "Treasury Department",
-                        date: dateStr,
-                        time: "14:45",
-                        title: "Baisse des rendements obligataires américains",
-                        content: "Les rendements des bons du Trésor américain ont diminué suite aux commentaires de la Fed, indiquant une confiance accrue des investisseurs dans la stabilité économique à moyen terme."
-                    }
-                ],
-                france: [
-                    {
-                        source: "Banque de France",
-                        date: dateStr,
-                        time: "09:00",
-                        title: "Révision à la hausse des prévisions de croissance",
-                        content: "La Banque de France a revu à la hausse ses prévisions de croissance pour l'année en cours, citant une reprise plus vigoureuse que prévu dans les secteurs des services et de l'industrie."
-                    },
-                    {
-                        source: "CAC 40",
-                        date: dateStr,
-                        time: "13:30",
-                        title: "Le CAC 40 atteint un nouveau sommet historique",
-                        content: "L'indice principal de la Bourse de Paris a franchi un nouveau record, porté par les performances exceptionnelles des valeurs du luxe et de l'aéronautique."
-                    },
-                    {
-                        source: "Ministère de l'Économie",
-                        date: dateStr,
-                        time: "11:15",
-                        title: "Nouvelles mesures fiscales pour soutenir l'innovation",
-                        content: "Le gouvernement français annonce un renforcement des incitations fiscales pour les entreprises investissant dans la recherche et développement, visant à stimuler l'innovation et la compétitivité internationale."
-                    }
-                ],
-                lastUpdated: now.toISOString()
-            };
-            
-            console.log('Actualités mises à jour');
+            console.log('Actualités mises à jour avec succès');
             return this.newsData;
             
         } catch (error) {
@@ -168,195 +348,64 @@ class PerplexityIntegration {
      */
     async updatePortfolios() {
         try {
-            // Cette fonction sera remplacée par un appel à l'API Perplexity en production
-            // Actuellement, nous utilisons des données simulées
+            console.log('Récupération des portefeuilles depuis l\'API...');
             
-            // Dans un environnement de production, vous utiliseriez:
-            /*
-            const response = await fetch('/api/perplexity/portfolios', {
+            // Appel à l'API via le proxy
+            const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.portfolios}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({
-                    prompt: "En te basant sur les actualités financières récentes et le contexte économique global, génère 3 portefeuilles d'investissement (agressif, modéré et stable) avec 10-15 actifs chacun incluant stocks, ETF, crypto, bonds. Pour chaque actif, fournis: Nom complet, Symbole/ticker, Type d'actif, Pourcentage d'allocation (total 100%), Justification basée sur les actualités récentes. Format JSON structuré."
-                })
+                body: JSON.stringify({})
             });
             
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+            
+            // Récupération et traitement des données
             const data = await response.json();
             
-            // Traiter la réponse de Perplexity
-            const portfoliosContent = data.response;
+            // Mise à jour des données de portefeuilles
+            this.portfolios = data;
             
-            // Parser le contenu JSON pour extraire les portefeuilles
-            // Logique de parsing ici
-            */
-            
-            // Simulons des données pour le développement
-            const now = new Date();
-            
-            this.portfolios = {
-                agressif: [
-                    {
-                        name: "NVIDIA Corporation",
-                        symbol: "NVDA",
-                        type: "STOCK",
-                        allocation: 25,
-                        reason: "Leader incontesté des puces IA avec un nouveau record historique selon les actualités du jour, bénéficiant directement de la demande croissante pour l'IA."
-                    },
-                    {
-                        name: "Tesla, Inc.",
-                        symbol: "TSLA",
-                        type: "STOCK",
-                        allocation: 22,
-                        reason: "L'augmentation de production dans la gigafactory de Berlin annoncée cette semaine crée une opportunité immédiate dans un secteur haussier."
-                    },
-                    {
-                        name: "Amazon.com, Inc.",
-                        symbol: "AMZN",
-                        type: "STOCK",
-                        allocation: 18,
-                        reason: "Sa nouvelle stratégie logistique annoncée cette semaine promet d'améliorer ses performances à court terme."
-                    },
-                    {
-                        name: "Invesco QQQ Trust",
-                        symbol: "QQQ",
-                        type: "ETF",
-                        allocation: 10,
-                        reason: "Exposition aux grandes entreprises technologiques qui bénéficient de la tendance haussière actuelle du secteur tech."
-                    },
-                    {
-                        name: "iShares Global Clean Energy ETF",
-                        symbol: "ICLN",
-                        type: "ETF",
-                        allocation: 8,
-                        reason: "Profite des initiatives de transition énergétique mentionnées dans les actualités récentes."
-                    },
-                    {
-                        name: "Bitcoin",
-                        symbol: "BTC",
-                        type: "CRYPTO",
-                        allocation: 12,
-                        reason: "Le rebond significatif suite aux commentaires de la SEC cette semaine crée une opportunité tactique à court terme."
-                    },
-                    {
-                        name: "Ethereum",
-                        symbol: "ETH",
-                        type: "CRYPTO",
-                        allocation: 5,
-                        reason: "Bénéficie actuellement du développement des applications décentralisées et suit la tendance haussière récente du Bitcoin."
-                    }
-                ],
-                modere: [
-                    {
-                        name: "Microsoft Corporation",
-                        symbol: "MSFT",
-                        type: "STOCK",
-                        allocation: 15,
-                        reason: "Position dominante dans le cloud et l'IA, profitant de la tendance haussière du secteur technologique avec un profil de risque modéré."
-                    },
-                    {
-                        name: "Amazon.com, Inc.",
-                        symbol: "AMZN",
-                        type: "STOCK",
-                        allocation: 12,
-                        reason: "Sa nouvelle stratégie logistique dévoilée cette semaine et sa diversification sectorielle offrent un bon équilibre risque/rendement."
-                    },
-                    {
-                        name: "SPDR S&P 500 ETF Trust",
-                        symbol: "SPY",
-                        type: "ETF",
-                        allocation: 20,
-                        reason: "Diversification large sur le marché américain pour réduire la volatilité globale du portefeuille."
-                    },
-                    {
-                        name: "Invesco QQQ Trust",
-                        symbol: "QQQ",
-                        type: "ETF",
-                        allocation: 15,
-                        reason: "Exposition contrôlée au secteur technologique pour capturer la croissance sans risque excessif."
-                    },
-                    {
-                        name: "iShares 20+ Year Treasury Bond ETF",
-                        symbol: "TLT",
-                        type: "BOND",
-                        allocation: 15,
-                        reason: "Protection contre la volatilité des marchés actions dans un contexte d'incertitude économique."
-                    },
-                    {
-                        name: "NVIDIA Corporation",
-                        symbol: "NVDA",
-                        type: "STOCK",
-                        allocation: 10,
-                        reason: "Exposition limitée au leader des puces IA pour bénéficier de la croissance sans surpondération."
-                    },
-                    {
-                        name: "iShares iBoxx $ Investment Grade Corporate Bond ETF",
-                        symbol: "LQD",
-                        type: "BOND",
-                        allocation: 8,
-                        reason: "Rendements supérieurs aux bons du Trésor avec un risque modéré."
-                    },
-                    {
-                        name: "Bitcoin",
-                        symbol: "BTC",
-                        type: "CRYPTO",
-                        allocation: 5,
-                        reason: "Exposition limitée pour diversification, suite aux commentaires positifs de la SEC cette semaine."
-                    }
-                ],
-                stable: [
-                    {
-                        name: "Vanguard Total Bond Market ETF",
-                        symbol: "BND",
-                        type: "BOND",
-                        allocation: 25,
-                        reason: "Large diversification obligataire offrant stabilité et préservation du capital dans le contexte actuel."
-                    },
-                    {
-                        name: "Johnson & Johnson",
-                        symbol: "JNJ",
-                        type: "STOCK",
-                        allocation: 15,
-                        reason: "Valeur défensive peu corrélée aux turbulences du marché, offrant stabilité et dividendes dans un contexte d'incertitude."
-                    },
-                    {
-                        name: "Microsoft Corporation",
-                        symbol: "MSFT",
-                        type: "STOCK",
-                        allocation: 10,
-                        reason: "Entreprise à forte capitalisation avec solides fondamentaux et flux de trésorerie stable, offrant à la fois sécurité et croissance modérée."
-                    },
-                    {
-                        name: "SPDR S&P 500 ETF Trust",
-                        symbol: "SPY",
-                        type: "ETF",
-                        allocation: 15,
-                        reason: "Exposition large au marché avec une volatilité moindre que les secteurs individuels."
-                    },
-                    {
-                        name: "iShares 20+ Year Treasury Bond ETF",
-                        symbol: "TLT",
-                        type: "BOND",
-                        allocation: 20,
-                        reason: "Protection maximale contre l'incertitude des marchés, particulièrement utile suite aux annonces récentes de la BCE."
-                    },
-                    {
-                        name: "iShares iBoxx $ Investment Grade Corporate Bond ETF",
-                        symbol: "LQD",
-                        type: "BOND",
-                        allocation: 15,
-                        reason: "Rendement prévisible avec risque limité grâce aux obligations d'entreprises de qualité."
-                    }
-                ],
-                lastUpdated: now.toISOString()
-            };
-            
-            console.log('Portefeuilles mis à jour');
+            console.log('Portefeuilles mis à jour avec succès');
             return this.portfolios;
             
         } catch (error) {
             console.error('Erreur lors de la mise à jour des portefeuilles:', error);
+            throw error;
+        }
+    }
+    
+    /**
+     * Effectue une recherche personnalisée avec Perplexity
+     */
+    async search(query) {
+        try {
+            console.log(`Recherche: "${query}"`);
+            
+            // Appel à l'API via le proxy
+            const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.search}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ query })
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+            
+            // Récupération et traitement des données
+            const data = await response.json();
+            
+            console.log('Recherche effectuée avec succès');
+            return data;
+            
+        } catch (error) {
+            console.error('Erreur lors de la recherche:', error);
             throw error;
         }
     }
