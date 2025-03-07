@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradePulse - Recherche Intelligente</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="pages-style.css">
+    <link rel="stylesheet" href="search-style.css">
+    <script type="module" src="aiintegration.js"></script>
+</head>
+<body class="page-recherche fade-in">
+    <header class="page-header">
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="pulse-dot"></div>
+                <a href="index.html" class="logo">TRADEPULSE</a>
+            </div>
+            <nav class="main-nav">
+                <a href="actualites.html">Actualités</a>
+                <a href="portefeuille.html?type=modere">Portefeuilles</a>
+                <a href="recherche.html" class="active">Recherche IA</a>
+            </nav>
+        </div>
+        <div class="header-right">
+            <div class="market-status">
+                <div class="market-indicator green"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time" id="marketTime">16:24:35</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="page-content search-content">
+        <section class="page-title-section">
+            <h1 class="page-title">RECHERCHE FINANCIÈRE INTELLIGENTE</h1>
+            <p class="page-subtitle">PROPULSÉE PAR PERPLEXITY AI</p>
+        </section>
+
+        <div class="search-container">
+            <div class="search-header">
+                <div class="search-icon">
+                    <i class="fas fa-lightbulb"></i>
+                </div>
+                <h2>Posez une question sur les marchés, les actifs ou les stratégies d'investissement</h2>
+                <p>Notre intelligence artificielle analysera les dernières informations et vous fournira une réponse détaillée avec des sources fiables.</p>
+            </div>
+            
+            <div class="search-form">
+                <form id="queryForm">
+                    <div class="input-wrapper">
+                        <input type="text" id="queryInput" placeholder="Ex: Quelles sont les implications de la hausse des taux directeurs sur le marché obligataire?" required>
+                        <button type="submit" class="search-button">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                    <div class="search-examples">
+                        <p>Suggestions :</p>
+                        <button type="button" class="example-button" data-query="Quels sont les secteurs les plus performants cette semaine et pourquoi?">Secteurs performants</button>
+                        <button type="button" class="example-button" data-query="Comment la situation géopolitique actuelle affecte-t-elle les marchés du pétrole?">Géopolitique & Pétrole</button>
+                        <button type="button" class="example-button" data-query="Quelles sont les meilleures stratégies d'investissement face à l'inflation actuelle?">Stratégies anti-inflation</button>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="results-container" id="resultsContainer">
+                <!-- État initial (vide) -->
+                <div class="initial-state">
+                    <div class="pulse-dot large"></div>
+                    <p>Votre assistant financier personnel attend votre question</p>
+                </div>
+                
+                <!-- État de chargement (masqué initialement) -->
+                <div class="loading-state" style="display: none;">
+                    <div class="loading-animation">
+                        <div class="pulse-dot"></div>
+                        <div class="pulse-dot"></div>
+                        <div class="pulse-dot"></div>
+                    </div>
+                    <p>Analyse des marchés en cours...</p>
+                </div>
+                
+                <!-- Résultats (masqués initialement) -->
+                <div class="results" style="display: none;">
+                    <div class="answer-header">
+                        <div class="perplexity-badge">
+                            <i class="fas fa-robot"></i>
+                            <span>Propulsé par Perplexity AI</span>
+                        </div>
+                        <div class="timestamp" id="answerTimestamp">07/03/2025 • 10:15</div>
+                    </div>
+                    
+                    <div class="answer-content" id="answerContent">
+                        <!-- Le contenu sera inséré ici dynamiquement -->
+                    </div>
+                    
+                    <div class="sources-section">
+                        <h3>Sources et références</h3>
+                        <ul class="sources-list" id="sourcesList">
+                            <!-- Les sources seront insérées ici dynamiquement -->
+                        </ul>
+                    </div>
+                    
+                    <div class="related-queries">
+                        <h3>Questions associées</h3>
+                        <div class="related-buttons" id="relatedButtons">
+                            <!-- Les questions associées seront insérées ici dynamiquement -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="page-footer">
+        <div class="data-source-info">
+            <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel</p>
+            <p><i class="fas fa-robot"></i> Analyses sectorielles et recherche intelligente fournies par Perplexity AI</p>
+            <p><i class="fas fa-clock"></i> Dernière mise à jour: <span class="update-time" id="updateTime">07/03/2025 10:15:53</span></p>
+        </div>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update market time
+            updateMarketTime();
+            setInterval(updateMarketTime, 1000);
+            
+            // Update current date
+            updateCurrentDate();
+            
+            // Handle example buttons
+            document.querySelectorAll('.example-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const query = this.getAttribute('data-query');
+                    document.getElementById('queryInput').value = query;
+                    document.getElementById('queryForm').dispatchEvent(new Event('submit'));
+                });
+            });
+            
+            // Handle form submission
+            document.getElementById('queryForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const query = document.getElementById('queryInput').value.trim();
+                
+                if (query) {
+                    // Show loading state
+                    document.querySelector('.initial-state').style.display = 'none';
+                    document.querySelector('.loading-state').style.display = 'flex';
+                    document.querySelector('.results').style.display = 'none';
+                    
+                    // Simuler un appel API à Perplexity (à remplacer par l'appel réel)
+                    setTimeout(() => {
+                        fetchPerplexityResults(query);
+                    }, 1500);
+                }
+            });
+        });
+        
+        // Fonction pour récupérer les résultats de Perplexity (simulé pour le moment)
+        async function fetchPerplexityResults(query) {
+            try {
+                // Dans un environnement de production, ce serait un appel à l'API Perplexity
+                // const response = await fetch('/api/perplexity/search', {
+                //    method: 'POST',
+                //    headers: { 'Content-Type': 'application/json' },
+                //    body: JSON.stringify({ query: query })
+                // });
+                // const data = await response.json();
+                
+                // Pour le développement, utilisons des données simulées
+                const data = simulatePerplexityResponse(query);
+                
+                // Mettre à jour l'interface avec les résultats
+                updateResultsUI(data);
+                
+                // Masquer le chargement et afficher les résultats
+                document.querySelector('.loading-state').style.display = 'none';
+                document.querySelector('.results').style.display = 'block';
+                
+            } catch (error) {
+                console.error('Erreur lors de la recherche:', error);
+                document.querySelector('.loading-state').style.display = 'none';
+                // Afficher un message d'erreur
+                document.getElementById('answerContent').innerHTML = 
+                    `<div class="error-message">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <p>Une erreur s'est produite lors de la recherche. Veuillez réessayer.</p>
+                     </div>`;
+                document.querySelector('.results').style.display = 'block';
+            }
+        }
+        
+        // Fonction pour mettre à jour l'interface avec les résultats
+        function updateResultsUI(data) {
+            // Mettre à jour le contenu de la réponse
+            document.getElementById('answerContent').innerHTML = data.answer;
+            
+            // Mettre à jour l'horodatage
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('fr-FR');
+            const timeStr = now.toLocaleTimeString('fr-FR', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            document.getElementById('answerTimestamp').textContent = `${dateStr} • ${timeStr}`;
+            
+            // Mettre à jour les sources
+            const sourcesList = document.getElementById('sourcesList');
+            sourcesList.innerHTML = '';
+            data.sources.forEach(source => {
+                const li = document.createElement('li');
+                li.innerHTML = `<a href="${source.url}" target="_blank">${source.title}</a>
+                                <span class="source-details">${source.publisher} • ${source.date}</span>`;
+                sourcesList.appendChild(li);
+            });
+            
+            // Mettre à jour les questions associées
+            const relatedButtons = document.getElementById('relatedButtons');
+            relatedButtons.innerHTML = '';
+            data.relatedQueries.forEach(query => {
+                const button = document.createElement('button');
+                button.className = 'related-query-button';
+                button.textContent = query;
+                button.addEventListener('click', function() {
+                    document.getElementById('queryInput').value = query;
+                    document.getElementById('queryForm').dispatchEvent(new Event('submit'));
+                });
+                relatedButtons.appendChild(button);
+            });
+        }
+        
+        // Fonction de simulation de réponse Perplexity (à remplacer par l'appel API réel)
+        function simulatePerplexityResponse(query) {
+            // Normaliser la requête pour la correspondance
+            const normalizedQuery = query.toLowerCase();
+            
+            // Réponses prédéfinies basées sur des mots-clés dans la requête
+            if (normalizedQuery.includes('secteur') && normalizedQuery.includes('performant')) {
+                return {
+                    answer: `<p>Cette semaine, les secteurs les plus performants ont été la technologie et l'énergie, avec des gains respectifs de 3,2% et 2,8%.</p>
+                            <p>Le secteur technologique a été principalement porté par les géants de l'IA comme NVIDIA (+5,7%) et Microsoft (+3,1%), suite à plusieurs annonces de nouveaux produits et partenariats stratégiques. En particulier, l'annonce de Microsoft concernant l'intégration de nouvelles capacités d'IA dans sa suite Office a été très bien accueillie par les marchés.</p>
+                            <p>Quant au secteur de l'énergie, il a bénéficié d'une hausse des prix du pétrole résultant des tensions géopolitiques au Moyen-Orient et de la décision de l'OPEP+ de maintenir sa réduction de production. ExxonMobil et Chevron ont tous deux enregistré des gains de plus de 3%.</p>
+                            <p>En revanche, le secteur des services publics est resté à la traîne, pénalisé par les préoccupations concernant la hausse des taux d'intérêt.</p>`,
+                    sources: [
+                        { title: "Tech Sector Outperforms as AI Boom Continues", url: "#", publisher: "Financial Times", date: "06/03/2025" },
+                        { title: "Energy Stocks Rally on OPEC+ Production Cuts", url: "#", publisher: "Bloomberg", date: "05/03/2025" },
+                        { title: "Weekly Market Sector Performance Report", url: "#", publisher: "S&P Global", date: "07/03/2025" }
+                    ],
+                    relatedQueries: [
+                        "Quelles actions tech ont le plus contribué à la performance du secteur?",
+                        "Comment investir dans le secteur de l'énergie actuellement?",
+                        "Quel impact a l'IA sur les marchés financiers?"
+                    ]
+                };
+            } else if (normalizedQuery.includes('géopolitique') && normalizedQuery.includes('pétrole')) {
+                return {
+                    answer: `<p>La situation géopolitique actuelle a un impact significatif sur les marchés pétroliers, provoquant une augmentation de la volatilité et une tendance haussière des prix.</p>
+                            <p>Les tensions au Moyen-Orient, en particulier les récentes escalades dans le détroit d'Ormuz, ont créé des incertitudes concernant l'approvisionnement mondial. Environ 20% du pétrole mondial transite par ce passage stratégique, et toute perturbation pourrait entraîner des conséquences majeures sur l'offre globale.</p>
+                            <p>En conséquence, le prix du Brent a augmenté de 8% au cours des deux dernières semaines, atteignant 86$ le baril. Cette hausse se répercute déjà sur les prix à la pompe dans plusieurs pays, avec une augmentation moyenne de 3,5% constatée en Europe.</p>
+                            <p>Par ailleurs, les sanctions occidentales contre certains pays producteurs continuent de restreindre l'offre sur le marché international, contribuant à maintenir une pression à la hausse sur les prix.</p>`,
+                    sources: [
+                        { title: "Oil Prices Surge as Middle East Tensions Escalate", url: "#", publisher: "Reuters", date: "04/03/2025" },
+                        { title: "Impact of Geopolitical Risks on Energy Markets", url: "#", publisher: "IEA Report", date: "02/03/2025" },
+                        { title: "Global Oil Supply: Vulnerabilities and Chokepoints", url: "#", publisher: "Energy Economics", date: "01/03/2025" }
+                    ],
+                    relatedQueries: [
+                        "Comment les cours du pétrole affectent-ils l'inflation?",
+                        "Quelles compagnies pétrolières sont les mieux positionnées actuellement?",
+                        "Quelle est la stratégie de l'OPEP face aux tensions géopolitiques?"
+                    ]
+                };
+            } else if (normalizedQuery.includes('inflation') && normalizedQuery.includes('stratégie')) {
+                return {
+                    answer: `<p>Face à l'inflation actuelle de 3,7% en zone euro et 4,1% aux États-Unis, plusieurs stratégies d'investissement s'avèrent particulièrement pertinentes :</p>
+                            <h3>1. Actifs réels et matières premières</h3>
+                            <p>Les investissements dans l'immobilier, les infrastructures et les matières premières comme l'or ont historiquement bien performé en période d'inflation. Ces actifs tangibles voient généralement leur valeur augmenter avec l'inflation.</p>
+                            <h3>2. Actions de valeur avec pricing power</h3>
+                            <p>Les entreprises capables de répercuter les hausses de coûts sur leurs clients sans perdre en volume de ventes (pricing power) résistent mieux à l'inflation. On les trouve souvent dans les secteurs des biens de consommation de base, de la santé et de certaines technologies.</p>
+                            <h3>3. Obligations indexées sur l'inflation</h3>
+                            <p>Les TIPS (Treasury Inflation-Protected Securities) aux États-Unis ou les OATi en France offrent une protection explicite contre l'inflation, leur principal et leurs intérêts étant ajustés en fonction de l'évolution des prix.</p>
+                            <h3>4. Duration courte pour les obligations classiques</h3>
+                            <p>Dans un environnement inflationniste, privilégier les obligations à duration courte permet de limiter la sensibilité de votre portefeuille à la hausse des taux d'intérêt qui accompagne généralement l'inflation.</p>`,
+                    sources: [
+                        { title: "Investing Strategies for Inflationary Environments", url: "#", publisher: "Morgan Stanley Research", date: "01/03/2025" },
+                        { title: "How to Protect Your Portfolio Against Inflation", url: "#", publisher: "Journal of Portfolio Management", date: "15/02/2025" },
+                        { title: "Central Banks' Response to Persistent Inflation", url: "#", publisher: "ECB Economic Bulletin", date: "28/02/2025" }
+                    ],
+                    relatedQueries: [
+                        "Quels ETF permettent de se protéger contre l'inflation?",
+                        "Comment l'or performe-t-il en période d'inflation élevée?",
+                        "Quelle allocation d'actifs recommandée face à l'inflation?"
+                    ]
+                };
+            } else {
+                // Réponse générique pour toute autre requête
+                return {
+                    answer: `<p>Votre question sur "${query}" touche à un sujet important dans le contexte économique actuel.</p>
+                            <p>D'après les analyses récentes et les données de marché, plusieurs facteurs entrent en jeu. Les tendances observées sur les marchés financiers ces dernières semaines montrent une volatilité accrue, notamment dans les secteurs technologiques et énergétiques.</p>
+                            <p>Les experts financiers recommandent actuellement de diversifier les portefeuilles et de porter une attention particulière aux indicateurs macroéconomiques comme l'inflation et les décisions des banques centrales.</p>
+                            <p>Pour une stratégie plus adaptée à ce sujet spécifique, il serait judicieux de consulter les rapports sectoriels détaillés et de suivre les annonces des principales institutions financières dans les prochains jours.</p>`,
+                    sources: [
+                        { title: "Market Analysis Report - Q1 2025", url: "#", publisher: "Financial Times", date: "01/03/2025" },
+                        { title: "Global Economic Outlook 2025", url: "#", publisher: "World Economic Forum", date: "15/02/2025" },
+                        { title: "Investment Strategies for Volatile Markets", url: "#", publisher: "Wall Street Journal", date: "05/03/2025" }
+                    ],
+                    relatedQueries: [
+                        "Quelles sont les perspectives économiques pour 2025?",
+                        "Comment diversifier un portefeuille d'investissement?",
+                        "Quel impact ont les décisions des banques centrales sur les marchés?"
+                    ]
+                };
+            }
+        }
+        
+        // Update market time
+        function updateMarketTime() {
+            const marketTimeElement = document.getElementById('marketTime');
+            if (marketTimeElement) {
+                const now = new Date();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                const seconds = now.getSeconds().toString().padStart(2, '0');
+                marketTimeElement.textContent = `${hours}:${minutes}:${seconds}`;
+            }
+        }
+        
+        // Update current date
+        function updateCurrentDate() {
+            const updateTimeElement = document.getElementById('updateTime');
+            if (updateTimeElement) {
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('fr-FR');
+                const timeStr = now.toLocaleTimeString('fr-FR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                updateTimeElement.textContent = `${dateStr} ${timeStr}`;
+            }
+        }
+    </script>
+</body>
+</html>
