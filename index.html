@@ -53,7 +53,11 @@
                         <div class="news-content">
                             <div class="news-meta">
                                 <span class="news-source">Maison Blanche</span>
-                                <span class="news-time">Aujourd'hui</span>
+                                <div class="news-date-time">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <span class="news-date">07/03/2025</span>
+                                    <span class="news-time">08:15</span>
+                                </div>
                             </div>
                             <h3>Exemption de droits de douane sur les véhicules</h3>
                             <p>La Maison Blanche a annoncé un report d'un mois sur les nouveaux tarifs automobiles. Cette exemption a entraîné une hausse des actions, avec le DAX en hausse de 3,5%, le STOXX 50 en hausse de 1,9%, et le Hang Seng en hausse de 2,87%.</p>
@@ -63,7 +67,11 @@
                         <div class="news-content">
                             <div class="news-meta">
                                 <span class="news-source">Marchés Européens</span>
-                                <span class="news-time">Aujourd'hui</span>
+                                <div class="news-date-time">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <span class="news-date">07/03/2025</span>
+                                    <span class="news-time">09:30</span>
+                                </div>
                             </div>
                             <h3>Flambée historique du marché obligataire européen</h3>
                             <p>Le marché obligataire européen a connu une journée historique avec une hausse de 30 points de base du rendement allemand à 10 ans, un record depuis 1990.</p>
@@ -73,7 +81,11 @@
                         <div class="news-content">
                             <div class="news-meta">
                                 <span class="news-source">BCE</span>
-                                <span class="news-time">Aujourd'hui</span>
+                                <div class="news-date-time">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <span class="news-date">07/03/2025</span>
+                                    <span class="news-time">07:45</span>
+                                </div>
                             </div>
                             <h3>Décision de la BCE attendue aujourd'hui</h3>
                             <p>La BCE est prévue pour maintenir ses taux inchangés, mais il y a une attente pour une baisse de 25 points de base, ce qui pourrait avoir des conséquences importantes sur les marchés.</p>
@@ -107,6 +119,12 @@
                                 <span class="event-market-type">actions</span>
                                 <span class="event-timing">immédiat</span>
                             </div>
+                            <div class="event-datetime">
+                                <i class="fas fa-calendar-day"></i>
+                                <span class="event-date">07/03/2025</span>
+                                <i class="fas fa-clock"></i>
+                                <span class="event-time">13:45</span>
+                            </div>
                             <p class="event-explanation">La BCE maintient ses taux d'intérêt, impactant les marchés européens et le secteur bancaire.</p>
                             <div class="event-symbols">
                                 <span class="symbols-label">Symboles affectés:</span>
@@ -134,6 +152,12 @@
                                 <span class="event-market-type">forex</span>
                                 <span class="event-timing">court terme</span>
                             </div>
+                            <div class="event-datetime">
+                                <i class="fas fa-calendar-day"></i>
+                                <span class="event-date">08/03/2025</span>
+                                <i class="fas fa-clock"></i>
+                                <span class="event-time">14:30</span>
+                            </div>
                             <p class="event-explanation">Des données sur l'emploi meilleures que prévu renforcent le dollar face aux autres devises.</p>
                             <div class="event-symbols">
                                 <span class="symbols-label">Symboles affectés:</span>
@@ -160,6 +184,12 @@
                             <div class="event-info">
                                 <span class="event-market-type">actions</span>
                                 <span class="event-timing">moyen terme</span>
+                            </div>
+                            <div class="event-datetime">
+                                <i class="fas fa-calendar-day"></i>
+                                <span class="event-date">10/03/2025</span>
+                                <i class="fas fa-clock"></i>
+                                <span class="event-time">09:00</span>
                             </div>
                             <p class="event-explanation">Plusieurs entreprises technologiques annoncent des avancées majeures en IA, stimulant le secteur.</p>
                             <div class="event-symbols">
@@ -224,40 +254,118 @@
             <div class="section-content">
                 <div class="portfolio-description reveal">
                     <p>Notre modèle Claude AI génère une allocation d'actifs optimale qui combine actions, ETF et crypto-monnaies pour profiter des tendances actuelles du marché.</p>
+                    
+                    <div class="profile-selector">
+                        <button id="profile-aggressive" class="profile-button active">
+                            <i class="fas fa-rocket"></i> Agressif
+                        </button>
+                        <button id="profile-moderate" class="profile-button">
+                            <i class="fas fa-balance-scale"></i> Modéré
+                        </button>
+                        <button id="profile-safe" class="profile-button">
+                            <i class="fas fa-shield-alt"></i> Sécurisé
+                        </button>
+                    </div>
                 </div>
                 <div class="portfolio-visualizations reveal">
                     <div class="portfolio-chart">
                         <canvas id="portfolioChart"></canvas>
                     </div>
                     <div class="portfolio-highlights">
-                        <div class="highlight-card">
-                            <div class="highlight-icon">
-                                <i class="fas fa-bolt"></i>
+                        <div id="aggressive-highlights">
+                            <div class="highlight-card">
+                                <div class="highlight-icon">
+                                    <i class="fas fa-bolt"></i>
+                                </div>
+                                <div class="highlight-content">
+                                    <h3>NVIDIA Corporation</h3>
+                                    <p class="highlight-symbol">NVDA</p>
+                                    <p class="highlight-allocation">25%</p>
+                                </div>
                             </div>
-                            <div class="highlight-content">
-                                <h3>NVIDIA Corporation</h3>
-                                <p class="highlight-symbol">NVDA</p>
-                                <p class="highlight-allocation">22%</p>
+                            <div class="highlight-card">
+                                <div class="highlight-icon">
+                                    <i class="fas fa-car"></i>
+                                </div>
+                                <div class="highlight-content">
+                                    <h3>Tesla, Inc.</h3>
+                                    <p class="highlight-symbol">TSLA</p>
+                                    <p class="highlight-allocation">22%</p>
+                                </div>
+                            </div>
+                            <div class="highlight-card">
+                                <div class="highlight-icon">
+                                    <i class="fas fa-microchip"></i>
+                                </div>
+                                <div class="highlight-content">
+                                    <h3>Advanced Micro Devices</h3>
+                                    <p class="highlight-symbol">AMD</p>
+                                    <p class="highlight-allocation">18%</p>
+                                </div>
                             </div>
                         </div>
-                        <div class="highlight-card">
-                            <div class="highlight-icon">
-                                <i class="fas fa-car"></i>
+                        <div id="moderate-highlights" style="display: none;">
+                            <div class="highlight-card">
+                                <div class="highlight-icon">
+                                    <i class="fas fa-window"></i>
+                                </div>
+                                <div class="highlight-content">
+                                    <h3>Microsoft Corporation</h3>
+                                    <p class="highlight-symbol">MSFT</p>
+                                    <p class="highlight-allocation">15%</p>
+                                </div>
                             </div>
-                            <div class="highlight-content">
-                                <h3>Tesla, Inc.</h3>
-                                <p class="highlight-symbol">TSLA</p>
-                                <p class="highlight-allocation">18%</p>
+                            <div class="highlight-card">
+                                <div class="highlight-icon">
+                                    <i class="fas fa-shopping-cart"></i>
+                                </div>
+                                <div class="highlight-content">
+                                    <h3>Amazon.com, Inc.</h3>
+                                    <p class="highlight-symbol">AMZN</p>
+                                    <p class="highlight-allocation">12%</p>
+                                </div>
+                            </div>
+                            <div class="highlight-card">
+                                <div class="highlight-icon">
+                                    <i class="fas fa-chart-pie"></i>
+                                </div>
+                                <div class="highlight-content">
+                                    <h3>SPDR S&P 500 ETF</h3>
+                                    <p class="highlight-symbol">SPY</p>
+                                    <p class="highlight-allocation">20%</p>
+                                </div>
                             </div>
                         </div>
-                        <div class="highlight-card">
-                            <div class="highlight-icon">
-                                <i class="fas fa-window"></i>
+                        <div id="safe-highlights" style="display: none;">
+                            <div class="highlight-card">
+                                <div class="highlight-icon">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                                <div class="highlight-content">
+                                    <h3>Vanguard Total Bond ETF</h3>
+                                    <p class="highlight-symbol">BND</p>
+                                    <p class="highlight-allocation">30%</p>
+                                </div>
                             </div>
-                            <div class="highlight-content">
-                                <h3>Microsoft Corporation</h3>
-                                <p class="highlight-symbol">MSFT</p>
-                                <p class="highlight-allocation">14%</p>
+                            <div class="highlight-card">
+                                <div class="highlight-icon">
+                                    <i class="fas fa-building"></i>
+                                </div>
+                                <div class="highlight-content">
+                                    <h3>Procter & Gamble</h3>
+                                    <p class="highlight-symbol">PG</p>
+                                    <p class="highlight-allocation">15%</p>
+                                </div>
+                            </div>
+                            <div class="highlight-card">
+                                <div class="highlight-icon">
+                                    <i class="fas fa-heartbeat"></i>
+                                </div>
+                                <div class="highlight-content">
+                                    <h3>Johnson & Johnson</h3>
+                                    <p class="highlight-symbol">JNJ</p>
+                                    <p class="highlight-allocation">12%</p>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -357,39 +465,183 @@
             observer.observe(el);
         });
 
-        // Portfolio chart
-        const ctx = document.getElementById('portfolioChart').getContext('2d');
-        const portfolioChart = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['NVDA', 'TSLA', 'MSFT', 'DRIV', 'TAN', 'SPY', 'BTC', 'ETH'],
-                datasets: [{
-                    data: [22, 18, 14, 12, 8, 11, 9, 6],
-                    backgroundColor: [
-                        '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
-                        '#B3FFC7', '#CCFFD6', '#00CC6A', '#00994F'
-                    ],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '70%',
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'right',
-                        labels: {
-                            color: '#00FF87',
-                            font: {
-                                size: 12
+        // Portfolio chart initialization
+        let portfolioChart;
+        
+        function initChart() {
+            const ctx = document.getElementById('portfolioChart').getContext('2d');
+            
+            // Default chart data (Aggressive profile)
+            portfolioChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['NVDA', 'TSLA', 'AMD', 'COIN', 'ARKK', 'SOXX', 'BTC', 'ETH'],
+                    datasets: [{
+                        data: [25, 22, 18, 10, 8, 7, 6, 4],
+                        backgroundColor: [
+                            '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
+                            '#B3FFC7', '#CCFFD6', '#00CC6A', '#00994F'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'right',
+                            labels: {
+                                color: '#00FF87',
+                                font: {
+                                    size: 12
+                                }
                             }
                         }
                     }
                 }
-            }
+            });
+        }
+
+        // Initialize the chart when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+            
+            // Add event listeners for profile buttons
+            document.getElementById('profile-aggressive').addEventListener('click', function() {
+                updateProfile('aggressive');
+            });
+            
+            document.getElementById('profile-moderate').addEventListener('click', function() {
+                updateProfile('moderate');
+            });
+            
+            document.getElementById('profile-safe').addEventListener('click', function() {
+                updateProfile('safe');
+            });
         });
+
+        // Function to update portfolio profile
+        function updateProfile(profile) {
+            // Update active button
+            document.querySelectorAll('.profile-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.getElementById(`profile-${profile}`).classList.add('active');
+            
+            // Update highlights
+            document.getElementById('aggressive-highlights').style.display = 'none';
+            document.getElementById('moderate-highlights').style.display = 'none';
+            document.getElementById('safe-highlights').style.display = 'none';
+            document.getElementById(`${profile}-highlights`).style.display = 'block';
+            
+            // Update chart data based on profile
+            if (portfolioChart) {
+                portfolioChart.destroy();
+            }
+            
+            const ctx = document.getElementById('portfolioChart').getContext('2d');
+            
+            if (profile === 'aggressive') {
+                portfolioChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['NVDA', 'TSLA', 'AMD', 'COIN', 'ARKK', 'SOXX', 'BTC', 'ETH'],
+                        datasets: [{
+                            data: [25, 22, 18, 10, 8, 7, 6, 4],
+                            backgroundColor: [
+                                '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
+                                '#B3FFC7', '#CCFFD6', '#00CC6A', '#00994F'
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'right',
+                                labels: {
+                                    color: '#00FF87',
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } else if (profile === 'moderate') {
+                portfolioChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['SPY', 'MSFT', 'AMZN', 'QQQ', 'AAPL', 'VTI', 'GOOGL', 'BTC'],
+                        datasets: [{
+                            data: [20, 15, 12, 10, 10, 10, 8, 5],
+                            backgroundColor: [
+                                '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
+                                '#B3FFC7', '#CCFFD6', '#00CC6A', '#00994F'
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'right',
+                                labels: {
+                                    color: '#00FF87',
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } else if (profile === 'safe') {
+                portfolioChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['BND', 'VYM', 'PG', 'JNJ', 'KO', 'BOND', 'VTIP', 'SCHD'],
+                        datasets: [{
+                            data: [30, 15, 15, 12, 10, 8, 5, 5],
+                            backgroundColor: [
+                                '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
+                                '#B3FFC7', '#CCFFD6', '#00CC6A', '#00994F'
+                            ],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'right',
+                                labels: {
+                                    color: '#00FF87',
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        }
     </script>
 </body>
 </html>
