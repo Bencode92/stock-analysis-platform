@@ -1,0 +1,39 @@
+/* src/styles/main.css */
+/* Fichier principal de styles, importe tous les autres fichiers CSS */
+
+/* Import des variables et des styles de base */
+@import 'variables.css';
+@import 'base.css';
+
+/* Import des composants spécifiques */
+@import 'header.css';
+@import 'news.css';
+@import 'sectors.css';
+@import 'portfolio.css';
+@import 'high-impact-events.css';
+@import 'notifications.css';
+@import 'loading.css';
+@import 'footer.css';
+
+/* Styles généraux de l'application */
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--bg-color);
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Styles responsive */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 1rem;
+  }
+}
