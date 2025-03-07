@@ -37,6 +37,32 @@
     box-shadow: var(--accent-glow);
 }
 
+/* Bouton "Ma question" */
+.question-button {
+    display: flex;
+    align-items: center;
+    margin-left: 1.5rem;
+    padding: 0.6rem 1.2rem;
+    background-color: var(--accent-color);
+    color: var(--background-color);
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: var(--accent-glow);
+}
+
+.question-button:hover {
+    background-color: #00cc6a;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 255, 135, 0.4);
+}
+
+.question-button i {
+    margin-right: 0.5rem;
+}
+
 /* Structure de la page de recherche */
 .search-content {
     display: flex;
@@ -432,6 +458,19 @@
     .example-button, .related-query-button {
         padding: 0.5rem 0.8rem;
         font-size: 0.8rem;
+    }
+    
+    .question-button {
+        padding: 0.5rem 1rem;
+        font-size: 0.8rem;
+    }
+    
+    .question-button span {
+        display: none;
+    }
+    
+    .question-button i {
+        margin-right: 0;
     }
 }
 
