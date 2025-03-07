@@ -373,10 +373,10 @@
         
         // Function to get URL parameters
         function getUrlParameter(name) {
-            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
-            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            name = name.replace(/[\\[]/, '\\\\[').replace(/[\\]]/, '\\\\]');
+            const regex = new RegExp('[\\\\?&]' + name + '=([^&#]*)');\n
             const results = regex.exec(location.search);
-            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\\+/g, ' '));
         }
         
         document.addEventListener('DOMContentLoaded', function() {
@@ -437,7 +437,7 @@
                 initAggressiveChart();
             } else if (type === 'modere') {
                 titleElement.textContent = 'PORTEFEUILLE MODÉRÉ';
-                profileDescElement.textContent = 'Ce portefeuille offre un équilibre entre croissance et stabilité, avec une diversification entre différentes classes d\'actifs.';
+                profileDescElement.textContent = 'Ce portefeuille offre un équilibre entre croissance et stabilité, avec une diversification entre différentes classes d\\'actifs.';
                 initModerateChart();
             } else if (type === 'stable') {
                 titleElement.textContent = 'PORTEFEUILLE STABLE';
