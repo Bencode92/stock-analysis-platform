@@ -7,8 +7,7 @@
 // Configuration de l'API
 const API_CONFIG = {
     // URL du serveur proxy (à modifier selon votre configuration)
-    baseUrl: 'https://tradepulse-api.onrender.com', // URL de production
-    // baseUrl: 'http://localhost:3000', // URL de développement local
+    baseUrl: 'https://tradepulse-api.onrender.com', // Remplacez par l'URL de votre service Render
     
     // Endpoints
     endpoints: {
