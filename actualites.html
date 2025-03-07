@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="pages-style.css">
+    <link rel="stylesheet" href="timeline-style.css">
     <script type="module" src="aiintegration.js"></script>
 </head>
 <body class="page-actualites fade-in">
@@ -26,132 +27,221 @@
         </div>
     </header>
 
-    <main class="page-content">
+    <main class="page-content timeline-layout">
         <section class="page-title-section">
             <h1 class="page-title">ACTUALITÉS FINANCIÈRES</h1>
             <p class="page-subtitle" id="currentDate">07 MARS 2025</p>
         </section>
 
-        <!-- News Section -->
-        <section class="news-section reveal">
-            <h2 class="section-title"><i class="fas fa-newspaper"></i> Actualités du jour</h2>
-            <div class="news-grid">
-                <!-- Le contenu sera généré dynamiquement par aiintegration.js -->
-                <div class="news-card loading-card">
-                    <div class="loading-indicator">
-                        <div class="pulse-dot"></div>
-                        <p>Chargement des actualités financières via Perplexity AI...</p>
+        <div class="timeline-container">
+            <!-- Timeline colonne gauche -->
+            <div class="timeline-sidebar">
+                <div class="date-group">
+                    <div class="date-header">
+                        <h3>Vendredi, 7 Mars 2025</h3>
+                        <p class="date-subtitle">3 événements majeurs</p>
+                    </div>
+                    <div class="timeline-events">
+                        <div class="timeline-event active" data-event="event1">
+                            <div class="event-time">08:15</div>
+                            <div class="event-title">Exemption de droits de douane</div>
+                            <div class="event-source">Maison Blanche</div>
+                        </div>
+                        <div class="timeline-event" data-event="event2">
+                            <div class="event-time">09:30</div>
+                            <div class="event-title">Marché obligataire européen</div>
+                            <div class="event-source">Marchés Européens</div>
+                        </div>
+                        <div class="timeline-event" data-event="event3">
+                            <div class="event-time">13:45</div>
+                            <div class="event-title">Décision de taux de la BCE</div>
+                            <div class="event-source">BCE</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="date-group">
+                    <div class="date-header">
+                        <h3>Jeudi, 6 Mars 2025</h3>
+                        <p class="date-subtitle">2 événements majeurs</p>
+                    </div>
+                    <div class="timeline-events">
+                        <div class="timeline-event" data-event="event4">
+                            <div class="event-time">14:30</div>
+                            <div class="event-title">Publication chiffres emploi US</div>
+                            <div class="event-source">Bureau des statistiques</div>
+                        </div>
+                        <div class="timeline-event" data-event="event5">
+                            <div class="event-time">16:00</div>
+                            <div class="event-title">Adoption de l'IA en finance</div>
+                            <div class="event-source">Wall Street Journal</div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </section>
 
-        <!-- Events Section -->
-        <section class="events-section reveal">
-            <h2 class="section-title"><i class="fas fa-bolt"></i> Événements à fort impact</h2>
-            <div class="events-grid">
-                <div class="event-card critical-impact">
-                    <div class="event-header">
-                        <div class="event-title">
-                            <i class="fas fa-chart-line"></i>
-                            <h3>Décision de taux de la BCE</h3>
+            <!-- Contenu détaillé à droite -->
+            <div class="timeline-content">
+                <!-- Détails événement 1 (affiché par défaut) -->
+                <div class="event-details active" id="event1">
+                    <div class="event-details-header">
+                        <div class="event-meta">
+                            <span class="event-source">Maison Blanche</span>
+                            <div class="event-date-time">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span class="event-date">07/03/2025</span>
+                                <span class="event-time">08:15</span>
+                            </div>
                         </div>
-                        <div class="event-score">
-                            <div class="impact-label">Impact</div>
-                            <div class="impact-value">8/10</div>
+                        <h2 class="event-title">Exemption de droits de douane sur les véhicules</h2>
+                        <div class="event-impact critical-impact">
+                            <span class="impact-label">Impact</span>
+                            <span class="impact-value">8/10</span>
                         </div>
                     </div>
-                    <div class="event-details">
-                        <div class="event-info">
-                            <span class="event-market-type">actions</span>
-                            <span class="event-timing">immédiat</span>
-                        </div>
-                        <div class="event-datetime">
-                            <i class="fas fa-calendar-day"></i>
-                            <span class="event-date">07/03/2025</span>
-                            <i class="fas fa-clock"></i>
-                            <span class="event-time">13:45</span>
-                        </div>
-                        <p class="event-explanation">La BCE maintient ses taux d'intérêt, impactant les marchés européens et le secteur bancaire.</p>
-                        <div class="event-symbols">
-                            <span class="symbols-label">Symboles affectés:</span>
-                            <div class="symbols-list">
-                                <span class="symbol-tag">EURO STOXX</span>
-                                <span class="symbol-tag">BNP.PA</span>
-                                <span class="symbol-tag">DB</span>
-                            </div>
+                    <div class="event-description">
+                        <p>La Maison Blanche a annoncé un report d'un mois sur les nouveaux tarifs automobiles. Cette exemption a entraîné une hausse des actions, avec le DAX en hausse de 3,5%, le STOXX 50 en hausse de 1,9%, et le Hang Seng en hausse de 2,87%.</p>
+                        <p>Les analystes estiment que cette décision pourrait signaler un adoucissement des tensions commerciales mondiales et offrir un répit bienvenu aux constructeurs automobiles européens et asiatiques.</p>
+                    </div>
+                    <div class="event-symbols">
+                        <span class="symbols-label">Symboles affectés:</span>
+                        <div class="symbols-list">
+                            <span class="symbol-tag">BMW.DE</span>
+                            <span class="symbol-tag">VOW3.DE</span>
+                            <span class="symbol-tag">RNO.PA</span>
+                            <span class="symbol-tag">TM</span>
                         </div>
                     </div>
                 </div>
-                <div class="event-card high-impact">
-                    <div class="event-header">
-                        <div class="event-title">
-                            <i class="fas fa-money-bill-transfer"></i>
-                            <h3>Publication des chiffres de l'emploi américain</h3>
+                
+                <!-- Détails événement 2 -->
+                <div class="event-details" id="event2">
+                    <div class="event-details-header">
+                        <div class="event-meta">
+                            <span class="event-source">Marchés Européens</span>
+                            <div class="event-date-time">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span class="event-date">07/03/2025</span>
+                                <span class="event-time">09:30</span>
+                            </div>
                         </div>
-                        <div class="event-score">
-                            <div class="impact-label">Impact</div>
-                            <div class="impact-value">7/10</div>
+                        <h2 class="event-title">Flambée historique du marché obligataire européen</h2>
+                        <div class="event-impact high-impact">
+                            <span class="impact-label">Impact</span>
+                            <span class="impact-value">7/10</span>
                         </div>
                     </div>
-                    <div class="event-details">
-                        <div class="event-info">
-                            <span class="event-market-type">forex</span>
-                            <span class="event-timing">court terme</span>
-                        </div>
-                        <div class="event-datetime">
-                            <i class="fas fa-calendar-day"></i>
-                            <span class="event-date">08/03/2025</span>
-                            <i class="fas fa-clock"></i>
-                            <span class="event-time">14:30</span>
-                        </div>
-                        <p class="event-explanation">Des données sur l'emploi meilleures que prévu renforcent le dollar face aux autres devises.</p>
-                        <div class="event-symbols">
-                            <span class="symbols-label">Symboles affectés:</span>
-                            <div class="symbols-list">
-                                <span class="symbol-tag">EUR/USD</span>
-                                <span class="symbol-tag">GBP/USD</span>
-                                <span class="symbol-tag">USD/JPY</span>
-                            </div>
+                    <div class="event-description">
+                        <p>Le marché obligataire européen a connu une journée historique avec une hausse de 30 points de base du rendement allemand à 10 ans, un record depuis 1990.</p>
+                        <p>Cette flambée des rendements reflète les inquiétudes croissantes concernant l'inflation et la politique monétaire de la BCE. Les investisseurs anticipent une approche plus restrictive lors de la prochaine réunion de la banque centrale.</p>
+                    </div>
+                    <div class="event-symbols">
+                        <span class="symbols-label">Symboles affectés:</span>
+                        <div class="symbols-list">
+                            <span class="symbol-tag">BUND</span>
+                            <span class="symbol-tag">TLT</span>
+                            <span class="symbol-tag">EUR/USD</span>
                         </div>
                     </div>
                 </div>
-                <div class="event-card critical-impact">
-                    <div class="event-header">
-                        <div class="event-title">
-                            <i class="fas fa-chart-line"></i>
-                            <h3>Progression de l'adoption de l'intelligence artificielle</h3>
+                
+                <!-- Détails événement 3 -->
+                <div class="event-details" id="event3">
+                    <div class="event-details-header">
+                        <div class="event-meta">
+                            <span class="event-source">BCE</span>
+                            <div class="event-date-time">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span class="event-date">07/03/2025</span>
+                                <span class="event-time">13:45</span>
+                            </div>
                         </div>
-                        <div class="event-score">
-                            <div class="impact-label">Impact</div>
-                            <div class="impact-value">9/10</div>
+                        <h2 class="event-title">Décision de taux de la BCE</h2>
+                        <div class="event-impact critical-impact">
+                            <span class="impact-label">Impact</span>
+                            <span class="impact-value">9/10</span>
                         </div>
                     </div>
-                    <div class="event-details">
-                        <div class="event-info">
-                            <span class="event-market-type">actions</span>
-                            <span class="event-timing">moyen terme</span>
+                    <div class="event-description">
+                        <p>La BCE maintient ses taux d'intérêt, impactant les marchés européens et le secteur bancaire. Contrairement aux attentes d'une baisse de 25 points de base, la BCE a adopté une position plus hawkish en citant des préoccupations persistantes concernant l'inflation.</p>
+                        <p>Dans son communiqué, la présidente a indiqué que la banque centrale reste vigilante face aux pressions inflationnistes, mais qu'elle envisage d'assouplir sa politique lors de la prochaine réunion si les données le justifient.</p>
+                    </div>
+                    <div class="event-symbols">
+                        <span class="symbols-label">Symboles affectés:</span>
+                        <div class="symbols-list">
+                            <span class="symbol-tag">EURO STOXX</span>
+                            <span class="symbol-tag">BNP.PA</span>
+                            <span class="symbol-tag">DB</span>
+                            <span class="symbol-tag">SAN.MC</span>
                         </div>
-                        <div class="event-datetime">
-                            <i class="fas fa-calendar-day"></i>
-                            <span class="event-date">10/03/2025</span>
-                            <i class="fas fa-clock"></i>
-                            <span class="event-time">09:00</span>
-                        </div>
-                        <p class="event-explanation">Plusieurs entreprises technologiques annoncent des avancées majeures en IA, stimulant le secteur.</p>
-                        <div class="event-symbols">
-                            <span class="symbols-label">Symboles affectés:</span>
-                            <div class="symbols-list">
-                                <span class="symbol-tag">NVDA</span>
-                                <span class="symbol-tag">GOOG</span>
-                                <span class="symbol-tag">MSFT</span>
-                                <span class="symbol-tag">META</span>
+                    </div>
+                </div>
+                
+                <!-- Détails événement 4 -->
+                <div class="event-details" id="event4">
+                    <div class="event-details-header">
+                        <div class="event-meta">
+                            <span class="event-source">Bureau des statistiques</span>
+                            <div class="event-date-time">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span class="event-date">06/03/2025</span>
+                                <span class="event-time">14:30</span>
                             </div>
+                        </div>
+                        <h2 class="event-title">Publication des chiffres de l'emploi américain</h2>
+                        <div class="event-impact high-impact">
+                            <span class="impact-label">Impact</span>
+                            <span class="impact-value">7/10</span>
+                        </div>
+                    </div>
+                    <div class="event-description">
+                        <p>Des données sur l'emploi meilleures que prévu renforcent le dollar face aux autres devises. Le taux de chômage est tombé à 3,6%, contre 3,8% attendu, et l'économie a créé 235 000 emplois non agricoles, dépassant les attentes de 185 000.</p>
+                        <p>Ces chiffres solides suggèrent une économie américaine robuste et pourraient inciter la Fed à maintenir des taux d'intérêt plus élevés plus longtemps que prévu initialement.</p>
+                    </div>
+                    <div class="event-symbols">
+                        <span class="symbols-label">Symboles affectés:</span>
+                        <div class="symbols-list">
+                            <span class="symbol-tag">EUR/USD</span>
+                            <span class="symbol-tag">GBP/USD</span>
+                            <span class="symbol-tag">USD/JPY</span>
+                            <span class="symbol-tag">DXY</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Détails événement 5 -->
+                <div class="event-details" id="event5">
+                    <div class="event-details-header">
+                        <div class="event-meta">
+                            <span class="event-source">Wall Street Journal</span>
+                            <div class="event-date-time">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span class="event-date">06/03/2025</span>
+                                <span class="event-time">16:00</span>
+                            </div>
+                        </div>
+                        <h2 class="event-title">Progression de l'adoption de l'intelligence artificielle</h2>
+                        <div class="event-impact critical-impact">
+                            <span class="impact-label">Impact</span>
+                            <span class="impact-value">9/10</span>
+                        </div>
+                    </div>
+                    <div class="event-description">
+                        <p>Plusieurs entreprises technologiques annoncent des avancées majeures en IA, stimulant le secteur. Selon un rapport du Wall Street Journal, les investissements dans l'IA par les institutions financières ont augmenté de 300% au cours du dernier trimestre.</p>
+                        <p>Les applications d'IA dans le trading, la gestion des risques et la détection de fraudes transforment rapidement le paysage financier, créant une forte demande pour les puces avancées et les solutions d'infrastructure cloud.</p>
+                    </div>
+                    <div class="event-symbols">
+                        <span class="symbols-label">Symboles affectés:</span>
+                        <div class="symbols-list">
+                            <span class="symbol-tag">NVDA</span>
+                            <span class="symbol-tag">GOOG</span>
+                            <span class="symbol-tag">MSFT</span>
+                            <span class="symbol-tag">META</span>
                         </div>
                     </div>
                 </div>
             </div>
-        </section>
+        </div>
 
         <div class="portfolio-selector">
             <h2 class="portfolio-heading">CHOISISSEZ VOTRE PORTEFEUILLE</h2>
@@ -212,6 +302,30 @@
                     setTimeout(() => {
                         window.location.href = this.getAttribute('href');
                     }, 800); // Transition time
+                });
+            });
+
+            // Timeline events interaction
+            document.querySelectorAll('.timeline-event').forEach(event => {
+                event.addEventListener('click', function() {
+                    // Remove active class from all events
+                    document.querySelectorAll('.timeline-event').forEach(e => {
+                        e.classList.remove('active');
+                    });
+                    
+                    // Add active class to clicked event
+                    this.classList.add('active');
+                    
+                    // Get event ID
+                    const eventId = this.getAttribute('data-event');
+                    
+                    // Hide all event details
+                    document.querySelectorAll('.event-details').forEach(detail => {
+                        detail.classList.remove('active');
+                    });
+                    
+                    // Show selected event details
+                    document.getElementById(eventId).classList.add('active');
                 });
             });
         });
