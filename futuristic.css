@@ -1,0 +1,586 @@
+/* futuristic.css - Éléments de design futuriste pour TradePulse */
+
+:root {
+  --glow-color: rgba(30, 144, 255, 0.6);
+  --glow-spread: 3px;
+  --accent-glow: rgba(30, 144, 255, 0.3);
+  --terminal-green: #0cfa6c;
+  --glass-bg: rgba(30, 30, 40, 0.7);
+  --glass-border: rgba(100, 156, 240, 0.3);
+  --panel-bg: rgba(15, 17, 26, 0.9);
+  --data-color: #1E90FF;
+}
+
+/* Effet de parallaxe subtil sur le fond */
+body {
+  background: linear-gradient(135deg, #080810 0%, #0d0d18 100%);
+  background-attachment: fixed;
+  position: relative;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: radial-gradient(circle at 15% 50%, rgba(30, 144, 255, 0.08) 0%, transparent 25%),
+              radial-gradient(circle at 85% 30%, rgba(30, 144, 255, 0.05) 0%, transparent 25%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Overlay de lignes de grille futuriste */
+body::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+      linear-gradient(90deg, rgba(30, 144, 255, 0.03) 1px, transparent 1px) 0 0 / 40px 40px,
+      linear-gradient(rgba(30, 144, 255, 0.03) 1px, transparent 1px) 0 0 / 40px 40px;
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Header futuriste */
+.main-header {
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+  position: relative;
+  overflow: hidden;
+}
+
+.main-header::before {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--data-color), transparent);
+  z-index: 1;
+}
+
+.site-title {
+  position: relative;
+  text-shadow: 0 0 10px var(--glow-color);
+}
+
+.site-title i {
+  color: var(--data-color);
+  filter: drop-shadow(0 0 5px var(--glow-color));
+}
+
+.market-status {
+  background: rgba(10, 10, 15, 0.7);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border-radius: 20px;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--glass-border);
+}
+
+.market-indicator.green {
+  box-shadow: 0 0 10px var(--terminal-green);
+  animation: pulse 2s infinite;
+}
+
+.market-indicator.red {
+  box-shadow: 0 0 10px #ff3d00;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { opacity: 0.7; }
+}
+
+/* Stylisation des sections */
+.news-section,
+.sectors-section,
+.events-section,
+.portfolio-section,
+.data-source-section {
+  background: var(--panel-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.news-section::before,
+.sectors-section::before,
+.events-section::before,
+.portfolio-section::before,
+.data-source-section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--data-color), transparent);
+  opacity: 0.7;
+}
+
+/* Effet de survol sur les sections */
+.news-section:hover,
+.sectors-section:hover,
+.events-section:hover,
+.portfolio-section:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.7), 0 0 10px var(--accent-glow);
+}
+
+/* Titres des sections avec animation */
+.news-section h2,
+.sectors-section h2,
+.events-section h2,
+.portfolio-section h2 {
+  display: flex;
+  align-items: center;
+  position: relative;
+  padding-left: 20px;
+  margin-left: -20px;
+  overflow: hidden;
+  text-shadow: 0 0 5px var(--accent-glow);
+}
+
+.news-section h2 i,
+.sectors-section h2 i,
+.events-section h2 i,
+.portfolio-section h2 i {
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 0 5px var(--glow-color));
+}
+
+.news-section h2::before,
+.sectors-section h2::before,
+.events-section h2::before,
+.portfolio-section h2::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  background: var(--data-color);
+  transform: translateY(-50%);
+  border-radius: 50%;
+  box-shadow: 0 0 10px var(--glow-color);
+}
+
+/* News cards avec look high-tech */
+.news-card {
+  border: 1px solid rgba(30, 144, 255, 0.2);
+  background: rgba(20, 22, 34, 0.7);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.news-card:hover {
+  transform: translateY(-5px) scale(1.01);
+  border-color: var(--data-color);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5), 0 0 10px var(--accent-glow);
+}
+
+.news-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    135deg,
+    rgba(30, 144, 255, 0.05) 0%,
+    transparent 50%,
+    rgba(30, 144, 255, 0.02) 100%
+  );
+  pointer-events: none;
+}
+
+.news-card.major-news {
+  border-color: var(--data-color);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5), 0 0 10px var(--accent-glow);
+}
+
+.news-source {
+  position: relative;
+  display: inline-block;
+  padding-left: 10px;
+}
+
+.news-source::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 5px;
+  height: 5px;
+  background-color: var(--data-color);
+  border-radius: 50%;
+}
+
+/* Event cards high-tech */
+.event-card {
+  border: 1px solid rgba(30, 144, 255, 0.2);
+  background: rgba(20, 22, 34, 0.7);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  transition: all 0.3s ease;
+}
+
+.event-card:hover {
+  transform: translateY(-5px) scale(1.01);
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5), 0 0 10px var(--accent-glow);
+}
+
+.event-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    135deg,
+    rgba(30, 144, 255, 0.05) 0%,
+    transparent 50%,
+    rgba(30, 144, 255, 0.02) 100%
+  );
+  pointer-events: none;
+}
+
+.event-card.critical-impact {
+  border-left-color: #ff3d00;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5), 0 0 8px rgba(255, 61, 0, 0.3);
+}
+
+.event-card.high-impact {
+  border-left-color: #ff9100;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5), 0 0 8px rgba(255, 145, 0, 0.3);
+}
+
+/* Secteurs */
+.sector-item {
+  border-bottom: 1px solid rgba(30, 144, 255, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.sector-item:hover {
+  border-bottom-color: var(--data-color);
+  background: rgba(30, 144, 255, 0.05);
+  padding: 0.5rem;
+  border-radius: 8px;
+  transform: scale(1.02);
+}
+
+.sector-name {
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sector-name i {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.bullish-sectors .sector-name i {
+  background: rgba(0, 200, 83, 0.1);
+  color: var(--terminal-green);
+  box-shadow: 0 0 5px rgba(0, 200, 83, 0.3);
+}
+
+.bearish-sectors .sector-name i {
+  background: rgba(255, 61, 0, 0.1);
+  color: #ff3d00;
+  box-shadow: 0 0 5px rgba(255, 61, 0, 0.3);
+}
+
+/* Portfolio section enhancements */
+.portfolio-table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.portfolio-table th {
+  background: rgba(10, 20, 35, 0.6);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border-bottom: 1px solid var(--data-color);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.8rem;
+  padding: 0.8rem 1rem;
+}
+
+.portfolio-asset {
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.portfolio-asset:hover {
+  background: rgba(30, 144, 255, 0.1);
+  transform: translateX(5px);
+  box-shadow: inset 0 0 0 1px var(--data-color);
+}
+
+.portfolio-asset td {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(30, 144, 255, 0.1);
+}
+
+.portfolio-asset td:first-child {
+  font-weight: 600;
+  color: var(--data-color);
+}
+
+.asset-type {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  letter-spacing: 1px;
+}
+
+.asset-type.stock {
+  background: rgba(30, 144, 255, 0.1);
+  color: var(--data-color);
+  box-shadow: 0 0 5px var(--accent-glow);
+}
+
+.asset-type.etf {
+  background: rgba(0, 191, 255, 0.1);
+  color: #00BFFF;
+  box-shadow: 0 0 5px rgba(0, 191, 255, 0.3);
+}
+
+.asset-type.crypto {
+  background: rgba(255, 215, 0, 0.1);
+  color: #FFD700;
+  box-shadow: 0 0 5px rgba(255, 215, 0, 0.3);
+}
+
+/* Attribution data section avec look terminal */
+.data-source-section {
+  background: rgba(10, 15, 25, 0.8);
+  font-family: 'Courier New', monospace;
+  position: relative;
+  overflow: hidden;
+}
+
+.data-source-section::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(30, 144, 255, 0.02) 50%,
+    transparent 100%
+  );
+  animation: scanline 6s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.source-info {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.source-info p {
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.source-info p i {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--data-color);
+}
+
+.update-time {
+  font-weight: 700;
+  color: var(--terminal-green);
+  text-shadow: 0 0 5px rgba(12, 250, 108, 0.5);
+}
+
+/* Animation d'entrée des sections au scroll */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-on-scroll {
+  opacity: 0;
+  animation: fadeInUp 0.6s ease forwards;
+}
+
+/* Pour les sections qui s'animent avec délai */
+.animate-with-delay-100 { animation-delay: 0.1s; }
+.animate-with-delay-200 { animation-delay: 0.2s; }
+.animate-with-delay-300 { animation-delay: 0.3s; }
+.animate-with-delay-400 { animation-delay: 0.4s; }
+
+/* Notifications futuristes */
+.notification {
+  background: rgba(15, 20, 30, 0.9);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  border-left: 3px solid var(--data-color);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5), 0 0 10px var(--accent-glow);
+}
+
+.notification.success {
+  border-left-color: var(--terminal-green);
+}
+
+.notification.error {
+  border-left-color: #ff3d00;
+}
+
+/* Impact meter improvements */
+.impact-meter {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.impact-level {
+  height: 100%;
+  border-radius: 3px;
+  position: relative;
+  transition: width 1s ease;
+}
+
+.impact-level.positive {
+  background: linear-gradient(90deg, #1a9a42, var(--terminal-green));
+  box-shadow: 0 0 10px rgba(12, 250, 108, 0.5);
+}
+
+.impact-level.negative {
+  background: linear-gradient(90deg, #b33000, #ff3d00);
+  box-shadow: 0 0 10px rgba(255, 61, 0, 0.5);
+}
+
+/* Scroll bars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background-color: rgba(10, 15, 25, 0.5);
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--data-color);
+  border-radius: 4px;
+  box-shadow: 0 0 5px var(--accent-glow);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #1a7ad4;
+}
+
+/* Animation d'apparition des éléments en séquence */
+.sequential-animation > * {
+  opacity: 0;
+  transform: translateY(20px);
+  animation: sequentialFade 0.4s ease forwards;
+}
+
+@keyframes sequentialFade {
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .news-grid,
+  .events-container,
+  .sectors-container,
+  .portfolio-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .source-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+/* Script d'initialisation des animations au défilement */
+document.addEventListener('DOMContentLoaded', function() {
+  // Ajouter les classes d'animation aux sections
+  document.querySelectorAll('.news-section, .events-section, .sectors-section, .portfolio-section').forEach((section, index) => {
+    section.classList.add('animate-on-scroll', `animate-with-delay-${index * 100}`);
+  });
+  
+  // Animation séquentielle pour les enfants de certains éléments
+  const sequentialElements = ['.news-grid', '.sectors-list', '#eventsContainer', '.portfolio-table tbody'];
+  sequentialElements.forEach(selector => {
+    const container = document.querySelector(selector);
+    if (container) {
+      container.classList.add('sequential-animation');
+      Array.from(container.children).forEach((child, i) => {
+        child.style.animationDelay = `${i * 0.1 + 0.2}s`;
+      });
+    }
+  });
+  
+  // Observer d'intersection pour les animations au défilement
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.style.animationPlayState = 'running';
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  
+  document.querySelectorAll('.animate-on-scroll').forEach(el => {
+    el.style.animationPlayState = 'paused';
+    observer.observe(el);
+  });
+});
