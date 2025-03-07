@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradePulse - Actualités Financières</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="pages-style.css">
+</head>
+<body class="page-actualites fade-in">
+    <header class="page-header">
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="pulse-dot"></div>
+                <a href="index.html" class="logo">TRADEPULSE</a>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="market-status">
+                <div class="market-indicator green"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time" id="marketTime">16:24:35</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="page-content">
+        <section class="page-title-section">
+            <h1 class="page-title">ACTUALITÉS FINANCIÈRES</h1>
+            <p class="page-subtitle" id="currentDate">07 MARS 2025</p>
+        </section>
+
+        <!-- News Section -->
+        <section class="news-section">
+            <h2 class="section-title reveal"><i class="fas fa-newspaper"></i> Actualités du jour</h2>
+            <div class="news-grid reveal">
+                <div class="news-card major-news">
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span class="news-source">Maison Blanche</span>
+                            <div class="news-date-time">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span class="news-date">07/03/2025</span>
+                                <span class="news-time">08:15</span>
+                            </div>
+                        </div>
+                        <h3>Exemption de droits de douane sur les véhicules</h3>
+                        <p>La Maison Blanche a annoncé un report d'un mois sur les nouveaux tarifs automobiles. Cette exemption a entraîné une hausse des actions, avec le DAX en hausse de 3,5%, le STOXX 50 en hausse de 1,9%, et le Hang Seng en hausse de 2,87%.</p>
+                    </div>
+                </div>
+                <div class="news-card">
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span class="news-source">Marchés Européens</span>
+                            <div class="news-date-time">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span class="news-date">07/03/2025</span>
+                                <span class="news-time">09:30</span>
+                            </div>
+                        </div>
+                        <h3>Flambée historique du marché obligataire européen</h3>
+                        <p>Le marché obligataire européen a connu une journée historique avec une hausse de 30 points de base du rendement allemand à 10 ans, un record depuis 1990.</p>
+                    </div>
+                </div>
+                <div class="news-card">
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span class="news-source">BCE</span>
+                            <div class="news-date-time">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span class="news-date">07/03/2025</span>
+                                <span class="news-time">07:45</span>
+                            </div>
+                        </div>
+                        <h3>Décision de la BCE attendue aujourd'hui</h3>
+                        <p>La BCE est prévue pour maintenir ses taux inchangés, mais il y a une attente pour une baisse de 25 points de base, ce qui pourrait avoir des conséquences importantes sur les marchés.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Events Section -->
+        <section class="events-section">
+            <h2 class="section-title reveal"><i class="fas fa-bolt"></i> Événements à fort impact</h2>
+            <div class="events-grid reveal">
+                <div class="event-card critical-impact">
+                    <div class="event-header">
+                        <div class="event-title">
+                            <i class="fas fa-chart-line"></i>
+                            <h3>Décision de taux de la BCE</h3>
+                        </div>
+                        <div class="event-score">
+                            <div class="impact-label">Impact</div>
+                            <div class="impact-value">8/10</div>
+                        </div>
+                    </div>
+                    <div class="event-details">
+                        <div class="event-info">
+                            <span class="event-market-type">actions</span>
+                            <span class="event-timing">immédiat</span>
+                        </div>
+                        <div class="event-datetime">
+                            <i class="fas fa-calendar-day"></i>
+                            <span class="event-date">07/03/2025</span>
+                            <i class="fas fa-clock"></i>
+                            <span class="event-time">13:45</span>
+                        </div>
+                        <p class="event-explanation">La BCE maintient ses taux d'intérêt, impactant les marchés européens et le secteur bancaire.</p>
+                        <div class="event-symbols">
+                            <span class="symbols-label">Symboles affectés:</span>
+                            <div class="symbols-list">
+                                <span class="symbol-tag">EURO STOXX</span>
+                                <span class="symbol-tag">BNP.PA</span>
+                                <span class="symbol-tag">DB</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="event-card high-impact">
+                    <div class="event-header">
+                        <div class="event-title">
+                            <i class="fas fa-money-bill-transfer"></i>
+                            <h3>Publication des chiffres de l'emploi américain</h3>
+                        </div>
+                        <div class="event-score">
+                            <div class="impact-label">Impact</div>
+                            <div class="impact-value">7/10</div>
+                        </div>
+                    </div>
+                    <div class="event-details">
+                        <div class="event-info">
+                            <span class="event-market-type">forex</span>
+                            <span class="event-timing">court terme</span>
+                        </div>
+                        <div class="event-datetime">
+                            <i class="fas fa-calendar-day"></i>
+                            <span class="event-date">08/03/2025</span>
+                            <i class="fas fa-clock"></i>
+                            <span class="event-time">14:30</span>
+                        </div>
+                        <p class="event-explanation">Des données sur l'emploi meilleures que prévu renforcent le dollar face aux autres devises.</p>
+                        <div class="event-symbols">
+                            <span class="symbols-label">Symboles affectés:</span>
+                            <div class="symbols-list">
+                                <span class="symbol-tag">EUR/USD</span>
+                                <span class="symbol-tag">GBP/USD</span>
+                                <span class="symbol-tag">USD/JPY</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="event-card critical-impact">
+                    <div class="event-header">
+                        <div class="event-title">
+                            <i class="fas fa-chart-line"></i>
+                            <h3>Progression de l'adoption de l'intelligence artificielle</h3>
+                        </div>
+                        <div class="event-score">
+                            <div class="impact-label">Impact</div>
+                            <div class="impact-value">9/10</div>
+                        </div>
+                    </div>
+                    <div class="event-details">
+                        <div class="event-info">
+                            <span class="event-market-type">actions</span>
+                            <span class="event-timing">moyen terme</span>
+                        </div>
+                        <div class="event-datetime">
+                            <i class="fas fa-calendar-day"></i>
+                            <span class="event-date">10/03/2025</span>
+                            <i class="fas fa-clock"></i>
+                            <span class="event-time">09:00</span>
+                        </div>
+                        <p class="event-explanation">Plusieurs entreprises technologiques annoncent des avancées majeures en IA, stimulant le secteur.</p>
+                        <div class="event-symbols">
+                            <span class="symbols-label">Symboles affectés:</span>
+                            <div class="symbols-list">
+                                <span class="symbol-tag">NVDA</span>
+                                <span class="symbol-tag">GOOG</span>
+                                <span class="symbol-tag">MSFT</span>
+                                <span class="symbol-tag">META</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <div class="portfolio-selector">
+            <h2 class="portfolio-heading">CHOISISSEZ VOTRE PORTEFEUILLE</h2>
+            <div class="portfolio-buttons">
+                <a href="portefeuille.html?type=agressif" class="portfolio-button aggressive">
+                    <i class="fas fa-rocket"></i>
+                    <span>AGRESSIF</span>
+                </a>
+                <a href="portefeuille.html?type=modere" class="portfolio-button moderate">
+                    <i class="fas fa-balance-scale"></i>
+                    <span>MODÉRÉ</span>
+                </a>
+                <a href="portefeuille.html?type=stable" class="portfolio-button stable">
+                    <i class="fas fa-shield-alt"></i>
+                    <span>STABLE</span>
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <footer class="page-footer">
+        <div class="data-source-info">
+            <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel</p>
+            <p><i class="fas fa-robot"></i> Analyses sectorielles et portefeuille optimisé fournis par Perplexity AI</p>
+            <p><i class="fas fa-clock"></i> Dernière mise à jour: <span class="update-time" id="updateTime">07/03/2025 10:15:53</span></p>
+        </div>
+    </footer>
+
+    <script>
+        // Animate elements on scroll
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, {threshold: 0.1});
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Observe elements with reveal class
+            document.querySelectorAll('.reveal').forEach(el => {
+                observer.observe(el);
+            });
+            
+            // Update market time
+            updateMarketTime();
+            setInterval(updateMarketTime, 1000);
+            
+            // Update current date
+            updateCurrentDate();
+            
+            // Add transition on portfolio button clicks
+            document.querySelectorAll('.portfolio-button').forEach(button => {
+                button.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.body.classList.add('fade-out');
+                    
+                    setTimeout(() => {
+                        window.location.href = this.getAttribute('href');
+                    }, 800); // Transition time
+                });
+            });
+        });
+        
+        // Update market time
+        function updateMarketTime() {
+            const marketTimeElement = document.getElementById('marketTime');
+            if (marketTimeElement) {
+                const now = new Date();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                const seconds = now.getSeconds().toString().padStart(2, '0');
+                marketTimeElement.textContent = `${hours}:${minutes}:${seconds}`;
+            }
+        }
+        
+        // Update current date
+        function updateCurrentDate() {
+            const dateElement = document.getElementById('currentDate');
+            if (dateElement) {
+                const now = new Date();
+                const options = { day: 'numeric', month: 'long', year: 'numeric' };
+                const dateStr = now.toLocaleDateString('fr-FR', options).toUpperCase();
+                dateElement.textContent = dateStr;
+            }
+            
+            const updateTimeElement = document.getElementById('updateTime');
+            if (updateTimeElement) {
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('fr-FR');
+                const timeStr = now.toLocaleTimeString('fr-FR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                updateTimeElement.textContent = `${dateStr} ${timeStr}`;
+            }
+        }
+    </script>
+</body>
+</html>
