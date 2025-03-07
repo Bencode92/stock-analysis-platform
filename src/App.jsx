@@ -4,6 +4,7 @@ import { FinancialDataProvider } from './contexts/FinancialDataContext';
 import { NewsSection } from './components/NewsSection';
 import { SectorsSection } from './components/SectorsSection';
 import { PortfolioSection } from './components/PortfolioSection';
+import { HighImpactEvents } from './components/HighImpactEvents';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
 import { Notification } from './components/ui/Notification';
@@ -45,6 +46,10 @@ function App() {
         
         <main className="main-content">
           <NewsSection />
+          
+          {/* Nouvelle section des événements à fort impact */}
+          <HighImpactEvents />
+          
           <SectorsSection />
           <PortfolioSection />
           <Footer />
