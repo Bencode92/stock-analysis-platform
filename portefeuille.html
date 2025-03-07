@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradePulse - Portefeuille Optimisé</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="pages-style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+</head>
+<body class="page-portefeuille fade-in">
+    <header class="page-header">
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="pulse-dot"></div>
+                <a href="index.html" class="logo">TRADEPULSE</a>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="market-status">
+                <div class="market-indicator green"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time" id="marketTime">16:24:35</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="page-content">
+        <section class="page-title-section">
+            <h1 class="page-title" id="portfolioTitle">PORTEFEUILLE AGRESSIF</h1>
+            <p class="page-subtitle" id="currentDate">07 MARS 2025</p>
+            <div class="portfolio-nav">
+                <a href="actualites.html" class="back-button"><i class="fas fa-arrow-left"></i> RETOUR AUX ACTUALITÉS</a>
+                <div class="portfolio-toggles">
+                    <a href="portefeuille.html?type=agressif" id="toggleAgressif" class="portfolio-toggle active">AGRESSIF</a>
+                    <a href="portefeuille.html?type=modere" id="toggleModere" class="portfolio-toggle">MODÉRÉ</a>
+                    <a href="portefeuille.html?type=stable" id="toggleStable" class="portfolio-toggle">STABLE</a>
+                </div>
+            </div>
+        </section>
+
+        <!-- Portfolio Chart Section -->
+        <section class="portfolio-chart-section">
+            <div class="chart-container">
+                <canvas id="portfolioChart"></canvas>
+            </div>
+            
+            <div class="portfolio-info" id="portfolioInfo">
+                <div class="info-card">
+                    <h3>GÉNÉRÉ PAR INTELLIGENCE ARTIFICIELLE</h3>
+                    <p>Ce portefeuille est généré par Perplexity AI en fonction des actualités financières et des tendances du marché actuelles.</p>
+                </div>
+                
+                <div class="info-card">
+                    <h3>PROFIL AGRESSIF</h3>
+                    <p id="profileDescription">Ce portefeuille vise une croissance maximale, avec une forte exposition aux secteurs en croissance et aux actifs à haut risque.</p>
+                </div>
+                
+                <div class="info-card">
+                    <h3>DERNIÈRE MISE À JOUR</h3>
+                    <p id="updateTimestamp">07/03/2025 à 10:15:53</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Portfolio Details -->
+        <section class="portfolio-details-section">
+            <h2 class="section-title">COMPOSITION DU PORTEFEUILLE</h2>
+            
+            <!-- Aggressive Portfolio Details -->
+            <div id="aggressiveDetails" class="portfolio-details">
+                <div class="portfolio-table">
+                    <div class="table-header">
+                        <div class="header-cell">INSTRUMENT</div>
+                        <div class="header-cell">SYMBOLE</div>
+                        <div class="header-cell">TYPE</div>
+                        <div class="header-cell">ALLOCATION</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">NVIDIA Corporation</div>
+                            <div class="instrument-reason">Leader incontesté des puces IA avec un nouveau record historique selon les actualités du jour, bénéficiant directement de la demande croissante pour l'IA.</div>
+                        </div>
+                        <div class="cell">NVDA</div>
+                        <div class="cell">
+                            <span class="asset-type stock">STOCK</span>
+                        </div>
+                        <div class="cell allocation">25%</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">Tesla, Inc.</div>
+                            <div class="instrument-reason">L'augmentation de production dans la gigafactory de Berlin annoncée cette semaine crée une opportunité immédiate dans un secteur haussier.</div>
+                        </div>
+                        <div class="cell">TSLA</div>
+                        <div class="cell">
+                            <span class="asset-type stock">STOCK</span>
+                        </div>
+                        <div class="cell allocation">22%</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">Amazon.com, Inc.</div>
+                            <div class="instrument-reason">Sa nouvelle stratégie logistique annoncée cette semaine promet d'améliorer ses performances à court terme.</div>
+                        </div>
+                        <div class="cell">AMZN</div>
+                        <div class="cell">
+                            <span class="asset-type stock">STOCK</span>
+                        </div>
+                        <div class="cell allocation">18%</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">Invesco QQQ Trust</div>
+                            <div class="instrument-reason">Exposition aux grandes entreprises technologiques qui bénéficient de la tendance haussière actuelle du secteur tech.</div>
+                        </div>
+                        <div class="cell">QQQ</div>
+                        <div class="cell">
+                            <span class="asset-type etf">ETF</span>
+                        </div>
+                        <div class="cell allocation">10%</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">iShares Global Clean Energy ETF</div>
+                            <div class="instrument-reason">Profite des initiatives de transition énergétique mentionnées dans les actualités récentes.</div>
+                        </div>
+                        <div class="cell">ICLN</div>
+                        <div class="cell">
+                            <span class="asset-type etf">ETF</span>
+                        </div>
+                        <div class="cell allocation">8%</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">Bitcoin</div>
+                            <div class="instrument-reason">Le rebond significatif suite aux commentaires de la SEC cette semaine crée une opportunité tactique à court terme.</div>
+                        </div>
+                        <div class="cell">BTC</div>
+                        <div class="cell">
+                            <span class="asset-type crypto">CRYPTO</span>
+                        </div>
+                        <div class="cell allocation">12%</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">Ethereum</div>
+                            <div class="instrument-reason">Bénéficie actuellement du développement des applications décentralisées et suit la tendance haussière récente du Bitcoin.</div>
+                        </div>
+                        <div class="cell">ETH</div>
+                        <div class="cell">
+                            <span class="asset-type crypto">CRYPTO</span>
+                        </div>
+                        <div class="cell allocation">5%</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Moderate Portfolio Details (hidden by default) -->
+            <div id="moderateDetails" class="portfolio-details" style="display: none;">
+                <!-- Same structure, different content -->
+                <div class="portfolio-table">
+                    <div class="table-header">
+                        <div class="header-cell">INSTRUMENT</div>
+                        <div class="header-cell">SYMBOLE</div>
+                        <div class="header-cell">TYPE</div>
+                        <div class="header-cell">ALLOCATION</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">Microsoft Corporation</div>
+                            <div class="instrument-reason">Position dominante dans le cloud et l'IA, profitant de la tendance haussière du secteur technologique avec un profil de risque modéré.</div>
+                        </div>
+                        <div class="cell">MSFT</div>
+                        <div class="cell">
+                            <span class="asset-type stock">STOCK</span>
+                        </div>
+                        <div class="cell allocation">15%</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">Amazon.com, Inc.</div>
+                            <div class="instrument-reason">Sa nouvelle stratégie logistique dévoilée cette semaine et sa diversification sectorielle offrent un bon équilibre risque/rendement.</div>
+                        </div>
+                        <div class="cell">AMZN</div>
+                        <div class="cell">
+                            <span class="asset-type stock">STOCK</span>
+                        </div>
+                        <div class="cell allocation">12%</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">SPDR S&P 500 ETF Trust</div>
+                            <div class="instrument-reason">Diversification large sur le marché américain pour réduire la volatilité globale du portefeuille.</div>
+                        </div>
+                        <div class="cell">SPY</div>
+                        <div class="cell">
+                            <span class="asset-type etf">ETF</span>
+                        </div>
+                        <div class="cell allocation">20%</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">Invesco QQQ Trust</div>
+                            <div class="instrument-reason">Exposition contrôlée au secteur technologique pour capturer la croissance sans risque excessif.</div>
+                        </div>
+                        <div class="cell">QQQ</div>
+                        <div class="cell">
+                            <span class="asset-type etf">ETF</span>
+                        </div>
+                        <div class="cell allocation">15%</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">iShares 20+ Year Treasury Bond ETF</div>
+                            <div class="instrument-reason">Protection contre la volatilité des marchés actions dans un contexte d'incertitude économique.</div>
+                        </div>
+                        <div class="cell">TLT</div>
+                        <div class="cell">
+                            <span class="asset-type bond">BOND</span>
+                        </div>
+                        <div class="cell allocation">15%</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">NVIDIA Corporation</div>
+                            <div class="instrument-reason">Exposition limitée au leader des puces IA pour bénéficier de la croissance sans surpondération.</div>
+                        </div>
+                        <div class="cell">NVDA</div>
+                        <div class="cell">
+                            <span class="asset-type stock">STOCK</span>
+                        </div>
+                        <div class="cell allocation">10%</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">iShares iBoxx $ Investment Grade Corporate Bond ETF</div>
+                            <div class="instrument-reason">Rendements supérieurs aux bons du Trésor avec un risque modéré.</div>
+                        </div>
+                        <div class="cell">LQD</div>
+                        <div class="cell">
+                            <span class="asset-type bond">BOND</span>
+                        </div>
+                        <div class="cell allocation">8%</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">Bitcoin</div>
+                            <div class="instrument-reason">Exposition limitée pour diversification, suite aux commentaires positifs de la SEC cette semaine.</div>
+                        </div>
+                        <div class="cell">BTC</div>
+                        <div class="cell">
+                            <span class="asset-type crypto">CRYPTO</span>
+                        </div>
+                        <div class="cell allocation">5%</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Stable Portfolio Details (hidden by default) -->
+            <div id="stableDetails" class="portfolio-details" style="display: none;">
+                <!-- Same structure, different content for stable portfolio -->
+                <div class="portfolio-table">
+                    <div class="table-header">
+                        <div class="header-cell">INSTRUMENT</div>
+                        <div class="header-cell">SYMBOLE</div>
+                        <div class="header-cell">TYPE</div>
+                        <div class="header-cell">ALLOCATION</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">Vanguard Total Bond Market ETF</div>
+                            <div class="instrument-reason">Large diversification obligataire offrant stabilité et préservation du capital dans le contexte actuel.</div>
+                        </div>
+                        <div class="cell">BND</div>
+                        <div class="cell">
+                            <span class="asset-type bond">BOND</span>
+                        </div>
+                        <div class="cell allocation">25%</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">Johnson & Johnson</div>
+                            <div class="instrument-reason">Valeur défensive peu corrélée aux turbulences du marché, offrant stabilité et dividendes dans un contexte d'incertitude.</div>
+                        </div>
+                        <div class="cell">JNJ</div>
+                        <div class="cell">
+                            <span class="asset-type stock">STOCK</span>
+                        </div>
+                        <div class="cell allocation">15%</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">Microsoft Corporation</div>
+                            <div class="instrument-reason">Entreprise à forte capitalisation avec solides fondamentaux et flux de trésorerie stable, offrant à la fois sécurité et croissance modérée.</div>
+                        </div>
+                        <div class="cell">MSFT</div>
+                        <div class="cell">
+                            <span class="asset-type stock">STOCK</span>
+                        </div>
+                        <div class="cell allocation">10%</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">SPDR S&P 500 ETF Trust</div>
+                            <div class="instrument-reason">Exposition large au marché avec une volatilité moindre que les secteurs individuels.</div>
+                        </div>
+                        <div class="cell">SPY</div>
+                        <div class="cell">
+                            <span class="asset-type etf">ETF</span>
+                        </div>
+                        <div class="cell allocation">15%</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">iShares 20+ Year Treasury Bond ETF</div>
+                            <div class="instrument-reason">Protection maximale contre l'incertitude des marchés, particulièrement utile suite aux annonces récentes de la BCE.</div>
+                        </div>
+                        <div class="cell">TLT</div>
+                        <div class="cell">
+                            <span class="asset-type bond">BOND</span>
+                        </div>
+                        <div class="cell allocation">20%</div>
+                    </div>
+                    
+                    <div class="table-row">
+                        <div class="cell instrument-cell">
+                            <div class="instrument-name">iShares iBoxx $ Investment Grade Corporate Bond ETF</div>
+                            <div class="instrument-reason">Rendement prévisible avec risque limité grâce aux obligations d'entreprises de qualité.</div>
+                        </div>
+                        <div class="cell">LQD</div>
+                        <div class="cell">
+                            <span class="asset-type bond">BOND</span>
+                        </div>
+                        <div class="cell allocation">15%</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="page-footer">
+        <div class="data-source-info">
+            <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel</p>
+            <p><i class="fas fa-robot"></i> Analyses sectorielles et portefeuille optimisé fournis par Perplexity AI</p>
+            <p><i class="fas fa-clock"></i> Dernière mise à jour: <span class="update-time" id="updateTime">07/03/2025 10:15:53</span></p>
+        </div>
+    </footer>
+
+    <script>
+        let portfolioChart;
+        
+        // Function to get URL parameters
+        function getUrlParameter(name) {
+            name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+            const regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+            const results = regex.exec(location.search);
+            return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get portfolio type from URL parameter (default to 'agressif')
+            const portfolioType = getUrlParameter('type') || 'agressif';
+            
+            // Update page based on selected portfolio type
+            updatePortfolioView(portfolioType);
+            
+            // Update market time
+            updateMarketTime();
+            setInterval(updateMarketTime, 1000);
+            
+            // Update current date
+            updateCurrentDate();
+            
+            // Add transition on toggle clicks
+            document.querySelectorAll('.portfolio-toggle').forEach(toggle => {
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    document.body.classList.add('fade-out');
+                    
+                    setTimeout(() => {
+                        window.location.href = this.getAttribute('href');
+                    }, 800); // Transition time
+                });
+            });
+            
+            // Add transition on back button
+            document.querySelector('.back-button').addEventListener('click', function(e) {
+                e.preventDefault();
+                document.body.classList.add('fade-out');
+                
+                setTimeout(() => {
+                    window.location.href = this.getAttribute('href');
+                }, 800); // Transition time
+            });
+        });
+        
+        function updatePortfolioView(type) {
+            // Update page title
+            const titleElement = document.getElementById('portfolioTitle');
+            const profileDescElement = document.getElementById('profileDescription');
+            
+            // Update portfolio toggles
+            document.querySelectorAll('.portfolio-toggle').forEach(toggle => toggle.classList.remove('active'));
+            document.getElementById(`toggle${type.charAt(0).toUpperCase() + type.slice(1)}`).classList.add('active');
+            
+            // Show appropriate portfolio details and hide others
+            document.getElementById('aggressiveDetails').style.display = type === 'agressif' ? 'block' : 'none';
+            document.getElementById('moderateDetails').style.display = type === 'modere' ? 'block' : 'none';
+            document.getElementById('stableDetails').style.display = type === 'stable' ? 'block' : 'none';
+            
+            // Update title and description based on portfolio type
+            if (type === 'agressif') {
+                titleElement.textContent = 'PORTEFEUILLE AGRESSIF';
+                profileDescElement.textContent = 'Ce portefeuille vise une croissance maximale, avec une forte exposition aux secteurs en croissance et aux actifs à haut risque.';
+                initAggressiveChart();
+            } else if (type === 'modere') {
+                titleElement.textContent = 'PORTEFEUILLE MODÉRÉ';
+                profileDescElement.textContent = 'Ce portefeuille offre un équilibre entre croissance et stabilité, avec une diversification entre différentes classes d\'actifs.';
+                initModerateChart();
+            } else if (type === 'stable') {
+                titleElement.textContent = 'PORTEFEUILLE STABLE';
+                profileDescElement.textContent = 'Ce portefeuille privilégie la préservation du capital et les dividendes, avec une faible exposition aux actifs risqués.';
+                initStableChart();
+            }
+        }
+        
+        function initAggressiveChart() {
+            const ctx = document.getElementById('portfolioChart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (portfolioChart) {
+                portfolioChart.destroy();
+            }
+            
+            // Create new chart for aggressive portfolio
+            portfolioChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['NVDA', 'TSLA', 'AMZN', 'QQQ', 'ICLN', 'BTC', 'ETH'],
+                    datasets: [{
+                        data: [25, 22, 18, 10, 8, 12, 5],
+                        backgroundColor: [
+                            '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
+                            '#B3FFC7', '#CCFFD6', '#00CC6A'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'right',
+                            labels: {
+                                color: '#00FF87',
+                                font: {
+                                    size: 14,
+                                    family: "'Inter', sans-serif"
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function initModerateChart() {
+            const ctx = document.getElementById('portfolioChart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (portfolioChart) {
+                portfolioChart.destroy();
+            }
+            
+            // Create new chart for moderate portfolio
+            portfolioChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['MSFT', 'AMZN', 'SPY', 'QQQ', 'TLT', 'NVDA', 'LQD', 'BTC'],
+                    datasets: [{
+                        data: [15, 12, 20, 15, 15, 10, 8, 5],
+                        backgroundColor: [
+                            '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
+                            '#B3FFC7', '#CCFFD6', '#00CC6A', '#00994F'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'right',
+                            labels: {
+                                color: '#00FF87',
+                                font: {
+                                    size: 14,
+                                    family: "'Inter', sans-serif"
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        function initStableChart() {
+            const ctx = document.getElementById('portfolioChart').getContext('2d');
+            
+            // Destroy existing chart if it exists
+            if (portfolioChart) {
+                portfolioChart.destroy();
+            }
+            
+            // Create new chart for stable portfolio
+            portfolioChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['BND', 'JNJ', 'MSFT', 'SPY', 'TLT', 'LQD'],
+                    datasets: [{
+                        data: [25, 15, 10, 15, 20, 15],
+                        backgroundColor: [
+                            '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
+                            '#B3FFC7', '#CCFFD6'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'right',
+                            labels: {
+                                color: '#00FF87',
+                                font: {
+                                    size: 14,
+                                    family: "'Inter', sans-serif"
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Update market time
+        function updateMarketTime() {
+            const marketTimeElement = document.getElementById('marketTime');
+            if (marketTimeElement) {
+                const now = new Date();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                const seconds = now.getSeconds().toString().padStart(2, '0');
+                marketTimeElement.textContent = `${hours}:${minutes}:${seconds}`;
+            }
+        }
+        
+        // Update current date
+        function updateCurrentDate() {
+            const dateElement = document.getElementById('currentDate');
+            if (dateElement) {
+                const now = new Date();
+                const options = { day: 'numeric', month: 'long', year: 'numeric' };
+                const dateStr = now.toLocaleDateString('fr-FR', options).toUpperCase();
+                dateElement.textContent = dateStr;
+            }
+            
+            const updateTimeElement = document.getElementById('updateTime');
+            if (updateTimeElement) {
+                const now = new Date();
+                const dateStr = now.toLocaleDateString('fr-FR');
+                const timeStr = now.toLocaleTimeString('fr-FR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                updateTimeElement.textContent = `${dateStr} ${timeStr}`;
+            }
+        }
+    </script>
+</body>
+</html>
