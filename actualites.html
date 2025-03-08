@@ -11,172 +11,6 @@
     <link rel="stylesheet" href="search-style.css">
     <script type="module" src="aiintegration.js"></script>
     <style>
-        /* Style pour le bouton News Time avec cercle de progression */
-        .news-time-wrapper {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 30px 0;
-        }
-        
-        .news-time-container {
-            position: relative;
-            width: 300px;
-            height: 80px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .news-time-button {
-            position: relative;
-            display: flex;
-            align-items: center;
-            background: linear-gradient(135deg, #001e36 0%, #011627 100%);
-            border: 2px solid var(--accent-color);
-            border-radius: 8px;
-            padding: 10px 20px;
-            cursor: pointer;
-            overflow: hidden;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
-            width: 80%;
-            z-index: 2;
-        }
-        
-        .news-time-button::before {
-            content: "";
-            position: absolute;
-            top: -10px;
-            left: -10px;
-            right: -10px;
-            bottom: -10px;
-            background: linear-gradient(45deg, var(--accent-color), transparent, var(--accent-color));
-            opacity: 0;
-            z-index: 0;
-            transition: opacity 0.5s ease;
-        }
-        
-        .news-time-button:hover::before {
-            opacity: 0.2;
-        }
-        
-        .news-time-icon {
-            background-color: var(--accent-color);
-            border-radius: 50%;
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 15px;
-            box-shadow: 0 0 10px rgba(0, 255, 135, 0.6);
-        }
-        
-        .news-time-icon i {
-            color: var(--background-color);
-            font-size: 18px;
-        }
-        
-        .news-time-content {
-            z-index: 1;
-            text-align: left;
-        }
-        
-        .news-time-title {
-            font-weight: 700;
-            font-size: 16px;
-            letter-spacing: 1px;
-            margin: 0;
-            color: var(--accent-color);
-        }
-        
-        .news-time-subtitle {
-            font-size: 11px;
-            opacity: 0.7;
-            margin: 2px 0 0 0;
-        }
-        
-        .news-time-button.loading {
-            cursor: not-allowed;
-        }
-        
-        .news-time-button.loading .news-time-icon {
-            position: relative;
-        }
-        
-        .news-time-button.loading .news-time-icon i {
-            animation: spin 1.5s linear infinite;
-        }
-        
-        .last-update-info {
-            margin-left: 15px;
-            font-size: 12px;
-            opacity: 0.7;
-        }
-        
-        /* Cercle de progression */
-        .progress-circle {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
-        
-        .progress-circle svg {
-            width: 100%;
-            height: 100%;
-            transform: rotate(-90deg);
-        }
-        
-        .progress-circle-bg {
-            fill: none;
-            stroke: rgba(0, 255, 135, 0.1);
-            stroke-width: 4px;
-            stroke-linecap: round;
-        }
-        
-        .progress-circle-value {
-            fill: none;
-            stroke: var(--accent-color);
-            stroke-width: 4px;
-            stroke-linecap: round;
-            stroke-dasharray: 100;
-            stroke-dashoffset: 100; /* 100 = pas de progression, 0 = progression complète */
-            transition: stroke-dashoffset 0.5s ease;
-        }
-        
-        .progress-label {
-            position: absolute;
-            top: -20px;
-            right: 25px;
-            font-size: 11px;
-            color: var(--accent-color);
-            background-color: rgba(1, 22, 39, 0.8);
-            padding: 2px 6px;
-            border-radius: 4px;
-            z-index: 3;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        
-        .news-time-container.loading .progress-label {
-            opacity: 1;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
-        }
-        
         /* Animation de notification */
         .update-notification {
             position: fixed;
@@ -203,6 +37,34 @@
         
         .update-notification i {
             margin-right: 10px;
+        }
+        
+        /* Info de dernière mise à jour */
+        .last-update-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0 30px 0;
+            padding: 8px 15px;
+            background-color: rgba(0, 255, 135, 0.05);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-color);
+        }
+        
+        .last-update-container i {
+            color: var(--accent-color);
+            margin-right: 10px;
+            font-size: 18px;
+        }
+        
+        .last-update-info {
+            font-size: 14px;
+        }
+        
+        .last-update-time {
+            color: var(--accent-color);
+            font-weight: 500;
+            margin-left: 5px;
         }
     </style>
 </head>
@@ -236,33 +98,11 @@
             <h1 class="page-title">ACTUALITÉS FINANCIÈRES</h1>
             <p class="page-subtitle" id="currentDate">07 MARS 2025</p>
             
-            <!-- Bouton News Time avec cercle de progression -->
-            <div class="news-time-wrapper">
-                <div class="news-time-container" id="newsTimeContainer">
-                    <!-- Cercle de progression -->
-                    <div class="progress-circle">
-                        <svg viewBox="0 0 100 100">
-                            <circle class="progress-circle-bg" cx="50" cy="50" r="40"></circle>
-                            <circle class="progress-circle-value" id="progressCircle" cx="50" cy="50" r="40"></circle>
-                        </svg>
-                    </div>
-                    
-                    <!-- Étiquette de progression -->
-                    <div class="progress-label" id="progressLabel">Actualités: 0%</div>
-                    
-                    <!-- Bouton -->
-                    <button id="newsTimeButton" class="news-time-button">
-                        <div class="news-time-icon">
-                            <i class="fas fa-sync-alt"></i>
-                        </div>
-                        <div class="news-time-content">
-                            <p class="news-time-title">NEWS TIME</p>
-                            <p class="news-time-subtitle">Actualiser les données</p>
-                        </div>
-                    </button>
-                </div>
+            <!-- Info de dernière mise à jour -->
+            <div class="last-update-container">
+                <i class="fas fa-info-circle"></i>
                 <div class="last-update-info">
-                    Dernière mise à jour: <span id="lastUpdateTime">07/03/2025 10:15:53</span>
+                    Dernière mise à jour des données: <span id="lastUpdateTime" class="last-update-time">07/03/2025 10:15:53</span>
                 </div>
             </div>
             
@@ -533,8 +373,13 @@
             // Update current date
             updateCurrentDate();
             
-            // Initialiser le bouton News Time
-            initNewsTimeButton();
+            // Vérifier s'il existe une date de dernière mise à jour
+            const lastUpdateTime = localStorage.getItem('tradepulse_last_update');
+            if (lastUpdateTime) {
+                const date = new Date(parseInt(lastUpdateTime));
+                document.getElementById('lastUpdateTime').textContent = formatDateTime(date);
+                document.getElementById('updateTime').textContent = formatDateTime(date);
+            }
             
             // Add transition on portfolio button clicks
             document.querySelectorAll('.portfolio-button').forEach(button => {
@@ -572,262 +417,6 @@
                 });
             });
         });
-        
-        // Initialiser le bouton News Time
-        function initNewsTimeButton() {
-            const button = document.getElementById('newsTimeButton');
-            const container = document.getElementById('newsTimeContainer');
-            const progressCircle = document.getElementById('progressCircle');
-            const progressLabel = document.getElementById('progressLabel');
-            
-            if (!button || !container || !progressCircle || !progressLabel) return;
-            
-            // Calculer la circonférence du cercle
-            const radius = progressCircle.getAttribute('r');
-            const circumference = 2 * Math.PI * radius;
-            progressCircle.style.strokeDasharray = circumference;
-            progressCircle.style.strokeDashoffset = circumference; // Initialement à 0%
-            
-            // Fonction pour mettre à jour la progression
-            function updateProgress(percent, label) {
-                const offset = circumference - (percent / 100) * circumference;
-                progressCircle.style.strokeDashoffset = offset;
-                progressLabel.textContent = label;
-            }
-            
-            // Vérifier s'il existe une date de dernière mise à jour
-            const lastUpdateTime = localStorage.getItem('tradepulse_last_update');
-            if (lastUpdateTime) {
-                const date = new Date(parseInt(lastUpdateTime));
-                document.getElementById('lastUpdateTime').textContent = formatDateTime(date);
-                document.getElementById('updateTime').textContent = formatDateTime(date);
-            }
-            
-            // Ajouter l'événement de clic
-            button.addEventListener('click', function() {
-                if (container.classList.contains('loading')) return;
-                
-                // Ajouter les classes de chargement
-                container.classList.add('loading');
-                button.classList.add('loading');
-                button.querySelector('i').classList.remove('fa-sync-alt');
-                button.querySelector('i').classList.add('fa-spinner');
-                
-                // Réinitialiser la progression
-                updateProgress(0, 'Initialisation...');
-                
-                // Mise à jour des données via l'API
-                if (window.perplexityIntegration) {
-                    try {
-                        // Étape 1: Mise à jour des actualités (25%)
-                        updateProgress(0, 'Actualités: 0%');
-                        
-                        // Simulation de progression pour les actualités
-                        let newsProgress = 0;
-                        const newsInterval = setInterval(() => {
-                            newsProgress += 5;
-                            if (newsProgress <= 25) {
-                                updateProgress(newsProgress, `Actualités: ${newsProgress * 4}%`);
-                            } else {
-                                clearInterval(newsInterval);
-                            }
-                        }, 200);
-                        
-                        setTimeout(() => {
-                            // Étape 2: Mise à jour du portefeuille agressif (50%)
-                            updateProgress(25, 'Portefeuille agressif: 0%');
-                            
-                            // Simulation de progression pour le portefeuille agressif
-                            let aggressiveProgress = 25;
-                            const aggressiveInterval = setInterval(() => {
-                                aggressiveProgress += 5;
-                                if (aggressiveProgress <= 50) {
-                                    updateProgress(aggressiveProgress, `Portefeuille agressif: ${(aggressiveProgress - 25) * 4}%`);
-                                } else {
-                                    clearInterval(aggressiveInterval);
-                                }
-                            }, 200);
-                            
-                            setTimeout(() => {
-                                // Étape 3: Mise à jour du portefeuille modéré (75%)
-                                updateProgress(50, 'Portefeuille modéré: 0%');
-                                
-                                // Simulation de progression pour le portefeuille modéré
-                                let moderateProgress = 50;
-                                const moderateInterval = setInterval(() => {
-                                    moderateProgress += 5;
-                                    if (moderateProgress <= 75) {
-                                        updateProgress(moderateProgress, `Portefeuille modéré: ${(moderateProgress - 50) * 4}%`);
-                                    } else {
-                                        clearInterval(moderateInterval);
-                                    }
-                                }, 200);
-                                
-                                setTimeout(() => {
-                                    // Étape 4: Mise à jour du portefeuille stable (100%)
-                                    updateProgress(75, 'Portefeuille stable: 0%');
-                                    
-                                    // Simulation de progression pour le portefeuille stable
-                                    let stableProgress = 75;
-                                    const stableInterval = setInterval(() => {
-                                        stableProgress += 5;
-                                        if (stableProgress <= 100) {
-                                            updateProgress(stableProgress, `Portefeuille stable: ${(stableProgress - 75) * 4}%`);
-                                        } else {
-                                            clearInterval(stableInterval);
-                                        }
-                                    }, 200);
-                                    
-                                    // Lancement de la mise à jour réelle des données
-                                    window.perplexityIntegration.updateData()
-                                        .then(data => {
-                                            // Mettre à jour la date de dernière mise à jour
-                                            const now = Date.now();
-                                            localStorage.setItem('tradepulse_last_update', now.toString());
-                                            document.getElementById('lastUpdateTime').textContent = formatDateTime(new Date(now));
-                                            document.getElementById('updateTime').textContent = formatDateTime(new Date(now));
-                                            
-                                            // Afficher la notification de succès
-                                            showUpdateNotification('Données mises à jour avec succès!', 'success');
-                                            
-                                            // Mettre en pause avant de recharger
-                                            setTimeout(() => {
-                                                // Enlever les classes de chargement
-                                                container.classList.remove('loading');
-                                                button.classList.remove('loading');
-                                                button.querySelector('i').classList.remove('fa-spinner');
-                                                button.querySelector('i').classList.add('fa-sync-alt');
-                                                
-                                                // Réinitialiser la progression
-                                                updateProgress(100, 'Terminé!');
-                                                
-                                                // Recharger la page pour afficher les nouvelles données
-                                                setTimeout(() => {
-                                                    window.location.reload();
-                                                }, 500);
-                                            }, 1000);
-                                        })
-                                        .catch(error => {
-                                            console.error('Erreur lors de la mise à jour des données:', error);
-                                            
-                                            // Enlever les classes de chargement
-                                            container.classList.remove('loading');
-                                            button.classList.remove('loading');
-                                            button.querySelector('i').classList.remove('fa-spinner');
-                                            button.querySelector('i').classList.add('fa-sync-alt');
-                                            
-                                            // Réinitialiser la progression
-                                            updateProgress(0, 'Erreur!');
-                                            
-                                            // Afficher la notification d'erreur
-                                            showUpdateNotification('Erreur lors de la mise à jour des données. Veuillez réessayer.', 'error');
-                                        });
-                                }, 1000);
-                            }, 1000);
-                        }, 1000);
-                    } catch (error) {
-                        console.error('Erreur lors de la mise à jour des données:', error);
-                        
-                        // Enlever les classes de chargement
-                        container.classList.remove('loading');
-                        button.classList.remove('loading');
-                        button.querySelector('i').classList.remove('fa-spinner');
-                        button.querySelector('i').classList.add('fa-sync-alt');
-                        
-                        // Réinitialiser la progression
-                        updateProgress(0, 'Erreur!');
-                        
-                        // Afficher la notification d'erreur
-                        showUpdateNotification('Erreur lors de la mise à jour des données. Veuillez réessayer.', 'error');
-                    }
-                } else {
-                    // Simuler une mise à jour si l'intégration n'est pas disponible
-                    // Étape 1: Mise à jour des actualités (25%)
-                    updateProgress(0, 'Actualités: 0%');
-                    
-                    // Simulation de progression pour les actualités
-                    let newsProgress = 0;
-                    const newsInterval = setInterval(() => {
-                        newsProgress += 5;
-                        if (newsProgress <= 25) {
-                            updateProgress(newsProgress, `Actualités: ${newsProgress * 4}%`);
-                        } else {
-                            clearInterval(newsInterval);
-                        }
-                    }, 200);
-                    
-                    setTimeout(() => {
-                        // Étape 2: Mise à jour du portefeuille agressif (50%)
-                        updateProgress(25, 'Portefeuille agressif: 0%');
-                        
-                        // Simulation de progression pour le portefeuille agressif
-                        let aggressiveProgress = 25;
-                        const aggressiveInterval = setInterval(() => {
-                            aggressiveProgress += 5;
-                            if (aggressiveProgress <= 50) {
-                                updateProgress(aggressiveProgress, `Portefeuille agressif: ${(aggressiveProgress - 25) * 4}%`);
-                            } else {
-                                clearInterval(aggressiveInterval);
-                            }
-                        }, 200);
-                        
-                        setTimeout(() => {
-                            // Étape 3: Mise à jour du portefeuille modéré (75%)
-                            updateProgress(50, 'Portefeuille modéré: 0%');
-                            
-                            // Simulation de progression pour le portefeuille modéré
-                            let moderateProgress = 50;
-                            const moderateInterval = setInterval(() => {
-                                moderateProgress += 5;
-                                if (moderateProgress <= 75) {
-                                    updateProgress(moderateProgress, `Portefeuille modéré: ${(moderateProgress - 50) * 4}%`);
-                                } else {
-                                    clearInterval(moderateInterval);
-                                }
-                            }, 200);
-                            
-                            setTimeout(() => {
-                                // Étape 4: Mise à jour du portefeuille stable (100%)
-                                updateProgress(75, 'Portefeuille stable: 0%');
-                                
-                                // Simulation de progression pour le portefeuille stable
-                                let stableProgress = 75;
-                                const stableInterval = setInterval(() => {
-                                    stableProgress += 5;
-                                    if (stableProgress <= 100) {
-                                        updateProgress(stableProgress, `Portefeuille stable: ${(stableProgress - 75) * 4}%`);
-                                    } else {
-                                        clearInterval(stableInterval);
-                                    }
-                                }, 200);
-                                
-                                setTimeout(() => {
-                                    // Mettre à jour la date de dernière mise à jour
-                                    const now = Date.now();
-                                    localStorage.setItem('tradepulse_last_update', now.toString());
-                                    document.getElementById('lastUpdateTime').textContent = formatDateTime(new Date(now));
-                                    document.getElementById('updateTime').textContent = formatDateTime(new Date(now));
-                                    
-                                    // Enlever les classes de chargement
-                                    container.classList.remove('loading');
-                                    button.classList.remove('loading');
-                                    button.querySelector('i').classList.remove('fa-spinner');
-                                    button.querySelector('i').classList.add('fa-sync-alt');
-                                    
-                                    // Afficher la notification de succès
-                                    showUpdateNotification('Données mises à jour avec succès!', 'success');
-                                    
-                                    // Recharger la page pour afficher les nouvelles données
-                                    setTimeout(() => {
-                                        window.location.reload();
-                                    }, 1500);
-                                }, 1000);
-                            }, 1000);
-                        }, 1000);
-                    }, 1000);
-                }
-            });
-        }
         
         // Afficher une notification de mise à jour
         function showUpdateNotification(message, type = 'success') {
