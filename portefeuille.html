@@ -13,14 +13,24 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script type="module" src="aiintegration.js"></script>
     <style>
+        /* Couleurs de base pour chaque portefeuille */
+        :root {
+            --aggressive-color: #FF7B00; /* Orange néon */
+            --aggressive-glow: 0 0 10px rgba(255, 123, 0, 0.6);
+            --moderate-color: #00FF87; /* Vert néon (couleur d'origine) */
+            --moderate-glow: 0 0 10px rgba(0, 255, 135, 0.6);
+            --stable-color: #00B2FF; /* Bleu néon */
+            --stable-glow: 0 0 10px rgba(0, 178, 255, 0.6);
+        }
+        
+        /* Style de base pour tous les boutons de téléchargement */
         .download-pdf-btn {
             display: inline-flex;
             align-items: center;
             padding: 0.75rem 1.5rem;
             margin: 1.5rem 0;
             background: transparent;
-            border: 2px solid var(--accent-color);
-            color: var(--accent-color);
+            color: var(--moderate-color);
             font-family: 'Inter', sans-serif;
             font-weight: 600;
             font-size: 0.9rem;
@@ -28,12 +38,41 @@
             cursor: pointer;
             transition: all 0.3s ease;
             border-radius: 4px;
+            border: 2px solid var(--moderate-color);
         }
         
-        .download-pdf-btn:hover {
-            background-color: var(--accent-color);
+        /* Styles spécifiques pour chaque type de portefeuille */
+        .portfolio-agressif .download-pdf-btn {
+            color: var(--aggressive-color);
+            border-color: var(--aggressive-color);
+        }
+        
+        .portfolio-agressif .download-pdf-btn:hover {
+            background-color: var(--aggressive-color);
+            color: var(--background-color);
+            box-shadow: 0 0 15px rgba(255, 123, 0, 0.4);
+        }
+        
+        .portfolio-modere .download-pdf-btn {
+            color: var(--moderate-color);
+            border-color: var(--moderate-color);
+        }
+        
+        .portfolio-modere .download-pdf-btn:hover {
+            background-color: var(--moderate-color);
             color: var(--background-color);
             box-shadow: 0 0 15px rgba(0, 255, 135, 0.4);
+        }
+        
+        .portfolio-stable .download-pdf-btn {
+            color: var(--stable-color);
+            border-color: var(--stable-color);
+        }
+        
+        .portfolio-stable .download-pdf-btn:hover {
+            background-color: var(--stable-color);
+            color: var(--background-color);
+            box-shadow: 0 0 15px rgba(0, 178, 255, 0.4);
         }
         
         .download-pdf-btn i {
@@ -116,7 +155,7 @@
             <h2 class="section-title">COMPOSITION DU PORTEFEUILLE</h2>
             
             <!-- Aggressive Portfolio Details -->
-            <div id="aggressiveDetails" class="portfolio-details">
+            <div id="aggressiveDetails" class="portfolio-details portfolio-agressif">
                 <div class="portfolio-table">
                     <div class="table-header">
                         <div class="header-cell">INSTRUMENT</div>
@@ -143,7 +182,7 @@
             </div>
             
             <!-- Moderate Portfolio Details (hidden by default) -->
-            <div id="moderateDetails" class="portfolio-details" style="display: none;">
+            <div id="moderateDetails" class="portfolio-details portfolio-modere" style="display: none;">
                 <div class="portfolio-table">
                     <div class="table-header">
                         <div class="header-cell">INSTRUMENT</div>
@@ -170,7 +209,7 @@
             </div>
             
             <!-- Stable Portfolio Details (hidden by default) -->
-            <div id="stableDetails" class="portfolio-details" style="display: none;">
+            <div id="stableDetails" class="portfolio-details portfolio-stable" style="display: none;">
                 <div class="portfolio-table">
                     <div class="table-header">
                         <div class="header-cell">INSTRUMENT</div>
@@ -208,6 +247,7 @@
 
     <script>
         let portfolioChart;
+        let currentPortfolioType = '';
         
         // Function to get URL parameters
         function getUrlParameter(name) {
@@ -221,6 +261,7 @@
         document.addEventListener('DOMContentLoaded', function() {
             // Get portfolio type from URL parameter (default to 'agressif')
             const portfolioType = getUrlParameter('type') || 'agressif';
+            currentPortfolioType = portfolioType;
             
             // Update page based on selected portfolio type
             updatePortfolioView(portfolioType);
@@ -272,6 +313,7 @@
             // Update page title
             const titleElement = document.getElementById('portfolioTitle');
             const profileDescElement = document.getElementById('profileDescription');
+            currentPortfolioType = type;
             
             // Update portfolio toggles
             document.querySelectorAll('.portfolio-toggle').forEach(toggle => toggle.classList.remove('active'));
@@ -286,20 +328,42 @@
             if (type === 'agressif') {
                 titleElement.textContent = 'PORTEFEUILLE AGRESSIF';
                 profileDescElement.textContent = 'Ce portefeuille vise une croissance maximale, avec une forte exposition aux secteurs en croissance et aux actifs à haut risque.';
+                
+                // Mettre à jour les couleurs des toggles
+                document.documentElement.style.setProperty('--accent-color', 'var(--aggressive-color)');
+                document.documentElement.style.setProperty('--accent-glow', 'var(--aggressive-glow)');
+                
                 initAggressiveChart();
             } else if (type === 'modere') {
                 titleElement.textContent = 'PORTEFEUILLE MODÉRÉ';
                 profileDescElement.textContent = 'Ce portefeuille offre un équilibre entre croissance et stabilité, avec une diversification entre différentes classes d\'actifs.';
+                
+                // Mettre à jour les couleurs des toggles
+                document.documentElement.style.setProperty('--accent-color', 'var(--moderate-color)');
+                document.documentElement.style.setProperty('--accent-glow', 'var(--moderate-glow)');
+                
                 initModerateChart();
             } else if (type === 'stable') {
                 titleElement.textContent = 'PORTEFEUILLE STABLE';
                 profileDescElement.textContent = 'Ce portefeuille privilégie la préservation du capital et les dividendes, avec une faible exposition aux actifs risqués.';
+                
+                // Mettre à jour les couleurs des toggles
+                document.documentElement.style.setProperty('--accent-color', 'var(--stable-color)');
+                document.documentElement.style.setProperty('--accent-glow', 'var(--stable-glow)');
+                
                 initStableChart();
             }
         }
         
         function initAggressiveChart() {
             const ctx = document.getElementById('portfolioChart').getContext('2d');
+            
+            // Define orange color palette
+            const orangeColorPalette = [
+                '#FF7B00', '#FF8F29', '#FFA352', '#FFB77A',
+                '#FFCBA3', '#FFE0CC', '#CC6300', '#994A00',
+                '#663200', '#4C2500', '#331900', '#190C00'
+            ];
             
             // Destroy existing chart if it exists
             if (portfolioChart) {
@@ -321,11 +385,7 @@
                         labels: labels,
                         datasets: [{
                             data: data,
-                            backgroundColor: [
-                                '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
-                                '#B3FFC7', '#CCFFD6', '#00CC6A', '#00994F',
-                                '#007A3D', '#005C2E', '#003F1F', '#002110'
-                            ],
+                            backgroundColor: orangeColorPalette.slice(0, data.length),
                             borderWidth: 0
                         }]
                     },
@@ -338,7 +398,7 @@
                                 display: true,
                                 position: 'right',
                                 labels: {
-                                    color: '#00FF87',
+                                    color: '#FF7B00',
                                     font: {
                                         size: 14,
                                         family: "'Inter', sans-serif"
@@ -356,10 +416,7 @@
                         labels: ['NVDA', 'TSLA', 'AMZN', 'QQQ', 'ICLN', 'BTC', 'ETH'],
                         datasets: [{
                             data: [25, 22, 18, 10, 8, 12, 5],
-                            backgroundColor: [
-                                '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
-                                '#B3FFC7', '#CCFFD6', '#00CC6A'
-                            ],
+                            backgroundColor: orangeColorPalette.slice(0, 7),
                             borderWidth: 0
                         }]
                     },
@@ -372,7 +429,7 @@
                                 display: true,
                                 position: 'right',
                                 labels: {
-                                    color: '#00FF87',
+                                    color: '#FF7B00',
                                     font: {
                                         size: 14,
                                         family: "'Inter', sans-serif"
@@ -387,6 +444,13 @@
         
         function initModerateChart() {
             const ctx = document.getElementById('portfolioChart').getContext('2d');
+            
+            // Define green color palette
+            const greenColorPalette = [
+                '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
+                '#B3FFC7', '#CCFFD6', '#00CC6A', '#00994F',
+                '#007A3D', '#005C2E', '#003F1F', '#002110'
+            ];
             
             // Destroy existing chart if it exists
             if (portfolioChart) {
@@ -408,11 +472,7 @@
                         labels: labels,
                         datasets: [{
                             data: data,
-                            backgroundColor: [
-                                '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
-                                '#B3FFC7', '#CCFFD6', '#00CC6A', '#00994F',
-                                '#007A3D', '#005C2E', '#003F1F', '#002110'
-                            ],
+                            backgroundColor: greenColorPalette.slice(0, data.length),
                             borderWidth: 0
                         }]
                     },
@@ -443,10 +503,7 @@
                         labels: ['MSFT', 'AMZN', 'SPY', 'QQQ', 'TLT', 'NVDA', 'LQD', 'BTC'],
                         datasets: [{
                             data: [15, 12, 20, 15, 15, 10, 8, 5],
-                            backgroundColor: [
-                                '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
-                                '#B3FFC7', '#CCFFD6', '#00CC6A', '#00994F'
-                            ],
+                            backgroundColor: greenColorPalette.slice(0, 8),
                             borderWidth: 0
                         }]
                     },
@@ -475,6 +532,13 @@
         function initStableChart() {
             const ctx = document.getElementById('portfolioChart').getContext('2d');
             
+            // Define blue color palette
+            const blueColorPalette = [
+                '#00B2FF', '#33C0FF', '#66CDFF', '#99DBFF',
+                '#B3E3FF', '#CCE7FF', '#008FCC', '#006C99',
+                '#00476C', '#003752', '#002738', '#00141C'
+            ];
+            
             // Destroy existing chart if it exists
             if (portfolioChart) {
                 portfolioChart.destroy();
@@ -495,11 +559,7 @@
                         labels: labels,
                         datasets: [{
                             data: data,
-                            backgroundColor: [
-                                '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
-                                '#B3FFC7', '#CCFFD6', '#00CC6A', '#00994F',
-                                '#007A3D', '#005C2E', '#003F1F', '#002110'
-                            ],
+                            backgroundColor: blueColorPalette.slice(0, data.length),
                             borderWidth: 0
                         }]
                     },
@@ -512,7 +572,7 @@
                                 display: true,
                                 position: 'right',
                                 labels: {
-                                    color: '#00FF87',
+                                    color: '#00B2FF',
                                     font: {
                                         size: 14,
                                         family: "'Inter', sans-serif"
@@ -530,10 +590,7 @@
                         labels: ['BND', 'JNJ', 'MSFT', 'SPY', 'TLT', 'LQD'],
                         datasets: [{
                             data: [25, 15, 10, 15, 20, 15],
-                            backgroundColor: [
-                                '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
-                                '#B3FFC7', '#CCFFD6'
-                            ],
+                            backgroundColor: blueColorPalette.slice(0, 6),
                             borderWidth: 0
                         }]
                     },
@@ -546,7 +603,7 @@
                                 display: true,
                                 position: 'right',
                                 labels: {
-                                    color: '#00FF87',
+                                    color: '#00B2FF',
                                     font: {
                                         size: 14,
                                         family: "'Inter', sans-serif"
@@ -604,16 +661,20 @@
             // Get portfolio title based on type
             let portfolioTitle = '';
             let portfolioDesc = '';
+            let themeColor = '#00FF87'; // Default green
             
             if (portfolioType === 'agressif') {
                 portfolioTitle = 'PORTEFEUILLE AGRESSIF';
                 portfolioDesc = 'Ce portefeuille vise une croissance maximale, avec une forte exposition aux secteurs en croissance et aux actifs à haut risque.';
+                themeColor = '#FF7B00'; // Orange
             } else if (portfolioType === 'modere') {
                 portfolioTitle = 'PORTEFEUILLE MODÉRÉ';
                 portfolioDesc = 'Ce portefeuille offre un équilibre entre croissance et stabilité, avec une diversification entre différentes classes d\'actifs.';
+                themeColor = '#00FF87'; // Green
             } else if (portfolioType === 'stable') {
                 portfolioTitle = 'PORTEFEUILLE STABLE';
                 portfolioDesc = 'Ce portefeuille privilégie la préservation du capital et les dividendes, avec une faible exposition aux actifs risqués.';
+                themeColor = '#00B2FF'; // Blue
             }
             
             // Get portfolio data
@@ -669,12 +730,12 @@
             // Add content to the div
             captureDiv.innerHTML = `
                 <div style="text-align: center; margin-bottom: 30px;">
-                    <div style="display: inline-block; width: 16px; height: 16px; background-color: #00FF87; border-radius: 50%; margin-bottom: 10px;"></div>
+                    <div style="display: inline-block; width: 16px; height: 16px; background-color: ${themeColor}; border-radius: 50%; margin-bottom: 10px;"></div>
                     <h1 style="font-size: 28px; font-weight: 900; margin: 0; color: #FFFFFF; letter-spacing: 1px;">TRADEPULSE</h1>
                     <p style="font-size: 12px; opacity: 0.8; margin-top: 5px;">POWERED BY PERPLEXITY AI</p>
                 </div>
                 
-                <h2 style="font-size: 24px; text-align: center; margin-bottom: 20px; color: #00FF87;">${portfolioTitle}</h2>
+                <h2 style="font-size: 24px; text-align: center; margin-bottom: 20px; color: ${themeColor};">${portfolioTitle}</h2>
                 <p style="margin-bottom: 30px; text-align: center; font-size: 14px;">${portfolioDesc}</p>
                 
                 <p style="margin-bottom: 30px; text-align: center; font-size: 12px;">
@@ -682,18 +743,18 @@
                 </p>
                 
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-                    <tr style="border-bottom: 1px solid #00FF87; color: #00FF87;">
+                    <tr style="border-bottom: 1px solid ${themeColor}; color: ${themeColor};">
                         <th style="padding: 10px; text-align: left; font-size: 14px;">INSTRUMENT</th>
                         <th style="padding: 10px; text-align: left; font-size: 14px;">SYMBOLE</th>
                         <th style="padding: 10px; text-align: left; font-size: 14px;">TYPE</th>
                         <th style="padding: 10px; text-align: right; font-size: 14px;">ALLOCATION</th>
                     </tr>
                     ${portfolioData.map(asset => `
-                        <tr style="border-bottom: 1px solid rgba(0, 255, 135, 0.2);">
+                        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
                             <td style="padding: 10px; text-align: left; font-size: 14px;">${asset.name}</td>
                             <td style="padding: 10px; text-align: left; font-size: 14px;">${asset.symbol}</td>
                             <td style="padding: 10px; text-align: left; font-size: 14px;">${asset.type}</td>
-                            <td style="padding: 10px; text-align: right; font-size: 14px;">${asset.allocation}%</td>
+                            <td style="padding: 10px; text-align: right; font-size: 14px; color: ${themeColor};">${asset.allocation}%</td>
                         </tr>
                     `).join('')}
                 </table>
