@@ -6,8 +6,11 @@
 
 // Configuration de l'API
 const API_CONFIG = {
-    // URL du serveur proxy (à modifier selon votre configuration)
-    baseUrl: 'https://tradepulse-api.onrender.com', // Remplacez par l'URL de votre service Render
+    // URL du serveur proxy
+    baseUrl: 'https://stock-analysis-platform-q9tc.onrender.com',
+    
+    // Mode debug pour afficher plus d'informations dans la console
+    debug: true,
     
     // Endpoints
     endpoints: {
@@ -45,17 +48,34 @@ class PerplexityIntegration {
      */
     async init() {
         console.log('Initialisation de l\'intégration Perplexity...');
+        console.log('URL de l\'API:', API_CONFIG.baseUrl);
         
         try {
-            // Charger les données pour la première fois
-            await this.updateData();
+            // Vérifier si l'API est accessible
+            const testResponse = await fetch(`${API_CONFIG.baseUrl}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
             
-            // Configurer une mise à jour périodique
-            setInterval(() => this.updateData(), API_CONFIG.updatesInterval);
-            
-            console.log('Intégration Perplexity initialisée avec succès');
+            if (testResponse.ok) {
+                const testData = await testResponse.json();
+                console.log('✅ API accessible:', testData);
+                
+                // Charger les données pour la première fois
+                await this.updateData();
+                
+                // Configurer une mise à jour périodique
+                setInterval(() => this.updateData(), API_CONFIG.updatesInterval);
+                
+                console.log('✅ Intégration Perplexity initialisée avec succès');
+            } else {
+                console.error('❌ API inaccessible:', testResponse.status, testResponse.statusText);
+                this.loadFallbackData();
+            }
         } catch (error) {
-            console.error('Erreur lors de l\'initialisation de l\'intégration Perplexity:', error);
+            console.error('❌ Erreur lors de l\'initialisation de l\'intégration Perplexity:', error);
             
             // Charger des données de secours en cas d'échec
             this.loadFallbackData();
@@ -66,7 +86,7 @@ class PerplexityIntegration {
      * Charge des données de secours en cas d'erreur avec l'API
      */
     loadFallbackData() {
-        console.log('Chargement des données de secours...');
+        console.log('⚠️ Chargement des données de secours...');
         
         // Simuler des données pour le développement
         const now = new Date();
@@ -287,7 +307,7 @@ class PerplexityIntegration {
      * Met à jour les données depuis Perplexity
      */
     async updateData() {
-        console.log('Mise à jour des données depuis Perplexity...');
+        console.log('🔄 Mise à jour des données depuis Perplexity...');
         
         try {
             // Mettre à jour les actualités et les portefeuilles en parallèle
@@ -299,10 +319,11 @@ class PerplexityIntegration {
             // Mise à jour des affichages sur le site
             this.updateUI();
             
-            console.log('Données mises à jour avec succès');
+            console.log('✅ Données mises à jour avec succès');
             return { newsData, portfoliosData };
         } catch (error) {
-            console.error('Erreur lors de la mise à jour des données:', error);
+            console.error('❌ Erreur lors de la mise à jour des données:', error);
+            this.loadFallbackData();
             throw error;
         }
     }
@@ -312,7 +333,7 @@ class PerplexityIntegration {
      */
     async updateNews() {
         try {
-            console.log('Récupération des actualités depuis l\'API...');
+            console.log('🔍 Récupération des actualités depuis l\'API...');
             
             // Appel à l'API via le proxy
             const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.news}`, {
@@ -324,20 +345,24 @@ class PerplexityIntegration {
             });
             
             if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
+                throw new Error(`Erreur HTTP: ${response.status} ${response.statusText}`);
             }
             
             // Récupération et traitement des données
             const data = await response.json();
             
+            if (API_CONFIG.debug) {
+                console.log('📊 Actualités reçues:', data);
+            }
+            
             // Mise à jour des données d'actualités
             this.newsData = data;
             
-            console.log('Actualités mises à jour avec succès');
+            console.log('✅ Actualités mises à jour avec succès');
             return this.newsData;
             
         } catch (error) {
-            console.error('Erreur lors de la mise à jour des actualités:', error);
+            console.error('❌ Erreur lors de la mise à jour des actualités:', error);
             throw error;
         }
     }
@@ -347,7 +372,7 @@ class PerplexityIntegration {
      */
     async updatePortfolios() {
         try {
-            console.log('Récupération des portefeuilles depuis l\'API...');
+            console.log('🔍 Récupération des portefeuilles depuis l\'API...');
             
             // Appel à l'API via le proxy
             const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.portfolios}`, {
@@ -359,20 +384,24 @@ class PerplexityIntegration {
             });
             
             if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
+                throw new Error(`Erreur HTTP: ${response.status} ${response.statusText}`);
             }
             
             // Récupération et traitement des données
             const data = await response.json();
             
+            if (API_CONFIG.debug) {
+                console.log('📊 Portefeuilles reçus:', data);
+            }
+            
             // Mise à jour des données de portefeuilles
             this.portfolios = data;
             
-            console.log('Portefeuilles mis à jour avec succès');
+            console.log('✅ Portefeuilles mis à jour avec succès');
             return this.portfolios;
             
         } catch (error) {
-            console.error('Erreur lors de la mise à jour des portefeuilles:', error);
+            console.error('❌ Erreur lors de la mise à jour des portefeuilles:', error);
             throw error;
         }
     }
@@ -382,7 +411,8 @@ class PerplexityIntegration {
      */
     async search(query) {
         try {
-            console.log(`Recherche: "${query}"`);
+            console.log(`🔍 Recherche: "${query}"`);
+            console.log(`📡 URL complète: ${API_CONFIG.baseUrl}${API_CONFIG.endpoints.search}`);
             
             // Appel à l'API via le proxy
             const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.search}`, {
@@ -394,17 +424,27 @@ class PerplexityIntegration {
             });
             
             if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
+                console.error(`❌ Erreur HTTP: ${response.status} ${response.statusText}`);
+                throw new Error(`Erreur HTTP: ${response.status} ${response.statusText}`);
             }
             
             // Récupération et traitement des données
             const data = await response.json();
             
-            console.log('Recherche effectuée avec succès');
+            if (API_CONFIG.debug) {
+                console.log('📊 Résultats de recherche reçus:', data);
+            }
+            
+            console.log('✅ Recherche effectuée avec succès');
             return data;
             
         } catch (error) {
-            console.error('Erreur lors de la recherche:', error);
+            console.error('❌ Erreur lors de la recherche:', error);
+            // Utilisez simulatePerplexityResponse si elle est disponible globalement
+            if (typeof simulatePerplexityResponse === 'function') {
+                console.log('⚠️ Utilisation des données simulées pour la recherche');
+                return simulatePerplexityResponse(query);
+            }
             throw error;
         }
     }
@@ -477,9 +517,9 @@ class PerplexityIntegration {
             // Mettre à jour le conteneur des actualités
             newsGrid.innerHTML = newsHTML;
             
-            console.log('Interface des actualités mise à jour');
+            console.log('✅ Interface des actualités mise à jour');
         } catch (error) {
-            console.error('Erreur lors de la mise à jour de l\'interface des actualités:', error);
+            console.error('❌ Erreur lors de la mise à jour de l\'interface des actualités:', error);
         }
     }
     
@@ -532,9 +572,9 @@ class PerplexityIntegration {
                 updateTimestamp.textContent = `${dateStr} à ${timeStr}`;
             }
             
-            console.log('Interface des portefeuilles mise à jour');
+            console.log('✅ Interface des portefeuilles mise à jour');
         } catch (error) {
-            console.error('Erreur lors de la mise à jour de l\'interface des portefeuilles:', error);
+            console.error('❌ Erreur lors de la mise à jour de l\'interface des portefeuilles:', error);
         }
     }
     
