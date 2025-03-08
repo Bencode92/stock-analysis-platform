@@ -9,6 +9,55 @@
     <link rel="stylesheet" href="pages-style.css">
     <link rel="stylesheet" href="search-style.css">
     <script type="module" src="aiintegration.js"></script>
+    <style>
+        /* Style pour le compteur de questions */
+        .quota-counter {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 10px;
+            padding: 8px 12px;
+            background-color: rgba(0, 255, 135, 0.1);
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        
+        .quota-counter i {
+            color: var(--accent-color);
+        }
+        
+        .quota-counter.low {
+            background-color: rgba(255, 123, 0, 0.1);
+        }
+        
+        .quota-counter.low i {
+            color: #FF7B00;
+        }
+        
+        .quota-counter.exhausted {
+            background-color: rgba(255, 51, 51, 0.1);
+        }
+        
+        .quota-counter.exhausted i {
+            color: #FF3333;
+        }
+        
+        .quota-reset-time {
+            font-size: 0.8rem;
+            opacity: 0.8;
+        }
+        
+        .search-button[disabled] {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .example-button[disabled] {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
 </head>
 <body class="page-recherche fade-in">
     <header class="page-header">
@@ -45,6 +94,12 @@
                 </div>
                 <h2>Posez une question sur les marchés, les actifs ou les stratégies d'investissement</h2>
                 <p>Notre intelligence artificielle analysera les dernières informations et vous fournira une réponse détaillée avec des sources fiables.</p>
+                
+                <!-- Compteur de questions -->
+                <div id="quotaCounter" class="quota-counter">
+                    <i class="fas fa-comment-dots"></i>
+                    <span>Questions restantes aujourd'hui: <strong id="questionsRemaining">3</strong></span>
+                </div>
             </div>
             
             <div class="search-form">
@@ -132,12 +187,25 @@
             // Mode debug (mettre à true pour activer)
             const DEBUG_MODE = true;
             
+            // Configuration du quota de questions
+            const QUESTIONS_QUOTA = {
+                max: 3,                // Maximum de questions par période
+                period: 60 * 60 * 1000, // Période de quota (1 heure en millisecondes)
+                storageKey: 'tradepulse_questions_quota'
+            };
+            
+            // Variables pour le suivi des questions
+            let questionsQuota = getQuestionsQuota();
+            
             // Update market time
             updateMarketTime();
             setInterval(updateMarketTime, 1000);
             
             // Update current date
             updateCurrentDate();
+            
+            // Mettre à jour l'affichage du quota
+            updateQuotaDisplay();
             
             // Afficher la section de débogage si nécessaire
             if (DEBUG_MODE) {
@@ -147,6 +215,11 @@
             // Handle example buttons
             document.querySelectorAll('.example-button').forEach(button => {
                 button.addEventListener('click', function() {
+                    if (questionsQuota.remaining <= 0) {
+                        alert('Vous avez atteint votre limite de questions pour l\'heure en cours. Veuillez réessayer plus tard.');
+                        return;
+                    }
+                    
                     const query = this.getAttribute('data-query');
                     document.getElementById('queryInput').value = query;
                     document.getElementById('queryForm').dispatchEvent(new Event('submit'));
@@ -158,7 +231,22 @@
                 e.preventDefault();
                 const query = document.getElementById('queryInput').value.trim();
                 
+                // Vérifier si le quota est épuisé
+                if (questionsQuota.remaining <= 0) {
+                    alert('Vous avez atteint votre limite de questions pour l\'heure en cours. Veuillez réessayer plus tard.');
+                    return;
+                }
+                
                 if (query) {
+                    // Décrémenter le quota
+                    questionsQuota.remaining--;
+                    questionsQuota.questions.push({
+                        timestamp: Date.now(),
+                        query: query
+                    });
+                    saveQuestionsQuota(questionsQuota);
+                    updateQuotaDisplay();
+                    
                     // Show loading state
                     document.querySelector('.initial-state').style.display = 'none';
                     document.querySelector('.loading-state').style.display = 'flex';
@@ -210,6 +298,106 @@
                     }
                 }
             });
+            
+            // Fonction pour récupérer le quota de questions
+            function getQuestionsQuota() {
+                // Récupérer le quota enregistré
+                const savedQuota = localStorage.getItem(QUESTIONS_QUOTA.storageKey);
+                let quota;
+                
+                if (savedQuota) {
+                    quota = JSON.parse(savedQuota);
+                    
+                    // Nettoyer les anciennes questions (plus d'une heure)
+                    const now = Date.now();
+                    quota.questions = quota.questions.filter(q => 
+                        now - q.timestamp < QUESTIONS_QUOTA.period
+                    );
+                    
+                    // Mettre à jour le nombre de questions restantes
+                    quota.remaining = QUESTIONS_QUOTA.max - quota.questions.length;
+                    quota.resetTime = quota.questions.length > 0 ? 
+                        Math.min(...quota.questions.map(q => q.timestamp)) + QUESTIONS_QUOTA.period : 
+                        null;
+                } else {
+                    quota = {
+                        remaining: QUESTIONS_QUOTA.max,
+                        questions: [],
+                        resetTime: null
+                    };
+                }
+                
+                return quota;
+            }
+            
+            // Fonction pour enregistrer le quota de questions
+            function saveQuestionsQuota(quota) {
+                localStorage.setItem(QUESTIONS_QUOTA.storageKey, JSON.stringify(quota));
+            }
+            
+            // Fonction pour mettre à jour l'affichage du quota
+            function updateQuotaDisplay() {
+                const counterElement = document.getElementById('quotaCounter');
+                const remainingElement = document.getElementById('questionsRemaining');
+                
+                // Mettre à jour le nombre de questions restantes
+                remainingElement.textContent = questionsQuota.remaining;
+                
+                // Mettre à jour la classe du compteur en fonction du nombre de questions restantes
+                counterElement.classList.remove('low', 'exhausted');
+                if (questionsQuota.remaining === 0) {
+                    counterElement.classList.add('exhausted');
+                } else if (questionsQuota.remaining === 1) {
+                    counterElement.classList.add('low');
+                }
+                
+                // Afficher le temps de réinitialisation si nécessaire
+                if (questionsQuota.resetTime && questionsQuota.remaining < QUESTIONS_QUOTA.max) {
+                    // Vérifier s'il existe déjà un élément de temps de réinitialisation
+                    let resetTimeElement = document.querySelector('.quota-reset-time');
+                    if (!resetTimeElement) {
+                        resetTimeElement = document.createElement('div');
+                        resetTimeElement.className = 'quota-reset-time';
+                        counterElement.appendChild(resetTimeElement);
+                    }
+                    
+                    // Calculer le temps restant
+                    const now = Date.now();
+                    const oldestQueryTime = Math.min(...questionsQuota.questions.map(q => q.timestamp));
+                    const resetTime = oldestQueryTime + QUESTIONS_QUOTA.period;
+                    const timeRemaining = resetTime - now;
+                    
+                    if (timeRemaining > 0) {
+                        const minutes = Math.floor(timeRemaining / 60000);
+                        const seconds = Math.floor((timeRemaining % 60000) / 1000);
+                        resetTimeElement.textContent = `Renouvellement dans ${minutes}m ${seconds}s`;
+                        
+                        // Mettre à jour le temps restant toutes les secondes
+                        setTimeout(updateQuotaDisplay, 1000);
+                    } else {
+                        // Actualiser le quota si le temps est écoulé
+                        questionsQuota = getQuestionsQuota();
+                        saveQuestionsQuota(questionsQuota);
+                        resetTimeElement.remove();
+                    }
+                }
+                
+                // Désactiver les boutons si le quota est épuisé
+                const searchButton = document.querySelector('.search-button');
+                const exampleButtons = document.querySelectorAll('.example-button');
+                
+                if (questionsQuota.remaining <= 0) {
+                    searchButton.setAttribute('disabled', 'disabled');
+                    exampleButtons.forEach(button => {
+                        button.setAttribute('disabled', 'disabled');
+                    });
+                } else {
+                    searchButton.removeAttribute('disabled');
+                    exampleButtons.forEach(button => {
+                        button.removeAttribute('disabled');
+                    });
+                }
+            }
             
             // Fonction pour le débogage
             function logDebug(message) {
@@ -268,6 +456,13 @@
                 button.className = 'related-query-button';
                 button.textContent = query;
                 button.addEventListener('click', function() {
+                    // Vérifier le quota avant de poser une question associée
+                    const quotaData = JSON.parse(localStorage.getItem('tradepulse_questions_quota') || '{"remaining":3,"questions":[]}');
+                    if (quotaData.remaining <= 0) {
+                        alert('Vous avez atteint votre limite de questions pour l\'heure en cours. Veuillez réessayer plus tard.');
+                        return;
+                    }
+                    
                     document.getElementById('queryInput').value = query;
                     document.getElementById('queryForm').dispatchEvent(new Event('submit'));
                 });
