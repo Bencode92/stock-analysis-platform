@@ -165,7 +165,7 @@
                     </div>
                 </div>
 
-                <!-- État de débogage (masqué par défaut) -->
+                <!-- État de débogage (masqué) -->
                 <div id="debugInfo" style="display: none; margin-top: 30px; padding: 20px; background: rgba(0,0,0,0.5); border-radius: 8px;">
                     <h3 style="color: #00ff99;">Informations de débogage</h3>
                     <pre id="debugContent" style="color: #ffffff; overflow-x: auto; white-space: pre-wrap;"></pre>
@@ -184,8 +184,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Mode debug (mettre à true pour activer)
-            const DEBUG_MODE = true;
+            // Mode debug (désactivé pour la production)
+            const DEBUG_MODE = false;
             
             // Configuration du quota de questions
             const QUESTIONS_QUOTA = {
