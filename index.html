@@ -5,40 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TradePulse - Finance Intelligence Platform</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="landing-style.css">
     <style>
-        /* Styles généraux */
-        body, html {
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', sans-serif;
-            height: 100%;
-            width: 100%;
-            background-color: #001220;
-            color: white;
-            overflow: hidden;
-        }
-        
-        /* Container principal */
-        .container {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            position: relative;
-        }
-        
-        /* Effet de particules en arrière-plan */
-        .particles {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
-        
-        /* Zone de la pièce */
+        /* Styles additionnels pour l'animation de pièce */
         .coin-container {
             width: 360px;
             height: 360px;
@@ -47,9 +16,9 @@
             z-index: 2;
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
+            position: relative;
         }
         
-        /* Animation de la pièce */
         .coin {
             width: 100%;
             height: 100%;
@@ -63,12 +32,10 @@
             animation-play-state: paused;
         }
         
-        /* Animation au survol ou interaction */
         .coin-container:hover .coin {
             transform: rotateY(180deg);
         }
         
-        /* Faces de la pièce */
         .coin-face {
             position: absolute;
             width: 100%;
@@ -80,25 +47,22 @@
             justify-content: center;
             align-items: center;
             text-align: center;
-            border: 3px solid #00ff99;
+            border: 3px solid var(--accent-color);
             box-shadow: 0 0 20px rgba(0, 255, 153, 0.5), 
                         0 0 40px rgba(0, 255, 153, 0.3), 
                         inset 0 0 20px rgba(0, 255, 153, 0.2);
             background: radial-gradient(ellipse at center, #001e36 0%, #000c14 100%);
         }
         
-        /* Face avant */
         .coin-front {
             transform: rotateY(0deg);
         }
         
-        /* Face arrière (date) */
         .coin-back {
             transform: rotateY(180deg);
         }
         
-        /* Logo principal */
-        .logo {
+        .coin-logo {
             font-size: 60px;
             font-weight: 900;
             letter-spacing: 1px;
@@ -106,19 +70,7 @@
             text-shadow: 0 0 15px rgba(0, 255, 153, 0.7);
         }
         
-        /* Point lumineux du logo */
-        .pulse-dot {
-            width: 16px;
-            height: 16px;
-            background-color: #00ff99;
-            border-radius: 50%;
-            margin: 10px auto;
-            box-shadow: 0 0 15px rgba(0, 255, 153, 0.8);
-            animation: pulse 2s infinite;
-        }
-        
-        /* Texte secondaire */
-        .subtitle {
+        .coin-subtitle {
             font-size: 16px;
             font-weight: 400;
             opacity: 0.8;
@@ -126,51 +78,23 @@
             letter-spacing: 1px;
         }
         
-        /* Date */
-        .date {
+        .coin-date {
             font-size: 80px;
             font-weight: 900;
             margin: 0;
-            color: #00ff99;
+            color: var(--accent-color);
             text-shadow: 0 0 20px rgba(0, 255, 153, 0.7);
         }
         
-        /* Bouton de démarrage */
-        .start-button {
-            padding: 16px 48px;
-            font-size: 24px;
-            font-weight: 600;
-            background-color: transparent;
-            color: white;
-            border: 2px solid #00ff99;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 60px;
-            z-index: 2;
-            letter-spacing: 2px;
-            box-shadow: 0 0 15px rgba(0, 255, 153, 0.3);
-            text-decoration: none;
-            display: inline-block;
-        }
-        
-        .start-button:hover {
-            background-color: rgba(0, 255, 153, 0.2);
-            box-shadow: 0 0 20px rgba(0, 255, 153, 0.6);
-            transform: translateY(-2px);
-        }
-        
-        /* Footer */
-        .footer {
+        .particles {
             position: absolute;
-            bottom: 20px;
-            text-align: center;
-            font-size: 14px;
-            opacity: 0.7;
-            z-index: 2;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
         }
         
-        /* Animations */
         @keyframes rotate {
             0% { transform: rotateY(0); }
             45% { transform: rotateY(1080deg); }
@@ -178,91 +102,83 @@
             95% { transform: rotateY(0); }
             100% { transform: rotateY(0); }
         }
-        
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(0, 255, 153, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(0, 255, 153, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(0, 255, 153, 0); }
-        }
-        
-        /* Effet d'apparition progressive */
-        .fade-in {
-            animation: fadeIn 1s ease-in-out forwards;
-            opacity: 0;
-        }
-        
-        .fade-out {
-            animation: fadeOut 0.8s ease-in-out forwards;
-        }
-        
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
-        }
     </style>
 </head>
 <body>
-    <div class="container fade-in">
+    <div class="landing-container">
         <div class="particles" id="particles-js"></div>
         
-        <!-- Conteneur de la pièce -->
+        <!-- Animation de pièce -->
         <div class="coin-container" id="coinContainer">
             <div class="coin">
                 <!-- Face avant de la pièce -->
                 <div class="coin-face coin-front">
                     <div class="pulse-dot"></div>
-                    <h1 class="logo">TRADEPULSE</h1>
-                    <p class="subtitle">POWERED BY PERPLEXITY AI</p>
+                    <h1 class="coin-logo">TRADEPULSE</h1>
+                    <p class="coin-subtitle">POWERED BY PERPLEXITY AI</p>
                 </div>
                 
                 <!-- Face arrière de la pièce (date) -->
                 <div class="coin-face coin-back">
-                    <p class="date" id="currentDate">08.03.2025</p>
+                    <p class="coin-date" id="coinDate">08.03.2025</p>
                 </div>
             </div>
         </div>
         
-        <!-- Bouton START -->
-        <a href="actualites.html" class="start-button" id="startButton">START</a>
-        
-        <footer class="footer">
-            © 2025 TradePulse | Finance Intelligence Platform
+        <a href="actualites.html" class="start-button">
+            <div class="button-inner">START</div>
+        </a>
+
+        <footer class="landing-footer">
+            <p>© 2025 TradePulse | Finance Intelligence Platform</p>
         </footer>
     </div>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Mettre à jour la date
-            const dateElement = document.getElementById('currentDate');
+        // Update date in the format DD.MM.YYYY
+        function updateDate() {
             const now = new Date();
             const day = String(now.getDate()).padStart(2, '0');
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const year = now.getFullYear();
-            dateElement.textContent = `${day}.${month}.${year}`;
             
-            // Navigation vers la page principale au clic sur la pièce
-            document.getElementById('coinContainer').addEventListener('click', function() {
-                document.body.classList.add('fade-out');
-                setTimeout(() => {
-                    window.location.href = 'actualites.html';
-                }, 800);
-            });
+            document.getElementById('currentDate').innerText = `${day}.${month}.${year}`;
+            document.getElementById('coinDate').innerText = `${day}.${month}.${year}`;
+        }
+        
+        // Navigation vers la page principale au clic sur la pièce
+        document.getElementById('coinContainer').addEventListener('click', function() {
+            document.body.classList.add('fade-out');
+            setTimeout(() => {
+                window.location.href = 'actualites.html';
+            }, 800);
+        });
+        
+        // Animate the start button when hovered
+        const startButton = document.querySelector('.start-button');
+        startButton.addEventListener('mouseenter', function() {
+            this.classList.add('pulse');
+        });
+        
+        startButton.addEventListener('mouseleave', function() {
+            this.classList.remove('pulse');
+        });
+        
+        // Add page transition on button click
+        startButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            document.body.classList.add('fade-out');
             
-            // Animation de transition pour le bouton
-            document.getElementById('startButton').addEventListener('click', function(e) {
-                e.preventDefault();
-                document.body.classList.add('fade-out');
-                setTimeout(() => {
-                    window.location.href = this.getAttribute('href');
-                }, 800);
-            });
+            setTimeout(() => {
+                window.location.href = this.getAttribute('href');
+            }, 800); // Transition time
+        });
+        
+        // Initialize date on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDate();
             
             // Configuration de l'effet de particules
             if (window.particlesJS) {
