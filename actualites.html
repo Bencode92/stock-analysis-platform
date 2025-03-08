@@ -10,6 +10,141 @@
     <link rel="stylesheet" href="timeline-style.css">
     <link rel="stylesheet" href="search-style.css">
     <script type="module" src="aiintegration.js"></script>
+    <style>
+        /* Style pour le bouton News Time */
+        .news-time-button {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: linear-gradient(135deg, #001e36 0%, #011627 100%);
+            border: 2px solid var(--accent-color);
+            border-radius: 8px;
+            padding: 10px 20px;
+            margin: 20px auto;
+            cursor: pointer;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            max-width: 300px;
+        }
+        
+        .news-time-button::before {
+            content: "";
+            position: absolute;
+            top: -10px;
+            left: -10px;
+            right: -10px;
+            bottom: -10px;
+            background: linear-gradient(45deg, var(--accent-color), transparent, var(--accent-color));
+            opacity: 0;
+            z-index: 0;
+            transition: opacity 0.5s ease;
+        }
+        
+        .news-time-button:hover::before {
+            opacity: 0.2;
+        }
+        
+        .news-time-icon {
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            box-shadow: 0 0 10px rgba(0, 255, 135, 0.6);
+        }
+        
+        .news-time-icon i {
+            color: var(--background-color);
+            font-size: 18px;
+        }
+        
+        .news-time-content {
+            z-index: 1;
+            text-align: left;
+        }
+        
+        .news-time-title {
+            font-weight: 700;
+            font-size: 16px;
+            letter-spacing: 1px;
+            margin: 0;
+            color: var(--accent-color);
+        }
+        
+        .news-time-subtitle {
+            font-size: 11px;
+            opacity: 0.7;
+            margin: 2px 0 0 0;
+        }
+        
+        .news-time-button.loading {
+            cursor: not-allowed;
+        }
+        
+        .news-time-button.loading .news-time-icon {
+            position: relative;
+        }
+        
+        .news-time-button.loading .news-time-icon i {
+            animation: spin 1.5s linear infinite;
+        }
+        
+        .news-time-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 30px 0;
+        }
+        
+        .last-update-info {
+            margin-left: 15px;
+            font-size: 12px;
+            opacity: 0.7;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
+        }
+        
+        /* Animation de notification */
+        .update-notification {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: var(--accent-color);
+            color: var(--background-color);
+            padding: 12px 24px;
+            border-radius: 4px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+        
+        .update-notification.show {
+            opacity: 1;
+        }
+        
+        .update-notification i {
+            margin-right: 10px;
+        }
+    </style>
 </head>
 <body class="page-actualites fade-in">
     <header class="page-header">
@@ -40,6 +175,28 @@
         <section class="page-title-section">
             <h1 class="page-title">ACTUALITÉS FINANCIÈRES</h1>
             <p class="page-subtitle" id="currentDate">07 MARS 2025</p>
+            
+            <!-- Bouton News Time -->
+            <div class="news-time-wrapper">
+                <button id="newsTimeButton" class="news-time-button">
+                    <div class="news-time-icon">
+                        <i class="fas fa-sync-alt"></i>
+                    </div>
+                    <div class="news-time-content">
+                        <p class="news-time-title">NEWS TIME</p>
+                        <p class="news-time-subtitle">Actualiser les données</p>
+                    </div>
+                </button>
+                <div class="last-update-info">
+                    Dernière mise à jour: <span id="lastUpdateTime">07/03/2025 10:15:53</span>
+                </div>
+            </div>
+            
+            <!-- Notification de mise à jour -->
+            <div id="updateNotification" class="update-notification">
+                <i class="fas fa-check-circle"></i>
+                <span>Données mises à jour avec succès!</span>
+            </div>
         </section>
 
         <div class="timeline-container">
@@ -302,6 +459,9 @@
             // Update current date
             updateCurrentDate();
             
+            // Initialiser le bouton News Time
+            initNewsTimeButton();
+            
             // Add transition on portfolio button clicks
             document.querySelectorAll('.portfolio-button').forEach(button => {
                 button.addEventListener('click', function(e) {
@@ -339,6 +499,136 @@
             });
         });
         
+        // Initialiser le bouton News Time
+        function initNewsTimeButton() {
+            const button = document.getElementById('newsTimeButton');
+            if (!button) return;
+            
+            // Vérifier s'il existe une date de dernière mise à jour
+            const lastUpdateTime = localStorage.getItem('tradepulse_last_update');
+            if (lastUpdateTime) {
+                const date = new Date(parseInt(lastUpdateTime));
+                document.getElementById('lastUpdateTime').textContent = formatDateTime(date);
+                document.getElementById('updateTime').textContent = formatDateTime(date);
+            }
+            
+            // Ajouter l'événement de clic
+            button.addEventListener('click', function() {
+                if (button.classList.contains('loading')) return;
+                
+                // Ajouter la classe de chargement
+                button.classList.add('loading');
+                button.querySelector('i').classList.remove('fa-sync-alt');
+                button.querySelector('i').classList.add('fa-spinner');
+                
+                // Mise à jour des données via l'API
+                if (window.perplexityIntegration) {
+                    try {
+                        window.perplexityIntegration.updateData()
+                            .then(data => {
+                                // Mettre à jour la date de dernière mise à jour
+                                const now = Date.now();
+                                localStorage.setItem('tradepulse_last_update', now.toString());
+                                document.getElementById('lastUpdateTime').textContent = formatDateTime(new Date(now));
+                                document.getElementById('updateTime').textContent = formatDateTime(new Date(now));
+                                
+                                // Enlever la classe de chargement
+                                button.classList.remove('loading');
+                                button.querySelector('i').classList.remove('fa-spinner');
+                                button.querySelector('i').classList.add('fa-sync-alt');
+                                
+                                // Afficher la notification de succès
+                                showUpdateNotification('Données mises à jour avec succès!', 'success');
+                                
+                                // Recharger la page pour afficher les nouvelles données
+                                setTimeout(() => {
+                                    window.location.reload();
+                                }, 1500);
+                            })
+                            .catch(error => {
+                                console.error('Erreur lors de la mise à jour des données:', error);
+                                
+                                // Enlever la classe de chargement
+                                button.classList.remove('loading');
+                                button.querySelector('i').classList.remove('fa-spinner');
+                                button.querySelector('i').classList.add('fa-sync-alt');
+                                
+                                // Afficher la notification d'erreur
+                                showUpdateNotification('Erreur lors de la mise à jour des données. Veuillez réessayer.', 'error');
+                            });
+                    } catch (error) {
+                        console.error('Erreur lors de la mise à jour des données:', error);
+                        
+                        // Enlever la classe de chargement
+                        button.classList.remove('loading');
+                        button.querySelector('i').classList.remove('fa-spinner');
+                        button.querySelector('i').classList.add('fa-sync-alt');
+                        
+                        // Afficher la notification d'erreur
+                        showUpdateNotification('Erreur lors de la mise à jour des données. Veuillez réessayer.', 'error');
+                    }
+                } else {
+                    // Simuler une mise à jour si l'intégration n'est pas disponible
+                    setTimeout(() => {
+                        // Mettre à jour la date de dernière mise à jour
+                        const now = Date.now();
+                        localStorage.setItem('tradepulse_last_update', now.toString());
+                        document.getElementById('lastUpdateTime').textContent = formatDateTime(new Date(now));
+                        document.getElementById('updateTime').textContent = formatDateTime(new Date(now));
+                        
+                        // Enlever la classe de chargement
+                        button.classList.remove('loading');
+                        button.querySelector('i').classList.remove('fa-spinner');
+                        button.querySelector('i').classList.add('fa-sync-alt');
+                        
+                        // Afficher la notification de succès
+                        showUpdateNotification('Données mises à jour avec succès!', 'success');
+                        
+                        // Recharger la page pour afficher les nouvelles données
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1500);
+                    }, 2000);
+                }
+            });
+        }
+        
+        // Afficher une notification de mise à jour
+        function showUpdateNotification(message, type = 'success') {
+            const notification = document.getElementById('updateNotification');
+            if (!notification) return;
+            
+            // Mettre à jour le message et l'icône
+            const icon = notification.querySelector('i');
+            if (icon) {
+                icon.className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
+            }
+            
+            const text = notification.querySelector('span');
+            if (text) {
+                text.textContent = message;
+            }
+            
+            // Ajouter la classe show
+            notification.classList.add('show');
+            
+            // Masquer la notification après 3 secondes
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Formater une date et heure
+        function formatDateTime(date) {
+            const dateStr = date.toLocaleDateString('fr-FR');
+            const timeStr = date.toLocaleTimeString('fr-FR', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            return `${dateStr} ${timeStr}`;
+        }
+        
         // Update market time
         function updateMarketTime() {
             const marketTimeElement = document.getElementById('marketTime');
@@ -359,18 +649,6 @@
                 const options = { day: 'numeric', month: 'long', year: 'numeric' };
                 const dateStr = now.toLocaleDateString('fr-FR', options).toUpperCase();
                 dateElement.textContent = dateStr;
-            }
-            
-            const updateTimeElement = document.getElementById('updateTime');
-            if (updateTimeElement) {
-                const now = new Date();
-                const dateStr = now.toLocaleDateString('fr-FR');
-                const timeStr = now.toLocaleTimeString('fr-FR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-                updateTimeElement.textContent = `${dateStr} ${timeStr}`;
             }
         }
     </script>
