@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TradePulse - Finance Intelligence Platform</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         /* Styles généraux */
         :root {
@@ -264,71 +265,106 @@
             pointer-events: all;
         }
         
-        .loading-hexagon {
+        .loading-animation {
             position: relative;
             width: 200px;
-            height: 230px;
-            margin-bottom: 30px;
+            height: 200px;
+            margin-bottom: 40px;
         }
         
-        .hexagon {
+        .loading-circle {
             position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
             height: 100%;
-            border: 2px solid var(--accent-color);
-            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            border-radius: 50%;
+            border: 2px solid rgba(0, 255, 135, 0.1);
+            border-top: 2px solid var(--accent-color);
+            animation: spin 2s linear infinite;
+        }
+        
+        .loading-circle:nth-child(2) {
+            width: 80%;
+            height: 80%;
+            top: 10%;
+            left: 10%;
+            border-top-color: rgba(0, 255, 135, 0.7);
+            border-right-color: var(--accent-color);
+            animation-duration: 1.5s;
+            animation-direction: reverse;
+        }
+        
+        .loading-circle:nth-child(3) {
+            width: 60%;
+            height: 60%;
+            top: 20%;
+            left: 20%;
+            border-top-color: rgba(0, 255, 135, 0.5);
+            border-left-color: var(--accent-color);
+            animation-duration: 3s;
+        }
+        
+        .loading-core {
+            position: absolute;
+            width: 40%;
+            height: 40%;
+            top: 30%;
+            left: 30%;
+            background-color: rgba(0, 255, 135, 0.1);
+            border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
-            opacity: 0.3;
-            transform-origin: center;
+            box-shadow: 0 0 20px rgba(0, 255, 135, 0.2);
         }
         
-        .hexagon-1 {
-            animation: rotateHex 4s linear infinite;
-        }
-        
-        .hexagon-2 {
-            transform: scale(0.8);
-            animation: pulseHex 2s ease-in-out infinite alternate;
-        }
-        
-        .hexagon-3 {
-            transform: scale(0.6);
-            opacity: 0.5;
-            animation: rotateHexReverse 3s linear infinite;
-        }
-        
-        .loading-icon {
-            position: absolute;
-            font-size: 40px;
-            color: var(--accent-color);
-            animation: pulse 2s infinite;
+        .loading-dot {
+            width: 20px;
+            height: 20px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
         }
         
         .loading-text {
             color: var(--accent-color);
             font-size: 18px;
             margin-bottom: 15px;
-            letter-spacing: 2px;
+            letter-spacing: 4px;
             text-transform: uppercase;
+            font-weight: 600;
+            text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
         }
         
         .loading-progress {
             width: 300px;
-            height: 3px;
-            background-color: rgba(0, 255, 135, 0.2);
-            border-radius: 3px;
+            height: 4px;
+            background-color: rgba(0, 255, 135, 0.1);
+            border-radius: 2px;
             overflow: hidden;
             margin-bottom: 10px;
+            position: relative;
         }
         
         .loading-progress-bar {
             height: 100%;
             background-color: var(--accent-color);
             width: 0%;
+            border-radius: 2px;
             box-shadow: 0 0 10px var(--accent-color);
             transition: width 0.3s ease;
+        }
+        
+        .loading-progress-tracker {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 30px;
+            background: linear-gradient(to right, transparent, var(--accent-color), transparent);
+            animation: progressTracker 2s ease-in-out infinite;
+            opacity: 0.6;
         }
         
         .loading-status {
@@ -338,34 +374,20 @@
         }
         
         .loading-update-info {
-            margin-top: 30px;
+            margin-top: 40px;
             font-size: 14px;
             color: rgba(255, 255, 255, 0.6);
-        }
-        
-        @keyframes rotateHex {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        @keyframes rotateHexReverse {
-            0% { transform: scale(0.6) rotate(0deg); }
-            100% { transform: scale(0.6) rotate(-360deg); }
-        }
-        
-        @keyframes pulseHex {
-            0% { transform: scale(0.8); opacity: 0.3; }
-            100% { transform: scale(0.85); opacity: 0.5; }
+            text-align: center;
         }
         
         .update-choice {
             display: flex;
             gap: 20px;
-            margin-top: 30px;
+            margin-top: 25px;
         }
         
         .update-button {
-            padding: 10px 20px;
+            padding: 12px 24px;
             background-color: transparent;
             border: 1px solid var(--accent-color);
             color: var(--accent-color);
@@ -379,6 +401,22 @@
         .update-button:hover {
             background-color: var(--accent-color);
             color: var(--background-color);
+            box-shadow: 0 0 15px rgba(0, 255, 135, 0.4);
+        }
+        
+        .last-update-time {
+            color: var(--accent-color);
+            font-weight: 500;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes progressTracker {
+            0% { left: -30px; }
+            100% { left: 100%; }
         }
         
         /* Responsive adjustments */
@@ -396,13 +434,18 @@
                 font-size: 60px;
             }
             
-            .loading-hexagon {
+            .loading-animation {
                 width: 150px;
-                height: 173px;
+                height: 150px;
             }
             
             .loading-progress {
                 width: 250px;
+            }
+            
+            .update-choice {
+                flex-direction: column;
+                gap: 10px;
             }
         }
     </style>
@@ -410,25 +453,26 @@
 <body>
     <!-- Écran de chargement futuriste -->
     <div class="loading-screen" id="loadingScreen">
-        <div class="loading-hexagon">
-            <div class="hexagon hexagon-1"></div>
-            <div class="hexagon hexagon-2"></div>
-            <div class="hexagon hexagon-3"></div>
-            <div class="loading-icon">
-                <div class="pulse-dot"></div>
+        <div class="loading-animation">
+            <div class="loading-circle"></div>
+            <div class="loading-circle"></div>
+            <div class="loading-circle"></div>
+            <div class="loading-core">
+                <div class="loading-dot"></div>
             </div>
         </div>
-        <div class="loading-text" id="loadingText">CHARGEMENT</div>
+        <div class="loading-text" id="loadingText">INITIALISATION</div>
         <div class="loading-progress">
             <div class="loading-progress-bar" id="loadingProgressBar"></div>
+            <div class="loading-progress-tracker"></div>
         </div>
-        <div class="loading-status" id="loadingStatus">Initialisation...</div>
+        <div class="loading-status" id="loadingStatus">Connexion à TradePulse...</div>
         
         <div class="loading-update-info" id="updateInfo" style="display: none;">
-            <p>Dernière mise à jour: <span id="lastUpdateDate">--/--/---- --:--:--</span></p>
+            <p>Dernière mise à jour: <span id="lastUpdateDate" class="last-update-time">--/--/---- --:--:--</span></p>
             <div class="update-choice" id="updateChoice">
-                <button class="update-button" id="updateYesBtn">Mettre à jour les données</button>
-                <button class="update-button" id="updateNoBtn">Continuer sans mise à jour</button>
+                <button class="update-button" id="updateYesBtn"><i class="fas fa-sync-alt"></i> Mettre à jour les données</button>
+                <button class="update-button" id="updateNoBtn"><i class="fas fa-forward"></i> Continuer sans mise à jour</button>
             </div>
         </div>
     </div>
@@ -467,6 +511,9 @@
         import PerplexityIntegration from './aiintegration.js';
         
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialiser les variables
+            let perplexityInstance = null;
+            
             // Mettre à jour la date
             const now = new Date();
             const day = String(now.getDate()).padStart(2, '0');
@@ -485,7 +532,6 @@
             const loadingStatus = document.getElementById('loadingStatus');
             const updateInfo = document.getElementById('updateInfo');
             const lastUpdateDate = document.getElementById('lastUpdateDate');
-            const updateChoice = document.getElementById('updateChoice');
             const updateYesBtn = document.getElementById('updateYesBtn');
             const updateNoBtn = document.getElementById('updateNoBtn');
             
@@ -506,147 +552,179 @@
             
             // Navigation vers la page principale au clic sur la pièce
             document.getElementById('coinContainer').addEventListener('click', function() {
-                startLoading(true);
+                startLoading();
             });
             
             // Animation de transition pour le bouton
             document.getElementById('startButton').addEventListener('click', function(e) {
                 e.preventDefault();
-                startLoading(true);
+                startLoading();
             });
             
             // Fonction pour démarrer le chargement
-            function startLoading(withTransition = false) {
-                if (withTransition) {
-                    document.body.classList.add('fade-out');
-                    setTimeout(() => {
-                        showLoadingScreen();
-                    }, 800);
-                } else {
-                    showLoadingScreen();
-                }
+            function startLoading() {
+                document.body.classList.add('fade-out');
+                setTimeout(() => {
+                    loadingScreen.classList.add('active');
+                    
+                    // Initialiser la barre de progression
+                    loadingProgressBar.style.width = '0%';
+                    
+                    // Animation de chargement initial
+                    let initProgress = 0;
+                    const initInterval = setInterval(() => {
+                        initProgress += 1;
+                        if (initProgress <= 30) {
+                            loadingProgressBar.style.width = `${initProgress}%`;
+                            loadingStatus.textContent = `Initialisation de TradePulse... ${initProgress * 3}%`;
+                        } else {
+                            clearInterval(initInterval);
+                            checkUpdates();
+                        }
+                    }, 50);
+                }, 800);
             }
             
-            // Fonction pour afficher l'écran de chargement
-            function showLoadingScreen() {
-                loadingScreen.classList.add('active');
+            // Fonction pour vérifier les mises à jour
+            function checkUpdates() {
+                loadingText.textContent = "VÉRIFICATION";
                 
-                // Si une mise à jour est nécessaire ou si c'est la première visite, charger directement
-                if (needsUpdate || !lastUpdateTime) {
-                    startDataUpdate();
-                } else {
-                    // Sinon, afficher l'option de mise à jour
-                    if (lastUpdateTime) {
-                        const date = new Date(parseInt(lastUpdateTime));
-                        lastUpdateDate.textContent = formatDateTime(date);
+                // Animation de vérification
+                let checkProgress = 30;
+                const checkInterval = setInterval(() => {
+                    checkProgress += 2;
+                    if (checkProgress <= 60) {
+                        loadingProgressBar.style.width = `${checkProgress}%`;
+                        loadingStatus.textContent = `Vérification des données... ${Math.floor((checkProgress - 30) * (100/30))}%`;
+                    } else {
+                        clearInterval(checkInterval);
+                        
+                        // Si une mise à jour est nécessaire ou si c'est la première visite, charger directement
+                        if (needsUpdate || !lastUpdateTime) {
+                            startDataUpdate();
+                        } else {
+                            // Sinon, afficher l'option de mise à jour
+                            loadingProgressBar.style.width = '100%';
+                            
+                            if (lastUpdateTime) {
+                                const date = new Date(parseInt(lastUpdateTime));
+                                lastUpdateDate.textContent = formatDateTime(date);
+                            }
+                            
+                            loadingText.textContent = "DONNÉES DISPONIBLES";
+                            loadingStatus.textContent = "Que souhaitez-vous faire?";
+                            updateInfo.style.display = "block";
+                            
+                            // Gérer les clics sur les boutons
+                            updateYesBtn.addEventListener('click', function() {
+                                updateInfo.style.display = "none";
+                                loadingText.textContent = "MISE À JOUR";
+                                loadingProgressBar.style.width = '60%';
+                                startDataUpdate();
+                            });
+                            
+                            updateNoBtn.addEventListener('click', function() {
+                                updateInfo.style.display = "none";
+                                loadingText.textContent = "CHARGEMENT";
+                                simulateLoading();
+                            });
+                        }
                     }
-                    
-                    loadingText.textContent = "DONNÉES DISPONIBLES";
-                    loadingStatus.textContent = "Voulez-vous mettre à jour les données?";
-                    updateInfo.style.display = "block";
-                    
-                    // Gérer les clics sur les boutons
-                    updateYesBtn.addEventListener('click', function() {
-                        updateInfo.style.display = "none";
-                        loadingText.textContent = "MISE À JOUR";
-                        startDataUpdate();
-                    });
-                    
-                    updateNoBtn.addEventListener('click', function() {
-                        updateInfo.style.display = "none";
-                        loadingText.textContent = "CHARGEMENT";
-                        simulateLoading(true);
-                    });
-                }
+                }, 50);
             }
             
             // Fonction pour démarrer la mise à jour des données
             function startDataUpdate() {
-                // Réinitialiser l'interface de chargement
-                loadingProgressBar.style.width = '0%';
-                loadingStatus.textContent = 'Initialisation...';
+                // Réinitialiser l'interface de chargement si nécessaire
+                if (loadingProgressBar.style.width !== '60%') {
+                    loadingProgressBar.style.width = '60%';
+                }
                 
-                let progress = 0;
+                loadingText.textContent = "MISE À JOUR";
+                loadingStatus.textContent = 'Initialisation de la mise à jour...';
+                
+                // Initialiser l'API
+                if (!window.perplexityIntegration && !perplexityInstance) {
+                    perplexityInstance = new PerplexityIntegration();
+                    window.perplexityIntegration = perplexityInstance;
+                }
+                
+                let progress = 60;
                 const updateInterval = setInterval(() => {
                     progress += 1;
-                    loadingProgressBar.style.width = `${progress}%`;
-                    
-                    if (progress <= 25) {
-                        loadingStatus.textContent = `Actualisation des marchés... ${Math.floor(progress * 4)}%`;
-                    } else if (progress <= 50) {
-                        loadingStatus.textContent = `Analyse portefeuille agressif... ${Math.floor((progress - 25) * 4)}%`;
-                    } else if (progress <= 75) {
-                        loadingStatus.textContent = `Analyse portefeuille modéré... ${Math.floor((progress - 50) * 4)}%`;
-                    } else if (progress < 100) {
-                        loadingStatus.textContent = `Analyse portefeuille stable... ${Math.floor((progress - 75) * 4)}%`;
+                    if (progress <= 100) {
+                        loadingProgressBar.style.width = `${progress}%`;
+                        
+                        if (progress <= 70) {
+                            loadingStatus.textContent = `Mise à jour actualités... ${Math.floor((progress - 60) * 10)}%`;
+                        } else if (progress <= 80) {
+                            loadingStatus.textContent = `Mise à jour portefeuille agressif... ${Math.floor((progress - 70) * 10)}%`;
+                        } else if (progress <= 90) {
+                            loadingStatus.textContent = `Mise à jour portefeuille modéré... ${Math.floor((progress - 80) * 10)}%`;
+                        } else {
+                            loadingStatus.textContent = `Mise à jour portefeuille stable... ${Math.floor((progress - 90) * 10)}%`;
+                        }
                     } else {
-                        loadingStatus.textContent = 'Données mises à jour avec succès!';
                         clearInterval(updateInterval);
-                        
-                        // Mettre à jour la date de dernière mise à jour
-                        localStorage.setItem('tradepulse_last_update', Date.now().toString());
-                        
-                        // Rediriger vers la page des actualités
-                        setTimeout(() => {
-                            window.location.href = 'actualites.html';
-                        }, 1000);
+                        completeLoading(true);
                     }
-                }, 30);
+                }, 100);
                 
-                // Si l'API Perplexity est disponible, l'utiliser pour la mise à jour
+                // Si l'API est disponible, l'utiliser pour la mise à jour
                 if (window.perplexityIntegration) {
                     window.perplexityIntegration.updateData()
                         .then(() => {
-                            // La mise à jour continuera visuellement
+                            // La mise à jour visuelle continue avec l'intervalle ci-dessus
                         })
                         .catch(error => {
                             console.error('Erreur lors de la mise à jour des données:', error);
-                            // Continuer visuellement même en cas d'erreur
+                            // La mise à jour visuelle continue même en cas d'erreur
                         });
-                } else {
-                    // Créer une instance et mettre à jour si elle n'existe pas
-                    const perplexity = new PerplexityIntegration();
-                    window.perplexityIntegration = perplexity;
-                    
-                    // Laisser le temps à l'initialisation
-                    setTimeout(() => {
-                        if (window.perplexityIntegration) {
-                            window.perplexityIntegration.updateData()
-                                .then(() => {
-                                    // La mise à jour continuera visuellement
-                                })
-                                .catch(error => {
-                                    console.error('Erreur lors de la mise à jour des données:', error);
-                                    // Continuer visuellement même en cas d'erreur
-                                });
-                        }
-                    }, 1000);
+                } else if (perplexityInstance) {
+                    perplexityInstance.updateData()
+                        .then(() => {
+                            // La mise à jour visuelle continue avec l'intervalle ci-dessus
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors de la mise à jour des données:', error);
+                            // La mise à jour visuelle continue même en cas d'erreur
+                        });
                 }
             }
             
             // Fonction pour simuler le chargement sans mise à jour
-            function simulateLoading(skipUpdate = false) {
-                // Réinitialiser l'interface de chargement
-                loadingProgressBar.style.width = '0%';
-                loadingStatus.textContent = 'Chargement des données...';
+            function simulateLoading() {
+                loadingProgressBar.style.width = '60%';
+                loadingStatus.textContent = 'Préparation des données...';
                 
-                let progress = 0;
+                let progress = 60;
                 const loadInterval = setInterval(() => {
                     progress += 2;
-                    loadingProgressBar.style.width = `${progress}%`;
-                    
-                    if (progress < 100) {
-                        loadingStatus.textContent = `Chargement des données... ${progress}%`;
+                    if (progress <= 100) {
+                        loadingProgressBar.style.width = `${progress}%`;
+                        loadingStatus.textContent = `Chargement des données... ${Math.floor((progress - 60) * (100/40))}%`;
                     } else {
-                        loadingStatus.textContent = 'Chargement terminé!';
                         clearInterval(loadInterval);
-                        
-                        // Rediriger vers la page des actualités
-                        setTimeout(() => {
-                            window.location.href = 'actualites.html';
-                        }, 500);
+                        completeLoading(false);
                     }
-                }, 20);
+                }, 30);
+            }
+            
+            // Fonction pour finaliser le chargement
+            function completeLoading(updated) {
+                loadingProgressBar.style.width = '100%';
+                loadingText.textContent = "TERMINÉ";
+                loadingStatus.textContent = updated ? 'Données mises à jour avec succès!' : 'Chargement terminé!';
+                
+                // Mettre à jour la date de dernière mise à jour si nécessaire
+                if (updated) {
+                    localStorage.setItem('tradepulse_last_update', Date.now().toString());
+                }
+                
+                // Rediriger vers la page des actualités
+                setTimeout(() => {
+                    window.location.href = 'actualites.html';
+                }, 1000);
             }
             
             // Formater une date et heure
