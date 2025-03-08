@@ -31,11 +31,6 @@
             background-color: var(--background-color);
             color: var(--text-color);
             overflow: hidden;
-            transition: opacity var(--transition-time) ease;
-        }
-        
-        body.fade-out {
-            opacity: 0;
         }
         
         /* Container principal */
@@ -242,145 +237,133 @@
             }
         }
         
-        /* Écran de chargement avec modal simple */
-        .loading-screen {
+        /* NOUVELLE IMPLÉMENTATION - Écran de modal de mise à jour */
+        #update-overlay {
+            display: none;
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(1, 22, 39, 0.9);
+            background: rgba(1, 22, 39, 0.9);
             z-index: 9999;
-            display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
         }
         
-        .loading-screen.active {
-            opacity: 1;
-            pointer-events: all;
-        }
-        
-        .loading-modal {
+        .update-modal {
             background-color: var(--background-color);
             border: 2px solid var(--accent-color);
-            border-radius: 10px;
+            border-radius: 12px;
+            box-shadow: 0 0 40px rgba(0, 255, 135, 0.4);
             width: 90%;
             max-width: 500px;
-            padding: 30px;
-            box-shadow: 0 0 30px rgba(0, 255, 135, 0.3);
+            padding: 35px;
             text-align: center;
         }
         
-        .loading-title {
-            font-size: 24px;
-            font-weight: 600;
-            margin-bottom: 20px;
+        .modal-title {
             color: var(--accent-color);
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 20px;
             text-shadow: 0 0 10px rgba(0, 255, 135, 0.3);
         }
         
-        .loading-message {
+        .modal-message {
             font-size: 16px;
-            margin-bottom: 30px;
-            line-height: 1.5;
+            line-height: 1.6;
+            margin-bottom: 25px;
         }
         
-        .last-update-info {
-            margin: 25px 0;
-            font-size: 14px;
-            padding: 10px;
+        .last-update-box {
             background-color: rgba(0, 255, 135, 0.05);
-            border-radius: 5px;
             border-left: 3px solid var(--accent-color);
+            border-radius: 4px;
+            padding: 12px;
+            margin: 25px 0;
+            text-align: left;
+            font-size: 14px;
         }
         
-        .last-update-time {
+        .update-time {
             color: var(--accent-color);
             font-weight: 500;
         }
         
-        .update-choice {
+        .modal-buttons {
             display: flex;
             gap: 20px;
             justify-content: center;
+            margin-top: 30px;
         }
         
-        .update-button {
-            padding: 12px 24px;
-            background-color: transparent;
+        .modal-btn {
+            padding: 14px 28px;
             border: 2px solid var(--accent-color);
-            color: var(--text-color);
-            cursor: pointer;
-            font-family: 'Inter', sans-serif;
-            font-size: 14px;
+            border-radius: 6px;
+            font-size: 15px;
             font-weight: 600;
+            cursor: pointer;
             transition: all 0.3s ease;
-            border-radius: 4px;
             min-width: 180px;
+            background: transparent;
+            color: var(--text-color);
         }
         
-        .update-button.primary {
+        .modal-btn.primary {
             background-color: var(--accent-color);
             color: var(--background-color);
         }
         
-        .update-button:hover {
+        .modal-btn:hover {
             transform: translateY(-3px);
             box-shadow: 0 5px 15px rgba(0, 255, 135, 0.4);
         }
         
-        .update-button.primary:hover {
-            background-color: #00E878;
+        .modal-btn.primary:hover {
+            background-color: #00d673;
         }
         
-        .update-button:active {
-            transform: translateY(0);
-            box-shadow: 0 2px 5px rgba(0, 255, 135, 0.4);
-        }
-        
-        /* Loading spinner simple */
-        .simple-loader {
+        /* Loader de mise à jour */
+        .update-loader {
             display: none;
             text-align: center;
+            margin-top: 30px;
+        }
+        
+        .update-spinner {
+            display: inline-block;
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(0, 255, 135, 0.2);
+            border-radius: 50%;
+            border-top-color: var(--accent-color);
+            animation: spin 1s linear infinite;
+            margin-bottom: 15px;
+        }
+        
+        .update-status {
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .progress-bar-outer {
+            height: 6px;
+            width: 100%;
+            background-color: rgba(0, 255, 135, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
             margin: 20px 0;
         }
         
-        .simple-loader.active {
-            display: block;
-        }
-        
-        .spinner {
-            display: inline-block;
-            width: 50px;
-            height: 50px;
-            border: 3px solid rgba(0, 255, 135, 0.3);
-            border-radius: 50%;
-            border-top-color: var(--accent-color);
-            animation: spin 1s ease-in-out infinite;
-            margin-bottom: 10px;
-        }
-        
-        .loading-progress {
-            height: 4px;
-            width: 80%;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 2px;
-            margin: 20px auto;
-            overflow: hidden;
-        }
-        
-        .loading-progress-bar {
+        .progress-bar-inner {
             height: 100%;
             width: 0%;
             background-color: var(--accent-color);
-            border-radius: 2px;
-            transition: width 0.3s ease;
-            box-shadow: 0 0 10px var(--accent-color);
+            border-radius: 3px;
+            transition: width 0.3s ease-out;
+            box-shadow: 0 0 8px rgba(0, 255, 135, 0.6);
         }
         
         @keyframes spin {
@@ -403,46 +386,18 @@
                 font-size: 60px;
             }
             
-            .update-choice {
+            .modal-buttons {
                 flex-direction: column;
-                align-items: center;
-                gap: 10px;
+                gap: 15px;
             }
             
-            .update-button {
+            .modal-btn {
                 width: 100%;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Modal de mise à jour simple -->
-    <div class="loading-screen" id="loadingScreen">
-        <div class="loading-modal">
-            <h2 class="loading-title">Mise à jour des données</h2>
-            
-            <p class="loading-message">Souhaitez-vous mettre à jour les données financières pour obtenir les dernières actualités et recommandations de portefeuille?</p>
-            
-            <div id="lastUpdateInfo" class="last-update-info">
-                Dernière mise à jour: <span id="lastUpdateDate" class="last-update-time">--/--/---- --:--:--</span>
-            </div>
-            
-            <div class="update-choice" id="updateChoice">
-                <button class="update-button primary" id="updateYesBtn"><i class="fas fa-sync-alt"></i> Mettre à jour</button>
-                <button class="update-button" id="updateNoBtn"><i class="fas fa-forward"></i> Continuer sans mise à jour</button>
-            </div>
-            
-            <!-- Loader simple qui s'affiche pendant le chargement -->
-            <div class="simple-loader" id="simpleLoader">
-                <div class="spinner"></div>
-                <div class="loading-status" id="loadingStatus">Mise à jour en cours...</div>
-                <div class="loading-progress">
-                    <div class="loading-progress-bar" id="loadingProgressBar"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <div class="container">
         <div class="particles" id="particles-js"></div>
         
@@ -471,16 +426,44 @@
         </footer>
     </div>
 
+    <!-- NOUVELLE IMPLÉMENTATION - Modal de mise à jour -->
+    <div id="update-overlay">
+        <div class="update-modal">
+            <h2 class="modal-title">Mise à jour des données</h2>
+            
+            <p class="modal-message">Souhaitez-vous mettre à jour les données financières pour obtenir les dernières actualités et recommandations de portefeuille?</p>
+            
+            <div class="last-update-box" id="last-update-info">
+                Dernière mise à jour: <span id="update-time" class="update-time">--/--/---- --:--:--</span>
+            </div>
+            
+            <div class="modal-buttons" id="modal-buttons">
+                <button class="modal-btn primary" id="update-yes">
+                    <i class="fas fa-sync-alt"></i> Mettre à jour
+                </button>
+                <button class="modal-btn" id="update-no">
+                    <i class="fas fa-forward"></i> Continuer sans mise à jour
+                </button>
+            </div>
+            
+            <!-- Loader pour la mise à jour -->
+            <div class="update-loader" id="update-loader">
+                <div class="update-spinner"></div>
+                <div class="update-status" id="update-status">Mise à jour en cours...</div>
+                <div class="progress-bar-outer">
+                    <div class="progress-bar-inner" id="progress-bar"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script type="module">
         import PerplexityIntegration from './aiintegration.js';
         
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialiser les variables
-            let perplexityInstance = null;
-            
-            // Mettre à jour la date
+            // Mettre à jour la date du jour
             const now = new Date();
             const day = String(now.getDate()).padStart(2, '0');
             const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -491,97 +474,75 @@
                 dateElement.textContent = `${day}.${month}.${year}`;
             }
             
-            // Variables pour l'écran de chargement
-            const loadingScreen = document.getElementById('loadingScreen');
-            const updateInfo = document.getElementById('lastUpdateInfo');
-            const lastUpdateDate = document.getElementById('lastUpdateDate');
-            const updateYesBtn = document.getElementById('updateYesBtn');
-            const updateNoBtn = document.getElementById('updateNoBtn');
-            const simpleLoader = document.getElementById('simpleLoader');
-            const loadingStatus = document.getElementById('loadingStatus');
-            const loadingProgressBar = document.getElementById('loadingProgressBar');
-            const updateChoice = document.getElementById('updateChoice');
+            // Éléments du DOM
+            const updateOverlay = document.getElementById('update-overlay');
+            const lastUpdateInfo = document.getElementById('last-update-info');
+            const updateTimeElement = document.getElementById('update-time');
+            const updateYesBtn = document.getElementById('update-yes');
+            const updateNoBtn = document.getElementById('update-no');
+            const modalButtons = document.getElementById('modal-buttons');
+            const updateLoader = document.getElementById('update-loader');
+            const updateStatus = document.getElementById('update-status');
+            const progressBar = document.getElementById('progress-bar');
             
             // Vérifier s'il existe une date de dernière mise à jour
             const lastUpdateTime = localStorage.getItem('tradepulse_last_update');
             
             if (lastUpdateTime) {
                 const date = new Date(parseInt(lastUpdateTime));
-                lastUpdateDate.textContent = formatDateTime(date);
-                updateInfo.style.display = 'block';
+                updateTimeElement.textContent = formatDateTime(date);
+                lastUpdateInfo.style.display = 'block';
             } else {
-                updateInfo.style.display = 'none';
+                lastUpdateInfo.style.display = 'none';
             }
             
-            // Variables pour suivre l'état de la modal
-            let modalShown = false;
-            
-            // Navigation vers la page principale au clic sur la pièce
-            document.getElementById('coinContainer').addEventListener('click', function() {
-                showUpdateModal();
-            });
-            
-            // Animation de transition pour le bouton
+            // Afficher la modal quand on clique sur START
             document.getElementById('startButton').addEventListener('click', function(e) {
                 e.preventDefault();
                 showUpdateModal();
             });
             
-            // Fonction pour afficher le modal de mise à jour
+            // Afficher la modal quand on clique sur la pièce
+            document.getElementById('coinContainer').addEventListener('click', function() {
+                showUpdateModal();
+            });
+            
+            // Fonction pour afficher la modal de mise à jour
             function showUpdateModal() {
-                if (modalShown) return; // Éviter de montrer plusieurs fois
-                modalShown = true;
+                // Afficher la modal avec display flex
+                updateOverlay.style.display = 'flex';
                 
-                // Fade out de la page d'accueil
-                document.body.classList.add('fade-out');
-                
-                // Afficher la modal
-                setTimeout(() => {
-                    // Activer l'écran de chargement
-                    loadingScreen.classList.add('active');
-                    
-                    // Configurer les événements de bouton une seule fois
-                    updateYesBtn.onclick = function() {
-                        startUpdate();
-                    };
-                    
-                    updateNoBtn.onclick = function() {
-                        continueWithoutUpdate();
-                    };
-                    
-                    // Retour à l'opacité normale pour l'arrière-plan
-                    setTimeout(() => {
-                        document.body.classList.remove('fade-out');
-                    }, 300);
-                    
-                }, 300);
+                // Attacher les événements aux boutons
+                updateYesBtn.addEventListener('click', handleUpdateClick);
+                updateNoBtn.addEventListener('click', handleContinueClick);
             }
             
-            // Fonction pour démarrer la mise à jour
-            function startUpdate() {
-                // Cacher les choix et afficher le loader
-                updateChoice.style.display = 'none';
-                simpleLoader.classList.add('active');
-                loadingStatus.textContent = 'Mise à jour des données en cours...';
+            // Gérer le clic sur "Mettre à jour"
+            function handleUpdateClick() {
+                // Cacher les boutons
+                modalButtons.style.display = 'none';
+                
+                // Afficher le loader
+                updateLoader.style.display = 'block';
                 
                 // Initialiser la barre de progression
                 let progress = 0;
-                loadingProgressBar.style.width = '0%';
+                progressBar.style.width = '0%';
                 
-                // Simuler la progression
+                // Mise à jour de la barre de progression
                 const updateInterval = setInterval(() => {
                     progress += 2;
                     if (progress <= 100) {
-                        loadingProgressBar.style.width = `${progress}%`;
+                        progressBar.style.width = `${progress}%`;
                         
                         if (progress <= 30) {
-                            loadingStatus.textContent = 'Téléchargement des actualités...';
+                            updateStatus.textContent = 'Téléchargement des actualités...';
                         } else if (progress <= 60) {
-                            loadingStatus.textContent = 'Mise à jour des portefeuilles...';
+                            updateStatus.textContent = 'Mise à jour des portefeuilles...';
                         } else if (progress <= 90) {
-                            loadingStatus.textContent = 'Analyse des données...';
+                            updateStatus.textContent = 'Analyse des données...';
                         } else {
-                            loadingStatus.textContent = 'Finalisation...';
+                            updateStatus.textContent = 'Finalisation...';
                         }
                     } else {
                         clearInterval(updateInterval);
@@ -589,12 +550,15 @@
                     }
                 }, 50);
                 
-                // Mettre à jour les données via l'API
-                if (!window.perplexityIntegration && !perplexityInstance) {
+                // Initialiser l'API Perplexity
+                let perplexityInstance = null;
+                
+                if (!window.perplexityIntegration) {
                     perplexityInstance = new PerplexityIntegration();
                     window.perplexityIntegration = perplexityInstance;
                 }
                 
+                // Mise à jour des données
                 if (window.perplexityIntegration) {
                     window.perplexityIntegration.updateData()
                         .then(() => {
@@ -616,8 +580,8 @@
                 }
             }
             
-            // Fonction pour continuer sans mise à jour
-            function continueWithoutUpdate() {
+            // Gérer le clic sur "Continuer sans mise à jour"
+            function handleContinueClick() {
                 // Rediriger vers la page des actualités
                 window.location.href = 'actualites.html';
             }
@@ -630,9 +594,7 @@
                 }
                 
                 // Rediriger vers la page des actualités
-                setTimeout(() => {
-                    window.location.href = 'actualites.html';
-                }, 500);
+                window.location.href = 'actualites.html';
             }
             
             // Formater une date et heure
