@@ -409,6 +409,35 @@
             font-weight: 500;
         }
         
+        /* Nouveau style pour le compteur numérique */
+        .loading-counter {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            font-size: 120px;
+            font-weight: 700;
+            color: rgba(0, 255, 135, 0.2);
+            z-index: 1;
+        }
+        
+        /* Barre horizontale du style davidlangarica */
+        .loading-line {
+            width: 0;
+            height: 2px;
+            background-color: var(--accent-color);
+            box-shadow: 0 0 10px var(--accent-color);
+            margin: 10px 0 30px 0;
+            transition: width 0.8s ease-in-out;
+            max-width: 400px;
+        }
+        
+        .loading-heading {
+            font-size: 24px;
+            font-weight: 400;
+            margin-bottom: 10px;
+            opacity: 0.8;
+        }
+        
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
@@ -447,12 +476,24 @@
                 flex-direction: column;
                 gap: 10px;
             }
+            
+            .loading-counter {
+                font-size: 80px;
+                top: 15px;
+                right: 15px;
+            }
         }
     </style>
 </head>
 <body>
     <!-- Écran de chargement futuriste -->
     <div class="loading-screen" id="loadingScreen">
+        <!-- Compteur numérique -->
+        <div class="loading-counter" id="loadingCounter">0</div>
+        
+        <div class="loading-heading" id="loadingHeading">Préparation des données...</div>
+        <div class="loading-line" id="loadingLine"></div>
+        
         <div class="loading-animation">
             <div class="loading-circle"></div>
             <div class="loading-circle"></div>
@@ -534,6 +575,9 @@
             const lastUpdateDate = document.getElementById('lastUpdateDate');
             const updateYesBtn = document.getElementById('updateYesBtn');
             const updateNoBtn = document.getElementById('updateNoBtn');
+            const loadingCounter = document.getElementById('loadingCounter');
+            const loadingLine = document.getElementById('loadingLine');
+            const loadingHeading = document.getElementById('loadingHeading');
             
             // Vérifier s'il existe une date de dernière mise à jour
             const lastUpdateTime = localStorage.getItem('tradepulse_last_update');
@@ -567,27 +611,61 @@
                 setTimeout(() => {
                     loadingScreen.classList.add('active');
                     
-                    // Initialiser la barre de progression
+                    // Initialiser la barre de progression et le compteur
                     loadingProgressBar.style.width = '0%';
+                    loadingCounter.textContent = '0';
+                    loadingLine.style.width = '0';
                     
                     // Animation de chargement initial
                     let initProgress = 0;
+                    let counterValue = 0;
+                    const finalCounterValue = 99;
+                    const counterInterval = 100; // ms entre chaque incrémentation
+                    
                     const initInterval = setInterval(() => {
                         initProgress += 1;
                         if (initProgress <= 30) {
                             loadingProgressBar.style.width = `${initProgress}%`;
                             loadingStatus.textContent = `Initialisation de TradePulse... ${initProgress * 3}%`;
+                            loadingLine.style.width = `${initProgress * 3}%`;
+                            
+                            // Mise à jour du compteur
+                            counterValue = Math.floor((initProgress / 30) * 30);
+                            loadingCounter.textContent = counterValue;
                         } else {
                             clearInterval(initInterval);
                             checkUpdates();
                         }
                     }, 50);
+                    
+                    // Animation du compteur
+                    animateCounter(0, 30, 2000); // Compteur de 0 à 30 en 2 secondes
                 }, 800);
+            }
+            
+            // Fonction pour animer le compteur
+            function animateCounter(start, end, duration) {
+                const startTime = performance.now();
+                
+                function updateCounter(currentTime) {
+                    const elapsedTime = currentTime - startTime;
+                    const progress = Math.min(elapsedTime / duration, 1);
+                    const value = Math.floor(start + progress * (end - start));
+                    
+                    loadingCounter.textContent = value;
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(updateCounter);
+                    }
+                }
+                
+                requestAnimationFrame(updateCounter);
             }
             
             // Fonction pour vérifier les mises à jour
             function checkUpdates() {
                 loadingText.textContent = "VÉRIFICATION";
+                loadingHeading.textContent = "Analyse de la dernière mise à jour...";
                 
                 // Animation de vérification
                 let checkProgress = 30;
@@ -596,6 +674,7 @@
                     if (checkProgress <= 60) {
                         loadingProgressBar.style.width = `${checkProgress}%`;
                         loadingStatus.textContent = `Vérification des données... ${Math.floor((checkProgress - 30) * (100/30))}%`;
+                        loadingLine.style.width = `${(checkProgress / 100) * 100}%`;
                     } else {
                         clearInterval(checkInterval);
                         
@@ -604,7 +683,8 @@
                             startDataUpdate();
                         } else {
                             // Sinon, afficher l'option de mise à jour
-                            loadingProgressBar.style.width = '100%';
+                            loadingProgressBar.style.width = '60%';
+                            loadingLine.style.width = '60%';
                             
                             if (lastUpdateTime) {
                                 const date = new Date(parseInt(lastUpdateTime));
@@ -612,13 +692,18 @@
                             }
                             
                             loadingText.textContent = "DONNÉES DISPONIBLES";
+                            loadingHeading.textContent = "Mise à jour optionnelle disponible";
                             loadingStatus.textContent = "Que souhaitez-vous faire?";
                             updateInfo.style.display = "block";
+                            
+                            // Animation du compteur de 30 à 60
+                            animateCounter(30, 60, 2000);
                             
                             // Gérer les clics sur les boutons
                             updateYesBtn.addEventListener('click', function() {
                                 updateInfo.style.display = "none";
                                 loadingText.textContent = "MISE À JOUR";
+                                loadingHeading.textContent = "Récupération des dernières données...";
                                 loadingProgressBar.style.width = '60%';
                                 startDataUpdate();
                             });
@@ -626,11 +711,15 @@
                             updateNoBtn.addEventListener('click', function() {
                                 updateInfo.style.display = "none";
                                 loadingText.textContent = "CHARGEMENT";
+                                loadingHeading.textContent = "Finalisation...";
                                 simulateLoading();
                             });
                         }
                     }
                 }, 50);
+                
+                // Animation du compteur de 30 à 60
+                animateCounter(30, 60, 1500);
             }
             
             // Fonction pour démarrer la mise à jour des données
@@ -638,9 +727,11 @@
                 // Réinitialiser l'interface de chargement si nécessaire
                 if (loadingProgressBar.style.width !== '60%') {
                     loadingProgressBar.style.width = '60%';
+                    loadingLine.style.width = '60%';
                 }
                 
                 loadingText.textContent = "MISE À JOUR";
+                loadingHeading.textContent = "Téléchargement des données en cours...";
                 loadingStatus.textContent = 'Initialisation de la mise à jour...';
                 
                 // Initialiser l'API
@@ -654,21 +745,29 @@
                     progress += 1;
                     if (progress <= 100) {
                         loadingProgressBar.style.width = `${progress}%`;
+                        loadingLine.style.width = `${progress}%`;
                         
                         if (progress <= 70) {
                             loadingStatus.textContent = `Mise à jour actualités... ${Math.floor((progress - 60) * 10)}%`;
+                            loadingHeading.textContent = "Téléchargement des actualités...";
                         } else if (progress <= 80) {
                             loadingStatus.textContent = `Mise à jour portefeuille agressif... ${Math.floor((progress - 70) * 10)}%`;
+                            loadingHeading.textContent = "Analyse du portefeuille agressif...";
                         } else if (progress <= 90) {
                             loadingStatus.textContent = `Mise à jour portefeuille modéré... ${Math.floor((progress - 80) * 10)}%`;
+                            loadingHeading.textContent = "Analyse du portefeuille modéré...";
                         } else {
                             loadingStatus.textContent = `Mise à jour portefeuille stable... ${Math.floor((progress - 90) * 10)}%`;
+                            loadingHeading.textContent = "Analyse du portefeuille stable...";
                         }
                     } else {
                         clearInterval(updateInterval);
                         completeLoading(true);
                     }
                 }, 100);
+                
+                // Animation du compteur
+                animateCounter(60, 99, 4000);
                 
                 // Si l'API est disponible, l'utiliser pour la mise à jour
                 if (window.perplexityIntegration) {
@@ -695,26 +794,35 @@
             // Fonction pour simuler le chargement sans mise à jour
             function simulateLoading() {
                 loadingProgressBar.style.width = '60%';
+                loadingLine.style.width = '60%';
                 loadingStatus.textContent = 'Préparation des données...';
+                loadingHeading.textContent = "Chargement de l'application...";
                 
                 let progress = 60;
                 const loadInterval = setInterval(() => {
                     progress += 2;
                     if (progress <= 100) {
                         loadingProgressBar.style.width = `${progress}%`;
+                        loadingLine.style.width = `${progress}%`;
                         loadingStatus.textContent = `Chargement des données... ${Math.floor((progress - 60) * (100/40))}%`;
                     } else {
                         clearInterval(loadInterval);
                         completeLoading(false);
                     }
                 }, 30);
+                
+                // Animation du compteur
+                animateCounter(60, 99, 1500);
             }
             
             // Fonction pour finaliser le chargement
             function completeLoading(updated) {
                 loadingProgressBar.style.width = '100%';
+                loadingLine.style.width = '100%';
                 loadingText.textContent = "TERMINÉ";
+                loadingHeading.textContent = "Accès à la plateforme...";
                 loadingStatus.textContent = updated ? 'Données mises à jour avec succès!' : 'Chargement terminé!';
+                loadingCounter.textContent = '100';
                 
                 // Mettre à jour la date de dernière mise à jour si nécessaire
                 if (updated) {
