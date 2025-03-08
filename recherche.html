@@ -109,6 +109,12 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- État de débogage (masqué par défaut) -->
+                <div id="debugInfo" style="display: none; margin-top: 30px; padding: 20px; background: rgba(0,0,0,0.5); border-radius: 8px;">
+                    <h3 style="color: #00ff99;">Informations de débogage</h3>
+                    <pre id="debugContent" style="color: #ffffff; overflow-x: auto; white-space: pre-wrap;"></pre>
+                </div>
             </div>
         </div>
     </main>
@@ -123,12 +129,20 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Mode debug (mettre à true pour activer)
+            const DEBUG_MODE = true;
+            
             // Update market time
             updateMarketTime();
             setInterval(updateMarketTime, 1000);
             
             // Update current date
             updateCurrentDate();
+            
+            // Afficher la section de débogage si nécessaire
+            if (DEBUG_MODE) {
+                document.getElementById('debugInfo').style.display = 'block';
+            }
             
             // Handle example buttons
             document.querySelectorAll('.example-button').forEach(button => {
@@ -150,11 +164,20 @@
                     document.querySelector('.loading-state').style.display = 'flex';
                     document.querySelector('.results').style.display = 'none';
                     
+                    if (DEBUG_MODE) {
+                        logDebug(`Recherche lancée: "${query}"`);
+                    }
+                    
                     // Appel à l'API Perplexity via l'instance globale
                     if (window.perplexityIntegration) {
+                        logDebug('Utilisation de l\'instance perplexityIntegration');
+                        
                         try {
                             window.perplexityIntegration.search(query)
                                 .then(data => {
+                                    logDebug('Réponse reçue de l\'API:');
+                                    logDebug(JSON.stringify(data, null, 2));
+                                    
                                     // Mettre à jour l'interface avec les résultats
                                     updateResultsUI(data);
                                     
@@ -164,17 +187,22 @@
                                 })
                                 .catch(error => {
                                     console.error('Erreur lors de la recherche:', error);
+                                    logDebug(`Erreur lors de la recherche: ${error.message}`);
                                     handleSearchError();
                                 });
                         } catch (error) {
                             console.error('Erreur lors de la recherche:', error);
+                            logDebug(`Exception lors de la recherche: ${error.message}`);
                             handleSearchError();
                         }
                     } else {
                         // Fallback si l'intégration n'est pas disponible
-                        console.warn('L\'intégration Perplexity n\'est pas disponible, utilisation des données simulées');
+                        logDebug('⚠️ L\'intégration Perplexity n\'est pas disponible, utilisation des données simulées');
                         setTimeout(() => {
                             const simulatedData = simulatePerplexityResponse(query);
+                            logDebug('Données simulées générées:');
+                            logDebug(JSON.stringify(simulatedData, null, 2));
+                            
                             updateResultsUI(simulatedData);
                             document.querySelector('.loading-state').style.display = 'none';
                             document.querySelector('.results').style.display = 'block';
@@ -182,6 +210,19 @@
                     }
                 }
             });
+            
+            // Fonction pour le débogage
+            function logDebug(message) {
+                if (DEBUG_MODE) {
+                    const debugContent = document.getElementById('debugContent');
+                    const timestamp = new Date().toLocaleTimeString();
+                    debugContent.innerHTML += `[${timestamp}] ${message}\n\n`;
+                    
+                    // Auto-scroll vers le bas
+                    debugContent.scrollTop = debugContent.scrollHeight;
+                }
+                console.log(message);
+            }
         });
         
         // Gestion des erreurs de recherche
