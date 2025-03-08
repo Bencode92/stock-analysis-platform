@@ -9,7 +9,44 @@
     <link rel="stylesheet" href="pages-style.css">
     <link rel="stylesheet" href="search-style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script type="module" src="aiintegration.js"></script>
+    <style>
+        .download-pdf-btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.75rem 1.5rem;
+            margin: 1.5rem 0;
+            background: transparent;
+            border: 2px solid var(--accent-color);
+            color: var(--accent-color);
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-radius: 4px;
+        }
+        
+        .download-pdf-btn:hover {
+            background-color: var(--accent-color);
+            color: var(--background-color);
+            box-shadow: 0 0 15px rgba(0, 255, 135, 0.4);
+        }
+        
+        .download-pdf-btn i {
+            margin-right: 8px;
+        }
+        
+        .download-container {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            margin-top: 1rem;
+        }
+    </style>
 </head>
 <body class="page-portefeuille fade-in">
     <header class="page-header">
@@ -96,6 +133,13 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Téléchargement PDF pour portefeuille Agressif -->
+                <div class="download-container">
+                    <button class="download-pdf-btn" id="downloadAgressifPdf">
+                        <i class="fas fa-file-pdf"></i> TÉLÉCHARGER LE PORTEFEUILLE AGRESSIF (PDF)
+                    </button>
+                </div>
             </div>
             
             <!-- Moderate Portfolio Details (hidden by default) -->
@@ -115,6 +159,13 @@
                             <p>Génération du portefeuille optimisé via Perplexity AI...</p>
                         </div>
                     </div>
+                </div>
+                
+                <!-- Téléchargement PDF pour portefeuille Modéré -->
+                <div class="download-container">
+                    <button class="download-pdf-btn" id="downloadModerePdf">
+                        <i class="fas fa-file-pdf"></i> TÉLÉCHARGER LE PORTEFEUILLE MODÉRÉ (PDF)
+                    </button>
                 </div>
             </div>
             
@@ -136,6 +187,13 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Téléchargement PDF pour portefeuille Stable -->
+                <div class="download-container">
+                    <button class="download-pdf-btn" id="downloadStablePdf">
+                        <i class="fas fa-file-pdf"></i> TÉLÉCHARGER LE PORTEFEUILLE STABLE (PDF)
+                    </button>
+                </div>
             </div>
         </section>
     </main>
@@ -154,7 +212,8 @@
         // Function to get URL parameters
         function getUrlParameter(name) {
             name = name.replace(/[\\[]/, '\\\\[').replace(/[\\]]/, '\\\\]');
-            const regex = new RegExp('[\\\\?&]' + name + '=([^&#]*)');\n
+            const regex = new RegExp('[\\\\?&]' + name + '=([^&#]*)');
+
             const results = regex.exec(location.search);
             return results === null ? '' : decodeURIComponent(results[1].replace(/\\+/g, ' '));
         }
@@ -194,6 +253,19 @@
                     window.location.href = this.getAttribute('href');
                 }, 800); // Transition time
             });
+            
+            // Ajouter les gestionnaires d'événements pour les boutons de téléchargement PDF
+            document.getElementById('downloadAgressifPdf').addEventListener('click', function() {
+                generatePDF('agressif');
+            });
+            
+            document.getElementById('downloadModerePdf').addEventListener('click', function() {
+                generatePDF('modere');
+            });
+            
+            document.getElementById('downloadStablePdf').addEventListener('click', function() {
+                generatePDF('stable');
+            });
         });
         
         function updatePortfolioView(type) {
@@ -217,7 +289,7 @@
                 initAggressiveChart();
             } else if (type === 'modere') {
                 titleElement.textContent = 'PORTEFEUILLE MODÉRÉ';
-                profileDescElement.textContent = 'Ce portefeuille offre un équilibre entre croissance et stabilité, avec une diversification entre différentes classes d\\'actifs.';
+                profileDescElement.textContent = 'Ce portefeuille offre un équilibre entre croissance et stabilité, avec une diversification entre différentes classes d\'actifs.';
                 initModerateChart();
             } else if (type === 'stable') {
                 titleElement.textContent = 'PORTEFEUILLE STABLE';
@@ -520,6 +592,140 @@
                 });
                 updateTimeElement.textContent = `${dateStr} ${timeStr}`;
             }
+        }
+        
+        // Function to generate PDF for a specific portfolio type
+        function generatePDF(portfolioType) {
+            // Make sure jsPDF is loaded
+            if (typeof window.jspdf === 'undefined') {
+                window.jspdf = window.jsPDF;
+            }
+            
+            // Get portfolio title based on type
+            let portfolioTitle = '';
+            let portfolioDesc = '';
+            
+            if (portfolioType === 'agressif') {
+                portfolioTitle = 'PORTEFEUILLE AGRESSIF';
+                portfolioDesc = 'Ce portefeuille vise une croissance maximale, avec une forte exposition aux secteurs en croissance et aux actifs à haut risque.';
+            } else if (portfolioType === 'modere') {
+                portfolioTitle = 'PORTEFEUILLE MODÉRÉ';
+                portfolioDesc = 'Ce portefeuille offre un équilibre entre croissance et stabilité, avec une diversification entre différentes classes d\'actifs.';
+            } else if (portfolioType === 'stable') {
+                portfolioTitle = 'PORTEFEUILLE STABLE';
+                portfolioDesc = 'Ce portefeuille privilégie la préservation du capital et les dividendes, avec une faible exposition aux actifs risqués.';
+            }
+            
+            // Get portfolio data
+            let portfolioData = [];
+            if (window.perplexityIntegration && window.perplexityIntegration.portfolios && window.perplexityIntegration.portfolios[portfolioType]) {
+                portfolioData = window.perplexityIntegration.portfolios[portfolioType];
+            } else {
+                // Utiliser des données par défaut si les données réelles ne sont pas disponibles
+                if (portfolioType === 'agressif') {
+                    portfolioData = [
+                        { name: 'NVIDIA', symbol: 'NVDA', type: 'Action', allocation: 25 },
+                        { name: 'Tesla', symbol: 'TSLA', type: 'Action', allocation: 22 },
+                        { name: 'Amazon', symbol: 'AMZN', type: 'Action', allocation: 18 },
+                        { name: 'Nasdaq 100 ETF', symbol: 'QQQ', type: 'ETF', allocation: 10 },
+                        { name: 'Clean Energy ETF', symbol: 'ICLN', type: 'ETF', allocation: 8 },
+                        { name: 'Bitcoin', symbol: 'BTC', type: 'Crypto', allocation: 12 },
+                        { name: 'Ethereum', symbol: 'ETH', type: 'Crypto', allocation: 5 }
+                    ];
+                } else if (portfolioType === 'modere') {
+                    portfolioData = [
+                        { name: 'Microsoft', symbol: 'MSFT', type: 'Action', allocation: 15 },
+                        { name: 'Amazon', symbol: 'AMZN', type: 'Action', allocation: 12 },
+                        { name: 'S&P 500 ETF', symbol: 'SPY', type: 'ETF', allocation: 20 },
+                        { name: 'Nasdaq 100 ETF', symbol: 'QQQ', type: 'ETF', allocation: 15 },
+                        { name: 'Treasury ETF', symbol: 'TLT', type: 'ETF', allocation: 15 },
+                        { name: 'NVIDIA', symbol: 'NVDA', type: 'Action', allocation: 10 },
+                        { name: 'Corporate Bond ETF', symbol: 'LQD', type: 'ETF', allocation: 8 },
+                        { name: 'Bitcoin', symbol: 'BTC', type: 'Crypto', allocation: 5 }
+                    ];
+                } else {
+                    portfolioData = [
+                        { name: 'Total Bond ETF', symbol: 'BND', type: 'ETF', allocation: 25 },
+                        { name: 'Johnson & Johnson', symbol: 'JNJ', type: 'Action', allocation: 15 },
+                        { name: 'Microsoft', symbol: 'MSFT', type: 'Action', allocation: 10 },
+                        { name: 'S&P 500 ETF', symbol: 'SPY', type: 'ETF', allocation: 15 },
+                        { name: 'Treasury ETF', symbol: 'TLT', type: 'ETF', allocation: 20 },
+                        { name: 'Corporate Bond ETF', symbol: 'LQD', type: 'ETF', allocation: 15 }
+                    ];
+                }
+            }
+            
+            // Create a new offscreen div to capture
+            const captureDiv = document.createElement('div');
+            captureDiv.style.width = '595px'; // A4 width in pixels at 72 DPI
+            captureDiv.style.padding = '40px';
+            captureDiv.style.backgroundColor = '#011627';
+            captureDiv.style.color = '#FFFFFF';
+            captureDiv.style.fontFamily = 'Inter, sans-serif';
+            captureDiv.style.position = 'absolute';
+            captureDiv.style.left = '-9999px';
+            document.body.appendChild(captureDiv);
+            
+            // Add content to the div
+            captureDiv.innerHTML = `
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <div style="display: inline-block; width: 16px; height: 16px; background-color: #00FF87; border-radius: 50%; margin-bottom: 10px;"></div>
+                    <h1 style="font-size: 28px; font-weight: 900; margin: 0; color: #FFFFFF; letter-spacing: 1px;">TRADEPULSE</h1>
+                    <p style="font-size: 12px; opacity: 0.8; margin-top: 5px;">POWERED BY PERPLEXITY AI</p>
+                </div>
+                
+                <h2 style="font-size: 24px; text-align: center; margin-bottom: 20px; color: #00FF87;">${portfolioTitle}</h2>
+                <p style="margin-bottom: 30px; text-align: center; font-size: 14px;">${portfolioDesc}</p>
+                
+                <p style="margin-bottom: 30px; text-align: center; font-size: 12px;">
+                    Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}
+                </p>
+                
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+                    <tr style="border-bottom: 1px solid #00FF87; color: #00FF87;">
+                        <th style="padding: 10px; text-align: left; font-size: 14px;">INSTRUMENT</th>
+                        <th style="padding: 10px; text-align: left; font-size: 14px;">SYMBOLE</th>
+                        <th style="padding: 10px; text-align: left; font-size: 14px;">TYPE</th>
+                        <th style="padding: 10px; text-align: right; font-size: 14px;">ALLOCATION</th>
+                    </tr>
+                    ${portfolioData.map(asset => `
+                        <tr style="border-bottom: 1px solid rgba(0, 255, 135, 0.2);">
+                            <td style="padding: 10px; text-align: left; font-size: 14px;">${asset.name}</td>
+                            <td style="padding: 10px; text-align: left; font-size: 14px;">${asset.symbol}</td>
+                            <td style="padding: 10px; text-align: left; font-size: 14px;">${asset.type}</td>
+                            <td style="padding: 10px; text-align: right; font-size: 14px;">${asset.allocation}%</td>
+                        </tr>
+                    `).join('')}
+                </table>
+                
+                <div style="text-align: center; font-size: 12px; opacity: 0.7; margin-top: 40px;">
+                    <p>© 2025 TradePulse | Finance Intelligence Platform</p>
+                    <p style="margin-top: 5px;">Ce document est généré par une intelligence artificielle et ne constitue pas un conseil financier.</p>
+                </div>
+            `;
+            
+            // Capture the div as an image
+            html2canvas(captureDiv, {
+                scale: 2,
+                backgroundColor: '#011627',
+                logging: false
+            }).then(canvas => {
+                // Create PDF
+                const pdf = new jspdf.jsPDF('p', 'pt', 'a4');
+                
+                // Get canvas data and add to PDF
+                const imgData = canvas.toDataURL('image/png');
+                const imgProps = pdf.getImageProperties(imgData);
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+                
+                // Save the PDF
+                pdf.save(`TradePulse_${portfolioTitle.replace(/\s+/g, '_')}.pdf`);
+                
+                // Remove the temporary div
+                document.body.removeChild(captureDiv);
+            });
         }
     </script>
 </body>
