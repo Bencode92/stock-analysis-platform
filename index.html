@@ -513,6 +513,9 @@
                 updateInfo.style.display = 'none';
             }
             
+            // Variables pour suivre l'état de la modal
+            let modalShown = false;
+            
             // Navigation vers la page principale au clic sur la pièce
             document.getElementById('coinContainer').addEventListener('click', function() {
                 showUpdateModal();
@@ -526,18 +529,31 @@
             
             // Fonction pour afficher le modal de mise à jour
             function showUpdateModal() {
+                if (modalShown) return; // Éviter de montrer plusieurs fois
+                modalShown = true;
+                
+                // Fade out de la page d'accueil
                 document.body.classList.add('fade-out');
+                
+                // Afficher la modal
                 setTimeout(() => {
+                    // Activer l'écran de chargement
                     loadingScreen.classList.add('active');
                     
-                    // Gérer les clics sur les boutons
-                    updateYesBtn.addEventListener('click', function() {
+                    // Configurer les événements de bouton une seule fois
+                    updateYesBtn.onclick = function() {
                         startUpdate();
-                    });
+                    };
                     
-                    updateNoBtn.addEventListener('click', function() {
+                    updateNoBtn.onclick = function() {
                         continueWithoutUpdate();
-                    });
+                    };
+                    
+                    // Retour à l'opacité normale pour l'arrière-plan
+                    setTimeout(() => {
+                        document.body.classList.remove('fade-out');
+                    }, 300);
+                    
                 }, 300);
             }
             
