@@ -241,6 +241,146 @@
             }
         }
         
+        /* Écran de chargement futuriste */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--background-color);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        
+        .loading-screen.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .loading-hexagon {
+            position: relative;
+            width: 200px;
+            height: 230px;
+            margin-bottom: 30px;
+        }
+        
+        .hexagon {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2px solid var(--accent-color);
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0.3;
+            transform-origin: center;
+        }
+        
+        .hexagon-1 {
+            animation: rotateHex 4s linear infinite;
+        }
+        
+        .hexagon-2 {
+            transform: scale(0.8);
+            animation: pulseHex 2s ease-in-out infinite alternate;
+        }
+        
+        .hexagon-3 {
+            transform: scale(0.6);
+            opacity: 0.5;
+            animation: rotateHexReverse 3s linear infinite;
+        }
+        
+        .loading-icon {
+            position: absolute;
+            font-size: 40px;
+            color: var(--accent-color);
+            animation: pulse 2s infinite;
+        }
+        
+        .loading-text {
+            color: var(--accent-color);
+            font-size: 18px;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+        }
+        
+        .loading-progress {
+            width: 300px;
+            height: 3px;
+            background-color: rgba(0, 255, 135, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+        
+        .loading-progress-bar {
+            height: 100%;
+            background-color: var(--accent-color);
+            width: 0%;
+            box-shadow: 0 0 10px var(--accent-color);
+            transition: width 0.3s ease;
+        }
+        
+        .loading-status {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+            margin-top: 15px;
+        }
+        
+        .loading-update-info {
+            margin-top: 30px;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        @keyframes rotateHex {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes rotateHexReverse {
+            0% { transform: scale(0.6) rotate(0deg); }
+            100% { transform: scale(0.6) rotate(-360deg); }
+        }
+        
+        @keyframes pulseHex {
+            0% { transform: scale(0.8); opacity: 0.3; }
+            100% { transform: scale(0.85); opacity: 0.5; }
+        }
+        
+        .update-choice {
+            display: flex;
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .update-button {
+            padding: 10px 20px;
+            background-color: transparent;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            border-radius: 4px;
+        }
+        
+        .update-button:hover {
+            background-color: var(--accent-color);
+            color: var(--background-color);
+        }
+        
         /* Responsive adjustments */
         @media (max-width: 768px) {
             .coin-container {
@@ -255,10 +395,44 @@
             .date {
                 font-size: 60px;
             }
+            
+            .loading-hexagon {
+                width: 150px;
+                height: 173px;
+            }
+            
+            .loading-progress {
+                width: 250px;
+            }
         }
     </style>
 </head>
 <body>
+    <!-- Écran de chargement futuriste -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-hexagon">
+            <div class="hexagon hexagon-1"></div>
+            <div class="hexagon hexagon-2"></div>
+            <div class="hexagon hexagon-3"></div>
+            <div class="loading-icon">
+                <div class="pulse-dot"></div>
+            </div>
+        </div>
+        <div class="loading-text" id="loadingText">CHARGEMENT</div>
+        <div class="loading-progress">
+            <div class="loading-progress-bar" id="loadingProgressBar"></div>
+        </div>
+        <div class="loading-status" id="loadingStatus">Initialisation...</div>
+        
+        <div class="loading-update-info" id="updateInfo" style="display: none;">
+            <p>Dernière mise à jour: <span id="lastUpdateDate">--/--/---- --:--:--</span></p>
+            <div class="update-choice" id="updateChoice">
+                <button class="update-button" id="updateYesBtn">Mettre à jour les données</button>
+                <button class="update-button" id="updateNoBtn">Continuer sans mise à jour</button>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
         <div class="particles" id="particles-js"></div>
         
@@ -280,7 +454,7 @@
         </div>
         
         <!-- Bouton START -->
-        <a href="actualites.html" class="start-button" id="startButton">START</a>
+        <a href="#" class="start-button" id="startButton">START</a>
         
         <footer class="footer">
             © 2025 TradePulse | Finance Intelligence Platform
@@ -289,7 +463,9 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
-    <script>
+    <script type="module">
+        import PerplexityIntegration from './aiintegration.js';
+        
         document.addEventListener('DOMContentLoaded', function() {
             // Mettre à jour la date
             const now = new Date();
@@ -302,22 +478,187 @@
                 dateElement.textContent = `${day}.${month}.${year}`;
             }
             
+            // Variables pour l'écran de chargement
+            const loadingScreen = document.getElementById('loadingScreen');
+            const loadingText = document.getElementById('loadingText');
+            const loadingProgressBar = document.getElementById('loadingProgressBar');
+            const loadingStatus = document.getElementById('loadingStatus');
+            const updateInfo = document.getElementById('updateInfo');
+            const lastUpdateDate = document.getElementById('lastUpdateDate');
+            const updateChoice = document.getElementById('updateChoice');
+            const updateYesBtn = document.getElementById('updateYesBtn');
+            const updateNoBtn = document.getElementById('updateNoBtn');
+            
+            // Vérifier s'il existe une date de dernière mise à jour
+            const lastUpdateTime = localStorage.getItem('tradepulse_last_update');
+            let needsUpdate = true;
+            
+            if (lastUpdateTime) {
+                const lastUpdate = new Date(parseInt(lastUpdateTime));
+                const timeDiff = now.getTime() - lastUpdate.getTime();
+                const hoursDiff = timeDiff / (1000 * 60 * 60);
+                
+                // Si la dernière mise à jour date de moins de 2 heures, proposer le choix
+                if (hoursDiff < 2) {
+                    needsUpdate = false;
+                }
+            }
+            
             // Navigation vers la page principale au clic sur la pièce
             document.getElementById('coinContainer').addEventListener('click', function() {
-                document.body.classList.add('fade-out');
-                setTimeout(() => {
-                    window.location.href = 'actualites.html';
-                }, 800);
+                startLoading(true);
             });
             
             // Animation de transition pour le bouton
             document.getElementById('startButton').addEventListener('click', function(e) {
                 e.preventDefault();
-                document.body.classList.add('fade-out');
-                setTimeout(() => {
-                    window.location.href = this.getAttribute('href');
-                }, 800);
+                startLoading(true);
             });
+            
+            // Fonction pour démarrer le chargement
+            function startLoading(withTransition = false) {
+                if (withTransition) {
+                    document.body.classList.add('fade-out');
+                    setTimeout(() => {
+                        showLoadingScreen();
+                    }, 800);
+                } else {
+                    showLoadingScreen();
+                }
+            }
+            
+            // Fonction pour afficher l'écran de chargement
+            function showLoadingScreen() {
+                loadingScreen.classList.add('active');
+                
+                // Si une mise à jour est nécessaire ou si c'est la première visite, charger directement
+                if (needsUpdate || !lastUpdateTime) {
+                    startDataUpdate();
+                } else {
+                    // Sinon, afficher l'option de mise à jour
+                    if (lastUpdateTime) {
+                        const date = new Date(parseInt(lastUpdateTime));
+                        lastUpdateDate.textContent = formatDateTime(date);
+                    }
+                    
+                    loadingText.textContent = "DONNÉES DISPONIBLES";
+                    loadingStatus.textContent = "Voulez-vous mettre à jour les données?";
+                    updateInfo.style.display = "block";
+                    
+                    // Gérer les clics sur les boutons
+                    updateYesBtn.addEventListener('click', function() {
+                        updateInfo.style.display = "none";
+                        loadingText.textContent = "MISE À JOUR";
+                        startDataUpdate();
+                    });
+                    
+                    updateNoBtn.addEventListener('click', function() {
+                        updateInfo.style.display = "none";
+                        loadingText.textContent = "CHARGEMENT";
+                        simulateLoading(true);
+                    });
+                }
+            }
+            
+            // Fonction pour démarrer la mise à jour des données
+            function startDataUpdate() {
+                // Réinitialiser l'interface de chargement
+                loadingProgressBar.style.width = '0%';
+                loadingStatus.textContent = 'Initialisation...';
+                
+                let progress = 0;
+                const updateInterval = setInterval(() => {
+                    progress += 1;
+                    loadingProgressBar.style.width = `${progress}%`;
+                    
+                    if (progress <= 25) {
+                        loadingStatus.textContent = `Actualisation des marchés... ${Math.floor(progress * 4)}%`;
+                    } else if (progress <= 50) {
+                        loadingStatus.textContent = `Analyse portefeuille agressif... ${Math.floor((progress - 25) * 4)}%`;
+                    } else if (progress <= 75) {
+                        loadingStatus.textContent = `Analyse portefeuille modéré... ${Math.floor((progress - 50) * 4)}%`;
+                    } else if (progress < 100) {
+                        loadingStatus.textContent = `Analyse portefeuille stable... ${Math.floor((progress - 75) * 4)}%`;
+                    } else {
+                        loadingStatus.textContent = 'Données mises à jour avec succès!';
+                        clearInterval(updateInterval);
+                        
+                        // Mettre à jour la date de dernière mise à jour
+                        localStorage.setItem('tradepulse_last_update', Date.now().toString());
+                        
+                        // Rediriger vers la page des actualités
+                        setTimeout(() => {
+                            window.location.href = 'actualites.html';
+                        }, 1000);
+                    }
+                }, 30);
+                
+                // Si l'API Perplexity est disponible, l'utiliser pour la mise à jour
+                if (window.perplexityIntegration) {
+                    window.perplexityIntegration.updateData()
+                        .then(() => {
+                            // La mise à jour continuera visuellement
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors de la mise à jour des données:', error);
+                            // Continuer visuellement même en cas d'erreur
+                        });
+                } else {
+                    // Créer une instance et mettre à jour si elle n'existe pas
+                    const perplexity = new PerplexityIntegration();
+                    window.perplexityIntegration = perplexity;
+                    
+                    // Laisser le temps à l'initialisation
+                    setTimeout(() => {
+                        if (window.perplexityIntegration) {
+                            window.perplexityIntegration.updateData()
+                                .then(() => {
+                                    // La mise à jour continuera visuellement
+                                })
+                                .catch(error => {
+                                    console.error('Erreur lors de la mise à jour des données:', error);
+                                    // Continuer visuellement même en cas d'erreur
+                                });
+                        }
+                    }, 1000);
+                }
+            }
+            
+            // Fonction pour simuler le chargement sans mise à jour
+            function simulateLoading(skipUpdate = false) {
+                // Réinitialiser l'interface de chargement
+                loadingProgressBar.style.width = '0%';
+                loadingStatus.textContent = 'Chargement des données...';
+                
+                let progress = 0;
+                const loadInterval = setInterval(() => {
+                    progress += 2;
+                    loadingProgressBar.style.width = `${progress}%`;
+                    
+                    if (progress < 100) {
+                        loadingStatus.textContent = `Chargement des données... ${progress}%`;
+                    } else {
+                        loadingStatus.textContent = 'Chargement terminé!';
+                        clearInterval(loadInterval);
+                        
+                        // Rediriger vers la page des actualités
+                        setTimeout(() => {
+                            window.location.href = 'actualites.html';
+                        }, 500);
+                    }
+                }, 20);
+            }
+            
+            // Formater une date et heure
+            function formatDateTime(date) {
+                const dateStr = date.toLocaleDateString('fr-FR');
+                const timeStr = date.toLocaleTimeString('fr-FR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                return `${dateStr} ${timeStr}`;
+            }
             
             // Configuration de l'effet de particules
             if (window.particlesJS) {
