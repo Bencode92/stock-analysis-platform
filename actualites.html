@@ -282,6 +282,18 @@
             color: var(--accent-color);
             font-weight: 500;
         }
+
+        /* Style pour les dates des événements */
+        .event-date {
+            display: inline-block;
+            padding: 4px 8px;
+            background-color: rgba(0, 255, 135, 0.1);
+            border-radius: 4px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--accent-color);
+        }
         
         /* Animations */
         @keyframes fadeIn {
@@ -409,6 +421,51 @@
                 <!-- Événement à gauche -->
                 <div class="timeline-event left">
                     <div class="event-content">
+                        <div class="event-date"><i class="fas fa-calendar-alt"></i> 10 Mars 2025</div>
+                        <div class="event-time"><i class="far fa-clock"></i> 08:15</div>
+                        <h3 class="event-title">Réunion de la Réserve fédérale</h3>
+                        <div class="event-source">Federal Reserve</div>
+                        <p class="event-description">La Fed annonce une réunion exceptionnelle pour discuter des prochaines mesures concernant les taux d'intérêt. Les investisseurs s'attendent à des annonces...</p>
+                        <div class="impact-indicator impact-high">
+                            <span class="impact-label"><i class="fas fa-chart-line"></i> Impact:</span>
+                            <span class="impact-value">
+                                <span class="impact-dot filled"></span>
+                                <span class="impact-dot filled"></span>
+                                <span class="impact-dot filled"></span>
+                                <span class="impact-dot filled"></span>
+                                <span class="impact-dot filled"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="event-dot"></div>
+                </div>
+                
+                <!-- Événement à droite -->
+                <div class="timeline-event right">
+                    <div class="event-content">
+                        <div class="event-date"><i class="fas fa-calendar-alt"></i> 8 Mars 2025</div>
+                        <div class="event-time"><i class="far fa-clock"></i> 14:30</div>
+                        <h3 class="event-title">Fusion géante dans le secteur technologique</h3>
+                        <div class="event-source">Business Insider</div>
+                        <p class="event-description">Google et Meta annoncent des discussions préliminaires concernant une fusion potentielle de leurs divisions de réalité virtuelle, créant un nouveau géant...</p>
+                        <div class="impact-indicator impact-high">
+                            <span class="impact-label"><i class="fas fa-chart-line"></i> Impact:</span>
+                            <span class="impact-value">
+                                <span class="impact-dot filled"></span>
+                                <span class="impact-dot filled"></span>
+                                <span class="impact-dot filled"></span>
+                                <span class="impact-dot filled"></span>
+                                <span class="impact-dot filled"></span>
+                            </span>
+                        </div>
+                    </div>
+                    <div class="event-dot"></div>
+                </div>
+                
+                <!-- Événement à gauche -->
+                <div class="timeline-event left">
+                    <div class="event-content">
+                        <div class="event-date"><i class="fas fa-calendar-alt"></i> 7 Mars 2025</div>
                         <div class="event-time"><i class="far fa-clock"></i> 08:15</div>
                         <h3 class="event-title">Exemption de droits de douane</h3>
                         <div class="event-source">Maison Blanche</div>
@@ -430,6 +487,7 @@
                 <!-- Événement à droite -->
                 <div class="timeline-event right">
                     <div class="event-content">
+                        <div class="event-date"><i class="fas fa-calendar-alt"></i> 7 Mars 2025</div>
                         <div class="event-time"><i class="far fa-clock"></i> 09:30</div>
                         <h3 class="event-title">Marché obligataire européen</h3>
                         <div class="event-source">Marchés Européens</div>
@@ -451,6 +509,7 @@
                 <!-- Événement à gauche -->
                 <div class="timeline-event left">
                     <div class="event-content">
+                        <div class="event-date"><i class="fas fa-calendar-alt"></i> 7 Mars 2025</div>
                         <div class="event-time"><i class="far fa-clock"></i> 13:45</div>
                         <h3 class="event-title">Décision de taux de la BCE</h3>
                         <div class="event-source">BCE</div>
@@ -472,6 +531,7 @@
                 <!-- Événement à droite -->
                 <div class="timeline-event right">
                     <div class="event-content">
+                        <div class="event-date"><i class="fas fa-calendar-alt"></i> 6 Mars 2025</div>
                         <div class="event-time"><i class="far fa-clock"></i> 14:30</div>
                         <h3 class="event-title">Publication chiffres emploi US</h3>
                         <div class="event-source">Bureau des statistiques</div>
@@ -493,6 +553,7 @@
                 <!-- Événement à gauche -->
                 <div class="timeline-event left">
                     <div class="event-content">
+                        <div class="event-date"><i class="fas fa-calendar-alt"></i> 5 Mars 2025</div>
                         <div class="event-time"><i class="far fa-clock"></i> 16:00</div>
                         <h3 class="event-title">Adoption de l'IA en finance</h3>
                         <div class="event-source">Wall Street Journal</div>
