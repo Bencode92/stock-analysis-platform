@@ -6,193 +6,303 @@
     <title>TradePulse - Actualités Financières</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="pages-style.css">
-    <link rel="stylesheet" href="timeline-style.css">
-    <link rel="stylesheet" href="search-style.css">
     <script type="module" src="aiintegration.js"></script>
     <style>
-        /* Styles améliorés pour la page d'actualités */
-        body.page-actualites {
-            background-image: linear-gradient(to bottom, var(--background-color), rgba(1, 34, 55, 0.9));
-            background-repeat: no-repeat;
-            background-attachment: fixed;
+        /* Variables et reset */
+        :root {
+            --background-color: #011627; /* Bleu nuit */
+            --background-gradient: linear-gradient(to bottom, #010e1a, #011627);
+            --text-color: #FFFFFF;
+            --accent-color: #00FF87; /* Vert néon */
+            --accent-glow: 0 0 10px rgba(0, 255, 135, 0.6);
+            --transition-time: 0.3s;
+            --header-height: 70px;
+            --sidebar-width: 80px;
         }
         
-        .page-title-section {
-            position: relative;
-            padding: 10px 0 30px;
-            overflow: hidden;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
         }
         
-        .page-title {
-            font-size: 3.2rem;
-            letter-spacing: 2px;
-            margin-bottom: 5px;
-            text-shadow: 0 0 15px rgba(0, 255, 135, 0.3);
-            animation: glow 3s infinite alternate;
-            position: relative;
+        body {
+            background: var(--background-gradient);
+            color: var(--text-color);
+            line-height: 1.6;
+            overflow-x: hidden;
+            font-size: 16px;
         }
         
-        .page-title::after {
-            content: '';
-            position: absolute;
-            bottom: -15px;
-            left: 0;
-            width: 80px;
-            height: 3px;
-            background-color: var(--accent-color);
-            box-shadow: 0 0 10px var(--accent-color);
-            animation: pulse-width 4s ease-in-out infinite;
+        /* Styles de base */
+        a {
+            color: var(--text-color);
+            text-decoration: none;
         }
         
-        @keyframes pulse-width {
-            0% { width: 80px; }
-            50% { width: 160px; }
-            100% { width: 80px; }
+        /* Header */
+        .main-header {
+            position: fixed;
+            top: 0;
+            left: var(--sidebar-width);
+            right: 0;
+            height: var(--header-height);
+            background-color: rgba(1, 22, 39, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            z-index: 100;
+            border-bottom: 1px solid rgba(0, 255, 135, 0.1);
         }
         
-        @keyframes glow {
-            0% { text-shadow: 0 0 5px rgba(0, 255, 135, 0.1); }
-            100% { text-shadow: 0 0 20px rgba(0, 255, 135, 0.4); }
-        }
-        
-        .page-subtitle {
-            font-size: 1.1rem;
-            font-weight: 500;
-            margin-top: 25px;
-            letter-spacing: 1px;
-            color: rgba(255, 255, 255, 0.8);
-        }
-        
-        /* Info de dernière mise à jour */
-        .last-update-container {
+        .header-left {
             display: flex;
             align-items: center;
-            justify-content: flex-start;
-            margin: 15px 0 30px 0;
-            padding: 10px 20px;
-            background-color: rgba(0, 255, 135, 0.05);
-            border-radius: 8px;
-            border-left: 3px solid var(--accent-color);
-            transform: translateY(0);
-            transition: transform 0.3s ease;
-            max-width: 600px;
         }
         
-        .last-update-container:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        .logo-container {
+            display: flex;
+            align-items: center;
+            font-weight: 900;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
         }
         
-        .last-update-container i {
-            color: var(--accent-color);
-            margin-right: 15px;
-            font-size: 18px;
+        .pulse-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 10px var(--accent-color);
             animation: pulse 2s infinite;
         }
         
-        .last-update-info {
-            font-size: 14px;
-        }
-        
-        .last-update-time {
-            color: var(--accent-color);
-            font-weight: 500;
-            margin-left: 5px;
-        }
-        
-        /* Timeline container amélioré */
-        .timeline-container {
+        .main-nav {
             display: flex;
-            gap: 30px;
-            padding: 0;
-            margin-bottom: 40px;
+            margin-left: 40px;
+        }
+        
+        .main-nav a {
+            margin-right: 30px;
+            padding: 8px 5px;
+            font-weight: 500;
             position: relative;
-            height: calc(100vh - 350px);
-            min-height: 500px;
+            transition: color 0.3s;
         }
         
-        /* Améliorations de la sidebar de timeline */
-        .timeline-sidebar {
-            flex: 0 0 320px;
-            background: rgba(0, 20, 40, 0.4);
-            border-radius: 12px;
-            overflow-y: auto;
-            padding: 20px 0;
-            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
-            border: 1px solid rgba(0, 255, 135, 0.1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            max-height: 100%;
-        }
-        
-        .date-group {
-            margin-bottom: 25px;
-            padding: 0 20px;
-        }
-        
-        .date-header {
-            margin-bottom: 15px;
-            position: relative;
-            padding-left: 15px;
-        }
-        
-        .date-header::before {
+        .main-nav a::after {
             content: '';
             position: absolute;
+            bottom: 0;
             left: 0;
-            top: 0;
-            height: 100%;
-            width: 4px;
+            width: 0;
+            height: 2px;
             background-color: var(--accent-color);
-            border-radius: 2px;
+            transition: width 0.3s;
         }
         
-        .date-header h3 {
-            font-size: 18px;
+        .main-nav a:hover::after,
+        .main-nav a.active::after {
+            width: 100%;
+        }
+        
+        .main-nav a.active {
+            color: var(--accent-color);
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+        }
+        
+        .market-status {
+            display: flex;
+            align-items: center;
+            margin-right: 30px;
+            font-size: 0.875rem;
+        }
+        
+        .market-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .market-indicator.green {
+            background-color: #4CAF50;
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+        }
+        
+        .market-time {
+            margin-left: 10px;
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+        
+        .search-button {
+            padding: 10px 20px;
+            background-color: rgba(0, 255, 135, 0.1);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+            border: 1px solid rgba(0, 255, 135, 0.3);
+        }
+        
+        .search-button:hover {
+            background-color: rgba(0, 255, 135, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .search-button i {
+            margin-right: 8px;
+            color: var(--accent-color);
+        }
+        
+        /* Sidebar de navigation verticale */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background-color: rgba(1, 15, 26, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            z-index: 101;
+            border-right: 1px solid rgba(0, 255, 135, 0.1);
+        }
+        
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--accent-color);
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
+        }
+        
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+        }
+        
+        .nav-item {
+            margin-bottom: 20px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            color: rgba(255, 255, 255, 0.7);
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .nav-item:hover, .nav-item.active {
+            background-color: rgba(0, 255, 135, 0.1);
+            color: var(--accent-color);
+        }
+        
+        .nav-item.active::before {
+            content: '';
+            position: absolute;
+            left: -20px;
+            width: 3px;
+            height: 20px;
+            background-color: var(--accent-color);
+            border-radius: 0 2px 2px 0;
+        }
+        
+        .nav-item i {
+            font-size: 1.2rem;
+        }
+        
+        /* Main container */
+        .main-container {
+            margin-left: var(--sidebar-width);
+            margin-top: var(--header-height);
+            padding: 0;
+            min-height: calc(100vh - var(--header-height));
+            display: flex;
+        }
+        
+        /* Timeline section */
+        .timeline-section {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Left column - Timeline navigator */
+        .timeline-navigator {
+            width: 25%;
+            min-width: 300px;
+            border-right: 1px solid rgba(0, 255, 135, 0.1);
+            overflow-y: auto;
+            max-height: calc(100vh - var(--header-height));
+        }
+        
+        .navigator-heading {
+            padding: 30px;
+            border-bottom: 1px solid rgba(0, 255, 135, 0.1);
+        }
+        
+        .date-title {
+            font-size: 24px;
             font-weight: 700;
-            margin-bottom: 5px;
+            margin-bottom: 10px;
         }
         
-        .date-subtitle {
-            font-size: 12px;
+        .events-count {
+            font-size: 14px;
             color: rgba(255, 255, 255, 0.6);
         }
         
-        /* Animation des événements de la timeline */
-        .timeline-event {
-            position: relative;
-            margin-bottom: 15px;
-            padding: 15px;
-            border-radius: 8px;
-            background: rgba(0, 40, 70, 0.4);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border-left: 3px solid transparent;
-            transform: translateX(0);
+        .events-list {
+            padding: 20px;
         }
         
-        .timeline-event:hover {
-            background: rgba(0, 60, 90, 0.5);
+        .event-item {
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            background: rgba(1, 30, 52, 0.4);
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+        
+        .event-item:hover {
+            background: rgba(1, 40, 60, 0.5);
             transform: translateX(5px);
         }
         
-        .timeline-event.active {
-            background: rgba(0, 255, 135, 0.1);
-            border-left: 3px solid var(--accent-color);
-            box-shadow: 0 0 15px rgba(0, 255, 135, 0.15);
+        .event-item.active {
+            border-left-color: var(--accent-color);
+            background: rgba(0, 255, 135, 0.05);
         }
         
         .event-time {
             color: var(--accent-color);
-            font-size: 15px;
-            font-weight: 700;
+            font-weight: 600;
+            font-size: 14px;
             margin-bottom: 8px;
         }
         
         .event-title {
-            font-size: 16px;
             font-weight: 600;
+            font-size: 16px;
             margin-bottom: 5px;
             line-height: 1.4;
         }
@@ -202,236 +312,178 @@
             color: rgba(255, 255, 255, 0.6);
         }
         
-        /* Améliorations du contenu principal de timeline */
-        .timeline-content {
-            flex: 1;
-            background: rgba(0, 20, 40, 0.5);
-            border-radius: 12px;
+        /* Right column - Main content display */
+        .content-display {
+            flex-grow: 1;
+            padding: 40px;
             overflow-y: auto;
-            padding: 30px;
-            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(0, 255, 135, 0.1);
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
-            max-height: 100%;
-            position: relative;
+            max-height: calc(100vh - var(--header-height));
         }
         
-        .event-details {
+        .update-info {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            background: rgba(0, 255, 135, 0.05);
+            border-radius: 8px;
+            margin-bottom: 30px;
+            border-left: 3px solid var(--accent-color);
+        }
+        
+        .update-info i {
+            color: var(--accent-color);
+            margin-right: 10px;
+            font-size: 16px;
+        }
+        
+        .update-text {
+            font-size: 14px;
+        }
+        
+        .update-time {
+            color: var(--accent-color);
+            font-weight: 500;
+        }
+        
+        .event-detail {
             display: none;
-            opacity: 0;
-            transform: translateY(20px);
-            transition: all 0.5s ease;
         }
         
-        .event-details.active {
+        .event-detail.active {
             display: block;
-            opacity: 1;
-            transform: translateY(0);
-            animation: fadeIn 0.5s ease forwards;
+            animation: fadeIn 0.4s ease;
         }
         
-        .event-details-header {
-            margin-bottom: 25px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid rgba(0, 255, 135, 0.2);
-            position: relative;
-        }
-        
-        /* Effet de radar sur le contenu actif */
-        .event-details.active::before {
-            content: '';
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 10px;
-            height: 10px;
-            background-color: var(--accent-color);
-            border-radius: 50%;
-            box-shadow: 0 0 0 rgba(0, 255, 135, 0.4);
-            animation: radar 2s infinite;
-        }
-        
-        @keyframes radar {
-            0% {
-                box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.4);
-            }
-            70% {
-                box-shadow: 0 0 0 20px rgba(0, 255, 135, 0);
-            }
-            100% {
-                box-shadow: 0 0 0 0 rgba(0, 255, 135, 0);
-            }
+        .event-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(0, 255, 135, 0.1);
         }
         
         .event-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            flex-grow: 1;
+        }
+        
+        .event-source-tag {
+            display: inline-block;
+            padding: 5px 10px;
+            background: rgba(0, 255, 135, 0.1);
+            color: var(--accent-color);
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: 600;
             margin-bottom: 15px;
         }
         
-        .event-meta .event-source {
-            font-size: 14px;
-            color: var(--accent-color);
-            font-weight: 600;
-            background-color: rgba(0, 255, 135, 0.1);
-            padding: 5px 10px;
-            border-radius: 4px;
-        }
-        
-        .event-date-time {
+        .event-date-display {
             display: flex;
             align-items: center;
             font-size: 14px;
             color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 20px;
         }
         
-        .event-date-time i {
-            margin-right: 8px;
+        .event-date-display i {
             color: var(--accent-color);
+            margin-right: 8px;
         }
         
-        .event-date {
-            margin-right: 10px;
+        .event-date-display span {
+            margin-right: 15px;
         }
         
-        .event-details h2 {
-            font-size: 28px;
+        .event-title-display {
+            font-size: 32px;
             font-weight: 700;
-            margin-bottom: 15px;
             line-height: 1.3;
+            margin-bottom: 20px;
         }
         
-        .event-impact {
+        .impact-meter {
             display: inline-flex;
             align-items: center;
-            padding: 8px 12px;
-            border-radius: 5px;
+            padding: 8px 15px;
+            border-radius: 6px;
             font-size: 14px;
             font-weight: 600;
-            margin-top: 10px;
         }
         
         .impact-label {
-            margin-right: 8px;
+            margin-right: 10px;
             opacity: 0.8;
         }
         
-        .critical-impact {
-            background-color: rgba(255, 76, 76, 0.2);
+        .impact-high {
+            background: rgba(255, 76, 76, 0.1);
             color: #ff4c4c;
         }
         
-        .high-impact {
-            background-color: rgba(255, 170, 0, 0.2);
-            color: #ffaa00;
+        .impact-medium {
+            background: rgba(255, 193, 7, 0.1);
+            color: #ffc107;
         }
         
-        .event-description {
-            margin-bottom: 25px;
-            line-height: 1.6;
+        .event-content {
+            line-height: 1.8;
+            margin-bottom: 40px;
         }
         
-        .event-description p {
-            margin-bottom: 15px;
+        .event-content p {
+            margin-bottom: 20px;
             font-size: 16px;
         }
         
-        .event-symbols {
-            background-color: rgba(0, 40, 70, 0.5);
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 20px;
+        .affected-symbols {
+            background: rgba(1, 30, 52, 0.4);
+            padding: 25px;
+            border-radius: 10px;
+            margin-top: 40px;
         }
         
-        .symbols-label {
-            font-size: 14px;
+        .symbols-title {
+            font-size: 16px;
             font-weight: 600;
-            margin-bottom: 10px;
-            display: block;
+            margin-bottom: 15px;
         }
         
-        .symbols-list {
+        .symbols-grid {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
+            gap: 12px;
         }
         
         .symbol-tag {
-            display: inline-block;
-            padding: 6px 12px;
-            background-color: rgba(0, 255, 135, 0.1);
-            border: 1px solid rgba(0, 255, 135, 0.3);
-            color: var(--accent-color);
+            padding: 8px 15px;
+            background: rgba(0, 255, 135, 0.08);
+            border: 1px solid rgba(0, 255, 135, 0.2);
+            border-radius: 6px;
+            font-size: 14px;
             font-weight: 600;
-            border-radius: 4px;
-            transition: all 0.2s ease;
+            color: var(--accent-color);
+            transition: all 0.3s;
         }
         
         .symbol-tag:hover {
-            background-color: rgba(0, 255, 135, 0.2);
-            transform: translateY(-2px);
-            box-shadow: 0 2px 8px rgba(0, 255, 135, 0.2);
+            background: rgba(0, 255, 135, 0.15);
+            transform: translateY(-3px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
         }
         
-        /* Animation de notification */
-        .update-notification {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background-color: var(--accent-color);
-            color: var(--background-color);
-            padding: 12px 24px;
-            border-radius: 4px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            z-index: 1000;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.3s ease;
+        /* Portfolios section */
+        .portfolios-section {
+            padding: 60px 0;
+            background: linear-gradient(rgba(1, 22, 39, 0), rgba(1, 22, 39, 0.8));
+            margin-top: 80px;
         }
         
-        .update-notification.show {
-            opacity: 1;
-        }
-        
-        .update-notification i {
-            margin-right: 10px;
-        }
-        
-        /* Section de sélection de portefeuille améliorée */
-        .portfolio-selector {
-            margin-top: 40px;
-            padding: 30px;
-            background: rgba(0, 30, 60, 0.4);
-            border-radius: 12px;
-            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
-            border: 1px solid rgba(0, 255, 135, 0.1);
-            backdrop-filter: blur(5px);
-            -webkit-backdrop-filter: blur(5px);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .portfolio-selector::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 3px;
-            background: linear-gradient(to right, transparent, var(--accent-color), transparent);
-        }
-        
-        .portfolio-heading {
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 25px;
+        .section-heading {
             text-align: center;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 40px;
             letter-spacing: 1px;
             position: relative;
             display: inline-block;
@@ -439,205 +491,203 @@
             transform: translateX(-50%);
         }
         
-        .portfolio-heading::after {
+        .section-heading::after {
             content: '';
             position: absolute;
             bottom: -10px;
             left: 0;
-            width: 50px;
+            width: 60px;
             height: 3px;
-            background-color: var(--accent-color);
-            box-shadow: 0 0 10px var(--accent-color);
+            background: var(--accent-color);
             left: 50%;
             transform: translateX(-50%);
+            box-shadow: 0 0 10px var(--accent-color);
         }
         
-        .portfolio-buttons {
+        .portfolios-grid {
             display: flex;
             justify-content: center;
             gap: 30px;
-            margin-top: 30px;
+            margin-top: 50px;
         }
         
-        .portfolio-button {
+        .portfolio-card {
+            width: 280px;
+            height: 200px;
+            background: rgba(1, 30, 52, 0.4);
+            border-radius: 12px;
+            padding: 25px;
             display: flex;
             flex-direction: column;
-            align-items: center;
             justify-content: center;
-            width: 200px;
-            height: 140px;
-            padding: 20px;
-            border-radius: 10px;
-            background: rgba(0, 40, 70, 0.5);
-            transition: all 0.3s ease;
-            text-decoration: none;
-            color: var(--text-color);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            align-items: center;
+            transition: all 0.3s;
             position: relative;
             overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         
-        .portfolio-button::before {
+        .portfolio-card::before {
             content: '';
             position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            z-index: -1;
-            background: linear-gradient(45deg, rgba(0, 255, 135, 0), rgba(0, 255, 135, 0.3), rgba(0, 255, 135, 0));
-            background-size: 400% 400%;
-            animation: gradient-border 4s ease infinite;
-            border-radius: 12px;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, 
+                rgba(0, 255, 135, 0) 0%, 
+                rgba(0, 255, 135, 0.05) 50%, 
+                rgba(0, 255, 135, 0) 100%);
+            z-index: 0;
             opacity: 0;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.3s;
         }
         
-        .portfolio-button:hover::before {
+        .portfolio-card:hover::before {
             opacity: 1;
         }
         
-        @keyframes gradient-border {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
+        .portfolio-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
         }
         
-        .portfolio-button i {
-            font-size: 36px;
-            margin-bottom: 15px;
-            transition: all 0.3s ease;
+        .portfolio-icon {
+            font-size: 40px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
         }
         
-        .portfolio-button span {
-            font-size: 16px;
-            font-weight: 600;
-            letter-spacing: 1px;
-        }
-        
-        .portfolio-button:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-            background: rgba(0, 50, 80, 0.7);
-        }
-        
-        .portfolio-button:hover i {
+        .portfolio-card:hover .portfolio-icon {
             transform: scale(1.2);
         }
         
-        .portfolio-button.aggressive:hover {
-            border-color: rgba(255, 89, 94, 0.4);
-        }
-        
-        .portfolio-button.aggressive i {
+        .portfolio-aggressive .portfolio-icon {
             color: #ff595e;
         }
         
-        .portfolio-button.moderate:hover {
-            border-color: rgba(255, 202, 58, 0.4);
-        }
-        
-        .portfolio-button.moderate i {
+        .portfolio-moderate .portfolio-icon {
             color: #ffca3a;
         }
         
-        .portfolio-button.stable:hover {
-            border-color: rgba(138, 201, 38, 0.4);
-        }
-        
-        .portfolio-button.stable i {
+        .portfolio-stable .portfolio-icon {
             color: #8ac926;
         }
         
-        /* Arrière-plan graphique */
-        .graphic-bg {
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            opacity: 0.05;
-            pointer-events: none;
+        .portfolio-name {
+            font-size: 18px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
-        /* Responsive design amélioré */
-        @media (max-width: 1024px) {
-            .timeline-container {
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-container {
                 flex-direction: column;
-                height: auto;
             }
             
-            .timeline-sidebar, .timeline-content {
-                flex: none;
+            .timeline-section {
+                flex-direction: column;
+            }
+            
+            .timeline-navigator {
                 width: 100%;
-                max-height: 400px;
+                max-height: none;
+                border-right: none;
+                border-bottom: 1px solid rgba(0, 255, 135, 0.1);
             }
             
-            .portfolio-buttons {
+            .content-display {
+                max-height: none;
+            }
+            
+            .portfolios-grid {
                 flex-direction: column;
                 align-items: center;
-                gap: 15px;
-            }
-            
-            .portfolio-button {
-                width: 100%;
-                max-width: 300px;
             }
         }
         
         @media (max-width: 768px) {
-            .page-title {
-                font-size: 2.5rem;
+            .main-header {
+                left: 0;
+                padding: 0 20px;
             }
             
-            .event-details-header h2 {
-                font-size: 22px;
+            .sidebar {
+                width: 100%;
+                height: auto;
+                flex-direction: row;
+                padding: 10px 20px;
+                justify-content: space-between;
+                position: relative;
             }
-        }
-        
-        /* Animations et effets supplémentaires */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
+            
+            .sidebar-nav {
+                flex-direction: row;
+                justify-content: center;
             }
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            
+            .nav-item {
+                margin: 0 10px;
             }
-        }
-        
-        .reveal {
-            opacity: 0;
-            transform: translateY(30px);
-            transition: all 0.6s ease;
-        }
-        
-        .reveal.active {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        
-        /* Effet de glissement */
-        .slide-in {
-            opacity: 0;
-            transform: translateX(-50px);
-            transition: all 0.6s ease;
-        }
-        
-        .slide-in.active {
-            opacity: 1;
-            transform: translateX(0);
+            
+            .main-container {
+                margin-left: 0;
+                margin-top: calc(var(--header-height) + 60px);
+            }
+            
+            .event-header {
+                flex-direction: column;
+            }
+            
+            .event-title-display {
+                font-size: 24px;
+            }
         }
     </style>
 </head>
-<body class="page-actualites fade-in">
-    <header class="page-header">
+<body>
+    <!-- Sidebar de navigation verticale -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">TP</div>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" title="Actualités">
+                <i class="fas fa-newspaper"></i>
+            </a>
+            <a href="#" class="nav-item" title="Portefeuilles">
+                <i class="fas fa-chart-pie"></i>
+            </a>
+            <a href="#" class="nav-item" title="Marchés">
+                <i class="fas fa-chart-line"></i>
+            </a>
+            <a href="#" class="nav-item" title="Alertes">
+                <i class="fas fa-bell"></i>
+            </a>
+            <a href="#" class="nav-item" title="Paramètres">
+                <i class="fas fa-cog"></i>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Header principal -->
+    <header class="main-header">
         <div class="header-left">
             <div class="logo-container">
                 <div class="pulse-dot"></div>
-                <a href="index.html" class="logo">TRADEPULSE</a>
+                <a href="index.html">TRADEPULSE</a>
             </div>
             <nav class="main-nav">
                 <a href="actualites.html" class="active">Actualités</a>
@@ -648,414 +698,336 @@
             <div class="market-status">
                 <div class="market-indicator green"></div>
                 <span>Marché ouvert</span>
-                <span class="market-time" id="marketTime">16:24:35</span>
+                <span class="market-time" id="marketTime">09:45:22</span>
             </div>
-            <a href="recherche.html" class="question-button">
+            <a href="recherche.html" class="search-button">
                 <i class="fas fa-search"></i>
                 <span>Ma question</span>
             </a>
         </div>
     </header>
 
-    <main class="page-content timeline-layout">
-        <!-- Arrière-plan graphique -->
-        <div class="graphic-bg">
-            <svg width="100%" height="100%" viewBox="0 0 1000 1000" preserveAspectRatio="none">
-                <path d="M0,500 C200,300 300,800 500,500 C700,300 800,600 1000,500 L1000,1000 L0,1000 Z" fill="url(#gradient)" opacity="0.3"></path>
-                <defs>
-                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                        <stop offset="0%" style="stop-color:var(--accent-color);stop-opacity:0.4" />
-                        <stop offset="100%" style="stop-color:var(--accent-color);stop-opacity:0.1" />
-                    </linearGradient>
-                </defs>
-            </svg>
-        </div>
-        
-        <section class="page-title-section reveal">
-            <h1 class="page-title">ACTUALITÉS FINANCIÈRES</h1>
-            <p class="page-subtitle" id="currentDate">9 MARS 2025</p>
-            
-            <!-- Info de dernière mise à jour -->
-            <div class="last-update-container">
-                <i class="fas fa-info-circle"></i>
-                <div class="last-update-info">
-                    Dernière mise à jour des données: <span id="lastUpdateTime" class="last-update-time">07/03/2025 10:15:53</span>
+    <!-- Container principal -->
+    <main class="main-container">
+        <section class="timeline-section">
+            <!-- Colonne gauche - Timeline navigator -->
+            <div class="timeline-navigator">
+                <div class="navigator-heading">
+                    <h2 class="date-title">Vendredi, 7 Mars 2025</h2>
+                    <p class="events-count">3 événements majeurs</p>
                 </div>
-            </div>
-            
-            <!-- Notification de mise à jour -->
-            <div id="updateNotification" class="update-notification">
-                <i class="fas fa-check-circle"></i>
-                <span>Données mises à jour avec succès!</span>
-            </div>
-        </section>
-
-        <div class="timeline-container reveal">
-            <!-- Timeline colonne gauche -->
-            <div class="timeline-sidebar slide-in">
-                <div class="date-group">
-                    <div class="date-header">
-                        <h3>Vendredi, 7 Mars 2025</h3>
-                        <p class="date-subtitle">3 événements majeurs</p>
+                <div class="events-list">
+                    <div class="event-item active" data-event="event1">
+                        <div class="event-time">08:15</div>
+                        <div class="event-title">Exemption de droits de douane</div>
+                        <div class="event-source">Maison Blanche</div>
                     </div>
-                    <div class="timeline-events">
-                        <div class="timeline-event active" data-event="event1">
-                            <div class="event-time">08:15</div>
-                            <div class="event-title">Exemption de droits de douane</div>
-                            <div class="event-source">Maison Blanche</div>
-                        </div>
-                        <div class="timeline-event" data-event="event2">
-                            <div class="event-time">09:30</div>
-                            <div class="event-title">Marché obligataire européen</div>
-                            <div class="event-source">Marchés Européens</div>
-                        </div>
-                        <div class="timeline-event" data-event="event3">
-                            <div class="event-time">13:45</div>
-                            <div class="event-title">Décision de taux de la BCE</div>
-                            <div class="event-source">BCE</div>
-                        </div>
+                    <div class="event-item" data-event="event2">
+                        <div class="event-time">09:30</div>
+                        <div class="event-title">Marché obligataire européen</div>
+                        <div class="event-source">Marchés Européens</div>
+                    </div>
+                    <div class="event-item" data-event="event3">
+                        <div class="event-time">13:45</div>
+                        <div class="event-title">Décision de taux de la BCE</div>
+                        <div class="event-source">BCE</div>
                     </div>
                 </div>
                 
-                <div class="date-group">
-                    <div class="date-header">
-                        <h3>Jeudi, 6 Mars 2025</h3>
-                        <p class="date-subtitle">2 événements majeurs</p>
+                <div class="navigator-heading">
+                    <h2 class="date-title">Jeudi, 6 Mars 2025</h2>
+                    <p class="events-count">2 événements majeurs</p>
+                </div>
+                <div class="events-list">
+                    <div class="event-item" data-event="event4">
+                        <div class="event-time">14:30</div>
+                        <div class="event-title">Publication chiffres emploi US</div>
+                        <div class="event-source">Bureau des statistiques</div>
                     </div>
-                    <div class="timeline-events">
-                        <div class="timeline-event" data-event="event4">
-                            <div class="event-time">14:30</div>
-                            <div class="event-title">Publication chiffres emploi US</div>
-                            <div class="event-source">Bureau des statistiques</div>
-                        </div>
-                        <div class="timeline-event" data-event="event5">
-                            <div class="event-time">16:00</div>
-                            <div class="event-title">Adoption de l'IA en finance</div>
-                            <div class="event-source">Wall Street Journal</div>
-                        </div>
+                    <div class="event-item" data-event="event5">
+                        <div class="event-time">16:00</div>
+                        <div class="event-title">Adoption de l'IA en finance</div>
+                        <div class="event-source">Wall Street Journal</div>
                     </div>
                 </div>
             </div>
-
-            <!-- Contenu détaillé à droite -->
-            <div class="timeline-content">
-                <!-- Détails événement 1 (affiché par défaut) -->
-                <div class="event-details active" id="event1">
-                    <div class="event-details-header">
+            
+            <!-- Colonne droite - Affichage du contenu -->
+            <div class="content-display">
+                <div class="update-info">
+                    <i class="fas fa-info-circle"></i>
+                    <div class="update-text">
+                        Dernière mise à jour des données: <span id="lastUpdateTime" class="update-time">07/03/2025 10:15:53</span>
+                    </div>
+                </div>
+                
+                <!-- Détails événement 1 -->
+                <div class="event-detail active" id="event1">
+                    <div class="event-header">
                         <div class="event-meta">
-                            <span class="event-source">Maison Blanche</span>
-                            <div class="event-date-time">
+                            <div class="event-source-tag">Maison Blanche</div>
+                            <div class="event-date-display">
                                 <i class="fas fa-calendar-alt"></i>
                                 <span class="event-date">07/03/2025</span>
                                 <span class="event-time">08:15</span>
                             </div>
+                            <h1 class="event-title-display">Exemption de droits de douane sur les véhicules</h1>
                         </div>
-                        <h2 class="event-title">Exemption de droits de douane sur les véhicules</h2>
-                        <div class="event-impact critical-impact">
+                        <div class="impact-meter impact-high">
                             <span class="impact-label">Impact</span>
                             <span class="impact-value">8/10</span>
                         </div>
                     </div>
-                    <div class="event-description">
+                    <div class="event-content">
                         <p>La Maison Blanche a annoncé un report d'un mois sur les nouveaux tarifs automobiles. Cette exemption a entraîné une hausse des actions, avec le DAX en hausse de 3,5%, le STOXX 50 en hausse de 1,9%, et le Hang Seng en hausse de 2,87%.</p>
-                        <p>Ces chiffres solides suggèrent une économie américaine robuste et pourraient inciter la Fed à maintenir des taux d'intérêt plus élevés plus longtemps que prévu initialement. Les analystes estiment que cette décision pourrait signaler un adoucissement des tensions commerciales mondiales et offrir un répit bienvenu aux constructeurs automobiles européens et asiatiques.</p>
-                    </div>
-                    <div class="event-symbols">
-                        <span class="symbols-label">Symboles affectés:</span>
-                        <div class="symbols-list">
-                            <span class="symbol-tag">BMW.DE</span>
-                            <span class="symbol-tag">VOW3.DE</span>
-                            <span class="symbol-tag">RNO.PA</span>
-                            <span class="symbol-tag">TM</span>
+                        <p>Cette décision intervient dans un contexte de tensions commerciales et pourrait signaler un adoucissement de la position américaine face à ses partenaires européens et asiatiques. Les analystes estiment que ce délai pourrait permettre aux négociateurs de parvenir à un accord plus favorable pour l'ensemble des parties.</p>
+                        <p>Les constructeurs automobiles européens et asiatiques bénéficient particulièrement de cette annonce, avec des gains significatifs observés sur leurs titres. Cette exemption temporaire pourrait également avoir des implications sur d'autres secteurs industriels concernés par les tensions commerciales.</p>
+                        
+                        <div class="affected-symbols">
+                            <h3 class="symbols-title">Symboles affectés:</h3>
+                            <div class="symbols-grid">
+                                <div class="symbol-tag">BMW.DE</div>
+                                <div class="symbol-tag">VOW3.DE</div>
+                                <div class="symbol-tag">RNO.PA</div>
+                                <div class="symbol-tag">TM</div>
+                                <div class="symbol-tag">DAX</div>
+                                <div class="symbol-tag">STOXX50E</div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Détails événement 2 -->
-                <div class="event-details" id="event2">
-                    <div class="event-details-header">
+                <div class="event-detail" id="event2">
+                    <div class="event-header">
                         <div class="event-meta">
-                            <span class="event-source">Marchés Européens</span>
-                            <div class="event-date-time">
+                            <div class="event-source-tag">Marchés Européens</div>
+                            <div class="event-date-display">
                                 <i class="fas fa-calendar-alt"></i>
                                 <span class="event-date">07/03/2025</span>
                                 <span class="event-time">09:30</span>
                             </div>
+                            <h1 class="event-title-display">Flambée historique du marché obligataire européen</h1>
                         </div>
-                        <h2 class="event-title">Flambée historique du marché obligataire européen</h2>
-                        <div class="event-impact high-impact">
+                        <div class="impact-meter impact-high">
                             <span class="impact-label">Impact</span>
                             <span class="impact-value">7/10</span>
                         </div>
                     </div>
-                    <div class="event-description">
-                        <p>Le marché obligataire européen a connu une journée historique avec une hausse de 30 points de base du rendement allemand à 10 ans, un record depuis 1990.</p>
-                        <p>Cette flambée des rendements reflète les inquiétudes croissantes concernant l'inflation et la politique monétaire de la BCE. Les investisseurs anticipent une approche plus restrictive lors de la prochaine réunion de la banque centrale.</p>
-                    </div>
-                    <div class="event-symbols">
-                        <span class="symbols-label">Symboles affectés:</span>
-                        <div class="symbols-list">
-                            <span class="symbol-tag">BUND</span>
-                            <span class="symbol-tag">TLT</span>
-                            <span class="symbol-tag">EUR/USD</span>
+                    <div class="event-content">
+                        <p>Le marché obligataire européen a connu une journée historique avec une hausse de 30 points de base du rendement allemand à 10 ans, un record depuis 1990. Cette évolution spectaculaire témoigne d'un changement majeur dans les anticipations des investisseurs.</p>
+                        <p>Cette flambée des rendements reflète les inquiétudes croissantes concernant l'inflation et la politique monétaire de la BCE. Les investisseurs anticipent une approche plus restrictive lors de la prochaine réunion de la banque centrale, ce qui pourrait avoir des répercussions significatives sur l'ensemble des marchés financiers européens.</p>
+                        <p>Les obligations d'État des autres pays européens ont également subi des pressions à la vente, avec des hausses de rendement généralisées. Cette volatilité exceptionnelle souligne l'incertitude actuelle concernant la trajectoire économique de la zone euro.</p>
+                        
+                        <div class="affected-symbols">
+                            <h3 class="symbols-title">Symboles affectés:</h3>
+                            <div class="symbols-grid">
+                                <div class="symbol-tag">BUND</div>
+                                <div class="symbol-tag">TLT</div>
+                                <div class="symbol-tag">EUR/USD</div>
+                                <div class="symbol-tag">DE10Y</div>
+                                <div class="symbol-tag">FR10Y</div>
+                                <div class="symbol-tag">IT10Y</div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Détails événement 3 -->
-                <div class="event-details" id="event3">
-                    <div class="event-details-header">
+                <div class="event-detail" id="event3">
+                    <div class="event-header">
                         <div class="event-meta">
-                            <span class="event-source">BCE</span>
-                            <div class="event-date-time">
+                            <div class="event-source-tag">BCE</div>
+                            <div class="event-date-display">
                                 <i class="fas fa-calendar-alt"></i>
                                 <span class="event-date">07/03/2025</span>
                                 <span class="event-time">13:45</span>
                             </div>
+                            <h1 class="event-title-display">Décision de taux de la BCE</h1>
                         </div>
-                        <h2 class="event-title">Décision de taux de la BCE</h2>
-                        <div class="event-impact critical-impact">
+                        <div class="impact-meter impact-high">
                             <span class="impact-label">Impact</span>
                             <span class="impact-value">9/10</span>
                         </div>
                     </div>
-                    <div class="event-description">
+                    <div class="event-content">
                         <p>La BCE maintient ses taux d'intérêt, impactant les marchés européens et le secteur bancaire. Contrairement aux attentes d'une baisse de 25 points de base, la BCE a adopté une position plus hawkish en citant des préoccupations persistantes concernant l'inflation.</p>
-                        <p>Dans son communiqué, la présidente a indiqué que la banque centrale reste vigilante face aux pressions inflationnistes, mais qu'elle envisage d'assouplir sa politique lors de la prochaine réunion si les données le justifient.</p>
-                    </div>
-                    <div class="event-symbols">
-                        <span class="symbols-label">Symboles affectés:</span>
-                        <div class="symbols-list">
-                            <span class="symbol-tag">EURO STOXX</span>
-                            <span class="symbol-tag">BNP.PA</span>
-                            <span class="symbol-tag">DB</span>
-                            <span class="symbol-tag">SAN.MC</span>
+                        <p>Dans son communiqué, la présidente a indiqué que la banque centrale reste vigilante face aux pressions inflationnistes, mais qu'elle envisage d'assouplir sa politique lors de la prochaine réunion si les données le justifient. Cette perspective a quelque peu atténué la réaction négative initiale des marchés.</p>
+                        <p>Le secteur bancaire européen a montré une réaction mitigée, certaines institutions bénéficiant de la perspective de taux plus élevés pour une période prolongée, tandis que d'autres ont souffert des inquiétudes concernant l'impact sur la croissance économique globale.</p>
+                        
+                        <div class="affected-symbols">
+                            <h3 class="symbols-title">Symboles affectés:</h3>
+                            <div class="symbols-grid">
+                                <div class="symbol-tag">EURO STOXX</div>
+                                <div class="symbol-tag">BNP.PA</div>
+                                <div class="symbol-tag">DB</div>
+                                <div class="symbol-tag">SAN.MC</div>
+                                <div class="symbol-tag">ISP.MI</div>
+                                <div class="symbol-tag">EUR/USD</div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Détails événement 4 -->
-                <div class="event-details" id="event4">
-                    <div class="event-details-header">
+                <div class="event-detail" id="event4">
+                    <div class="event-header">
                         <div class="event-meta">
-                            <span class="event-source">Bureau des statistiques</span>
-                            <div class="event-date-time">
+                            <div class="event-source-tag">Bureau des statistiques</div>
+                            <div class="event-date-display">
                                 <i class="fas fa-calendar-alt"></i>
                                 <span class="event-date">06/03/2025</span>
                                 <span class="event-time">14:30</span>
                             </div>
+                            <h1 class="event-title-display">Publication des chiffres de l'emploi américain</h1>
                         </div>
-                        <h2 class="event-title">Publication des chiffres de l'emploi américain</h2>
-                        <div class="event-impact high-impact">
+                        <div class="impact-meter impact-high">
                             <span class="impact-label">Impact</span>
                             <span class="impact-value">7/10</span>
                         </div>
                     </div>
-                    <div class="event-description">
+                    <div class="event-content">
                         <p>Des données sur l'emploi meilleures que prévu renforcent le dollar face aux autres devises. Le taux de chômage est tombé à 3,6%, contre 3,8% attendu, et l'économie a créé 235 000 emplois non agricoles, dépassant les attentes de 185 000.</p>
-                        <p>Ces chiffres solides suggèrent une économie américaine robuste et pourraient inciter la Fed à maintenir des taux d'intérêt plus élevés plus longtemps que prévu initialement.</p>
-                    </div>
-                    <div class="event-symbols">
-                        <span class="symbols-label">Symboles affectés:</span>
-                        <div class="symbols-list">
-                            <span class="symbol-tag">EUR/USD</span>
-                            <span class="symbol-tag">GBP/USD</span>
-                            <span class="symbol-tag">USD/JPY</span>
-                            <span class="symbol-tag">DXY</span>
+                        <p>Ces chiffres solides suggèrent une économie américaine robuste et pourraient inciter la Fed à maintenir des taux d'intérêt plus élevés plus longtemps que prévu initialement. Les marchés ont immédiatement réagi, avec une hausse du dollar et une pression à la baisse sur les obligations américaines.</p>
+                        <p>Les secteurs ayant connu les plus fortes créations d'emplois sont les services aux entreprises, la santé et le secteur manufacturier, ce qui témoigne d'une reprise économique large et diversifiée. Les salaires ont également augmenté de 0,4% sur un mois, dépassant les prévisions de 0,3%.</p>
+                        
+                        <div class="affected-symbols">
+                            <h3 class="symbols-title">Symboles affectés:</h3>
+                            <div class="symbols-grid">
+                                <div class="symbol-tag">EUR/USD</div>
+                                <div class="symbol-tag">GBP/USD</div>
+                                <div class="symbol-tag">USD/JPY</div>
+                                <div class="symbol-tag">DXY</div>
+                                <div class="symbol-tag">US10Y</div>
+                                <div class="symbol-tag">SPY</div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Détails événement 5 -->
-                <div class="event-details" id="event5">
-                    <div class="event-details-header">
+                <div class="event-detail" id="event5">
+                    <div class="event-header">
                         <div class="event-meta">
-                            <span class="event-source">Wall Street Journal</span>
-                            <div class="event-date-time">
+                            <div class="event-source-tag">Wall Street Journal</div>
+                            <div class="event-date-display">
                                 <i class="fas fa-calendar-alt"></i>
                                 <span class="event-date">06/03/2025</span>
                                 <span class="event-time">16:00</span>
                             </div>
+                            <h1 class="event-title-display">Progression de l'adoption de l'intelligence artificielle</h1>
                         </div>
-                        <h2 class="event-title">Progression de l'adoption de l'intelligence artificielle</h2>
-                        <div class="event-impact critical-impact">
+                        <div class="impact-meter impact-high">
                             <span class="impact-label">Impact</span>
                             <span class="impact-value">9/10</span>
                         </div>
                     </div>
-                    <div class="event-description">
+                    <div class="event-content">
                         <p>Plusieurs entreprises technologiques annoncent des avancées majeures en IA, stimulant le secteur. Selon un rapport du Wall Street Journal, les investissements dans l'IA par les institutions financières ont augmenté de 300% au cours du dernier trimestre.</p>
-                        <p>Les applications d'IA dans le trading, la gestion des risques et la détection de fraudes transforment rapidement le paysage financier, créant une forte demande pour les puces avancées et les solutions d'infrastructure cloud.</p>
-                    </div>
-                    <div class="event-symbols">
-                        <span class="symbols-label">Symboles affectés:</span>
-                        <div class="symbols-list">
-                            <span class="symbol-tag">NVDA</span>
-                            <span class="symbol-tag">GOOG</span>
-                            <span class="symbol-tag">MSFT</span>
-                            <span class="symbol-tag">META</span>
+                        <p>Les applications d'IA dans le trading, la gestion des risques et la détection de fraudes transforment rapidement le paysage financier, créant une forte demande pour les puces avancées et les solutions d'infrastructure cloud. Cela a entraîné une hausse notable des valeurs technologiques, avec NVIDIA en tête des gains.</p>
+                        <p>Des banques d'investissement majeures comme Goldman Sachs et JPMorgan ont annoncé des partenariats stratégiques avec des entreprises spécialisées en IA, confirmant la tendance à l'intégration profonde de ces technologies dans les processus financiers. Selon les experts, cette transformation pourrait entraîner des économies de coûts de l'ordre de 15 à 20% pour les institutions financières au cours des deux prochaines années.</p>
+                        
+                        <div class="affected-symbols">
+                            <h3 class="symbols-title">Symboles affectés:</h3>
+                            <div class="symbols-grid">
+                                <div class="symbol-tag">NVDA</div>
+                                <div class="symbol-tag">GOOG</div>
+                                <div class="symbol-tag">MSFT</div>
+                                <div class="symbol-tag">META</div>
+                                <div class="symbol-tag">GS</div>
+                                <div class="symbol-tag">JPM</div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="portfolio-selector reveal">
-            <h2 class="portfolio-heading">CHOISISSEZ VOTRE PORTEFEUILLE</h2>
-            <div class="portfolio-buttons">
-                <a href="portefeuille.html?type=agressif" class="portfolio-button aggressive">
-                    <i class="fas fa-rocket"></i>
-                    <span>AGRESSIF</span>
+        </section>
+        
+        <!-- Section des portfolios -->
+        <section class="portfolios-section">
+            <h2 class="section-heading">CHOISISSEZ VOTRE PORTEFEUILLE</h2>
+            <div class="portfolios-grid">
+                <a href="portefeuille.html?type=agressif" class="portfolio-card portfolio-aggressive">
+                    <i class="fas fa-rocket portfolio-icon"></i>
+                    <div class="portfolio-name">Agressif</div>
                 </a>
-                <a href="portefeuille.html?type=modere" class="portfolio-button moderate">
-                    <i class="fas fa-balance-scale"></i>
-                    <span>MODÉRÉ</span>
+                <a href="portefeuille.html?type=modere" class="portfolio-card portfolio-moderate">
+                    <i class="fas fa-balance-scale portfolio-icon"></i>
+                    <div class="portfolio-name">Modéré</div>
                 </a>
-                <a href="portefeuille.html?type=stable" class="portfolio-button stable">
-                    <i class="fas fa-shield-alt"></i>
-                    <span>STABLE</span>
+                <a href="portefeuille.html?type=stable" class="portfolio-card portfolio-stable">
+                    <i class="fas fa-shield-alt portfolio-icon"></i>
+                    <div class="portfolio-name">Stable</div>
                 </a>
             </div>
-        </div>
+        </section>
     </main>
 
-    <footer class="page-footer">
-        <div class="data-source-info">
-            <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel</p>
-            <p><i class="fas fa-robot"></i> Analyses sectorielles et portefeuille optimisé fournis par Perplexity AI</p>
-            <p><i class="fas fa-clock"></i> Dernière mise à jour: <span class="update-time" id="updateTime">07/03/2025 10:15:53</span></p>
-        </div>
-    </footer>
-
     <script>
-        // Animate elements on scroll
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('active');
-                }
-            });
-        }, {threshold: 0.1});
-        
         document.addEventListener('DOMContentLoaded', function() {
-            // Observe elements with reveal and slide-in classes
-            document.querySelectorAll('.reveal, .slide-in').forEach(el => {
-                observer.observe(el);
-            });
-            
             // Update market time
             updateMarketTime();
             setInterval(updateMarketTime, 1000);
-            
-            // Update current date
-            updateCurrentDate();
             
             // Vérifier s'il existe une date de dernière mise à jour
             const lastUpdateTime = localStorage.getItem('tradepulse_last_update');
             if (lastUpdateTime) {
                 const date = new Date(parseInt(lastUpdateTime));
                 document.getElementById('lastUpdateTime').textContent = formatDateTime(date);
-                document.getElementById('updateTime').textContent = formatDateTime(date);
             }
             
-            // Add transition on portfolio button clicks
-            document.querySelectorAll('.portfolio-button').forEach(button => {
-                button.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    document.body.classList.add('fade-out');
-                    
-                    setTimeout(() => {
-                        window.location.href = this.getAttribute('href');
-                    }, 800); // Transition time
-                });
-            });
-
             // Timeline events interaction
-            document.querySelectorAll('.timeline-event').forEach(event => {
-                event.addEventListener('click', function() {
-                    // Remove active class from all events
-                    document.querySelectorAll('.timeline-event').forEach(e => {
-                        e.classList.remove('active');
+            document.querySelectorAll('.event-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    // Remove active class from all items
+                    document.querySelectorAll('.event-item').forEach(el => {
+                        el.classList.remove('active');
                     });
                     
-                    // Add active class to clicked event
+                    // Add active class to clicked item
                     this.classList.add('active');
                     
                     // Get event ID
                     const eventId = this.getAttribute('data-event');
                     
                     // Hide all event details
-                    document.querySelectorAll('.event-details').forEach(detail => {
+                    document.querySelectorAll('.event-detail').forEach(detail => {
                         detail.classList.remove('active');
                     });
                     
-                    // Show selected event details with animation
-                    const targetDetail = document.getElementById(eventId);
-                    setTimeout(() => {
-                        targetDetail.classList.add('active');
-                    }, 10);
+                    // Show selected event detail
+                    document.getElementById(eventId).classList.add('active');
+                    
+                    // Scroll to top of content on mobile
+                    if (window.innerWidth <= 768) {
+                        document.querySelector('.content-display').scrollTop = 0;
+                    }
                 });
             });
+            
+            // Format a date and time
+            function formatDateTime(date) {
+                const dateStr = date.toLocaleDateString('fr-FR');
+                const timeStr = date.toLocaleTimeString('fr-FR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                return `${dateStr} ${timeStr}`;
+            }
+            
+            // Update market time
+            function updateMarketTime() {
+                const marketTimeElement = document.getElementById('marketTime');
+                if (marketTimeElement) {
+                    const now = new Date();
+                    const hours = now.getHours().toString().padStart(2, '0');
+                    const minutes = now.getMinutes().toString().padStart(2, '0');
+                    const seconds = now.getSeconds().toString().padStart(2, '0');
+                    marketTimeElement.textContent = `${hours}:${minutes}:${seconds}`;
+                }
+            }
         });
-        
-        // Afficher une notification de mise à jour
-        function showUpdateNotification(message, type = 'success') {
-            const notification = document.getElementById('updateNotification');
-            if (!notification) return;
-            
-            // Mettre à jour le message et l'icône
-            const icon = notification.querySelector('i');
-            if (icon) {
-                icon.className = type === 'success' ? 'fas fa-check-circle' : 'fas fa-exclamation-circle';
-            }
-            
-            const text = notification.querySelector('span');
-            if (text) {
-                text.textContent = message;
-            }
-            
-            // Ajouter la classe show
-            notification.classList.add('show');
-            
-            // Masquer la notification après 3 secondes
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
-        }
-        
-        // Formater une date et heure
-        function formatDateTime(date) {
-            const dateStr = date.toLocaleDateString('fr-FR');
-            const timeStr = date.toLocaleTimeString('fr-FR', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            return `${dateStr} ${timeStr}`;
-        }
-        
-        // Update market time
-        function updateMarketTime() {
-            const marketTimeElement = document.getElementById('marketTime');
-            if (marketTimeElement) {
-                const now = new Date();
-                const hours = now.getHours().toString().padStart(2, '0');
-                const minutes = now.getMinutes().toString().padStart(2, '0');
-                const seconds = now.getSeconds().toString().padStart(2, '0');
-                marketTimeElement.textContent = `${hours}:${minutes}:${seconds}`;
-            }
-        }
-        
-        // Update current date
-        function updateCurrentDate() {
-            const dateElement = document.getElementById('currentDate');
-            if (dateElement) {
-                const now = new Date();
-                const options = { day: 'numeric', month: 'long', year: 'numeric' };
-                const dateStr = now.toLocaleDateString('fr-FR', options).toUpperCase();
-                dateElement.textContent = dateStr;
-            }
-        }
     </script>
 </body>
 </html>
