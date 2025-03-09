@@ -6,6 +6,7 @@
     <title>TradePulse - Actualités Financières</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="timeline-style.css">
     <script type="module" src="aiintegration.js"></script>
     <style>
         /* Variables et reset */
@@ -234,100 +235,37 @@
             margin-top: var(--header-height);
             padding: 0;
             min-height: calc(100vh - var(--header-height));
-            display: flex;
         }
         
-        /* Timeline section */
-        .timeline-section {
-            display: flex;
-            width: 100%;
-            height: 100%;
+        /* Page title section */
+        .page-title-section {
+            text-align: center;
+            padding: 40px 0;
+            background: linear-gradient(rgba(1, 22, 39, 0), rgba(1, 22, 39, 0.4), rgba(1, 22, 39, 0));
         }
         
-        /* Left column - Timeline navigator */
-        .timeline-navigator {
-            width: 25%;
-            min-width: 300px;
-            border-right: 1px solid rgba(0, 255, 135, 0.1);
-            overflow-y: auto;
-            max-height: calc(100vh - var(--header-height));
-        }
-        
-        .navigator-heading {
-            padding: 30px;
-            border-bottom: 1px solid rgba(0, 255, 135, 0.1);
-        }
-        
-        .date-title {
-            font-size: 24px;
+        .page-title {
+            font-size: 32px;
             font-weight: 700;
             margin-bottom: 10px;
+            letter-spacing: 1px;
         }
         
-        .events-count {
+        .page-subtitle {
             font-size: 14px;
-            color: rgba(255, 255, 255, 0.6);
+            opacity: 0.7;
         }
         
-        .events-list {
-            padding: 20px;
-        }
-        
-        .event-item {
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            background: rgba(1, 30, 52, 0.4);
-            cursor: pointer;
-            transition: all 0.3s;
-            border-left: 3px solid transparent;
-        }
-        
-        .event-item:hover {
-            background: rgba(1, 40, 60, 0.5);
-            transform: translateX(5px);
-        }
-        
-        .event-item.active {
-            border-left-color: var(--accent-color);
-            background: rgba(0, 255, 135, 0.05);
-        }
-        
-        .event-time {
-            color: var(--accent-color);
-            font-weight: 600;
-            font-size: 14px;
-            margin-bottom: 8px;
-        }
-        
-        .event-title {
-            font-weight: 600;
-            font-size: 16px;
-            margin-bottom: 5px;
-            line-height: 1.4;
-        }
-        
-        .event-source {
-            font-size: 12px;
-            color: rgba(255, 255, 255, 0.6);
-        }
-        
-        /* Right column - Main content display */
-        .content-display {
-            flex-grow: 1;
-            padding: 40px;
-            overflow-y: auto;
-            max-height: calc(100vh - var(--header-height));
-        }
-        
+        /* Update info */
         .update-info {
             display: flex;
             align-items: center;
             padding: 15px 20px;
             background: rgba(0, 255, 135, 0.05);
             border-radius: 8px;
-            margin-bottom: 30px;
+            margin: 0 auto 30px;
             border-left: 3px solid var(--accent-color);
+            max-width: 800px;
         }
         
         .update-info i {
@@ -345,242 +283,6 @@
             font-weight: 500;
         }
         
-        .event-detail {
-            display: none;
-        }
-        
-        .event-detail.active {
-            display: block;
-            animation: fadeIn 0.4s ease;
-        }
-        
-        .event-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px solid rgba(0, 255, 135, 0.1);
-        }
-        
-        .event-meta {
-            flex-grow: 1;
-        }
-        
-        .event-source-tag {
-            display: inline-block;
-            padding: 5px 10px;
-            background: rgba(0, 255, 135, 0.1);
-            color: var(--accent-color);
-            border-radius: 4px;
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 15px;
-        }
-        
-        .event-date-display {
-            display: flex;
-            align-items: center;
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.7);
-            margin-bottom: 20px;
-        }
-        
-        .event-date-display i {
-            color: var(--accent-color);
-            margin-right: 8px;
-        }
-        
-        .event-date-display span {
-            margin-right: 15px;
-        }
-        
-        .event-title-display {
-            font-size: 32px;
-            font-weight: 700;
-            line-height: 1.3;
-            margin-bottom: 20px;
-        }
-        
-        .impact-meter {
-            display: inline-flex;
-            align-items: center;
-            padding: 8px 15px;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-        
-        .impact-label {
-            margin-right: 10px;
-            opacity: 0.8;
-        }
-        
-        .impact-high {
-            background: rgba(255, 76, 76, 0.1);
-            color: #ff4c4c;
-        }
-        
-        .impact-medium {
-            background: rgba(255, 193, 7, 0.1);
-            color: #ffc107;
-        }
-        
-        .event-content {
-            line-height: 1.8;
-            margin-bottom: 40px;
-        }
-        
-        .event-content p {
-            margin-bottom: 20px;
-            font-size: 16px;
-        }
-        
-        .affected-symbols {
-            background: rgba(1, 30, 52, 0.4);
-            padding: 25px;
-            border-radius: 10px;
-            margin-top: 40px;
-        }
-        
-        .symbols-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin-bottom: 15px;
-        }
-        
-        .symbols-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-        
-        .symbol-tag {
-            padding: 8px 15px;
-            background: rgba(0, 255, 135, 0.08);
-            border: 1px solid rgba(0, 255, 135, 0.2);
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            color: var(--accent-color);
-            transition: all 0.3s;
-        }
-        
-        .symbol-tag:hover {
-            background: rgba(0, 255, 135, 0.15);
-            transform: translateY(-3px);
-            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-        }
-        
-        /* Portfolios section */
-        .portfolios-section {
-            padding: 60px 0;
-            background: linear-gradient(rgba(1, 22, 39, 0), rgba(1, 22, 39, 0.8));
-            margin-top: 80px;
-        }
-        
-        .section-heading {
-            text-align: center;
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 40px;
-            letter-spacing: 1px;
-            position: relative;
-            display: inline-block;
-            left: 50%;
-            transform: translateX(-50%);
-        }
-        
-        .section-heading::after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 0;
-            width: 60px;
-            height: 3px;
-            background: var(--accent-color);
-            left: 50%;
-            transform: translateX(-50%);
-            box-shadow: 0 0 10px var(--accent-color);
-        }
-        
-        .portfolios-grid {
-            display: flex;
-            justify-content: center;
-            gap: 30px;
-            margin-top: 50px;
-        }
-        
-        .portfolio-card {
-            width: 280px;
-            height: 200px;
-            background: rgba(1, 30, 52, 0.4);
-            border-radius: 12px;
-            padding: 25px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            transition: all 0.3s;
-            position: relative;
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .portfolio-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(45deg, 
-                rgba(0, 255, 135, 0) 0%, 
-                rgba(0, 255, 135, 0.05) 50%, 
-                rgba(0, 255, 135, 0) 100%);
-            z-index: 0;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-        
-        .portfolio-card:hover::before {
-            opacity: 1;
-        }
-        
-        .portfolio-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-        }
-        
-        .portfolio-icon {
-            font-size: 40px;
-            margin-bottom: 20px;
-            transition: all 0.3s;
-        }
-        
-        .portfolio-card:hover .portfolio-icon {
-            transform: scale(1.2);
-        }
-        
-        .portfolio-aggressive .portfolio-icon {
-            color: #ff595e;
-        }
-        
-        .portfolio-moderate .portfolio-icon {
-            color: #ffca3a;
-        }
-        
-        .portfolio-stable .portfolio-icon {
-            color: #8ac926;
-        }
-        
-        .portfolio-name {
-            font-size: 18px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
         /* Animations */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(20px); }
@@ -594,32 +296,6 @@
         }
         
         /* Responsive */
-        @media (max-width: 1200px) {
-            .main-container {
-                flex-direction: column;
-            }
-            
-            .timeline-section {
-                flex-direction: column;
-            }
-            
-            .timeline-navigator {
-                width: 100%;
-                max-height: none;
-                border-right: none;
-                border-bottom: 1px solid rgba(0, 255, 135, 0.1);
-            }
-            
-            .content-display {
-                max-height: none;
-            }
-            
-            .portfolios-grid {
-                flex-direction: column;
-                align-items: center;
-            }
-        }
-        
         @media (max-width: 768px) {
             .main-header {
                 left: 0;
@@ -647,14 +323,6 @@
             .main-container {
                 margin-left: 0;
                 margin-top: calc(var(--header-height) + 60px);
-            }
-            
-            .event-header {
-                flex-direction: column;
-            }
-            
-            .event-title-display {
-                font-size: 24px;
             }
         }
     </style>
@@ -709,243 +377,151 @@
 
     <!-- Container principal -->
     <main class="main-container">
-        <section class="timeline-section">
-            <!-- Colonne gauche - Timeline navigator -->
-            <div class="timeline-navigator">
-                <div class="navigator-heading">
-                    <h2 class="date-title">Vendredi, 7 Mars 2025</h2>
-                    <p class="events-count">3 événements majeurs</p>
+        <!-- En-tête de la page -->
+        <section class="page-title-section">
+            <h1 class="page-title">ACTUALITÉS FINANCIÈRES</h1>
+            <p class="page-subtitle">7 MARS 2025</p>
+            <div class="update-info">
+                <i class="fas fa-info-circle"></i>
+                <div class="update-text">
+                    Dernière mise à jour des données: <span id="lastUpdateTime" class="update-time">07/03/2025 10:15:53</span>
                 </div>
-                <div class="events-list">
-                    <div class="event-item active" data-event="event1">
+            </div>
+        </section>
+        
+        <!-- Timeline verticale des événements -->
+        <section class="timeline-section">
+            <div class="timeline-container">
+                <div class="timeline-line"></div>
+                
+                <!-- Événement à gauche -->
+                <div class="timeline-event left">
+                    <div class="event-content">
                         <div class="event-time">08:15</div>
-                        <div class="event-title">Exemption de droits de douane</div>
+                        <h3 class="event-title">Exemption de droits de douane</h3>
                         <div class="event-source">Maison Blanche</div>
+                        <p class="event-description">La Maison Blanche a annoncé un report d'un mois sur les nouveaux tarifs automobiles. Cette exemption a entraîné une hausse des actions...</p>
                     </div>
-                    <div class="event-item" data-event="event2">
+                    <div class="event-dot"></div>
+                </div>
+                
+                <!-- Événement à droite -->
+                <div class="timeline-event right">
+                    <div class="event-content">
                         <div class="event-time">09:30</div>
-                        <div class="event-title">Marché obligataire européen</div>
+                        <h3 class="event-title">Marché obligataire européen</h3>
                         <div class="event-source">Marchés Européens</div>
+                        <p class="event-description">Le marché obligataire européen a connu une journée historique avec une hausse de 30 points de base du rendement allemand à 10 ans...</p>
                     </div>
-                    <div class="event-item" data-event="event3">
+                    <div class="event-dot"></div>
+                </div>
+                
+                <!-- Événement à gauche -->
+                <div class="timeline-event left">
+                    <div class="event-content">
                         <div class="event-time">13:45</div>
-                        <div class="event-title">Décision de taux de la BCE</div>
+                        <h3 class="event-title">Décision de taux de la BCE</h3>
                         <div class="event-source">BCE</div>
+                        <p class="event-description">La BCE maintient ses taux d'intérêt, impactant les marchés européens et le secteur bancaire. Contrairement aux attentes d'une baisse...</p>
+                    </div>
+                    <div class="event-dot"></div>
+                </div>
+                
+                <!-- Événement à droite -->
+                <div class="timeline-event right">
+                    <div class="event-content">
+                        <div class="event-time">14:30</div>
+                        <h3 class="event-title">Publication chiffres emploi US</h3>
+                        <div class="event-source">Bureau des statistiques</div>
+                        <p class="event-description">Des données sur l'emploi meilleures que prévu renforcent le dollar face aux autres devises. Le taux de chômage est tombé à 3,6%...</p>
+                    </div>
+                    <div class="event-dot"></div>
+                </div>
+                
+                <!-- Événement à gauche -->
+                <div class="timeline-event left">
+                    <div class="event-content">
+                        <div class="event-time">16:00</div>
+                        <h3 class="event-title">Adoption de l'IA en finance</h3>
+                        <div class="event-source">Wall Street Journal</div>
+                        <p class="event-description">Plusieurs entreprises technologiques annoncent des avancées majeures en IA, stimulant le secteur. Selon un rapport du Wall Street Journal...</p>
+                    </div>
+                    <div class="event-dot"></div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Section des nouvelles générales -->
+        <section class="news-section">
+            <div class="section-header">
+                <h2 class="section-title">DERNIÈRES ACTUALITÉS</h2>
+            </div>
+            
+            <div class="news-grid">
+                <!-- Actualité 1 -->
+                <div class="news-card">
+                    <div class="news-image" style="background-image: url('https://via.placeholder.com/300x160?text=Finance+News');"></div>
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span>Financial Times</span>
+                            <span>07/03/2025</span>
+                        </div>
+                        <h3 class="news-title">Les géants technologiques dopent les marchés</h3>
+                        <p class="news-excerpt">Les valeurs technologiques enregistrent une forte hausse suite à des résultats trimestriels au-delà des attentes...</p>
                     </div>
                 </div>
                 
-                <div class="navigator-heading">
-                    <h2 class="date-title">Jeudi, 6 Mars 2025</h2>
-                    <p class="events-count">2 événements majeurs</p>
-                </div>
-                <div class="events-list">
-                    <div class="event-item" data-event="event4">
-                        <div class="event-time">14:30</div>
-                        <div class="event-title">Publication chiffres emploi US</div>
-                        <div class="event-source">Bureau des statistiques</div>
+                <!-- Actualité 2 -->
+                <div class="news-card">
+                    <div class="news-image" style="background-image: url('https://via.placeholder.com/300x160?text=Market+News');"></div>
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span>Bloomberg</span>
+                            <span>07/03/2025</span>
+                        </div>
+                        <h3 class="news-title">Le pétrole en hausse sur fond de tensions</h3>
+                        <p class="news-excerpt">Les prix du pétrole poursuivent leur tendance haussière avec une progression de 3% suite aux tensions géopolitiques...</p>
                     </div>
-                    <div class="event-item" data-event="event5">
-                        <div class="event-time">16:00</div>
-                        <div class="event-title">Adoption de l'IA en finance</div>
-                        <div class="event-source">Wall Street Journal</div>
+                </div>
+                
+                <!-- Actualité 3 -->
+                <div class="news-card">
+                    <div class="news-image" style="background-image: url('https://via.placeholder.com/300x160?text=Crypto+News');"></div>
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span>CoinDesk</span>
+                            <span>07/03/2025</span>
+                        </div>
+                        <h3 class="news-title">Bitcoin franchit un nouveau seuil</h3>
+                        <p class="news-excerpt">La principale cryptomonnaie dépasse les 75 000$ dans un contexte d'adoption institutionnelle croissante...</p>
+                    </div>
+                </div>
+                
+                <!-- Actualité 4 -->
+                <div class="news-card">
+                    <div class="news-image" style="background-image: url('https://via.placeholder.com/300x160?text=Economy+News');"></div>
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span>Reuters</span>
+                            <span>06/03/2025</span>
+                        </div>
+                        <h3 class="news-title">L'inflation revient sous les 3% en zone euro</h3>
+                        <p class="news-excerpt">Les dernières données d'Eurostat montrent un ralentissement de l'inflation à 2,8% sur un an...</p>
                     </div>
                 </div>
             </div>
             
-            <!-- Colonne droite - Affichage du contenu -->
-            <div class="content-display">
-                <div class="update-info">
-                    <i class="fas fa-info-circle"></i>
-                    <div class="update-text">
-                        Dernière mise à jour des données: <span id="lastUpdateTime" class="update-time">07/03/2025 10:15:53</span>
-                    </div>
-                </div>
-                
-                <!-- Détails événement 1 -->
-                <div class="event-detail active" id="event1">
-                    <div class="event-header">
-                        <div class="event-meta">
-                            <div class="event-source-tag">Maison Blanche</div>
-                            <div class="event-date-display">
-                                <i class="fas fa-calendar-alt"></i>
-                                <span class="event-date">07/03/2025</span>
-                                <span class="event-time">08:15</span>
-                            </div>
-                            <h1 class="event-title-display">Exemption de droits de douane sur les véhicules</h1>
-                        </div>
-                        <div class="impact-meter impact-high">
-                            <span class="impact-label">Impact</span>
-                            <span class="impact-value">8/10</span>
-                        </div>
-                    </div>
-                    <div class="event-content">
-                        <p>La Maison Blanche a annoncé un report d'un mois sur les nouveaux tarifs automobiles. Cette exemption a entraîné une hausse des actions, avec le DAX en hausse de 3,5%, le STOXX 50 en hausse de 1,9%, et le Hang Seng en hausse de 2,87%.</p>
-                        <p>Cette décision intervient dans un contexte de tensions commerciales et pourrait signaler un adoucissement de la position américaine face à ses partenaires européens et asiatiques. Les analystes estiment que ce délai pourrait permettre aux négociateurs de parvenir à un accord plus favorable pour l'ensemble des parties.</p>
-                        <p>Les constructeurs automobiles européens et asiatiques bénéficient particulièrement de cette annonce, avec des gains significatifs observés sur leurs titres. Cette exemption temporaire pourrait également avoir des implications sur d'autres secteurs industriels concernés par les tensions commerciales.</p>
-                        
-                        <div class="affected-symbols">
-                            <h3 class="symbols-title">Symboles affectés:</h3>
-                            <div class="symbols-grid">
-                                <div class="symbol-tag">BMW.DE</div>
-                                <div class="symbol-tag">VOW3.DE</div>
-                                <div class="symbol-tag">RNO.PA</div>
-                                <div class="symbol-tag">TM</div>
-                                <div class="symbol-tag">DAX</div>
-                                <div class="symbol-tag">STOXX50E</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Détails événement 2 -->
-                <div class="event-detail" id="event2">
-                    <div class="event-header">
-                        <div class="event-meta">
-                            <div class="event-source-tag">Marchés Européens</div>
-                            <div class="event-date-display">
-                                <i class="fas fa-calendar-alt"></i>
-                                <span class="event-date">07/03/2025</span>
-                                <span class="event-time">09:30</span>
-                            </div>
-                            <h1 class="event-title-display">Flambée historique du marché obligataire européen</h1>
-                        </div>
-                        <div class="impact-meter impact-high">
-                            <span class="impact-label">Impact</span>
-                            <span class="impact-value">7/10</span>
-                        </div>
-                    </div>
-                    <div class="event-content">
-                        <p>Le marché obligataire européen a connu une journée historique avec une hausse de 30 points de base du rendement allemand à 10 ans, un record depuis 1990. Cette évolution spectaculaire témoigne d'un changement majeur dans les anticipations des investisseurs.</p>
-                        <p>Cette flambée des rendements reflète les inquiétudes croissantes concernant l'inflation et la politique monétaire de la BCE. Les investisseurs anticipent une approche plus restrictive lors de la prochaine réunion de la banque centrale, ce qui pourrait avoir des répercussions significatives sur l'ensemble des marchés financiers européens.</p>
-                        <p>Les obligations d'État des autres pays européens ont également subi des pressions à la vente, avec des hausses de rendement généralisées. Cette volatilité exceptionnelle souligne l'incertitude actuelle concernant la trajectoire économique de la zone euro.</p>
-                        
-                        <div class="affected-symbols">
-                            <h3 class="symbols-title">Symboles affectés:</h3>
-                            <div class="symbols-grid">
-                                <div class="symbol-tag">BUND</div>
-                                <div class="symbol-tag">TLT</div>
-                                <div class="symbol-tag">EUR/USD</div>
-                                <div class="symbol-tag">DE10Y</div>
-                                <div class="symbol-tag">FR10Y</div>
-                                <div class="symbol-tag">IT10Y</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Détails événement 3 -->
-                <div class="event-detail" id="event3">
-                    <div class="event-header">
-                        <div class="event-meta">
-                            <div class="event-source-tag">BCE</div>
-                            <div class="event-date-display">
-                                <i class="fas fa-calendar-alt"></i>
-                                <span class="event-date">07/03/2025</span>
-                                <span class="event-time">13:45</span>
-                            </div>
-                            <h1 class="event-title-display">Décision de taux de la BCE</h1>
-                        </div>
-                        <div class="impact-meter impact-high">
-                            <span class="impact-label">Impact</span>
-                            <span class="impact-value">9/10</span>
-                        </div>
-                    </div>
-                    <div class="event-content">
-                        <p>La BCE maintient ses taux d'intérêt, impactant les marchés européens et le secteur bancaire. Contrairement aux attentes d'une baisse de 25 points de base, la BCE a adopté une position plus hawkish en citant des préoccupations persistantes concernant l'inflation.</p>
-                        <p>Dans son communiqué, la présidente a indiqué que la banque centrale reste vigilante face aux pressions inflationnistes, mais qu'elle envisage d'assouplir sa politique lors de la prochaine réunion si les données le justifient. Cette perspective a quelque peu atténué la réaction négative initiale des marchés.</p>
-                        <p>Le secteur bancaire européen a montré une réaction mitigée, certaines institutions bénéficiant de la perspective de taux plus élevés pour une période prolongée, tandis que d'autres ont souffert des inquiétudes concernant l'impact sur la croissance économique globale.</p>
-                        
-                        <div class="affected-symbols">
-                            <h3 class="symbols-title">Symboles affectés:</h3>
-                            <div class="symbols-grid">
-                                <div class="symbol-tag">EURO STOXX</div>
-                                <div class="symbol-tag">BNP.PA</div>
-                                <div class="symbol-tag">DB</div>
-                                <div class="symbol-tag">SAN.MC</div>
-                                <div class="symbol-tag">ISP.MI</div>
-                                <div class="symbol-tag">EUR/USD</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Détails événement 4 -->
-                <div class="event-detail" id="event4">
-                    <div class="event-header">
-                        <div class="event-meta">
-                            <div class="event-source-tag">Bureau des statistiques</div>
-                            <div class="event-date-display">
-                                <i class="fas fa-calendar-alt"></i>
-                                <span class="event-date">06/03/2025</span>
-                                <span class="event-time">14:30</span>
-                            </div>
-                            <h1 class="event-title-display">Publication des chiffres de l'emploi américain</h1>
-                        </div>
-                        <div class="impact-meter impact-high">
-                            <span class="impact-label">Impact</span>
-                            <span class="impact-value">7/10</span>
-                        </div>
-                    </div>
-                    <div class="event-content">
-                        <p>Des données sur l'emploi meilleures que prévu renforcent le dollar face aux autres devises. Le taux de chômage est tombé à 3,6%, contre 3,8% attendu, et l'économie a créé 235 000 emplois non agricoles, dépassant les attentes de 185 000.</p>
-                        <p>Ces chiffres solides suggèrent une économie américaine robuste et pourraient inciter la Fed à maintenir des taux d'intérêt plus élevés plus longtemps que prévu initialement. Les marchés ont immédiatement réagi, avec une hausse du dollar et une pression à la baisse sur les obligations américaines.</p>
-                        <p>Les secteurs ayant connu les plus fortes créations d'emplois sont les services aux entreprises, la santé et le secteur manufacturier, ce qui témoigne d'une reprise économique large et diversifiée. Les salaires ont également augmenté de 0,4% sur un mois, dépassant les prévisions de 0,3%.</p>
-                        
-                        <div class="affected-symbols">
-                            <h3 class="symbols-title">Symboles affectés:</h3>
-                            <div class="symbols-grid">
-                                <div class="symbol-tag">EUR/USD</div>
-                                <div class="symbol-tag">GBP/USD</div>
-                                <div class="symbol-tag">USD/JPY</div>
-                                <div class="symbol-tag">DXY</div>
-                                <div class="symbol-tag">US10Y</div>
-                                <div class="symbol-tag">SPY</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Détails événement 5 -->
-                <div class="event-detail" id="event5">
-                    <div class="event-header">
-                        <div class="event-meta">
-                            <div class="event-source-tag">Wall Street Journal</div>
-                            <div class="event-date-display">
-                                <i class="fas fa-calendar-alt"></i>
-                                <span class="event-date">06/03/2025</span>
-                                <span class="event-time">16:00</span>
-                            </div>
-                            <h1 class="event-title-display">Progression de l'adoption de l'intelligence artificielle</h1>
-                        </div>
-                        <div class="impact-meter impact-high">
-                            <span class="impact-label">Impact</span>
-                            <span class="impact-value">9/10</span>
-                        </div>
-                    </div>
-                    <div class="event-content">
-                        <p>Plusieurs entreprises technologiques annoncent des avancées majeures en IA, stimulant le secteur. Selon un rapport du Wall Street Journal, les investissements dans l'IA par les institutions financières ont augmenté de 300% au cours du dernier trimestre.</p>
-                        <p>Les applications d'IA dans le trading, la gestion des risques et la détection de fraudes transforment rapidement le paysage financier, créant une forte demande pour les puces avancées et les solutions d'infrastructure cloud. Cela a entraîné une hausse notable des valeurs technologiques, avec NVIDIA en tête des gains.</p>
-                        <p>Des banques d'investissement majeures comme Goldman Sachs et JPMorgan ont annoncé des partenariats stratégiques avec des entreprises spécialisées en IA, confirmant la tendance à l'intégration profonde de ces technologies dans les processus financiers. Selon les experts, cette transformation pourrait entraîner des économies de coûts de l'ordre de 15 à 20% pour les institutions financières au cours des deux prochaines années.</p>
-                        
-                        <div class="affected-symbols">
-                            <h3 class="symbols-title">Symboles affectés:</h3>
-                            <div class="symbols-grid">
-                                <div class="symbol-tag">NVDA</div>
-                                <div class="symbol-tag">GOOG</div>
-                                <div class="symbol-tag">MSFT</div>
-                                <div class="symbol-tag">META</div>
-                                <div class="symbol-tag">GS</div>
-                                <div class="symbol-tag">JPM</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <div class="cta-container">
+                <a href="#" class="view-more-btn">VOIR PLUS D'ACTUALITÉS</a>
             </div>
         </section>
         
         <!-- Section des portfolios -->
         <section class="portfolios-section">
-            <h2 class="section-heading">CHOISISSEZ VOTRE PORTEFEUILLE</h2>
+            <div class="section-header">
+                <h2 class="section-title">CHOISISSEZ VOTRE PORTEFEUILLE</h2>
+            </div>
+            
             <div class="portfolios-grid">
                 <a href="portefeuille.html?type=agressif" class="portfolio-card portfolio-aggressive">
                     <i class="fas fa-rocket portfolio-icon"></i>
@@ -959,6 +535,10 @@
                     <i class="fas fa-shield-alt portfolio-icon"></i>
                     <div class="portfolio-name">Stable</div>
                 </a>
+            </div>
+            
+            <div class="cta-container">
+                <a href="portefeuille.html?type=modere" class="cta-button">DÉCOUVRIR LES PORTEFEUILLES OPTIMISÉS</a>
             </div>
         </section>
     </main>
@@ -975,35 +555,6 @@
                 const date = new Date(parseInt(lastUpdateTime));
                 document.getElementById('lastUpdateTime').textContent = formatDateTime(date);
             }
-            
-            // Timeline events interaction
-            document.querySelectorAll('.event-item').forEach(item => {
-                item.addEventListener('click', function() {
-                    // Remove active class from all items
-                    document.querySelectorAll('.event-item').forEach(el => {
-                        el.classList.remove('active');
-                    });
-                    
-                    // Add active class to clicked item
-                    this.classList.add('active');
-                    
-                    // Get event ID
-                    const eventId = this.getAttribute('data-event');
-                    
-                    // Hide all event details
-                    document.querySelectorAll('.event-detail').forEach(detail => {
-                        detail.classList.remove('active');
-                    });
-                    
-                    // Show selected event detail
-                    document.getElementById(eventId).classList.add('active');
-                    
-                    // Scroll to top of content on mobile
-                    if (window.innerWidth <= 768) {
-                        document.querySelector('.content-display').scrollTop = 0;
-                    }
-                });
-            });
             
             // Format a date and time
             function formatDateTime(date) {
@@ -1027,6 +578,16 @@
                     marketTimeElement.textContent = `${hours}:${minutes}:${seconds}`;
                 }
             }
+            
+            // Ajouter l'interaction pour les événements de la timeline
+            const timelineEvents = document.querySelectorAll('.timeline-event');
+            timelineEvents.forEach(event => {
+                event.addEventListener('click', function() {
+                    // Pour une version future, on pourrait ajouter ici l'affichage du détail de l'événement
+                    // dans une modal ou une zone dédiée
+                    console.log('Événement cliqué:', this.querySelector('.event-title').textContent);
+                });
+            });
         });
     </script>
 </body>
