@@ -482,6 +482,10 @@
             display: flex;
             flex-direction: column;
         }
+        
+        .news-card.filtered {
+            display: none;
+        }
 
         .news-card:hover {
             transform: translateY(-5px);
@@ -626,6 +630,34 @@
 
         .view-more-btn:hover i {
             transform: translateX(4px);
+        }
+
+        /* Notification quand aucune actualité ne correspond au filtre */
+        .no-results {
+            text-align: center;
+            padding: 40px;
+            background: rgba(0, 255, 135, 0.05);
+            border-radius: var(--card-radius);
+            margin: 20px auto;
+            max-width: 600px;
+            display: none;
+        }
+
+        .no-results i {
+            font-size: 40px;
+            margin-bottom: 20px;
+            color: var(--accent-color);
+            opacity: 0.5;
+        }
+
+        .no-results h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .no-results p {
+            font-size: 16px;
+            opacity: 0.7;
         }
 
         /* Calendrier des événements à venir */
@@ -941,26 +973,26 @@
         <div class="news-container">
             <!-- Onglets de catégories -->
             <div class="news-tabs">
-                <div class="news-tab active">
+                <div class="news-tab active" data-category="all">
                     <i class="fas fa-globe news-tab-icon"></i>Toutes
                 </div>
-                <div class="news-tab">
+                <div class="news-tab" data-category="marches">
                     <i class="fas fa-chart-line news-tab-icon"></i>Marchés
                 </div>
-                <div class="news-tab">
+                <div class="news-tab" data-category="economie">
                     <i class="fas fa-university news-tab-icon"></i>Économie
                 </div>
-                <div class="news-tab">
+                <div class="news-tab" data-category="tech">
                     <i class="fas fa-microchip news-tab-icon"></i>Tech
                 </div>
-                <div class="news-tab">
+                <div class="news-tab" data-category="crypto">
                     <i class="fas fa-coins news-tab-icon"></i>Crypto
                 </div>
             </div>
             
             <!-- Articles à la une -->
             <section class="featured-news">
-                <div class="featured-news-card" style="background-image: url('https://via.placeholder.com/600x400?text=Fed+Meeting')">
+                <div class="featured-news-card" data-category="economie" style="background-image: url('https://via.placeholder.com/600x400?text=Fed+Meeting')">
                     <div class="featured-news-tag tag-breaking">BREAKING</div>
                     <div class="featured-news-overlay"></div>
                     <div class="featured-news-content">
@@ -976,7 +1008,7 @@
                     </div>
                 </div>
                 
-                <div class="featured-news-card" style="background-image: url('https://via.placeholder.com/600x400?text=Tech+Merger')">
+                <div class="featured-news-card" data-category="tech" style="background-image: url('https://via.placeholder.com/600x400?text=Tech+Merger')">
                     <div class="featured-news-tag tag-important">IMPORTANT</div>
                     <div class="featured-news-overlay"></div>
                     <div class="featured-news-content">
@@ -993,10 +1025,17 @@
                 </div>
             </section>
             
+            <!-- Message quand aucune actualité ne correspond au filtre -->
+            <div class="no-results">
+                <i class="fas fa-search"></i>
+                <h3>Aucune actualité dans cette catégorie</h3>
+                <p>Essayez une autre catégorie ou revenez plus tard pour les dernières mises à jour.</p>
+            </div>
+            
             <!-- Grille d'actualités principale -->
             <section class="news-grid">
                 <!-- Actualité 1 -->
-                <div class="news-card">
+                <div class="news-card" data-category="economie">
                     <div class="news-image" style="background-image: url('https://via.placeholder.com/400x200?text=Tariffs');">
                         <div class="news-impact high"><i class="fas fa-arrow-trend-up"></i>Impact: Élevé</div>
                     </div>
@@ -1015,7 +1054,7 @@
                 </div>
                 
                 <!-- Actualité 2 -->
-                <div class="news-card">
+                <div class="news-card" data-category="marches">
                     <div class="news-image" style="background-image: url('https://via.placeholder.com/400x200?text=EU+Bonds');">
                         <div class="news-impact high"><i class="fas fa-arrow-trend-up"></i>Impact: Élevé</div>
                     </div>
@@ -1034,7 +1073,7 @@
                 </div>
                 
                 <!-- Actualité 3 -->
-                <div class="news-card">
+                <div class="news-card" data-category="marches">
                     <div class="news-image" style="background-image: url('https://via.placeholder.com/400x200?text=ECB+Rates');">
                         <div class="news-impact high"><i class="fas fa-arrow-trend-up"></i>Impact: Élevé</div>
                     </div>
@@ -1053,7 +1092,7 @@
                 </div>
                 
                 <!-- Actualité 4 -->
-                <div class="news-card">
+                <div class="news-card" data-category="economie">
                     <div class="news-image" style="background-image: url('https://via.placeholder.com/400x200?text=Jobs+Report');">
                         <div class="news-impact medium"><i class="fas fa-arrow-right"></i>Impact: Moyen</div>
                     </div>
@@ -1072,7 +1111,7 @@
                 </div>
                 
                 <!-- Actualité 5 -->
-                <div class="news-card">
+                <div class="news-card" data-category="tech">
                     <div class="news-image" style="background-image: url('https://via.placeholder.com/400x200?text=AI+Finance');">
                         <div class="news-impact medium"><i class="fas fa-arrow-right"></i>Impact: Moyen</div>
                     </div>
@@ -1091,7 +1130,7 @@
                 </div>
                 
                 <!-- Actualité 6 -->
-                <div class="news-card">
+                <div class="news-card" data-category="crypto">
                     <div class="news-image" style="background-image: url('https://via.placeholder.com/400x200?text=Crypto+News');">
                         <div class="news-impact low"><i class="fas fa-arrow-trend-down"></i>Impact: Faible</div>
                     </div>
@@ -1122,7 +1161,7 @@
                 
                 <div class="events-list">
                     <!-- Événement 1 -->
-                    <div class="event-card">
+                    <div class="event-card" data-category="economie">
                         <div class="event-card-header">
                             <div class="event-card-date">
                                 <div class="event-day">10</div>
@@ -1139,7 +1178,7 @@
                     </div>
                     
                     <!-- Événement 2 -->
-                    <div class="event-card">
+                    <div class="event-card" data-category="economie">
                         <div class="event-card-header">
                             <div class="event-card-date">
                                 <div class="event-day">12</div>
@@ -1156,7 +1195,7 @@
                     </div>
                     
                     <!-- Événement 3 -->
-                    <div class="event-card">
+                    <div class="event-card" data-category="economie">
                         <div class="event-card-header">
                             <div class="event-card-date">
                                 <div class="event-day">15</div>
@@ -1173,7 +1212,7 @@
                     </div>
                     
                     <!-- Événement 4 -->
-                    <div class="event-card">
+                    <div class="event-card" data-category="tech">
                         <div class="event-card-header">
                             <div class="event-card-date">
                                 <div class="event-day">18</div>
@@ -1229,19 +1268,118 @@
                 }
             }
             
-            // Gestion des onglets
+            // Gestion des onglets et filtrage des actualités
             const tabs = document.querySelectorAll('.news-tab');
+            const featuredNewsCards = document.querySelectorAll('.featured-news-card');
+            const newsCards = document.querySelectorAll('.news-grid .news-card');
+            const eventCards = document.querySelectorAll('.events-list .event-card');
+            const noResultsMessage = document.querySelector('.no-results');
+            
+            // Fonction pour filtrer les éléments
+            function filterContent(category) {
+                let featuredVisible = 0;
+                let gridVisible = 0;
+                let eventsVisible = 0;
+                
+                // Filtrer les articles à la une
+                featuredNewsCards.forEach(card => {
+                    if (category === 'all' || card.dataset.category === category) {
+                        card.style.display = 'flex';
+                        featuredVisible++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                
+                // Ajuster le layout des articles à la une en fonction des résultats
+                const featuredNewsSection = document.querySelector('.featured-news');
+                if (featuredVisible === 0) {
+                    featuredNewsSection.style.display = 'none';
+                } else {
+                    featuredNewsSection.style.display = 'grid';
+                    if (featuredVisible === 1) {
+                        featuredNewsSection.style.gridTemplateColumns = '1fr';
+                    } else {
+                        featuredNewsSection.style.gridTemplateColumns = '1fr 1fr';
+                    }
+                }
+                
+                // Filtrer les cartes d'actualité
+                newsCards.forEach(card => {
+                    if (category === 'all' || card.dataset.category === category) {
+                        card.classList.remove('filtered');
+                        gridVisible++;
+                    } else {
+                        card.classList.add('filtered');
+                    }
+                });
+                
+                // Filtrer les événements
+                eventCards.forEach(card => {
+                    if (category === 'all' || card.dataset.category === category) {
+                        card.style.display = 'block';
+                        eventsVisible++;
+                    } else {
+                        card.style.display = 'none';
+                    }
+                });
+                
+                // Afficher ou masquer le message "Aucun résultat"
+                if (featuredVisible === 0 && gridVisible === 0) {
+                    noResultsMessage.style.display = 'block';
+                } else {
+                    noResultsMessage.style.display = 'none';
+                }
+                
+                // Afficher ou masquer la section des événements à venir
+                const upcomingEventsSection = document.querySelector('.upcoming-events');
+                if (eventsVisible === 0) {
+                    upcomingEventsSection.style.display = 'none';
+                } else {
+                    upcomingEventsSection.style.display = 'block';
+                }
+            }
+            
+            // Ajouter des écouteurs d'événements aux onglets
             tabs.forEach(tab => {
                 tab.addEventListener('click', function() {
+                    // Mettre à jour l'onglet actif
                     tabs.forEach(t => t.classList.remove('active'));
                     this.classList.add('active');
-                    // Pour une future implémentation : filtrer les actualités en fonction de l'onglet sélectionné
+                    
+                    // Récupérer la catégorie et filtrer le contenu
+                    const category = this.dataset.category;
+                    filterContent(category);
+                    
+                    // Animer les éléments après filtrage
+                    setTimeout(() => {
+                        animateFilteredElements();
+                    }, 50);
                 });
             });
             
-            // Animation d'apparition au scroll
+            // Animation d'apparition au scroll et après filtrage
+            function animateFilteredElements() {
+                const elementsToAnimate = document.querySelectorAll('.news-card:not(.filtered), .event-card:not([style*="display: none"]), .featured-news-card:not([style*="display: none"])');
+                
+                elementsToAnimate.forEach(element => {
+                    // Réinitialiser les styles
+                    element.style.opacity = '0';
+                    element.style.transform = 'translateY(20px)';
+                    
+                    // Forcer le reflow pour que la transition soit déclenchée
+                    void element.offsetWidth;
+                    
+                    // Animer à nouveau
+                    setTimeout(() => {
+                        element.style.opacity = '1';
+                        element.style.transform = 'translateY(0)';
+                    }, 10);
+                });
+            }
+            
             const animateOnScroll = function() {
-                const elementsToAnimate = document.querySelectorAll('.news-card, .event-card, .featured-news-card');
+                const elementsToAnimate = document.querySelectorAll('.news-card:not(.filtered), .event-card:not([style*="display: none"]), .featured-news-card:not([style*="display: none"])');
                 
                 elementsToAnimate.forEach(element => {
                     const elementTop = element.getBoundingClientRect().top;
