@@ -6,19 +6,26 @@
     <title>TradePulse - Actualités Financières</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="timeline-style.css">
     <script type="module" src="aiintegration.js"></script>
     <style>
         /* Variables et reset */
         :root {
             --background-color: #011627; /* Bleu nuit */
-            --background-gradient: linear-gradient(to bottom, #010e1a, #011627);
+            --background-gradient: linear-gradient(135deg, #010e1a, #011627 70%);
             --text-color: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
             --accent-color: #00FF87; /* Vert néon */
             --accent-glow: 0 0 10px rgba(0, 255, 135, 0.6);
             --transition-time: 0.3s;
             --header-height: 70px;
             --sidebar-width: 80px;
+            --card-bg: rgba(1, 30, 52, 0.5);
+            --card-border: 1px solid rgba(0, 255, 135, 0.2);
+            --card-radius: 12px;
+            --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            --high-impact: #ff4c4c;
+            --medium-impact: #ffc107;
+            --low-impact: #2196f3;
         }
         
         * {
@@ -34,12 +41,14 @@
             line-height: 1.6;
             overflow-x: hidden;
             font-size: 16px;
+            min-height: 100vh;
         }
         
         /* Styles de base */
         a {
             color: var(--text-color);
             text-decoration: none;
+            transition: all 0.2s ease;
         }
         
         /* Header */
@@ -58,6 +67,7 @@
             padding: 0 40px;
             z-index: 100;
             border-bottom: 1px solid rgba(0, 255, 135, 0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
         
         .header-left {
@@ -180,6 +190,7 @@
             padding: 20px 0;
             z-index: 101;
             border-right: 1px solid rgba(0, 255, 135, 0.1);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
         }
         
         .sidebar-logo {
@@ -240,8 +251,20 @@
         /* Page title section */
         .page-title-section {
             text-align: center;
-            padding: 40px 0;
-            background: linear-gradient(rgba(1, 22, 39, 0), rgba(1, 22, 39, 0.4), rgba(1, 22, 39, 0));
+            padding: 40px 0 30px;
+            background: linear-gradient(rgba(1, 22, 39, 0), rgba(1, 22, 39, 0.3), rgba(1, 22, 39, 0));
+            position: relative;
+        }
+        
+        .page-title-section::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(0, 255, 135, 0.5), transparent);
         }
         
         .page-title {
@@ -249,11 +272,27 @@
             font-weight: 700;
             margin-bottom: 10px;
             letter-spacing: 1px;
+            position: relative;
+            display: inline-block;
+        }
+        
+        .page-title::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 3px;
+            background-color: var(--accent-color);
+            border-radius: 3px;
+            box-shadow: var(--accent-glow);
         }
         
         .page-subtitle {
             font-size: 14px;
             opacity: 0.7;
+            margin-top: 15px;
         }
         
         /* Update info */
@@ -263,9 +302,11 @@
             padding: 15px 20px;
             background: rgba(0, 255, 135, 0.05);
             border-radius: 8px;
-            margin: 0 auto 30px;
+            margin: 20px auto 30px;
             border-left: 3px solid var(--accent-color);
             max-width: 800px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
         
         .update-info i {
@@ -283,16 +324,472 @@
             font-weight: 500;
         }
 
+        /* Nouvelles sections d'actualités */
+        .news-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Système d'onglets */
+        .news-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid rgba(0, 255, 135, 0.2);
+            padding-bottom: 10px;
+        }
+
+        .news-tab {
+            padding: 10px 20px;
+            margin: 0 10px;
+            border-radius: 6px 6px 0 0;
+            font-weight: 500;
+            transition: all 0.3s;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .news-tab.active {
+            color: var(--accent-color);
+        }
+
+        .news-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -11px;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background-color: var(--accent-color);
+            box-shadow: var(--accent-glow);
+        }
+
+        .news-tab:hover:not(.active) {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+
+        .news-tab-icon {
+            margin-right: 8px;
+        }
+
+        /* Articles à la une */
+        .featured-news {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .featured-news-card {
+            position: relative;
+            border-radius: var(--card-radius);
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            height: 360px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            background-size: cover;
+            background-position: center;
+            transition: transform 0.3s;
+        }
+
+        .featured-news-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .featured-news-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(to bottom, rgba(0,0,0,0) 0%, rgba(1,22,39,0.8) 70%, rgba(1,22,39,0.95) 100%);
+            z-index: 1;
+        }
+
+        .featured-news-content {
+            position: relative;
+            z-index: 2;
+            padding: 25px;
+        }
+
+        .featured-news-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .featured-news-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
+        .featured-news-excerpt {
+            font-size: 15px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            opacity: 0.85;
+        }
+
+        .featured-news-tag {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 3;
+            backdrop-filter: blur(8px);
+        }
+
+        .tag-breaking {
+            background-color: rgba(255, 76, 76, 0.2);
+            color: #ff4c4c;
+            border: 1px solid rgba(255, 76, 76, 0.3);
+        }
+
+        .tag-important {
+            background-color: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+
+        /* Grille d'actualités principale */
+        .news-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+
+        .news-card {
+            background: var(--card-bg);
+            border-radius: var(--card-radius);
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            height: 100%;
+            position: relative;
+            backdrop-filter: blur(10px);
+            border: var(--card-border);
+            box-shadow: var(--card-shadow);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .news-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+            border-color: rgba(0, 255, 135, 0.3);
+        }
+
+        .news-image {
+            height: 180px;
+            background-color: rgba(0, 255, 135, 0.05);
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+
+        .news-content {
+            padding: 20px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .news-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        .news-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .news-excerpt {
+            font-size: 14px;
+            opacity: 0.8;
+            line-height: 1.6;
+            flex-grow: 1;
+        }
+
+        .news-impact {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            backdrop-filter: blur(5px);
+            display: flex;
+            align-items: center;
+        }
+
+        .news-impact i {
+            margin-right: 5px;
+        }
+
+        .news-impact.high {
+            color: var(--high-impact);
+            border-left: 2px solid var(--high-impact);
+        }
+
+        .news-impact.medium {
+            color: var(--medium-impact);
+            border-left: 2px solid var(--medium-impact);
+        }
+
+        .news-impact.low {
+            color: var(--low-impact);
+            border-left: 2px solid var(--low-impact);
+        }
+
+        .news-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-top: 15px;
+            margin-top: auto;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .news-source {
+            font-size: 12px;
+            padding: 4px 8px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .news-time {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
         /* Style pour les dates des événements */
         .event-date {
             display: inline-block;
-            padding: 4px 8px;
+            padding: 6px 10px;
             background-color: rgba(0, 255, 135, 0.1);
             border-radius: 4px;
             margin-bottom: 8px;
             font-size: 13px;
             font-weight: 500;
             color: var(--accent-color);
+        }
+
+        /* CTA et boutons */
+        .cta-container {
+            text-align: center;
+            margin: 40px 0;
+        }
+
+        .view-more-btn {
+            display: inline-block;
+            padding: 12px 24px;
+            background: rgba(0, 255, 135, 0.1);
+            border: 2px solid var(--accent-color);
+            color: var(--accent-color);
+            border-radius: 6px;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 14px;
+        }
+
+        .view-more-btn:hover {
+            background-color: var(--accent-color);
+            color: var(--background-color);
+            box-shadow: 0 0 15px rgba(0, 255, 135, 0.4);
+            transform: translateY(-3px);
+        }
+
+        .view-more-btn i {
+            margin-left: 8px;
+            transition: transform 0.3s;
+        }
+
+        .view-more-btn:hover i {
+            transform: translateX(4px);
+        }
+
+        /* Calendrier des événements à venir */
+        .upcoming-events {
+            margin-top: 60px;
+            padding: 40px 0;
+            background: linear-gradient(rgba(1, 22, 39, 0), rgba(1, 22, 39, 0.3), rgba(1, 22, 39, 0));
+        }
+
+        .events-list {
+            display: flex;
+            gap: 20px;
+            padding: 20px 0;
+            overflow-x: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--accent-color) rgba(0, 255, 135, 0.1);
+            padding-bottom: 20px;
+        }
+
+        .events-list::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .events-list::-webkit-scrollbar-track {
+            background: rgba(0, 255, 135, 0.1);
+            border-radius: 3px;
+        }
+
+        .events-list::-webkit-scrollbar-thumb {
+            background-color: var(--accent-color);
+            border-radius: 3px;
+        }
+
+        .event-card {
+            flex: 0 0 300px;
+            background: var(--card-bg);
+            border-radius: var(--card-radius);
+            padding: 20px;
+            border: var(--card-border);
+            box-shadow: var(--card-shadow);
+            transition: transform 0.3s;
+            backdrop-filter: blur(5px);
+            position: relative;
+        }
+
+        .event-card:hover {
+            transform: translateY(-5px);
+            border-color: rgba(0, 255, 135, 0.3);
+        }
+
+        .event-card-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            align-items: flex-start;
+        }
+
+        .event-card-date {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: rgba(0, 255, 135, 0.1);
+            border-radius: 8px;
+            padding: 10px;
+            min-width: 60px;
+        }
+
+        .event-day {
+            font-size: 20px;
+            font-weight: 700;
+            line-height: 1;
+        }
+
+        .event-month {
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-top: 5px;
+        }
+
+        .event-time {
+            font-size: 14px;
+            color: var(--accent-color);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+        }
+
+        .event-time i {
+            margin-right: 5px;
+        }
+
+        .event-card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            line-height: 1.4;
+        }
+
+        .event-card-source {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+        }
+
+        .event-card-desc {
+            font-size: 14px;
+            line-height: 1.5;
+            margin-bottom: 15px;
+            opacity: 0.85;
+        }
+
+        .event-impact {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .event-impact-high {
+            background: rgba(255, 76, 76, 0.1);
+            color: var(--high-impact);
+            border-left: 2px solid var(--high-impact);
+        }
+
+        .event-impact-medium {
+            background: rgba(255, 193, 7, 0.1);
+            color: var(--medium-impact);
+            border-left: 2px solid var(--medium-impact);
+        }
+
+        .event-impact-low {
+            background: rgba(33, 150, 243, 0.1);
+            color: var(--low-impact);
+            border-left: 2px solid var(--low-impact);
+        }
+
+        /* Effet de brillance au survol des cartes */
+        .news-card::after,
+        .event-card::after,
+        .featured-news-card::after {
+            content: '';
+            position: absolute;
+            top: -100%;
+            left: -100%;
+            width: 50%;
+            height: 50%;
+            background: linear-gradient(
+                to bottom right,
+                rgba(255, 255, 255, 0) 0%,
+                rgba(255, 255, 255, 0.03) 100%
+            );
+            transform: rotate(45deg);
+            transition: all 0.5s;
+            opacity: 0;
+        }
+
+        .news-card:hover::after,
+        .event-card:hover::after,
+        .featured-news-card:hover::after {
+            top: 100%;
+            left: 100%;
+            opacity: 1;
         }
         
         /* Animations */
@@ -308,6 +805,18 @@
         }
         
         /* Responsive */
+        @media (max-width: 1200px) {
+            .news-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 992px) {
+            .featured-news {
+                grid-template-columns: 1fr;
+            }
+        }
+        
         @media (max-width: 768px) {
             .main-header {
                 left: 0;
@@ -320,38 +829,53 @@
                 flex-direction: row;
                 padding: 10px 20px;
                 justify-content: space-between;
-                position: relative;
+                position: fixed;
+                bottom: 0;
+                top: auto;
+                border-top: 1px solid rgba(0, 255, 135, 0.1);
+                border-right: none;
+            }
+            
+            .sidebar-logo {
+                display: none;
             }
             
             .sidebar-nav {
                 flex-direction: row;
-                justify-content: center;
+                justify-content: space-around;
+                width: 100%;
+                margin: 0;
             }
             
             .nav-item {
-                margin: 0 10px;
+                margin: 0;
+            }
+            
+            .nav-item.active::before {
+                display: none;
             }
             
             .main-container {
                 margin-left: 0;
-                margin-top: calc(var(--header-height) + 60px);
+                margin-top: calc(var(--header-height));
+                margin-bottom: 60px;
+            }
+            
+            .main-nav {
+                display: none;
+            }
+            
+            .news-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .news-tabs {
+                flex-wrap: wrap;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Éléments d'arrière-plan -->
-    <div class="bg-element bg-grid"></div>
-    <div class="bg-element bg-chart"></div>
-    <div class="bg-particles">
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-        <div class="particle"></div>
-    </div>
-
     <!-- Sidebar de navigation verticale -->
     <aside class="sidebar">
         <div class="sidebar-logo">TP</div>
@@ -404,270 +928,269 @@
         <!-- En-tête de la page -->
         <section class="page-title-section">
             <h1 class="page-title">ACTUALITÉS FINANCIÈRES</h1>
-            <p class="page-subtitle">7 MARS 2025</p>
+            <p class="page-subtitle">9 MARS 2025</p>
             <div class="update-info">
                 <i class="fas fa-info-circle"></i>
                 <div class="update-text">
-                    Dernière mise à jour des données: <span id="lastUpdateTime" class="update-time">07/03/2025 10:15:53</span>
+                    Dernière mise à jour des données: <span id="lastUpdateTime" class="update-time">09/03/2025 10:15:53</span>
                 </div>
             </div>
         </section>
         
-        <!-- Timeline verticale des événements -->
-        <section class="timeline-section">
-            <div class="timeline-container">
-                <div class="timeline-line"></div>
-                
-                <!-- Événement à gauche -->
-                <div class="timeline-event left">
-                    <div class="event-content">
-                        <div class="event-date"><i class="fas fa-calendar-alt"></i> 10 Mars 2025</div>
-                        <div class="event-time"><i class="far fa-clock"></i> 08:15</div>
-                        <h3 class="event-title">Réunion de la Réserve fédérale</h3>
-                        <div class="event-source">Federal Reserve</div>
-                        <p class="event-description">La Fed annonce une réunion exceptionnelle pour discuter des prochaines mesures concernant les taux d'intérêt. Les investisseurs s'attendent à des annonces...</p>
-                        <div class="impact-indicator impact-high">
-                            <span class="impact-label"><i class="fas fa-chart-line"></i> Impact:</span>
-                            <span class="impact-value">
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="event-dot"></div>
+        <!-- Conteneur principal pour les actualités -->
+        <div class="news-container">
+            <!-- Onglets de catégories -->
+            <div class="news-tabs">
+                <div class="news-tab active">
+                    <i class="fas fa-globe news-tab-icon"></i>Toutes
                 </div>
-                
-                <!-- Événement à droite -->
-                <div class="timeline-event right">
-                    <div class="event-content">
-                        <div class="event-date"><i class="fas fa-calendar-alt"></i> 8 Mars 2025</div>
-                        <div class="event-time"><i class="far fa-clock"></i> 14:30</div>
-                        <h3 class="event-title">Fusion géante dans le secteur technologique</h3>
-                        <div class="event-source">Business Insider</div>
-                        <p class="event-description">Google et Meta annoncent des discussions préliminaires concernant une fusion potentielle de leurs divisions de réalité virtuelle, créant un nouveau géant...</p>
-                        <div class="impact-indicator impact-high">
-                            <span class="impact-label"><i class="fas fa-chart-line"></i> Impact:</span>
-                            <span class="impact-value">
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="event-dot"></div>
+                <div class="news-tab">
+                    <i class="fas fa-chart-line news-tab-icon"></i>Marchés
                 </div>
-                
-                <!-- Événement à gauche -->
-                <div class="timeline-event left">
-                    <div class="event-content">
-                        <div class="event-date"><i class="fas fa-calendar-alt"></i> 7 Mars 2025</div>
-                        <div class="event-time"><i class="far fa-clock"></i> 08:15</div>
-                        <h3 class="event-title">Exemption de droits de douane</h3>
-                        <div class="event-source">Maison Blanche</div>
-                        <p class="event-description">La Maison Blanche a annoncé un report d'un mois sur les nouveaux tarifs automobiles. Cette exemption a entraîné une hausse des actions...</p>
-                        <div class="impact-indicator impact-high">
-                            <span class="impact-label"><i class="fas fa-chart-line"></i> Impact:</span>
-                            <span class="impact-value">
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot empty"></span>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="event-dot"></div>
+                <div class="news-tab">
+                    <i class="fas fa-university news-tab-icon"></i>Économie
                 </div>
-                
-                <!-- Événement à droite -->
-                <div class="timeline-event right">
-                    <div class="event-content">
-                        <div class="event-date"><i class="fas fa-calendar-alt"></i> 7 Mars 2025</div>
-                        <div class="event-time"><i class="far fa-clock"></i> 09:30</div>
-                        <h3 class="event-title">Marché obligataire européen</h3>
-                        <div class="event-source">Marchés Européens</div>
-                        <p class="event-description">Le marché obligataire européen a connu une journée historique avec une hausse de 30 points de base du rendement allemand à 10 ans...</p>
-                        <div class="impact-indicator impact-high">
-                            <span class="impact-label"><i class="fas fa-chart-line"></i> Impact:</span>
-                            <span class="impact-value">
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot empty"></span>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="event-dot"></div>
+                <div class="news-tab">
+                    <i class="fas fa-microchip news-tab-icon"></i>Tech
                 </div>
-                
-                <!-- Événement à gauche -->
-                <div class="timeline-event left">
-                    <div class="event-content">
-                        <div class="event-date"><i class="fas fa-calendar-alt"></i> 7 Mars 2025</div>
-                        <div class="event-time"><i class="far fa-clock"></i> 13:45</div>
-                        <h3 class="event-title">Décision de taux de la BCE</h3>
-                        <div class="event-source">BCE</div>
-                        <p class="event-description">La BCE maintient ses taux d'intérêt, impactant les marchés européens et le secteur bancaire. Contrairement aux attentes d'une baisse...</p>
-                        <div class="impact-indicator impact-high">
-                            <span class="impact-label"><i class="fas fa-chart-line"></i> Impact:</span>
-                            <span class="impact-value">
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="event-dot"></div>
+                <div class="news-tab">
+                    <i class="fas fa-coins news-tab-icon"></i>Crypto
                 </div>
-                
-                <!-- Événement à droite -->
-                <div class="timeline-event right">
-                    <div class="event-content">
-                        <div class="event-date"><i class="fas fa-calendar-alt"></i> 6 Mars 2025</div>
-                        <div class="event-time"><i class="far fa-clock"></i> 14:30</div>
-                        <h3 class="event-title">Publication chiffres emploi US</h3>
-                        <div class="event-source">Bureau des statistiques</div>
-                        <p class="event-description">Des données sur l'emploi meilleures que prévu renforcent le dollar face aux autres devises. Le taux de chômage est tombé à 3,6%...</p>
-                        <div class="impact-indicator impact-medium">
-                            <span class="impact-label"><i class="fas fa-chart-line"></i> Impact:</span>
-                            <span class="impact-value">
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot empty"></span>
-                                <span class="impact-dot empty"></span>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="event-dot"></div>
-                </div>
-                
-                <!-- Événement à gauche -->
-                <div class="timeline-event left">
-                    <div class="event-content">
-                        <div class="event-date"><i class="fas fa-calendar-alt"></i> 5 Mars 2025</div>
-                        <div class="event-time"><i class="far fa-clock"></i> 16:00</div>
-                        <h3 class="event-title">Adoption de l'IA en finance</h3>
-                        <div class="event-source">Wall Street Journal</div>
-                        <p class="event-description">Plusieurs entreprises technologiques annoncent des avancées majeures en IA, stimulant le secteur. Selon un rapport du Wall Street Journal...</p>
-                        <div class="impact-indicator impact-medium">
-                            <span class="impact-label"><i class="fas fa-chart-line"></i> Impact:</span>
-                            <span class="impact-value">
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot filled"></span>
-                                <span class="impact-dot empty"></span>
-                                <span class="impact-dot empty"></span>
-                            </span>
-                        </div>
-                    </div>
-                    <div class="event-dot"></div>
-                </div>
-            </div>
-        </section>
-        
-        <!-- Section des nouvelles générales -->
-        <section class="news-section">
-            <div class="section-header">
-                <h2 class="section-title">DERNIÈRES ACTUALITÉS</h2>
             </div>
             
-            <div class="news-grid">
+            <!-- Articles à la une -->
+            <section class="featured-news">
+                <div class="featured-news-card" style="background-image: url('https://via.placeholder.com/600x400?text=Fed+Meeting')">
+                    <div class="featured-news-tag tag-breaking">BREAKING</div>
+                    <div class="featured-news-overlay"></div>
+                    <div class="featured-news-content">
+                        <div class="featured-news-meta">
+                            <span>Federal Reserve</span>
+                            <span>09/03/2025 08:15</span>
+                        </div>
+                        <h3 class="featured-news-title">La Fed annonce une réunion exceptionnelle pour discuter des taux d'intérêt</h3>
+                        <p class="featured-news-excerpt">La Réserve fédérale américaine vient d'annoncer la tenue d'une réunion exceptionnelle le 10 mars pour discuter des prochaines mesures concernant les taux d'intérêt. Les analystes prévoient...</p>
+                        <div class="event-impact event-impact-high">
+                            <i class="fas fa-chart-line"></i> Impact élevé
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="featured-news-card" style="background-image: url('https://via.placeholder.com/600x400?text=Tech+Merger')">
+                    <div class="featured-news-tag tag-important">IMPORTANT</div>
+                    <div class="featured-news-overlay"></div>
+                    <div class="featured-news-content">
+                        <div class="featured-news-meta">
+                            <span>Business Insider</span>
+                            <span>08/03/2025 14:30</span>
+                        </div>
+                        <h3 class="featured-news-title">Google et Meta envisagent une fusion de leurs divisions VR</h3>
+                        <p class="featured-news-excerpt">Les géants technologiques Google et Meta annoncent des discussions préliminaires concernant une fusion potentielle de leurs divisions de réalité virtuelle, créant un nouveau leader du marché...</p>
+                        <div class="event-impact event-impact-high">
+                            <i class="fas fa-chart-line"></i> Impact élevé
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Grille d'actualités principale -->
+            <section class="news-grid">
                 <!-- Actualité 1 -->
                 <div class="news-card">
-                    <div class="news-image" style="background-image: url('https://via.placeholder.com/300x160?text=Finance+News');"></div>
-                    <div class="news-impact high">Impact: Élevé</div>
+                    <div class="news-image" style="background-image: url('https://via.placeholder.com/400x200?text=Tariffs');">
+                        <div class="news-impact high"><i class="fas fa-arrow-trend-up"></i>Impact: Élevé</div>
+                    </div>
                     <div class="news-content">
                         <div class="news-meta">
-                            <span>Financial Times</span>
-                            <span>07/03/2025</span>
+                            <span>7 Mars 2025</span>
+                            <span>08:15</span>
                         </div>
-                        <h3 class="news-title">Les géants technologiques dopent les marchés</h3>
-                        <p class="news-excerpt">Les valeurs technologiques enregistrent une forte hausse suite à des résultats trimestriels au-delà des attentes...</p>
+                        <h3 class="news-title">Exemption de droits de douane</h3>
+                        <p class="news-excerpt">La Maison Blanche a annoncé un report d'un mois sur les nouveaux tarifs automobiles. Cette exemption a entraîné une hausse des actions des constructeurs étrangers...</p>
+                        <div class="news-footer">
+                            <div class="news-source">Maison Blanche</div>
+                            <div class="news-time"><i class="far fa-clock"></i> Il y a 2 jours</div>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Actualité 2 -->
                 <div class="news-card">
-                    <div class="news-image" style="background-image: url('https://via.placeholder.com/300x160?text=Market+News');"></div>
-                    <div class="news-impact high">Impact: Élevé</div>
+                    <div class="news-image" style="background-image: url('https://via.placeholder.com/400x200?text=EU+Bonds');">
+                        <div class="news-impact high"><i class="fas fa-arrow-trend-up"></i>Impact: Élevé</div>
+                    </div>
                     <div class="news-content">
                         <div class="news-meta">
-                            <span>Bloomberg</span>
-                            <span>07/03/2025</span>
+                            <span>7 Mars 2025</span>
+                            <span>09:30</span>
                         </div>
-                        <h3 class="news-title">Le pétrole en hausse sur fond de tensions</h3>
-                        <p class="news-excerpt">Les prix du pétrole poursuivent leur tendance haussière avec une progression de 3% suite aux tensions géopolitiques...</p>
+                        <h3 class="news-title">Marché obligataire européen</h3>
+                        <p class="news-excerpt">Le marché obligataire européen a connu une journée historique avec une hausse de 30 points de base du rendement allemand à 10 ans...</p>
+                        <div class="news-footer">
+                            <div class="news-source">Marchés Européens</div>
+                            <div class="news-time"><i class="far fa-clock"></i> Il y a 2 jours</div>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Actualité 3 -->
                 <div class="news-card">
-                    <div class="news-image" style="background-image: url('https://via.placeholder.com/300x160?text=Crypto+News');"></div>
-                    <div class="news-impact medium">Impact: Moyen</div>
+                    <div class="news-image" style="background-image: url('https://via.placeholder.com/400x200?text=ECB+Rates');">
+                        <div class="news-impact high"><i class="fas fa-arrow-trend-up"></i>Impact: Élevé</div>
+                    </div>
                     <div class="news-content">
                         <div class="news-meta">
-                            <span>CoinDesk</span>
-                            <span>07/03/2025</span>
+                            <span>7 Mars 2025</span>
+                            <span>13:45</span>
                         </div>
-                        <h3 class="news-title">Bitcoin franchit un nouveau seuil</h3>
-                        <p class="news-excerpt">La principale cryptomonnaie dépasse les 75 000$ dans un contexte d'adoption institutionnelle croissante...</p>
+                        <h3 class="news-title">Décision de taux de la BCE</h3>
+                        <p class="news-excerpt">La BCE maintient ses taux d'intérêt, impactant les marchés européens et le secteur bancaire. Contrairement aux attentes d'une baisse...</p>
+                        <div class="news-footer">
+                            <div class="news-source">BCE</div>
+                            <div class="news-time"><i class="far fa-clock"></i> Il y a 2 jours</div>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Actualité 4 -->
                 <div class="news-card">
-                    <div class="news-image" style="background-image: url('https://via.placeholder.com/300x160?text=Economy+News');"></div>
-                    <div class="news-impact low">Impact: Faible</div>
+                    <div class="news-image" style="background-image: url('https://via.placeholder.com/400x200?text=Jobs+Report');">
+                        <div class="news-impact medium"><i class="fas fa-arrow-right"></i>Impact: Moyen</div>
+                    </div>
                     <div class="news-content">
                         <div class="news-meta">
-                            <span>Reuters</span>
-                            <span>06/03/2025</span>
+                            <span>6 Mars 2025</span>
+                            <span>14:30</span>
                         </div>
-                        <h3 class="news-title">L'inflation revient sous les 3% en zone euro</h3>
-                        <p class="news-excerpt">Les dernières données d'Eurostat montrent un ralentissement de l'inflation à 2,8% sur un an...</p>
+                        <h3 class="news-title">Publication chiffres emploi US</h3>
+                        <p class="news-excerpt">Des données sur l'emploi meilleures que prévu renforcent le dollar face aux autres devises. Le taux de chômage est tombé à 3,6%...</p>
+                        <div class="news-footer">
+                            <div class="news-source">Bureau des statistiques</div>
+                            <div class="news-time"><i class="far fa-clock"></i> Il y a 3 jours</div>
+                        </div>
                     </div>
                 </div>
-            </div>
+                
+                <!-- Actualité 5 -->
+                <div class="news-card">
+                    <div class="news-image" style="background-image: url('https://via.placeholder.com/400x200?text=AI+Finance');">
+                        <div class="news-impact medium"><i class="fas fa-arrow-right"></i>Impact: Moyen</div>
+                    </div>
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span>5 Mars 2025</span>
+                            <span>16:00</span>
+                        </div>
+                        <h3 class="news-title">Adoption de l'IA en finance</h3>
+                        <p class="news-excerpt">Plusieurs entreprises technologiques annoncent des avancées majeures en IA, stimulant le secteur. Selon un rapport du Wall Street Journal...</p>
+                        <div class="news-footer">
+                            <div class="news-source">Wall Street Journal</div>
+                            <div class="news-time"><i class="far fa-clock"></i> Il y a 4 jours</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Actualité 6 -->
+                <div class="news-card">
+                    <div class="news-image" style="background-image: url('https://via.placeholder.com/400x200?text=Crypto+News');">
+                        <div class="news-impact low"><i class="fas fa-arrow-trend-down"></i>Impact: Faible</div>
+                    </div>
+                    <div class="news-content">
+                        <div class="news-meta">
+                            <span>5 Mars 2025</span>
+                            <span>11:30</span>
+                        </div>
+                        <h3 class="news-title">Bitcoin franchit un nouveau seuil</h3>
+                        <p class="news-excerpt">La principale cryptomonnaie dépasse les 75 000$ dans un contexte d'adoption institutionnelle croissante...</p>
+                        <div class="news-footer">
+                            <div class="news-source">CoinDesk</div>
+                            <div class="news-time"><i class="far fa-clock"></i> Il y a 4 jours</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
             
             <div class="cta-container">
-                <a href="#" class="view-more-btn">VOIR PLUS D'ACTUALITÉS</a>
-            </div>
-        </section>
-        
-        <!-- Section des portfolios -->
-        <section class="portfolios-section">
-            <div class="section-header">
-                <h2 class="section-title">CHOISISSEZ VOTRE PORTEFEUILLE</h2>
+                <a href="#" class="view-more-btn">Voir plus d'actualités <i class="fas fa-arrow-right"></i></a>
             </div>
             
-            <div class="portfolios-grid">
-                <a href="portefeuille.html?type=agressif" class="portfolio-card portfolio-aggressive">
-                    <i class="fas fa-rocket portfolio-icon"></i>
-                    <div class="portfolio-name">Agressif</div>
-                </a>
-                <a href="portefeuille.html?type=modere" class="portfolio-card portfolio-moderate">
-                    <i class="fas fa-balance-scale portfolio-icon"></i>
-                    <div class="portfolio-name">Modéré</div>
-                </a>
-                <a href="portefeuille.html?type=stable" class="portfolio-card portfolio-stable">
-                    <i class="fas fa-shield-alt portfolio-icon"></i>
-                    <div class="portfolio-name">Stable</div>
-                </a>
-            </div>
-            
-            <div class="cta-container">
-                <a href="portefeuille.html?type=modere" class="cta-button">DÉCOUVRIR LES PORTEFEUILLES OPTIMISÉS</a>
-            </div>
-        </section>
+            <!-- Événements à venir -->
+            <section class="upcoming-events">
+                <div class="section-header">
+                    <h2 class="section-title">ÉVÉNEMENTS À VENIR</h2>
+                </div>
+                
+                <div class="events-list">
+                    <!-- Événement 1 -->
+                    <div class="event-card">
+                        <div class="event-card-header">
+                            <div class="event-card-date">
+                                <div class="event-day">10</div>
+                                <div class="event-month">MAR</div>
+                            </div>
+                            <div class="event-time"><i class="far fa-clock"></i> 08:15</div>
+                        </div>
+                        <h3 class="event-card-title">Réunion de la Réserve fédérale</h3>
+                        <div class="event-card-source">Federal Reserve</div>
+                        <p class="event-card-desc">La Fed annonce une réunion exceptionnelle pour discuter des prochaines mesures concernant les taux d'intérêt. Les investisseurs s'attendent à des annonces...</p>
+                        <div class="event-impact event-impact-high">
+                            <i class="fas fa-chart-line"></i> Impact élevé
+                        </div>
+                    </div>
+                    
+                    <!-- Événement 2 -->
+                    <div class="event-card">
+                        <div class="event-card-header">
+                            <div class="event-card-date">
+                                <div class="event-day">12</div>
+                                <div class="event-month">MAR</div>
+                            </div>
+                            <div class="event-time"><i class="far fa-clock"></i> 10:30</div>
+                        </div>
+                        <h3 class="event-card-title">Indice des prix à la consommation US</h3>
+                        <div class="event-card-source">Bureau of Labor Statistics</div>
+                        <p class="event-card-desc">Publication mensuelle des données d'inflation aux États-Unis. Les analystes prévoient une légère hausse par rapport au mois précédent...</p>
+                        <div class="event-impact event-impact-high">
+                            <i class="fas fa-chart-line"></i> Impact élevé
+                        </div>
+                    </div>
+                    
+                    <!-- Événement 3 -->
+                    <div class="event-card">
+                        <div class="event-card-header">
+                            <div class="event-card-date">
+                                <div class="event-day">15</div>
+                                <div class="event-month">MAR</div>
+                            </div>
+                            <div class="event-time"><i class="far fa-clock"></i> 14:00</div>
+                        </div>
+                        <h3 class="event-card-title">Sommet des ministres de l'Économie G20</h3>
+                        <div class="event-card-source">G20</div>
+                        <p class="event-card-desc">Réunion des ministres des Finances et des gouverneurs des banques centrales pour discuter de la coordination des politiques économiques...</p>
+                        <div class="event-impact event-impact-medium">
+                            <i class="fas fa-chart-line"></i> Impact moyen
+                        </div>
+                    </div>
+                    
+                    <!-- Événement 4 -->
+                    <div class="event-card">
+                        <div class="event-card-header">
+                            <div class="event-card-date">
+                                <div class="event-day">18</div>
+                                <div class="event-month">MAR</div>
+                            </div>
+                            <div class="event-time"><i class="far fa-clock"></i> 09:00</div>
+                        </div>
+                        <h3 class="event-card-title">Publication résultats Apple</h3>
+                        <div class="event-card-source">Apple Inc.</div>
+                        <p class="event-card-desc">Publication des résultats trimestriels d'Apple. Les analystes surveillent particulièrement les performances des nouveaux produits...</p>
+                        <div class="event-impact event-impact-medium">
+                            <i class="fas fa-chart-line"></i> Impact moyen
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
     </main>
 
     <script>
@@ -706,15 +1229,46 @@
                 }
             }
             
-            // Ajouter l'interaction pour les événements de la timeline
-            const timelineEvents = document.querySelectorAll('.timeline-event');
-            timelineEvents.forEach(event => {
-                event.addEventListener('click', function() {
-                    // Pour une version future, on pourrait ajouter ici l'affichage du détail de l'événement
-                    // dans une modal ou une zone dédiée
-                    console.log('Événement cliqué:', this.querySelector('.event-title').textContent);
+            // Gestion des onglets
+            const tabs = document.querySelectorAll('.news-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    // Pour une future implémentation : filtrer les actualités en fonction de l'onglet sélectionné
                 });
             });
+            
+            // Animation d'apparition au scroll
+            const animateOnScroll = function() {
+                const elementsToAnimate = document.querySelectorAll('.news-card, .event-card, .featured-news-card');
+                
+                elementsToAnimate.forEach(element => {
+                    const elementTop = element.getBoundingClientRect().top;
+                    const elementBottom = element.getBoundingClientRect().bottom;
+                    const viewportHeight = window.innerHeight;
+                    
+                    if (elementTop < viewportHeight * 0.9 && elementBottom > 0) {
+                        element.style.opacity = '1';
+                        element.style.transform = 'translateY(0)';
+                    } else {
+                        element.style.opacity = '0';
+                        element.style.transform = 'translateY(20px)';
+                    }
+                });
+            };
+            
+            // Ajouter des styles initiaux pour l'animation
+            const elementsToAnimate = document.querySelectorAll('.news-card, .event-card, .featured-news-card');
+            elementsToAnimate.forEach(element => {
+                element.style.opacity = '0';
+                element.style.transform = 'translateY(20px)';
+                element.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+            });
+            
+            // Déclencher l'animation au chargement et au scroll
+            window.addEventListener('load', animateOnScroll);
+            window.addEventListener('scroll', animateOnScroll);
         });
     </script>
 </body>
