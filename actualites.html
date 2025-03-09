@@ -11,6 +11,370 @@
     <link rel="stylesheet" href="search-style.css">
     <script type="module" src="aiintegration.js"></script>
     <style>
+        /* Styles améliorés pour la page d'actualités */
+        body.page-actualites {
+            background-image: linear-gradient(to bottom, var(--background-color), rgba(1, 34, 55, 0.9));
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+        
+        .page-title-section {
+            position: relative;
+            padding: 10px 0 30px;
+            overflow: hidden;
+        }
+        
+        .page-title {
+            font-size: 3.2rem;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+            text-shadow: 0 0 15px rgba(0, 255, 135, 0.3);
+            animation: glow 3s infinite alternate;
+            position: relative;
+        }
+        
+        .page-title::after {
+            content: '';
+            position: absolute;
+            bottom: -15px;
+            left: 0;
+            width: 80px;
+            height: 3px;
+            background-color: var(--accent-color);
+            box-shadow: 0 0 10px var(--accent-color);
+            animation: pulse-width 4s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-width {
+            0% { width: 80px; }
+            50% { width: 160px; }
+            100% { width: 80px; }
+        }
+        
+        @keyframes glow {
+            0% { text-shadow: 0 0 5px rgba(0, 255, 135, 0.1); }
+            100% { text-shadow: 0 0 20px rgba(0, 255, 135, 0.4); }
+        }
+        
+        .page-subtitle {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-top: 25px;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        /* Info de dernière mise à jour */
+        .last-update-container {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            margin: 15px 0 30px 0;
+            padding: 10px 20px;
+            background-color: rgba(0, 255, 135, 0.05);
+            border-radius: 8px;
+            border-left: 3px solid var(--accent-color);
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+            max-width: 600px;
+        }
+        
+        .last-update-container:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .last-update-container i {
+            color: var(--accent-color);
+            margin-right: 15px;
+            font-size: 18px;
+            animation: pulse 2s infinite;
+        }
+        
+        .last-update-info {
+            font-size: 14px;
+        }
+        
+        .last-update-time {
+            color: var(--accent-color);
+            font-weight: 500;
+            margin-left: 5px;
+        }
+        
+        /* Timeline container amélioré */
+        .timeline-container {
+            display: flex;
+            gap: 30px;
+            padding: 0;
+            margin-bottom: 40px;
+            position: relative;
+            height: calc(100vh - 350px);
+            min-height: 500px;
+        }
+        
+        /* Améliorations de la sidebar de timeline */
+        .timeline-sidebar {
+            flex: 0 0 320px;
+            background: rgba(0, 20, 40, 0.4);
+            border-radius: 12px;
+            overflow-y: auto;
+            padding: 20px 0;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(0, 255, 135, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            max-height: 100%;
+        }
+        
+        .date-group {
+            margin-bottom: 25px;
+            padding: 0 20px;
+        }
+        
+        .date-header {
+            margin-bottom: 15px;
+            position: relative;
+            padding-left: 15px;
+        }
+        
+        .date-header::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            width: 4px;
+            background-color: var(--accent-color);
+            border-radius: 2px;
+        }
+        
+        .date-header h3 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .date-subtitle {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        /* Animation des événements de la timeline */
+        .timeline-event {
+            position: relative;
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            background: rgba(0, 40, 70, 0.4);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            transform: translateX(0);
+        }
+        
+        .timeline-event:hover {
+            background: rgba(0, 60, 90, 0.5);
+            transform: translateX(5px);
+        }
+        
+        .timeline-event.active {
+            background: rgba(0, 255, 135, 0.1);
+            border-left: 3px solid var(--accent-color);
+            box-shadow: 0 0 15px rgba(0, 255, 135, 0.15);
+        }
+        
+        .event-time {
+            color: var(--accent-color);
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        
+        .event-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            line-height: 1.4;
+        }
+        
+        .event-source {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        /* Améliorations du contenu principal de timeline */
+        .timeline-content {
+            flex: 1;
+            background: rgba(0, 20, 40, 0.5);
+            border-radius: 12px;
+            overflow-y: auto;
+            padding: 30px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(0, 255, 135, 0.1);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            max-height: 100%;
+            position: relative;
+        }
+        
+        .event-details {
+            display: none;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.5s ease;
+        }
+        
+        .event-details.active {
+            display: block;
+            opacity: 1;
+            transform: translateY(0);
+            animation: fadeIn 0.5s ease forwards;
+        }
+        
+        .event-details-header {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(0, 255, 135, 0.2);
+            position: relative;
+        }
+        
+        /* Effet de radar sur le contenu actif */
+        .event-details.active::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 10px;
+            height: 10px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            box-shadow: 0 0 0 rgba(0, 255, 135, 0.4);
+            animation: radar 2s infinite;
+        }
+        
+        @keyframes radar {
+            0% {
+                box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.4);
+            }
+            70% {
+                box-shadow: 0 0 0 20px rgba(0, 255, 135, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(0, 255, 135, 0);
+            }
+        }
+        
+        .event-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .event-meta .event-source {
+            font-size: 14px;
+            color: var(--accent-color);
+            font-weight: 600;
+            background-color: rgba(0, 255, 135, 0.1);
+            padding: 5px 10px;
+            border-radius: 4px;
+        }
+        
+        .event-date-time {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .event-date-time i {
+            margin-right: 8px;
+            color: var(--accent-color);
+        }
+        
+        .event-date {
+            margin-right: 10px;
+        }
+        
+        .event-details h2 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            line-height: 1.3;
+        }
+        
+        .event-impact {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 12px;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .impact-label {
+            margin-right: 8px;
+            opacity: 0.8;
+        }
+        
+        .critical-impact {
+            background-color: rgba(255, 76, 76, 0.2);
+            color: #ff4c4c;
+        }
+        
+        .high-impact {
+            background-color: rgba(255, 170, 0, 0.2);
+            color: #ffaa00;
+        }
+        
+        .event-description {
+            margin-bottom: 25px;
+            line-height: 1.6;
+        }
+        
+        .event-description p {
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+        
+        .event-symbols {
+            background-color: rgba(0, 40, 70, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .symbols-label {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: block;
+        }
+        
+        .symbols-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .symbol-tag {
+            display: inline-block;
+            padding: 6px 12px;
+            background-color: rgba(0, 255, 135, 0.1);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            color: var(--accent-color);
+            font-weight: 600;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        
+        .symbol-tag:hover {
+            background-color: rgba(0, 255, 135, 0.2);
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0, 255, 135, 0.2);
+        }
+        
         /* Animation de notification */
         .update-notification {
             position: fixed;
@@ -39,32 +403,232 @@
             margin-right: 10px;
         }
         
-        /* Info de dernière mise à jour */
-        .last-update-container {
+        /* Section de sélection de portefeuille améliorée */
+        .portfolio-selector {
+            margin-top: 40px;
+            padding: 30px;
+            background: rgba(0, 30, 60, 0.4);
+            border-radius: 12px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.15);
+            border: 1px solid rgba(0, 255, 135, 0.1);
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .portfolio-selector::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(to right, transparent, var(--accent-color), transparent);
+        }
+        
+        .portfolio-heading {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 25px;
+            text-align: center;
+            letter-spacing: 1px;
+            position: relative;
+            display: inline-block;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .portfolio-heading::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 0;
+            width: 50px;
+            height: 3px;
+            background-color: var(--accent-color);
+            box-shadow: 0 0 10px var(--accent-color);
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        .portfolio-buttons {
             display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 30px;
+        }
+        
+        .portfolio-button {
+            display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            margin: 10px 0 30px 0;
-            padding: 8px 15px;
-            background-color: rgba(0, 255, 135, 0.05);
-            border-radius: 8px;
-            border-left: 3px solid var(--accent-color);
+            width: 200px;
+            height: 140px;
+            padding: 20px;
+            border-radius: 10px;
+            background: rgba(0, 40, 70, 0.5);
+            transition: all 0.3s ease;
+            text-decoration: none;
+            color: var(--text-color);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
         }
         
-        .last-update-container i {
-            color: var(--accent-color);
-            margin-right: 10px;
-            font-size: 18px;
+        .portfolio-button::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            z-index: -1;
+            background: linear-gradient(45deg, rgba(0, 255, 135, 0), rgba(0, 255, 135, 0.3), rgba(0, 255, 135, 0));
+            background-size: 400% 400%;
+            animation: gradient-border 4s ease infinite;
+            border-radius: 12px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
         }
         
-        .last-update-info {
-            font-size: 14px;
+        .portfolio-button:hover::before {
+            opacity: 1;
         }
         
-        .last-update-time {
-            color: var(--accent-color);
-            font-weight: 500;
-            margin-left: 5px;
+        @keyframes gradient-border {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .portfolio-button i {
+            font-size: 36px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .portfolio-button span {
+            font-size: 16px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+        
+        .portfolio-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+            background: rgba(0, 50, 80, 0.7);
+        }
+        
+        .portfolio-button:hover i {
+            transform: scale(1.2);
+        }
+        
+        .portfolio-button.aggressive:hover {
+            border-color: rgba(255, 89, 94, 0.4);
+        }
+        
+        .portfolio-button.aggressive i {
+            color: #ff595e;
+        }
+        
+        .portfolio-button.moderate:hover {
+            border-color: rgba(255, 202, 58, 0.4);
+        }
+        
+        .portfolio-button.moderate i {
+            color: #ffca3a;
+        }
+        
+        .portfolio-button.stable:hover {
+            border-color: rgba(138, 201, 38, 0.4);
+        }
+        
+        .portfolio-button.stable i {
+            color: #8ac926;
+        }
+        
+        /* Arrière-plan graphique */
+        .graphic-bg {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.05;
+            pointer-events: none;
+        }
+        
+        /* Responsive design amélioré */
+        @media (max-width: 1024px) {
+            .timeline-container {
+                flex-direction: column;
+                height: auto;
+            }
+            
+            .timeline-sidebar, .timeline-content {
+                flex: none;
+                width: 100%;
+                max-height: 400px;
+            }
+            
+            .portfolio-buttons {
+                flex-direction: column;
+                align-items: center;
+                gap: 15px;
+            }
+            
+            .portfolio-button {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .page-title {
+                font-size: 2.5rem;
+            }
+            
+            .event-details-header h2 {
+                font-size: 22px;
+            }
+        }
+        
+        /* Animations et effets supplémentaires */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.6s ease;
+        }
+        
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Effet de glissement */
+        .slide-in {
+            opacity: 0;
+            transform: translateX(-50px);
+            transition: all 0.6s ease;
+        }
+        
+        .slide-in.active {
+            opacity: 1;
+            transform: translateX(0);
         }
     </style>
 </head>
@@ -94,9 +658,22 @@
     </header>
 
     <main class="page-content timeline-layout">
-        <section class="page-title-section">
+        <!-- Arrière-plan graphique -->
+        <div class="graphic-bg">
+            <svg width="100%" height="100%" viewBox="0 0 1000 1000" preserveAspectRatio="none">
+                <path d="M0,500 C200,300 300,800 500,500 C700,300 800,600 1000,500 L1000,1000 L0,1000 Z" fill="url(#gradient)" opacity="0.3"></path>
+                <defs>
+                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:var(--accent-color);stop-opacity:0.4" />
+                        <stop offset="100%" style="stop-color:var(--accent-color);stop-opacity:0.1" />
+                    </linearGradient>
+                </defs>
+            </svg>
+        </div>
+        
+        <section class="page-title-section reveal">
             <h1 class="page-title">ACTUALITÉS FINANCIÈRES</h1>
-            <p class="page-subtitle" id="currentDate">07 MARS 2025</p>
+            <p class="page-subtitle" id="currentDate">9 MARS 2025</p>
             
             <!-- Info de dernière mise à jour -->
             <div class="last-update-container">
@@ -113,9 +690,9 @@
             </div>
         </section>
 
-        <div class="timeline-container">
+        <div class="timeline-container reveal">
             <!-- Timeline colonne gauche -->
-            <div class="timeline-sidebar">
+            <div class="timeline-sidebar slide-in">
                 <div class="date-group">
                     <div class="date-header">
                         <h3>Vendredi, 7 Mars 2025</h3>
@@ -181,7 +758,7 @@
                     </div>
                     <div class="event-description">
                         <p>La Maison Blanche a annoncé un report d'un mois sur les nouveaux tarifs automobiles. Cette exemption a entraîné une hausse des actions, avec le DAX en hausse de 3,5%, le STOXX 50 en hausse de 1,9%, et le Hang Seng en hausse de 2,87%.</p>
-                        <p>Les analystes estiment que cette décision pourrait signaler un adoucissement des tensions commerciales mondiales et offrir un répit bienvenu aux constructeurs automobiles européens et asiatiques.</p>
+                        <p>Ces chiffres solides suggèrent une économie américaine robuste et pourraient inciter la Fed à maintenir des taux d'intérêt plus élevés plus longtemps que prévu initialement. Les analystes estiment que cette décision pourrait signaler un adoucissement des tensions commerciales mondiales et offrir un répit bienvenu aux constructeurs automobiles européens et asiatiques.</p>
                     </div>
                     <div class="event-symbols">
                         <span class="symbols-label">Symboles affectés:</span>
@@ -323,7 +900,7 @@
             </div>
         </div>
 
-        <div class="portfolio-selector">
+        <div class="portfolio-selector reveal">
             <h2 class="portfolio-heading">CHOISISSEZ VOTRE PORTEFEUILLE</h2>
             <div class="portfolio-buttons">
                 <a href="portefeuille.html?type=agressif" class="portfolio-button aggressive">
@@ -361,8 +938,8 @@
         }, {threshold: 0.1});
         
         document.addEventListener('DOMContentLoaded', function() {
-            // Observe elements with reveal class
-            document.querySelectorAll('.reveal').forEach(el => {
+            // Observe elements with reveal and slide-in classes
+            document.querySelectorAll('.reveal, .slide-in').forEach(el => {
                 observer.observe(el);
             });
             
@@ -412,8 +989,11 @@
                         detail.classList.remove('active');
                     });
                     
-                    // Show selected event details
-                    document.getElementById(eventId).classList.add('active');
+                    // Show selected event details with animation
+                    const targetDetail = document.getElementById(eventId);
+                    setTimeout(() => {
+                        targetDetail.classList.add('active');
+                    }, 10);
                 });
             });
         });
