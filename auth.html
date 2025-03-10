@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradePulse - Authentification</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="enhanced-ui.css">
+    <link rel="stylesheet" href="auth-styles.css">
+    <style>
+        /* Variables et reset */
+        :root {
+            --background-color: #011627; /* Bleu nuit */
+            --text-color: #FFFFFF;
+            --accent-color: #00FF87; /* Vert néon */
+            --accent-glow: 0 0 10px rgba(0, 255, 135, 0.6);
+            --transition-time: 0.8s;
+            --error-color: #FF4C4C;
+            --success-color: #00FF87;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            height: 100%;
+            width: 100%;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            overflow: hidden;
+        }
+        
+        /* Container principal */
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            position: relative;
+            perspective: 1000px;
+        }
+        
+        /* Effet de particules en arrière-plan */
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        /* NOUVELLE IMPLÉMENTATION - Graphiques financiers en arrière-plan */
+        .financial-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.15;
+            overflow: hidden;
+        }
+
+        .chart-line {
+            position: absolute;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+            animation: chart-move 15s infinite linear;
+        }
+
+        .chart-dot {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            border-radius: 50%;
+            background-color: var(--accent-color);
+            box-shadow: 0 0 6px var(--accent-color);
+            animation: pulse 2s infinite;
+        }
+        
+        /* Logo et branding */
+        .brand {
+            position: absolute;
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            z-index: 10;
+            animation: fadeIn 1s ease forwards;
+        }
+        
+        .logo {
+            font-size: 32px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            margin: 0;
+            text-shadow: 0 0 15px rgba(0, 255, 153, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .pulse-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 15px rgba(0, 255, 153, 0.8);
+            animation: pulse 2s infinite;
+        }
+        
+        /* Carte d'authentification */
+        .auth-card {
+            width: 420px;
+            background: rgba(1, 30, 52, 0.8);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
+            z-index: 10;
+            position: relative;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 255, 135, 0.2);
+            animation: cardAppear 1s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
+            opacity: 0;
+            transform: scale(0.9) translateY(20px);
+        }
+        
+        @keyframes cardAppear {
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+        
+        /* En-tête de la carte */
+        .auth-header {
+            padding: 30px 30px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+        
+        .auth-header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+        }
+        
+        .auth-title {
+            font-size: 24px;
+            color: var(--accent-color);
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(0, 255, 135, 0.4);
+        }
+        
+        .auth-subtitle {
+            font-size: 14px;
+            opacity: 0.7;
+            font-weight: 300;
+            margin-bottom: 0;
+        }
+        
+        /* Onglets Login/Signup */
+        .auth-tabs {
+            display: flex;
+            margin: 0;
+            padding: 0;
+            list-style: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .auth-tab {
+            flex: 1;
+            text-align: center;
+            padding: 16px 0;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .auth-tab.active {
+            color: var(--accent-color);
+        }
+        
+        .auth-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: var(--accent-color);
+            box-shadow: var(--accent-glow);
+        }
+        
+        /* Contenu du formulaire */
+        .auth-content {
+            padding: 30px;
+        }
+        
+        .auth-form {
+            display: none;
+        }
+        
+        .auth-form.active {
+            display: block;
+            animation: fadeIn 0.5s ease forwards;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .form-group input {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            padding: 12px 15px;
+            font-size: 15px;
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2);
+        }
+        
+        .input-icon {
+            position: absolute;
+            top: 38px;
+            right: 15px;
+            color: rgba(255, 255, 255, 0.3);
+        }
+        
+        /* Bouton d'envoi */
+        .btn-submit {
+            width: 100%;
+            background: transparent;
+            border: 2px solid var(--accent-color);
+            color: var(--text-color);
+            padding: 12px 0;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            letter-spacing: 1px;
+        }
+        
+        .btn-submit::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: var(--accent-color);
+            transition: all 0.3s ease;
+            z-index: -1;
+        }
+        
+        .btn-submit:hover {
+            color: var(--background-color);
+        }
+        
+        .btn-submit:hover::before {
+            left: 0;
+        }
+        
+        /* Options supplémentaires */
+        .auth-options {
+            margin-top: 25px;
+            text-align: center;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .auth-options a {
+            color: var(--accent-color);
+            text-decoration: none;
+            transition: all 0.3s ease;
+        }
+        
+        .auth-options a:hover {
+            text-shadow: 0 0 8px rgba(0, 255, 135, 0.8);
+        }
+        
+        /* Séparateur stylisé */
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 25px 0;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 12px;
+        }
+        
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .divider::before {
+            margin-right: 15px;
+        }
+        
+        .divider::after {
+            margin-left: 15px;
+        }
+        
+        /* Boutons de connexion sociale */
+        .social-auth {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .social-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: var(--text-color);
+            font-size: 20px;
+        }
+        
+        .social-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            border-color: rgba(0, 255, 135, 0.3);
+        }
+        
+        /* Messages d'erreur */
+        .error-message {
+            color: var(--error-color);
+            font-size: 13px;
+            margin-top: 5px;
+            display: none;
+        }
+        
+        /* Animation de chargement lors de la soumission */
+        .btn-submit.loading {
+            pointer-events: none;
+            opacity: 0.8;
+        }
+        
+        .loading-spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--text-color);
+            animation: spin 1s linear infinite;
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+        
+        .btn-submit.loading .loading-spinner {
+            display: inline-block;
+        }
+        
+        @keyframes spin {
+            to { transform: translateY(-50%) rotate(360deg); }
+        }
+        
+        /* Animation du message de réussite */
+        .success-message {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(1, 30, 52, 0.97);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.5s ease;
+            z-index: 20;
+            backdrop-filter: blur(5px);
+            border-radius: 20px;
+        }
+        
+        .success-message.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .success-icon {
+            width: 80px;
+            height: 80px;
+            background: rgba(0, 255, 135, 0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            box-shadow: 0 0 30px rgba(0, 255, 135, 0.3);
+            transform: scale(0);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s;
+        }
+        
+        .success-message.active .success-icon {
+            transform: scale(1);
+        }
+        
+        .success-icon i {
+            color: var(--accent-color);
+            font-size: 40px;
+            text-shadow: 0 0 10px rgba(0, 255, 135, 0.8);
+        }
+        
+        .success-title {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: var(--accent-color);
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.5s ease 0.5s;
+        }
+        
+        .success-message.active .success-title {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .success-text {
+            font-size: 15px;
+            max-width: 80%;
+            text-align: center;
+            opacity: 0.8;
+            margin-bottom: 30px;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.5s ease 0.7s;
+        }
+        
+        .success-message.active .success-text {
+            transform: translateY(0);
+            opacity: 0.8;
+        }
+        
+        .continue-btn {
+            padding: 12px 30px;
+            background: var(--accent-color);
+            color: var(--background-color);
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.5s ease 0.9s;
+        }
+        
+        .success-message.active .continue-btn {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .continue-btn:hover {
+            box-shadow: 0 0 20px rgba(0, 255, 135, 0.5);
+            transform: translateY(-3px);
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
+        }
+        
+        @keyframes chart-move {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%) rotate(5deg); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 480px) {
+            .auth-card {
+                width: 100%;
+                max-width: 380px;
+                margin: 0 15px;
+            }
+            
+            .auth-content {
+                padding: 20px;
+            }
+            
+            .brand {
+                top: 15px;
+            }
+            
+            .logo {
+                font-size: 24px;
+            }
+            
+            .auth-title {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="brand">
+        <h1 class="logo">
+            <div class="pulse-dot"></div>
+            TRADEPULSE
+        </h1>
+    </div>
+
+    <div class="container">
+        <div class="particles" id="particles-js"></div>
+        
+        <!-- Arrière-plan dynamique avec graphiques financiers -->
+        <div class="financial-background">
+            <div class="chart-line" style="top: 20%; left: -50%; width: 80%;"></div>
+            <div class="chart-line" style="top: 40%; left: -30%; width: 60%;"></div>
+            <div class="chart-line" style="top: 60%; left: -70%; width: 90%;"></div>
+            <div class="chart-line" style="top: 80%; left: -40%; width: 70%;"></div>
+            
+            <div class="chart-dot" style="top: 20%; left: 30%;"></div>
+            <div class="chart-dot" style="top: 35%; left: 60%;"></div>
+            <div class="chart-dot" style="top: 55%; left: 20%;"></div>
+            <div class="chart-dot" style="top: 75%; left: 50%;"></div>
+        </div>
+        
+        <!-- Carte d'authentification -->
+        <div class="auth-card">
+            <div class="auth-header">
+                <h2 class="auth-title">ACCÈS À LA PLATEFORME</h2>
+                <p class="auth-subtitle">Connectez-vous pour accéder à vos données financières</p>
+            </div>
+            
+            <!-- Onglets Login/Signup -->
+            <ul class="auth-tabs">
+                <li class="auth-tab active" data-target="login-form">Connexion</li>
+                <li class="auth-tab" data-target="signup-form">Inscription</li>
+            </ul>
+            
+            <div class="auth-content">
+                <!-- Formulaire de connexion -->
+                <form class="auth-form login-form active" id="login-form">
+                    <div class="form-group">
+                        <label for="login-email">Email</label>
+                        <input type="email" id="login-email" placeholder="Votre adresse email" required>
+                        <i class="fas fa-envelope input-icon"></i>
+                        <div class="error-message" id="login-email-error">Veuillez entrer une adresse email valide</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="login-password">Mot de passe</label>
+                        <input type="password" id="login-password" placeholder="Votre mot de passe" required>
+                        <i class="fas fa-lock input-icon"></i>
+                        <div class="error-message" id="login-password-error">Le mot de passe est requis</div>
+                    </div>
+                    
+                    <button type="submit" class="btn-submit" id="login-btn">
+                        SE CONNECTER
+                        <div class="loading-spinner"></div>
+                    </button>
+                    
+                    <div class="auth-options">
+                        <a href="#" id="forgot-password">Mot de passe oublié?</a>
+                    </div>
+                    
+                    <div class="divider">OU CONNECTEZ-VOUS AVEC</div>
+                    
+                    <div class="social-auth">
+                        <a href="#" class="social-btn" title="Google">
+                            <i class="fab fa-google"></i>
+                        </a>
+                        <a href="#" class="social-btn" title="Apple">
+                            <i class="fab fa-apple"></i>
+                        </a>
+                        <a href="#" class="social-btn" title="LinkedIn">
+                            <i class="fab fa-linkedin-in"></i>
+                        </a>
+                    </div>
+                </form>
+                
+                <!-- Formulaire d'inscription -->
+                <form class="auth-form signup-form" id="signup-form">
+                    <div class="form-group">
+                        <label for="signup-name">Nom complet</label>
+                        <input type="text" id="signup-name" placeholder="Votre nom complet" required>
+                        <i class="fas fa-user input-icon"></i>
+                        <div class="error-message" id="signup-name-error">Veuillez entrer votre nom complet</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="signup-email">Email</label>
+                        <input type="email" id="signup-email" placeholder="Votre adresse email" required>
+                        <i class="fas fa-envelope input-icon"></i>
+                        <div class="error-message" id="signup-email-error">Veuillez entrer une adresse email valide</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="signup-password">Mot de passe</label>
+                        <input type="password" id="signup-password" placeholder="Créez un mot de passe" required>
+                        <i class="fas fa-lock input-icon"></i>
+                        <div class="error-message" id="signup-password-error">Le mot de passe doit contenir au moins 8 caractères</div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="signup-confirm">Confirmer le mot de passe</label>
+                        <input type="password" id="signup-confirm" placeholder="Confirmez votre mot de passe" required>
+                        <i class="fas fa-lock input-icon"></i>
+                        <div class="error-message" id="signup-confirm-error">Les mots de passe ne correspondent pas</div>
+                    </div>
+                    
+                    <button type="submit" class="btn-submit" id="signup-btn">
+                        CRÉER UN COMPTE
+                        <div class="loading-spinner"></div>
+                    </button>
+                    
+                    <div class="auth-options">
+                        En vous inscrivant, vous acceptez nos <a href="#">Conditions d'utilisation</a> et notre <a href="#">Politique de confidentialité</a>
+                    </div>
+                </form>
+                
+                <!-- Message de succès -->
+                <div class="success-message" id="success-message">
+                    <div class="success-icon">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <h3 class="success-title">Connexion réussie!</h3>
+                    <p class="success-text">Vous êtes maintenant connecté à TradePulse. Profitez de notre plateforme d'analyse financière!</p>
+                    <button class="continue-btn" id="continue-btn">CONTINUER</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Gestion des onglets
+            const tabs = document.querySelectorAll('.auth-tab');
+            const forms = document.querySelectorAll('.auth-form');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const target = tab.getAttribute('data-target');
+                    
+                    // Update active tab
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Show target form
+                    forms.forEach(form => {
+                        form.classList.remove('active');
+                        if (form.id === target) {
+                            form.classList.add('active');
+                        }
+                    });
+                });
+            });
+            
+            // Configuration de l'effet de particules
+            if (window.particlesJS) {
+                particlesJS('particles-js', {
+                    particles: {
+                        number: { value: 80, density: { enable: true, value_area: 800 } },
+                        color: { value: "#00ff99" },
+                        shape: { type: "circle" },
+                        opacity: { value: 0.3, random: true },
+                        size: { value: 3, random: true },
+                        line_linked: {
+                            enable: true,
+                            distance: 150,
+                            color: "#00ff99",
+                            opacity: 0.2,
+                            width: 1
+                        },
+                        move: {
+                            enable: true,
+                            speed: 1,
+                            direction: "none",
+                            random: true,
+                            straight: false,
+                            out_mode: "out",
+                            bounce: false
+                        }
+                    },
+                    interactivity: {
+                        detect_on: "canvas",
+                        events: {
+                            onhover: { enable: true, mode: "grab" },
+                            onclick: { enable: true, mode: "push" },
+                            resize: true
+                        },
+                        modes: {
+                            grab: { distance: 140, line_linked: { opacity: 0.5 } },
+                            push: { particles_nb: 4 }
+                        }
+                    },
+                    retina_detect: true
+                });
+            }
+            
+            // Animation des lignes de graphique
+            const chartLines = document.querySelectorAll('.chart-line');
+            chartLines.forEach((line, index) => {
+                // Ajouter des délais différents pour un effet plus naturel
+                line.style.animationDelay = `${index * 0.8}s`;
+            });
+            
+            // Gestion de la validation et de la soumission des formulaires
+            const loginForm = document.getElementById('login-form');
+            const signupForm = document.getElementById('signup-form');
+            const successMessage = document.getElementById('success-message');
+            const continueBtn = document.getElementById('continue-btn');
+            
+            // Validation du formulaire de connexion
+            loginForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                let isValid = true;
+                
+                // Validation basique de l'email
+                if (!validateEmail(email)) {
+                    document.getElementById('login-email-error').style.display = 'block';
+                    isValid = false;
+                } else {
+                    document.getElementById('login-email-error').style.display = 'none';
+                }
+                
+                // Validation du mot de passe
+                if (!password) {
+                    document.getElementById('login-password-error').style.display = 'block';
+                    isValid = false;
+                } else {
+                    document.getElementById('login-password-error').style.display = 'none';
+                }
+                
+                if (isValid) {
+                    // Simuler l'envoi du formulaire
+                    const loginBtn = document.getElementById('login-btn');
+                    loginBtn.classList.add('loading');
+                    loginBtn.innerHTML = 'CONNEXION EN COURS... <div class="loading-spinner"></div>';
+                    
+                    // Simuler un délai réseau (à remplacer par votre logique d'authentification)
+                    setTimeout(() => {
+                        // Stocker les informations d'utilisateur (simulé)
+                        localStorage.setItem('tradepulse_user', JSON.stringify({
+                            email: email,
+                            name: email.split('@')[0],
+                            isLoggedIn: true,
+                            loginTime: Date.now()
+                        }));
+                        
+                        // Afficher le message de succès
+                        successMessage.classList.add('active');
+                    }, 1500);
+                }
+            });
+            
+            // Validation du formulaire d'inscription
+            signupForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const name = document.getElementById('signup-name').value;
+                const email = document.getElementById('signup-email').value;
+                const password = document.getElementById('signup-password').value;
+                const confirm = document.getElementById('signup-confirm').value;
+                let isValid = true;
+                
+                // Validation du nom
+                if (!name || name.length < 3) {
+                    document.getElementById('signup-name-error').style.display = 'block';
+                    isValid = false;
+                } else {
+                    document.getElementById('signup-name-error').style.display = 'none';
+                }
+                
+                // Validation de l'email
+                if (!validateEmail(email)) {
+                    document.getElementById('signup-email-error').style.display = 'block';
+                    isValid = false;
+                } else {
+                    document.getElementById('signup-email-error').style.display = 'none';
+                }
+                
+                // Validation du mot de passe
+                if (!password || password.length < 8) {
+                    document.getElementById('signup-password-error').style.display = 'block';
+                    isValid = false;
+                } else {
+                    document.getElementById('signup-password-error').style.display = 'none';
+                }
+                
+                // Confirmation du mot de passe
+                if (password !== confirm) {
+                    document.getElementById('signup-confirm-error').style.display = 'block';
+                    isValid = false;
+                } else {
+                    document.getElementById('signup-confirm-error').style.display = 'none';
+                }
+                
+                if (isValid) {
+                    // Simuler l'envoi du formulaire
+                    const signupBtn = document.getElementById('signup-btn');
+                    signupBtn.classList.add('loading');
+                    signupBtn.innerHTML = 'CRÉATION EN COURS... <div class="loading-spinner"></div>';
+                    
+                    // Simuler un délai réseau (à remplacer par votre logique d'authentification)
+                    setTimeout(() => {
+                        // Stocker les informations d'utilisateur (simulé)
+                        localStorage.setItem('tradepulse_user', JSON.stringify({
+                            email: email,
+                            name: name,
+                            isLoggedIn: true,
+                            loginTime: Date.now()
+                        }));
+                        
+                        // Afficher le message de succès
+                        successMessage.classList.add('active');
+                    }, 1500);
+                }
+            });
+            
+            // Gestion du bouton Continuer après connexion
+            continueBtn.addEventListener('click', function() {
+                // Rediriger vers la page d'accueil
+                window.location.href = 'index.html';
+            });
+            
+            // Fonction utilitaire pour valider les emails
+            function validateEmail(email) {
+                const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+                return re.test(String(email).toLowerCase());
+            }
+            
+            // Gestion du lien "Mot de passe oublié"
+            document.getElementById('forgot-password').addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                // Afficher une alerte stylisée (à remplacer par votre logique)
+                alert('Fonctionnalité en cours de développement. Veuillez contacter le support pour réinitialiser votre mot de passe.');
+            });
+            
+            // Gestion des boutons de connexion sociale
+            document.querySelectorAll('.social-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Afficher une alerte stylisée (à remplacer par votre logique)
+                    alert('Fonctionnalité en cours de développement. Veuillez utiliser le formulaire de connexion standard.');
+                });
+            });
+        });
+    </script>
+</body>
+</html>
