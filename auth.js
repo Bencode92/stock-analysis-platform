@@ -1,281 +1,549 @@
 /**
- * auth.js - Gestion de l'authentification pour TradePulse
- * 
- * Ce fichier gère:
- * - La connexion des utilisateurs
- * - L'inscription des nouveaux utilisateurs
- * - La gestion des sessions
+ * auth.js - Script d'authentification pour TradePulse
+ * Gère le login, signup et les interactions utilisateur avec le système d'authentification
  */
 
-class AuthManager {
+class Authentication {
     constructor() {
-        this.currentUser = null;
-        this.authContainer = document.getElementById('auth-container');
-        this.loginTab = document.getElementById('login-tab');
-        this.signupTab = document.getElementById('signup-tab');
-        this.loginForm = document.getElementById('login-form');
-        this.signupForm = document.getElementById('signup-form');
-        this.authError = document.getElementById('auth-error');
-        this.authSuccess = document.getElementById('auth-success');
+        // Initialiser les écouteurs d'événements
+        this.initEventListeners();
         
-        this.initializeEvents();
-        this.checkExistingSession();
+        // État de l'application
+        this.state = {
+            currentTab: 'login',
+            isLoading: false,
+            isLoggedIn: this.checkLoginStatus()
+        };
+        
+        // Si l'utilisateur est déjà connecté, rediriger vers la page d'accueil
+        if (this.state.isLoggedIn) {
+            console.log('Utilisateur déjà connecté, redirection vers la page d\'accueil');
+            window.location.href = 'index.html';
+        }
+        
+        // Initialiser les animations
+        this.initAnimations();
     }
     
     /**
-     * Initialise les événements des formulaires et des onglets
+     * Initialise tous les écouteurs d'événements
      */
-    initializeEvents() {
-        // Si les éléments d'authentification existent
-        if (this.loginTab && this.signupTab) {
-            // Gestion des onglets
-            this.loginTab.addEventListener('click', () => this.switchTab('login'));
-            this.signupTab.addEventListener('click', () => this.switchTab('signup'));
+    initEventListeners() {
+        // Gestion des onglets
+        const tabs = document.querySelectorAll('.auth-tab');
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => this.switchTab(tab));
+        });
+        
+        // Gestion des formulaires
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        
+        if (loginForm) {
+            loginForm.addEventListener('submit', (e) => this.handleLoginSubmit(e));
+        }
+        
+        if (signupForm) {
+            signupForm.addEventListener('submit', (e) => this.handleSignupSubmit(e));
+        }
+        
+        // Bouton continuer après connexion
+        const continueBtn = document.getElementById('continue-btn');
+        if (continueBtn) {
+            continueBtn.addEventListener('click', () => this.continueToApp());
+        }
+        
+        // Mot de passe oublié
+        const forgotPassword = document.getElementById('forgot-password');
+        if (forgotPassword) {
+            forgotPassword.addEventListener('click', (e) => this.handleForgotPassword(e));
+        }
+        
+        // Connexion sociale
+        const socialButtons = document.querySelectorAll('.social-btn');
+        socialButtons.forEach(btn => {
+            btn.addEventListener('click', (e) => this.handleSocialLogin(e, btn.getAttribute('title')));
+        });
+        
+        // Validation en temps réel des champs
+        this.initInputValidation();
+    }
+    
+    /**
+     * Initialise la validation en temps réel des champs
+     */
+    initInputValidation() {
+        // Validation de l'email (login)
+        const loginEmail = document.getElementById('login-email');
+        if (loginEmail) {
+            loginEmail.addEventListener('blur', () => {
+                if (loginEmail.value && !this.validateEmail(loginEmail.value)) {
+                    document.getElementById('login-email-error').style.display = 'block';
+                    loginEmail.classList.add('shake');
+                    setTimeout(() => loginEmail.classList.remove('shake'), 600);
+                } else {
+                    document.getElementById('login-email-error').style.display = 'none';
+                }
+            });
+        }
+        
+        // Validation du mot de passe (login)
+        const loginPassword = document.getElementById('login-password');
+        if (loginPassword) {
+            loginPassword.addEventListener('blur', () => {
+                if (!loginPassword.value) {
+                    document.getElementById('login-password-error').style.display = 'block';
+                } else {
+                    document.getElementById('login-password-error').style.display = 'none';
+                }
+            });
+        }
+        
+        // Validation du nom (signup)
+        const signupName = document.getElementById('signup-name');
+        if (signupName) {
+            signupName.addEventListener('blur', () => {
+                if (!signupName.value || signupName.value.length < 3) {
+                    document.getElementById('signup-name-error').style.display = 'block';
+                } else {
+                    document.getElementById('signup-name-error').style.display = 'none';
+                }
+            });
+        }
+        
+        // Validation de l'email (signup)
+        const signupEmail = document.getElementById('signup-email');
+        if (signupEmail) {
+            signupEmail.addEventListener('blur', () => {
+                if (signupEmail.value && !this.validateEmail(signupEmail.value)) {
+                    document.getElementById('signup-email-error').style.display = 'block';
+                    signupEmail.classList.add('shake');
+                    setTimeout(() => signupEmail.classList.remove('shake'), 600);
+                } else {
+                    document.getElementById('signup-email-error').style.display = 'none';
+                }
+            });
+        }
+        
+        // Validation du mot de passe (signup)
+        const signupPassword = document.getElementById('signup-password');
+        if (signupPassword) {
+            signupPassword.addEventListener('blur', () => {
+                if (!signupPassword.value || signupPassword.value.length < 8) {
+                    document.getElementById('signup-password-error').style.display = 'block';
+                } else {
+                    document.getElementById('signup-password-error').style.display = 'none';
+                }
+            });
+        }
+        
+        // Validation de la confirmation du mot de passe
+        const signupConfirm = document.getElementById('signup-confirm');
+        if (signupConfirm && signupPassword) {
+            signupConfirm.addEventListener('blur', () => {
+                if (signupPassword.value !== signupConfirm.value) {
+                    document.getElementById('signup-confirm-error').style.display = 'block';
+                    signupConfirm.classList.add('shake');
+                    setTimeout(() => signupConfirm.classList.remove('shake'), 600);
+                } else {
+                    document.getElementById('signup-confirm-error').style.display = 'none';
+                }
+            });
             
-            // Gestion des formulaires
-            if (this.loginForm) {
-                this.loginForm.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    this.loginUser();
-                });
-            }
-            
-            if (this.signupForm) {
-                this.signupForm.addEventListener('submit', (e) => {
-                    e.preventDefault();
-                    this.registerUser();
-                });
-            }
-            
-            // Effets visuels pour les champs de formulaire
-            const formControls = document.querySelectorAll('.auth-input');
-            formControls.forEach(control => {
-                control.addEventListener('focus', () => {
-                    control.parentElement.classList.add('focused');
-                });
-                
-                control.addEventListener('blur', () => {
-                    if (!control.value) {
-                        control.parentElement.classList.remove('focused');
+            // Vérification en temps réel
+            signupConfirm.addEventListener('input', () => {
+                if (signupPassword.value === signupConfirm.value && signupConfirm.value) {
+                    document.getElementById('signup-confirm-error').style.display = 'none';
+                    signupConfirm.style.borderColor = 'var(--success-color)';
+                } else if (signupConfirm.value) {
+                    document.getElementById('signup-confirm-error').style.display = 'block';
+                    signupConfirm.style.borderColor = 'var(--error-color)';
+                }
+            });
+        }
+        
+        // Vérification de la force du mot de passe
+        if (signupPassword) {
+            signupPassword.addEventListener('input', () => {
+                if (signupPassword.value.length > 0) {
+                    const strength = this.checkPasswordStrength(signupPassword.value);
+                    
+                    if (strength === 'strong') {
+                        signupPassword.style.borderColor = 'var(--success-color)';
+                    } else if (strength === 'medium') {
+                        signupPassword.style.borderColor = 'orange';
+                    } else {
+                        signupPassword.style.borderColor = 'var(--error-color)';
                     }
-                });
-                
-                // Vérifie si le champ a déjà une valeur (pour les autofills)
-                if (control.value) {
-                    control.parentElement.classList.add('focused');
                 }
             });
         }
     }
     
     /**
-     * Vérifie si une session existe déjà
+     * Initialise les animations et effets
      */
-    checkExistingSession() {
-        const savedUser = localStorage.getItem('tradepulse_user');
+    initAnimations() {
+        // Animation des lignes de graphique
+        const chartLines = document.querySelectorAll('.chart-line');
+        chartLines.forEach((line, index) => {
+            line.style.animationDelay = `${index * 0.8}s`;
+        });
         
-        if (savedUser) {
-            try {
-                this.currentUser = JSON.parse(savedUser);
+        // Effet 3D sur la carte
+        const authCard = document.querySelector('.auth-card');
+        
+        if (authCard) {
+            document.addEventListener('mousemove', (e) => {
+                const xAxis = (window.innerWidth / 2 - e.pageX) / 25;
+                const yAxis = (window.innerHeight / 2 - e.pageY) / 25;
                 
-                // Mettre à jour le nom d'utilisateur dans l'interface
-                const usernameDisplay = document.getElementById('username-display');
-                if (usernameDisplay) {
-                    usernameDisplay.textContent = this.currentUser.name || this.currentUser.email;
-                }
-                
-                // Masquer la modal d'authentification si elle est présente
-                if (this.authContainer) {
-                    this.authContainer.style.display = 'none';
-                }
-                
-                console.log('Utilisateur connecté:', this.currentUser);
-                return true;
-            } catch (error) {
-                console.error('Erreur lors de la récupération de la session:', error);
-                localStorage.removeItem('tradepulse_user');
+                authCard.style.transform = `rotateY(${xAxis}deg) rotateX(${yAxis}deg)`;
+            });
+            
+            // Reset de la rotation quand la souris quitte la page
+            document.addEventListener('mouseleave', () => {
+                authCard.style.transform = 'rotateY(0deg) rotateX(0deg)';
+            });
+        }
+    }
+    
+    /**
+     * Change d'onglet (login/signup)
+     * @param {HTMLElement} tab - L'onglet cliqué
+     */
+    switchTab(tab) {
+        const tabs = document.querySelectorAll('.auth-tab');
+        const forms = document.querySelectorAll('.auth-form');
+        const targetId = tab.getAttribute('data-target');
+        
+        // Mise à jour de l'état
+        this.state.currentTab = targetId === 'login-form' ? 'login' : 'signup';
+        
+        // Mise à jour des onglets actifs
+        tabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        // Animation de transition du formulaire
+        const isMovingLeft = targetId === 'login-form';
+        
+        forms.forEach(form => {
+            form.classList.remove('active', 'prev', 'slide-left', 'slide-right');
+            
+            if (form.id === targetId) {
+                form.classList.add('active');
+                form.classList.add(isMovingLeft ? 'slide-right' : 'slide-left');
+            } else {
+                form.classList.add('prev');
             }
+        });
+    }
+    
+    /**
+     * Gère la soumission du formulaire de connexion
+     * @param {Event} e - L'événement de soumission
+     */
+    handleLoginSubmit(e) {
+        e.preventDefault();
+        
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        
+        // Validation basique
+        if (!this.validateLoginForm(email, password)) {
+            return;
+        }
+        
+        // Simuler le chargement
+        this.setLoading(true, 'login');
+        
+        // Simuler une authentification (à remplacer par votre API réelle)
+        setTimeout(() => {
+            // En condition réelle, vous appelleriez votre API ici
+            // Simulation d'une réponse positive
+            this.loginSuccess({
+                email: email,
+                name: email.split('@')[0],
+                token: 'sample-jwt-token-' + Date.now()
+            });
+        }, 1500);
+    }
+    
+    /**
+     * Gère la soumission du formulaire d'inscription
+     * @param {Event} e - L'événement de soumission
+     */
+    handleSignupSubmit(e) {
+        e.preventDefault();
+        
+        const name = document.getElementById('signup-name').value;
+        const email = document.getElementById('signup-email').value;
+        const password = document.getElementById('signup-password').value;
+        const confirm = document.getElementById('signup-confirm').value;
+        
+        // Validation basique
+        if (!this.validateSignupForm(name, email, password, confirm)) {
+            return;
+        }
+        
+        // Simuler le chargement
+        this.setLoading(true, 'signup');
+        
+        // Simuler une inscription (à remplacer par votre API réelle)
+        setTimeout(() => {
+            // En condition réelle, vous appelleriez votre API ici
+            // Simulation d'une réponse positive
+            this.signupSuccess({
+                name: name,
+                email: email,
+                token: 'sample-jwt-token-' + Date.now()
+            });
+        }, 2000);
+    }
+    
+    /**
+     * Valide le formulaire de connexion
+     * @param {string} email - Email de l'utilisateur
+     * @param {string} password - Mot de passe
+     * @returns {boolean} - Formulaire valide ou non
+     */
+    validateLoginForm(email, password) {
+        let isValid = true;
+        
+        // Validation de l'email
+        if (!this.validateEmail(email)) {
+            document.getElementById('login-email-error').style.display = 'block';
+            document.getElementById('login-email').classList.add('shake');
+            setTimeout(() => document.getElementById('login-email').classList.remove('shake'), 600);
+            isValid = false;
+        } else {
+            document.getElementById('login-email-error').style.display = 'none';
+        }
+        
+        // Validation du mot de passe
+        if (!password) {
+            document.getElementById('login-password-error').style.display = 'block';
+            document.getElementById('login-password').classList.add('shake');
+            setTimeout(() => document.getElementById('login-password').classList.remove('shake'), 600);
+            isValid = false;
+        } else {
+            document.getElementById('login-password-error').style.display = 'none';
+        }
+        
+        return isValid;
+    }
+    
+    /**
+     * Valide le formulaire d'inscription
+     * @param {string} name - Nom de l'utilisateur
+     * @param {string} email - Email
+     * @param {string} password - Mot de passe
+     * @param {string} confirm - Confirmation du mot de passe
+     * @returns {boolean} - Formulaire valide ou non
+     */
+    validateSignupForm(name, email, password, confirm) {
+        let isValid = true;
+        
+        // Validation du nom
+        if (!name || name.length < 3) {
+            document.getElementById('signup-name-error').style.display = 'block';
+            document.getElementById('signup-name').classList.add('shake');
+            setTimeout(() => document.getElementById('signup-name').classList.remove('shake'), 600);
+            isValid = false;
+        } else {
+            document.getElementById('signup-name-error').style.display = 'none';
+        }
+        
+        // Validation de l'email
+        if (!this.validateEmail(email)) {
+            document.getElementById('signup-email-error').style.display = 'block';
+            document.getElementById('signup-email').classList.add('shake');
+            setTimeout(() => document.getElementById('signup-email').classList.remove('shake'), 600);
+            isValid = false;
+        } else {
+            document.getElementById('signup-email-error').style.display = 'none';
+        }
+        
+        // Validation du mot de passe
+        if (!password || password.length < 8) {
+            document.getElementById('signup-password-error').style.display = 'block';
+            document.getElementById('signup-password').classList.add('shake');
+            setTimeout(() => document.getElementById('signup-password').classList.remove('shake'), 600);
+            isValid = false;
+        } else {
+            document.getElementById('signup-password-error').style.display = 'none';
+        }
+        
+        // Validation de la confirmation du mot de passe
+        if (password !== confirm) {
+            document.getElementById('signup-confirm-error').style.display = 'block';
+            document.getElementById('signup-confirm').classList.add('shake');
+            setTimeout(() => document.getElementById('signup-confirm').classList.remove('shake'), 600);
+            isValid = false;
+        } else {
+            document.getElementById('signup-confirm-error').style.display = 'none';
+        }
+        
+        return isValid;
+    }
+    
+    /**
+     * Définit l'état de chargement des formulaires
+     * @param {boolean} isLoading - État de chargement
+     * @param {string} form - Formulaire concerné ('login' ou 'signup')
+     */
+    setLoading(isLoading, form) {
+        this.state.isLoading = isLoading;
+        
+        const buttonId = form === 'login' ? 'login-btn' : 'signup-btn';
+        const button = document.getElementById(buttonId);
+        
+        if (isLoading) {
+            button.classList.add('loading');
+            button.innerHTML = form === 'login' ? 
+                'CONNEXION EN COURS... <div class="loading-spinner"></div>' : 
+                'CRÉATION EN COURS... <div class="loading-spinner"></div>';
+            button.disabled = true;
+        } else {
+            button.classList.remove('loading');
+            button.innerHTML = form === 'login' ? 'SE CONNECTER' : 'CRÉER UN COMPTE';
+            button.disabled = false;
+        }
+    }
+    
+    /**
+     * Gère le succès de la connexion
+     * @param {Object} userData - Données de l'utilisateur
+     */
+    loginSuccess(userData) {
+        // Stocker les informations d'utilisateur
+        localStorage.setItem('tradepulse_user', JSON.stringify({
+            email: userData.email,
+            name: userData.name,
+            token: userData.token,
+            isLoggedIn: true,
+            loginTime: Date.now()
+        }));
+        
+        // Mettre à jour l'état
+        this.state.isLoggedIn = true;
+        
+        // Afficher le message de succès
+        document.getElementById('success-message').classList.add('active');
+        
+        // Mettre fin au chargement
+        this.setLoading(false, 'login');
+    }
+    
+    /**
+     * Gère le succès de l'inscription
+     * @param {Object} userData - Données de l'utilisateur
+     */
+    signupSuccess(userData) {
+        // Stocker les informations d'utilisateur
+        localStorage.setItem('tradepulse_user', JSON.stringify({
+            email: userData.email,
+            name: userData.name,
+            token: userData.token,
+            isLoggedIn: true,
+            loginTime: Date.now()
+        }));
+        
+        // Mettre à jour l'état
+        this.state.isLoggedIn = true;
+        
+        // Afficher le message de succès
+        document.getElementById('success-message').classList.add('active');
+        
+        // Mettre fin au chargement
+        this.setLoading(false, 'signup');
+    }
+    
+    /**
+     * Vérifie si l'utilisateur est connecté
+     * @returns {boolean} - État de connexion
+     */
+    checkLoginStatus() {
+        const userData = localStorage.getItem('tradepulse_user');
+        
+        if (userData) {
+            const user = JSON.parse(userData);
+            
+            // Vérifier si le token est encore valide (par exemple, vérifie si la connexion date de moins de 24h)
+            const currentTime = Date.now();
+            const loginTime = user.loginTime || 0;
+            const dayInMs = 24 * 60 * 60 * 1000;
+            
+            return user.isLoggedIn && (currentTime - loginTime < dayInMs);
         }
         
         return false;
     }
     
     /**
-     * Change l'onglet actif (login/signup)
+     * Continue vers l'application après la connexion
      */
-    switchTab(tab) {
-        // Mise à jour des onglets
-        if (tab === 'login') {
-            this.loginTab.classList.add('active');
-            this.signupTab.classList.remove('active');
-            document.getElementById('login-form').style.display = 'block';
-            document.getElementById('signup-form').style.display = 'none';
-        } else {
-            this.loginTab.classList.remove('active');
-            this.signupTab.classList.add('active');
-            document.getElementById('login-form').style.display = 'none';
-            document.getElementById('signup-form').style.display = 'block';
-        }
-        
-        // Réinitialiser les messages d'erreur et de succès
-        this.authError.style.display = 'none';
-        this.authSuccess.style.display = 'none';
+    continueToApp() {
+        // Redirection vers la page d'accueil
+        window.location.href = 'index.html';
     }
     
     /**
-     * Tente de connecter l'utilisateur
+     * Gère la demande de mot de passe oublié
+     * @param {Event} e - L'événement de clic
      */
-    loginUser() {
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
+    handleForgotPassword(e) {
+        e.preventDefault();
         
-        if (!email || !password) {
-            this.showError('Veuillez remplir tous les champs');
-            return;
-        }
-        
-        // Vérifier les informations dans localStorage
-        const users = JSON.parse(localStorage.getItem('tradepulse_users') || '[]');
-        const user = users.find(u => u.email === email && u.password === password);
-        
-        if (user) {
-            // Connexion réussie
-            this.currentUser = user;
-            localStorage.setItem('tradepulse_user', JSON.stringify(user));
-            
-            this.showSuccess('Connexion réussie!');
-            
-            // Masquer la modal d'authentification après un court délai
-            setTimeout(() => {
-                this.authContainer.style.display = 'none';
-                
-                // Si nous avons une fonction de mise à jour à déclencher
-                if (window.showUpdateModal) {
-                    window.showUpdateModal();
-                }
-            }, 1500);
-        } else {
-            this.showError('Email ou mot de passe incorrect');
-        }
+        // Afficher une alerte stylisée (à remplacer par votre logique)
+        alert('Fonctionnalité en cours de développement. Veuillez contacter le support pour réinitialiser votre mot de passe.');
     }
     
     /**
-     * Enregistre un nouvel utilisateur
+     * Gère la connexion via réseau social
+     * @param {Event} e - L'événement de clic
+     * @param {string} provider - Le fournisseur d'authentification
      */
-    registerUser() {
-        const name = document.getElementById('signup-name').value;
-        const email = document.getElementById('signup-email').value;
-        const password = document.getElementById('signup-password').value;
-        const confirmPassword = document.getElementById('signup-confirm-password').value;
+    handleSocialLogin(e, provider) {
+        e.preventDefault();
         
-        if (!name || !email || !password || !confirmPassword) {
-            this.showError('Veuillez remplir tous les champs');
-            return;
-        }
+        // Afficher une alerte stylisée (à remplacer par votre logique)
+        alert(`Connexion via ${provider} en cours de développement. Veuillez utiliser le formulaire de connexion standard.`);
+    }
+    
+    /**
+     * Valide un email
+     * @param {string} email - Email à valider
+     * @returns {boolean} - Email valide ou non
+     */
+    validateEmail(email) {
+        const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+        return re.test(String(email).toLowerCase());
+    }
+    
+    /**
+     * Vérifie la force d'un mot de passe
+     * @param {string} password - Mot de passe à vérifier
+     * @returns {string} - Force du mot de passe ('weak', 'medium', 'strong')
+     */
+    checkPasswordStrength(password) {
+        const hasLowerCase = /[a-z]/.test(password);
+        const hasUpperCase = /[A-Z]/.test(password);
+        const hasNumber = /\d/.test(password);
+        const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
         
-        if (password !== confirmPassword) {
-            this.showError('Les mots de passe ne correspondent pas');
-            return;
-        }
-        
-        // Vérifier si l'email existe déjà
-        const users = JSON.parse(localStorage.getItem('tradepulse_users') || '[]');
-        if (users.some(u => u.email === email)) {
-            this.showError('Cet email est déjà utilisé');
-            return;
-        }
-        
-        // Ajouter le nouvel utilisateur
-        const newUser = { id: Date.now(), name, email, password, createdAt: new Date().toISOString() };
-        users.push(newUser);
-        localStorage.setItem('tradepulse_users', JSON.stringify(users));
-        
-        // Connecter automatiquement l'utilisateur
-        this.currentUser = newUser;
-        localStorage.setItem('tradepulse_user', JSON.stringify(newUser));
-        
-        this.showSuccess('Compte créé avec succès!');
-        
-        // Masquer la modal d'authentification après un court délai
-        setTimeout(() => {
-            this.authContainer.style.display = 'none';
-            
-            // Si nous avons une fonction de mise à jour à déclencher
-            if (window.showUpdateModal) {
-                window.showUpdateModal();
+        if (password.length >= 8 && hasLowerCase && hasUpperCase && (hasNumber || hasSpecialChar)) {
+            if (password.length >= 12 && hasLowerCase && hasUpperCase && hasNumber && hasSpecialChar) {
+                return 'strong';
             }
-        }, 1500);
-    }
-    
-    /**
-     * Déconnecte l'utilisateur actuel
-     */
-    logoutUser() {
-        localStorage.removeItem('tradepulse_user');
-        this.currentUser = null;
-        
-        // Si nous sommes sur une page qui nécessite une authentification, rediriger vers l'accueil
-        if (window.location.pathname !== '/index.html' && window.location.pathname !== '/') {
-            window.location.href = 'index.html';
-        } else {
-            // Sinon, afficher la modal d'authentification
-            this.authContainer.style.display = 'flex';
+            return 'medium';
         }
-    }
-    
-    /**
-     * Affiche un message d'erreur
-     */
-    showError(message) {
-        this.authError.textContent = message;
-        this.authError.style.display = 'block';
-        this.authSuccess.style.display = 'none';
         
-        // Effet de secousse sur le formulaire
-        const form = document.querySelector('.auth-form:not([style*="display: none"])');
-        form.classList.add('shake');
-        setTimeout(() => form.classList.remove('shake'), 500);
-    }
-    
-    /**
-     * Affiche un message de succès
-     */
-    showSuccess(message) {
-        this.authSuccess.textContent = message;
-        this.authSuccess.style.display = 'block';
-        this.authError.style.display = 'none';
-    }
-    
-    /**
-     * Vérifie si l'utilisateur est connecté
-     */
-    isLoggedIn() {
-        return this.currentUser !== null;
-    }
-    
-    /**
-     * Expose la modal d'authentification
-     */
-    showAuthModal() {
-        if (this.authContainer) {
-            this.authContainer.style.display = 'flex';
-            
-            // Animation d'apparition
-            const authModal = document.querySelector('.auth-modal');
-            if (authModal) {
-                authModal.style.opacity = '0';
-                authModal.style.transform = 'scale(0.8)';
-                
-                setTimeout(() => {
-                    authModal.style.opacity = '1';
-                    authModal.style.transform = 'scale(1)';
-                }, 10);
-            }
-        }
+        return 'weak';
     }
 }
 
-// Initialiser le gestionnaire d'authentification lorsque le DOM est chargé
+// Initialiser l'authentification lorsque le DOM est chargé
 document.addEventListener('DOMContentLoaded', () => {
-    window.authManager = new AuthManager();
+    const auth = new Authentication();
 });
