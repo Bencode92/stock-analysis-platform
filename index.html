@@ -712,6 +712,7 @@
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script src="ui-enhancements.js"></script>
     <script src="user-preferences.js"></script>
+    <script src="auth.js"></script>
     <script type="module">
         import PerplexityIntegration from './aiintegration.js';
         
@@ -733,6 +734,29 @@
                     dateElement.style.transform = 'scale(1)';
                 }, 500);
             }
+            
+            // Vérifier si l'utilisateur est connecté
+            const checkLoginStatus = () => {
+                const userData = localStorage.getItem('tradepulse_user');
+                
+                if (userData) {
+                    try {
+                        const user = JSON.parse(userData);
+                        
+                        // Vérifier si le token est encore valide (par exemple, vérifie si la connexion date de moins de 24h)
+                        const currentTime = Date.now();
+                        const loginTime = user.loginTime || 0;
+                        const dayInMs = 24 * 60 * 60 * 1000;
+                        
+                        return user.isLoggedIn && (currentTime - loginTime < dayInMs);
+                    } catch (error) {
+                        console.error('Erreur lors de la vérification du statut de connexion:', error);
+                        return false;
+                    }
+                }
+                
+                return false;
+            };
             
             // Éléments du DOM
             const updateOverlay = document.getElementById('update-overlay');
@@ -761,11 +785,26 @@
             // Afficher la modal quand on clique sur START
             document.getElementById('startButton').addEventListener('click', function(e) {
                 e.preventDefault();
+                
+                // Vérifier si l'utilisateur est connecté
+                if (!checkLoginStatus()) {
+                    // Rediriger vers la page de connexion
+                    window.location.href = 'auth.html';
+                    return;
+                }
+                
                 showUpdateModal();
             });
             
             // Afficher la modal quand on clique sur la pièce
             document.getElementById('coinContainer').addEventListener('click', function() {
+                // Vérifier si l'utilisateur est connecté
+                if (!checkLoginStatus()) {
+                    // Rediriger vers la page de connexion
+                    window.location.href = 'auth.html';
+                    return;
+                }
+                
                 showUpdateModal();
             });
             
