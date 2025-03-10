@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradePulse - Tableau de Bord</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="enhanced-ui.css">
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.14.0/Sortable.min.js"></script>
+    <style>
+        /* Variables et reset */
+        :root {
+            --background-color: #011627; /* Bleu nuit */
+            --background-gradient: linear-gradient(135deg, #010e1a, #011627 70%);
+            --text-color: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --accent-color: #00FF87; /* Vert néon */
+            --accent-glow: 0 0 10px rgba(0, 255, 135, 0.6);
+            --transition-time: 0.3s;
+            --header-height: 70px;
+            --sidebar-width: 80px;
+            --card-bg: rgba(1, 30, 52, 0.5);
+            --card-border: 1px solid rgba(0, 255, 135, 0.2);
+            --card-radius: 12px;
+            --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            --high-impact: #ff4c4c;
+            --medium-impact: #ffc107;
+            --low-impact: #2196f3;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: var(--background-gradient);
+            color: var(--text-color);
+            line-height: 1.6;
+            overflow-x: hidden;
+            font-size: 16px;
+            min-height: 100vh;
+        }
+        
+        /* Styles de base */
+        a {
+            color: var(--text-color);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+        
+        /* Header */
+        .main-header {
+            position: fixed;
+            top: 0;
+            left: var(--sidebar-width);
+            right: 0;
+            height: var(--header-height);
+            background-color: rgba(1, 22, 39, 0.9);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            z-index: 100;
+            border-bottom: 1px solid rgba(0, 255, 135, 0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            font-weight: 900;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+        }
+        
+        .pulse-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 10px var(--accent-color);
+            animation: pulse 2s infinite;
+        }
+        
+        .main-nav {
+            display: flex;
+            margin-left: 40px;
+        }
+        
+        .main-nav a {
+            margin-right: 30px;
+            padding: 8px 5px;
+            font-weight: 500;
+            position: relative;
+            transition: color 0.3s;
+        }
+        
+        .main-nav a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--accent-color);
+            transition: width 0.3s;
+        }
+        
+        .main-nav a:hover::after,
+        .main-nav a.active::after {
+            width: 100%;
+        }
+        
+        .main-nav a.active {
+            color: var(--accent-color);
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+        }
+        
+        .market-status {
+            display: flex;
+            align-items: center;
+            margin-right: 30px;
+            font-size: 0.875rem;
+        }
+        
+        .market-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .market-indicator.green {
+            background-color: #4CAF50;
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+        }
+        
+        .market-time {
+            margin-left: 10px;
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+        
+        .search-button {
+            padding: 10px 20px;
+            background-color: rgba(0, 255, 135, 0.1);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+            border: 1px solid rgba(0, 255, 135, 0.3);
+        }
+        
+        .search-button:hover {
+            background-color: rgba(0, 255, 135, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .search-button i {
+            margin-right: 8px;
+            color: var(--accent-color);
+        }
+        
+        /* Sidebar de navigation verticale */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background-color: rgba(1, 15, 26, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            z-index: 101;
+            border-right: 1px solid rgba(0, 255, 135, 0.1);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--accent-color);
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
+        }
+        
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sélecteur de thème -->
+    <div class="theme-toggle">
+        <button id="theme-toggle-btn" aria-label="Changer de thème" class="button-press">
+            <i class="fas fa-moon" id="dark-icon"></i>
+            <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
+        </button>
+    </div>
+    
+    <!-- Bouton de personnalisation -->
+    <button id="open-customization" class="customization-btn button-press" aria-label="Personnaliser l'interface">
+        <i class="fas fa-paint-brush"></i>
+    </button>
+    
+    <!-- Panneau de personnalisation -->
+    <div id="customization-panel" class="customization-panel">
+        <div class="panel-header">
+            <h3>Personnalisation</h3>
+            <button id="close-customization" class="close-btn"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="panel-content">
+            <div class="customize-section">
+                <h4>Couleur d'accent</h4>
+                <div class="color-options">
+                    <button class="color-option active" data-color="#00FF87" style="background-color: #00FF87;"></button>
+                    <button class="color-option" data-color="#ff6b6b" style="background-color: #ff6b6b;"></button>
+                    <button class="color-option" data-color="#4d79ff" style="background-color: #4d79ff;"></button>
+                    <button class="color-option" data-color="#ffd166" style="background-color: #ffd166;"></button>
+                    <button class="color-option" data-color="#bb6bd9" style="background-color: #bb6bd9;"></button>
+                </div>
+            </div>
+            <div class="customize-section">
+                <h4>Animation de fond</h4>
+                <div class="toggle-switch">
+                    <input type="checkbox" id="bg-animation-toggle" checked>
+                    <label for="bg-animation-toggle"></label>
+                    <span>Activer</span>
+                </div>
+            </div>
+            <div class="customize-section">
+                <h4>Densité de l'interface</h4>
+                <div class="density-options">
+                    <button class="density-option" data-density="compact">Compacte</button>
+                    <button class="density-option active" data-density="normal">Normale</button>
+                    <button class="density-option" data-density="comfortable">Confortable</button>
+                </div>
+            </div>
+            <button id="reset-customization" class="reset-btn">Réinitialiser par défaut</button>
+        </div>
+    </div>
+
+    <!-- Sidebar de navigation verticale -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">TP</div>
+        <nav class="sidebar-nav">
+            <a href="actualites.html" class="nav-item" title="Actualités">
+                <i class="fas fa-newspaper"></i>
+            </a>
+            <a href="portefeuille.html" class="nav-item" title="Portefeuilles">
+                <i class="fas fa-chart-pie"></i>
+            </a>
+            <a href="dashboard.html" class="nav-item active" title="Tableau de bord">
+                <i class="fas fa-tachometer-alt"></i>
+            </a>
+            <a href="marches.html" class="nav-item" title="Marchés">
+                <i class="fas fa-chart-line"></i>
+            </a>
+            <a href="alertes.html" class="nav-item" title="Alertes">
+                <i class="fas fa-bell"></i>
+            </a>
+            <a href="parametres.html" class="nav-item" title="Paramètres">
+                <i class="fas fa-cog"></i>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Header principal -->
+    <header class="main-header">
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="pulse-dot"></div>
+                <a href="index.html">TRADEPULSE</a>
+            </div>
+            <nav class="main-nav">
+                <a href="actualites.html">Actualités</a>
+                <a href="portefeuille.html">Portefeuilles</a>
+                <a href="dashboard.html" class="active">Tableau de bord</a>
+            </nav>
+        </div>
+        <div class="header-right">
+            <div class="market-status">
+                <div class="market-indicator green"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time" id="marketTime">09:45:22</span>
+            </div>
+            <a href="recherche.html" class="search-button ripple">
+                <i class="fas fa-search"></i>
+                <span>Ma question</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Container principal -->
+    <main class="main-container">
+        <div class="dashboard-container">
+            <div class="dashboard-header">
+                <h1>Tableau de bord</h1>
+                <button id="edit-dashboard" class="edit-dashboard-btn">
+                    <i class="fas fa-grip-lines"></i> Réorganiser
+                </button>
+            </div>
+            
+            <div id="dashboard-grid" class="dashboard-grid">
+                <!-- Widget des actualités -->
+                <div class="dashboard-widget" data-widget-id="news">
+                    <div class="widget-header">
+                        <h3>Actualités récentes</h3>
+                        <div class="widget-actions">
+                            <button class="widget-control minimize"><i class="fas fa-minus"></i></button>
+                        </div>
+                    </div>
+                    <div class="widget-content">
+                        <div class="news-list">
+                            <div class="news-item">
+                                <div class="news-item-title">La Fed annonce une réunion exceptionnelle</div>
+                                <div class="news-item-meta">
+                                    <span class="news-item-source">Federal Reserve</span>
+                                    <span class="news-item-time">Il y a 3h</span>
+                                </div>
+                            </div>
+                            <div class="news-item">
+                                <div class="news-item-title">Les résultats trimestriels dépassent les attentes</div>
+                                <div class="news-item-meta">
+                                    <span class="news-item-source">Markets US</span>
+                                    <span class="news-item-time">Il y a 5h</span>
+                                </div>
+                            </div>
+                            <div class="news-item">
+                                <div class="news-item-title">Baisse des rendements obligataires américains</div>
+                                <div class="news-item-meta">
+                                    <span class="news-item-source">Treasury Department</span>
+                                    <span class="news-item-time">Il y a 8h</span>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="actualites.html" class="widget-action-link">Voir toutes les actualités <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </div>
+                
+                <!-- Widget du portefeuille -->
+                <div class="dashboard-widget" data-widget-id="portfolio">
+                    <div class="widget-header">
+                        <h3>Mon portefeuille</h3>
+                        <div class="widget-actions">
+                            <button class="widget-control minimize"><i class="fas fa-minus"></i></button>
+                        </div>
+                    </div>
+                    <div class="widget-content">
+                        <div class="portfolio-performance">
+                            <div class="portfolio-value">
+                                <div class="value-label">Valeur totale</div>
+                                <div class="value-amount">68,452.35 €</div>
+                                <div class="value-change positive">
+                                    <i class="fas fa-caret-up"></i> +2.3% ce mois
+                                </div>
+                            </div>
+                            <div class="portfolio-chart">
+                                <!-- Graphique simplifié -->
+                                <div class="mini-chart">
+                                    <div class="chart-bar" style="height: 60%;"></div>
+                                    <div class="chart-bar" style="height: 40%;"></div>
+                                    <div class="chart-bar" style="height: 70%;"></div>
+                                    <div class="chart-bar" style="height: 65%;"></div>
+                                    <div class="chart-bar" style="height: 80%;"></div>
+                                    <div class="chart-bar" style="height: 90%;"></div>
+                                    <div class="chart-bar" style="height: 85%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="top-assets">
+                            <div class="asset-item">
+                                <div class="asset-name">NVIDIA Corporation</div>
+                                <div class="asset-value">
+                                    <span class="asset-price">545.32 €</span>
+                                    <span class="asset-change positive">+3.8%</span>
+                                </div>
+                            </div>
+                            <div class="asset-item">
+                                <div class="asset-name">Tesla, Inc.</div>
+                                <div class="asset-value">
+                                    <span class="asset-price">182.48 €</span>
+                                    <span class="asset-change negative">-1.2%</span>
+                                </div>
+                            </div>
+                            <div class="asset-item">
+                                <div class="asset-name">Amazon.com, Inc.</div>
+                                <div class="asset-value">
+                                    <span class="asset-price">173.25 €</span>
+                                    <span class="asset-change positive">+2.1%</span>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="portefeuille.html" class="widget-action-link">Voir le portefeuille complet <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </div>
+                
+                <!-- Widget des marchés -->
+                <div class="dashboard-widget" data-widget-id="markets">
+                    <div class="widget-header">
+                        <h3>Marchés</h3>
+                        <div class="widget-actions">
+                            <button class="widget-control minimize"><i class="fas fa-minus"></i></button>
+                        </div>
+                    </div>
+                    <div class="widget-content">
+                        <div class="market-indices">
+                            <div class="market-index">
+                                <div class="index-name">S&P 500</div>
+                                <div class="index-value">5,187.52</div>
+                                <div class="index-change positive">+0.68%</div>
+                            </div>
+                            <div class="market-index">
+                                <div class="index-name">NASDAQ</div>
+                                <div class="index-value">16,342.15</div>
+                                <div class="index-change positive">+1.12%</div>
+                            </div>
+                            <div class="market-index">
+                                <div class="index-name">CAC 40</div>
+                                <div class="index-value">8,052.21</div>
+                                <div class="index-change negative">-0.23%</div>
+                            </div>
+                            <div class="market-index">
+                                <div class="index-name">DAX</div>
+                                <div class="index-value">17,745.35</div>
+                                <div class="index-change positive">+0.45%</div>
+                            </div>
+                        </div>
+                        <a href="marches.html" class="widget-action-link">Consulter tous les marchés <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </div>
+                
+                <!-- Widget des alertes -->
+                <div class="dashboard-widget" data-widget-id="alerts">
+                    <div class="widget-header">
+                        <h3>Alertes récentes</h3>
+                        <div class="widget-actions">
+                            <button class="widget-control minimize"><i class="fas fa-minus"></i></button>
+                        </div>
+                    </div>
+                    <div class="widget-content">
+                        <div class="alerts-list">
+                            <div class="alert-item high">
+                                <div class="alert-icon"><i class="fas fa-exclamation-circle"></i></div>
+                                <div class="alert-content">
+                                    <div class="alert-title">NVDA a dépassé votre seuil d'achat (540 €)</div>
+                                    <div class="alert-time">Il y a 2h</div>
+                                </div>
+                            </div>
+                            <div class="alert-item medium">
+                                <div class="alert-icon"><i class="fas fa-info-circle"></i></div>
+                                <div class="alert-content">
+                                    <div class="alert-title">Annonce des résultats d'Amazon prévue demain</div>
+                                    <div class="alert-time">Il y a 5h</div>
+                                </div>
+                            </div>
+                            <div class="alert-item low">
+                                <div class="alert-icon"><i class="fas fa-bell"></i></div>
+                                <div class="alert-content">
+                                    <div class="alert-title">Votre objectif de performance mensuelle atteint</div>
+                                    <div class="alert-time">Il y a 1j</div>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="alertes.html" class="widget-action-link">Gérer mes alertes <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </div>
+                
+                <!-- Widget des événements -->
+                <div class="dashboard-widget" data-widget-id="events">
+                    <div class="widget-header">
+                        <h3>Événements à venir</h3>
+                        <div class="widget-actions">
+                            <button class="widget-control minimize"><i class="fas fa-minus"></i></button>
+                        </div>
+                    </div>
+                    <div class="widget-content">
+                        <div class="events-list">
+                            <div class="event-item">
+                                <div class="event-date">
+                                    <div class="event-day">10</div>
+                                    <div class="event-month">MAR</div>
+                                </div>
+                                <div class="event-details">
+                                    <div class="event-title">Réunion de la Réserve fédérale</div>
+                                    <div class="event-time">08:15</div>
+                                </div>
+                                <div class="event-impact high">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                            </div>
+                            <div class="event-item">
+                                <div class="event-date">
+                                    <div class="event-day">12</div>
+                                    <div class="event-month">MAR</div>
+                                </div>
+                                <div class="event-details">
+                                    <div class="event-title">Publication IPC (États-Unis)</div>
+                                    <div class="event-time">10:30</div>
+                                </div>
+                                <div class="event-impact high">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                            </div>
+                            <div class="event-item">
+                                <div class="event-date">
+                                    <div class="event-day">15</div>
+                                    <div class="event-month">MAR</div>
+                                </div>
+                                <div class="event-details">
+                                    <div class="event-title">Sommet du G20</div>
+                                    <div class="event-time">14:00</div>
+                                </div>
+                                <div class="event-impact medium">
+                                    <i class="fas fa-chart-line"></i>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="events.html" class="widget-action-link">Voir le calendrier complet <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </div>
+                
+                <!-- Widget des performances -->
+                <div class="dashboard-widget" data-widget-id="performance">
+                    <div class="widget-header">
+                        <h3>Performance</h3>
+                        <div class="widget-actions">
+                            <button class="widget-control minimize"><i class="fas fa-minus"></i></button>
+                        </div>
+                    </div>
+                    <div class="widget-content">
+                        <div class="performance-metrics">
+                            <div class="metric">
+                                <div class="metric-name">Rendement annuel</div>
+                                <div class="metric-value positive">+18.7%</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-name">Alpha</div>
+                                <div class="metric-value positive">+5.3%</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-name">Bêta</div>
+                                <div class="metric-value">1.12</div>
+                            </div>
+                            <div class="metric">
+                                <div class="metric-name">Ratio de Sharpe</div>
+                                <div class="metric-value positive">1.8</div>
+                            </div>
+                        </div>
+                        <div class="performance-chart">
+                            <!-- Graphique simplifié -->
+                            <div class="line-chart">
+                                <div class="line-point" style="bottom: 20%; left: 0%;"></div>
+                                <div class="line-point" style="bottom: 30%; left: 20%;"></div>
+                                <div class="line-point" style="bottom: 50%; left: 40%;"></div>
+                                <div class="line-point" style="bottom: 45%; left: 60%;"></div>
+                                <div class="line-point" style="bottom: 70%; left: 80%;"></div>
+                                <div class="line-point" style="bottom: 80%; left: 100%;"></div>
+                                <div class="chart-line"></div>
+                            </div>
+                        </div>
+                        <a href="performance.html" class="widget-action-link">Analyse complète <i class="fas fa-arrow-right"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="ui-enhancements.js"></script>
+    <script src="user-preferences.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update market time
+            function updateMarketTime() {
+                const marketTimeElement = document.getElementById('marketTime');
+                if (marketTimeElement) {
+                    const now = new Date();
+                    const hours = now.getHours().toString().padStart(2, '0');
+                    const minutes = now.getMinutes().toString().padStart(2, '0');
+                    const seconds = now.getSeconds().toString().padStart(2, '0');
+                    marketTimeElement.textContent = `${hours}:${minutes}:${seconds}`;
+                }
+            }
+            
+            updateMarketTime();
+            setInterval(updateMarketTime, 1000);
+            
+            // Styles pour les widgets du tableau de bord
+            const dashboardWidgets = document.querySelectorAll('.dashboard-widget');
+            dashboardWidgets.forEach(widget => {
+                // Style pour les widgets
+                widget.style.backgroundColor = 'var(--card-bg)';
+                widget.style.borderRadius = 'var(--card-radius)';
+                widget.style.overflow = 'hidden';
+                widget.style.border = 'var(--card-border)';
+                widget.style.boxShadow = 'var(--card-shadow)';
+                widget.style.transition = 'transform 0.3s ease, box-shadow 0.3s ease';
+                
+                widget.addEventListener('mouseenter', () => {
+                    widget.style.transform = 'translateY(-5px)';
+                    widget.style.boxShadow = '0 15px 30px rgba(0, 0, 0, 0.2)';
+                });
+                
+                widget.addEventListener('mouseleave', () => {
+                    widget.style.transform = 'translateY(0)';
+                    widget.style.boxShadow = 'var(--card-shadow)';
+                });
+            });
+            
+            // Styles pour les contenus des widgets
+            const widgetContents = document.querySelectorAll('.widget-content');
+            widgetContents.forEach(content => {
+                content.style.padding = '20px';
+            });
+            
+            // Style pour les éléments de nouvelles
+            const newsItems = document.querySelectorAll('.news-item');
+            newsItems.forEach(item => {
+                item.style.padding = '10px 0';
+                item.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+            });
+            
+            // Style pour les liens d'action
+            const actionLinks = document.querySelectorAll('.widget-action-link');
+            actionLinks.forEach(link => {
+                link.style.display = 'block';
+                link.style.textAlign = 'right';
+                link.style.marginTop = '15px';
+                link.style.color = 'var(--accent-color)';
+                link.style.fontWeight = '500';
+                link.style.fontSize = '14px';
+            });
+            
+            // Style pour le mini-chart
+            const miniChart = document.querySelector('.mini-chart');
+            if (miniChart) {
+                miniChart.style.display = 'flex';
+                miniChart.style.alignItems = 'flex-end';
+                miniChart.style.height = '60px';
+                miniChart.style.gap = '3px';
+                
+                const chartBars = miniChart.querySelectorAll('.chart-bar');
+                chartBars.forEach(bar => {
+                    bar.style.flex = '1';
+                    bar.style.background = 'var(--accent-color)';
+                    bar.style.borderRadius = '2px 2px 0 0';
+                });
+            }
+            
+            // Style pour les indices de marché
+            const marketIndices = document.querySelectorAll('.market-index');
+            marketIndices.forEach(index => {
+                index.style.display = 'flex';
+                index.style.justifyContent = 'space-between';
+                index.style.padding = '10px 0';
+                index.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+            });
+            
+            // Style pour les changements positifs/négatifs
+            const positiveChanges = document.querySelectorAll('.positive');
+            positiveChanges.forEach(change => {
+                change.style.color = '#4CAF50';
+            });
+            
+            const negativeChanges = document.querySelectorAll('.negative');
+            negativeChanges.forEach(change => {
+                change.style.color = '#FF5252';
+            });
+            
+            // Style pour les alertes
+            const alertItems = document.querySelectorAll('.alert-item');
+            alertItems.forEach(alert => {
+                alert.style.display = 'flex';
+                alert.style.padding = '10px';
+                alert.style.marginBottom = '10px';
+                alert.style.borderRadius = '6px';
+                alert.style.alignItems = 'center';
+            });
+            
+            const highAlerts = document.querySelectorAll('.alert-item.high');
+            highAlerts.forEach(alert => {
+                alert.style.backgroundColor = 'rgba(255, 76, 76, 0.1)';
+                alert.style.borderLeft = '3px solid var(--high-impact)';
+            });
+            
+            const mediumAlerts = document.querySelectorAll('.alert-item.medium');
+            mediumAlerts.forEach(alert => {
+                alert.style.backgroundColor = 'rgba(255, 193, 7, 0.1)';
+                alert.style.borderLeft = '3px solid var(--medium-impact)';
+            });
+            
+            const lowAlerts = document.querySelectorAll('.alert-item.low');
+            lowAlerts.forEach(alert => {
+                alert.style.backgroundColor = 'rgba(33, 150, 243, 0.1)';
+                alert.style.borderLeft = '3px solid var(--low-impact)';
+            });
+            
+            // Style pour les événements
+            const eventItems = document.querySelectorAll('.event-item');
+            eventItems.forEach(event => {
+                event.style.display = 'flex';
+                event.style.alignItems = 'center';
+                event.style.padding = '10px 0';
+                event.style.borderBottom = '1px solid rgba(255, 255, 255, 0.1)';
+            });
+            
+            const eventDates = document.querySelectorAll('.event-date');
+            eventDates.forEach(date => {
+                date.style.display = 'flex';
+                date.style.flexDirection = 'column';
+                date.style.alignItems = 'center';
+                date.style.marginRight = '15px';
+                date.style.minWidth = '50px';
+                date.style.background = 'rgba(0, 255, 135, 0.1)';
+                date.style.borderRadius = '6px';
+                date.style.padding = '8px';
+            });
+            
+            const eventDays = document.querySelectorAll('.event-day');
+            eventDays.forEach(day => {
+                day.style.fontSize = '18px';
+                day.style.fontWeight = '700';
+            });
+            
+            const eventMonths = document.querySelectorAll('.event-month');
+            eventMonths.forEach(month => {
+                month.style.fontSize = '12px';
+                month.style.opacity = '0.7';
+            });
+            
+            const eventImpacts = document.querySelectorAll('.event-impact');
+            eventImpacts.forEach(impact => {
+                impact.style.marginLeft = 'auto';
+                impact.style.width = '24px';
+                impact.style.height = '24px';
+                impact.style.borderRadius = '50%';
+                impact.style.display = 'flex';
+                impact.style.alignItems = 'center';
+                impact.style.justifyContent = 'center';
+            });
+            
+            const highImpacts = document.querySelectorAll('.event-impact.high');
+            highImpacts.forEach(impact => {
+                impact.style.backgroundColor = 'rgba(255, 76, 76, 0.2)';
+                impact.style.color = 'var(--high-impact)';
+            });
+            
+            const mediumImpacts = document.querySelectorAll('.event-impact.medium');
+            mediumImpacts.forEach(impact => {
+                impact.style.backgroundColor = 'rgba(255, 193, 7, 0.2)';
+                impact.style.color = 'var(--medium-impact)';
+            });
+            
+            // Styles pour la performance
+            const performanceMetrics = document.querySelector('.performance-metrics');
+            if (performanceMetrics) {
+                performanceMetrics.style.display = 'grid';
+                performanceMetrics.style.gridTemplateColumns = 'repeat(2, 1fr)';
+                performanceMetrics.style.gap = '15px';
+                performanceMetrics.style.marginBottom = '20px';
+            }
+            
+            const metrics = document.querySelectorAll('.metric');
+            metrics.forEach(metric => {
+                metric.style.padding = '10px';
+                metric.style.borderRadius = '6px';
+                metric.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+            });
+            
+            const metricValues = document.querySelectorAll('.metric-value');
+            metricValues.forEach(value => {
+                value.style.fontSize = '18px';
+                value.style.fontWeight = '700';
+            });
+            
+            // Style pour le graphique simplifié de performance
+            const lineChart = document.querySelector('.line-chart');
+            if (lineChart) {
+                lineChart.style.position = 'relative';
+                lineChart.style.height = '120px';
+                lineChart.style.marginTop = '20px';
+                
+                const chartLine = lineChart.querySelector('.chart-line');
+                if (chartLine) {
+                    chartLine.style.position = 'absolute';
+                    chartLine.style.top = '0';
+                    chartLine.style.left = '0';
+                    chartLine.style.width = '100%';
+                    chartLine.style.height = '100%';
+                    chartLine.style.background = 'none';
+                    chartLine.style.borderBottom = '1px solid rgba(255, 255, 255, 0.2)';
+                }
+                
+                const linePoints = lineChart.querySelectorAll('.line-point');
+                linePoints.forEach((point, index) => {
+                    point.style.position = 'absolute';
+                    point.style.width = '8px';
+                    point.style.height = '8px';
+                    point.style.borderRadius = '50%';
+                    point.style.backgroundColor = 'var(--accent-color)';
+                    point.style.boxShadow = '0 0 8px var(--accent-color)';
+                    
+                    if (index > 0) {
+                        const prevPoint = linePoints[index - 1];
+                        const line = document.createElement('div');
+                        line.style.position = 'absolute';
+                        line.style.height = '2px';
+                        line.style.backgroundColor = 'var(--accent-color)';
+                        line.style.zIndex = '-1';
+                        line.style.boxShadow = '0 0 8px var(--accent-color)';
+                        
+                        // Calculate position for the connecting line
+                        const prevLeft = parseFloat(prevPoint.style.left);
+                        const prevBottom = parseFloat(prevPoint.style.bottom);
+                        const currLeft = parseFloat(point.style.left);
+                        const currBottom = parseFloat(point.style.bottom);
+                        
+                        const length = Math.sqrt(Math.pow(currLeft - prevLeft, 2) + Math.pow(currBottom - prevBottom, 2));
+                        const angle = Math.atan2(currBottom - prevBottom, currLeft - prevLeft) * 180 / Math.PI;
+                        
+                        line.style.width = length + '%';
+                        line.style.left = prevLeft + '%';
+                        line.style.bottom = prevBottom + '%';
+                        line.style.transformOrigin = '0 50%';
+                        line.style.transform = `rotate(${angle}deg)`;
+                        
+                        lineChart.appendChild(line);
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
