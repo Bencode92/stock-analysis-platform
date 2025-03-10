@@ -572,6 +572,56 @@
     </style>
 </head>
 <body>
+    <!-- Sélecteur de thème -->
+    <div class="theme-toggle">
+        <button id="theme-toggle-btn" aria-label="Changer de thème" class="button-press">
+            <i class="fas fa-moon" id="dark-icon"></i>
+            <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
+        </button>
+    </div>
+    
+    <!-- Bouton de personnalisation -->
+    <button id="open-customization" class="customization-btn button-press" aria-label="Personnaliser l'interface">
+        <i class="fas fa-paint-brush"></i>
+    </button>
+    
+    <!-- Panneau de personnalisation -->
+    <div id="customization-panel" class="customization-panel">
+        <div class="panel-header">
+            <h3>Personnalisation</h3>
+            <button id="close-customization" class="close-btn"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="panel-content">
+            <div class="customize-section">
+                <h4>Couleur d'accent</h4>
+                <div class="color-options">
+                    <button class="color-option active" data-color="#00FF87" style="background-color: #00FF87;"></button>
+                    <button class="color-option" data-color="#ff6b6b" style="background-color: #ff6b6b;"></button>
+                    <button class="color-option" data-color="#4d79ff" style="background-color: #4d79ff;"></button>
+                    <button class="color-option" data-color="#ffd166" style="background-color: #ffd166;"></button>
+                    <button class="color-option" data-color="#bb6bd9" style="background-color: #bb6bd9;"></button>
+                </div>
+            </div>
+            <div class="customize-section">
+                <h4>Animation de fond</h4>
+                <div class="toggle-switch">
+                    <input type="checkbox" id="bg-animation-toggle" checked>
+                    <label for="bg-animation-toggle"></label>
+                    <span>Activer</span>
+                </div>
+            </div>
+            <div class="customize-section">
+                <h4>Densité de l'interface</h4>
+                <div class="density-options">
+                    <button class="density-option" data-density="compact">Compacte</button>
+                    <button class="density-option active" data-density="normal">Normale</button>
+                    <button class="density-option" data-density="comfortable">Confortable</button>
+                </div>
+            </div>
+            <button id="reset-customization" class="reset-btn">Réinitialiser par défaut</button>
+        </div>
+    </div>
+
     <div class="container">
         <div class="particles" id="particles-js"></div>
         
@@ -661,6 +711,7 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script src="ui-enhancements.js"></script>
+    <script src="user-preferences.js"></script>
     <script type="module">
         import PerplexityIntegration from './aiintegration.js';
         
