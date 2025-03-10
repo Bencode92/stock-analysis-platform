@@ -586,8 +586,8 @@ class AuthClient {
    * Continue vers l'application après la connexion
    */
   continueToApp() {
-    // Redirection vers la page d'accueil
-    window.location.href = 'index.html';
+    // Redirection vers la page de mise à jour
+    window.location.href = 'update.html';
   }
   
   /**
@@ -622,7 +622,7 @@ class AuthClient {
    * @returns {boolean} - Email valide ou non
    */
   validateEmail(email) {
-    const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+    const re = /^(([^<>()[\]\\.,;:\s@"]+(.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@(([[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}])|(([a-zA-Z-0-9]+.)+[a-zA-Z]{2,}))$/;
     return re.test(String(email).toLowerCase());
   }
   
