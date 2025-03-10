@@ -763,6 +763,44 @@
                 // Ajouter des délais différents pour un effet plus naturel
                 line.style.animationDelay = `${index * 0.8}s`;
             });
+            
+            // Redirection vers la page d'accueil après connexion réussie
+            const continueBtn = document.getElementById('continue-btn');
+            if (continueBtn) {
+                continueBtn.addEventListener('click', function() {
+                    window.location.href = 'index.html';
+                });
+            }
+            
+            // Vérifier si l'utilisateur est déjà connecté
+            const checkLoginStatus = () => {
+                const userData = localStorage.getItem('tradepulse_user');
+                
+                if (userData) {
+                    try {
+                        const user = JSON.parse(userData);
+                        
+                        // Vérifier si le token est encore valide
+                        const currentTime = Date.now();
+                        const loginTime = user.loginTime || 0;
+                        const dayInMs = 24 * 60 * 60 * 1000;
+                        
+                        if (user.isLoggedIn && (currentTime - loginTime < dayInMs)) {
+                            // Rediriger vers la page d'accueil si déjà connecté
+                            window.location.href = 'index.html';
+                            return true;
+                        }
+                    } catch (error) {
+                        console.error('Erreur lors de la vérification du statut de connexion:', error);
+                        return false;
+                    }
+                }
+                
+                return false;
+            };
+            
+            // Vérifier au chargement de la page
+            checkLoginStatus();
         });
     </script>
 </body>
