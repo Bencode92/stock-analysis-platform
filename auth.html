@@ -571,9 +571,34 @@
                 font-size: 20px;
             }
         }
+
+        /* Bannière mode local */
+        .local-mode-banner {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background-color: rgba(0, 204, 102, 0.8);
+            color: #003300;
+            padding: 8px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 100;
+            backdrop-filter: blur(4px);
+        }
+
+        .local-mode-banner i {
+            margin-right: 5px;
+        }
     </style>
 </head>
 <body>
+    <!-- Bannière mode local -->
+    <div class="local-mode-banner">
+        <i class="fas fa-info-circle"></i> Mode local activé : Vos données sont stockées uniquement sur ce navigateur
+    </div>
+
     <div class="brand">
         <h1 class="logo">
             <div class="pulse-dot"></div>
@@ -712,7 +737,7 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
-    <script src="auth-client.js"></script>
+    <script src="auth-local.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Configuration de l'effet de particules
@@ -768,7 +793,7 @@
             const continueBtn = document.getElementById('continue-btn');
             if (continueBtn) {
                 continueBtn.addEventListener('click', function() {
-                    window.location.href = 'index.html';
+                    window.location.href = 'dashboard.html';
                 });
             }
             
@@ -787,7 +812,7 @@
                         
                         if (user.isLoggedIn && (currentTime - loginTime < dayInMs)) {
                             // Rediriger vers la page d'accueil si déjà connecté
-                            window.location.href = 'index.html';
+                            window.location.href = 'dashboard.html';
                             return true;
                         }
                     } catch (error) {
@@ -801,6 +826,133 @@
             
             // Vérifier au chargement de la page
             checkLoginStatus();
+
+            // Gestion des onglets
+            const tabs = document.querySelectorAll('.auth-tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Retirer la classe active de tous les onglets
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+                    
+                    // Afficher le formulaire correspondant
+                    const targetId = tab.getAttribute('data-target');
+                    document.querySelectorAll('.auth-form').forEach(form => {
+                        form.classList.remove('active');
+                    });
+                    document.getElementById(targetId).classList.add('active');
+                });
+            });
+            
+            // Gérer la soumission du formulaire de connexion
+            const loginForm = document.getElementById('login-form');
+            loginForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                // Cacher les messages d'erreur précédents
+                document.getElementById('login-general-error').style.display = 'none';
+                
+                // Récupérer les valeurs
+                const email = document.getElementById('login-email').value;
+                const password = document.getElementById('login-password').value;
+                
+                // Validation simple
+                if (!email || !password) {
+                    document.getElementById('login-general-error').textContent = 'Veuillez remplir tous les champs';
+                    document.getElementById('login-general-error').style.display = 'block';
+                    return;
+                }
+                
+                // Mettre à jour l'interface pour montrer le chargement
+                const loginBtn = document.getElementById('login-btn');
+                loginBtn.classList.add('loading');
+                loginBtn.innerHTML = 'CONNEXION EN COURS... <div class="loading-spinner"></div>';
+                
+                try {
+                    // Appel au système d'authentification local
+                    await window.authLocal.login({ email, password });
+                    
+                    // Afficher le message de succès
+                    document.getElementById('success-message').classList.add('active');
+                } catch (error) {
+                    // Afficher l'erreur
+                    document.getElementById('login-general-error').textContent = error.message;
+                    document.getElementById('login-general-error').style.display = 'block';
+                    
+                    // Réinitialiser le bouton
+                    loginBtn.classList.remove('loading');
+                    loginBtn.innerHTML = 'SE CONNECTER';
+                }
+            });
+            
+            // Gérer la soumission du formulaire d'inscription
+            const signupForm = document.getElementById('signup-form');
+            signupForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                // Cacher les messages d'erreur précédents
+                document.getElementById('signup-general-error').style.display = 'none';
+                
+                // Récupérer les valeurs
+                const name = document.getElementById('signup-name').value;
+                const email = document.getElementById('signup-email').value;
+                const password = document.getElementById('signup-password').value;
+                const confirm = document.getElementById('signup-confirm').value;
+                
+                // Validation simple
+                if (!name || !email || !password || !confirm) {
+                    document.getElementById('signup-general-error').textContent = 'Veuillez remplir tous les champs';
+                    document.getElementById('signup-general-error').style.display = 'block';
+                    return;
+                }
+                
+                if (password !== confirm) {
+                    document.getElementById('signup-general-error').textContent = 'Les mots de passe ne correspondent pas';
+                    document.getElementById('signup-general-error').style.display = 'block';
+                    return;
+                }
+                
+                if (password.length < 8) {
+                    document.getElementById('signup-general-error').textContent = 'Le mot de passe doit contenir au moins 8 caractères';
+                    document.getElementById('signup-general-error').style.display = 'block';
+                    return;
+                }
+                
+                // Mettre à jour l'interface pour montrer le chargement
+                const signupBtn = document.getElementById('signup-btn');
+                signupBtn.classList.add('loading');
+                signupBtn.innerHTML = 'CRÉATION EN COURS... <div class="loading-spinner"></div>';
+                
+                try {
+                    // Appel au système d'authentification local
+                    await window.authLocal.register({ name, email, password });
+                    
+                    // Afficher le message de succès
+                    document.getElementById('success-message').classList.add('active');
+                } catch (error) {
+                    // Afficher l'erreur
+                    document.getElementById('signup-general-error').textContent = error.message;
+                    document.getElementById('signup-general-error').style.display = 'block';
+                    
+                    // Réinitialiser le bouton
+                    signupBtn.classList.remove('loading');
+                    signupBtn.innerHTML = 'CRÉER UN COMPTE';
+                }
+            });
+            
+            // Gestion du mot de passe oublié
+            document.getElementById('forgot-password').addEventListener('click', function(e) {
+                e.preventDefault();
+                alert('Fonctionnalité de récupération de mot de passe en cours de développement. Veuillez utiliser le mode local temporairement.');
+            });
+            
+            // Gestion des boutons de connexion sociale
+            document.querySelectorAll('.social-btn').forEach(btn => {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    alert('La connexion via ' + this.title + ' est en cours de développement. Veuillez utiliser la méthode de connexion standard.');
+                });
+            });
         });
     </script>
 </body>
