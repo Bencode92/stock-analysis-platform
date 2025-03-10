@@ -268,6 +268,403 @@
     border-color: var(--accent-color);
 }
 
+/* ===== 4. THÈME CLAIR/SOMBRE ===== */
+
+/* Variables pour le thème clair */
+body.light-theme {
+    --background-color: #f5f8fa;
+    --text-color: #333333;
+    --background-gradient: linear-gradient(135deg, #eaf0f6, #f5f8fa 70%);
+    --card-bg: rgba(255, 255, 255, 0.9);
+    --card-border: 1px solid rgba(0, 168, 107, 0.2);
+    --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    --text-secondary: rgba(0, 0, 0, 0.7);
+}
+
+/* Transition pour le changement de thème */
+body, body * {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Bouton de changement de thème */
+.theme-toggle {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.theme-toggle button {
+    background: rgba(0, 255, 135, 0.1);
+    border: 1px solid var(--accent-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent-color);
+    box-shadow: 0 0 10px rgba(0, 255, 135, 0.3);
+    transition: all 0.3s ease;
+}
+
+.theme-toggle button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 0 15px rgba(0, 255, 135, 0.5);
+}
+
+/* Adaptation des éléments au thème clair */
+body.light-theme .main-header {
+    background-color: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+body.light-theme .sidebar {
+    background-color: rgba(245, 248, 250, 0.95);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== 5. PERSONNALISATION DE L'INTERFACE ===== */
+
+/* Panneau de personnalisation */
+.customization-panel {
+    position: fixed;
+    top: 0;
+    right: -350px;
+    width: 350px;
+    height: 100vh;
+    background: var(--background-color);
+    border-left: 1px solid rgba(0, 255, 135, 0.2);
+    z-index: 1001;
+    transition: right 0.3s ease;
+    box-shadow: -5px 0 20px rgba(0, 0, 0, 0.2);
+    overflow-y: auto;
+}
+
+.customization-panel.open {
+    right: 0;
+}
+
+.panel-header {
+    padding: 20px;
+    border-bottom: 1px solid rgba(0, 255, 135, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.panel-content {
+    padding: 20px;
+}
+
+.customize-section {
+    margin-bottom: 30px;
+}
+
+.customize-section h4 {
+    margin-bottom: 15px;
+    font-size: 16px;
+    color: var(--text-color);
+}
+
+/* Options de couleur */
+.color-options {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.color-option {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.color-option.active {
+    transform: scale(1.1);
+    border-color: var(--text-color);
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+/* Bouton pour ouvrir le panneau de personnalisation */
+.customization-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: var(--accent-color);
+    color: var(--background-color);
+    border: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 20px;
+    cursor: pointer;
+    z-index: 1000;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.customization-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+}
+
+/* Bouton de fermeture */
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 18px;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.close-btn:hover {
+    color: var(--accent-color);
+}
+
+/* Switch toggle pour les options on/off */
+.toggle-switch {
+    display: flex;
+    align-items: center;
+}
+
+.toggle-switch input[type="checkbox"] {
+    height: 0;
+    width: 0;
+    visibility: hidden;
+    position: absolute;
+}
+
+.toggle-switch label {
+    cursor: pointer;
+    width: 50px;
+    height: 25px;
+    background: rgba(0, 255, 135, 0.2);
+    display: block;
+    border-radius: 100px;
+    position: relative;
+    margin-right: 10px;
+}
+
+.toggle-switch label:after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 19px;
+    height: 19px;
+    background: #fff;
+    border-radius: 90px;
+    transition: 0.3s;
+}
+
+.toggle-switch input:checked + label {
+    background: var(--accent-color);
+}
+
+.toggle-switch input:checked + label:after {
+    left: calc(100% - 3px);
+    transform: translateX(-100%);
+}
+
+/* Options de densité de l'interface */
+.density-options {
+    display: flex;
+    gap: 10px;
+}
+
+.density-option {
+    padding: 8px 12px;
+    background: rgba(0, 255, 135, 0.1);
+    border: 1px solid rgba(0, 255, 135, 0.3);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.density-option.active {
+    background: var(--accent-color);
+    color: var(--background-color);
+}
+
+/* Bouton de réinitialisation */
+.reset-btn {
+    width: 100%;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    color: var(--text-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 20px;
+}
+
+.reset-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+/* Densité de l'interface */
+body.density-compact {
+    --card-padding: 10px;
+    --element-spacing: 8px;
+    font-size: 14px;
+}
+
+body.density-normal {
+    --card-padding: 20px;
+    --element-spacing: 16px;
+    font-size: 16px;
+}
+
+body.density-comfortable {
+    --card-padding: 30px;
+    --element-spacing: 24px;
+    font-size: 18px;
+}
+
+/* ===== 6. TABLEAU DE BORD PERSONNALISABLE ===== */
+
+/* Layout du tableau de bord */
+.dashboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.dashboard-header {
+    padding: 20px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+    padding: 20px 0;
+}
+
+/* Widgets du tableau de bord */
+.dashboard-widget {
+    background: var(--card-bg);
+    border-radius: var(--card-radius, 12px);
+    border: var(--card-border);
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.dashboard-widget:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+}
+
+.widget-header {
+    padding: 15px;
+    background: rgba(0, 255, 135, 0.05);
+    border-bottom: 1px solid var(--card-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.widget-content {
+    padding: var(--card-padding, 20px);
+    transition: max-height 0.3s ease, padding 0.3s ease;
+    overflow: hidden;
+}
+
+.widget-content.minimized {
+    max-height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+}
+
+.widget-actions {
+    display: flex;
+    gap: 5px;
+}
+
+.widget-control {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.widget-control:hover {
+    background: rgba(0, 255, 135, 0.2);
+    color: var(--accent-color);
+}
+
+/* Mode d'édition du tableau de bord */
+.edit-dashboard-btn {
+    padding: 8px 15px;
+    background: rgba(0, 255, 135, 0.1);
+    border: 1px solid var(--accent-color);
+    border-radius: 4px;
+    color: var(--text-color);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+}
+
+.edit-dashboard-btn:hover {
+    background: rgba(0, 255, 135, 0.2);
+    transform: translateY(-2px);
+}
+
+.dashboard-grid.edit-mode .dashboard-widget {
+    cursor: move;
+    position: relative;
+}
+
+.dashboard-grid.edit-mode .dashboard-widget::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 255, 135, 0.05);
+    border: 2px dashed var(--accent-color);
+    border-radius: var(--card-radius, 12px);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* Classes de Sortable.js */
+.sortable-ghost {
+    opacity: 0.4;
+}
+
+.sortable-chosen {
+    box-shadow: 0 0 20px rgba(0, 255, 135, 0.5) !important;
+}
+
+.sortable-drag {
+    transform: scale(1.05) !important;
+}
+
 /* Media Queries pour les appareils mobiles */
 @media (max-width: 768px) {
     .nav-item .tooltip {
@@ -286,5 +683,24 @@
     .nav-item:hover .tooltip {
         top: -40px;
         left: 50%;
+    }
+    
+    .theme-toggle {
+        top: auto;
+        bottom: 80px;
+        right: 10px;
+    }
+    
+    .customization-panel {
+        width: 100%;
+        right: -100%;
+    }
+    
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .customization-btn {
+        bottom: 80px;
     }
 }
