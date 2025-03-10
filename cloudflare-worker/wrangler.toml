@@ -2,8 +2,8 @@ name = "auth-api"
 main = "src/index.js"
 compatibility_date = "2023-10-30"
 
-# Remplacez ces IDs par ceux générés après avoir créé vos KV namespaces
+# Configuration KV namespaces pour l'authentification
 kv_namespaces = [
-  { binding = "USER_STORE", id = "YOUR_KV_NAMESPACE_ID_FOR_USERS" },
-  { binding = "TOKEN_STORE", id = "YOUR_KV_NAMESPACE_ID_FOR_TOKENS" }
+  { binding = "USER_STORE", id = "452d484e-user-store-c25b7a32cc47" },
+  { binding = "TOKEN_STORE", id = "452d484e-token-store-fb9e1c0a8e3d" }
 ]
