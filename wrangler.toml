@@ -1,0 +1,10 @@
+name = "tradepulse-auth"
+main = "src/auth-worker.js"
+compatibility_date = "2023-12-01"
+
+[vars]
+JWT_SECRET = "votre_secret_jwt_securise"  # À remplacer par une vraie valeur secrète
+
+[[kv_namespaces]]
+binding = "AUTH_STORE"
+id = "votre_id_kv_namespace"  # À remplacer par un vrai ID de KV namespace
