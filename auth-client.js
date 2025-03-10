@@ -6,7 +6,7 @@
 class AuthClient {
   constructor(apiBaseUrl) {
     // URL de base de l'API d'authentification
-    this.apiBaseUrl = apiBaseUrl || 'https://auth-api.workers.dev/api/auth';
+    this.apiBaseUrl = apiBaseUrl || 'https://auth-api.bencode92.workers.dev/api/auth';
     this.isUsingLocalStorage = false; // Utilisation de l'API par défaut
     
     // État de l'application
@@ -650,8 +650,8 @@ class AuthClient {
 
 // Initialiser l'authentification lorsque le DOM est chargé
 document.addEventListener('DOMContentLoaded', () => {
-  // Utiliser l'API déployée
-  const authClient = new AuthClient('https://auth-api.workers.dev/api/auth');
+  // Utiliser l'API déployée avec le sous-domaine correct
+  const authClient = new AuthClient('https://auth-api.bencode92.workers.dev/api/auth');
 });
 
 // Exporter la classe pour l'utiliser dans d'autres scripts
