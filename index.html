@@ -6,6 +6,7 @@
     <title>TradePulse - Finance Intelligence Platform</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="enhanced-ui.css">
     <style>
         /* Styles généraux */
         :root {
@@ -260,6 +261,18 @@
             max-width: 500px;
             padding: 35px;
             text-align: center;
+            animation: modal-appear 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        
+        @keyframes modal-appear {
+            from { 
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to { 
+                opacity: 1;
+                transform: scale(1);
+            }
         }
         
         .modal-title {
@@ -419,7 +432,7 @@
         </div>
         
         <!-- Bouton START -->
-        <a href="#" class="start-button" id="startButton">START</a>
+        <a href="#" class="start-button button-press ripple" id="startButton">START</a>
         
         <footer class="footer">
             © 2025 TradePulse | Finance Intelligence Platform
@@ -438,10 +451,10 @@
             </div>
             
             <div class="modal-buttons" id="modal-buttons">
-                <button class="modal-btn primary" id="update-yes">
+                <button class="modal-btn primary button-press ripple" id="update-yes">
                     <i class="fas fa-sync-alt"></i> Mettre à jour
                 </button>
-                <button class="modal-btn" id="update-no">
+                <button class="modal-btn button-press ripple" id="update-no">
                     <i class="fas fa-forward"></i> Continuer sans mise à jour
                 </button>
             </div>
@@ -459,6 +472,7 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="ui-enhancements.js"></script>
     <script type="module">
         import PerplexityIntegration from './aiintegration.js';
         
@@ -472,6 +486,13 @@
             const dateElement = document.getElementById('currentDate');
             if (dateElement) {
                 dateElement.textContent = `${day}.${month}.${year}`;
+                
+                // Ajouter une légère animation à la date
+                dateElement.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    dateElement.style.transition = 'transform 0.5s ease';
+                    dateElement.style.transform = 'scale(1)';
+                }, 500);
             }
             
             // Éléments du DOM
@@ -509,8 +530,17 @@
             
             // Fonction pour afficher la modal de mise à jour
             function showUpdateModal() {
-                // Afficher la modal avec display flex
-                updateOverlay.style.display = 'flex';
+                // Ajouter un effet de transition avant d'afficher la modal
+                if (window.uiEnhancer) {
+                    window.uiEnhancer.showPageTransition(false);
+                    setTimeout(() => {
+                        // Afficher la modal avec display flex
+                        updateOverlay.style.display = 'flex';
+                    }, 300);
+                } else {
+                    // Afficher la modal directement si l'enhancer n'est pas disponible
+                    updateOverlay.style.display = 'flex';
+                }
                 
                 // Attacher les événements aux boutons
                 updateYesBtn.addEventListener('click', handleUpdateClick);
@@ -519,6 +549,9 @@
             
             // Gérer le clic sur "Mettre à jour"
             function handleUpdateClick() {
+                // Effet de pulsation sur le bouton
+                updateYesBtn.classList.add('updating');
+                
                 // Cacher les boutons
                 modalButtons.style.display = 'none';
                 
@@ -543,6 +576,14 @@
                             updateStatus.textContent = 'Analyse des données...';
                         } else {
                             updateStatus.textContent = 'Finalisation...';
+                        }
+                        
+                        // Ajouter un effet de pulsation à certains points clés
+                        if (progress === 30 || progress === 60 || progress === 90) {
+                            progressBar.classList.add('updating');
+                            setTimeout(() => {
+                                progressBar.classList.remove('updating');
+                            }, 1000);
                         }
                     } else {
                         clearInterval(updateInterval);
@@ -582,8 +623,12 @@
             
             // Gérer le clic sur "Continuer sans mise à jour"
             function handleContinueClick() {
-                // Rediriger vers la page des actualités
-                window.location.href = 'actualites.html';
+                // Rediriger vers la page des actualités avec une transition
+                if (window.uiEnhancer) {
+                    window.uiEnhancer.navigateTo('actualites.html');
+                } else {
+                    window.location.href = 'actualites.html';
+                }
             }
             
             // Fonction pour finaliser la mise à jour
@@ -593,8 +638,19 @@
                     localStorage.setItem('tradepulse_last_update', Date.now().toString());
                 }
                 
-                // Rediriger vers la page des actualités
-                window.location.href = 'actualites.html';
+                // Rediriger vers la page des actualités avec une transition
+                if (window.uiEnhancer) {
+                    // Ajouter une animation de succès sur le loader
+                    updateStatus.innerHTML = '<i class="fas fa-check-circle"></i> Mise à jour terminée!';
+                    updateStatus.style.color = 'var(--accent-color)';
+                    
+                    setTimeout(() => {
+                        window.uiEnhancer.navigateTo('actualites.html');
+                    }, 1000);
+                } else {
+                    // Rediriger directement si l'enhancer n'est pas disponible
+                    window.location.href = 'actualites.html';
+                }
             }
             
             // Formater une date et heure
