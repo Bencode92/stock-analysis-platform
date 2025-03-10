@@ -23,8 +23,8 @@
     left: 55px;
     top: 50%;
     transform: translateY(-50%);
-    background-color: rgba(0, 0, 0, 0.8);
-    color: white;
+    background-color: var(--tooltip-bg);
+    color: var(--tooltip-text);
     padding: 6px 12px;
     border-radius: 4px;
     font-size: 12px;
@@ -33,8 +33,8 @@
     visibility: hidden;
     transition: all 0.3s ease;
     z-index: 1000;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(0, 255, 135, 0.3);
+    box-shadow: var(--tooltip-shadow);
+    border: var(--tooltip-border);
 }
 
 .nav-item .tooltip::before {
@@ -45,7 +45,7 @@
     transform: translateY(-50%);
     border-width: 6px 6px 6px 0;
     border-style: solid;
-    border-color: transparent rgba(0, 0, 0, 0.8) transparent transparent;
+    border-color: transparent var(--tooltip-bg) transparent transparent;
 }
 
 .nav-item:hover .tooltip {
@@ -94,7 +94,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, transparent 30%, rgba(0, 255, 135, 0.1), transparent 70%);
+    background: linear-gradient(135deg, transparent 30%, var(--accent-glow-color), transparent 70%);
     background-size: 200% 200%;
     animation: shine 1s ease forwards;
 }
@@ -127,7 +127,7 @@
 
 @keyframes highlight {
     0% { background-color: transparent; }
-    50% { background-color: rgba(0, 255, 135, 0.1); }
+    50% { background-color: var(--highlight-color); }
     100% { background-color: transparent; }
 }
 
@@ -140,14 +140,14 @@
 
 .button-press:active {
     transform: scale(0.95);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2) !important;
+    box-shadow: var(--button-active-shadow) !important;
 }
 
 /* Animation de chargement améliorée */
 .loading-spinner {
     width: 30px;
     height: 30px;
-    border: 3px solid rgba(0, 255, 135, 0.1);
+    border: 3px solid var(--spinner-track-color);
     border-top-color: var(--accent-color);
     border-radius: 50%;
     animation: spin 1s linear infinite;
@@ -156,7 +156,7 @@
 .loading-progress {
     height: 3px;
     width: 100%;
-    background-color: rgba(0, 255, 135, 0.1);
+    background-color: var(--progress-bg);
     border-radius: 3px;
     overflow: hidden;
     position: relative;
@@ -170,7 +170,7 @@
     width: 0%;
     background-color: var(--accent-color);
     border-radius: 3px;
-    box-shadow: 0 0 8px rgba(0, 255, 135, 0.6);
+    box-shadow: var(--progress-shadow);
     transition: width 0.3s ease-out;
 }
 
@@ -187,7 +187,7 @@
 /* Effet de focus amélioré pour les éléments interactifs */
 .focus-effect:focus {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(0, 255, 135, 0.3);
+    box-shadow: var(--focus-shadow);
 }
 
 /* Effet d'onde au clic */
@@ -199,7 +199,7 @@
 .ripple-effect {
     position: absolute;
     border-radius: 50%;
-    background-color: rgba(255, 255, 255, 0.4);
+    background-color: var(--ripple-color);
     transform: scale(0);
     animation: ripple-animation 0.6s ease-out;
     pointer-events: none;
@@ -247,7 +247,7 @@
 
 @keyframes updating-glow {
     0% { box-shadow: 0 0 5px rgba(0, 255, 135, 0); }
-    50% { box-shadow: 0 0 15px rgba(0, 255, 135, 0.5); }
+    50% { box-shadow: 0 0 15px var(--glow-color); }
     100% { box-shadow: 0 0 5px rgba(0, 255, 135, 0); }
 }
 
@@ -264,21 +264,88 @@
 .event-card:hover,
 .portfolio-asset:hover {
     transform: translateY(-5px) scale(1.02);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--card-hover-shadow);
     border-color: var(--accent-color);
 }
 
 /* ===== 4. THÈME CLAIR/SOMBRE ===== */
 
+/* Variables de base pour les deux thèmes */
+:root {
+    /* Thème sombre (par défaut) */
+    --background-color: #011627; /* Bleu nuit */
+    --background-gradient: linear-gradient(135deg, #010e1a, #011627 70%);
+    --text-color: #FFFFFF;
+    --text-secondary: rgba(255, 255, 255, 0.7);
+    --accent-color: #00FF87; /* Vert néon */
+    --accent-glow: 0 0 10px rgba(0, 255, 135, 0.6);
+    --transition-time: 0.3s;
+    --header-height: 70px;
+    --sidebar-width: 80px;
+    --card-bg: rgba(1, 30, 52, 0.5);
+    --card-border: 1px solid rgba(0, 255, 135, 0.2);
+    --card-radius: 12px;
+    --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    --card-hover-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+    --high-impact: #ff4c4c;
+    --medium-impact: #ffc107;
+    --low-impact: #2196f3;
+    
+    /* Couleurs d'interface supplémentaires */
+    --tooltip-bg: rgba(0, 0, 0, 0.8);
+    --tooltip-text: #ffffff;
+    --tooltip-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+    --tooltip-border: 1px solid rgba(0, 255, 135, 0.3);
+    --highlight-color: rgba(0, 255, 135, 0.1);
+    --button-active-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    --spinner-track-color: rgba(0, 255, 135, 0.1);
+    --progress-bg: rgba(0, 255, 135, 0.1);
+    --progress-shadow: 0 0 8px rgba(0, 255, 135, 0.6);
+    --focus-shadow: 0 0 0 3px rgba(0, 255, 135, 0.3);
+    --ripple-color: rgba(255, 255, 255, 0.4);
+    --glow-color: rgba(0, 255, 135, 0.5);
+    --accent-glow-color: rgba(0, 255, 135, 0.1);
+    --panel-bg: rgba(1, 22, 39, 0.95);
+    --widget-header-bg: rgba(0, 255, 135, 0.05);
+    --modal-bg: linear-gradient(135deg, rgba(1, 22, 39, 0.95), rgba(1, 15, 26, 0.95));
+    --separator-color: rgba(255, 255, 255, 0.1);
+    --input-bg: rgba(255, 255, 255, 0.05);
+    --sidebar-bg: rgba(1, 15, 26, 0.95);
+    --header-bg: rgba(1, 22, 39, 0.9);
+}
+
 /* Variables pour le thème clair */
 body.light-theme {
     --background-color: #f5f8fa;
-    --text-color: #333333;
     --background-gradient: linear-gradient(135deg, #eaf0f6, #f5f8fa 70%);
+    --text-color: #333333;
+    --text-secondary: rgba(0, 0, 0, 0.6);
     --card-bg: rgba(255, 255, 255, 0.9);
     --card-border: 1px solid rgba(0, 168, 107, 0.2);
-    --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-    --text-secondary: rgba(0, 0, 0, 0.7);
+    --card-shadow: 0 8px 16px rgba(0, 0, 0, 0.06);
+    --card-hover-shadow: 0 15px 30px rgba(0, 0, 0, 0.08);
+    
+    /* Couleurs d'interface supplémentaires pour le thème clair */
+    --tooltip-bg: rgba(50, 50, 50, 0.95);
+    --tooltip-text: #ffffff;
+    --tooltip-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    --tooltip-border: 1px solid rgba(0, 168, 107, 0.3);
+    --highlight-color: rgba(0, 168, 107, 0.08);
+    --button-active-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    --spinner-track-color: rgba(0, 168, 107, 0.1);
+    --progress-bg: rgba(0, 168, 107, 0.1);
+    --progress-shadow: 0 0 8px rgba(0, 168, 107, 0.5);
+    --focus-shadow: 0 0 0 3px rgba(0, 168, 107, 0.25);
+    --ripple-color: rgba(0, 0, 0, 0.12);
+    --glow-color: rgba(0, 168, 107, 0.4);
+    --accent-glow-color: rgba(0, 168, 107, 0.1);
+    --panel-bg: rgba(255, 255, 255, 0.98);
+    --widget-header-bg: rgba(0, 168, 107, 0.05);
+    --modal-bg: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(245, 248, 250, 0.98));
+    --separator-color: rgba(0, 0, 0, 0.08);
+    --input-bg: rgba(0, 0, 0, 0.03);
+    --sidebar-bg: rgba(245, 248, 250, 0.95);
+    --header-bg: rgba(255, 255, 255, 0.95);
 }
 
 /* Transition pour le changement de thème */
@@ -295,7 +362,7 @@ body, body * {
 }
 
 .theme-toggle button {
-    background: rgba(0, 255, 135, 0.1);
+    background: var(--highlight-color);
     border: 1px solid var(--accent-color);
     border-radius: 50%;
     width: 40px;
@@ -305,24 +372,107 @@ body, body * {
     align-items: center;
     justify-content: center;
     color: var(--accent-color);
-    box-shadow: 0 0 10px rgba(0, 255, 135, 0.3);
+    box-shadow: 0 0 10px var(--glow-color);
     transition: all 0.3s ease;
 }
 
 .theme-toggle button:hover {
     transform: scale(1.1);
-    box-shadow: 0 0 15px rgba(0, 255, 135, 0.5);
+    box-shadow: 0 0 15px var(--glow-color);
 }
 
 /* Adaptation des éléments au thème clair */
 body.light-theme .main-header {
-    background-color: rgba(255, 255, 255, 0.9);
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    background-color: var(--header-bg);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
 }
 
 body.light-theme .sidebar {
-    background-color: rgba(245, 248, 250, 0.95);
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    background-color: var(--sidebar-bg);
+    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.07);
+}
+
+body.light-theme .logo-container a,
+body.light-theme .sidebar-logo {
+    color: var(--accent-color);
+    text-shadow: 0 0 5px rgba(0, 168, 107, 0.3);
+}
+
+body.light-theme .chart-line,
+body.light-theme .chart-dot {
+    opacity: 0.8;
+}
+
+body.light-theme .coin-face {
+    background: radial-gradient(ellipse at center, #f8fafc 0%, #e2e8f0 100%);
+    box-shadow: 0 0 20px rgba(0, 168, 107, 0.3), 
+                0 0 40px rgba(0, 168, 107, 0.2), 
+                inset 0 0 20px rgba(0, 168, 107, 0.1);
+}
+
+body.light-theme .date {
+    text-shadow: 0 0 10px rgba(0, 168, 107, 0.4);
+}
+
+body.light-theme .pulse-dot {
+    box-shadow: 0 0 10px rgba(0, 168, 107, 0.5);
+}
+
+body.light-theme .nav-item:not(.active) {
+    color: var(--text-secondary);
+}
+
+body.light-theme .card-content,
+body.light-theme .widget-content {
+    color: var(--text-color);
+}
+
+body.light-theme .widget-header {
+    background-color: var(--widget-header-bg);
+    border-bottom: 1px solid var(--card-border);
+}
+
+body.light-theme .news-item,
+body.light-theme .event-item,
+body.light-theme .market-index {
+    border-bottom: 1px solid var(--separator-color);
+}
+
+body.light-theme .high-impact,
+body.light-theme .medium-impact,
+body.light-theme .low-impact {
+    opacity: 0.9;
+}
+
+body.light-theme .asset-change.positive {
+    color: #27ae60;
+}
+
+body.light-theme .asset-change.negative {
+    color: #e74c3c;
+}
+
+body.light-theme input[type="text"],
+body.light-theme input[type="email"],
+body.light-theme input[type="password"],
+body.light-theme select,
+body.light-theme textarea {
+    background-color: var(--input-bg);
+    border: 1px solid var(--separator-color);
+    color: var(--text-color);
+}
+
+body.light-theme .subtitle {
+    color: var(--text-secondary);
+}
+
+body.light-theme .modal-message,
+body.light-theme .update-status {
+    color: var(--text-color);
+}
+
+body.light-theme .financial-background {
+    opacity: 0.08;
 }
 
 /* ===== 5. PERSONNALISATION DE L'INTERFACE ===== */
@@ -334,12 +484,13 @@ body.light-theme .sidebar {
     right: -350px;
     width: 350px;
     height: 100vh;
-    background: var(--background-color);
-    border-left: 1px solid rgba(0, 255, 135, 0.2);
+    background: var(--panel-bg);
+    border-left: 1px solid var(--card-border);
     z-index: 1001;
     transition: right 0.3s ease;
     box-shadow: -5px 0 20px rgba(0, 0, 0, 0.2);
     overflow-y: auto;
+    color: var(--text-color);
 }
 
 .customization-panel.open {
@@ -348,7 +499,7 @@ body.light-theme .sidebar {
 
 .panel-header {
     padding: 20px;
-    border-bottom: 1px solid rgba(0, 255, 135, 0.2);
+    border-bottom: 1px solid var(--card-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -387,7 +538,7 @@ body.light-theme .sidebar {
 .color-option.active {
     transform: scale(1.1);
     border-color: var(--text-color);
-    box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 10px var(--glow-color);
 }
 
 /* Bouton pour ouvrir le panneau de personnalisation */
@@ -447,7 +598,7 @@ body.light-theme .sidebar {
     cursor: pointer;
     width: 50px;
     height: 25px;
-    background: rgba(0, 255, 135, 0.2);
+    background: var(--widget-header-bg);
     display: block;
     border-radius: 100px;
     position: relative;
@@ -475,6 +626,10 @@ body.light-theme .sidebar {
     transform: translateX(-100%);
 }
 
+.toggle-switch span {
+    color: var(--text-color);
+}
+
 /* Options de densité de l'interface */
 .density-options {
     display: flex;
@@ -483,11 +638,12 @@ body.light-theme .sidebar {
 
 .density-option {
     padding: 8px 12px;
-    background: rgba(0, 255, 135, 0.1);
-    border: 1px solid rgba(0, 255, 135, 0.3);
+    background: var(--widget-header-bg);
+    border: 1px solid var(--card-border);
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s ease;
+    color: var(--text-color);
 }
 
 .density-option.active {
@@ -499,8 +655,8 @@ body.light-theme .sidebar {
 .reset-btn {
     width: 100%;
     padding: 10px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: var(--input-bg);
+    border: 1px solid var(--separator-color);
     border-radius: 4px;
     color: var(--text-color);
     cursor: pointer;
@@ -509,7 +665,7 @@ body.light-theme .sidebar {
 }
 
 .reset-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: var(--highlight-color);
 }
 
 /* Densité de l'interface */
@@ -566,13 +722,13 @@ body.density-comfortable {
 
 .dashboard-widget:hover {
     transform: translateY(-5px);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--card-hover-shadow);
 }
 
 .widget-header {
     padding: 15px;
-    background: rgba(0, 255, 135, 0.05);
-    border-bottom: 1px solid var(--card-border);
+    background: var(--widget-header-bg);
+    border-bottom: var(--card-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -600,7 +756,7 @@ body.density-comfortable {
     height: 24px;
     border-radius: 4px;
     border: none;
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--input-bg);
     color: var(--text-color);
     display: flex;
     align-items: center;
@@ -610,14 +766,14 @@ body.density-comfortable {
 }
 
 .widget-control:hover {
-    background: rgba(0, 255, 135, 0.2);
+    background: var(--highlight-color);
     color: var(--accent-color);
 }
 
 /* Mode d'édition du tableau de bord */
 .edit-dashboard-btn {
     padding: 8px 15px;
-    background: rgba(0, 255, 135, 0.1);
+    background: var(--highlight-color);
     border: 1px solid var(--accent-color);
     border-radius: 4px;
     color: var(--text-color);
@@ -629,7 +785,7 @@ body.density-comfortable {
 }
 
 .edit-dashboard-btn:hover {
-    background: rgba(0, 255, 135, 0.2);
+    background: var(--widget-header-bg);
     transform: translateY(-2px);
 }
 
@@ -645,7 +801,7 @@ body.density-comfortable {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 255, 135, 0.05);
+    background: var(--highlight-color);
     border: 2px dashed var(--accent-color);
     border-radius: var(--card-radius, 12px);
     pointer-events: none;
@@ -658,11 +814,44 @@ body.density-comfortable {
 }
 
 .sortable-chosen {
-    box-shadow: 0 0 20px rgba(0, 255, 135, 0.5) !important;
+    box-shadow: 0 0 20px var(--glow-color) !important;
 }
 
 .sortable-drag {
     transform: scale(1.05) !important;
+}
+
+/* ===== 7. ÉLÉMENTS DE NAVIGATION ===== */
+
+/* Styles communs pour les éléments du tableau de bord */
+.news-item,
+.event-item,
+.asset-item,
+.market-index {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--separator-color);
+}
+
+.widget-action-link {
+    display: block;
+    text-align: right;
+    margin-top: 15px;
+    color: var(--accent-color);
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.widget-action-link:hover {
+    text-decoration: underline;
+}
+
+/* Styles des éléments de performance */
+.positive {
+    color: #4CAF50;
+}
+
+.negative {
+    color: #FF5252;
 }
 
 /* Media Queries pour les appareils mobiles */
