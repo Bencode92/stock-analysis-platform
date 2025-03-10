@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="pages-style.css">
     <link rel="stylesheet" href="search-style.css">
+    <link rel="stylesheet" href="enhanced-ui.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -85,6 +86,106 @@
             width: 100%;
             margin-top: 1rem;
         }
+        
+        /* Améliorations de l'expérience utilisateur */
+        .portfolio-toggle {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        
+        .portfolio-toggle.active {
+            transform: translateY(-3px);
+        }
+        
+        .portfolio-toggle:hover:not(.active) {
+            transform: translateY(-2px);
+        }
+        
+        /* Animation pour le changement de portefeuille */
+        .portfolio-details {
+            opacity: 0;
+            animation: portfolio-appear 0.6s ease forwards;
+        }
+        
+        @keyframes portfolio-appear {
+            from { 
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Amélioration de la table */
+        .table-row {
+            position: relative;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .table-row:hover {
+            transform: translateX(5px);
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        /* Animation de chargement améliorée */
+        .loading-row .pulse-dot {
+            width: 16px;
+            height: 16px;
+            margin-right: 15px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        
+        .loading-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 0;
+        }
+        
+        /* Animation pour le graphique de portefeuille */
+        .chart-container {
+            transform: scale(0.95);
+            opacity: 0;
+            animation: chart-appear 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards 0.3s;
+        }
+        
+        @keyframes chart-appear {
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+        
+        /* Animation des cartes d'information */
+        .info-card {
+            transform: translateY(20px);
+            opacity: 0;
+            animation: info-card-appear 0.6s ease forwards;
+        }
+        
+        .info-card:nth-child(1) {
+            animation-delay: 0.2s;
+        }
+        
+        .info-card:nth-child(2) {
+            animation-delay: 0.4s;
+        }
+        
+        .info-card:nth-child(3) {
+            animation-delay: 0.6s;
+        }
+        
+        @keyframes info-card-appear {
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
     </style>
 </head>
 <body class="page-portefeuille fade-in">
@@ -105,7 +206,7 @@
                 <span>Marché ouvert</span>
                 <span class="market-time" id="marketTime">16:24:35</span>
             </div>
-            <a href="recherche.html" class="question-button">
+            <a href="recherche.html" class="question-button ripple">
                 <i class="fas fa-search"></i>
                 <span>Ma question</span>
             </a>
@@ -117,11 +218,11 @@
             <h1 class="page-title" id="portfolioTitle">PORTEFEUILLE AGRESSIF</h1>
             <p class="page-subtitle" id="currentDate">07 MARS 2025</p>
             <div class="portfolio-nav">
-                <a href="actualites.html" class="back-button"><i class="fas fa-arrow-left"></i> RETOUR AUX ACTUALITÉS</a>
+                <a href="actualites.html" class="back-button ripple"><i class="fas fa-arrow-left"></i> RETOUR AUX ACTUALITÉS</a>
                 <div class="portfolio-toggles">
-                    <a href="portefeuille.html?type=agressif" id="toggleAgressif" class="portfolio-toggle active">AGRESSIF</a>
-                    <a href="portefeuille.html?type=modere" id="toggleModere" class="portfolio-toggle">MODÉRÉ</a>
-                    <a href="portefeuille.html?type=stable" id="toggleStable" class="portfolio-toggle">STABLE</a>
+                    <a href="portefeuille.html?type=agressif" id="toggleAgressif" class="portfolio-toggle ripple active">AGRESSIF</a>
+                    <a href="portefeuille.html?type=modere" id="toggleModere" class="portfolio-toggle ripple">MODÉRÉ</a>
+                    <a href="portefeuille.html?type=stable" id="toggleStable" class="portfolio-toggle ripple">STABLE</a>
                 </div>
             </div>
         </section>
@@ -175,7 +276,7 @@
                 
                 <!-- Téléchargement PDF pour portefeuille Agressif -->
                 <div class="download-container">
-                    <button class="download-pdf-btn" id="downloadAgressifPdf">
+                    <button class="download-pdf-btn button-press ripple" id="downloadAgressifPdf">
                         <i class="fas fa-file-pdf"></i> TÉLÉCHARGER LE PORTEFEUILLE AGRESSIF (PDF)
                     </button>
                 </div>
@@ -202,7 +303,7 @@
                 
                 <!-- Téléchargement PDF pour portefeuille Modéré -->
                 <div class="download-container">
-                    <button class="download-pdf-btn" id="downloadModerePdf">
+                    <button class="download-pdf-btn button-press ripple" id="downloadModerePdf">
                         <i class="fas fa-file-pdf"></i> TÉLÉCHARGER LE PORTEFEUILLE MODÉRÉ (PDF)
                     </button>
                 </div>
@@ -229,7 +330,7 @@
                 
                 <!-- Téléchargement PDF pour portefeuille Stable -->
                 <div class="download-container">
-                    <button class="download-pdf-btn" id="downloadStablePdf">
+                    <button class="download-pdf-btn button-press ripple" id="downloadStablePdf">
                         <i class="fas fa-file-pdf"></i> TÉLÉCHARGER LE PORTEFEUILLE STABLE (PDF)
                     </button>
                 </div>
@@ -245,6 +346,9 @@
         </div>
     </footer>
 
+    <!-- Chargement de nos améliorations UI -->
+    <script src="ui-enhancements.js"></script>
+    
     <script>
         let portfolioChart;
         let currentPortfolioType = '';
@@ -277,35 +381,95 @@
             document.querySelectorAll('.portfolio-toggle').forEach(toggle => {
                 toggle.addEventListener('click', function(e) {
                     e.preventDefault();
-                    document.body.classList.add('fade-out');
                     
-                    setTimeout(() => {
-                        window.location.href = this.getAttribute('href');
-                    }, 800); // Transition time
+                    // Utiliser l'enhancer UI si disponible
+                    if (window.uiEnhancer) {
+                        window.uiEnhancer.navigateTo(this.getAttribute('href'));
+                    } else {
+                        // Fallback à l'animation originale
+                        document.body.classList.add('fade-out');
+                        setTimeout(() => {
+                            window.location.href = this.getAttribute('href');
+                        }, 800); // Transition time
+                    }
                 });
             });
             
             // Add transition on back button
             document.querySelector('.back-button').addEventListener('click', function(e) {
                 e.preventDefault();
-                document.body.classList.add('fade-out');
                 
-                setTimeout(() => {
-                    window.location.href = this.getAttribute('href');
-                }, 800); // Transition time
+                // Utiliser l'enhancer UI si disponible
+                if (window.uiEnhancer) {
+                    window.uiEnhancer.navigateTo(this.getAttribute('href'));
+                } else {
+                    // Fallback à l'animation originale
+                    document.body.classList.add('fade-out');
+                    setTimeout(() => {
+                        window.location.href = this.getAttribute('href');
+                    }, 800); // Transition time
+                }
             });
             
             // Ajouter les gestionnaires d'événements pour les boutons de téléchargement PDF
             document.getElementById('downloadAgressifPdf').addEventListener('click', function() {
+                // Ajouter une animation de chargement
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GÉNÉRATION DU PDF...';
+                this.classList.add('updating');
+                
+                // Générer le PDF
                 generatePDF('agressif');
+                
+                // Restaurer le bouton après un délai
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-file-pdf"></i> TÉLÉCHARGER LE PORTEFEUILLE AGRESSIF (PDF)';
+                    this.classList.remove('updating');
+                    
+                    // Ajouter un effet de succès
+                    if (window.uiEnhancer) {
+                        window.uiEnhancer.showSuccessAnimation(this);
+                    }
+                }, 2000);
             });
             
             document.getElementById('downloadModerePdf').addEventListener('click', function() {
+                // Ajouter une animation de chargement
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GÉNÉRATION DU PDF...';
+                this.classList.add('updating');
+                
+                // Générer le PDF
                 generatePDF('modere');
+                
+                // Restaurer le bouton après un délai
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-file-pdf"></i> TÉLÉCHARGER LE PORTEFEUILLE MODÉRÉ (PDF)';
+                    this.classList.remove('updating');
+                    
+                    // Ajouter un effet de succès
+                    if (window.uiEnhancer) {
+                        window.uiEnhancer.showSuccessAnimation(this);
+                    }
+                }, 2000);
             });
             
             document.getElementById('downloadStablePdf').addEventListener('click', function() {
+                // Ajouter une animation de chargement
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GÉNÉRATION DU PDF...';
+                this.classList.add('updating');
+                
+                // Générer le PDF
                 generatePDF('stable');
+                
+                // Restaurer le bouton après un délai
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-file-pdf"></i> TÉLÉCHARGER LE PORTEFEUILLE STABLE (PDF)';
+                    this.classList.remove('updating');
+                    
+                    // Ajouter un effet de succès
+                    if (window.uiEnhancer) {
+                        window.uiEnhancer.showSuccessAnimation(this);
+                    }
+                }, 2000);
             });
         });
         
@@ -315,11 +479,17 @@
             const profileDescElement = document.getElementById('profileDescription');
             currentPortfolioType = type;
             
-            // Update portfolio toggles
-            document.querySelectorAll('.portfolio-toggle').forEach(toggle => toggle.classList.remove('active'));
+            // Update portfolio toggles with a state change animation
+            document.querySelectorAll('.portfolio-toggle').forEach(toggle => {
+                toggle.classList.remove('active');
+                toggle.classList.add('state-change');
+                setTimeout(() => {
+                    toggle.classList.remove('state-change');
+                }, 500);
+            });
             document.getElementById(`toggle${type.charAt(0).toUpperCase() + type.slice(1)}`).classList.add('active');
             
-            // Show appropriate portfolio details and hide others
+            // Show appropriate portfolio details and hide others with animation
             document.getElementById('aggressiveDetails').style.display = type === 'agressif' ? 'block' : 'none';
             document.getElementById('moderateDetails').style.display = type === 'modere' ? 'block' : 'none';
             document.getElementById('stableDetails').style.display = type === 'stable' ? 'block' : 'none';
@@ -353,6 +523,14 @@
                 
                 initStableChart();
             }
+            
+            // Ajouter une animation d'apparition au changement de portfolio
+            const portfolioDetails = document.querySelector(`.portfolio-details[style*="display: block"]`);
+            if (portfolioDetails) {
+                portfolioDetails.style.animation = 'none';
+                portfolioDetails.offsetHeight; // Force reflow
+                portfolioDetails.style.animation = 'portfolio-appear 0.6s ease forwards';
+            }
         }
         
         function initAggressiveChart() {
@@ -368,6 +546,14 @@
             // Destroy existing chart if it exists
             if (portfolioChart) {
                 portfolioChart.destroy();
+            }
+            
+            // Ajouter une animation de chargement
+            const chartContainer = document.querySelector('.chart-container');
+            if (chartContainer) {
+                chartContainer.style.animation = 'none';
+                chartContainer.offsetHeight; // Force reflow
+                chartContainer.style.animation = 'chart-appear 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards 0.3s';
             }
             
             // Attendre que les données de portefeuille soient chargées
@@ -405,6 +591,12 @@
                                     }
                                 }
                             }
+                        },
+                        animation: {
+                            animateScale: true,
+                            animateRotate: true,
+                            duration: 2000,
+                            easing: 'easeOutQuart'
                         }
                     }
                 });
@@ -436,6 +628,12 @@
                                     }
                                 }
                             }
+                        },
+                        animation: {
+                            animateScale: true,
+                            animateRotate: true,
+                            duration: 2000,
+                            easing: 'easeOutQuart'
                         }
                     }
                 });
@@ -455,6 +653,14 @@
             // Destroy existing chart if it exists
             if (portfolioChart) {
                 portfolioChart.destroy();
+            }
+            
+            // Ajouter une animation de chargement
+            const chartContainer = document.querySelector('.chart-container');
+            if (chartContainer) {
+                chartContainer.style.animation = 'none';
+                chartContainer.offsetHeight; // Force reflow
+                chartContainer.style.animation = 'chart-appear 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards 0.3s';
             }
             
             // Attendre que les données de portefeuille soient chargées
@@ -492,6 +698,12 @@
                                     }
                                 }
                             }
+                        },
+                        animation: {
+                            animateScale: true,
+                            animateRotate: true,
+                            duration: 2000,
+                            easing: 'easeOutQuart'
                         }
                     }
                 });
@@ -523,6 +735,12 @@
                                     }
                                 }
                             }
+                        },
+                        animation: {
+                            animateScale: true,
+                            animateRotate: true,
+                            duration: 2000,
+                            easing: 'easeOutQuart'
                         }
                     }
                 });
@@ -542,6 +760,14 @@
             // Destroy existing chart if it exists
             if (portfolioChart) {
                 portfolioChart.destroy();
+            }
+            
+            // Ajouter une animation de chargement
+            const chartContainer = document.querySelector('.chart-container');
+            if (chartContainer) {
+                chartContainer.style.animation = 'none';
+                chartContainer.offsetHeight; // Force reflow
+                chartContainer.style.animation = 'chart-appear 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards 0.3s';
             }
             
             // Attendre que les données de portefeuille soient chargées
@@ -579,6 +805,12 @@
                                     }
                                 }
                             }
+                        },
+                        animation: {
+                            animateScale: true,
+                            animateRotate: true,
+                            duration: 2000,
+                            easing: 'easeOutQuart'
                         }
                     }
                 });
@@ -610,6 +842,12 @@
                                     }
                                 }
                             }
+                        },
+                        animation: {
+                            animateScale: true,
+                            animateRotate: true,
+                            duration: 2000,
+                            easing: 'easeOutQuart'
                         }
                     }
                 });
