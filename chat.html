@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradePulse - Assistant Financier IA</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Styles généraux */
+        :root {
+            --background-color: #011627; /* Bleu nuit */
+            --text-color: #FFFFFF;
+            --accent-color: #00FF87; /* Vert néon */
+            --accent-glow: 0 0 10px rgba(0, 255, 135, 0.6);
+            --secondary-bg: #001018;
+            --border-color: rgba(0, 255, 135, 0.2);
+            --card-bg: rgba(1, 30, 47, 0.7);
+            --chat-bg: rgba(1, 30, 47, 0.5);
+            --user-bubble: rgba(0, 255, 135, 0.15);
+            --assistant-bubble: rgba(255, 255, 255, 0.05);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body, html {
+            font-family: 'Inter', sans-serif;
+            height: 100%;
+            width: 100%;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            overflow: hidden;
+        }
+        
+        /* Layout */
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 80px;
+            background-color: var(--secondary-bg);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            border-right: 1px solid var(--border-color);
+            transition: width 0.3s ease;
+        }
+        
+        .logo-small {
+            font-size: 24px;
+            font-weight: 900;
+            margin-bottom: 40px;
+            color: var(--accent-color);
+            text-shadow: 0 0 10px rgba(0, 255, 135, 0.3);
+        }
+        
+        .nav-item {
+            width: 100%;
+            padding: 15px 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 5px;
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            transition: all 0.2s ease;
+            border-left: 3px solid transparent;
+        }
+        
+        .nav-item.active {
+            color: var(--accent-color);
+            background-color: rgba(0, 255, 135, 0.1);
+            border-left: 3px solid var(--accent-color);
+        }
+        
+        .nav-item:hover {
+            color: var(--accent-color);
+            background-color: rgba(0, 255, 135, 0.05);
+        }
+        
+        .nav-item i {
+            font-size: 20px;
+        }
+        
+        /* Chat Container */
+        .chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        
+        /* Chat Header */
+        .chat-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .chat-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .chat-title h1 {
+            font-size: 22px;
+            font-weight: 600;
+            color: var(--accent-color);
+            text-shadow: 0 0 8px rgba(0, 255, 135, 0.3);
+        }
+        
+        .ai-badge {
+            background-color: rgba(0, 255, 135, 0.15);
+            color: var(--accent-color);
+            font-size: 12px;
+            padding: 4px 8px;
+            border-radius: 30px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .ai-badge i {
+            font-size: 10px;
+        }
+        
+        .chat-actions {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .chat-action-btn {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .chat-action-btn:hover {
+            color: var(--accent-color);
+        }
+        
+        /* Chat Messages */
+        .chat-messages {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background-color: var(--chat-bg);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .message {
+            display: flex;
+            max-width: 80%;
+        }
+        
+        .message.user {
+            align-self: flex-end;
+        }
+        
+        .message.assistant {
+            align-self: flex-start;
+        }
+        
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-right: 12px;
+        }
+        
+        .user .message-avatar {
+            background-color: var(--accent-color);
+            color: var(--secondary-bg);
+        }
+        
+        .assistant .message-avatar {
+            background-color: rgba(255, 255, 255, 0.1);
+            margin-right: 12px;
+            margin-left: 0;
+        }
+        
+        .message-content {
+            padding: 15px;
+            border-radius: 18px;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+        
+        .user .message-content {
+            background-color: var(--user-bubble);
+            border-bottom-right-radius: 4px;
+            color: var(--text-color);
+        }
+        
+        .assistant .message-content {
+            background-color: var(--assistant-bubble);
+            border-bottom-left-radius: 4px;
+        }
+        
+        .message-time {
+            font-size: 11px;
+            color: rgba(255, 255, 255, 0.5);
+            margin-top: 5px;
+            align-self: flex-end;
+        }
+        
+        /* Finance Data Cards */
+        .finance-cards {
+            display: flex;
+            gap: 15px;
+            overflow-x: auto;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .finance-card {
+            background-color: rgba(1, 30, 47, 0.8);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 12px;
+            min-width: 160px;
+            transition: transform 0.2s ease;
+            cursor: pointer;
+        }
+        
+        .finance-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--accent-color);
+        }
+        
+        .finance-symbol {
+            font-weight: 600;
+            font-size: 16px;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .finance-price {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .finance-change {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .finance-change.positive {
+            color: #00E676;
+        }
+        
+        .finance-change.negative {
+            color: #FF5252;
+        }
+        
+        /* Chat Input */
+        .chat-input-container {
+            padding: 20px;
+            border-top: 1px solid var(--border-color);
+            background-color: var(--secondary-bg);
+        }
+        
+        .chat-input-wrapper {
+            display: flex;
+            align-items: center;
+            background-color: rgba(1, 30, 47, 0.7);
+            border: 1px solid var(--border-color);
+            border-radius: 30px;
+            padding: 5px 20px;
+            transition: all 0.3s ease;
+        }
+        
+        .chat-input-wrapper:focus-within {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 15px rgba(0, 255, 135, 0.2);
+        }
+        
+        .chat-input {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 15px;
+            padding: 12px 0;
+            outline: none;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .chat-input::placeholder {
+            color: rgba(255, 255, 255, 0.4);
+        }
+        
+        .chat-input-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .chat-input-btn {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            padding: 5px;
+        }
+        
+        .chat-input-btn:hover {
+            color: var(--accent-color);
+        }
+        
+        .send-btn {
+            background-color: var(--accent-color);
+            color: var(--secondary-bg);
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .send-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(0, 255, 135, 0.4);
+        }
+        
+        /* Suggestions */
+        .suggestions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .suggestion-chip {
+            background-color: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 30px;
+            padding: 8px 15px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+        }
+        
+        .suggestion-chip:hover {
+            background-color: rgba(0, 255, 135, 0.15);
+            border-color: rgba(0, 255, 135, 0.3);
+        }
+        
+        /* Typing Indicator */
+        .typing-indicator {
+            display: flex;
+            gap: 5px;
+            padding: 15px;
+            background-color: var(--assistant-bubble);
+            border-radius: 18px;
+            border-bottom-left-radius: 4px;
+            align-self: flex-start;
+            margin-left: 48px;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            animation: typingAnimation 1.5s infinite ease-in-out;
+        }
+        
+        .typing-dot:nth-child(1) {
+            animation-delay: 0s;
+        }
+        
+        .typing-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .typing-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes typingAnimation {
+            0% { transform: translateY(0); background-color: rgba(255, 255, 255, 0.5); }
+            50% { transform: translateY(-5px); background-color: var(--accent-color); }
+            100% { transform: translateY(0); background-color: rgba(255, 255, 255, 0.5); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .message {
+                max-width: 90%;
+            }
+            
+            .finance-cards {
+                padding: 10px 0;
+            }
+            
+            .suggestions {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+                padding-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="logo-small">TP</div>
+            
+            <a href="actualites.html" class="nav-item">
+                <i class="fas fa-newspaper"></i>
+            </a>
+            
+            <a href="portefeuilles.html" class="nav-item">
+                <i class="fas fa-chart-pie"></i>
+            </a>
+            
+            <a href="marches.html" class="nav-item">
+                <i class="fas fa-chart-line"></i>
+            </a>
+            
+            <a href="screener.html" class="nav-item">
+                <i class="fas fa-search-dollar"></i>
+            </a>
+            
+            <a href="chat.html" class="nav-item active">
+                <i class="fas fa-comment-alt"></i>
+            </a>
+            
+            <a href="parametres.html" class="nav-item" style="margin-top: auto;">
+                <i class="fas fa-cog"></i>
+            </a>
+        </div>
+        
+        <!-- Chat Container -->
+        <div class="chat-container">
+            <!-- Chat Header -->
+            <div class="chat-header">
+                <div class="chat-title">
+                    <h1>Assistant Financier</h1>
+                    <span class="ai-badge">
+                        <i class="fas fa-robot"></i> Perplexity AI
+                    </span>
+                </div>
+                
+                <div class="chat-actions">
+                    <button class="chat-action-btn">
+                        <i class="fas fa-file-export"></i>
+                    </button>
+                    <button class="chat-action-btn">
+                        <i class="fas fa-trash-alt"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Chat Messages -->
+            <div class="chat-messages">
+                <!-- Assistant Message -->
+                <div class="message assistant">
+                    <div class="message-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div>
+                        <div class="message-content">
+                            Bonjour ! Je suis votre assistant financier TradePulse. Comment puis-je vous aider aujourd'hui ? Je peux vous fournir des analyses de marché, des informations sur des actions spécifiques, ou répondre à vos questions sur l'investissement.
+                        </div>
+                        <div class="message-time">10:32</div>
+                    </div>
+                </div>
+                
+                <!-- Finance Data Cards (can appear in assistant messages) -->
+                <div class="finance-cards">
+                    <div class="finance-card">
+                        <div class="finance-symbol">
+                            AAPL
+                            <i class="fab fa-apple"></i>
+                        </div>
+                        <div class="finance-price">$184.36</div>
+                        <div class="finance-change positive">+1.24%</div>
+                    </div>
+                    
+                    <div class="finance-card">
+                        <div class="finance-symbol">
+                            MSFT
+                            <i class="fab fa-microsoft"></i>
+                        </div>
+                        <div class="finance-price">$412.72</div>
+                        <div class="finance-change positive">+0.87%</div>
+                    </div>
+                    
+                    <div class="finance-card">
+                        <div class="finance-symbol">
+                            TSLA
+                            <i class="fas fa-car"></i>
+                        </div>
+                        <div class="finance-price">$175.22</div>
+                        <div class="finance-change negative">-1.58%</div>
+                    </div>
+                    
+                    <div class="finance-card">
+                        <div class="finance-symbol">
+                            AMZN
+                            <i class="fab fa-amazon"></i>
+                        </div>
+                        <div class="finance-price">$178.75</div>
+                        <div class="finance-change positive">+0.45%</div>
+                    </div>
+                </div>
+                
+                <!-- User Message -->
+                <div class="message user">
+                    <div>
+                        <div class="message-content">
+                            Quelles sont les meilleures actions tech à surveiller cette semaine ?
+                        </div>
+                        <div class="message-time">10:35</div>
+                    </div>
+                    <div class="message-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
+                
+                <!-- Assistant Message -->
+                <div class="message assistant">
+                    <div class="message-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div>
+                        <div class="message-content">
+                            Cette semaine, plusieurs actions tech sont particulièrement intéressantes à surveiller :<br><br>
+                            
+                            1. <strong>NVIDIA (NVDA)</strong> - Publication de nouveaux produits IA prévue<br>
+                            2. <strong>AMD (AMD)</strong> - Gains potentiels suite à une expansion de marché<br>
+                            3. <strong>Salesforce (CRM)</strong> - Nouvelles initiatives cloud attendues<br>
+                            4. <strong>Microsoft (MSFT)</strong> - Développement continu de ses services IA<br>
+                            5. <strong>Palantir (PLTR)</strong> - Nouveaux contrats gouvernementaux annoncés<br><br>
+                            
+                            Ces entreprises pourraient connaître une volatilité accrue en raison des récentes évolutions du marché tech. Souhaitez-vous une analyse plus détaillée sur l'une d'entre elles ?
+                        </div>
+                        <div class="message-time">10:36</div>
+                    </div>
+                </div>
+                
+                <!-- Typing Indicator -->
+                <div class="typing-indicator">
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                    <div class="typing-dot"></div>
+                </div>
+            </div>
+            
+            <!-- Chat Input -->
+            <div class="chat-input-container">
+                <div class="chat-input-wrapper">
+                    <input type="text" class="chat-input" placeholder="Posez une question sur les marchés, actions, stratégies..." />
+                    
+                    <div class="chat-input-actions">
+                        <button class="chat-input-btn">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                        <button class="chat-input-btn">
+                            <i class="fas fa-chart-line"></i>
+                        </button>
+                        <button class="send-btn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Suggestions -->
+                <div class="suggestions">
+                    <div class="suggestion-chip">Analyse de NVDA</div>
+                    <div class="suggestion-chip">Tendances du marché aujourd'hui</div>
+                    <div class="suggestion-chip">Prévisions taux d'intérêt</div>
+                    <div class="suggestion-chip">Portfolio tech diversifié</div>
+                    <div class="suggestion-chip">Stratégie dividendes 2025</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Handle sending messages
+            const chatInput = document.querySelector('.chat-input');
+            const sendBtn = document.querySelector('.send-btn');
+            const chatMessages = document.querySelector('.chat-messages');
+            const typingIndicator = document.querySelector('.typing-indicator');
+            
+            // Initially hide typing indicator
+            typingIndicator.style.display = 'none';
+            
+            function sendMessage() {
+                const message = chatInput.value.trim();
+                
+                if (message) {
+                    // Add user message
+                    const now = new Date();
+                    const time = now.getHours() + ':' + (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+                    
+                    const userMessageHTML = `
+                        <div class="message user">
+                            <div>
+                                <div class="message-content">
+                                    ${message}
+                                </div>
+                                <div class="message-time">${time}</div>
+                            </div>
+                            <div class="message-avatar">
+                                <i class="fas fa-user"></i>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Insert before typing indicator
+                    chatMessages.insertAdjacentHTML('beforeend', userMessageHTML);
+                    
+                    // Clear input
+                    chatInput.value = '';
+                    
+                    // Scroll to bottom
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                    
+                    // Show typing indicator
+                    typingIndicator.style.display = 'flex';
+                    
+                    // Simulate response after delay
+                    setTimeout(() => {
+                        // Hide typing indicator
+                        typingIndicator.style.display = 'none';
+                        
+                        // Add assistant response
+                        let responseText = "Je suis en train d'analyser votre demande concernant \"" + message + "\". Je vais vous apporter une réponse détaillée basée sur les dernières données financières.";
+                        
+                        const assistantMessageHTML = `
+                            <div class="message assistant">
+                                <div class="message-avatar">
+                                    <i class="fas fa-robot"></i>
+                                </div>
+                                <div>
+                                    <div class="message-content">
+                                        ${responseText}
+                                    </div>
+                                    <div class="message-time">${time}</div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        chatMessages.insertAdjacentHTML('beforeend', assistantMessageHTML);
+                        
+                        // Scroll to bottom
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+                    }, 2000);
+                }
+            }
+            
+            // Send on click
+            sendBtn.addEventListener('click', sendMessage);
+            
+            // Send on Enter key
+            chatInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessage();
+                }
+            });
+            
+            // Handle suggestion chips
+            const suggestionChips = document.querySelectorAll('.suggestion-chip');
+            
+            suggestionChips.forEach(chip => {
+                chip.addEventListener('click', function() {
+                    chatInput.value = this.textContent;
+                    chatInput.focus();
+                });
+            });
+            
+            // Handle finance cards
+            const financeCards = document.querySelectorAll('.finance-card');
+            
+            financeCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    const symbol = this.querySelector('.finance-symbol').textContent.trim();
+                    chatInput.value = `Analyse détaillée de ${symbol}`;
+                    chatInput.focus();
+                });
+            });
+        });
+    </script>
+</body>
+</html>
