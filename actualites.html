@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="enhanced-ui.css">
+    <link rel="stylesheet" href="news-enhancements.css">
     <script type="module" src="aiintegration.js"></script>
     <style>
         /* Variables et reset */
@@ -326,7 +327,7 @@
         .news-tabs {
             display: flex;
             justify-content: center;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             border-bottom: 1px solid rgba(0, 255, 135, 0.2);
             padding-bottom: 10px;
         }
@@ -482,14 +483,6 @@
             transform: translateY(-5px);
             box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
             border-color: rgba(0, 255, 135, 0.3);
-        }
-
-        .news-image {
-            height: 180px;
-            background-color: rgba(0, 255, 135, 0.05);
-            background-size: cover;
-            background-position: center;
-            position: relative;
         }
 
         .news-content {
@@ -860,7 +853,7 @@
     <aside class="sidebar">
         <div class="sidebar-logo">TP</div>
         <nav class="sidebar-nav">
-            <a href="actualites.html" class="nav-item" title="Actualités">
+            <a href="actualites.html" class="nav-item active" title="Actualités">
                 <i class="fas fa-newspaper"></i>
             </a>
             <a href="portefeuille.html" class="nav-item" title="Portefeuilles">
@@ -896,7 +889,7 @@
                 <span>Marché ouvert</span>
                 <span class="market-time" id="marketTime">09:45:22</span>
             </div>
-            <a href="recherche.html" class="search-button">
+            <a href="recherche.html" class="search-button ripple">
                 <i class="fas fa-search"></i>
                 <span>Ma question</span>
             </a>
@@ -938,18 +931,47 @@
                 </div>
             </div>
             
+            <!-- Nouveaux filtres avancés -->
+            <div class="advanced-filters">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <span class="filter-label">Trier par:</span>
+                        <select class="sort-selector focus-effect">
+                            <option value="date">Date (plus récent)</option>
+                            <option value="date-asc">Date (plus ancien)</option>
+                            <option value="impact">Impact (élevé à faible)</option>
+                            <option value="impact-asc">Impact (faible à élevé)</option>
+                            <option value="source">Source</option>
+                        </select>
+                    </div>
+                    
+                    <div class="filter-group">
+                        <span class="filter-label">Niveau d'impact:</span>
+                        <div class="toggle-group">
+                            <button class="toggle-btn high active">Élevé</button>
+                            <button class="toggle-btn medium active">Moyen</button>
+                            <button class="toggle-btn low active">Faible</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- Articles à la une -->
             <section class="featured-news">
                 <div class="featured-news-card" data-category="economie" style="background-image: url('https://via.placeholder.com/600x400?text=Fed+Meeting')">
-                    <div class="featured-news-tag tag-breaking">BREAKING</div>
+                    <div class="status-tag breaking">BREAKING</div>
                     <div class="featured-news-overlay"></div>
                     <div class="featured-news-content">
                         <div class="featured-news-meta">
-                            <span>Federal Reserve</span>
-                            <span>09/03/2025 08:15</span>
+                            <span class="news-date-badge"><i class="far fa-calendar-alt"></i>09 Mars 2025</span>
+                            <span class="read-time"><i class="far fa-clock"></i>3 min</span>
                         </div>
                         <h3 class="featured-news-title">La Fed annonce une réunion exceptionnelle pour discuter des taux d'intérêt</h3>
                         <p class="featured-news-excerpt">La Réserve fédérale américaine vient d'annoncer la tenue d'une réunion exceptionnelle le 10 mars pour discuter des prochaines mesures concernant les taux d'intérêt. Les analystes prévoient...</p>
+                        <div class="news-tags">
+                            <span class="news-tag economie">Économie</span>
+                            <span class="news-tag marches">Marchés US</span>
+                        </div>
                         <div class="event-impact event-impact-high">
                             <i class="fas fa-chart-line"></i> Impact élevé
                         </div>
@@ -957,15 +979,19 @@
                 </div>
                 
                 <div class="featured-news-card" data-category="tech" style="background-image: url('https://via.placeholder.com/600x400?text=Tech+Merger')">
-                    <div class="featured-news-tag tag-important">IMPORTANT</div>
+                    <div class="status-tag new">IMPORTANT</div>
                     <div class="featured-news-overlay"></div>
                     <div class="featured-news-content">
                         <div class="featured-news-meta">
-                            <span>Business Insider</span>
-                            <span>08/03/2025 14:30</span>
+                            <span class="news-date-badge"><i class="far fa-calendar-alt"></i>08 Mars 2025</span>
+                            <span class="read-time"><i class="far fa-clock"></i>4 min</span>
                         </div>
                         <h3 class="featured-news-title">Google et Meta envisagent une fusion de leurs divisions VR</h3>
                         <p class="featured-news-excerpt">Les géants technologiques Google et Meta annoncent des discussions préliminaires concernant une fusion potentielle de leurs divisions de réalité virtuelle, créant un nouveau leader du marché...</p>
+                        <div class="news-tags">
+                            <span class="news-tag tech">Tech</span>
+                            <span class="news-tag marches">Actions</span>
+                        </div>
                         <div class="event-impact event-impact-high">
                             <i class="fas fa-chart-line"></i> Impact élevé
                         </div>
@@ -983,17 +1009,23 @@
             <!-- Grille d'actualités principale -->
             <section class="news-grid">
                 <!-- Actualité 1 -->
-                <div class="news-card" data-category="economie">
-                    <div class="news-image" style="background-image: url('https://via.placeholder.com/400x200?text=Tariffs');">
+                <div class="news-card" data-category="economie" data-impact="high" data-date="2025-03-07">
+                    <div class="news-image-container">
+                        <img src="https://via.placeholder.com/400x200?text=Tariffs" alt="Exemption des droits de douane" class="news-image">
+                        <div class="news-image-overlay"></div>
                         <div class="news-impact high"><i class="fas fa-arrow-trend-up"></i>Impact: Élevé</div>
                     </div>
                     <div class="news-content">
                         <div class="news-meta">
-                            <span>7 Mars 2025</span>
-                            <span>08:15</span>
+                            <span class="news-date-badge"><i class="far fa-calendar-alt"></i>07 Mars 2025</span>
+                            <span class="read-time"><i class="far fa-clock"></i>2 min</span>
                         </div>
                         <h3 class="news-title">Exemption de droits de douane</h3>
                         <p class="news-excerpt">La Maison Blanche a annoncé un report d'un mois sur les nouveaux tarifs automobiles. Cette exemption a entraîné une hausse des actions des constructeurs étrangers...</p>
+                        <div class="news-tags">
+                            <span class="news-tag economie">Économie</span>
+                            <span class="news-tag marches">Commerce</span>
+                        </div>
                         <div class="news-footer">
                             <div class="news-source">Maison Blanche</div>
                             <div class="news-time"><i class="far fa-clock"></i> Il y a 2 jours</div>
@@ -1002,17 +1034,23 @@
                 </div>
                 
                 <!-- Actualité 2 -->
-                <div class="news-card" data-category="marches">
-                    <div class="news-image" style="background-image: url('https://via.placeholder.com/400x200?text=EU+Bonds');">
+                <div class="news-card" data-category="marches" data-impact="high" data-date="2025-03-07">
+                    <div class="news-image-container">
+                        <img src="https://via.placeholder.com/400x200?text=EU+Bonds" alt="Marché obligataire européen" class="news-image">
+                        <div class="news-image-overlay"></div>
                         <div class="news-impact high"><i class="fas fa-arrow-trend-up"></i>Impact: Élevé</div>
                     </div>
                     <div class="news-content">
                         <div class="news-meta">
-                            <span>7 Mars 2025</span>
-                            <span>09:30</span>
+                            <span class="news-date-badge"><i class="far fa-calendar-alt"></i>07 Mars 2025</span>
+                            <span class="read-time"><i class="far fa-clock"></i>3 min</span>
                         </div>
                         <h3 class="news-title">Marché obligataire européen</h3>
                         <p class="news-excerpt">Le marché obligataire européen a connu une journée historique avec une hausse de 30 points de base du rendement allemand à 10 ans...</p>
+                        <div class="news-tags">
+                            <span class="news-tag marches">Marchés EU</span>
+                            <span class="news-tag economie">Obligations</span>
+                        </div>
                         <div class="news-footer">
                             <div class="news-source">Marchés Européens</div>
                             <div class="news-time"><i class="far fa-clock"></i> Il y a 2 jours</div>
@@ -1021,17 +1059,23 @@
                 </div>
                 
                 <!-- Actualité 3 -->
-                <div class="news-card" data-category="marches">
-                    <div class="news-image" style="background-image: url('https://via.placeholder.com/400x200?text=ECB+Rates');">
+                <div class="news-card" data-category="marches" data-impact="high" data-date="2025-03-07">
+                    <div class="news-image-container">
+                        <img src="https://via.placeholder.com/400x200?text=ECB+Rates" alt="Décision de taux de la BCE" class="news-image">
+                        <div class="news-image-overlay"></div>
                         <div class="news-impact high"><i class="fas fa-arrow-trend-up"></i>Impact: Élevé</div>
                     </div>
                     <div class="news-content">
                         <div class="news-meta">
-                            <span>7 Mars 2025</span>
-                            <span>13:45</span>
+                            <span class="news-date-badge"><i class="far fa-calendar-alt"></i>07 Mars 2025</span>
+                            <span class="read-time"><i class="far fa-clock"></i>4 min</span>
                         </div>
                         <h3 class="news-title">Décision de taux de la BCE</h3>
                         <p class="news-excerpt">La BCE maintient ses taux d'intérêt, impactant les marchés européens et le secteur bancaire. Contrairement aux attentes d'une baisse...</p>
+                        <div class="news-tags">
+                            <span class="news-tag marches">Marchés EU</span>
+                            <span class="news-tag economie">Taux</span>
+                        </div>
                         <div class="news-footer">
                             <div class="news-source">BCE</div>
                             <div class="news-time"><i class="far fa-clock"></i> Il y a 2 jours</div>
@@ -1040,17 +1084,23 @@
                 </div>
                 
                 <!-- Actualité 4 -->
-                <div class="news-card" data-category="economie">
-                    <div class="news-image" style="background-image: url('https://via.placeholder.com/400x200?text=Jobs+Report');">
+                <div class="news-card" data-category="economie" data-impact="medium" data-date="2025-03-06">
+                    <div class="news-image-container">
+                        <img src="https://via.placeholder.com/400x200?text=Jobs+Report" alt="Publication chiffres emploi US" class="news-image">
+                        <div class="news-image-overlay"></div>
                         <div class="news-impact medium"><i class="fas fa-arrow-right"></i>Impact: Moyen</div>
                     </div>
                     <div class="news-content">
                         <div class="news-meta">
-                            <span>6 Mars 2025</span>
-                            <span>14:30</span>
+                            <span class="news-date-badge"><i class="far fa-calendar-alt"></i>06 Mars 2025</span>
+                            <span class="read-time"><i class="far fa-clock"></i>3 min</span>
                         </div>
                         <h3 class="news-title">Publication chiffres emploi US</h3>
                         <p class="news-excerpt">Des données sur l'emploi meilleures que prévu renforcent le dollar face aux autres devises. Le taux de chômage est tombé à 3,6%...</p>
+                        <div class="news-tags">
+                            <span class="news-tag economie">Économie</span>
+                            <span class="news-tag marches">Emploi</span>
+                        </div>
                         <div class="news-footer">
                             <div class="news-source">Bureau des statistiques</div>
                             <div class="news-time"><i class="far fa-clock"></i> Il y a 3 jours</div>
@@ -1059,17 +1109,23 @@
                 </div>
                 
                 <!-- Actualité 5 -->
-                <div class="news-card" data-category="tech">
-                    <div class="news-image" style="background-image: url('https://via.placeholder.com/400x200?text=AI+Finance');">
+                <div class="news-card" data-category="tech" data-impact="medium" data-date="2025-03-05">
+                    <div class="news-image-container">
+                        <img src="https://via.placeholder.com/400x200?text=AI+Finance" alt="Adoption de l'IA en finance" class="news-image">
+                        <div class="news-image-overlay"></div>
                         <div class="news-impact medium"><i class="fas fa-arrow-right"></i>Impact: Moyen</div>
                     </div>
                     <div class="news-content">
                         <div class="news-meta">
-                            <span>5 Mars 2025</span>
-                            <span>16:00</span>
+                            <span class="news-date-badge"><i class="far fa-calendar-alt"></i>05 Mars 2025</span>
+                            <span class="read-time"><i class="far fa-clock"></i>5 min</span>
                         </div>
                         <h3 class="news-title">Adoption de l'IA en finance</h3>
                         <p class="news-excerpt">Plusieurs entreprises technologiques annoncent des avancées majeures en IA, stimulant le secteur. Selon un rapport du Wall Street Journal...</p>
+                        <div class="news-tags">
+                            <span class="news-tag tech">Tech</span>
+                            <span class="news-tag economie">IA</span>
+                        </div>
                         <div class="news-footer">
                             <div class="news-source">Wall Street Journal</div>
                             <div class="news-time"><i class="far fa-clock"></i> Il y a 4 jours</div>
@@ -1078,17 +1134,23 @@
                 </div>
                 
                 <!-- Actualité 6 -->
-                <div class="news-card" data-category="crypto">
-                    <div class="news-image" style="background-image: url('https://via.placeholder.com/400x200?text=Crypto+News');">
+                <div class="news-card" data-category="crypto" data-impact="low" data-date="2025-03-05">
+                    <div class="news-image-container">
+                        <img src="https://via.placeholder.com/400x200?text=Crypto+News" alt="Bitcoin franchit un nouveau seuil" class="news-image">
+                        <div class="news-image-overlay"></div>
                         <div class="news-impact low"><i class="fas fa-arrow-trend-down"></i>Impact: Faible</div>
                     </div>
                     <div class="news-content">
                         <div class="news-meta">
-                            <span>5 Mars 2025</span>
-                            <span>11:30</span>
+                            <span class="news-date-badge"><i class="far fa-calendar-alt"></i>05 Mars 2025</span>
+                            <span class="read-time"><i class="far fa-clock"></i>2 min</span>
                         </div>
                         <h3 class="news-title">Bitcoin franchit un nouveau seuil</h3>
                         <p class="news-excerpt">La principale cryptomonnaie dépasse les 75 000$ dans un contexte d'adoption institutionnelle croissante...</p>
+                        <div class="news-tags">
+                            <span class="news-tag crypto">Crypto</span>
+                            <span class="news-tag marches">Bitcoin</span>
+                        </div>
                         <div class="news-footer">
                             <div class="news-source">CoinDesk</div>
                             <div class="news-time"><i class="far fa-clock"></i> Il y a 4 jours</div>
@@ -1116,6 +1178,10 @@
                         <h3 class="event-card-title">Réunion de la Réserve fédérale</h3>
                         <div class="event-card-source">Federal Reserve</div>
                         <p class="event-card-desc">La Fed annonce une réunion exceptionnelle pour discuter des prochaines mesures concernant les taux d'intérêt. Les investisseurs s'attendent à des annonces...</p>
+                        <div class="news-tags">
+                            <span class="news-tag economie">Économie</span>
+                            <span class="news-tag marches">Taux</span>
+                        </div>
                         <div class="event-impact event-impact-high">
                             <i class="fas fa-chart-line"></i> Impact élevé
                         </div>
@@ -1133,6 +1199,10 @@
                         <h3 class="event-card-title">Indice des prix à la consommation US</h3>
                         <div class="event-card-source">Bureau of Labor Statistics</div>
                         <p class="event-card-desc">Publication mensuelle des données d'inflation aux États-Unis. Les analystes prévoient une légère hausse par rapport au mois précédent...</p>
+                        <div class="news-tags">
+                            <span class="news-tag economie">Économie</span>
+                            <span class="news-tag marches">Inflation</span>
+                        </div>
                         <div class="event-impact event-impact-high">
                             <i class="fas fa-chart-line"></i> Impact élevé
                         </div>
@@ -1150,6 +1220,10 @@
                         <h3 class="event-card-title">Sommet des ministres de l'Économie G20</h3>
                         <div class="event-card-source">G20</div>
                         <p class="event-card-desc">Réunion des ministres des Finances et des gouverneurs des banques centrales pour discuter de la coordination des politiques économiques...</p>
+                        <div class="news-tags">
+                            <span class="news-tag economie">Économie</span>
+                            <span class="news-tag marches">G20</span>
+                        </div>
                         <div class="event-impact event-impact-medium">
                             <i class="fas fa-chart-line"></i> Impact moyen
                         </div>
@@ -1167,6 +1241,10 @@
                         <h3 class="event-card-title">Publication résultats Apple</h3>
                         <div class="event-card-source">Apple Inc.</div>
                         <p class="event-card-desc">Publication des résultats trimestriels d'Apple. Les analystes surveillent particulièrement les performances des nouveaux produits...</p>
+                        <div class="news-tags">
+                            <span class="news-tag tech">Tech</span>
+                            <span class="news-tag marches">Actions</span>
+                        </div>
                         <div class="event-impact event-impact-medium">
                             <i class="fas fa-chart-line"></i> Impact moyen
                         </div>
@@ -1227,8 +1305,90 @@
             const eventCards = document.querySelectorAll('.events-list .event-card');
             const noResultsMessage = document.querySelector('.no-results');
             
+            // Gestion des toggles d'impact
+            const impactToggles = document.querySelectorAll('.toggle-btn');
+            const activeImpacts = ['high', 'medium', 'low']; // Par défaut, tous les impacts sont affichés
+            
+            impactToggles.forEach(toggle => {
+                toggle.addEventListener('click', function() {
+                    this.classList.toggle('active');
+                    const impact = this.classList.contains('high') ? 'high' : 
+                                  this.classList.contains('medium') ? 'medium' : 'low';
+                    
+                    // Mettre à jour la liste des impacts actifs
+                    if (this.classList.contains('active')) {
+                        if (!activeImpacts.includes(impact)) {
+                            activeImpacts.push(impact);
+                        }
+                    } else {
+                        const index = activeImpacts.indexOf(impact);
+                        if (index > -1) {
+                            activeImpacts.splice(index, 1);
+                        }
+                    }
+                    
+                    // Appliquer le filtrage
+                    filterContent(getActiveCategory(), activeImpacts);
+                    
+                    // Ajouter effet de succès avec l'enhancer UI
+                    if (window.uiEnhancer) {
+                        window.uiEnhancer.showSuccessAnimation(this);
+                    }
+                });
+            });
+            
+            // Gestion du sélecteur de tri
+            const sortSelector = document.querySelector('.sort-selector');
+            sortSelector.addEventListener('change', function() {
+                sortNews(this.value);
+                
+                // Animer les éléments après le tri
+                setTimeout(() => {
+                    animateFilteredElements();
+                }, 50);
+            });
+            
+            // Fonction pour trier les actualités
+            function sortNews(sortBy) {
+                const newsContainer = document.querySelector('.news-grid');
+                const cards = Array.from(newsCards);
+                
+                // Tri des cartes selon le critère choisi
+                cards.sort((a, b) => {
+                    switch(sortBy) {
+                        case 'date':
+                            return new Date(b.dataset.date) - new Date(a.dataset.date);
+                        case 'date-asc':
+                            return new Date(a.dataset.date) - new Date(b.dataset.date);
+                        case 'impact':
+                            const impactOrder = {'high': 3, 'medium': 2, 'low': 1};
+                            return impactOrder[b.dataset.impact] - impactOrder[a.dataset.impact];
+                        case 'impact-asc':
+                            const impactOrderAsc = {'high': 3, 'medium': 2, 'low': 1};
+                            return impactOrderAsc[a.dataset.impact] - impactOrderAsc[b.dataset.impact];
+                        case 'source':
+                            const sourceA = a.querySelector('.news-source').textContent.toLowerCase();
+                            const sourceB = b.querySelector('.news-source').textContent.toLowerCase();
+                            return sourceA.localeCompare(sourceB);
+                        default:
+                            return 0;
+                    }
+                });
+                
+                // Réorganiser les cartes dans le DOM
+                cards.forEach(card => {
+                    newsContainer.appendChild(card);
+                });
+            }
+            
+            // Fonction pour obtenir la catégorie active
+            function getActiveCategory() {
+                const activeTab = document.querySelector('.news-tab.active');
+                return activeTab ? activeTab.dataset.category : 'all';
+            }
+            
             // Fonction pour filtrer les éléments
-            function filterContent(category) {
+            function filterContent(category, impacts = activeImpacts) {
                 let featuredVisible = 0;
                 let gridVisible = 0;
                 let eventsVisible = 0;
@@ -1241,7 +1401,7 @@
                 
                 // Filtrer les articles à la une
                 featuredNewsCards.forEach(card => {
-                    if (category === 'all' || card.dataset.category === category) {
+                    if ((category === 'all' || card.dataset.category === category)) {
                         card.style.display = 'flex';
                         featuredVisible++;
                     } else {
@@ -1264,7 +1424,9 @@
                 
                 // Filtrer les cartes d'actualité
                 newsCards.forEach(card => {
-                    if (category === 'all' || card.dataset.category === category) {
+                    const cardImpact = card.dataset.impact;
+                    if ((category === 'all' || card.dataset.category === category) && 
+                        impacts.includes(cardImpact)) {
                         card.classList.remove('filtered');
                         gridVisible++;
                     } else {
@@ -1296,12 +1458,6 @@
                 } else {
                     upcomingEventsSection.style.display = 'block';
                 }
-                
-                // Effet de succès sur l'onglet actif
-                if (window.uiEnhancer) {
-                    const activeTab = document.querySelector('.news-tab.active');
-                    window.uiEnhancer.showSuccessAnimation(activeTab);
-                }
             }
             
             // Ajouter des écouteurs d'événements aux onglets
@@ -1319,6 +1475,42 @@
                     setTimeout(() => {
                         animateFilteredElements();
                     }, 50);
+                });
+            });
+            
+            // Rendre les tags cliquables pour filtrer
+            const newsTags = document.querySelectorAll('.news-tag');
+            newsTags.forEach(tag => {
+                tag.addEventListener('click', function() {
+                    // Déterminer la catégorie basée sur la classe du tag
+                    let category = 'all';
+                    if (this.classList.contains('marches')) category = 'marches';
+                    else if (this.classList.contains('economie')) category = 'economie';
+                    else if (this.classList.contains('tech')) category = 'tech';
+                    else if (this.classList.contains('crypto')) category = 'crypto';
+                    
+                    // Mettre à jour l'onglet actif
+                    tabs.forEach(t => {
+                        if (t.dataset.category === category) {
+                            t.classList.add('active');
+                        } else {
+                            t.classList.remove('active');
+                        }
+                    });
+                    
+                    // Filtrer le contenu
+                    filterContent(category);
+                    
+                    // Animer les éléments après filtrage
+                    setTimeout(() => {
+                        animateFilteredElements();
+                    }, 50);
+                    
+                    // Effet d'animation sur le tag
+                    this.classList.add('updating');
+                    setTimeout(() => {
+                        this.classList.remove('updating');
+                    }, 800);
                 });
             });
             
