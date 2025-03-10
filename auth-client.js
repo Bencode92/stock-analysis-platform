@@ -6,9 +6,8 @@
 class AuthClient {
   constructor(apiBaseUrl) {
     // URL de base de l'API d'authentification
-    // Pour la version démo, nous utiliserons localStorage
-    this.apiBaseUrl = apiBaseUrl || null;
-    this.isUsingLocalStorage = !apiBaseUrl;
+    this.apiBaseUrl = apiBaseUrl || 'https://auth-api.workers.dev/api/auth';
+    this.isUsingLocalStorage = false; // Utilisation de l'API par défaut
     
     // État de l'application
     this.state = {
@@ -26,7 +25,7 @@ class AuthClient {
       this.fetchCurrentUser();
     }
     
-    console.log('AuthClient initialisé', this.isUsingLocalStorage ? '(mode localStorage)' : '(mode API)');
+    console.log('AuthClient initialisé avec l\'API', this.apiBaseUrl);
   }
   
   /**
@@ -234,13 +233,28 @@ class AuthClient {
     this.setLoading(true, 'login');
     
     try {
-      if (this.isUsingLocalStorage) {
-        // Version démo - utilisation du localStorage
-        await this.loginWithLocalStorage(email, password);
-      } else {
-        // Version API - appel au backend
-        await this.loginWithAPI(email, password);
+      // Appel à l'API d'authentification
+      const response = await fetch(`${this.apiBaseUrl}/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de la connexion');
       }
+      
+      // Stocker le token et les informations utilisateur
+      this.loginSuccess({
+        name: data.user.name,
+        email: data.user.email,
+        token: data.token
+      });
+      
     } catch (error) {
       console.error('Erreur de connexion:', error);
       
@@ -254,69 +268,6 @@ class AuthClient {
       // Désactiver l'état de chargement
       this.setLoading(false, 'login');
     }
-  }
-  
-  /**
-   * Connexion avec localStorage (version démo)
-   */
-  async loginWithLocalStorage(email, password) {
-    return new Promise((resolve, reject) => {
-      // Simuler une latence réseau
-      setTimeout(() => {
-        // Vérifier si l'email existe
-        const usersJson = localStorage.getItem('tradepulse_users');
-        const users = usersJson ? JSON.parse(usersJson) : {};
-        
-        if (!users[email]) {
-          reject(new Error('Email ou mot de passe incorrect'));
-          return;
-        }
-        
-        // Vérifier le mot de passe (simple comparaison en démo)
-        if (users[email].password !== password) {
-          reject(new Error('Email ou mot de passe incorrect'));
-          return;
-        }
-        
-        // Générer un token simple
-        const token = this.generateToken();
-        
-        // Connexion réussie
-        this.loginSuccess({
-          name: users[email].name,
-          email: email,
-          token: token
-        });
-        
-        resolve();
-      }, 1000);
-    });
-  }
-  
-  /**
-   * Connexion avec l'API backend
-   */
-  async loginWithAPI(email, password) {
-    const response = await fetch(`${this.apiBaseUrl}/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
-    });
-    
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.error || 'Erreur lors de la connexion');
-    }
-    
-    // Connexion réussie
-    this.loginSuccess({
-      name: data.user.name,
-      email: data.user.email,
-      token: data.token
-    });
   }
   
   /**
@@ -340,13 +291,28 @@ class AuthClient {
     this.setLoading(true, 'signup');
     
     try {
-      if (this.isUsingLocalStorage) {
-        // Version démo - utilisation du localStorage
-        await this.registerWithLocalStorage(name, email, password);
-      } else {
-        // Version API - appel au backend
-        await this.registerWithAPI(name, email, password);
+      // Appel à l'API d'authentification
+      const response = await fetch(`${this.apiBaseUrl}/register`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ name, email, password }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Erreur lors de l\'inscription');
       }
+      
+      // Stocker le token et les informations utilisateur
+      this.signupSuccess({
+        name: data.user.name,
+        email: data.user.email,
+        token: data.token
+      });
+      
     } catch (error) {
       console.error('Erreur d\'inscription:', error);
       
@@ -360,75 +326,6 @@ class AuthClient {
       // Désactiver l'état de chargement
       this.setLoading(false, 'signup');
     }
-  }
-  
-  /**
-   * Inscription avec localStorage (version démo)
-   */
-  async registerWithLocalStorage(name, email, password) {
-    return new Promise((resolve, reject) => {
-      // Simuler une latence réseau
-      setTimeout(() => {
-        // Récupérer les utilisateurs existants
-        const usersJson = localStorage.getItem('tradepulse_users');
-        const users = usersJson ? JSON.parse(usersJson) : {};
-        
-        // Vérifier si l'email existe déjà
-        if (users[email]) {
-          reject(new Error('Cet email est déjà utilisé'));
-          return;
-        }
-        
-        // Ajouter le nouvel utilisateur
-        users[email] = {
-          name,
-          email,
-          password, // En démo, on stocke le mot de passe en clair (jamais faire ça en production!)
-          createdAt: new Date().toISOString()
-        };
-        
-        // Sauvegarder les utilisateurs
-        localStorage.setItem('tradepulse_users', JSON.stringify(users));
-        
-        // Générer un token simple
-        const token = this.generateToken();
-        
-        // Inscription réussie
-        this.signupSuccess({
-          name,
-          email,
-          token
-        });
-        
-        resolve();
-      }, 1500);
-    });
-  }
-  
-  /**
-   * Inscription avec l'API backend
-   */
-  async registerWithAPI(name, email, password) {
-    const response = await fetch(`${this.apiBaseUrl}/register`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ name, email, password }),
-    });
-    
-    const data = await response.json();
-    
-    if (!response.ok) {
-      throw new Error(data.error || 'Erreur lors de l\'inscription');
-    }
-    
-    // Inscription réussie
-    this.signupSuccess({
-      name: data.user.name,
-      email: data.user.email,
-      token: data.token
-    });
   }
   
   /**
@@ -630,32 +527,24 @@ class AuthClient {
         throw new Error('Utilisateur non connecté');
       }
       
-      if (this.isUsingLocalStorage) {
-        // En mode localStorage, nous avons déjà les informations
-        this.state.user = {
-          name: userData.name,
-          email: userData.email
-        };
-      } else {
-        // En mode API, nous devons vérifier la validité du token
-        const response = await fetch(`${this.apiBaseUrl}/verify`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${userData.token}`,
-          },
-        });
-        
-        if (!response.ok) {
-          // Token invalide, déconnecter l'utilisateur
-          this.logout();
-          throw new Error('Session expirée, veuillez vous reconnecter');
-        }
-        
-        const data = await response.json();
-        
-        // Mettre à jour les informations utilisateur
-        this.state.user = data.user;
+      // Vérifier la validité du token avec l'API
+      const response = await fetch(`${this.apiBaseUrl}/verify`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${userData.token}`,
+        },
+      });
+      
+      if (!response.ok) {
+        // Token invalide, déconnecter l'utilisateur
+        this.logout();
+        throw new Error('Session expirée, veuillez vous reconnecter');
       }
+      
+      const data = await response.json();
+      
+      // Mettre à jour les informations utilisateur
+      this.state.user = data.user;
     } catch (error) {
       console.error('Erreur lors de la récupération des informations utilisateur:', error);
       this.logout();
@@ -667,18 +556,16 @@ class AuthClient {
    */
   async logout() {
     try {
-      if (!this.isUsingLocalStorage) {
-        const userData = JSON.parse(localStorage.getItem('tradepulse_user'));
-        
-        if (userData && userData.token) {
-          // Appel à l'API pour invalider le token
-          await fetch(`${this.apiBaseUrl}/logout`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${userData.token}`,
-            },
-          });
-        }
+      const userData = JSON.parse(localStorage.getItem('tradepulse_user'));
+      
+      if (userData && userData.token) {
+        // Appel à l'API pour invalider le token
+        await fetch(`${this.apiBaseUrl}/logout`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${userData.token}`,
+          },
+        });
       }
     } catch (error) {
       console.error('Erreur lors de la déconnexion:', error);
@@ -759,21 +646,12 @@ class AuthClient {
     
     return 'weak';
   }
-  
-  /**
-   * Génère un token aléatoire simple
-   * @returns {string} - Token généré
-   */
-  generateToken() {
-    // Générer un token simple pour la démo
-    return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-  }
 }
 
 // Initialiser l'authentification lorsque le DOM est chargé
 document.addEventListener('DOMContentLoaded', () => {
-  // Mode localStorage pour la démo, mais prêt pour une API future
-  const authClient = new AuthClient();
+  // Utiliser l'API déployée
+  const authClient = new AuthClient('https://auth-api.workers.dev/api/auth');
 });
 
 // Exporter la classe pour l'utiliser dans d'autres scripts
