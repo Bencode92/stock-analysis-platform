@@ -656,7 +656,7 @@
         </div>
         
         <!-- Bouton START -->
-        <a href="#" class="start-button button-press ripple" id="startButton">START</a>
+        <a href="auth.html" class="start-button button-press ripple" id="startButton">START</a>
         
         <footer class="footer">
             © 2025 TradePulse | Finance Intelligence Platform
@@ -770,6 +770,7 @@
             const progressBar = document.getElementById('progress-bar');
             const progressPercentage = document.getElementById('progress-percentage');
             const updateComplete = document.getElementById('update-complete');
+            const startButton = document.getElementById('startButton');
             
             // Vérifier s'il existe une date de dernière mise à jour
             const lastUpdateTime = localStorage.getItem('tradepulse_last_update');
@@ -782,19 +783,13 @@
                 lastUpdateInfo.style.display = 'none';
             }
             
-            // Afficher la modal quand on clique sur START
-            document.getElementById('startButton').addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                // Vérifier si l'utilisateur est connecté
-                if (!checkLoginStatus()) {
-                    // Rediriger vers la page de connexion
-                    window.location.href = 'auth.html';
-                    return;
-                }
-                
-                showUpdateModal();
-            });
+            // Remplacer le comportement par défaut du bouton START s'il est déjà connecté
+            if (checkLoginStatus()) {
+                startButton.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    showUpdateModal();
+                });
+            }
             
             // Afficher la modal quand on clique sur la pièce
             document.getElementById('coinContainer').addEventListener('click', function() {
