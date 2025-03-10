@@ -1,0 +1,9 @@
+name = "auth-api"
+main = "src/index.js"
+compatibility_date = "2023-10-30"
+
+# Remplacez ces IDs par ceux générés après avoir créé vos KV namespaces
+kv_namespaces = [
+  { binding = "USER_STORE", id = "YOUR_KV_NAMESPACE_ID_FOR_USERS" },
+  { binding = "TOKEN_STORE", id = "YOUR_KV_NAMESPACE_ID_FOR_TOKENS" }
+]
