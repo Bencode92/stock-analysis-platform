@@ -37,15 +37,15 @@
             position: relative;
         }
         
-        /* Bannière mode local */
-        .local-mode-banner {
+        /* Bannière temporaire */
+        .info-banner {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             padding: 10px 20px;
-            background-color: rgba(255, 193, 7, 0.2);
-            color: #FFD54F;
+            background-color: rgba(33, 150, 243, 0.2);
+            color: #90CAF9;
             text-align: center;
             z-index: 1000;
             display: flex;
@@ -53,10 +53,10 @@
             align-items: center;
             font-size: 14px;
             backdrop-filter: blur(5px);
-            border-bottom: 1px solid rgba(255, 193, 7, 0.3);
+            border-bottom: 1px solid rgba(33, 150, 243, 0.3);
         }
         
-        .local-mode-banner i {
+        .info-banner i {
             margin-right: 8px;
             font-size: 16px;
         }
@@ -185,222 +185,14 @@
             position: relative;
         }
         
-        /* Formulaires */
-        .auth-form {
-            display: none;
-            animation: form-appear 0.3s ease-out;
-        }
-        
-        .auth-form.active {
-            display: block;
-        }
-        
-        @keyframes form-appear {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .form-group {
-            margin-bottom: 25px;
-            position: relative;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 500;
-            font-size: 0.9rem;
-        }
-        
-        input {
-            width: 100%;
-            padding: 14px 16px 14px 45px;
-            background-color: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            color: var(--text-color);
-            font-size: 1rem;
-            transition: border-color 0.3s, box-shadow 0.3s;
-        }
-        
-        input:focus {
-            outline: none;
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2);
-        }
-        
-        .input-icon {
-            position: absolute;
-            left: 16px;
-            top: 43px;
-            color: rgba(255, 255, 255, 0.5);
-            transition: color 0.3s;
-        }
-        
-        input:focus + .input-icon {
-            color: var(--accent-color);
-        }
-        
-        .error-message {
-            color: #FF5252;
-            font-size: 0.8rem;
-            margin-top: 5px;
-            display: none;
-        }
-        
-        .general-error {
-            background-color: rgba(255, 82, 82, 0.1);
-            color: #FF5252;
-            padding: 12px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            border-left: 3px solid #FF5252;
-            font-size: 0.9rem;
-            display: none;
-        }
-        
-        /* Bouton de soumission */
-        .btn-submit {
-            width: 100%;
-            padding: 16px;
-            background-color: var(--accent-color);
-            color: var(--background-color);
-            border: none;
-            border-radius: 8px;
-            font-weight: 600;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background-color 0.3s, transform 0.3s;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .btn-submit:hover {
-            background-color: #00e67a;
-            transform: translateY(-2px);
-        }
-        
-        .btn-submit:active {
-            transform: translateY(0);
-        }
-        
-        /* Animation de chargement */
-        .btn-submit.loading {
-            background-color: #00c267;
-            pointer-events: none;
-        }
-        
-        .loading-spinner {
-            display: none;
-            width: 20px;
-            height: 20px;
-            border: 3px solid rgba(0, 0, 0, 0.1);
-            border-radius: 50%;
-            border-top-color: var(--background-color);
-            animation: spin 1s linear infinite;
-            margin-left: 10px;
-        }
-        
-        .btn-submit.loading .loading-spinner {
-            display: inline-block;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Options d'authentification */
-        .auth-options {
-            margin-top: 20px;
+        /* Message de maintenance */
+        .maintenance-message {
             text-align: center;
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-        }
-        
-        .auth-options a {
-            color: var(--accent-color);
-            text-decoration: none;
-            transition: color 0.3s;
-        }
-        
-        .auth-options a:hover {
-            text-decoration: underline;
-        }
-        
-        /* Séparateur */
-        .divider {
-            margin: 30px 0;
-            text-align: center;
-            position: relative;
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-        }
-        
-        .divider::before,
-        .divider::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            width: 35%;
-            height: 1px;
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-        
-        .divider::before {
-            left: 0;
-        }
-        
-        .divider::after {
-            right: 0;
-        }
-        
-        /* Boutons sociaux */
-        .social-auth {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-        }
-        
-        .social-btn {
-            width: 50px;
-            height: 50px;
-            border-radius: 12px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background-color: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            transition: all 0.3s;
-            color: var(--text-color);
-            text-decoration: none;
-        }
-        
-        .social-btn:hover {
-            background-color: rgba(0, 255, 135, 0.1);
-            border-color: var(--accent-color);
-            transform: translateY(-3px);
-        }
-        
-        .social-btn i {
-            font-size: 1.3rem;
-        }
-        
-        /* Message de succès */
-        .success-message {
-            display: none;
-            text-align: center;
+            padding: 20px;
             animation: form-appear 0.5s ease-out;
         }
         
-        .success-message.active {
-            display: block;
-        }
-        
-        .success-icon {
+        .maintenance-icon {
             width: 80px;
             height: 80px;
             background-color: rgba(0, 255, 135, 0.1);
@@ -418,22 +210,24 @@
             100% { transform: scale(1); }
         }
         
-        .success-icon i {
+        .maintenance-icon i {
             color: var(--accent-color);
             font-size: 40px;
         }
         
-        .success-title {
+        .maintenance-title {
             margin-bottom: 15px;
             color: var(--accent-color);
+            font-size: 1.8rem;
         }
         
-        .success-text {
+        .maintenance-text {
             margin-bottom: 30px;
             color: var(--text-secondary);
+            line-height: 1.6;
         }
         
-        .continue-btn {
+        .back-btn {
             background-color: var(--accent-color);
             color: var(--background-color);
             border: none;
@@ -443,9 +237,10 @@
             cursor: pointer;
             transition: all 0.3s;
             font-size: 0.9rem;
+            margin-top: 20px;
         }
         
-        .continue-btn:hover {
+        .back-btn:hover {
             background-color: #00e67a;
             transform: translateY(-2px);
         }
@@ -472,9 +267,9 @@
     </style>
 </head>
 <body>
-    <!-- Bannière mode local -->
-    <div class="local-mode-banner">
-        <i class="fas fa-info-circle"></i> Mode local activé : Vos données sont stockées uniquement sur ce navigateur
+    <!-- Bannière d'information -->
+    <div class="info-banner">
+        <i class="fas fa-tools"></i> Système d'authentification en cours de mise à jour - Prochainement disponible
     </div>
 
     <div class="brand">
@@ -504,110 +299,21 @@
         <div class="auth-card">
             <div class="auth-header">
                 <h2 class="auth-title">ACCÈS À LA PLATEFORME</h2>
-                <p class="auth-subtitle">Connectez-vous pour accéder à vos données financières</p>
+                <p class="auth-subtitle">Un nouveau système d'authentification arrive bientôt</p>
             </div>
             
-            <!-- Onglets Login/Signup -->
-            <ul class="auth-tabs">
-                <li class="auth-tab" data-target="login-form">Connexion</li>
-                <li class="auth-tab active" data-target="signup-form">Inscription</li>
-            </ul>
-            
             <div class="auth-content">
-                <!-- Formulaire de connexion -->
-                <form class="auth-form login-form" id="login-form">
-                    <!-- Message d'erreur général -->
-                    <div class="general-error" id="login-general-error"></div>
-                    
-                    <div class="form-group">
-                        <label for="login-email">Email</label>
-                        <input type="email" id="login-email" placeholder="Votre adresse email" required>
-                        <i class="fas fa-envelope input-icon"></i>
-                        <div class="error-message" id="login-email-error">Veuillez entrer une adresse email valide</div>
+                <!-- Message de maintenance -->
+                <div class="maintenance-message">
+                    <div class="maintenance-icon">
+                        <i class="fas fa-cogs"></i>
                     </div>
-                    
-                    <div class="form-group">
-                        <label for="login-password">Mot de passe</label>
-                        <input type="password" id="login-password" placeholder="Votre mot de passe" required>
-                        <i class="fas fa-lock input-icon"></i>
-                        <div class="error-message" id="login-password-error">Le mot de passe est requis</div>
-                    </div>
-                    
-                    <button type="submit" class="btn-submit" id="login-btn">
-                        SE CONNECTER
-                        <div class="loading-spinner"></div>
-                    </button>
-                    
-                    <div class="auth-options">
-                        <a href="#" id="forgot-password">Mot de passe oublié?</a>
-                    </div>
-                    
-                    <div class="divider">OU CONNECTEZ-VOUS AVEC</div>
-                    
-                    <div class="social-auth">
-                        <a href="#" class="social-btn" title="Google">
-                            <i class="fab fa-google"></i>
-                        </a>
-                        <a href="#" class="social-btn" title="Apple">
-                            <i class="fab fa-apple"></i>
-                        </a>
-                        <a href="#" class="social-btn" title="LinkedIn">
-                            <i class="fab fa-linkedin-in"></i>
-                        </a>
-                    </div>
-                </form>
-                
-                <!-- Formulaire d'inscription -->
-                <form class="auth-form signup-form active" id="signup-form">
-                    <!-- Message d'erreur général -->
-                    <div class="general-error" id="signup-general-error"></div>
-                    
-                    <div class="form-group">
-                        <label for="signup-name">Nom complet</label>
-                        <input type="text" id="signup-name" placeholder="Votre nom complet" required>
-                        <i class="fas fa-user input-icon"></i>
-                        <div class="error-message" id="signup-name-error">Veuillez entrer votre nom complet</div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="signup-email">Email</label>
-                        <input type="email" id="signup-email" placeholder="Votre adresse email" required>
-                        <i class="fas fa-envelope input-icon"></i>
-                        <div class="error-message" id="signup-email-error">Veuillez entrer une adresse email valide</div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="signup-password">Mot de passe</label>
-                        <input type="password" id="signup-password" placeholder="Créez un mot de passe" required>
-                        <i class="fas fa-lock input-icon"></i>
-                        <div class="error-message" id="signup-password-error">Le mot de passe doit contenir au moins 8 caractères</div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="signup-confirm">Confirmer le mot de passe</label>
-                        <input type="password" id="signup-confirm" placeholder="Confirmez votre mot de passe" required>
-                        <i class="fas fa-lock input-icon"></i>
-                        <div class="error-message" id="signup-confirm-error">Les mots de passe ne correspondent pas</div>
-                    </div>
-                    
-                    <button type="submit" class="btn-submit" id="signup-btn">
-                        CRÉER UN COMPTE
-                        <div class="loading-spinner"></div>
-                    </button>
-                    
-                    <div class="auth-options">
-                        En vous inscrivant, vous acceptez nos <a href="#">Conditions d'utilisation</a> et notre <a href="#">Politique de confidentialité</a>
-                    </div>
-                </form>
-                
-                <!-- Message de succès -->
-                <div class="success-message" id="success-message">
-                    <div class="success-icon">
-                        <i class="fas fa-check"></i>
-                    </div>
-                    <h3 class="success-title">Connexion réussie!</h3>
-                    <p class="success-text">Vous êtes maintenant connecté à TradePulse. Profitez de notre plateforme d'analyse financière!</p>
-                    <button class="continue-btn" id="continue-btn">CONTINUER</button>
+                    <h3 class="maintenance-title">Système en cours de mise à jour</h3>
+                    <p class="maintenance-text">
+                        Nous améliorons notre système d'authentification pour vous offrir une expérience plus sécurisée et plus fluide. <br><br>
+                        Le nouveau système intégrera Firebase Authentication pour une connexion simplifiée et la possibilité de s'authentifier avec vos comptes sociaux préférés.
+                    </p>
+                    <a href="index.html" class="back-btn">RETOUR À L'ACCUEIL</a>
                 </div>
             </div>
         </div>
@@ -616,8 +322,57 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script src="theme-common.js"></script>
-    <script src="auth-local.js"></script>
-    <script src="auth-cloud.js"></script>
-    <script src="auth-integration.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Configuration de l'effet de particules
+            if (window.particlesJS) {
+                particlesJS('particles-js', {
+                    particles: {
+                        number: { value: 80, density: { enable: true, value_area: 800 } },
+                        color: { value: "#00ff99" },
+                        shape: { type: "circle" },
+                        opacity: { value: 0.3, random: true },
+                        size: { value: 3, random: true },
+                        line_linked: {
+                            enable: true,
+                            distance: 150,
+                            color: "#00ff99",
+                            opacity: 0.2,
+                            width: 1
+                        },
+                        move: {
+                            enable: true,
+                            speed: 1,
+                            direction: "none",
+                            random: true,
+                            straight: false,
+                            out_mode: "out",
+                            bounce: false
+                        }
+                    },
+                    interactivity: {
+                        detect_on: "canvas",
+                        events: {
+                            onhover: { enable: true, mode: "grab" },
+                            onclick: { enable: true, mode: "push" },
+                            resize: true
+                        },
+                        modes: {
+                            grab: { distance: 140, line_linked: { opacity: 0.5 } },
+                            push: { particles_nb: 4 }
+                        }
+                    },
+                    retina_detect: true
+                });
+            }
+            
+            // Animation des lignes de graphique
+            const chartLines = document.querySelectorAll('.chart-line');
+            chartLines.forEach((line, index) => {
+                // Ajouter des délais différents pour un effet plus naturel
+                line.style.animationDelay = `${index * 0.8}s`;
+            });
+        });
+    </script>
 </body>
 </html>
