@@ -2,8 +2,9 @@ name = "auth-api"
 main = "src/index.js"
 compatibility_date = "2023-10-30"
 
-# Configuration KV namespaces pour l'authentification
-kv_namespaces = [
-  { binding = "USER_STORE", id = "452d484e-user-store-c25b7a32cc47" },
-  { binding = "TOKEN_STORE", id = "452d484e-token-store-fb9e1c0a8e3d" }
-]
+# Note: Utilisation temporaire du stockage en mémoire
+# Les namespaces KV seront configurés dans une future mise à jour
+# kv_namespaces = [
+#   { binding = "USER_STORE", id = "your-kv-namespace-id-for-users" },
+#   { binding = "TOKEN_STORE", id = "your-kv-namespace-id-for-tokens" }
+# ]
