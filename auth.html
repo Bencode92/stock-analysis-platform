@@ -11,100 +11,70 @@
         /* Variables et reset */
         :root {
             --background-color: #011627; /* Bleu nuit */
+            --background-gradient: linear-gradient(135deg, #010e1a, #011627 70%);
             --text-color: #FFFFFF;
+            --text-secondary: rgba(255, 255, 255, 0.7);
             --accent-color: #00FF87; /* Vert néon */
             --accent-glow: 0 0 10px rgba(0, 255, 135, 0.6);
-            --transition-time: 0.8s;
-            --error-color: #FF4C4C;
-            --success-color: #00FF87;
+            --transition-time: 0.3s;
         }
         
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-        }
-        
-        body, html {
-            margin: 0;
-            padding: 0;
             font-family: 'Inter', sans-serif;
-            height: 100%;
-            width: 100%;
-            background-color: var(--background-color);
-            color: var(--text-color);
-            overflow: hidden;
         }
         
-        /* Container principal */
-        .container {
+        body {
+            background: var(--background-gradient);
+            color: var(--text-color);
+            min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
-            height: 100vh;
+            padding: 2rem;
             position: relative;
-            perspective: 1000px;
         }
         
-        /* Effet de particules en arrière-plan */
-        .particles {
-            position: absolute;
+        /* Bannière mode local */
+        .local-mode-banner {
+            position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
-        
-        /* NOUVELLE IMPLÉMENTATION - Graphiques financiers en arrière-plan */
-        .financial-background {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-            opacity: 0.15;
-            overflow: hidden;
-        }
-
-        .chart-line {
-            position: absolute;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
-            animation: chart-move 15s infinite linear;
-        }
-
-        .chart-dot {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            border-radius: 50%;
-            background-color: var(--accent-color);
-            box-shadow: 0 0 6px var(--accent-color);
-            animation: pulse 2s infinite;
-        }
-        
-        /* Logo et branding */
-        .brand {
-            position: absolute;
-            top: 30px;
-            left: 50%;
-            transform: translateX(-50%);
+            right: 0;
+            padding: 10px 20px;
+            background-color: rgba(255, 193, 7, 0.2);
+            color: #FFD54F;
             text-align: center;
-            z-index: 10;
-            animation: fadeIn 1s ease forwards;
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            backdrop-filter: blur(5px);
+            border-bottom: 1px solid rgba(255, 193, 7, 0.3);
+        }
+        
+        .local-mode-banner i {
+            margin-right: 8px;
+            font-size: 16px;
+        }
+        
+        /* Logo dans le header */
+        .brand {
+            position: fixed;
+            top: 30px;
+            left: 40px;
         }
         
         .logo {
-            font-size: 32px;
-            font-weight: 900;
-            letter-spacing: 1px;
-            margin: 0;
-            text-shadow: 0 0 15px rgba(0, 255, 153, 0.7);
             display: flex;
             align-items: center;
-            justify-content: center;
+            font-weight: 900;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+            color: var(--text-color);
         }
         
         .pulse-dot {
@@ -113,84 +83,85 @@
             background-color: var(--accent-color);
             border-radius: 50%;
             margin-right: 10px;
-            box-shadow: 0 0 15px rgba(0, 255, 153, 0.8);
+            box-shadow: 0 0 10px var(--accent-color);
             animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 153, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 153, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 153, 0); }
+        }
+        
+        /* Arrière-plan avec particules */
+        .particles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
         }
         
         /* Carte d'authentification */
         .auth-card {
-            width: 420px;
-            background: rgba(1, 30, 52, 0.8);
-            border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
-            overflow: hidden;
-            z-index: 10;
-            position: relative;
+            background-color: rgba(1, 26, 47, 0.8);
             backdrop-filter: blur(10px);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 480px;
+            overflow: hidden;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3), 
+                       0 0 40px rgba(0, 255, 135, 0.1);
             border: 1px solid rgba(0, 255, 135, 0.2);
-            animation: cardAppear 1s cubic-bezier(0.165, 0.84, 0.44, 1) forwards;
-            opacity: 0;
-            transform: scale(0.9) translateY(20px);
+            animation: card-appear 0.5s ease-out;
         }
         
-        @keyframes cardAppear {
-            to {
-                opacity: 1;
-                transform: scale(1) translateY(0);
-            }
+        @keyframes card-appear {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
-        /* En-tête de la carte */
         .auth-header {
-            padding: 30px 30px 20px;
+            padding: 30px;
+            background-color: rgba(0, 0, 0, 0.2);
             text-align: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            position: relative;
-        }
-        
-        .auth-header::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 100px;
-            height: 1px;
-            background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+            border-bottom: 1px solid rgba(0, 255, 135, 0.1);
         }
         
         .auth-title {
-            font-size: 24px;
-            color: var(--accent-color);
-            margin-bottom: 10px;
-            text-shadow: 0 0 10px rgba(0, 255, 135, 0.4);
+            font-weight: 700;
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
         }
         
         .auth-subtitle {
-            font-size: 14px;
-            opacity: 0.7;
-            font-weight: 300;
-            margin-bottom: 0;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
         }
         
-        /* Onglets Login/Signup */
+        /* Onglets de navigation */
         .auth-tabs {
             display: flex;
-            margin: 0;
-            padding: 0;
             list-style: none;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0;
+            margin: 0;
+            background-color: rgba(0, 0, 0, 0.1);
         }
         
         .auth-tab {
             flex: 1;
             text-align: center;
-            padding: 16px 0;
-            font-weight: 500;
-            letter-spacing: 0.5px;
+            padding: 15px 0;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: background-color 0.3s, color 0.3s;
+            font-weight: 500;
             position: relative;
+        }
+        
+        .auth-tab:hover {
+            background-color: rgba(0, 255, 135, 0.1);
         }
         
         .auth-tab.active {
@@ -200,53 +171,59 @@
         .auth-tab.active::after {
             content: '';
             position: absolute;
-            bottom: -1px;
+            bottom: 0;
             left: 0;
             width: 100%;
-            height: 2px;
+            height: 3px;
             background-color: var(--accent-color);
             box-shadow: var(--accent-glow);
         }
         
-        /* Contenu du formulaire */
+        /* Contenu de l'authentification */
         .auth-content {
             padding: 30px;
+            position: relative;
         }
         
+        /* Formulaires */
         .auth-form {
             display: none;
+            animation: form-appear 0.3s ease-out;
         }
         
         .auth-form.active {
             display: block;
-            animation: fadeIn 0.5s ease forwards;
+        }
+        
+        @keyframes form-appear {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
         
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 25px;
             position: relative;
         }
         
-        .form-group label {
+        label {
             display: block;
             margin-bottom: 8px;
-            font-size: 14px;
             font-weight: 500;
-            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
         }
         
-        .form-group input {
+        input {
             width: 100%;
-            background: rgba(255, 255, 255, 0.05);
+            padding: 14px 16px 14px 45px;
+            background-color: rgba(0, 0, 0, 0.2);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 6px;
-            padding: 12px 15px;
-            font-size: 15px;
+            border-radius: 8px;
             color: var(--text-color);
-            transition: all 0.3s ease;
+            font-size: 1rem;
+            transition: border-color 0.3s, box-shadow 0.3s;
         }
         
-        .form-group input:focus {
+        input:focus {
             outline: none;
             border-color: var(--accent-color);
             box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2);
@@ -254,157 +231,77 @@
         
         .input-icon {
             position: absolute;
-            top: 38px;
-            right: 15px;
-            color: rgba(255, 255, 255, 0.3);
+            left: 16px;
+            top: 43px;
+            color: rgba(255, 255, 255, 0.5);
+            transition: color 0.3s;
         }
         
-        /* Bouton d'envoi */
-        .btn-submit {
-            width: 100%;
-            background: transparent;
-            border: 2px solid var(--accent-color);
-            color: var(--text-color);
-            padding: 12px 0;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 6px;
-            cursor: pointer;
-            margin-top: 10px;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            letter-spacing: 1px;
-        }
-        
-        .btn-submit::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: var(--accent-color);
-            transition: all 0.3s ease;
-            z-index: -1;
-        }
-        
-        .btn-submit:hover {
-            color: var(--background-color);
-        }
-        
-        .btn-submit:hover::before {
-            left: 0;
-        }
-        
-        /* Options supplémentaires */
-        .auth-options {
-            margin-top: 25px;
-            text-align: center;
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.6);
-        }
-        
-        .auth-options a {
+        input:focus + .input-icon {
             color: var(--accent-color);
-            text-decoration: none;
-            transition: all 0.3s ease;
         }
         
-        .auth-options a:hover {
-            text-shadow: 0 0 8px rgba(0, 255, 135, 0.8);
-        }
-        
-        /* Séparateur stylisé */
-        .divider {
-            display: flex;
-            align-items: center;
-            margin: 25px 0;
-            color: rgba(255, 255, 255, 0.4);
-            font-size: 12px;
-        }
-        
-        .divider::before,
-        .divider::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: rgba(255, 255, 255, 0.1);
-        }
-        
-        .divider::before {
-            margin-right: 15px;
-        }
-        
-        .divider::after {
-            margin-left: 15px;
-        }
-        
-        /* Boutons de connexion sociale */
-        .social-auth {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-        }
-        
-        .social-btn {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            color: var(--text-color);
-            font-size: 20px;
-        }
-        
-        .social-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            border-color: rgba(0, 255, 135, 0.3);
-        }
-        
-        /* Messages d'erreur */
         .error-message {
-            color: var(--error-color);
-            font-size: 13px;
+            color: #FF5252;
+            font-size: 0.8rem;
             margin-top: 5px;
             display: none;
         }
         
         .general-error {
-            color: var(--error-color);
-            background-color: rgba(255, 76, 76, 0.1);
-            border-left: 3px solid var(--error-color);
-            padding: 10px;
-            margin-bottom: 15px;
-            border-radius: 4px;
-            font-size: 14px;
+            background-color: rgba(255, 82, 82, 0.1);
+            color: #FF5252;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 3px solid #FF5252;
+            font-size: 0.9rem;
             display: none;
         }
         
-        /* Animation de chargement lors de la soumission */
+        /* Bouton de soumission */
+        .btn-submit {
+            width: 100%;
+            padding: 16px;
+            background-color: var(--accent-color);
+            color: var(--background-color);
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .btn-submit:hover {
+            background-color: #00e67a;
+            transform: translateY(-2px);
+        }
+        
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+        
+        /* Animation de chargement */
         .btn-submit.loading {
+            background-color: #00c267;
             pointer-events: none;
-            opacity: 0.8;
         }
         
         .loading-spinner {
             display: none;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 0, 0, 0.1);
             border-radius: 50%;
-            border-top-color: var(--text-color);
+            border-top-color: var(--background-color);
             animation: spin 1s linear infinite;
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
+            margin-left: 10px;
         }
         
         .btn-submit.loading .loading-spinner {
@@ -412,184 +309,165 @@
         }
         
         @keyframes spin {
-            to { transform: translateY(-50%) rotate(360deg); }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         
-        /* Animation du message de réussite */
-        .success-message {
+        /* Options d'authentification */
+        .auth-options {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+        
+        .auth-options a {
+            color: var(--accent-color);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .auth-options a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Séparateur */
+        .divider {
+            margin: 30px 0;
+            text-align: center;
+            position: relative;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+        
+        .divider::before,
+        .divider::after {
+            content: '';
             position: absolute;
-            top: 0;
+            top: 50%;
+            width: 35%;
+            height: 1px;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .divider::before {
             left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(1, 30, 52, 0.97);
+        }
+        
+        .divider::after {
+            right: 0;
+        }
+        
+        /* Boutons sociaux */
+        .social-auth {
             display: flex;
-            flex-direction: column;
-            align-items: center;
             justify-content: center;
-            opacity: 0;
-            visibility: hidden;
-            transition: all 0.5s ease;
-            z-index: 20;
-            backdrop-filter: blur(5px);
-            border-radius: 20px;
+            gap: 20px;
+        }
+        
+        .social-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s;
+            color: var(--text-color);
+            text-decoration: none;
+        }
+        
+        .social-btn:hover {
+            background-color: rgba(0, 255, 135, 0.1);
+            border-color: var(--accent-color);
+            transform: translateY(-3px);
+        }
+        
+        .social-btn i {
+            font-size: 1.3rem;
+        }
+        
+        /* Message de succès */
+        .success-message {
+            display: none;
+            text-align: center;
+            animation: form-appear 0.5s ease-out;
         }
         
         .success-message.active {
-            opacity: 1;
-            visibility: visible;
+            display: block;
         }
         
         .success-icon {
             width: 80px;
             height: 80px;
-            background: rgba(0, 255, 135, 0.1);
+            background-color: rgba(0, 255, 135, 0.1);
             border-radius: 50%;
             display: flex;
-            align-items: center;
             justify-content: center;
-            margin-bottom: 20px;
-            box-shadow: 0 0 30px rgba(0, 255, 135, 0.3);
-            transform: scale(0);
-            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) 0.3s;
+            align-items: center;
+            margin: 0 auto 20px;
+            animation: scale-in 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
         
-        .success-message.active .success-icon {
-            transform: scale(1);
+        @keyframes scale-in {
+            0% { transform: scale(0); }
+            70% { transform: scale(1.1); }
+            100% { transform: scale(1); }
         }
         
         .success-icon i {
             color: var(--accent-color);
             font-size: 40px;
-            text-shadow: 0 0 10px rgba(0, 255, 135, 0.8);
         }
         
         .success-title {
-            font-size: 22px;
-            font-weight: 700;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
             color: var(--accent-color);
-            transform: translateY(20px);
-            opacity: 0;
-            transition: all 0.5s ease 0.5s;
-        }
-        
-        .success-message.active .success-title {
-            transform: translateY(0);
-            opacity: 1;
         }
         
         .success-text {
-            font-size: 15px;
-            max-width: 80%;
-            text-align: center;
-            opacity: 0.8;
             margin-bottom: 30px;
-            transform: translateY(20px);
-            opacity: 0;
-            transition: all 0.5s ease 0.7s;
-        }
-        
-        .success-message.active .success-text {
-            transform: translateY(0);
-            opacity: 0.8;
+            color: var(--text-secondary);
         }
         
         .continue-btn {
-            padding: 12px 30px;
-            background: var(--accent-color);
+            background-color: var(--accent-color);
             color: var(--background-color);
             border: none;
-            border-radius: 6px;
-            font-size: 16px;
+            border-radius: 8px;
+            padding: 14px 30px;
             font-weight: 600;
             cursor: pointer;
-            transform: translateY(20px);
-            opacity: 0;
-            transition: all 0.5s ease 0.9s;
-        }
-        
-        .success-message.active .continue-btn {
-            transform: translateY(0);
-            opacity: 1;
+            transition: all 0.3s;
+            font-size: 0.9rem;
         }
         
         .continue-btn:hover {
-            box-shadow: 0 0 20px rgba(0, 255, 135, 0.5);
-            transform: translateY(-3px);
-        }
-        
-        /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
-        }
-        
-        @keyframes chart-move {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%) rotate(5deg); }
-        }
-        
-        /* Shake animation */
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-            20%, 40%, 60%, 80% { transform: translateX(5px); }
-        }
-        
-        .shake {
-            animation: shake 0.6s ease;
+            background-color: #00e67a;
+            transform: translateY(-2px);
         }
         
         /* Responsive */
-        @media (max-width: 480px) {
+        @media (max-width: 576px) {
             .auth-card {
-                width: 100%;
-                max-width: 380px;
-                margin: 0 15px;
+                max-width: 100%;
             }
             
             .auth-content {
                 padding: 20px;
             }
             
-            .brand {
-                top: 15px;
-            }
-            
-            .logo {
-                font-size: 24px;
-            }
-            
             .auth-title {
-                font-size: 20px;
+                font-size: 1.3rem;
             }
-        }
-
-        /* Bannière mode local */
-        .local-mode-banner {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background-color: rgba(0, 204, 102, 0.8);
-            color: #003300;
-            padding: 8px;
-            text-align: center;
-            font-size: 14px;
-            font-weight: 500;
-            z-index: 100;
-            backdrop-filter: blur(4px);
-        }
-
-        .local-mode-banner i {
-            margin-right: 5px;
+            
+            .brand {
+                top: 20px;
+                left: 20px;
+            }
         }
     </style>
 </head>
@@ -611,10 +489,10 @@
         
         <!-- Arrière-plan dynamique avec graphiques financiers -->
         <div class="financial-background">
-            <div class="chart-line" style="top: 20%; left: -50%; width: 80%;"></div>
-            <div class="chart-line" style="top: 40%; left: -30%; width: 60%;"></div>
-            <div class="chart-line" style="top: 60%; left: -70%; width: 90%;"></div>
-            <div class="chart-line" style="top: 80%; left: -40%; width: 70%;"></div>
+            <div class="chart-line" style="top: 20%; left: -50%; width: 80%; animation-delay: 0s;"></div>
+            <div class="chart-line" style="top: 40%; left: -30%; width: 60%; animation-delay: 0.8s;"></div>
+            <div class="chart-line" style="top: 60%; left: -70%; width: 90%; animation-delay: 1.6s;"></div>
+            <div class="chart-line" style="top: 80%; left: -40%; width: 70%; animation-delay: 2.4s;"></div>
             
             <div class="chart-dot" style="top: 20%; left: 30%;"></div>
             <div class="chart-dot" style="top: 35%; left: 60%;"></div>
@@ -631,13 +509,13 @@
             
             <!-- Onglets Login/Signup -->
             <ul class="auth-tabs">
-                <li class="auth-tab active" data-target="login-form">Connexion</li>
-                <li class="auth-tab" data-target="signup-form">Inscription</li>
+                <li class="auth-tab" data-target="login-form">Connexion</li>
+                <li class="auth-tab active" data-target="signup-form">Inscription</li>
             </ul>
             
             <div class="auth-content">
                 <!-- Formulaire de connexion -->
-                <form class="auth-form login-form active" id="login-form">
+                <form class="auth-form login-form" id="login-form">
                     <!-- Message d'erreur général -->
                     <div class="general-error" id="login-general-error"></div>
                     
@@ -680,7 +558,7 @@
                 </form>
                 
                 <!-- Formulaire d'inscription -->
-                <form class="auth-form signup-form" id="signup-form">
+                <form class="auth-form signup-form active" id="signup-form">
                     <!-- Message d'erreur général -->
                     <div class="general-error" id="signup-general-error"></div>
                     
@@ -739,222 +617,7 @@
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
     <script src="theme-common.js"></script>
     <script src="auth-local.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Configuration de l'effet de particules
-            if (window.particlesJS) {
-                particlesJS('particles-js', {
-                    particles: {
-                        number: { value: 80, density: { enable: true, value_area: 800 } },
-                        color: { value: "#00ff99" },
-                        shape: { type: "circle" },
-                        opacity: { value: 0.3, random: true },
-                        size: { value: 3, random: true },
-                        line_linked: {
-                            enable: true,
-                            distance: 150,
-                            color: "#00ff99",
-                            opacity: 0.2,
-                            width: 1
-                        },
-                        move: {
-                            enable: true,
-                            speed: 1,
-                            direction: "none",
-                            random: true,
-                            straight: false,
-                            out_mode: "out",
-                            bounce: false
-                        }
-                    },
-                    interactivity: {
-                        detect_on: "canvas",
-                        events: {
-                            onhover: { enable: true, mode: "grab" },
-                            onclick: { enable: true, mode: "push" },
-                            resize: true
-                        },
-                        modes: {
-                            grab: { distance: 140, line_linked: { opacity: 0.5 } },
-                            push: { particles_nb: 4 }
-                        }
-                    },
-                    retina_detect: true
-                });
-            }
-            
-            // Animation des lignes de graphique
-            const chartLines = document.querySelectorAll('.chart-line');
-            chartLines.forEach((line, index) => {
-                // Ajouter des délais différents pour un effet plus naturel
-                line.style.animationDelay = `${index * 0.8}s`;
-            });
-            
-            // Redirection vers la page d'accueil après connexion réussie
-            const continueBtn = document.getElementById('continue-btn');
-            if (continueBtn) {
-                continueBtn.addEventListener('click', function() {
-                    window.location.href = 'dashboard.html';
-                });
-            }
-            
-            // Vérifier si l'utilisateur est déjà connecté
-            const checkLoginStatus = () => {
-                const userData = localStorage.getItem('tradepulse_user');
-                
-                if (userData) {
-                    try {
-                        const user = JSON.parse(userData);
-                        
-                        // Vérifier si le token est encore valide
-                        const currentTime = Date.now();
-                        const loginTime = user.loginTime || 0;
-                        const dayInMs = 24 * 60 * 60 * 1000;
-                        
-                        if (user.isLoggedIn && (currentTime - loginTime < dayInMs)) {
-                            // Rediriger vers la page d'accueil si déjà connecté
-                            window.location.href = 'dashboard.html';
-                            return true;
-                        }
-                    } catch (error) {
-                        console.error('Erreur lors de la vérification du statut de connexion:', error);
-                        return false;
-                    }
-                }
-                
-                return false;
-            };
-            
-            // Vérifier au chargement de la page
-            checkLoginStatus();
-
-            // Gestion des onglets
-            const tabs = document.querySelectorAll('.auth-tab');
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    // Retirer la classe active de tous les onglets
-                    tabs.forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-                    
-                    // Afficher le formulaire correspondant
-                    const targetId = tab.getAttribute('data-target');
-                    document.querySelectorAll('.auth-form').forEach(form => {
-                        form.classList.remove('active');
-                    });
-                    document.getElementById(targetId).classList.add('active');
-                });
-            });
-            
-            // Gérer la soumission du formulaire de connexion
-            const loginForm = document.getElementById('login-form');
-            loginForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                // Cacher les messages d'erreur précédents
-                document.getElementById('login-general-error').style.display = 'none';
-                
-                // Récupérer les valeurs
-                const email = document.getElementById('login-email').value;
-                const password = document.getElementById('login-password').value;
-                
-                // Validation simple
-                if (!email || !password) {
-                    document.getElementById('login-general-error').textContent = 'Veuillez remplir tous les champs';
-                    document.getElementById('login-general-error').style.display = 'block';
-                    return;
-                }
-                
-                // Mettre à jour l'interface pour montrer le chargement
-                const loginBtn = document.getElementById('login-btn');
-                loginBtn.classList.add('loading');
-                loginBtn.innerHTML = 'CONNEXION EN COURS... <div class="loading-spinner"></div>';
-                
-                try {
-                    // Appel au système d'authentification local
-                    await window.authLocal.login({ email, password });
-                    
-                    // Afficher le message de succès
-                    document.getElementById('success-message').classList.add('active');
-                } catch (error) {
-                    // Afficher l'erreur
-                    document.getElementById('login-general-error').textContent = error.message;
-                    document.getElementById('login-general-error').style.display = 'block';
-                    
-                    // Réinitialiser le bouton
-                    loginBtn.classList.remove('loading');
-                    loginBtn.innerHTML = 'SE CONNECTER';
-                }
-            });
-            
-            // Gérer la soumission du formulaire d'inscription
-            const signupForm = document.getElementById('signup-form');
-            signupForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                // Cacher les messages d'erreur précédents
-                document.getElementById('signup-general-error').style.display = 'none';
-                
-                // Récupérer les valeurs
-                const name = document.getElementById('signup-name').value;
-                const email = document.getElementById('signup-email').value;
-                const password = document.getElementById('signup-password').value;
-                const confirm = document.getElementById('signup-confirm').value;
-                
-                // Validation simple
-                if (!name || !email || !password || !confirm) {
-                    document.getElementById('signup-general-error').textContent = 'Veuillez remplir tous les champs';
-                    document.getElementById('signup-general-error').style.display = 'block';
-                    return;
-                }
-                
-                if (password !== confirm) {
-                    document.getElementById('signup-general-error').textContent = 'Les mots de passe ne correspondent pas';
-                    document.getElementById('signup-general-error').style.display = 'block';
-                    return;
-                }
-                
-                if (password.length < 8) {
-                    document.getElementById('signup-general-error').textContent = 'Le mot de passe doit contenir au moins 8 caractères';
-                    document.getElementById('signup-general-error').style.display = 'block';
-                    return;
-                }
-                
-                // Mettre à jour l'interface pour montrer le chargement
-                const signupBtn = document.getElementById('signup-btn');
-                signupBtn.classList.add('loading');
-                signupBtn.innerHTML = 'CRÉATION EN COURS... <div class="loading-spinner"></div>';
-                
-                try {
-                    // Appel au système d'authentification local
-                    await window.authLocal.register({ name, email, password });
-                    
-                    // Afficher le message de succès
-                    document.getElementById('success-message').classList.add('active');
-                } catch (error) {
-                    // Afficher l'erreur
-                    document.getElementById('signup-general-error').textContent = error.message;
-                    document.getElementById('signup-general-error').style.display = 'block';
-                    
-                    // Réinitialiser le bouton
-                    signupBtn.classList.remove('loading');
-                    signupBtn.innerHTML = 'CRÉER UN COMPTE';
-                }
-            });
-            
-            // Gestion du mot de passe oublié
-            document.getElementById('forgot-password').addEventListener('click', function(e) {
-                e.preventDefault();
-                alert('Fonctionnalité de récupération de mot de passe en cours de développement. Veuillez utiliser le mode local temporairement.');
-            });
-            
-            // Gestion des boutons de connexion sociale
-            document.querySelectorAll('.social-btn').forEach(btn => {
-                btn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    alert('La connexion via ' + this.title + ' est en cours de développement. Veuillez utiliser la méthode de connexion standard.');
-                });
-            });
-        });
-    </script>
+    <script src="auth-cloud.js"></script>
+    <script src="auth-integration.js"></script>
 </body>
 </html>
