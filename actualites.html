@@ -6,6 +6,7 @@
     <title>TradePulse - Actualités Financières</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="enhanced-ui.css">
     <script type="module" src="aiintegration.js"></script>
     <style>
         /* Variables et reset */
@@ -224,16 +225,6 @@
         .nav-item:hover, .nav-item.active {
             background-color: rgba(0, 255, 135, 0.1);
             color: var(--accent-color);
-        }
-        
-        .nav-item.active::before {
-            content: '';
-            position: absolute;
-            left: -20px;
-            width: 3px;
-            height: 20px;
-            background-color: var(--accent-color);
-            border-radius: 0 2px 2px 0;
         }
         
         .nav-item i {
@@ -631,6 +622,31 @@
             background: linear-gradient(rgba(1, 22, 39, 0), rgba(1, 22, 39, 0.3), rgba(1, 22, 39, 0));
         }
 
+        .section-header {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .section-title {
+            font-size: 28px;
+            color: var(--text-color);
+            position: relative;
+            display: inline-block;
+            padding-bottom: 10px;
+        }
+
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 3px;
+            background-color: var(--accent-color);
+            border-radius: 3px;
+        }
+
         .events-list {
             display: flex;
             gap: 20px;
@@ -759,34 +775,6 @@
             color: var(--low-impact);
             border-left: 2px solid var(--low-impact);
         }
-
-        /* Effet de brillance au survol des cartes */
-        .news-card::after,
-        .event-card::after,
-        .featured-news-card::after {
-            content: '';
-            position: absolute;
-            top: -100%;
-            left: -100%;
-            width: 50%;
-            height: 50%;
-            background: linear-gradient(
-                to bottom right,
-                rgba(255, 255, 255, 0) 0%,
-                rgba(255, 255, 255, 0.03) 100%
-            );
-            transform: rotate(45deg);
-            transition: all 0.5s;
-            opacity: 0;
-        }
-
-        .news-card:hover::after,
-        .event-card:hover::after,
-        .featured-news-card:hover::after {
-            top: 100%;
-            left: 100%;
-            opacity: 1;
-        }
         
         /* Animations */
         @keyframes fadeIn {
@@ -847,10 +835,6 @@
                 margin: 0;
             }
             
-            .nav-item.active::before {
-                display: none;
-            }
-            
             .main-container {
                 margin-left: 0;
                 margin-top: calc(var(--header-height));
@@ -876,19 +860,19 @@
     <aside class="sidebar">
         <div class="sidebar-logo">TP</div>
         <nav class="sidebar-nav">
-            <a href="#" class="nav-item active" title="Actualités">
+            <a href="actualites.html" class="nav-item" title="Actualités">
                 <i class="fas fa-newspaper"></i>
             </a>
-            <a href="#" class="nav-item" title="Portefeuilles">
+            <a href="portefeuille.html" class="nav-item" title="Portefeuilles">
                 <i class="fas fa-chart-pie"></i>
             </a>
-            <a href="#" class="nav-item" title="Marchés">
+            <a href="marches.html" class="nav-item" title="Marchés">
                 <i class="fas fa-chart-line"></i>
             </a>
-            <a href="#" class="nav-item" title="Alertes">
+            <a href="alertes.html" class="nav-item" title="Alertes">
                 <i class="fas fa-bell"></i>
             </a>
-            <a href="#" class="nav-item" title="Paramètres">
+            <a href="parametres.html" class="nav-item" title="Paramètres">
                 <i class="fas fa-cog"></i>
             </a>
         </nav>
@@ -924,7 +908,7 @@
         <!-- En-tête de la page -->
         <section class="page-title-section">
             <h1 class="page-title">ACTUALITÉS FINANCIÈRES</h1>
-            <p class="page-subtitle">9 MARS 2025</p>
+            <p class="page-subtitle" id="currentDate">9 MARS 2025</p>
             <div class="update-info">
                 <i class="fas fa-info-circle"></i>
                 <div class="update-text">
@@ -1192,8 +1176,16 @@
         </div>
     </main>
 
+    <!-- Chargement de nos améliorations UI -->
+    <script src="ui-enhancements.js"></script>
+    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Mettre à jour la date du jour
+            const now = new Date();
+            const options = { day: 'numeric', month: 'long', year: 'numeric' };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('fr-FR', options).toUpperCase();
+            
             // Update market time
             updateMarketTime();
             setInterval(updateMarketTime, 1000);
@@ -1240,6 +1232,12 @@
                 let featuredVisible = 0;
                 let gridVisible = 0;
                 let eventsVisible = 0;
+                
+                // Ajouter une classe pour l'animation de changement d'état
+                document.querySelector('.news-container').classList.add('state-change');
+                setTimeout(() => {
+                    document.querySelector('.news-container').classList.remove('state-change');
+                }, 500);
                 
                 // Filtrer les articles à la une
                 featuredNewsCards.forEach(card => {
@@ -1297,6 +1295,12 @@
                     upcomingEventsSection.style.display = 'none';
                 } else {
                     upcomingEventsSection.style.display = 'block';
+                }
+                
+                // Effet de succès sur l'onglet actif
+                if (window.uiEnhancer) {
+                    const activeTab = document.querySelector('.news-tab.active');
+                    window.uiEnhancer.showSuccessAnimation(activeTab);
                 }
             }
             
