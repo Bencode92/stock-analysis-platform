@@ -1,0 +1,290 @@
+/* enhanced-ui.css - Améliorations de l'expérience utilisateur pour TradePulse */
+
+/* ===== 1. NAVIGATION PLUS INTUITIVE ===== */
+
+/* Indicateur amélioré pour la page active */
+.nav-item.active {
+    background-color: rgba(0, 255, 135, 0.2) !important;
+    border-left: 3px solid var(--accent-color);
+    transform: translateX(3px);
+}
+
+.nav-item.active::before {
+    display: none; /* Remplacé par la bordure à gauche */
+}
+
+/* Tooltip amélioré pour les icônes de la sidebar */
+.nav-item {
+    position: relative;
+}
+
+.nav-item .tooltip {
+    position: absolute;
+    left: 55px;
+    top: 50%;
+    transform: translateY(-50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    z-index: 1000;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(0, 255, 135, 0.3);
+}
+
+.nav-item .tooltip::before {
+    content: '';
+    position: absolute;
+    left: -6px;
+    top: 50%;
+    transform: translateY(-50%);
+    border-width: 6px 6px 6px 0;
+    border-style: solid;
+    border-color: transparent rgba(0, 0, 0, 0.8) transparent transparent;
+}
+
+.nav-item:hover .tooltip {
+    opacity: 1;
+    visibility: visible;
+    left: 45px;
+}
+
+/* Ajouter un effet de pulsation pour l'icône active */
+@keyframes pulse-icon {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+}
+
+.nav-item.active i {
+    color: var(--accent-color);
+    animation: pulse-icon 2s infinite;
+}
+
+/* ===== 2. TRANSITIONS ENTRE LES PAGES ===== */
+
+/* Animation de transition pour les pages */
+.page-transition {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--background-color);
+    z-index: 9999;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.4s ease;
+}
+
+.page-transition.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.page-transition-inner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, transparent 30%, rgba(0, 255, 135, 0.1), transparent 70%);
+    background-size: 200% 200%;
+    animation: shine 1s ease forwards;
+}
+
+@keyframes shine {
+    0% { 
+        background-position: 200% 0; 
+        opacity: 0;
+    }
+    100% { 
+        background-position: -200% 0; 
+        opacity: 1; 
+    }
+}
+
+/* Animation d'entrée pour le contenu principal */
+.main-container {
+    animation: fade-in 0.6s ease-out;
+}
+
+@keyframes fade-in {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Animation pour la modification d'état */
+.state-change {
+    animation: highlight 0.5s ease;
+}
+
+@keyframes highlight {
+    0% { background-color: transparent; }
+    50% { background-color: rgba(0, 255, 135, 0.1); }
+    100% { background-color: transparent; }
+}
+
+/* ===== 3. FEEDBACK VISUEL AMÉLIORÉ ===== */
+
+/* Effet de pression sur les boutons */
+.button-press {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.button-press:active {
+    transform: scale(0.95);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Animation de chargement améliorée */
+.loading-spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid rgba(0, 255, 135, 0.1);
+    border-top-color: var(--accent-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.loading-progress {
+    height: 3px;
+    width: 100%;
+    background-color: rgba(0, 255, 135, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+}
+
+.loading-progress-bar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 0%;
+    background-color: var(--accent-color);
+    border-radius: 3px;
+    box-shadow: 0 0 8px rgba(0, 255, 135, 0.6);
+    transition: width 0.3s ease-out;
+}
+
+.loading-progress-bar.indeterminate {
+    width: 30%;
+    animation: progress-indeterminate 1.5s infinite ease-in-out;
+}
+
+@keyframes progress-indeterminate {
+    0% { left: -30%; }
+    100% { left: 100%; }
+}
+
+/* Effet de focus amélioré pour les éléments interactifs */
+.focus-effect:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0, 255, 135, 0.3);
+}
+
+/* Effet d'onde au clic */
+.ripple {
+    position: relative;
+    overflow: hidden;
+}
+
+.ripple-effect {
+    position: absolute;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.4);
+    transform: scale(0);
+    animation: ripple-animation 0.6s ease-out;
+    pointer-events: none;
+}
+
+@keyframes ripple-animation {
+    to {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+/* Animation de réussite pour les actions importantes */
+.success-animation {
+    position: relative;
+}
+
+.success-animation::after {
+    content: '\f00c'; /* Icône de coche Font Awesome */
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    color: var(--accent-color);
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.success-animation.completed::after {
+    animation: success-complete 1s forwards;
+}
+
+@keyframes success-complete {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0; }
+    50% { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}
+
+/* Effet de surbrillance pour les éléments en cours de mise à jour */
+.updating {
+    animation: updating-glow 1.5s infinite;
+}
+
+@keyframes updating-glow {
+    0% { box-shadow: 0 0 5px rgba(0, 255, 135, 0); }
+    50% { box-shadow: 0 0 15px rgba(0, 255, 135, 0.5); }
+    100% { box-shadow: 0 0 5px rgba(0, 255, 135, 0); }
+}
+
+/* Effets de survol améliorés pour les cartes */
+.news-card,
+.event-card,
+.portfolio-asset {
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+                box-shadow 0.3s ease, 
+                border-color 0.3s ease;
+}
+
+.news-card:hover,
+.event-card:hover,
+.portfolio-asset:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+    border-color: var(--accent-color);
+}
+
+/* Media Queries pour les appareils mobiles */
+@media (max-width: 768px) {
+    .nav-item .tooltip {
+        top: -30px;
+        left: 50%;
+        transform: translateX(-50%);
+    }
+    
+    .nav-item .tooltip::before {
+        left: 50%;
+        top: auto;
+        bottom: -6px;
+        transform: translateX(-50%) rotate(90deg);
+    }
+    
+    .nav-item:hover .tooltip {
+        top: -40px;
+        left: 50%;
+    }
+}
