@@ -7,7 +7,6 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="enhanced-ui.css">
-    <link rel="stylesheet" href="auth-styles.css">
     <style>
         /* Variables et reset */
         :root {
@@ -377,6 +376,17 @@
             display: none;
         }
         
+        .general-error {
+            color: var(--error-color);
+            background-color: rgba(255, 76, 76, 0.1);
+            border-left: 3px solid var(--error-color);
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            font-size: 14px;
+            display: none;
+        }
+        
         /* Animation de chargement lors de la soumission */
         .btn-submit.loading {
             pointer-events: none;
@@ -526,6 +536,17 @@
             100% { transform: translateX(100%) rotate(5deg); }
         }
         
+        /* Shake animation */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+        
+        .shake {
+            animation: shake 0.6s ease;
+        }
+        
         /* Responsive */
         @media (max-width: 480px) {
             .auth-card {
@@ -592,6 +613,9 @@
             <div class="auth-content">
                 <!-- Formulaire de connexion -->
                 <form class="auth-form login-form active" id="login-form">
+                    <!-- Message d'erreur général -->
+                    <div class="general-error" id="login-general-error"></div>
+                    
                     <div class="form-group">
                         <label for="login-email">Email</label>
                         <input type="email" id="login-email" placeholder="Votre adresse email" required>
@@ -632,6 +656,9 @@
                 
                 <!-- Formulaire d'inscription -->
                 <form class="auth-form signup-form" id="signup-form">
+                    <!-- Message d'erreur général -->
+                    <div class="general-error" id="signup-general-error"></div>
+                    
                     <div class="form-group">
                         <label for="signup-name">Nom complet</label>
                         <input type="text" id="signup-name" placeholder="Votre nom complet" required>
@@ -685,30 +712,9 @@
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+    <script src="auth-client.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Gestion des onglets
-            const tabs = document.querySelectorAll('.auth-tab');
-            const forms = document.querySelectorAll('.auth-form');
-            
-            tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    const target = tab.getAttribute('data-target');
-                    
-                    // Update active tab
-                    tabs.forEach(t => t.classList.remove('active'));
-                    tab.classList.add('active');
-                    
-                    // Show target form
-                    forms.forEach(form => {
-                        form.classList.remove('active');
-                        if (form.id === target) {
-                            form.classList.add('active');
-                        }
-                    });
-                });
-            });
-            
             // Configuration de l'effet de particules
             if (window.particlesJS) {
                 particlesJS('particles-js', {
@@ -756,152 +762,6 @@
             chartLines.forEach((line, index) => {
                 // Ajouter des délais différents pour un effet plus naturel
                 line.style.animationDelay = `${index * 0.8}s`;
-            });
-            
-            // Gestion de la validation et de la soumission des formulaires
-            const loginForm = document.getElementById('login-form');
-            const signupForm = document.getElementById('signup-form');
-            const successMessage = document.getElementById('success-message');
-            const continueBtn = document.getElementById('continue-btn');
-            
-            // Validation du formulaire de connexion
-            loginForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const email = document.getElementById('login-email').value;
-                const password = document.getElementById('login-password').value;
-                let isValid = true;
-                
-                // Validation basique de l'email
-                if (!validateEmail(email)) {
-                    document.getElementById('login-email-error').style.display = 'block';
-                    isValid = false;
-                } else {
-                    document.getElementById('login-email-error').style.display = 'none';
-                }
-                
-                // Validation du mot de passe
-                if (!password) {
-                    document.getElementById('login-password-error').style.display = 'block';
-                    isValid = false;
-                } else {
-                    document.getElementById('login-password-error').style.display = 'none';
-                }
-                
-                if (isValid) {
-                    // Simuler l'envoi du formulaire
-                    const loginBtn = document.getElementById('login-btn');
-                    loginBtn.classList.add('loading');
-                    loginBtn.innerHTML = 'CONNEXION EN COURS... <div class="loading-spinner"></div>';
-                    
-                    // Simuler un délai réseau (à remplacer par votre logique d'authentification)
-                    setTimeout(() => {
-                        // Stocker les informations d'utilisateur (simulé)
-                        localStorage.setItem('tradepulse_user', JSON.stringify({
-                            email: email,
-                            name: email.split('@')[0],
-                            isLoggedIn: true,
-                            loginTime: Date.now()
-                        }));
-                        
-                        // Afficher le message de succès
-                        successMessage.classList.add('active');
-                    }, 1500);
-                }
-            });
-            
-            // Validation du formulaire d'inscription
-            signupForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const name = document.getElementById('signup-name').value;
-                const email = document.getElementById('signup-email').value;
-                const password = document.getElementById('signup-password').value;
-                const confirm = document.getElementById('signup-confirm').value;
-                let isValid = true;
-                
-                // Validation du nom
-                if (!name || name.length < 3) {
-                    document.getElementById('signup-name-error').style.display = 'block';
-                    isValid = false;
-                } else {
-                    document.getElementById('signup-name-error').style.display = 'none';
-                }
-                
-                // Validation de l'email
-                if (!validateEmail(email)) {
-                    document.getElementById('signup-email-error').style.display = 'block';
-                    isValid = false;
-                } else {
-                    document.getElementById('signup-email-error').style.display = 'none';
-                }
-                
-                // Validation du mot de passe
-                if (!password || password.length < 8) {
-                    document.getElementById('signup-password-error').style.display = 'block';
-                    isValid = false;
-                } else {
-                    document.getElementById('signup-password-error').style.display = 'none';
-                }
-                
-                // Confirmation du mot de passe
-                if (password !== confirm) {
-                    document.getElementById('signup-confirm-error').style.display = 'block';
-                    isValid = false;
-                } else {
-                    document.getElementById('signup-confirm-error').style.display = 'none';
-                }
-                
-                if (isValid) {
-                    // Simuler l'envoi du formulaire
-                    const signupBtn = document.getElementById('signup-btn');
-                    signupBtn.classList.add('loading');
-                    signupBtn.innerHTML = 'CRÉATION EN COURS... <div class="loading-spinner"></div>';
-                    
-                    // Simuler un délai réseau (à remplacer par votre logique d'authentification)
-                    setTimeout(() => {
-                        // Stocker les informations d'utilisateur (simulé)
-                        localStorage.setItem('tradepulse_user', JSON.stringify({
-                            email: email,
-                            name: name,
-                            isLoggedIn: true,
-                            loginTime: Date.now()
-                        }));
-                        
-                        // Afficher le message de succès
-                        successMessage.classList.add('active');
-                    }, 1500);
-                }
-            });
-            
-            // Gestion du bouton Continuer après connexion
-            continueBtn.addEventListener('click', function() {
-                // Rediriger vers la page d'accueil
-                window.location.href = 'index.html';
-            });
-            
-            // Fonction utilitaire pour valider les emails
-            function validateEmail(email) {
-                const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
-                return re.test(String(email).toLowerCase());
-            }
-            
-            // Gestion du lien "Mot de passe oublié"
-            document.getElementById('forgot-password').addEventListener('click', function(e) {
-                e.preventDefault();
-                
-                // Afficher une alerte stylisée (à remplacer par votre logique)
-                alert('Fonctionnalité en cours de développement. Veuillez contacter le support pour réinitialiser votre mot de passe.');
-            });
-            
-            // Gestion des boutons de connexion sociale
-            document.querySelectorAll('.social-btn').forEach(btn => {
-                btn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    // Afficher une alerte stylisée (à remplacer par votre logique)
-                    alert('Fonctionnalité en cours de développement. Veuillez utiliser le formulaire de connexion standard.');
-                });
             });
         });
     </script>
