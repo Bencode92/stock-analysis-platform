@@ -1,36 +1,34 @@
 {
-  "name": "tradepulse-email-system",
+  "name": "tradepulse",
   "version": "1.0.0",
-  "description": "Système d'envoi d'emails pour la plateforme TradePulse",
-  "main": "email-server.js",
+  "description": "Plateforme d'analyse d'actions et ETF avec intégration IA",
+  "main": "index.js",
   "scripts": {
-    "start": "node email-server.js",
-    "dev": "nodemon email-server.js",
-    "send-daily": "node send-daily-email.js"
+    "start": "node server/server.js",
+    "email-server": "node email-server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bencode92/stock-analysis-platform.git"
   },
   "keywords": [
-    "email",
     "finance",
-    "dashboard",
-    "tradepulse"
+    "trading",
+    "ai",
+    "analysis"
   ],
-  "author": "TradePulse Team",
+  "author": "Bencode92",
   "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/bencode92/stock-analysis-platform/issues"
+  },
+  "homepage": "https://github.com/bencode92/stock-analysis-platform#readme",
   "dependencies": {
+    "axios": "^1.6.5",
+    "body-parser": "^1.20.2",
     "cors": "^2.8.5",
-    "express": "^4.17.3",
-    "fs-extra": "^10.0.1",
-    "handlebars": "^4.7.7",
-    "moment": "^2.29.1",
-    "node-cron": "^3.0.0",
-    "node-fetch": "^2.6.7",
-    "nodemailer": "^6.7.3"
-  },
-  "devDependencies": {
-    "nodemon": "^2.0.15"
-  },
-  "engines": {
-    "node": ">=14.0.0"
-  },
-  "readme": "# TradePulse Email System\n\nCe système permet d'envoyer automatiquement un résumé quotidien du tableau de bord TradePulse par email.\n\n## Installation\n\n```bash\nnpm install\n```\n\n## Utilisation\n\n### Prévisualisation de l'email\n\n```bash\nnpm start\n```\n\nPuis ouvrez http://localhost:3000 dans votre navigateur.\n\n### Envoi manuel d'un email de test\n\n```bash\nnpm run send-daily\n```\n\n### Configuration pour envoi automatique quotidien\n\nVous pouvez configurer un job cron pour exécuter `npm run send-daily` tous les jours à 9h00.\n\nExemple de configuration cron:\n\n```\n0 9 * * * cd /chemin/vers/tradepulse && npm run send-daily\n```\n"
+    "express": "^4.18.2",
+    "nodemailer": "^6.9.8"
+  }
 }
