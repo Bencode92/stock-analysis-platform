@@ -6,7 +6,7 @@
 
 // Configuration de l'API
 const API_CONFIG = {
-    // URL du serveur proxy
+    // URL du serveur proxy (mis à jour avec la nouvelle URL Render)
     baseUrl: 'https://stock-analysis-platform-q9tc.onrender.com',
     
     // Mode debug pour afficher plus d'informations dans la console
@@ -21,6 +21,13 @@ const API_CONFIG = {
     
     // Intervalle de mise à jour (en millisecondes)
     updatesInterval: 30 * 60 * 1000, // Mise à jour toutes les 30 minutes
+    
+    // Options de timeout et retry pour améliorer la résilience
+    fetchOptions: {
+        timeout: 15000,
+        retries: 3,
+        retryDelay: 2000
+    }
 };
 
 // Classe principale pour l'intégration de Perplexity
@@ -51,34 +58,72 @@ class PerplexityIntegration {
         console.log('URL de l\'API:', API_CONFIG.baseUrl);
         
         try {
-            // Vérifier si l'API est accessible
-            const testResponse = await fetch(`${API_CONFIG.baseUrl}`, {
+            // Vérifier si l'API est accessible avec retry
+            await this.fetchWithRetry(`${API_CONFIG.baseUrl}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
                 }
-            });
+            }, true);
             
-            if (testResponse.ok) {
-                const testData = await testResponse.json();
-                console.log('✅ API accessible:', testData);
-                
-                // Charger les données pour la première fois
-                await this.updateData();
-                
-                // Configurer une mise à jour périodique
-                setInterval(() => this.updateData(), API_CONFIG.updatesInterval);
-                
-                console.log('✅ Intégration Perplexity initialisée avec succès');
-            } else {
-                console.error('❌ API inaccessible:', testResponse.status, testResponse.statusText);
-                this.loadFallbackData();
-            }
+            console.log('✅ API accessible');
+            
+            // Charger les données pour la première fois
+            await this.updateData();
+            
+            // Configurer une mise à jour périodique
+            setInterval(() => this.updateData(), API_CONFIG.updatesInterval);
+            
+            console.log('✅ Intégration Perplexity initialisée avec succès');
         } catch (error) {
-            console.error('❌ Erreur lors de l\'initialisation de l\'intégration Perplexity:', error);
-            
-            // Charger des données de secours en cas d'échec
+            console.error('❌ API inaccessible:', error.message);
             this.loadFallbackData();
+        }
+    }
+    
+    /**
+     * Effectue une requête fetch avec retry et timeout
+     */
+    async fetchWithRetry(url, options = {}, skipParse = false) {
+        let attempt = 0;
+        
+        while (attempt < API_CONFIG.fetchOptions.retries) {
+            try {
+                // Ajouter un timeout à la requête fetch
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), API_CONFIG.fetchOptions.timeout);
+                
+                const fetchOptions = {
+                    ...options,
+                    signal: controller.signal
+                };
+                
+                const response = await fetch(url, fetchOptions);
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error: ${response.status} ${response.statusText}`);
+                }
+                
+                // Si skipParse est true, on renvoie juste la réponse
+                if (skipParse) {
+                    return response;
+                }
+                
+                // Sinon on parse le JSON
+                const data = await response.json();
+                return data;
+            } catch (error) {
+                attempt++;
+                console.warn(`Tentative ${attempt}/${API_CONFIG.fetchOptions.retries} échouée:`, error.message);
+                
+                if (attempt >= API_CONFIG.fetchOptions.retries) {
+                    throw error;
+                }
+                
+                // Attendre avant de réessayer
+                await new Promise(resolve => setTimeout(resolve, API_CONFIG.fetchOptions.retryDelay));
+            }
         }
     }
     
@@ -98,22 +143,22 @@ class PerplexityIntegration {
                     source: "Federal Reserve",
                     date: dateStr,
                     time: "08:30",
-                    title: "La Fed annonce un maintien des taux directeurs",
-                    content: "La Réserve fédérale américaine maintient ses taux directeurs inchangés, signalant une stabilité de la politique monétaire américaine. Les marchés réagissent positivement à cette décision attendue."
+                    title: "La Fed annonce une réunion exceptionnelle",
+                    content: "La Réserve fédérale américaine a programmé une réunion exceptionnelle pour discuter des dernières évolutions économiques. Les analystes anticipent un possible ajustement de la politique monétaire."
                 },
                 {
                     source: "Markets US",
-                    date: dateStr,
                     time: "10:15",
-                    title: "Résultats trimestriels supérieurs aux attentes pour le secteur technologique",
+                    date: dateStr,
+                    title: "Les résultats trimestriels dépassent les attentes",
                     content: "Les grandes entreprises technologiques américaines ont présenté des résultats trimestriels largement supérieurs aux attentes des analystes, témoignant de la robustesse du secteur malgré l'environnement économique incertain."
                 },
                 {
                     source: "Treasury Department",
-                    date: dateStr,
                     time: "14:45",
-                    title: "Baisse des rendements obligataires américains",
-                    content: "Les rendements des bons du Trésor américain ont diminué suite aux commentaires de la Fed, indiquant une confiance accrue des investisseurs dans la stabilité économique à moyen terme."
+                    date: dateStr,
+                    title: "Hausse des rendements obligataires américains",
+                    content: "Les rendements des bons du Trésor américain ont augmenté suite aux dernières données d'inflation, reflétant les inquiétudes des investisseurs concernant la politique monétaire à venir."
                 }
             ],
             france: [
@@ -335,21 +380,14 @@ class PerplexityIntegration {
         try {
             console.log('🔍 Récupération des actualités depuis l\'API...');
             
-            // Appel à l'API via le proxy
-            const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.news}`, {
+            // Appel à l'API via le proxy avec retry
+            const data = await this.fetchWithRetry(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.news}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({})
             });
-            
-            if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status} ${response.statusText}`);
-            }
-            
-            // Récupération et traitement des données
-            const data = await response.json();
             
             if (API_CONFIG.debug) {
                 console.log('📊 Actualités reçues:', data);
@@ -374,21 +412,14 @@ class PerplexityIntegration {
         try {
             console.log('🔍 Récupération des portefeuilles depuis l\'API...');
             
-            // Appel à l'API via le proxy
-            const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.portfolios}`, {
+            // Appel à l'API via le proxy avec retry
+            const data = await this.fetchWithRetry(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.portfolios}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({})
             });
-            
-            if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status} ${response.statusText}`);
-            }
-            
-            // Récupération et traitement des données
-            const data = await response.json();
             
             if (API_CONFIG.debug) {
                 console.log('📊 Portefeuilles reçus:', data);
@@ -414,22 +445,14 @@ class PerplexityIntegration {
             console.log(`🔍 Recherche: "${query}"`);
             console.log(`📡 URL complète: ${API_CONFIG.baseUrl}${API_CONFIG.endpoints.search}`);
             
-            // Appel à l'API via le proxy
-            const response = await fetch(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.search}`, {
+            // Appel à l'API via le proxy avec retry
+            const data = await this.fetchWithRetry(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.search}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({ query })
             });
-            
-            if (!response.ok) {
-                console.error(`❌ Erreur HTTP: ${response.status} ${response.statusText}`);
-                throw new Error(`Erreur HTTP: ${response.status} ${response.statusText}`);
-            }
-            
-            // Récupération et traitement des données
-            const data = await response.json();
             
             if (API_CONFIG.debug) {
                 console.log('📊 Résultats de recherche reçus:', data);
@@ -491,8 +514,8 @@ class PerplexityIntegration {
                 return dateB - dateA;
             });
             
-            // Sélectionner les 3 actualités les plus récentes
-            const recentNews = sortedNews.slice(0, 3);
+            // Sélectionner les 10 actualités les plus récentes
+            const recentNews = sortedNews.slice(0, 10);
             
             // Créer le HTML pour chaque actualité
             const newsHTML = recentNews.map((news, index) => {
