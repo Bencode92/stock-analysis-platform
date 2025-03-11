@@ -3,302 +3,268 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TradePulse - Résumé Quotidien</title>
+    <title>TradePulse - Résumé Daily</title>
+    <style>
+        /* Style général */
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #0a1621;
+            color: #ffffff;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #0d1f2d;
+        }
+        
+        /* En-tête */
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 1px solid #1e3a52;
+        }
+        
+        .logo {
+            color: #00ff9d;
+            font-size: 28px;
+            font-weight: bold;
+            margin: 0;
+        }
+        
+        .tagline {
+            color: #9ba1a8;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        /* Sections */
+        .section {
+            padding: 20px 0;
+            border-bottom: 1px solid #1e3a52;
+        }
+        
+        .section-title {
+            color: #00ff9d;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+        
+        /* Performance */
+        .performance-card {
+            background-color: #15293c;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .performance-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        
+        .positive {
+            color: #00ff9d;
+        }
+        
+        .negative {
+            color: #ff4757;
+        }
+        
+        .performance-label {
+            color: #9ba1a8;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .metrics {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+        }
+        
+        .metric {
+            text-align: center;
+            flex: 1;
+        }
+        
+        .metric-value {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .metric-label {
+            color: #9ba1a8;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        
+        /* Marchés */
+        .market-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #1e3a52;
+        }
+        
+        .market-item:last-child {
+            border-bottom: none;
+        }
+        
+        .market-name {
+            font-weight: bold;
+        }
+        
+        /* Événements */
+        .event-item {
+            background-color: #15293c;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .event-time {
+            color: #00ff9d;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .event-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .event-description {
+            color: #9ba1a8;
+            font-size: 14px;
+        }
+        
+        /* Pied de page */
+        .footer {
+            text-align: center;
+            padding: 20px 0;
+            color: #9ba1a8;
+            font-size: 12px;
+        }
+        
+        .footer a {
+            color: #00ff9d;
+            text-decoration: none;
+        }
+        
+        /* Responsive */
+        @media only screen and (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .metrics {
+                flex-direction: column;
+            }
+            
+            .metric {
+                margin-bottom: 10px;
+            }
+        }
+    </style>
 </head>
-<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f0f0f0; color: #333333;">
-    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #011627;">
-        <!-- En-tête -->
-        <tr>
-            <td align="center" style="padding: 20px; background-color: #011627; border-bottom: 1px solid rgba(0, 255, 135, 0.2);">
-                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                    <tr>
-                        <td align="left" width="50">
-                            <div style="width: 12px; height: 12px; background-color: #00FF87; border-radius: 50%; display: inline-block;"></div>
-                        </td>
-                        <td>
-                            <h1 style="margin: 0; font-size: 24px; color: #ffffff; font-weight: bold;">TRADEPULSE</h1>
-                        </td>
-                        <td align="right" style="color: #00FF87; font-size: 14px;">
-                            Résumé Quotidien
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">TRADEPULSE</div>
+            <div class="tagline">RÉSUMÉ QUOTIDIEN DU {{date}}</div>
+        </div>
         
-        <!-- Date du jour -->
-        <tr>
-            <td align="center" style="padding: 20px 20px 10px 20px; background-color: #011627; color: #ffffff;">
-                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                    <tr>
-                        <td align="center">
-                            <h2 style="margin: 0; font-size: 28px; color: #00FF87; font-weight: bold;">{{DATE}}</h2>
-                            <p style="margin: 5px 0 0 0; font-size: 16px; color: rgba(255, 255, 255, 0.7);">{{JOUR}}</p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
+        <div class="section">
+            <h2 class="section-title">PERFORMANCE DE VOTRE PORTEFEUILLE</h2>
+            <div class="performance-card">
+                <div class="performance-value {{performanceClass}}">{{performanceValue}}</div>
+                <div class="performance-label">Performance totale</div>
+                
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-value">{{portfolioValue}} €</div>
+                        <div class="metric-label">Valeur totale</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value {{gainClass}}">{{gainValue}} €</div>
+                        <div class="metric-label">Gain/Perte</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">{{sharpeRatio}}</div>
+                        <div class="metric-label">Ratio de Sharpe</div>
+                    </div>
+                </div>
+            </div>
+        </div>
         
-        <!-- Actualités importantes -->
-        <tr>
-            <td style="padding: 20px; background-color: #011627; color: #ffffff;">
-                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                    <tr>
-                        <td>
-                            <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #00FF87;">📰 ACTUALITÉS IMPORTANTES</h3>
-                        </td>
-                    </tr>
-                    <!-- Actualité 1 -->
-                    <tr>
-                        <td style="padding: 12px; background-color: rgba(1, 30, 52, 0.7); border-left: 3px solid #00FF87; margin-bottom: 10px; border-radius: 5px;">
-                            <h4 style="margin: 0 0 5px 0; font-size: 16px; color: #ffffff;">La Fed annonce une réunion exceptionnelle sur les taux</h4>
-                            <p style="margin: 0; font-size: 13px; color: rgba(255, 255, 255, 0.7);">
-                                <span>Federal Reserve</span>
-                                <span style="float: right;">08:15</span>
-                            </p>
-                        </td>
-                    </tr>
-                    <tr><td height="10"></td></tr>
-                    <!-- Actualité 2 -->
-                    <tr>
-                        <td style="padding: 12px; background-color: rgba(1, 30, 52, 0.7); border-left: 3px solid #00FF87; margin-bottom: 10px; border-radius: 5px;">
-                            <h4 style="margin: 0 0 5px 0; font-size: 16px; color: #ffffff;">LVMH dévoile des résultats trimestriels supérieurs aux attentes</h4>
-                            <p style="margin: 0; font-size: 13px; color: rgba(255, 255, 255, 0.7);">
-                                <span>LVMH</span>
-                                <span style="float: right;">Hier, 16:30</span>
-                            </p>
-                        </td>
-                    </tr>
-                    <tr><td height="10"></td></tr>
-                    <!-- Actualité 3 -->
-                    <tr>
-                        <td style="padding: 12px; background-color: rgba(1, 30, 52, 0.7); border-left: 3px solid #00FF87; margin-bottom: 10px; border-radius: 5px;">
-                            <h4 style="margin: 0 0 5px 0; font-size: 16px; color: #ffffff;">Bitcoin franchit un nouveau seuil à 75 000$</h4>
-                            <p style="margin: 0; font-size: 13px; color: rgba(255, 255, 255, 0.7);">
-                                <span>CoinDesk</span>
-                                <span style="float: right;">Hier, 14:45</span>
-                            </p>
-                        </td>
-                    </tr>
-                    <tr><td height="15"></td></tr>
-                    <tr>
-                        <td>
-                            <a href="https://bencode92.github.io/stock-analysis-platform/actualites.html" style="color: #00FF87; text-decoration: none; font-size: 14px;">
-                                Voir toutes les actualités →
-                            </a>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
+        <div class="section">
+            <h2 class="section-title">ÉTAT DES MARCHÉS</h2>
+            
+            <div class="market-item">
+                <div class="market-name">CAC 40</div>
+                <div class="market-value {{cac40Class}}">{{cac40Value}} ({{cac40Change}})</div>
+            </div>
+            
+            <div class="market-item">
+                <div class="market-name">S&P 500</div>
+                <div class="market-value {{sp500Class}}">{{sp500Value}} ({{sp500Change}})</div>
+            </div>
+            
+            <div class="market-item">
+                <div class="market-name">NASDAQ</div>
+                <div class="market-value {{nasdaqClass}}">{{nasdaqValue}} ({{nasdaqChange}})</div>
+            </div>
+            
+            <div class="market-item">
+                <div class="market-name">EUR/USD</div>
+                <div class="market-value {{eurusdClass}}">{{eurusdValue}} ({{eurusdChange}})</div>
+            </div>
+        </div>
         
-        <!-- Portfolio - Performance -->
-        <tr>
-            <td style="padding: 20px; background-color: #011627; color: #ffffff;">
-                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                    <tr>
-                        <td>
-                            <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #00FF87;">📊 MON PORTEFEUILLE</h3>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                <tr>
-                                    <td width="48%" valign="top" style="padding: 15px; background-color: rgba(1, 30, 52, 0.7); border-radius: 5px;">
-                                        <p style="margin: 0 0 5px 0; font-size: 13px; color: rgba(255, 255, 255, 0.7);">Valeur totale</p>
-                                        <h4 style="margin: 0; font-size: 22px; color: #ffffff;">26,842.15 €</h4>
-                                        <p style="margin: 5px 0 0 0; font-size: 14px; color: #4CAF50;">+3.2% (7j)</p>
-                                    </td>
-                                    <td width="4%"></td>
-                                    <td width="48%" valign="top" style="padding: 15px; background-color: rgba(1, 30, 52, 0.7); border-radius: 5px;">
-                                        <p style="margin: 0 0 5px 0; font-size: 13px; color: rgba(255, 255, 255, 0.7);">Performance</p>
-                                        <h4 style="margin: 0; font-size: 22px; color: #ffffff;">+5.8%</h4>
-                                        <p style="margin: 5px 0 0 0; font-size: 14px; color: rgba(255, 255, 255, 0.7);">vs +2.3% (S&P 500)</p>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr><td height="15"></td></tr>
-                    <tr>
-                        <td>
-                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border-radius: 5px; overflow: hidden;">
-                                <tr style="background-color: rgba(0, 255, 135, 0.1);">
-                                    <th align="left" style="padding: 8px; font-size: 14px; color: rgba(255, 255, 255, 0.7);">Actif</th>
-                                    <th align="left" style="padding: 8px; font-size: 14px; color: rgba(255, 255, 255, 0.7);">Type</th>
-                                    <th align="right" style="padding: 8px; font-size: 14px; color: rgba(255, 255, 255, 0.7);">Alloc.</th>
-                                    <th align="right" style="padding: 8px; font-size: 14px; color: rgba(255, 255, 255, 0.7);">Perf.</th>
-                                </tr>
-                                <tr style="background-color: rgba(1, 30, 52, 0.4);">
-                                    <td style="padding: 8px; font-size: 14px; color: #ffffff;">NVIDIA</td>
-                                    <td style="padding: 8px; font-size: 12px;">
-                                        <span style="padding: 3px 6px; background-color: rgba(76, 175, 80, 0.2); color: rgb(76, 175, 80); border-radius: 3px;">STOCK</span>
-                                    </td>
-                                    <td align="right" style="padding: 8px; font-size: 14px; color: #ffffff;">25%</td>
-                                    <td align="right" style="padding: 8px; font-size: 14px; color: #4CAF50;">+3.8%</td>
-                                </tr>
-                                <tr style="background-color: rgba(1, 30, 52, 0.7);">
-                                    <td style="padding: 8px; font-size: 14px; color: #ffffff;">Microsoft</td>
-                                    <td style="padding: 8px; font-size: 12px;">
-                                        <span style="padding: 3px 6px; background-color: rgba(76, 175, 80, 0.2); color: rgb(76, 175, 80); border-radius: 3px;">STOCK</span>
-                                    </td>
-                                    <td align="right" style="padding: 8px; font-size: 14px; color: #ffffff;">15%</td>
-                                    <td align="right" style="padding: 8px; font-size: 14px; color: #4CAF50;">+2.2%</td>
-                                </tr>
-                                <tr style="background-color: rgba(1, 30, 52, 0.4);">
-                                    <td style="padding: 8px; font-size: 14px; color: #ffffff;">Amazon</td>
-                                    <td style="padding: 8px; font-size: 12px;">
-                                        <span style="padding: 3px 6px; background-color: rgba(76, 175, 80, 0.2); color: rgb(76, 175, 80); border-radius: 3px;">STOCK</span>
-                                    </td>
-                                    <td align="right" style="padding: 8px; font-size: 14px; color: #ffffff;">12%</td>
-                                    <td align="right" style="padding: 8px; font-size: 14px; color: #4CAF50;">+2.1%</td>
-                                </tr>
-                                <tr style="background-color: rgba(1, 30, 52, 0.7);">
-                                    <td style="padding: 8px; font-size: 14px; color: #ffffff;">S&P 500 ETF</td>
-                                    <td style="padding: 8px; font-size: 12px;">
-                                        <span style="padding: 3px 6px; background-color: rgba(33, 150, 243, 0.2); color: rgb(33, 150, 243); border-radius: 3px;">ETF</span>
-                                    </td>
-                                    <td align="right" style="padding: 8px; font-size: 14px; color: #ffffff;">20%</td>
-                                    <td align="right" style="padding: 8px; font-size: 14px; color: #4CAF50;">+0.7%</td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr><td height="15"></td></tr>
-                    <tr>
-                        <td>
-                            <a href="https://bencode92.github.io/stock-analysis-platform/portefeuilles.html" style="color: #00FF87; text-decoration: none; font-size: 14px;">
-                                Voir le portefeuille complet →
-                            </a>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
+        <div class="section">
+            <h2 class="section-title">ÉVÉNEMENTS IMPORTANTS AUJOURD'HUI</h2>
+            
+            <div class="event-item">
+                <div class="event-time">08:15</div>
+                <div class="event-title">Réunion exceptionnelle Fed</div>
+                <div class="event-description">Federal Reserve</div>
+            </div>
+            
+            <div class="event-item">
+                <div class="event-time">14:30</div>
+                <div class="event-title">Publication résultats trimestriels</div>
+                <div class="event-description">Plusieurs entreprises du S&P 500</div>
+            </div>
+        </div>
         
-        <!-- Marchés -->
-        <tr>
-            <td style="padding: 20px; background-color: #011627; color: #ffffff;">
-                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                    <tr>
-                        <td>
-                            <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #00FF87;">📈 MARCHÉS</h3>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                <tr>
-                                    <td width="32%" style="padding: 12px; background-color: rgba(1, 30, 52, 0.7); border-radius: 5px;">
-                                        <p style="margin: 0 0 5px 0; font-size: 15px; color: #ffffff; font-weight: bold;">S&P 500</p>
-                                        <h4 style="margin: 0; font-size: 18px; color: #ffffff;">5,187.52</h4>
-                                        <p style="margin: 5px 0 0 0; font-size: 13px; color: #4CAF50;">+0.68%</p>
-                                    </td>
-                                    <td width="2%"></td>
-                                    <td width="32%" style="padding: 12px; background-color: rgba(1, 30, 52, 0.7); border-radius: 5px;">
-                                        <p style="margin: 0 0 5px 0; font-size: 15px; color: #ffffff; font-weight: bold;">NASDAQ</p>
-                                        <h4 style="margin: 0; font-size: 18px; color: #ffffff;">16,342.15</h4>
-                                        <p style="margin: 5px 0 0 0; font-size: 13px; color: #4CAF50;">+1.12%</p>
-                                    </td>
-                                    <td width="2%"></td>
-                                    <td width="32%" style="padding: 12px; background-color: rgba(1, 30, 52, 0.7); border-radius: 5px;">
-                                        <p style="margin: 0 0 5px 0; font-size: 15px; color: #ffffff; font-weight: bold;">CAC 40</p>
-                                        <h4 style="margin: 0; font-size: 18px; color: #ffffff;">8,052.21</h4>
-                                        <p style="margin: 5px 0 0 0; font-size: 13px; color: #FF5252;">-0.23%</p>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr><td height="15"></td></tr>
-                    <tr>
-                        <td>
-                            <a href="https://bencode92.github.io/stock-analysis-platform/marches.html" style="color: #00FF87; text-decoration: none; font-size: 14px;">
-                                Voir tous les marchés →
-                            </a>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
+        <div class="section">
+            <h2 class="section-title">ACTUALITÉS FINANCIÈRES</h2>
+            
+            <div class="event-item">
+                <div class="event-title">{{newsTitle1}}</div>
+                <div class="event-description">{{newsDesc1}}</div>
+            </div>
+            
+            <div class="event-item">
+                <div class="event-title">{{newsTitle2}}</div>
+                <div class="event-description">{{newsDesc2}}</div>
+            </div>
+            
+            <div class="event-item">
+                <div class="event-title">{{newsTitle3}}</div>
+                <div class="event-description">{{newsDesc3}}</div>
+            </div>
+        </div>
         
-        <!-- Événements du jour -->
-        <tr>
-            <td style="padding: 20px; background-color: #011627; color: #ffffff; border-bottom: 1px solid rgba(0, 255, 135, 0.2);">
-                <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                    <tr>
-                        <td>
-                            <h3 style="margin: 0 0 15px 0; font-size: 18px; color: #00FF87;">🗓️ ÉVÉNEMENTS DU JOUR</h3>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 12px; background-color: rgba(1, 30, 52, 0.7); border-radius: 5px;">
-                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                <tr>
-                                    <td width="60" valign="top">
-                                        <div style="background-color: rgba(0, 0, 0, 0.3); width: 50px; height: 50px; border-radius: 5px; text-align: center; padding-top: 5px;">
-                                            <div style="font-size: 18px; font-weight: bold; color: #ffffff;">11</div>
-                                            <div style="font-size: 12px; color: rgba(255, 255, 255, 0.6);">MAR</div>
-                                        </div>
-                                    </td>
-                                    <td valign="top" style="padding-left: 10px;">
-                                        <p style="margin: 0 0 3px 0; font-size: 16px; color: #ffffff;">Réunion exceptionnelle Fed</p>
-                                        <p style="margin: 0; font-size: 14px; color: #00FF87;">08:15</p>
-                                    </td>
-                                    <td width="30" valign="top">
-                                        <div style="width: 30px; height: 30px; border-radius: 50%; background-color: rgba(255, 82, 82, 0.2); color: #FF5252; text-align: center; line-height: 30px; font-size: 14px;">
-                                            ⚠️
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                    <tr><td height="10"></td></tr>
-                    <tr>
-                        <td style="padding: 12px; background-color: rgba(1, 30, 52, 0.7); border-radius: 5px;">
-                            <table width="100%" cellpadding="0" cellspacing="0" border="0">
-                                <tr>
-                                    <td width="60" valign="top">
-                                        <div style="background-color: rgba(0, 0, 0, 0.3); width: 50px; height: 50px; border-radius: 5px; text-align: center; padding-top: 5px;">
-                                            <div style="font-size: 18px; font-weight: bold; color: #ffffff;">11</div>
-                                            <div style="font-size: 12px; color: rgba(255, 255, 255, 0.6);">MAR</div>
-                                        </div>
-                                    </td>
-                                    <td valign="top" style="padding-left: 10px;">
-                                        <p style="margin: 0 0 3px 0; font-size: 16px; color: #ffffff;">Résultats trimestriels Amazon</p>
-                                        <p style="margin: 0; font-size: 14px; color: #00FF87;">16:30</p>
-                                    </td>
-                                    <td width="30" valign="top">
-                                        <div style="width: 30px; height: 30px; border-radius: 50%; background-color: rgba(255, 193, 7, 0.2); color: #FFC107; text-align: center; line-height: 30px; font-size: 14px;">
-                                            📊
-                                        </div>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-        
-        <!-- Pied de page -->
-        <tr>
-            <td style="padding: 20px; background-color: #010e1a; color: rgba(255, 255, 255, 0.7); font-size: 12px; text-align: center;">
-                <p style="margin: 0 0 10px 0;">
-                    Ce résumé quotidien est généré automatiquement par <span style="color: #00FF87;">TradePulse</span>
-                </p>
-                <p style="margin: 0 0 10px 0;">
-                    Pour accéder à votre tableau de bord complet, <a href="https://bencode92.github.io/stock-analysis-platform/dashboard.html" style="color: #00FF87; text-decoration: none;">cliquez ici</a>
-                </p>
-                <p style="margin: 0;">
-                    <a href="https://bencode92.github.io/stock-analysis-platform/settings.html" style="color: rgba(255, 255, 255, 0.5); text-decoration: none;">Préférences d'email</a> | 
-                    <a href="mailto:contact@tradepulse.com" style="color: rgba(255, 255, 255, 0.5); text-decoration: none;">Contact</a>
-                </p>
-            </td>
-        </tr>
-    </table>
+        <div class="footer">
+            <p>Ce mail est envoyé automatiquement par TradePulse.</p>
+            <p>Pour modifier vos préférences d'alertes, <a href="{{alertsSettingsUrl}}">cliquez ici</a>.</p>
+            <p>© 2025 TradePulse | Finance Intelligence Platform</p>
+        </div>
+    </div>
 </body>
 </html>
