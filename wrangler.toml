@@ -1,0 +1,25 @@
+name = "tradepulse-email-sender"
+type = "javascript"
+account_id = "YOUR_ACCOUNT_ID" # À remplacer par votre ID de compte Cloudflare
+workers_dev = true
+compatibility_date = "2025-03-11"
+
+[triggers]
+# Programmé pour s'exécuter tous les jours à 9:00 CET/CEST (Europe/Paris)
+crons = ["0 9 * * *"]
+
+[vars]
+# Variables d'environnement (vous pouvez les configurer via l'interface Cloudflare)
+SMTP_HOST = "smtp.example.com"
+SMTP_PORT = "587"
+# Ne stockez pas d'informations sensibles ici, utilisez plutôt Worker Secrets
+
+# [secrets]
+# SMTP_USER
+# SMTP_PASSWORD
+
+[build]
+command = "npm install"
+
+[build.upload]
+format = "service-worker"
