@@ -6,7 +6,7 @@
 
 // Configuration de l'API
 const API_CONFIG = {
-    // URL du serveur proxy (mis à jour avec la nouvelle URL Render)
+    // URL du serveur proxy (mise à jour avec l'URL Render valide)
     baseUrl: 'https://stock-analysis-platform-q9tc.onrender.com',
     
     // Mode debug pour afficher plus d'informations dans la console
@@ -77,6 +77,26 @@ class PerplexityIntegration {
             console.log('✅ Intégration Perplexity initialisée avec succès');
         } catch (error) {
             console.error('❌ API inaccessible:', error.message);
+            console.log('⚠️ Tentative de réveil du service Render...');
+            
+            // Deuxième tentative après un délai pour laisser le temps au service de se réveiller
+            setTimeout(async () => {
+                try {
+                    await this.fetchWithRetry(`${API_CONFIG.baseUrl}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    }, true);
+                    console.log('✅ API accessible après réveil');
+                    await this.updateData();
+                } catch (secondError) {
+                    console.error('❌ API toujours inaccessible après tentative de réveil:', secondError.message);
+                    this.loadFallbackData();
+                }
+            }, 5000); // 5 secondes de délai pour laisser le temps au service de se réveiller
+            
+            // Charger les données de secours pendant ce temps
             this.loadFallbackData();
         }
     }
