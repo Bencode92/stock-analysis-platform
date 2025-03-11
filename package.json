@@ -1,0 +1,36 @@
+{
+  "name": "tradepulse-email-system",
+  "version": "1.0.0",
+  "description": "Système d'envoi d'emails pour la plateforme TradePulse",
+  "main": "email-server.js",
+  "scripts": {
+    "start": "node email-server.js",
+    "dev": "nodemon email-server.js",
+    "send-daily": "node send-daily-email.js"
+  },
+  "keywords": [
+    "email",
+    "finance",
+    "dashboard",
+    "tradepulse"
+  ],
+  "author": "TradePulse Team",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.17.3",
+    "fs-extra": "^10.0.1",
+    "handlebars": "^4.7.7",
+    "moment": "^2.29.1",
+    "node-cron": "^3.0.0",
+    "node-fetch": "^2.6.7",
+    "nodemailer": "^6.7.3"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "readme": "# TradePulse Email System\n\nCe système permet d'envoyer automatiquement un résumé quotidien du tableau de bord TradePulse par email.\n\n## Installation\n\n```bash\nnpm install\n```\n\n## Utilisation\n\n### Prévisualisation de l'email\n\n```bash\nnpm start\n```\n\nPuis ouvrez http://localhost:3000 dans votre navigateur.\n\n### Envoi manuel d'un email de test\n\n```bash\nnpm run send-daily\n```\n\n### Configuration pour envoi automatique quotidien\n\nVous pouvez configurer un job cron pour exécuter `npm run send-daily` tous les jours à 9h00.\n\nExemple de configuration cron:\n\n```\n0 9 * * * cd /chemin/vers/tradepulse && npm run send-daily\n```\n"
+}
