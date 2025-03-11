@@ -75,6 +75,11 @@
             letter-spacing: 1px;
         }
         
+        .logo-container a {
+            color: var(--text-color);
+            text-decoration: none;
+        }
+        
         .pulse-dot {
             width: 12px;
             height: 12px;
@@ -130,6 +135,7 @@
             align-items: center;
             margin-right: 30px;
             font-size: 0.875rem;
+            color: var(--text-color);
         }
         
         .market-indicator {
@@ -434,6 +440,40 @@
                 display: none;
             }
         }
+
+        /* Style pour news-item caché */
+        .hidden-item {
+            display: none !important;
+        }
+
+        /* Animation pour les éléments filtrés */
+        .fade-in {
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Filtre actif */
+        .filter-active {
+            background-color: rgba(0, 255, 135, 0.1) !important;
+            color: #00FF87 !important;
+            border-color: #00FF87 !important;
+            border-opacity: 0.3 !important;
+        }
+
+        /* Animation pour les mises à jour */
+        .update-animation {
+            animation: pulse 1s ease-in-out;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body>
@@ -467,7 +507,7 @@
         <div class="header-left">
             <div class="logo-container">
                 <div class="pulse-dot"></div>
-                <a href="index.html">TRADEPULSE</a>
+                <a href="index.html" class="text-white">TRADEPULSE</a>
             </div>
             <nav class="main-nav">
                 <a href="actualites.html" class="active">Actualités</a>
@@ -478,7 +518,7 @@
         <div class="header-right">
             <div class="market-status">
                 <div class="market-indicator green"></div>
-                <span>Marché ouvert</span>
+                <span class="text-white">Marché ouvert</span>
                 <span class="market-time" id="marketTime">09:45:22</span>
             </div>
             <a href="recherche.html" class="search-button ripple">
@@ -507,18 +547,18 @@
                             ÉVÉNEMENTS À VENIR
                         </h2>
                         <div class="flex gap-2">
-                            <button class="text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded">
+                            <button id="today-btn" class="text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded filter-active">
                                 Aujourd'hui
                             </button>
-                            <button class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded">
+                            <button id="week-btn" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded">
                                 Cette semaine
                             </button>
                         </div>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <!-- Événement 1 -->
-                        <div class="bg-gray-800 bg-opacity-60 p-3 rounded-lg border-l-2 border-red-500 flex items-start">
+                        <!-- Événement 1 (aujourd'hui) -->
+                        <div class="bg-gray-800 bg-opacity-60 p-3 rounded-lg border-l-2 border-red-500 flex items-start event-item" data-date="today">
                             <div class="flex-shrink-0 w-12 h-12 bg-gray-900 rounded-lg flex flex-col items-center justify-center mr-3">
                                 <span class="text-sm font-bold">10</span>
                                 <span class="text-xs text-gray-400">MAR</span>
@@ -535,8 +575,8 @@
                             </div>
                         </div>
                         
-                        <!-- Événement 2 -->
-                        <div class="bg-gray-800 bg-opacity-60 p-3 rounded-lg border-l-2 border-red-500 flex items-start">
+                        <!-- Événement 2 (cette semaine) -->
+                        <div class="bg-gray-800 bg-opacity-60 p-3 rounded-lg border-l-2 border-red-500 flex items-start event-item" data-date="week">
                             <div class="flex-shrink-0 w-12 h-12 bg-gray-900 rounded-lg flex flex-col items-center justify-center mr-3">
                                 <span class="text-sm font-bold">12</span>
                                 <span class="text-xs text-gray-400">MAR</span>
@@ -553,8 +593,8 @@
                             </div>
                         </div>
                         
-                        <!-- Événement 3 -->
-                        <div class="bg-gray-800 bg-opacity-60 p-3 rounded-lg border-l-2 border-yellow-500 flex items-start">
+                        <!-- Événement 3 (cette semaine) -->
+                        <div class="bg-gray-800 bg-opacity-60 p-3 rounded-lg border-l-2 border-yellow-500 flex items-start event-item" data-date="week">
                             <div class="flex-shrink-0 w-12 h-12 bg-gray-900 rounded-lg flex flex-col items-center justify-center mr-3">
                                 <span class="text-sm font-bold">15</span>
                                 <span class="text-xs text-gray-400">MAR</span>
@@ -577,7 +617,7 @@
                 <div class="mb-8">
                     <div class="flex flex-wrap gap-2 md:gap-4 justify-between items-center">
                         <div class="flex gap-2 overflow-x-auto pb-2 md:pb-0" id="category-filters">
-                            <button class="text-xs md:text-sm px-3 py-1.5 bg-green-400 bg-opacity-10 text-green-400 border border-green-400 border-opacity-30 rounded-full font-medium" data-category="all">
+                            <button class="text-xs md:text-sm px-3 py-1.5 bg-green-400 bg-opacity-10 text-green-400 border border-green-400 border-opacity-30 rounded-full font-medium filter-active" data-category="all">
                                 Tous
                             </button>
                             <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="marches">
@@ -592,19 +632,30 @@
                             <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="tech">
                                 Tech
                             </button>
+                            <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="crypto">
+                                Crypto
+                            </button>
                         </div>
                         
-                        <div class="flex gap-2">
+                        <div class="flex flex-wrap gap-2">
                             <select id="sort-select" class="text-xs md:text-sm px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700 rounded-full">
-                                <option>Trier par</option>
-                                <option>Plus récent</option>
-                                <option>Impact</option>
+                                <option value="recent">Plus récent</option>
+                                <option value="older">Plus ancien</option>
+                                <option value="impact-high">Impact (élevé à faible)</option>
+                                <option value="impact-low">Impact (faible à élevé)</option>
                             </select>
                             <select id="impact-select" class="text-xs md:text-sm px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700 rounded-full">
-                                <option>Tous impacts</option>
-                                <option>Positif</option>
-                                <option>Négatif</option>
-                                <option>Neutre</option>
+                                <option value="all">Tous impacts</option>
+                                <option value="positive">Positif</option>
+                                <option value="negative">Négatif</option>
+                                <option value="neutral">Neutre</option>
+                            </select>
+                            <select id="country-select" class="text-xs md:text-sm px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700 rounded-full">
+                                <option value="all">Tous pays</option>
+                                <option value="us">États-Unis</option>
+                                <option value="eu">Europe</option>
+                                <option value="fr">France</option>
+                                <option value="other">Autres</option>
                             </select>
                         </div>
                     </div>
@@ -616,7 +667,7 @@
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" id="featured-news">
                         <!-- Article 1 -->
-                        <div class="bg-gray-800 bg-opacity-50 rounded-xl overflow-hidden border border-gray-700 group hover:border-green-400 hover:border-opacity-30 transition-all duration-300">
+                        <div class="bg-gray-800 bg-opacity-50 rounded-xl overflow-hidden border border-gray-700 group hover:border-green-400 hover:border-opacity-30 transition-all duration-300 news-item" data-category="economie" data-impact="negative" data-country="us" data-date="2025-03-07">
                             <div class="relative h-48 bg-gray-700">
                                 <div class="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent opacity-60"></div>
                                 <div class="absolute bottom-3 left-3 right-3">
@@ -660,7 +711,7 @@
                         </div>
                         
                         <!-- Article 2 -->
-                        <div class="bg-gray-800 bg-opacity-50 rounded-xl overflow-hidden border border-gray-700 group hover:border-green-400 hover:border-opacity-30 transition-all duration-300">
+                        <div class="bg-gray-800 bg-opacity-50 rounded-xl overflow-hidden border border-gray-700 group hover:border-green-400 hover:border-opacity-30 transition-all duration-300 news-item" data-category="entreprises" data-impact="positive" data-country="fr" data-date="2025-03-07">
                             <div class="relative h-48 bg-gray-700">
                                 <div class="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent opacity-60"></div>
                                 <div class="absolute bottom-3 left-3 right-3">
@@ -711,7 +762,7 @@
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-5" id="recent-news">
                         <!-- Actualité 1 -->
-                        <div class="bg-gray-800 bg-opacity-40 rounded-lg border border-gray-700 p-4 hover:border-green-400 hover:border-opacity-30 transition-all duration-300">
+                        <div class="bg-gray-800 bg-opacity-40 rounded-lg border border-gray-700 p-4 hover:border-green-400 hover:border-opacity-30 transition-all duration-300 news-item" data-category="marches" data-impact="neutral" data-country="eu" data-date="2025-03-09">
                             <div class="flex justify-between items-center mb-3">
                                 <span class="text-xs px-2 py-0.5 bg-green-400 bg-opacity-20 text-green-400 rounded-full">
                                     Marchés
@@ -737,7 +788,7 @@
                         </div>
                         
                         <!-- Actualité 2 -->
-                        <div class="bg-gray-800 bg-opacity-40 rounded-lg border border-gray-700 p-4 hover:border-green-400 hover:border-opacity-30 transition-all duration-300">
+                        <div class="bg-gray-800 bg-opacity-40 rounded-lg border border-gray-700 p-4 hover:border-green-400 hover:border-opacity-30 transition-all duration-300 news-item" data-category="tech" data-impact="positive" data-country="us" data-date="2025-03-08">
                             <div class="flex justify-between items-center mb-3">
                                 <span class="text-xs px-2 py-0.5 bg-green-400 bg-opacity-20 text-green-400 rounded-full">
                                     Tech
@@ -763,7 +814,7 @@
                         </div>
                         
                         <!-- Actualité 3 -->
-                        <div class="bg-gray-800 bg-opacity-40 rounded-lg border border-gray-700 p-4 hover:border-green-400 hover:border-opacity-30 transition-all duration-300">
+                        <div class="bg-gray-800 bg-opacity-40 rounded-lg border border-gray-700 p-4 hover:border-green-400 hover:border-opacity-30 transition-all duration-300 news-item" data-category="crypto" data-impact="positive" data-country="other" data-date="2025-03-07">
                             <div class="flex justify-between items-center mb-3">
                                 <span class="text-xs px-2 py-0.5 bg-green-400 bg-opacity-20 text-green-400 rounded-full">
                                     Crypto
@@ -911,23 +962,160 @@
                 });
             }
 
+            // Gestion des boutons Aujourd'hui/Cette semaine
+            const todayBtn = document.getElementById('today-btn');
+            const weekBtn = document.getElementById('week-btn');
+            const eventItems = document.querySelectorAll('.event-item');
+
+            todayBtn.addEventListener('click', function() {
+                // Activer ce bouton et désactiver l'autre
+                todayBtn.classList.add('filter-active');
+                todayBtn.classList.remove('text-gray-400', 'border-gray-700');
+                weekBtn.classList.remove('filter-active');
+                weekBtn.classList.add('text-gray-400', 'border-gray-700');
+                
+                // Filtrer les événements pour aujourd'hui
+                eventItems.forEach(item => {
+                    if (item.dataset.date === 'today') {
+                        item.classList.remove('hidden-item');
+                        item.classList.add('fade-in');
+                    } else {
+                        item.classList.add('hidden-item');
+                    }
+                });
+            });
+
+            weekBtn.addEventListener('click', function() {
+                // Activer ce bouton et désactiver l'autre
+                weekBtn.classList.add('filter-active');
+                weekBtn.classList.remove('text-gray-400', 'border-gray-700');
+                todayBtn.classList.remove('filter-active');
+                todayBtn.classList.add('text-gray-400', 'border-gray-700');
+                
+                // Afficher tous les événements de la semaine
+                eventItems.forEach(item => {
+                    item.classList.remove('hidden-item');
+                    item.classList.add('fade-in');
+                });
+            });
+
             // Gestion des filtres de catégories
-            const filterButtons = document.querySelectorAll('#category-filters button');
-            filterButtons.forEach(button => {
+            const categoryButtons = document.querySelectorAll('#category-filters button');
+            const newsItems = document.querySelectorAll('.news-item');
+            
+            categoryButtons.forEach(button => {
                 button.addEventListener('click', function() {
                     // Mettre à jour les styles des boutons
-                    filterButtons.forEach(btn => {
-                        btn.classList.remove('bg-green-400', 'bg-opacity-10', 'text-green-400', 'border-green-400', 'border-opacity-30');
+                    categoryButtons.forEach(btn => {
+                        btn.classList.remove('filter-active');
                         btn.classList.add('bg-transparent', 'text-gray-400', 'border-gray-700');
+                        btn.classList.remove('bg-green-400', 'bg-opacity-10', 'text-green-400', 'border-green-400', 'border-opacity-30');
                     });
                     
+                    this.classList.add('filter-active');
                     this.classList.remove('bg-transparent', 'text-gray-400', 'border-gray-700');
                     this.classList.add('bg-green-400', 'bg-opacity-10', 'text-green-400', 'border-green-400', 'border-opacity-30');
                     
-                    // Simuler un filtrage par catégorie
-                    console.log('Filtrage par catégorie:', this.dataset.category);
+                    // Filtrer les actualités
+                    filterNewsItems();
                 });
             });
+
+            // Gestion des sélecteurs de filtres
+            const sortSelect = document.getElementById('sort-select');
+            const impactSelect = document.getElementById('impact-select');
+            const countrySelect = document.getElementById('country-select');
+
+            // Ajouter les événements de changement
+            sortSelect.addEventListener('change', filterNewsItems);
+            impactSelect.addEventListener('change', filterNewsItems);
+            countrySelect.addEventListener('change', filterNewsItems);
+
+            // Fonction pour filtrer les actualités
+            function filterNewsItems() {
+                // Récupérer les filtres sélectionnés
+                const categoryBtn = document.querySelector('#category-filters button.filter-active');
+                const category = categoryBtn ? categoryBtn.dataset.category : 'all';
+                const impact = impactSelect.value;
+                const country = countrySelect.value;
+                const sort = sortSelect.value;
+
+                // Appliquer les filtres à tous les items d'actualité
+                newsItems.forEach(item => {
+                    const itemCategory = item.dataset.category;
+                    const itemImpact = item.dataset.impact;
+                    const itemCountry = item.dataset.country;
+                    
+                    // Vérifier si l'item correspond aux filtres
+                    const matchesCategory = category === 'all' || itemCategory === category;
+                    
+                    let matchesImpact = true;
+                    if (impact === 'positive') matchesImpact = itemImpact === 'positive';
+                    else if (impact === 'negative') matchesImpact = itemImpact === 'negative';
+                    else if (impact === 'neutral') matchesImpact = itemImpact === 'neutral';
+                    
+                    const matchesCountry = country === 'all' || itemCountry === country;
+                    
+                    // Afficher ou masquer l'item en fonction des filtres
+                    if (matchesCategory && matchesImpact && matchesCountry) {
+                        item.classList.remove('hidden-item');
+                    } else {
+                        item.classList.add('hidden-item');
+                    }
+                });
+
+                // Appliquer le tri
+                if (sort === 'recent' || sort === 'older' || sort === 'impact-high' || sort === 'impact-low') {
+                    sortNewsItems(sort);
+                }
+
+                // Ajouter une animation aux éléments affichés
+                setTimeout(() => {
+                    document.querySelectorAll('.news-item:not(.hidden-item)').forEach(item => {
+                        item.classList.add('fade-in');
+                    });
+                }, 50);
+            }
+
+            // Fonction pour trier les actualités
+            function sortNewsItems(sortType) {
+                const featuredNews = document.getElementById('featured-news');
+                const recentNews = document.getElementById('recent-news');
+                
+                // Trier les éléments dans chaque conteneur
+                sortContainer(featuredNews, sortType);
+                sortContainer(recentNews, sortType);
+            }
+
+            function sortContainer(container, sortType) {
+                if (!container) return;
+                
+                const items = Array.from(container.children);
+                
+                items.sort((a, b) => {
+                    if (sortType === 'recent') {
+                        // Trier par date (plus récent en premier)
+                        return new Date(b.dataset.date) - new Date(a.dataset.date);
+                    } else if (sortType === 'older') {
+                        // Trier par date (plus ancien en premier)
+                        return new Date(a.dataset.date) - new Date(b.dataset.date);
+                    } else if (sortType === 'impact-high') {
+                        // Trier par impact (élevé à faible)
+                        const impactOrder = { 'negative': 3, 'neutral': 2, 'positive': 1 };
+                        return impactOrder[b.dataset.impact] - impactOrder[a.dataset.impact];
+                    } else if (sortType === 'impact-low') {
+                        // Trier par impact (faible à élevé)
+                        const impactOrder = { 'negative': 3, 'neutral': 2, 'positive': 1 };
+                        return impactOrder[a.dataset.impact] - impactOrder[b.dataset.impact];
+                    }
+                    return 0;
+                });
+                
+                // Réinsérer les éléments triés
+                items.forEach(item => {
+                    container.appendChild(item);
+                });
+            }
 
             // Gestion du bouton "Voir plus"
             const loadMoreBtn = document.getElementById('load-more-btn');
@@ -937,8 +1125,89 @@
                     
                     // Simuler un chargement
                     setTimeout(() => {
+                        // Créer de nouvelles actualités dynamiquement
+                        const recentNews = document.getElementById('recent-news');
+                        
+                        // Nouvelles actualités à ajouter
+                        const newArticles = [
+                            {
+                                category: 'economie',
+                                impact: 'negative',
+                                country: 'us',
+                                date: '2025-03-06',
+                                title: 'Hausse inattendue du taux de chômage américain',
+                                source: 'Bureau of Labor Statistics',
+                                time: 'Il y a 3j',
+                                content: 'Le taux de chômage aux États-Unis a augmenté de 0,2 point pour atteindre 3,8%, surprenant les analystes qui anticipaient une stabilité.'
+                            },
+                            {
+                                category: 'tech',
+                                impact: 'positive',
+                                country: 'us',
+                                date: '2025-03-05',
+                                title: 'Microsoft dévoile sa nouvelle génération d\'IA',
+                                source: 'Microsoft',
+                                time: 'Il y a 4j',
+                                content: 'Le géant technologique a présenté sa nouvelle plateforme d\'intelligence artificielle destinée aux entreprises, promettant un gain de productivité substantiel.'
+                            },
+                            {
+                                category: 'marches',
+                                impact: 'neutral',
+                                country: 'eu',
+                                date: '2025-03-06',
+                                title: 'Les marchés européens clôturent en légère hausse',
+                                source: 'Euronext',
+                                time: 'Il y a 3j',
+                                content: 'Les principaux indices européens ont terminé la séance en légère hausse malgré les tensions géopolitiques persistantes.'
+                            }
+                        ];
+                        
+                        // Ajouter chaque nouvelle actualité
+                        newArticles.forEach(article => {
+                            const newItem = document.createElement('div');
+                            newItem.className = 'bg-gray-800 bg-opacity-40 rounded-lg border border-gray-700 p-4 hover:border-green-400 hover:border-opacity-30 transition-all duration-300 news-item fade-in';
+                            newItem.dataset.category = article.category;
+                            newItem.dataset.impact = article.impact;
+                            newItem.dataset.country = article.country;
+                            newItem.dataset.date = article.date;
+                            
+                            // Simuler la structure HTML d'une actualité
+                            newItem.innerHTML = `
+                                <div class="flex justify-between items-center mb-3">
+                                    <span class="text-xs px-2 py-0.5 bg-green-400 bg-opacity-20 text-green-400 rounded-full">
+                                        ${article.category.charAt(0).toUpperCase() + article.category.slice(1)}
+                                    </span>
+                                    <span class="text-xs text-gray-400 flex items-center">
+                                        <span class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5"></span>
+                                        ${article.time}
+                                    </span>
+                                </div>
+                                
+                                <h3 class="text-base font-medium mb-2">${article.title}</h3>
+                                
+                                <p class="text-sm text-gray-400 mb-3">
+                                    ${article.content}
+                                </p>
+                                
+                                <div class="flex justify-between items-center text-xs">
+                                    <span class="text-gray-500">${article.source}</span>
+                                    <span class="text-gray-400 flex items-center gap-1">
+                                        <span class="px-1.5 py-0.5 ${article.impact === 'positive' ? 'bg-green-900 bg-opacity-20 text-green-400' : (article.impact === 'negative' ? 'bg-red-900 bg-opacity-20 text-red-400' : 'bg-gray-700')} rounded">
+                                            Impact ${article.impact === 'positive' ? 'positif' : (article.impact === 'negative' ? 'négatif' : 'neutre')}
+                                        </span>
+                                    </span>
+                                </div>
+                            `;
+                            
+                            // Ajouter au container
+                            recentNews.appendChild(newItem);
+                        });
+                        
+                        // Réappliquer les filtres actuels
+                        filterNewsItems();
+                        
+                        // Rétablir le texte du bouton
                         this.innerHTML = 'Voir plus d\'actualités';
-                        alert('Fonctionnalité simulée : plus d\'actualités seraient chargées ici.');
                     }, 1000);
                 });
             }
