@@ -582,7 +582,7 @@
                 <span>Marché ouvert</span>
                 <span class="market-time" id="marketTime">09:45:22</span>
             </div>
-            <a href="recherche.html" class="search-button ripple">
+            <a href="questions-ia.html" class="search-button ripple">
                 <i class="fas fa-search"></i>
                 <span>Ma question</span>
             </a>
@@ -657,31 +657,31 @@
                         <div class="p-4">
                             <div class="space-y-4">
                                 <!-- Actualité 1 -->
-                                <div class="p-3 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-neon-green hover:translate-x-1 transition-transform news-card">
+                                <a href="actualites.html#event-fed" class="p-3 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-neon-green hover:translate-x-1 transition-transform news-card block">
                                     <h4 class="font-medium mb-1">La Fed annonce une réunion exceptionnelle sur les taux</h4>
                                     <div class="flex justify-between text-xs text-white text-opacity-70">
                                         <span>Federal Reserve</span>
                                         <span>Il y a 1h</span>
                                     </div>
-                                </div>
+                                </a>
                                 
                                 <!-- Actualité 2 -->
-                                <div class="p-3 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-neon-green hover:translate-x-1 transition-transform news-card">
+                                <a href="actualites.html#event-lvmh" class="p-3 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-neon-green hover:translate-x-1 transition-transform news-card block">
                                     <h4 class="font-medium mb-1">LVMH dévoile des résultats trimestriels supérieurs aux attentes</h4>
                                     <div class="flex justify-between text-xs text-white text-opacity-70">
                                         <span>LVMH</span>
                                         <span>Il y a 3h</span>
                                     </div>
-                                </div>
+                                </a>
                                 
                                 <!-- Actualité 3 -->
-                                <div class="p-3 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-neon-green hover:translate-x-1 transition-transform news-card">
+                                <a href="actualites.html#event-btc" class="p-3 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-neon-green hover:translate-x-1 transition-transform news-card block">
                                     <h4 class="font-medium mb-1">Bitcoin franchit un nouveau seuil à 75 000$</h4>
                                     <div class="flex justify-between text-xs text-white text-opacity-70">
                                         <span>CoinDesk</span>
                                         <span>Il y a 2j</span>
                                     </div>
-                                </div>
+                                </a>
                             </div>
                             
                             <a href="actualites.html" class="mt-4 text-neon-green text-sm inline-flex items-center hover:underline">
@@ -930,6 +930,12 @@
                                     <div class="font-medium" id="lastUpdateTime">11/03/2025 09:15:32</div>
                                 </div>
                             </div>
+                            
+                            <!-- Lien vers la page de questions IA -->
+                            <a href="questions-ia.html" class="mt-4 text-neon-green text-sm inline-flex items-center hover:underline">
+                                <i class="fas fa-robot mr-2"></i>
+                                Poser une question à l'IA
+                            </a>
                         </div>
                         <!-- Connecteur visuel vers l'API de recherche -->
                         <div class="connection-line hidden lg:block absolute -left-10 top-10 w-10 transform -rotate-45"></div>
@@ -1206,13 +1212,16 @@
                     datasets: [{
                         data: [62, 20, 15, 3],
                         backgroundColor: [
-                            'rgba(76, 175, 80, 0.8)',
-                            'rgba(33, 150, 243, 0.8)',
-                            'rgba(255, 193, 7, 0.8)',
-                            'rgba(156, 39, 176, 0.8)'
+                            'rgba(76, 175, 80, 0.9)',
+                            'rgba(33, 150, 243, 0.9)',
+                            'rgba(255, 193, 7, 0.9)',
+                            'rgba(156, 39, 176, 0.9)'
                         ],
                         borderColor: 'rgba(1, 22, 39, 0.8)',
-                        borderWidth: 1
+                        borderWidth: 2,
+                        hoverOffset: 12,
+                        hoverBorderColor: 'rgba(0, 255, 135, 0.7)',
+                        hoverBorderWidth: 3
                     }]
                 };
                 
@@ -1223,15 +1232,28 @@
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        cutout: '65%',
+                        cutout: '70%',
                         plugins: {
                             legend: {
                                 display: false
                             },
                             tooltip: {
+                                backgroundColor: 'rgba(1, 22, 39, 0.9)',
                                 bodyFont: {
-                                    family: 'Inter'
+                                    family: 'Inter',
+                                    size: 14
                                 },
+                                titleFont: {
+                                    family: 'Inter',
+                                    size: 16,
+                                    weight: 'bold'
+                                },
+                                padding: 12,
+                                cornerRadius: 8,
+                                caretSize: 8,
+                                borderColor: 'rgba(0, 255, 135, 0.7)',
+                                borderWidth: 1,
+                                displayColors: true,
                                 callbacks: {
                                     label: function(context) {
                                         return context.label + ': ' + context.raw + '%';
@@ -1241,7 +1263,9 @@
                         },
                         animation: {
                             animateRotate: true,
-                            animateScale: true
+                            animateScale: true,
+                            duration: 1200,
+                            easing: 'easeOutQuart'
                         }
                     }
                 };
@@ -1251,29 +1275,61 @@
             }
             
             function updatePortfolioData(portfolioType) {
-                // Dans une implémentation réelle, on récupérerait les données du portefeuille depuis l'API
-                // Pour cet exemple, nous modifions simplement quelques valeurs d'affichage
-                
+                // Les données des différents types de portefeuille
                 const portfolioData = {
                     'aggressive': {
-                        value: '26,842.15 €',
-                        performance: '+3.2%',
-                        monthlyPerformance: '+5.8%'
+                        value: '32,415.25 €',
+                        performance: '+7.2%',
+                        monthlyPerformance: '+9.8%',
+                        benchmark: '+3.1% (S&P 500)',
+                        components: [
+                            { name: 'NVIDIA Corporation', type: 'STOCK', allocation: '30%', performance: '+5.5%' },
+                            { name: 'Tesla, Inc.', type: 'STOCK', allocation: '20%', performance: '+3.3%' },
+                            { name: 'Bitcoin', type: 'CRYPTO', allocation: '15%', performance: '+18.7%' },
+                            { name: 'Ethereum', type: 'CRYPTO', allocation: '10%', performance: '+9.5%' },
+                            { name: 'ARK Innovation ETF', type: 'ETF', allocation: '15%', performance: '+2.2%' },
+                            { name: 'Palantir Technologies', type: 'STOCK', allocation: '10%', performance: '+3.8%' }
+                        ],
+                        pieData: [80, 15, 25, 0]
                     },
                     'moderate': {
-                        value: '53,485.50 €',
-                        performance: '+1.8%',
-                        monthlyPerformance: '+3.2%'
+                        value: '26,842.15 €',
+                        performance: '+3.2%',
+                        monthlyPerformance: '+5.8%',
+                        benchmark: '+2.3% (S&P 500)',
+                        components: [
+                            { name: 'NVIDIA Corporation', type: 'STOCK', allocation: '25%', performance: '+3.8%' },
+                            { name: 'Microsoft Corporation', type: 'STOCK', allocation: '15%', performance: '+2.2%' },
+                            { name: 'Amazon.com, Inc.', type: 'STOCK', allocation: '12%', performance: '+2.1%' },
+                            { name: 'Tesla, Inc.', type: 'STOCK', allocation: '10%', performance: '-1.5%' },
+                            { name: 'SPDR S&P 500 ETF', type: 'ETF', allocation: '20%', performance: '+0.7%' },
+                            { name: 'Bitcoin', type: 'CRYPTO', allocation: '5%', performance: '+12.3%' },
+                            { name: 'Obligations d\'État', type: 'BOND', allocation: '13%', performance: '+0.4%' }
+                        ],
+                        pieData: [62, 20, 15, 3]
                     },
                     'stable': {
                         value: '18,124.70 €',
-                        performance: '-0.3%',
-                        monthlyPerformance: '+1.1%'
+                        performance: '+1.2%',
+                        monthlyPerformance: '+3.1%',
+                        benchmark: '+2.3% (S&P 500)',
+                        components: [
+                            { name: 'Vanguard Total Bond ETF', type: 'BOND', allocation: '25%', performance: '+0.4%' },
+                            { name: 'Johnson & Johnson', type: 'STOCK', allocation: '12%', performance: '+0.8%' },
+                            { name: 'Microsoft Corporation', type: 'STOCK', allocation: '10%', performance: '+2.2%' },
+                            { name: 'SPDR S&P 500 ETF', type: 'ETF', allocation: '15%', performance: '+0.7%' },
+                            { name: 'iShares 20+ Year Treasury', type: 'BOND', allocation: '23%', performance: '+0.2%' },
+                            { name: 'Gold ETF', type: 'ETF', allocation: '5%', performance: '+1.1%' },
+                            { name: 'Obligations d\'État', type: 'BOND', allocation: '10%', performance: '+0.3%' }
+                        ],
+                        pieData: [22, 20, 0, 58]
                     }
                 };
                 
                 // Mise à jour des valeurs affichées
                 const data = portfolioData[portfolioType];
+                
+                // Mettre à jour les informations principales
                 document.querySelector('#portfolio-widget .text-2xl.font-bold').textContent = data.value;
                 
                 const perfElement = document.querySelector('#portfolio-widget .text-sm.flex.items-center');
@@ -1285,13 +1341,98 @@
                     perfElement.innerHTML = `<i class="fas fa-caret-down mr-1"></i> ${data.performance} (7j)`;
                 }
                 
-                document.querySelector('#portfolio-widget .text-2xl.font-bold:nth-of-type(2)').textContent = data.monthlyPerformance;
+                document.querySelector('#portfolio-widget .bg-\\[\\#011E34\\].bg-opacity-70.p-4.rounded-lg:nth-of-type(2) .text-2xl.font-bold').textContent = data.monthlyPerformance;
+                document.querySelector('#portfolio-widget .bg-\\[\\#011E34\\].bg-opacity-70.p-4.rounded-lg:nth-of-type(2) .text-sm.text-white.text-opacity-70').textContent = `vs ${data.benchmark}`;
+                
+                // Mettre à jour le tableau des composants
+                const tableBody = document.querySelector('#portfolio-widget tbody');
+                tableBody.innerHTML = '';
+                
+                data.components.forEach(component => {
+                    const row = document.createElement('tr');
+                    row.className = 'border-b border-white border-opacity-5';
+                    
+                    row.innerHTML = `
+                        <td class="py-3">${component.name}</td>
+                        <td>
+                            <span class="px-2 py-0.5 text-xs rounded ${getTypeClass(component.type)}">
+                                ${component.type}
+                            </span>
+                        </td>
+                        <td class="text-right font-medium">${component.allocation}</td>
+                        <td class="text-right font-medium ${component.performance.startsWith('+') ? 'trend-up' : 'trend-down'}">${component.performance}</td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+                
+                // Mettre à jour le graphique avec les nouvelles données
+                updateChartData(data.pieData);
+                
+                // Mettre à jour la légende
+                updateLegendValues(data.pieData);
+            }
+            
+            // Fonction utilitaire pour obtenir la classe CSS en fonction du type d'actif
+            function getTypeClass(type) {
+                switch(type) {
+                    case 'STOCK':
+                        return 'bg-green-500 bg-opacity-20 text-green-400';
+                    case 'ETF':
+                        return 'bg-blue-500 bg-opacity-20 text-blue-400';
+                    case 'CRYPTO':
+                        return 'bg-yellow-500 bg-opacity-20 text-yellow-400';
+                    case 'BOND':
+                        return 'bg-purple-500 bg-opacity-20 text-purple-400';
+                    default:
+                        return 'bg-gray-500 bg-opacity-20 text-gray-400';
+                }
+            }
+            
+            // Fonction pour mettre à jour les données du graphique
+            function updateChartData(newData) {
+                const chartInstance = Chart.getChart(document.getElementById('assetAllocationChart'));
+                if (chartInstance) {
+                    chartInstance.data.datasets[0].data = newData;
+                    chartInstance.update();
+                }
+            }
+            
+            // Fonction pour mettre à jour les valeurs de la légende
+            function updateLegendValues(data) {
+                const legendItems = document.querySelectorAll('.legend-value');
+                legendItems.forEach((item, index) => {
+                    if (index < data.length) {
+                        item.textContent = data[index] + '%';
+                    }
+                });
             }
             
             function updateLastUpdateTime() {
                 const now = new Date();
                 const formattedDate = `${now.toLocaleDateString('fr-FR')} ${now.toLocaleTimeString('fr-FR')}`;
                 document.getElementById('lastUpdateTime').textContent = formattedDate;
+            }
+            
+            // Redirection vers la page IA lors du clic sur le bouton de recherche
+            document.querySelector('.search-button').addEventListener('click', function(e) {
+                e.preventDefault();
+                window.location.href = 'questions-ia.html';
+            });
+
+            // Ajouter un effet visuel lors du survol du widget des crédits IA
+            const aiWidget = document.getElementById('ai-credits-widget');
+            if (aiWidget) {
+                aiWidget.addEventListener('mouseenter', function() {
+                    this.style.boxShadow = '0 0 15px rgba(0, 255, 135, 0.3)';
+                    this.style.transform = 'translateY(-5px)';
+                    this.style.transition = 'all 0.3s ease';
+                });
+                
+                aiWidget.addEventListener('mouseleave', function() {
+                    this.style.boxShadow = '';
+                    this.style.transform = '';
+                });
             }
 
             // Redimensionner le réseau lors du redimensionnement de la fenêtre
