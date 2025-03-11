@@ -24,20 +24,20 @@ document.addEventListener('DOMContentLoaded', function() {
             // Sauvegarder dans localStorage
             localStorage.setItem('tradepulse_user', JSON.stringify(dummyUser));
             
-            // Vérifier si une mise à jour est nécessaire
+            // Enregistrer l'information sur les mises à jour nécessaires dans localStorage
+            // au lieu de rediriger vers index.html pour le modal de mise à jour
             const lastUpdate = localStorage.getItem('tradepulse_last_update');
             const now = Date.now();
             const showUpdateModal = !lastUpdate || (now - parseInt(lastUpdate)) / (1000 * 60 * 60) > 4;
             
-            // Rediriger vers la page des actualités
             if (showUpdateModal) {
-                // Si une mise à jour est nécessaire, afficher le modal de mise à jour
-                // en passant par index.html où le modal sera automatiquement affiché
-                window.location.href = 'index.html?update=true';
-            } else {
-                // Sinon, rediriger directement vers les actualités
-                window.location.href = 'actualites.html';
+                // On enregistre dans localStorage qu'une mise à jour doit être affichée 
+                // mais on redirige quand même vers actualites.html
+                localStorage.setItem('tradepulse_need_update', 'true');
             }
+            
+            // Rediriger directement vers la page des actualités dans tous les cas
+            window.location.href = 'actualites.html';
         });
     }
     
