@@ -6,51 +6,41 @@
     <title>TradePulse - Actualités Financières</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="enhanced-ui.css">
-    <link rel="stylesheet" href="news-enhancements.css">
     <script type="module" src="aiintegration.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        green: {
+                            400: '#00FF87'
+                        }
+                    }
+                },
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif']
+                }
+            }
+        }
+    </script>
     <style>
         /* Variables et reset */
         :root {
             --background-color: #011627; /* Bleu nuit */
-            --background-gradient: linear-gradient(135deg, #010e1a, #011627 70%);
             --text-color: #FFFFFF;
-            --text-secondary: rgba(255, 255, 255, 0.7);
             --accent-color: #00FF87; /* Vert néon */
-            --accent-glow: 0 0 10px rgba(0, 255, 135, 0.6);
             --transition-time: 0.3s;
             --header-height: 70px;
             --sidebar-width: 80px;
-            --card-bg: rgba(1, 30, 52, 0.5);
-            --card-border: 1px solid rgba(0, 255, 135, 0.2);
-            --card-radius: 12px;
-            --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-            --high-impact: #ff4c4c;
-            --medium-impact: #ffc107;
-            --low-impact: #2196f3;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
         }
         
         body {
-            background: var(--background-gradient);
-            color: var(--text-color);
-            line-height: 1.6;
-            overflow-x: hidden;
-            font-size: 16px;
-            min-height: 100vh;
-        }
-        
-        /* Styles de base */
-        a {
-            color: var(--text-color);
-            text-decoration: none;
-            transition: all 0.2s ease;
+            background-color: var(--background-color);
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
         }
         
         /* Header */
@@ -106,6 +96,8 @@
             font-weight: 500;
             position: relative;
             transition: color 0.3s;
+            color: var(--text-color);
+            text-decoration: none;
         }
         
         .main-nav a::after {
@@ -166,6 +158,8 @@
             align-items: center;
             transition: all 0.3s;
             border: 1px solid rgba(0, 255, 135, 0.3);
+            color: var(--text-color);
+            text-decoration: none;
         }
         
         .search-button:hover {
@@ -221,6 +215,7 @@
             color: rgba(255, 255, 255, 0.7);
             transition: all 0.3s;
             position: relative;
+            text-decoration: none;
         }
         
         .nav-item:hover, .nav-item.active {
@@ -236,50 +231,8 @@
         .main-container {
             margin-left: var(--sidebar-width);
             margin-top: var(--header-height);
-            padding: 0;
+            padding: 20px;
             min-height: calc(100vh - var(--header-height));
-        }
-        
-        /* Animation de complétion */
-        .update-complete {
-            display: none;
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .success-checkmark {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 20px;
-            position: relative;
-            animation: check-appear 0.8s ease forwards;
-        }
-
-        .success-checkmark::before {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background-color: rgba(0, 255, 135, 0.1);
-            transform: scale(0);
-            animation: circle-expand 0.5s ease forwards;
-        }
-
-        .success-checkmark i {
-            font-size: 40px;
-            color: var(--accent-color);
-            position: relative;
-            opacity: 0;
-            animation: check-appear 0.5s ease 0.3s forwards;
-        }
-
-        @keyframes circle-expand {
-            to { transform: scale(1); }
-        }
-
-        @keyframes check-appear {
-            to { opacity: 1; }
         }
         
         /* Modal de mise à jour */
@@ -430,11 +383,6 @@
         }
         
         /* Animations */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
             70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
@@ -485,449 +433,6 @@
             .main-nav {
                 display: none;
             }
-        }
-
-        /* Nouveau style minimaliste pour la page d'actualités */
-        .minimalist-news-container {
-            background-color: #121212;
-            font-family: 'Inter', sans-serif;
-        }
-
-        .bg-gray-900 {
-            background-color: var(--background-color);
-        }
-
-        .text-white {
-            color: var(--text-color);
-        }
-
-        .text-green-400 {
-            color: var(--accent-color);
-        }
-
-        .text-red-400 {
-            color: var(--high-impact);
-        }
-
-        .text-yellow-400 {
-            color: var(--medium-impact);
-        }
-
-        .text-gray-400 {
-            color: var(--text-secondary);
-        }
-
-        .border-green-400 {
-            border-color: var(--accent-color);
-        }
-
-        .border-red-500 {
-            border-color: var(--high-impact);
-        }
-
-        .border-yellow-500 {
-            border-color: var(--medium-impact);
-        }
-
-        .hover\:border-green-400:hover {
-            border-color: var(--accent-color);
-        }
-
-        .bg-green-400 {
-            background-color: var(--accent-color);
-        }
-
-        .bg-green-900 {
-            background-color: rgba(0, 255, 135, 0.1);
-        }
-
-        .bg-red-900 {
-            background-color: rgba(255, 76, 76, 0.1);
-        }
-
-        .bg-yellow-900 {
-            background-color: rgba(255, 193, 7, 0.1);
-        }
-
-        .bg-gray-800 {
-            background-color: #1a2e3b;
-        }
-
-        .bg-gray-700 {
-            background-color: #132537;
-        }
-
-        .hover\:underline:hover {
-            text-decoration: underline;
-        }
-
-        /* Tailwind-like utility classes */
-        .p-4 {
-            padding: 1rem;
-        }
-
-        .md\:p-6 {
-            padding: 1.5rem;
-        }
-
-        .rounded-lg {
-            border-radius: 0.5rem;
-        }
-
-        .rounded-xl {
-            border-radius: 0.75rem;
-        }
-
-        .rounded-full {
-            border-radius: 9999px;
-        }
-
-        .mb-8 {
-            margin-bottom: 2rem;
-        }
-
-        .mb-10 {
-            margin-bottom: 2.5rem;
-        }
-
-        .mb-4 {
-            margin-bottom: 1rem;
-        }
-
-        .mb-2 {
-            margin-bottom: 0.5rem;
-        }
-
-        .mb-3 {
-            margin-bottom: 0.75rem;
-        }
-
-        .mb-1 {
-            margin-bottom: 0.25rem;
-        }
-
-        .mr-2 {
-            margin-right: 0.5rem;
-        }
-
-        .mr-3 {
-            margin-right: 0.75rem;
-        }
-
-        .mt-1 {
-            margin-top: 0.25rem;
-        }
-
-        .my-1 {
-            margin-top: 0.25rem;
-            margin-bottom: 0.25rem;
-        }
-
-        .mx-auto {
-            margin-left: auto;
-            margin-right: auto;
-        }
-
-        .font-bold {
-            font-weight: 700;
-        }
-
-        .font-medium {
-            font-weight: 500;
-        }
-
-        .font-semibold {
-            font-weight: 600;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .text-left {
-            text-align: left;
-        }
-
-        .text-lg {
-            font-size: 1.125rem;
-        }
-
-        .text-2xl {
-            font-size: 1.5rem;
-        }
-
-        .text-sm {
-            font-size: 0.875rem;
-        }
-
-        .text-xs {
-            font-size: 0.75rem;
-        }
-
-        .flex {
-            display: flex;
-        }
-
-        .flex-shrink-0 {
-            flex-shrink: 0;
-        }
-
-        .flex-grow {
-            flex-grow: 1;
-        }
-
-        .flex-col {
-            flex-direction: column;
-        }
-
-        .flex-wrap {
-            flex-wrap: wrap;
-        }
-
-        .items-center {
-            align-items: center;
-        }
-
-        .items-start {
-            align-items: flex-start;
-        }
-
-        .justify-between {
-            justify-content: space-between;
-        }
-
-        .justify-center {
-            justify-content: center;
-        }
-
-        .w-full {
-            width: 100%;
-        }
-
-        .max-w-6xl {
-            max-width: 72rem;
-        }
-
-        .w-12 {
-            width: 3rem;
-        }
-
-        .h-12 {
-            height: 3rem;
-        }
-
-        .h-48 {
-            height: 12rem;
-        }
-
-        .w-1\.5 {
-            width: 0.375rem;
-        }
-
-        .h-1\.5 {
-            height: 0.375rem;
-        }
-
-        .overflow-hidden {
-            overflow: hidden;
-        }
-
-        .overflow-x-auto {
-            overflow-x: auto;
-        }
-
-        .relative {
-            position: relative;
-        }
-
-        .absolute {
-            position: absolute;
-        }
-
-        .inset-0 {
-            top: 0;
-            right: 0;
-            bottom: 0;
-            left: 0;
-        }
-
-        .bottom-3 {
-            bottom: 0.75rem;
-        }
-
-        .left-3 {
-            left: 0.75rem;
-        }
-
-        .right-3 {
-            right: 0.75rem;
-        }
-
-        .gap-2 {
-            gap: 0.5rem;
-        }
-
-        .gap-4 {
-            gap: 1rem;
-        }
-
-        .gap-6 {
-            gap: 1.5rem;
-        }
-
-        .gap-5 {
-            gap: 1.25rem;
-        }
-
-        .px-3 {
-            padding-left: 0.75rem;
-            padding-right: 0.75rem;
-        }
-
-        .py-2 {
-            padding-top: 0.5rem;
-            padding-bottom: 0.5rem;
-        }
-
-        .py-1 {
-            padding-top: 0.25rem;
-            padding-bottom: 0.25rem;
-        }
-
-        .py-1\.5 {
-            padding-top: 0.375rem;
-            padding-bottom: 0.375rem;
-        }
-
-        .px-2 {
-            padding-left: 0.5rem;
-            padding-right: 0.5rem;
-        }
-
-        .py-0\.5 {
-            padding-top: 0.125rem;
-            padding-bottom: 0.125rem;
-        }
-
-        .px-1\.5 {
-            padding-left: 0.375rem;
-            padding-right: 0.375rem;
-        }
-
-        .px-4 {
-            padding-left: 1rem;
-            padding-right: 1rem;
-        }
-
-        .pb-2 {
-            padding-bottom: 0.5rem;
-        }
-
-        .pb-0 {
-            padding-bottom: 0;
-        }
-
-        .grid {
-            display: grid;
-        }
-
-        .grid-cols-1 {
-            grid-template-columns: repeat(1, minmax(0, 1fr));
-        }
-
-        .grid-cols-3 {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-
-        .grid-cols-2 {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-        }
-
-        .border {
-            border-width: 1px;
-        }
-
-        .border-l-2 {
-            border-left-width: 2px;
-        }
-
-        .border-gray-700 {
-            border-color: rgba(255, 255, 255, 0.1);
-        }
-
-        .bg-opacity-60 {
-            --tw-bg-opacity: 0.6;
-        }
-
-        .bg-opacity-50 {
-            --tw-bg-opacity: 0.5;
-        }
-
-        .bg-opacity-40 {
-            --tw-bg-opacity: 0.4;
-        }
-
-        .bg-opacity-20 {
-            --tw-bg-opacity: 0.2;
-        }
-
-        .bg-opacity-10 {
-            --tw-bg-opacity: 0.1;
-        }
-
-        .border-opacity-30 {
-            --tw-border-opacity: 0.3;
-        }
-
-        .opacity-60 {
-            opacity: 0.6;
-        }
-
-        .transition-all {
-            transition-property: all;
-            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-            transition-duration: 300ms;
-        }
-
-        .duration-300 {
-            transition-duration: 300ms;
-        }
-
-        .group {
-            position: relative;
-        }
-
-        /* Media Queries */
-        @media (min-width: 768px) {
-            .md\:grid-cols-2 {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-
-            .md\:grid-cols-3 {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-            }
-
-            .md\:gap-4 {
-                gap: 1rem;
-            }
-
-            .md\:text-sm {
-                font-size: 0.875rem;
-            }
-
-            .md\:pb-0 {
-                padding-bottom: 0;
-            }
-        }
-
-        /* Section d'événements à venir spécifique */
-        #events-section .event-card {
-            flex: 0 0 auto;
-        }
-
-        /* Animation de survol pour les boutons */
-        .hover\:bg-green-400:hover {
-            background-color: rgba(0, 255, 135, 0.2);
         }
     </style>
 </head>
@@ -1012,14 +517,66 @@
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <!-- Les événements seront injectés ici dynamiquement via le script -->
+                        <!-- Événement 1 -->
+                        <div class="bg-gray-800 bg-opacity-60 p-3 rounded-lg border-l-2 border-red-500 flex items-start">
+                            <div class="flex-shrink-0 w-12 h-12 bg-gray-900 rounded-lg flex flex-col items-center justify-center mr-3">
+                                <span class="text-sm font-bold">10</span>
+                                <span class="text-xs text-gray-400">MAR</span>
+                            </div>
+                            <div class="flex-grow">
+                                <div class="flex items-center">
+                                    <span class="text-xs px-1.5 py-0.5 bg-red-900 bg-opacity-20 text-red-400 rounded mr-2">
+                                        Important
+                                    </span>
+                                    <span class="text-xs text-green-400">08:15</span>
+                                </div>
+                                <h3 class="text-sm font-medium my-1">Réunion exceptionnelle Fed</h3>
+                                <p class="text-xs text-gray-400">Federal Reserve</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Événement 2 -->
+                        <div class="bg-gray-800 bg-opacity-60 p-3 rounded-lg border-l-2 border-red-500 flex items-start">
+                            <div class="flex-shrink-0 w-12 h-12 bg-gray-900 rounded-lg flex flex-col items-center justify-center mr-3">
+                                <span class="text-sm font-bold">12</span>
+                                <span class="text-xs text-gray-400">MAR</span>
+                            </div>
+                            <div class="flex-grow">
+                                <div class="flex items-center">
+                                    <span class="text-xs px-1.5 py-0.5 bg-red-900 bg-opacity-20 text-red-400 rounded mr-2">
+                                        Important
+                                    </span>
+                                    <span class="text-xs text-green-400">10:30</span>
+                                </div>
+                                <h3 class="text-sm font-medium my-1">IPC US (Inflation)</h3>
+                                <p class="text-xs text-gray-400">Bureau of Labor Statistics</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Événement 3 -->
+                        <div class="bg-gray-800 bg-opacity-60 p-3 rounded-lg border-l-2 border-yellow-500 flex items-start">
+                            <div class="flex-shrink-0 w-12 h-12 bg-gray-900 rounded-lg flex flex-col items-center justify-center mr-3">
+                                <span class="text-sm font-bold">15</span>
+                                <span class="text-xs text-gray-400">MAR</span>
+                            </div>
+                            <div class="flex-grow">
+                                <div class="flex items-center">
+                                    <span class="text-xs px-1.5 py-0.5 bg-yellow-900 bg-opacity-20 text-yellow-400 rounded mr-2">
+                                        Moyen
+                                    </span>
+                                    <span class="text-xs text-green-400">14:00</span>
+                                </div>
+                                <h3 class="text-sm font-medium my-1">Sommet G20 Finance</h3>
+                                <p class="text-xs text-gray-400">G20</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Filtres Simplifiés -->
                 <div class="mb-8">
                     <div class="flex flex-wrap gap-2 md:gap-4 justify-between items-center">
-                        <div class="flex gap-2 overflow-x-auto pb-2 md:pb-0" id="filters-container">
+                        <div class="flex gap-2 overflow-x-auto pb-2 md:pb-0" id="category-filters">
                             <button class="text-xs md:text-sm px-3 py-1.5 bg-green-400 bg-opacity-10 text-green-400 border border-green-400 border-opacity-30 rounded-full font-medium" data-category="all">
                                 Tous
                             </button>
@@ -1029,26 +586,25 @@
                             <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="economie">
                                 Économie
                             </button>
+                            <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="entreprises">
+                                Entreprises
+                            </button>
                             <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="tech">
                                 Tech
-                            </button>
-                            <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="crypto">
-                                Crypto
                             </button>
                         </div>
                         
                         <div class="flex gap-2">
-                            <select class="text-xs md:text-sm px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700 rounded-full sort-selector">
-                                <option value="date">Plus récent</option>
-                                <option value="date-asc">Plus ancien</option>
-                                <option value="impact">Impact (élevé à faible)</option>
-                                <option value="impact-asc">Impact (faible à élevé)</option>
+                            <select id="sort-select" class="text-xs md:text-sm px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700 rounded-full">
+                                <option>Trier par</option>
+                                <option>Plus récent</option>
+                                <option>Impact</option>
                             </select>
-                            <select class="text-xs md:text-sm px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700 rounded-full impact-selector">
-                                <option value="all">Tous impacts</option>
-                                <option value="high">Positif</option>
-                                <option value="low">Négatif</option>
-                                <option value="medium">Neutre</option>
+                            <select id="impact-select" class="text-xs md:text-sm px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700 rounded-full">
+                                <option>Tous impacts</option>
+                                <option>Positif</option>
+                                <option>Négatif</option>
+                                <option>Neutre</option>
                             </select>
                         </div>
                     </div>
@@ -1059,7 +615,93 @@
                     <h2 class="text-lg font-semibold mb-4">À LA UNE</h2>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" id="featured-news">
-                        <!-- Les articles à la une seront injectés ici dynamiquement via le script -->
+                        <!-- Article 1 -->
+                        <div class="bg-gray-800 bg-opacity-50 rounded-xl overflow-hidden border border-gray-700 group hover:border-green-400 hover:border-opacity-30 transition-all duration-300">
+                            <div class="relative h-48 bg-gray-700">
+                                <div class="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent opacity-60"></div>
+                                <div class="absolute bottom-3 left-3 right-3">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-xs px-2 py-0.5 bg-green-400 bg-opacity-20 text-green-400 rounded-full">
+                                            Économie
+                                        </span>
+                                        <span class="text-xs text-white flex items-center">
+                                            <span class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5"></span>
+                                            Il y a 1h
+                                        </span>
+                                    </div>
+                                    <h3 class="text-lg font-semibold text-white">La Fed annonce une réunion exceptionnelle sur les taux</h3>
+                                </div>
+                            </div>
+                            
+                            <div class="p-4">
+                                <div class="mb-3 text-xs text-gray-400 flex justify-between">
+                                    <span>Federal Reserve</span>
+                                    <span>7 Mars 2025</span>
+                                </div>
+                                
+                                <p class="text-sm text-gray-300 mb-4">
+                                    La Réserve fédérale américaine vient d'annoncer la tenue d'une réunion exceptionnelle le 10 mars pour discuter des prochaines mesures concernant les taux d'intérêt.
+                                </p>
+                                
+                                <div class="px-3 py-2 bg-gray-900 bg-opacity-50 rounded border-l-2 border-red-400 mb-3">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-xs font-medium">Analyse</span>
+                                        <span class="text-xs text-red-400">Impact négatif</span>
+                                    </div>
+                                    <p class="text-xs text-gray-400">
+                                        Cette annonce surprise laisse présager une possible hausse des taux plus tôt que prévu.
+                                    </p>
+                                </div>
+                                
+                                <a href="#" class="text-xs text-green-400 hover:underline">
+                                    Consulter la source →
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Article 2 -->
+                        <div class="bg-gray-800 bg-opacity-50 rounded-xl overflow-hidden border border-gray-700 group hover:border-green-400 hover:border-opacity-30 transition-all duration-300">
+                            <div class="relative h-48 bg-gray-700">
+                                <div class="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent opacity-60"></div>
+                                <div class="absolute bottom-3 left-3 right-3">
+                                    <div class="flex justify-between items-center mb-1">
+                                        <span class="text-xs px-2 py-0.5 bg-green-400 bg-opacity-20 text-green-400 rounded-full">
+                                            Entreprises
+                                        </span>
+                                        <span class="text-xs text-white flex items-center">
+                                            <span class="w-1.5 h-1.5 bg-yellow-400 rounded-full mr-1.5"></span>
+                                            Il y a 3h
+                                        </span>
+                                    </div>
+                                    <h3 class="text-lg font-semibold text-white">LVMH dévoile des résultats trimestriels supérieurs aux attentes</h3>
+                                </div>
+                            </div>
+                            
+                            <div class="p-4">
+                                <div class="mb-3 text-xs text-gray-400 flex justify-between">
+                                    <span>LVMH</span>
+                                    <span>7 Mars 2025</span>
+                                </div>
+                                
+                                <p class="text-sm text-gray-300 mb-4">
+                                    Le leader mondial du luxe annonce un chiffre d'affaires en hausse de 12% par rapport à l'année précédente, dépassant les prévisions des analystes.
+                                </p>
+                                
+                                <div class="px-3 py-2 bg-gray-900 bg-opacity-50 rounded border-l-2 border-green-400 mb-3">
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-xs font-medium">Analyse</span>
+                                        <span class="text-xs text-green-400">Impact positif</span>
+                                    </div>
+                                    <p class="text-xs text-gray-400">
+                                        Ces résultats confirment la résilience du secteur du luxe face aux incertitudes économiques.
+                                    </p>
+                                </div>
+                                
+                                <a href="#" class="text-xs text-green-400 hover:underline">
+                                    Consulter la source →
+                                </a>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
@@ -1068,13 +710,89 @@
                     <h2 class="text-lg font-semibold mb-4">ACTUALITÉS RÉCENTES</h2>
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-5" id="recent-news">
-                        <!-- Les actualités récentes seront injectées ici dynamiquement via le script -->
+                        <!-- Actualité 1 -->
+                        <div class="bg-gray-800 bg-opacity-40 rounded-lg border border-gray-700 p-4 hover:border-green-400 hover:border-opacity-30 transition-all duration-300">
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-xs px-2 py-0.5 bg-green-400 bg-opacity-20 text-green-400 rounded-full">
+                                    Marchés
+                                </span>
+                                <span class="text-xs text-gray-400 flex items-center">
+                                    <span class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5"></span>
+                                    Il y a 45min
+                                </span>
+                            </div>
+                            
+                            <h3 class="text-base font-medium mb-2">La BCE maintient ses taux directeurs inchangés</h3>
+                            
+                            <p class="text-sm text-gray-400 mb-3">
+                                Lors de sa réunion mensuelle, la BCE a décidé de maintenir son taux de dépôt à 3,25%.
+                            </p>
+                            
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-gray-500">BCE</span>
+                                <span class="text-gray-400 flex items-center gap-1">
+                                    <span class="px-1.5 py-0.5 bg-gray-700 rounded">Impact neutre</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Actualité 2 -->
+                        <div class="bg-gray-800 bg-opacity-40 rounded-lg border border-gray-700 p-4 hover:border-green-400 hover:border-opacity-30 transition-all duration-300">
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-xs px-2 py-0.5 bg-green-400 bg-opacity-20 text-green-400 rounded-full">
+                                    Tech
+                                </span>
+                                <span class="text-xs text-gray-400 flex items-center">
+                                    <span class="w-1.5 h-1.5 bg-yellow-400 rounded-full mr-1.5"></span>
+                                    Il y a 5h
+                                </span>
+                            </div>
+                            
+                            <h3 class="text-base font-medium mb-2">Apple lance une nouvelle gamme de produits IA</h3>
+                            
+                            <p class="text-sm text-gray-400 mb-3">
+                                Le géant de la tech dévoile ses premiers produits dédiés à l'intelligence artificielle.
+                            </p>
+                            
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-gray-500">Apple Inc.</span>
+                                <span class="text-gray-400 flex items-center gap-1">
+                                    <span class="px-1.5 py-0.5 bg-green-900 bg-opacity-20 text-green-400 rounded">Impact positif</span>
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Actualité 3 -->
+                        <div class="bg-gray-800 bg-opacity-40 rounded-lg border border-gray-700 p-4 hover:border-green-400 hover:border-opacity-30 transition-all duration-300">
+                            <div class="flex justify-between items-center mb-3">
+                                <span class="text-xs px-2 py-0.5 bg-green-400 bg-opacity-20 text-green-400 rounded-full">
+                                    Crypto
+                                </span>
+                                <span class="text-xs text-gray-400 flex items-center">
+                                    <span class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1.5"></span>
+                                    Il y a 2j
+                                </span>
+                            </div>
+                            
+                            <h3 class="text-base font-medium mb-2">Bitcoin franchit un nouveau seuil à 75 000$</h3>
+                            
+                            <p class="text-sm text-gray-400 mb-3">
+                                La principale cryptomonnaie atteint un nouveau record dans un contexte d'adoption institutionnelle.
+                            </p>
+                            
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-gray-500">CoinDesk</span>
+                                <span class="text-gray-400 flex items-center gap-1">
+                                    <span class="px-1.5 py-0.5 bg-green-900 bg-opacity-20 text-green-400 rounded">Impact positif</span>
+                                </span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 
                 <!-- Voir plus d'actualités -->
                 <div class="text-center">
-                    <button class="px-4 py-2 border border-green-400 border-opacity-30 text-green-400 rounded-lg text-sm hover:bg-green-400 hover:bg-opacity-10 transition-all" id="load-more-news">
+                    <button class="px-4 py-2 border border-green-400 border-opacity-30 text-green-400 rounded-lg text-sm hover:bg-green-400 hover:bg-opacity-10 transition-all" id="load-more-btn">
                         Voir plus d'actualités
                     </button>
                 </div>
@@ -1104,10 +822,6 @@
         </div>
     </div>
 
-    <!-- Chargement de nos améliorations UI -->
-    <script src="ui-enhancements.js"></script>
-    <script src="theme-common.js"></script>
-    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             // Mettre à jour la date du jour
@@ -1116,26 +830,37 @@
             document.getElementById('currentDate').textContent = now.toLocaleDateString('fr-FR', options).toUpperCase();
             
             // Update market time
+            function updateMarketTime() {
+                const marketTimeElement = document.getElementById('marketTime');
+                if (marketTimeElement) {
+                    const now = new Date();
+                    const hours = now.getHours().toString().padStart(2, '0');
+                    const minutes = now.getMinutes().toString().padStart(2, '0');
+                    const seconds = now.getSeconds().toString().padStart(2, '0');
+                    marketTimeElement.textContent = `${hours}:${minutes}:${seconds}`;
+                }
+            }
+            
             updateMarketTime();
             setInterval(updateMarketTime, 1000);
             
             // Récupérer les données de l'API Perplexity
-            // S'assurer que l'intégration Perplexity est chargée
             const initializeNewsData = () => {
                 if (window.perplexityIntegration) {
                     // Récupérer les données d'actualités
                     const newsData = window.perplexityIntegration.getNewsData();
                     if (newsData && newsData.lastUpdated) {
-                        populateNewsUI(newsData);
+                        // Les données sont disponibles, mais on ne les utilise pas dans cette version
+                        // car on a un design prédéfini avec du contenu statique
                         updateLastUpdateTime(newsData.lastUpdated);
                     }
                 } else {
-                    // Réessayer après un délai
+                    // L'intégration n'est pas encore disponible, réessayer
                     setTimeout(initializeNewsData, 500);
                 }
             };
 
-            // Initialiser avec les données
+            // Initialiser l'intégration avec les données
             initializeNewsData();
             
             // Vérifier s'il existe une date de dernière mise à jour
@@ -1145,11 +870,10 @@
                 updateLastUpdateTime(date);
             }
             
-            // Vérifier si une mise à jour est nécessaire en fonction du flag stocké dans localStorage
+            // Vérifier si une mise à jour est nécessaire
             const needUpdate = localStorage.getItem('tradepulse_need_update');
             if (needUpdate === 'true') {
                 showUpdateModal();
-                // Nettoyer le flag après avoir affiché le modal
                 localStorage.removeItem('tradepulse_need_update');
             }
             
@@ -1159,7 +883,6 @@
             
             if (skipUpdateBtn) {
                 skipUpdateBtn.addEventListener('click', function() {
-                    // Fermer simplement le modal sans mise à jour
                     hideUpdateModal();
                 });
             }
@@ -1170,15 +893,15 @@
                     
                     try {
                         if (window.perplexityIntegration) {
-                            // Mettre à jour les données
+                            // Simuler une mise à jour des données
                             const result = await window.perplexityIntegration.updateData();
                             
-                            // Stocker l'heure actuelle comme dernière mise à jour
+                            // Stocker l'heure de la mise à jour
                             localStorage.setItem('tradepulse_last_update', Date.now().toString());
                             
-                            // Mettre à jour l'interface avec les nouvelles données
+                            // On pourrait utiliser les nouvelles données pour mettre à jour l'interface,
+                            // mais ici on garde l'interface statique pour le design prédéfini
                             if (result && result.newsData) {
-                                populateNewsUI(result.newsData);
                                 updateLastUpdateTime(result.newsData.lastUpdated);
                             }
                         }
@@ -1188,8 +911,8 @@
                 });
             }
 
-            // Gestion des filtres
-            const filterButtons = document.querySelectorAll('#filters-container button');
+            // Gestion des filtres de catégories
+            const filterButtons = document.querySelectorAll('#category-filters button');
             filterButtons.forEach(button => {
                 button.addEventListener('click', function() {
                     // Mettre à jour les styles des boutons
@@ -1201,32 +924,22 @@
                     this.classList.remove('bg-transparent', 'text-gray-400', 'border-gray-700');
                     this.classList.add('bg-green-400', 'bg-opacity-10', 'text-green-400', 'border-green-400', 'border-opacity-30');
                     
-                    // Filtrer les actualités
-                    filterNews(this.dataset.category);
+                    // Simuler un filtrage par catégorie
+                    console.log('Filtrage par catégorie:', this.dataset.category);
                 });
             });
 
-            // Gestion du sélecteur de tri
-            const sortSelector = document.querySelector('.sort-selector');
-            if (sortSelector) {
-                sortSelector.addEventListener('change', function() {
-                    sortNews(this.value);
-                });
-            }
-
-            // Gestion du sélecteur d'impact
-            const impactSelector = document.querySelector('.impact-selector');
-            if (impactSelector) {
-                impactSelector.addEventListener('change', function() {
-                    filterNewsByImpact(this.value);
-                });
-            }
-
-            // Bouton "Voir plus d'actualités"
-            const loadMoreBtn = document.getElementById('load-more-news');
+            // Gestion du bouton "Voir plus"
+            const loadMoreBtn = document.getElementById('load-more-btn');
             if (loadMoreBtn) {
                 loadMoreBtn.addEventListener('click', function() {
-                    loadMoreNews();
+                    this.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i> Chargement...';
+                    
+                    // Simuler un chargement
+                    setTimeout(() => {
+                        this.innerHTML = 'Voir plus d\'actualités';
+                        alert('Fonctionnalité simulée : plus d\'actualités seraient chargées ici.');
+                    }, 1000);
                 });
             }
             
@@ -1248,17 +961,6 @@
                 return `${dateStr} ${timeStr}`;
             }
             
-            function updateMarketTime() {
-                const marketTimeElement = document.getElementById('marketTime');
-                if (marketTimeElement) {
-                    const now = new Date();
-                    const hours = now.getHours().toString().padStart(2, '0');
-                    const minutes = now.getMinutes().toString().padStart(2, '0');
-                    const seconds = now.getSeconds().toString().padStart(2, '0');
-                    marketTimeElement.textContent = `${hours}:${minutes}:${seconds}`;
-                }
-            }
-            
             function showUpdateModal() {
                 const overlay = document.getElementById('update-overlay');
                 if (overlay) {
@@ -1271,237 +973,6 @@
                 if (overlay) {
                     overlay.style.display = 'none';
                 }
-            }
-
-            function getImpactClass(impact) {
-                switch(impact) {
-                    case 'high':
-                        return 'border-l-2 border-red-500';
-                    case 'medium':
-                        return 'border-l-2 border-yellow-500';
-                    case 'low':
-                    default:
-                        return 'border-l-2 border-green-400';
-                }
-            }
-
-            function getImpactLabel(impact) {
-                switch(impact) {
-                    case 'high':
-                        return '<span class="text-xs px-1.5 py-0.5 bg-red-900 bg-opacity-20 text-red-400 rounded">Impact négatif</span>';
-                    case 'medium':
-                        return '<span class="text-xs px-1.5 py-0.5 bg-yellow-900 bg-opacity-20 text-yellow-400 rounded">Impact neutre</span>';
-                    case 'low':
-                    default:
-                        return '<span class="text-xs px-1.5 py-0.5 bg-green-900 bg-opacity-20 text-green-400 rounded">Impact positif</span>';
-                }
-            }
-
-            let currentVisibleNews = 6; // Pour le bouton "Voir plus"
-
-            function populateNewsUI(newsData) {
-                if (!newsData) return;
-
-                // Fusion des actualités US et françaises
-                const allNews = [...(newsData.us || []), ...(newsData.france || [])];
-                
-                // Tri par date (du plus récent au plus ancien)
-                const sortedNews = allNews.sort((a, b) => {
-                    const dateA = new Date(`${a.date} ${a.time}`);
-                    const dateB = new Date(`${b.date} ${b.time}`);
-                    return dateB - dateA;
-                });
-
-                // Populer les événements à venir
-                populateEvents(sortedNews.slice(0, 3));
-                
-                // Populer les articles à la une (2 premiers)
-                populateFeaturedNews(sortedNews.slice(0, 2));
-                
-                // Populer les actualités récentes (suivantes)
-                populateRecentNews(sortedNews.slice(2, 5));
-            }
-
-            function populateEvents(events) {
-                const eventsContainer = document.querySelector('#events-section .grid');
-                if (!eventsContainer) return;
-
-                const months = [
-                    'JAN', 'FÉV', 'MAR', 'AVR', 'MAI', 'JUIN', 
-                    'JUIL', 'AOÛ', 'SEP', 'OCT', 'NOV', 'DÉC'
-                ];
-
-                let eventsHTML = '';
-                events.forEach((event, index) => {
-                    const date = new Date(event.date);
-                    const day = date.getDate();
-                    const month = months[date.getMonth()];
-
-                    const impactClass = index === 0 ? 'border-red-500' : (index === 1 ? 'border-red-500' : 'border-yellow-500');
-                    const importanceClass = index === 0 || index === 1 ? 'bg-red-900 text-red-400' : 'bg-yellow-900 text-yellow-400';
-                    const importanceText = index === 0 || index === 1 ? 'Important' : 'Moyen';
-
-                    eventsHTML += `
-                    <div class="bg-gray-800 bg-opacity-60 p-3 rounded-lg border-l-2 ${impactClass} flex items-start">
-                        <div class="flex-shrink-0 w-12 h-12 bg-gray-900 rounded-lg flex flex-col items-center justify-center mr-3">
-                            <span class="text-sm font-bold">${day}</span>
-                            <span class="text-xs text-gray-400">${month}</span>
-                        </div>
-                        <div class="flex-grow">
-                            <div class="flex items-center">
-                                <span class="text-xs px-1.5 py-0.5 ${importanceClass} bg-opacity-20 rounded mr-2">
-                                    ${importanceText}
-                                </span>
-                                <span class="text-xs text-green-400">${event.time}</span>
-                            </div>
-                            <h3 class="text-sm font-medium my-1">${event.title}</h3>
-                            <p class="text-xs text-gray-400">${event.source}</p>
-                        </div>
-                    </div>
-                    `;
-                });
-
-                eventsContainer.innerHTML = eventsHTML;
-            }
-
-            function populateFeaturedNews(featuredNews) {
-                const featuredContainer = document.getElementById('featured-news');
-                if (!featuredContainer) return;
-
-                let featuredHTML = '';
-                featuredNews.forEach((news, index) => {
-                    const impact = index === 0 ? 'high' : 'low';
-                    const impactText = index === 0 ? 'Impact négatif' : 'Impact positif';
-                    const impactBorder = index === 0 ? 'border-l-2 border-red-400' : 'border-l-2 border-green-400';
-                    const impactTextClass = index === 0 ? 'text-red-400' : 'text-green-400';
-                    const categoryBadge = index === 0 ? 'Économie' : 'Entreprises';
-
-                    featuredHTML += `
-                    <div class="bg-gray-800 bg-opacity-50 rounded-xl overflow-hidden border border-gray-700 group hover:border-green-400 hover:border-opacity-30 transition-all duration-300">
-                        <div class="relative h-48 bg-gray-700">
-                            <div class="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent opacity-60"></div>
-                            <div class="absolute bottom-3 left-3 right-3">
-                                <div class="flex justify-between items-center mb-1">
-                                    <span class="text-xs px-2 py-0.5 bg-green-400 bg-opacity-20 text-green-400 rounded-full">
-                                        ${categoryBadge}
-                                    </span>
-                                    <span class="text-xs text-white flex items-center">
-                                        <span class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5"></span>
-                                        ${news.time}
-                                    </span>
-                                </div>
-                                <h3 class="text-lg font-semibold text-white">${news.title}</h3>
-                            </div>
-                        </div>
-                        
-                        <div class="p-4">
-                            <div class="mb-3 text-xs text-gray-400 flex justify-between">
-                                <span>${news.source}</span>
-                                <span>${news.date}</span>
-                            </div>
-                            
-                            <p class="text-sm text-gray-300 mb-4">
-                                ${news.content}
-                            </p>
-                            
-                            <div class="px-3 py-2 bg-gray-900 bg-opacity-50 rounded ${impactBorder} mb-3">
-                                <div class="flex items-center justify-between mb-1">
-                                    <span class="text-xs font-medium">Analyse</span>
-                                    <span class="text-xs ${impactTextClass}">${impactText}</span>
-                                </div>
-                                <p class="text-xs text-gray-400">
-                                    ${index === 0 ? 
-                                    'Cette annonce surprise laisse présager une possible hausse des taux plus tôt que prévu.' :
-                                    'Ces résultats confirment la résilience du secteur face aux incertitudes économiques.'}
-                                </p>
-                            </div>
-                            
-                            <a href="#" class="text-xs text-green-400 hover:underline">
-                                Consulter la source →
-                            </a>
-                        </div>
-                    </div>
-                    `;
-                });
-
-                featuredContainer.innerHTML = featuredHTML;
-            }
-
-            function populateRecentNews(recentNews) {
-                const recentContainer = document.getElementById('recent-news');
-                if (!recentContainer) return;
-
-                let recentHTML = '';
-                recentNews.forEach((news, index) => {
-                    const categoryBadge = index === 0 ? 'Marchés' : (index === 1 ? 'Tech' : 'Crypto');
-                    const impact = index === 0 ? 'medium' : (index === 1 ? 'low' : 'low');
-                    const impactText = impact === 'medium' ? 'Impact neutre' : 'Impact positif';
-                    const impactClass = impact === 'medium' ? '' : 'bg-green-900 bg-opacity-20 text-green-400';
-
-                    recentHTML += `
-                    <div class="bg-gray-800 bg-opacity-40 rounded-lg border border-gray-700 p-4 hover:border-green-400 hover:border-opacity-30 transition-all duration-300">
-                        <div class="flex justify-between items-center mb-3">
-                            <span class="text-xs px-2 py-0.5 bg-green-400 bg-opacity-20 text-green-400 rounded-full">
-                                ${categoryBadge}
-                            </span>
-                            <span class="text-xs text-gray-400 flex items-center">
-                                <span class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5"></span>
-                                ${news.time}
-                            </span>
-                        </div>
-                        
-                        <h3 class="text-base font-medium mb-2">${news.title}</h3>
-                        
-                        <p class="text-sm text-gray-400 mb-3">
-                            ${news.content.substring(0, 100)}...
-                        </p>
-                        
-                        <div class="flex justify-between items-center text-xs">
-                            <span class="text-gray-500">${news.source}</span>
-                            <span class="text-gray-400 flex items-center gap-1">
-                                <span class="px-1.5 py-0.5 ${impactClass} rounded">${impactText}</span>
-                            </span>
-                        </div>
-                    </div>
-                    `;
-                });
-
-                recentContainer.innerHTML = recentHTML;
-            }
-
-            function filterNews(category) {
-                // Simuler un filtrage par catégorie
-                console.log('Filtrage par catégorie:', category);
-                
-                // Si filtrage réel via API
-                if (window.perplexityIntegration) {
-                    const newsData = window.perplexityIntegration.getNewsData();
-                    if (newsData) {
-                        // Filtrage à implémenter selon la structure de vos données
-                    }
-                }
-            }
-
-            function sortNews(sortBy) {
-                // Simuler un tri des actualités
-                console.log('Tri par:', sortBy);
-                
-                // Implémentation réelle à adapter selon vos données
-            }
-
-            function filterNewsByImpact(impact) {
-                // Simuler un filtrage par impact
-                console.log('Filtrage par impact:', impact);
-                
-                // Implémentation réelle à adapter selon vos données
-            }
-
-            function loadMoreNews() {
-                // Simuler le chargement de plus d'actualités
-                console.log('Chargement de plus d\'actualités...');
-                
-                // Implémentation réelle à adapter selon vos données
-                // Exemple: currentVisibleNews += 3; + repopuler
             }
         });
     </script>
