@@ -220,6 +220,7 @@
             transition: all 0.3s;
             color: rgba(255, 255, 255, 0.7);
             text-decoration: none;
+            position: relative;
         }
         
         .nav-item:hover, .nav-item.active {
@@ -229,6 +230,18 @@
         
         .nav-item i {
             font-size: 1.2rem;
+        }
+
+        /* Notification badge for alerts */
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 10px;
+            height: 10px;
+            background-color: #ff4757;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
         }
         
         /* Header principal */
@@ -475,6 +488,73 @@
             border-width: 5px 0 5px 8px;
             border-color: transparent transparent transparent rgba(0, 255, 135, 0.5);
         }
+
+        /* Style pour la notification d'email de résumé */
+        .email-summary-notification {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: rgba(1, 22, 39, 0.9);
+            border: 1px solid rgba(0, 255, 135, 0.4);
+            border-radius: 10px;
+            padding: 15px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            max-width: 300px;
+            transform: translateY(150%);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .email-summary-notification.show {
+            transform: translateY(0);
+        }
+
+        .email-notification-icon {
+            background-color: rgba(0, 255, 135, 0.15);
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--accent-color);
+            margin-right: 10px;
+        }
+
+        .email-notification-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+
+        .email-notification-actions button {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .email-notification-primary {
+            background-color: var(--accent-color);
+            color: var(--background-color);
+            border: none;
+        }
+
+        .email-notification-secondary {
+            background-color: transparent;
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .email-notification-primary:hover {
+            background-color: rgba(0, 255, 135, 0.8);
+        }
+
+        .email-notification-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
         
         /* Responsive */
         @media (max-width: 1200px) {
@@ -554,8 +634,9 @@
             <a href="marches.html" class="nav-item" title="Marchés">
                 <i class="fas fa-chart-line"></i>
             </a>
-            <a href="alertes.html" class="nav-item" title="Alertes">
+            <a href="email-preview.html" class="nav-item" title="Alertes">
                 <i class="fas fa-bell"></i>
+                <span class="notification-badge"></span>
             </a>
             <a href="parametres.html" class="nav-item" title="Paramètres">
                 <i class="fas fa-cog"></i>
@@ -718,17 +799,17 @@
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
                                 <div class="bg-[#011E34] bg-opacity-70 p-4 rounded-lg border border-neon-green border-opacity-10">
                                     <div class="text-white text-opacity-70 text-sm mb-1">Valeur totale</div>
-                                    <div class="text-2xl font-bold">26,842.15 €</div>
-                                    <div class="text-sm trend-up flex items-center mt-1">
-                                        <i class="fas fa-caret-up mr-1"></i> +3.2% (7j)
+                                    <div class="text-2xl font-bold" id="totalPortfolioValue">32,415.25 €</div>
+                                    <div class="text-sm trend-up flex items-center mt-1" id="portfolioPerformance">
+                                        <i class="fas fa-caret-up mr-1"></i> +7.2% (7j)
                                     </div>
                                 </div>
                                 
                                 <div class="bg-[#011E34] bg-opacity-70 p-4 rounded-lg">
                                     <div class="text-white text-opacity-70 text-sm mb-1">Performance mensuelle</div>
-                                    <div class="text-2xl font-bold">+5.8%</div>
-                                    <div class="text-sm text-white text-opacity-70 mt-1">
-                                        vs +2.3% (S&P 500)
+                                    <div class="text-2xl font-bold" id="monthlyPerformance">+9.8%</div>
+                                    <div class="text-sm text-white text-opacity-70 mt-1" id="benchmarkPerformance">
+                                        vs +3.1% (S&P 500)
                                     </div>
                                 </div>
                             </div>
@@ -754,28 +835,8 @@
                                                         STOCK
                                                     </span>
                                                 </td>
-                                                <td class="text-right font-medium">25%</td>
-                                                <td class="text-right font-medium trend-up">+3.8%</td>
-                                            </tr>
-                                            <tr class="border-b border-white border-opacity-5">
-                                                <td class="py-3">Microsoft Corporation</td>
-                                                <td>
-                                                    <span class="px-2 py-0.5 text-xs rounded bg-green-500 bg-opacity-20 text-green-400">
-                                                        STOCK
-                                                    </span>
-                                                </td>
-                                                <td class="text-right font-medium">15%</td>
-                                                <td class="text-right font-medium trend-up">+2.2%</td>
-                                            </tr>
-                                            <tr class="border-b border-white border-opacity-5">
-                                                <td class="py-3">Amazon.com, Inc.</td>
-                                                <td>
-                                                    <span class="px-2 py-0.5 text-xs rounded bg-green-500 bg-opacity-20 text-green-400">
-                                                        STOCK
-                                                    </span>
-                                                </td>
-                                                <td class="text-right font-medium">12%</td>
-                                                <td class="text-right font-medium trend-up">+2.1%</td>
+                                                <td class="text-right font-medium">30%</td>
+                                                <td class="text-right font-medium trend-up">+5.5%</td>
                                             </tr>
                                             <tr class="border-b border-white border-opacity-5">
                                                 <td class="py-3">Tesla, Inc.</td>
@@ -784,37 +845,63 @@
                                                         STOCK
                                                     </span>
                                                 </td>
-                                                <td class="text-right font-medium">10%</td>
-                                                <td class="text-right font-medium trend-down">-1.5%</td>
+                                                <td class="text-right font-medium">20%</td>
+                                                <td class="text-right font-medium trend-up">+3.3%</td>
                                             </tr>
                                             <tr class="border-b border-white border-opacity-5">
-                                                <td class="py-3">SPDR S&P 500 ETF Trust</td>
-                                                <td>
-                                                    <span class="px-2 py-0.5 text-xs rounded bg-blue-500 bg-opacity-20 text-blue-400">
-                                                        ETF
-                                                    </span>
-                                                </td>
-                                                <td class="text-right font-medium">20%</td>
-                                                <td class="text-right font-medium trend-up">+0.7%</td>
-                                            </tr>
-                                            <tr>
                                                 <td class="py-3">Bitcoin</td>
                                                 <td>
                                                     <span class="px-2 py-0.5 text-xs rounded bg-yellow-500 bg-opacity-20 text-yellow-400">
                                                         CRYPTO
                                                     </span>
                                                 </td>
-                                                <td class="text-right font-medium">5%</td>
-                                                <td class="text-right font-medium trend-up">+12.3%</td>
+                                                <td class="text-right font-medium">15%</td>
+                                                <td class="text-right font-medium trend-up">+18.7%</td>
+                                            </tr>
+                                            <tr class="border-b border-white border-opacity-5">
+                                                <td class="py-3">Ethereum</td>
+                                                <td>
+                                                    <span class="px-2 py-0.5 text-xs rounded bg-yellow-500 bg-opacity-20 text-yellow-400">
+                                                        CRYPTO
+                                                    </span>
+                                                </td>
+                                                <td class="text-right font-medium">10%</td>
+                                                <td class="text-right font-medium trend-up">+9.5%</td>
+                                            </tr>
+                                            <tr class="border-b border-white border-opacity-5">
+                                                <td class="py-3">ARK Innovation ETF</td>
+                                                <td>
+                                                    <span class="px-2 py-0.5 text-xs rounded bg-blue-500 bg-opacity-20 text-blue-400">
+                                                        ETF
+                                                    </span>
+                                                </td>
+                                                <td class="text-right font-medium">15%</td>
+                                                <td class="text-right font-medium trend-up">+2.2%</td>
+                                            </tr>
+                                            <tr>
+                                                <td class="py-3">Palantir Technologies</td>
+                                                <td>
+                                                    <span class="px-2 py-0.5 text-xs rounded bg-green-500 bg-opacity-20 text-green-400">
+                                                        STOCK
+                                                    </span>
+                                                </td>
+                                                <td class="text-right font-medium">10%</td>
+                                                <td class="text-right font-medium trend-up">+3.8%</td>
                                             </tr>
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
                             
-                            <a href="portefeuille.html" class="mt-4 text-neon-green text-sm inline-flex items-center hover:underline">
-                                Voir le portefeuille complet <i class="fas fa-arrow-right ml-2"></i>
-                            </a>
+                            <div class="flex mt-4 justify-between">
+                                <a href="portefeuille.html" class="text-neon-green text-sm inline-flex items-center hover:underline">
+                                    Voir le portefeuille complet <i class="fas fa-arrow-right ml-2"></i>
+                                </a>
+                                
+                                <button id="generateEmailBtn" class="text-sm text-neon-green border border-neon-green border-opacity-30 bg-neon-green bg-opacity-10 px-3 py-1.5 rounded hover:bg-opacity-20 transition-all inline-flex items-center">
+                                    <i class="fas fa-envelope mr-2"></i> Générer un résumé
+                                </button>
+                            </div>
                         </div>
                     </div>
                     
@@ -1034,6 +1121,26 @@
         </div>
     </main>
 
+    <!-- Notification de résumé email -->
+    <div class="email-summary-notification" id="emailNotification">
+        <div class="flex items-center mb-3">
+            <div class="email-notification-icon">
+                <i class="fas fa-envelope"></i>
+            </div>
+            <div>
+                <div class="font-medium">Résumé de portefeuille</div>
+                <div class="text-xs text-white text-opacity-70">Prêt à être envoyé</div>
+            </div>
+        </div>
+        <p class="text-sm text-white text-opacity-80 mb-2">
+            Un résumé de votre portefeuille a été généré. Souhaitez-vous le prévisualiser?
+        </p>
+        <div class="email-notification-actions">
+            <button class="email-notification-secondary" id="dismissNotification">Plus tard</button>
+            <button class="email-notification-primary" id="viewEmailPreview">Voir résumé</button>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -1052,6 +1159,61 @@
                 document.getElementById('creditProgressBar').style.width = '85%';
             }, 500);
             
+            // Données des portefeuilles pour synchronisation avec les emails
+            const portfolioData = {
+                'aggressive': {
+                    value: '32,415.25 €',
+                    performance: '+7.2%',
+                    monthlyPerformance: '+9.8%',
+                    benchmark: '+3.1% (S&P 500)',
+                    components: [
+                        { name: 'NVIDIA Corporation', type: 'STOCK', allocation: '30%', performance: '+5.5%' },
+                        { name: 'Tesla, Inc.', type: 'STOCK', allocation: '20%', performance: '+3.3%' },
+                        { name: 'Bitcoin', type: 'CRYPTO', allocation: '15%', performance: '+18.7%' },
+                        { name: 'Ethereum', type: 'CRYPTO', allocation: '10%', performance: '+9.5%' },
+                        { name: 'ARK Innovation ETF', type: 'ETF', allocation: '15%', performance: '+2.2%' },
+                        { name: 'Palantir Technologies', type: 'STOCK', allocation: '10%', performance: '+3.8%' }
+                    ],
+                    pieData: [80, 15, 25, 0]
+                },
+                'moderate': {
+                    value: '26,842.15 €',
+                    performance: '+3.2%',
+                    monthlyPerformance: '+5.8%',
+                    benchmark: '+2.3% (S&P 500)',
+                    components: [
+                        { name: 'NVIDIA Corporation', type: 'STOCK', allocation: '25%', performance: '+3.8%' },
+                        { name: 'Microsoft Corporation', type: 'STOCK', allocation: '15%', performance: '+2.2%' },
+                        { name: 'Amazon.com, Inc.', type: 'STOCK', allocation: '12%', performance: '+2.1%' },
+                        { name: 'Tesla, Inc.', type: 'STOCK', allocation: '10%', performance: '-1.5%' },
+                        { name: 'SPDR S&P 500 ETF', type: 'ETF', allocation: '20%', performance: '+0.7%' },
+                        { name: 'Bitcoin', type: 'CRYPTO', allocation: '5%', performance: '+12.3%' },
+                        { name: 'Obligations d\'État', type: 'BOND', allocation: '13%', performance: '+0.4%' }
+                    ],
+                    pieData: [62, 20, 15, 3]
+                },
+                'stable': {
+                    value: '18,124.70 €',
+                    performance: '+1.2%',
+                    monthlyPerformance: '+3.1%',
+                    benchmark: '+2.3% (S&P 500)',
+                    components: [
+                        { name: 'Vanguard Total Bond ETF', type: 'BOND', allocation: '25%', performance: '+0.4%' },
+                        { name: 'Johnson & Johnson', type: 'STOCK', allocation: '12%', performance: '+0.8%' },
+                        { name: 'Microsoft Corporation', type: 'STOCK', allocation: '10%', performance: '+2.2%' },
+                        { name: 'SPDR S&P 500 ETF', type: 'ETF', allocation: '15%', performance: '+0.7%' },
+                        { name: 'iShares 20+ Year Treasury', type: 'BOND', allocation: '23%', performance: '+0.2%' },
+                        { name: 'Gold ETF', type: 'ETF', allocation: '5%', performance: '+1.1%' },
+                        { name: 'Obligations d\'État', type: 'BOND', allocation: '10%', performance: '+0.3%' }
+                    ],
+                    pieData: [22, 20, 0, 58]
+                }
+            };
+            
+            // Initialisation avec le portefeuille agressif par défaut
+            let currentPortfolio = 'aggressive';
+            savePortfolioData(currentPortfolio);
+            
             // Filtres de portefeuille
             document.querySelectorAll('.portfolio-filter').forEach(button => {
                 button.addEventListener('click', function() {
@@ -1068,8 +1230,9 @@
                     this.classList.add('bg-neon-green', 'bg-opacity-10', 'border-neon-green', 'border-opacity-30', 'text-neon-green');
                     
                     // Changer les données du portefeuille selon le filtre
-                    const portfolioType = this.getAttribute('data-portfolio');
-                    updatePortfolioData(portfolioType);
+                    currentPortfolio = this.getAttribute('data-portfolio');
+                    updatePortfolioData(currentPortfolio);
+                    savePortfolioData(currentPortfolio);
                 });
             });
             
@@ -1096,6 +1259,25 @@
                     this.classList.remove('animate-spin');
                     updateLastUpdateTime();
                 }, 1000);
+            });
+
+            // Bouton de génération de résumé email
+            document.getElementById('generateEmailBtn').addEventListener('click', function() {
+                // Sauvegarder les données actuelles du portefeuille
+                savePortfolioData(currentPortfolio);
+                
+                // Afficher la notification
+                document.getElementById('emailNotification').classList.add('show');
+            });
+
+            // Bouton de rejet de la notification
+            document.getElementById('dismissNotification').addEventListener('click', function() {
+                document.getElementById('emailNotification').classList.remove('show');
+            });
+
+            // Bouton de prévisualisation d'email
+            document.getElementById('viewEmailPreview').addEventListener('click', function() {
+                window.location.href = 'email-preview.html';
             });
             
             // Fonctions
@@ -1275,64 +1457,13 @@
             }
             
             function updatePortfolioData(portfolioType) {
-                // Les données des différents types de portefeuille
-                const portfolioData = {
-                    'aggressive': {
-                        value: '32,415.25 €',
-                        performance: '+7.2%',
-                        monthlyPerformance: '+9.8%',
-                        benchmark: '+3.1% (S&P 500)',
-                        components: [
-                            { name: 'NVIDIA Corporation', type: 'STOCK', allocation: '30%', performance: '+5.5%' },
-                            { name: 'Tesla, Inc.', type: 'STOCK', allocation: '20%', performance: '+3.3%' },
-                            { name: 'Bitcoin', type: 'CRYPTO', allocation: '15%', performance: '+18.7%' },
-                            { name: 'Ethereum', type: 'CRYPTO', allocation: '10%', performance: '+9.5%' },
-                            { name: 'ARK Innovation ETF', type: 'ETF', allocation: '15%', performance: '+2.2%' },
-                            { name: 'Palantir Technologies', type: 'STOCK', allocation: '10%', performance: '+3.8%' }
-                        ],
-                        pieData: [80, 15, 25, 0]
-                    },
-                    'moderate': {
-                        value: '26,842.15 €',
-                        performance: '+3.2%',
-                        monthlyPerformance: '+5.8%',
-                        benchmark: '+2.3% (S&P 500)',
-                        components: [
-                            { name: 'NVIDIA Corporation', type: 'STOCK', allocation: '25%', performance: '+3.8%' },
-                            { name: 'Microsoft Corporation', type: 'STOCK', allocation: '15%', performance: '+2.2%' },
-                            { name: 'Amazon.com, Inc.', type: 'STOCK', allocation: '12%', performance: '+2.1%' },
-                            { name: 'Tesla, Inc.', type: 'STOCK', allocation: '10%', performance: '-1.5%' },
-                            { name: 'SPDR S&P 500 ETF', type: 'ETF', allocation: '20%', performance: '+0.7%' },
-                            { name: 'Bitcoin', type: 'CRYPTO', allocation: '5%', performance: '+12.3%' },
-                            { name: 'Obligations d\'État', type: 'BOND', allocation: '13%', performance: '+0.4%' }
-                        ],
-                        pieData: [62, 20, 15, 3]
-                    },
-                    'stable': {
-                        value: '18,124.70 €',
-                        performance: '+1.2%',
-                        monthlyPerformance: '+3.1%',
-                        benchmark: '+2.3% (S&P 500)',
-                        components: [
-                            { name: 'Vanguard Total Bond ETF', type: 'BOND', allocation: '25%', performance: '+0.4%' },
-                            { name: 'Johnson & Johnson', type: 'STOCK', allocation: '12%', performance: '+0.8%' },
-                            { name: 'Microsoft Corporation', type: 'STOCK', allocation: '10%', performance: '+2.2%' },
-                            { name: 'SPDR S&P 500 ETF', type: 'ETF', allocation: '15%', performance: '+0.7%' },
-                            { name: 'iShares 20+ Year Treasury', type: 'BOND', allocation: '23%', performance: '+0.2%' },
-                            { name: 'Gold ETF', type: 'ETF', allocation: '5%', performance: '+1.1%' },
-                            { name: 'Obligations d\'État', type: 'BOND', allocation: '10%', performance: '+0.3%' }
-                        ],
-                        pieData: [22, 20, 0, 58]
-                    }
-                };
-                
-                // Mise à jour des valeurs affichées
+                // Obtenir les données du portefeuille sélectionné
                 const data = portfolioData[portfolioType];
                 
                 // Mettre à jour les informations principales
-                document.querySelector('#portfolio-widget .text-2xl.font-bold').textContent = data.value;
+                document.getElementById('totalPortfolioValue').textContent = data.value;
                 
-                const perfElement = document.querySelector('#portfolio-widget .text-sm.flex.items-center');
+                const perfElement = document.getElementById('portfolioPerformance');
                 if (data.performance.startsWith('+')) {
                     perfElement.className = 'text-sm trend-up flex items-center mt-1';
                     perfElement.innerHTML = `<i class="fas fa-caret-up mr-1"></i> ${data.performance} (7j)`;
@@ -1341,8 +1472,8 @@
                     perfElement.innerHTML = `<i class="fas fa-caret-down mr-1"></i> ${data.performance} (7j)`;
                 }
                 
-                document.querySelector('#portfolio-widget .bg-\\[\\#011E34\\].bg-opacity-70.p-4.rounded-lg:nth-of-type(2) .text-2xl.font-bold').textContent = data.monthlyPerformance;
-                document.querySelector('#portfolio-widget .bg-\\[\\#011E34\\].bg-opacity-70.p-4.rounded-lg:nth-of-type(2) .text-sm.text-white.text-opacity-70').textContent = `vs ${data.benchmark}`;
+                document.getElementById('monthlyPerformance').textContent = data.monthlyPerformance;
+                document.getElementById('benchmarkPerformance').textContent = `vs ${data.benchmark}`;
                 
                 // Mettre à jour le tableau des composants
                 const tableBody = document.querySelector('#portfolio-widget tbody');
@@ -1412,6 +1543,13 @@
                 const now = new Date();
                 const formattedDate = `${now.toLocaleDateString('fr-FR')} ${now.toLocaleTimeString('fr-FR')}`;
                 document.getElementById('lastUpdateTime').textContent = formattedDate;
+            }
+            
+            // Fonction pour sauvegarder les données du portefeuille dans le localStorage
+            function savePortfolioData(portfolioType) {
+                const data = portfolioData[portfolioType];
+                localStorage.setItem('portfolioType', portfolioType);
+                localStorage.setItem('portfolioData', JSON.stringify(data));
             }
             
             // Redirection vers la page IA lors du clic sur le bouton de recherche
