@@ -3,24 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TradePulse - Aperçu Email</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <title>TradePulse - Prévisualisation Email</title>
+    <link rel="stylesheet" href="css/styles.css">
     <style>
         :root {
-            --background-color: #011627;
-            --text-color: #FFFFFF;
-            --accent-color: #00FF87;
-            --accent-glow: 0 0 20px rgba(0, 255, 135, 0.6);
+            --primary-color: #00ff9d;
+            --bg-dark: #0a1621;
+            --bg-medium: #15293c;
+            --bg-light: #1e3a52;
+            --text-light: #ffffff;
+            --text-muted: #9ba1a8;
         }
         
         body {
-            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            font-family: 'Arial', sans-serif;
             margin: 0;
             padding: 0;
-            background-color: var(--background-color);
-            color: var(--text-color);
-            min-height: 100vh;
         }
         
         .container {
@@ -29,428 +29,304 @@
             padding: 20px;
         }
         
-        header {
+        .header {
             display: flex;
+            align-items: center;
             justify-content: space-between;
-            align-items: center;
-            margin-bottom: 30px;
-            border-bottom: 1px solid rgba(0, 255, 135, 0.2);
+            border-bottom: 1px solid var(--bg-light);
             padding-bottom: 20px;
-        }
-        
-        .logo {
-            display: flex;
-            align-items: center;
-        }
-        
-        .logo-dot {
-            width: 12px;
-            height: 12px;
-            background-color: var(--accent-color);
-            border-radius: 50%;
-            margin-right: 10px;
-            box-shadow: 0 0 10px var(--accent-color);
-        }
-        
-        .logo-text {
-            font-size: 24px;
-            font-weight: 900;
-            letter-spacing: 1px;
-        }
-        
-        .controls {
-            display: flex;
-            gap: 15px;
-        }
-        
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 10px 15px;
-            border: 1px solid var(--accent-color);
-            border-radius: 6px;
-            color: var(--text-color);
-            background-color: transparent;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            text-decoration: none;
-        }
-        
-        .btn i {
-            margin-right: 8px;
-        }
-        
-        .btn-primary {
-            background-color: var(--accent-color);
-            color: var(--background-color);
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 255, 135, 0.2);
-        }
-        
-        .tabs {
-            display: flex;
-            gap: 10px;
             margin-bottom: 20px;
         }
         
-        .tab {
+        .header h1 {
+            color: var(--primary-color);
+            margin: 0;
+        }
+        
+        .preview-container {
+            display: grid;
+            grid-template-columns: 1fr 3fr;
+            gap: 20px;
+        }
+        
+        .controls {
+            background-color: var(--bg-medium);
+            border-radius: 8px;
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--primary-color);
+        }
+        
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--bg-light);
+            border-radius: 4px;
+            color: var(--text-light);
+        }
+        
+        .form-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+        
+        button {
+            background-color: var(--primary-color);
+            color: var(--bg-dark);
+            border: none;
+            border-radius: 4px;
             padding: 10px 20px;
-            border-radius: 6px 6px 0 0;
-            background-color: rgba(0, 255, 135, 0.1);
             cursor: pointer;
+            font-weight: bold;
             transition: all 0.3s ease;
-            border-bottom: 2px solid transparent;
         }
         
-        .tab.active {
-            border-bottom: 2px solid var(--accent-color);
-            background-color: rgba(0, 255, 135, 0.2);
+        button:hover {
+            background-color: #00cc7d;
         }
         
-        .email-preview {
-            height: 700px;
-            border: 1px solid rgba(0, 255, 135, 0.2);
+        .preview {
+            background-color: var(--bg-medium);
             border-radius: 8px;
             overflow: hidden;
         }
         
-        iframe {
+        .preview-tabs {
+            display: flex;
+            background-color: var(--bg-light);
+        }
+        
+        .preview-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .preview-tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+        
+        .preview-content {
+            padding: 20px;
+            height: 600px;
+            overflow: auto;
+        }
+        
+        .preview-frame-container {
+            height: 100%;
+            overflow: hidden;
+        }
+        
+        .preview-frame {
             width: 100%;
             height: 100%;
             border: none;
+            transform-origin: top left;
         }
         
-        .preview-controls {
-            margin-top: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .device-selector {
-            display: flex;
-            gap: 10px;
-        }
-        
-        .device-btn {
-            padding: 8px 12px;
-            border-radius: 4px;
-            background-color: rgba(255, 255, 255, 0.1);
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .device-btn.active {
-            background-color: rgba(0, 255, 135, 0.2);
-            color: var(--accent-color);
-        }
-        
-        .email-options {
-            display: flex;
-            gap: 15px;
-        }
-        
-        .email-form {
-            display: none;
-            background-color: rgba(1, 30, 52, 0.8);
-            border-radius: 8px;
-            padding: 20px;
-            margin-top: 20px;
-        }
-        
-        .form-group {
-            margin-bottom: 15px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-        
-        input, select {
+        .device-desktop {
+            transform: scale(1);
             width: 100%;
-            padding: 10px;
-            border-radius: 4px;
-            background-color: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: var(--text-color);
         }
         
-        .form-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 20px;
+        .device-tablet {
+            transform: scale(0.8);
+            width: 768px;
         }
         
-        .status-message {
-            padding: 10px;
+        .device-mobile {
+            transform: scale(0.5);
+            width: 375px;
+        }
+        
+        .code-view {
+            background-color: var(--bg-dark);
+            padding: 15px;
             border-radius: 4px;
-            margin-top: 15px;
+            height: 100%;
+            overflow: auto;
+            white-space: pre;
+            font-family: monospace;
+            color: var(--text-light);
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            background-color: var(--primary-color);
+            color: var(--bg-dark);
+            border-radius: 4px;
+            font-weight: bold;
             display: none;
+            animation: fadeInOut 3s forwards;
         }
         
-        .status-success {
-            background-color: rgba(0, 255, 135, 0.1);
-            color: var(--accent-color);
-            border: 1px solid rgba(0, 255, 135, 0.3);
+        @keyframes fadeInOut {
+            0% { opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { opacity: 0; }
         }
         
-        .status-error {
-            background-color: rgba(255, 82, 82, 0.1);
-            color: #FF5252;
-            border: 1px solid rgba(255, 82, 82, 0.3);
-        }
-        
-        .loading {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 2px solid rgba(0, 255, 135, 0.2);
-            border-top-color: var(--accent-color);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 8px;
-        }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-        
-        footer {
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(0, 255, 135, 0.2);
-            text-align: center;
-            font-size: 14px;
-            color: rgba(255, 255, 255, 0.6);
+        .hidden {
+            display: none;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
-            <div class="logo">
-                <div class="logo-dot"></div>
-                <div class="logo-text">TRADEPULSE</div>
+        <div class="header">
+            <h1>PRÉVISUALISATION DES ALERTES EMAIL</h1>
+            <div>
+                <a href="actualites.html" class="btn-secondary">Retour au Dashboard</a>
             </div>
+        </div>
+        
+        <div class="preview-container">
             <div class="controls">
-                <a href="dashboard.html" class="btn">
-                    <i class="fas fa-tachometer-alt"></i> Retour au Tableau de Bord
-                </a>
-                <button id="sendTestBtn" class="btn btn-primary">
-                    <i class="fas fa-paper-plane"></i> Envoyer un Email Test
-                </button>
-            </div>
-        </header>
-        
-        <div class="tabs">
-            <div class="tab active" data-view="desktop">Aperçu Email</div>
-            <div class="tab" data-view="code">Code HTML</div>
-        </div>
-        
-        <div class="email-preview">
-            <iframe id="previewFrame" src="email-dashboard-template.html"></iframe>
-        </div>
-        
-        <div class="preview-controls">
-            <div class="device-selector">
-                <div class="device-btn active" data-width="100%">
-                    <i class="fas fa-desktop"></i> Desktop
+                <div class="form-group">
+                    <label>Type de résumé</label>
+                    <select id="emailType">
+                        <option value="daily">Résumé quotidien</option>
+                        <option value="weekly">Résumé hebdomadaire</option>
+                        <option value="alert">Alerte spéciale</option>
+                    </select>
                 </div>
-                <div class="device-btn" data-width="768px">
-                    <i class="fas fa-tablet-alt"></i> Tablet
+                
+                <div class="form-group">
+                    <label>Portefeuille</label>
+                    <select id="portfolioType">
+                        <option value="aggressive">Agressif (+8.32%)</option>
+                        <option value="moderate">Modéré (+5.47%)</option>
+                        <option value="stable">Stable (+2.19%)</option>
+                    </select>
                 </div>
-                <div class="device-btn" data-width="390px">
-                    <i class="fas fa-mobile-alt"></i> Mobile
+                
+                <div class="form-group">
+                    <label>Email de test</label>
+                    <input type="email" id="testEmail" placeholder="votre@email.com">
                 </div>
+                
+                <button id="sendTestBtn" class="btn-primary">Envoyer un email de test</button>
+                <button id="downloadBtn" class="btn-secondary" style="margin-top: 10px;">Télécharger le Template</button>
+                
+                <div class="form-group" style="margin-top: 20px;">
+                    <label>Préférences d'envoi</label>
+                    <div>
+                        <input type="checkbox" id="dailyEnabled" checked>
+                        <label for="dailyEnabled">Résumé quotidien</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="weeklyEnabled" checked>
+                        <label for="weeklyEnabled">Résumé hebdomadaire</label>
+                    </div>
+                    <div>
+                        <input type="checkbox" id="alertsEnabled" checked>
+                        <label for="alertsEnabled">Alertes spéciales</label>
+                    </div>
+                </div>
+                
+                <button id="savePrefsBtn" class="btn-primary" style="margin-top: 10px;">Enregistrer les préférences</button>
             </div>
             
-            <div class="email-options">
-                <button id="refreshBtn" class="btn">
-                    <i class="fas fa-sync-alt"></i> Actualiser
-                </button>
-                <button id="downloadBtn" class="btn">
-                    <i class="fas fa-download"></i> Télécharger
-                </button>
+            <div class="preview">
+                <div class="preview-tabs">
+                    <div class="preview-tab active" data-view="desktop">Desktop</div>
+                    <div class="preview-tab" data-view="tablet">Tablette</div>
+                    <div class="preview-tab" data-view="mobile">Mobile</div>
+                    <div class="preview-tab" data-view="code">Code HTML</div>
+                </div>
+                
+                <div class="preview-content">
+                    <div class="preview-view desktop-view">
+                        <div class="preview-frame-container">
+                            <iframe id="previewFrame" class="preview-frame device-desktop" src="email-dashboard-template.html"></iframe>
+                        </div>
+                    </div>
+                    
+                    <div class="preview-view tablet-view hidden">
+                        <div class="preview-frame-container">
+                            <iframe id="tabletFrame" class="preview-frame device-tablet" src="email-dashboard-template.html"></iframe>
+                        </div>
+                    </div>
+                    
+                    <div class="preview-view mobile-view hidden">
+                        <div class="preview-frame-container">
+                            <iframe id="mobileFrame" class="preview-frame device-mobile" src="email-dashboard-template.html"></iframe>
+                        </div>
+                    </div>
+                    
+                    <div class="preview-view code-view hidden">
+                        <pre id="codeView"></pre>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <div id="emailForm" class="email-form">
-            <h3>Envoyer un Email Test</h3>
-            <div class="form-group">
-                <label for="emailTo">Adresse Email</label>
-                <input type="email" id="emailTo" placeholder="votre@email.com">
-            </div>
-            <div class="form-group">
-                <label for="portfolioType">Type de Portefeuille</label>
-                <select id="portfolioType">
-                    <option value="aggressive">Agressif</option>
-                    <option value="moderate">Modéré</option>
-                    <option value="stable">Stable</option>
-                </select>
-            </div>
-            <div class="form-actions">
-                <button id="cancelSendBtn" class="btn">Annuler</button>
-                <button id="confirmSendBtn" class="btn btn-primary">
-                    <i class="fas fa-paper-plane"></i> Envoyer
-                </button>
-            </div>
-            <div id="statusMessage" class="status-message"></div>
-        </div>
-        
-        <footer>
-            <p>TradePulse © 2025 - Plateforme d'Analyse Financière en Temps Réel</p>
-        </footer>
     </div>
+    
+    <div id="notification" class="notification">Email de test envoyé avec succès !</div>
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Sélecteurs
-            const previewFrame = document.getElementById('previewFrame');
-            const tabs = document.querySelectorAll('.tab');
-            const deviceBtns = document.querySelectorAll('.device-btn');
-            const sendTestBtn = document.getElementById('sendTestBtn');
-            const emailForm = document.getElementById('emailForm');
-            const cancelSendBtn = document.getElementById('cancelSendBtn');
-            const confirmSendBtn = document.getElementById('confirmSendBtn');
-            const refreshBtn = document.getElementById('refreshBtn');
-            const downloadBtn = document.getElementById('downloadBtn');
-            const statusMessage = document.getElementById('statusMessage');
+            // Prévisualisation des onglets
+            const tabs = document.querySelectorAll('.preview-tab');
+            const views = document.querySelectorAll('.preview-view');
             
-            // Changer la largeur de l'aperçu en fonction du périphérique
-            deviceBtns.forEach(btn => {
-                btn.addEventListener('click', function() {
-                    // Mise à jour des classes actives
-                    deviceBtns.forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    
-                    // Changer la largeur de l'iframe
-                    const width = this.getAttribute('data-width');
-                    previewFrame.style.width = width;
-                    
-                    // Centrer l'iframe si ce n'est pas en pleine largeur
-                    if (width !== '100%') {
-                        previewFrame.style.display = 'block';
-                        previewFrame.style.margin = '0 auto';
-                    } else {
-                        previewFrame.style.display = 'block';
-                        previewFrame.style.margin = '0';
-                    }
-                });
-            });
-            
-            // Gestion des onglets
             tabs.forEach(tab => {
                 tab.addEventListener('click', function() {
-                    // Mise à jour des classes actives
+                    // Onglets actifs
                     tabs.forEach(t => t.classList.remove('active'));
                     this.classList.add('active');
                     
-                    // Changer le contenu affiché
-                    const view = this.getAttribute('data-view');
-                    if (view === 'desktop') {
-                        previewFrame.src = 'email-dashboard-template.html';
-                    } else if (view === 'code') {
-                        // Afficher le code HTML dans l'iframe
+                    // Afficher la vue correspondante
+                    const viewType = this.getAttribute('data-view');
+                    views.forEach(view => view.classList.add('hidden'));
+                    document.querySelector(`.${viewType}-view`).classList.remove('hidden');
+                    
+                    // Charger le code HTML pour l'onglet de code
+                    if (viewType === 'code') {
                         fetch('email-dashboard-template.html')
                             .then(response => response.text())
                             .then(html => {
-                                // Échapper le HTML pour l'afficher
-                                const escapedHtml = html
-                                    .replace(/&/g, '&amp;')
-                                    .replace(/</g, '&lt;')
-                                    .replace(/>/g, '&gt;');
-                                
-                                const codePreview = `
-                                    <!DOCTYPE html>
-                                    <html>
-                                    <head>
-                                        <meta charset="UTF-8">
-                                        <style>
-                                            body {
-                                                margin: 0;
-                                                padding: 20px;
-                                                background-color: #011627;
-                                                color: #c0c0c0;
-                                                font-family: monospace;
-                                                line-height: 1.5;
-                                                font-size: 14px;
-                                                white-space: pre-wrap;
-                                                word-wrap: break-word;
-                                            }
-                                        </style>
-                                    </head>
-                                    <body>${escapedHtml}</body>
-                                    </html>
-                                `;
-                                
-                                const doc = previewFrame.contentDocument;
-                                doc.open();
-                                doc.write(codePreview);
-                                doc.close();
+                                document.getElementById('codeView').textContent = html;
                             });
                     }
                 });
             });
             
-            // Ouvrir/fermer le formulaire d'envoi d'email
-            sendTestBtn.addEventListener('click', function() {
-                emailForm.style.display = 'block';
-            });
-            
-            cancelSendBtn.addEventListener('click', function() {
-                emailForm.style.display = 'none';
-                statusMessage.style.display = 'none';
-            });
-            
-            // Simuler l'envoi d'un email
-            confirmSendBtn.addEventListener('click', function() {
-                const emailTo = document.getElementById('emailTo').value;
-                const portfolioType = document.getElementById('portfolioType').value;
-                
-                if (!emailTo) {
-                    statusMessage.textContent = 'Veuillez entrer une adresse email valide.';
-                    statusMessage.className = 'status-message status-error';
-                    statusMessage.style.display = 'block';
-                    return;
-                }
-                
-                // Afficher l'indicateur de chargement
-                confirmSendBtn.innerHTML = '<span class="loading"></span> Envoi en cours...';
-                confirmSendBtn.disabled = true;
-                
-                // Simuler l'envoi d'email (dans une implémentation réelle, appeler l'API)
-                setTimeout(() => {
-                    // Simuler une réponse réussie
-                    statusMessage.textContent = `Email envoyé avec succès à ${emailTo} (Portefeuille: ${portfolioType})`;
-                    statusMessage.className = 'status-message status-success';
-                    statusMessage.style.display = 'block';
-                    
-                    confirmSendBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Envoyer';
-                    confirmSendBtn.disabled = false;
-                    
-                    // Option: Fermer le formulaire après quelques secondes
+            // Gérer les emails de test
+            document.getElementById('sendTestBtn').addEventListener('click', function() {
+                const email = document.getElementById('testEmail').value;
+                if (email) {
+                    // Simuler l'envoi d'email (dans un vrai environnement, cela appellerait votre API)
                     setTimeout(() => {
-                        emailForm.style.display = 'none';
-                        statusMessage.style.display = 'none';
-                    }, 3000);
-                }, 2000);
+                        const notification = document.getElementById('notification');
+                        notification.style.display = 'block';
+                        setTimeout(() => {
+                            notification.style.display = 'none';
+                        }, 3000);
+                    }, 500);
+                } else {
+                    alert('Veuillez entrer une adresse email valide');
+                }
             });
             
-            // Rafraîchir l'aperçu
-            refreshBtn.addEventListener('click', function() {
-                previewFrame.src = previewFrame.src;
-            });
-            
-            // Télécharger l'HTML
-            downloadBtn.addEventListener('click', function() {
+            // Gérer le téléchargement du template
+            document.getElementById('downloadBtn').addEventListener('click', function() {
                 fetch('email-dashboard-template.html')
                     .then(response => response.text())
                     .then(html => {
@@ -466,19 +342,32 @@
                     });
             });
             
-            // Initialiser la vue desktop
-            const desktopBtn = document.querySelector('.device-btn[data-width="100%"]');
-            if (desktopBtn) {
-                desktopBtn.click();
-            }
+            // Enregistrer les préférences
+            document.getElementById('savePrefsBtn').addEventListener('click', function() {
+                const prefs = {
+                    daily: document.getElementById('dailyEnabled').checked,
+                    weekly: document.getElementById('weeklyEnabled').checked,
+                    alerts: document.getElementById('alertsEnabled').checked
+                };
+                
+                // Simuler l'enregistrement des préférences
+                localStorage.setItem('emailPrefs', JSON.stringify(prefs));
+                
+                const notification = document.getElementById('notification');
+                notification.textContent = 'Préférences enregistrées !';
+                notification.style.display = 'block';
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, 3000);
+            });
             
-            // Injecter des données dynamiques dans l'aperçu de l'email
-            updateEmailPreview();
-            
-            function updateEmailPreview() {
-                // Dans une application réelle, cette fonction récupérerait les données et les injecterait
-                // Pour cette démo, nous utilisons directement le template statique
-                console.log('Email preview template initialized');
+            // Charger les préférences sauvegardées
+            const savedPrefs = localStorage.getItem('emailPrefs');
+            if (savedPrefs) {
+                const prefs = JSON.parse(savedPrefs);
+                document.getElementById('dailyEnabled').checked = prefs.daily;
+                document.getElementById('weeklyEnabled').checked = prefs.weekly;
+                document.getElementById('alertsEnabled').checked = prefs.alerts;
             }
         });
     </script>
