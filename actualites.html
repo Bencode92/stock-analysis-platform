@@ -299,6 +299,18 @@
             position: relative;
             text-decoration: none;
         }
+
+        /* Notification badge for alerts */
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 10px;
+            height: 10px;
+            background-color: #ff4757;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
+        }
         
         .dark .nav-item {
             color: rgba(255, 255, 255, 0.7);
@@ -953,8 +965,9 @@
             <a href="marches.html" class="nav-item" title="Marchés">
                 <i class="fas fa-chart-line"></i>
             </a>
-            <a href="alertes.html" class="nav-item" title="Alertes">
+            <a href="email-preview.html" class="nav-item" title="Alertes">
                 <i class="fas fa-bell"></i>
+                <span class="notification-badge"></span>
             </a>
             <a href="parametres.html" class="nav-item" title="Paramètres">
                 <i class="fas fa-cog"></i>
