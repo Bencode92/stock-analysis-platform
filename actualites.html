@@ -846,6 +846,153 @@
                 flex-wrap: wrap;
             }
         }
+
+        /* Modal de mise à jour */
+        #update-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(1, 22, 39, 0.9);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .update-modal {
+            background: linear-gradient(135deg, rgba(1, 22, 39, 0.95), rgba(1, 15, 26, 0.95));
+            border: 2px solid var(--accent-color);
+            border-radius: 16px;
+            box-shadow: 0 0 50px rgba(0, 255, 135, 0.3),
+                        inset 0 0 20px rgba(0, 255, 135, 0.1);
+            width: 95%;
+            max-width: 550px;
+            padding: 40px;
+            text-align: center;
+            backdrop-filter: blur(15px);
+            animation: modal-appear 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        
+        @keyframes modal-appear {
+            from { 
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to { 
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .modal-title {
+            color: var(--accent-color);
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 25px;
+            text-shadow: 0 0 15px rgba(0, 255, 135, 0.3);
+            letter-spacing: 1px;
+        }
+
+        .modal-title::after {
+            content: '';
+            display: block;
+            width: 60px;
+            height: 3px;
+            background-color: var(--accent-color);
+            margin: 15px auto 0;
+            border-radius: 3px;
+            box-shadow: 0 0 10px rgba(0, 255, 135, 0.6);
+        }
+        
+        .modal-message {
+            font-size: 16px;
+            line-height: 1.7;
+            margin-bottom: 30px;
+            max-width: 90%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .last-update-box {
+            background-color: rgba(0, 255, 135, 0.08);
+            border-left: 3px solid var(--accent-color);
+            border-radius: 6px;
+            padding: 15px;
+            margin: 30px 0;
+            text-align: left;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+        }
+
+        .last-update-box i {
+            font-size: 18px;
+            color: var(--accent-color);
+            margin-right: 12px;
+        }
+        
+        .update-time {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 35px;
+        }
+        
+        .modal-btn {
+            padding: 14px 28px;
+            border: 2px solid var(--accent-color);
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 180px;
+            background: transparent;
+            color: var(--text-color);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .modal-btn.primary {
+            background-color: var(--accent-color);
+            color: var(--background-color);
+        }
+        
+        .modal-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(0, 255, 135, 0.4);
+        }
+        
+        .modal-btn.primary:hover {
+            background-color: #00d673;
+        }
+        
+        .modal-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(
+                90deg,
+                transparent 0%,
+                rgba(255, 255, 255, 0.2) 50%,
+                transparent 100%
+            );
+            transition: all 0.5s ease;
+        }
+
+        .modal-btn:hover::before {
+            left: 100%;
+        }
     </style>
 </head>
 <body>
@@ -1258,6 +1405,28 @@
         </div>
     </main>
 
+    <!-- Modal de mise à jour -->
+    <div id="update-overlay">
+        <div class="update-modal">
+            <h2 class="modal-title">MISE À JOUR DES DONNÉES</h2>
+            <p class="modal-message">
+                Nous mettons régulièrement à jour nos données pour vous fournir les informations financières les plus précises et actuelles.
+            </p>
+            
+            <div class="last-update-box">
+                <i class="fas fa-info-circle"></i>
+                <div>
+                    Votre dernière mise à jour date du <span class="update-time" id="modalLastUpdateTime">09/03/2023</span>
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button class="modal-btn" id="skipUpdateBtn">Plus tard</button>
+                <button class="modal-btn primary" id="proceedUpdateBtn">Mettre à jour</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Chargement de nos améliorations UI -->
     <script src="ui-enhancements.js"></script>
     <script src="theme-common.js"></script>
@@ -1278,6 +1447,63 @@
             if (lastUpdateTime) {
                 const date = new Date(parseInt(lastUpdateTime));
                 document.getElementById('lastUpdateTime').textContent = formatDateTime(date);
+                
+                // Mettre à jour également dans le modal si nécessaire
+                if (document.getElementById('modalLastUpdateTime')) {
+                    document.getElementById('modalLastUpdateTime').textContent = formatDateTime(date);
+                }
+            }
+            
+            // Vérifier si une mise à jour est nécessaire en fonction du flag stocké dans localStorage
+            const needUpdate = localStorage.getItem('tradepulse_need_update');
+            if (needUpdate === 'true') {
+                showUpdateModal();
+                // Nettoyer le flag après avoir affiché le modal
+                localStorage.removeItem('tradepulse_need_update');
+            }
+            
+            // Configurer les boutons du modal de mise à jour
+            const skipUpdateBtn = document.getElementById('skipUpdateBtn');
+            const proceedUpdateBtn = document.getElementById('proceedUpdateBtn');
+            
+            if (skipUpdateBtn) {
+                skipUpdateBtn.addEventListener('click', function() {
+                    // Fermer simplement le modal sans mise à jour
+                    hideUpdateModal();
+                });
+            }
+            
+            if (proceedUpdateBtn) {
+                proceedUpdateBtn.addEventListener('click', function() {
+                    // Simuler une mise à jour et stocker l'heure actuelle
+                    localStorage.setItem('tradepulse_last_update', Date.now().toString());
+                    hideUpdateModal();
+                    
+                    // Mettre à jour l'affichage dans l'interface
+                    const now = new Date();
+                    document.getElementById('lastUpdateTime').textContent = formatDateTime(now);
+                    
+                    // Rafraîchir la page pour refléter les changements
+                    setTimeout(() => {
+                        location.reload();
+                    }, 1000);
+                });
+            }
+            
+            // Fonction pour afficher le modal de mise à jour
+            function showUpdateModal() {
+                const overlay = document.getElementById('update-overlay');
+                if (overlay) {
+                    overlay.style.display = 'flex';
+                }
+            }
+            
+            // Fonction pour cacher le modal de mise à jour
+            function hideUpdateModal() {
+                const overlay = document.getElementById('update-overlay');
+                if (overlay) {
+                    overlay.style.display = 'none';
+                }
             }
             
             // Format a date and time
