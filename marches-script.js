@@ -1,20 +1,14 @@
 /**
- * marches-script.js
+ * marches-script.js - Version mise à jour pour utiliser les données du scraper Puppeteer
  * 
- * Ce script extrait les données des indices boursiers internationaux depuis Boursorama
+ * Ce script charge les données des indices boursiers extraites par Puppeteer
  * et les affiche dans le tableau de bord TradePulse
  */
 
 document.addEventListener('DOMContentLoaded', function() {
     // Configuration
-    const BOURSORAMA_URL = 'https://www.boursorama.com/bourse/indices/internationaux';
-    const CACHE_DURATION = 15 * 60 * 1000; // 15 minutes en millisecondes
-    
-    // Cache des données
-    let marketIndicesCache = {
-        data: null,
-        timestamp: null
-    };
+    const API_URL = 'http://localhost:3001/api/indices'; // URL de l'API locale du scraper
+    const FALLBACK_DATA_URL = 'indices_data.json'; // Chemin vers le fichier JSON local de secours
     
     // Variables globales
     let indicesData = {};
@@ -37,9 +31,7 @@ document.addEventListener('DOMContentLoaded', function() {
         this.innerHTML = '<i class="fas fa-sync-alt fa-spin mr-2"></i> Chargement...';
         this.disabled = true;
         
-        // Forcer le rafraîchissement des données
-        marketIndicesCache.timestamp = null;
-        loadIndicesData().finally(() => {
+        loadIndicesData(true).finally(() => {
             this.innerHTML = '<i class="fas fa-sync-alt mr-2"></i> Rafraîchir';
             this.disabled = false;
         });
@@ -77,167 +69,60 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * Charge les données d'indices depuis Boursorama ou du cache
+     * Charge les données d'indices depuis l'API locale ou le fichier
      */
-    async function loadIndicesData() {
+    async function loadIndicesData(forceRefresh = false) {
         try {
             // Afficher le loader
             showElement('indices-loading');
             hideElement('indices-error');
             hideElement('indices-container');
             
-            // Vérifier le cache
-            const now = Date.now();
-            if (marketIndicesCache.data && marketIndicesCache.timestamp && 
-                now - marketIndicesCache.timestamp < CACHE_DURATION) {
-                console.log('Utilisation des données en cache');
-                indicesData = marketIndicesCache.data;
-                renderIndicesData();
-                return;
-            }
-            
-            // Utiliser Brave Search API ou une autre méthode pour contourner les restrictions CORS
-            // Note: Nous allons simuler l'extraction des données ici
-            
-            console.log('Extraction des données depuis Boursorama...');
-            
-            // Comme nous sommes dans le navigateur sans serveur, nous utilisons un proxy CORS
-            // Vous pouvez remplacer ceci par un proxy CORS de votre choix
-            const proxyUrl = 'https://corsproxy.io/?';
-            const response = await fetch(proxyUrl + encodeURIComponent(BOURSORAMA_URL));
-            
-            if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
-            }
-            
-            const html = await response.text();
-            
-            // Analyser le HTML avec DOMParser (méthode sûre côté client)
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            
-            // Extraire les données
-            const indices = [];
-            const rows = doc.querySelectorAll('table.c-table tbody tr');
-            
-            rows.forEach(row => {
+            // Essayer d'abord l'API locale du scraper Puppeteer
+            try {
+                console.log('Tentative de chargement depuis l\'API locale...');
+                const response = await fetch(API_URL + (forceRefresh ? '?refresh=true' : ''));
+                
+                if (response.ok) {
+                    indicesData = await response.json();
+                    console.log('Données chargées depuis l\'API locale');
+                    renderIndicesData();
+                    return;
+                } else {
+                    console.warn('API locale non disponible:', response.status);
+                    throw new Error('API locale non disponible');
+                }
+            } catch (apiError) {
+                console.warn('Erreur lors de l\'accès à l\'API locale:', apiError);
+                
+                // En cas d'échec, essayer de charger le fichier JSON statique
                 try {
-                    // Extraire les données de chaque colonne
-                    const name = row.querySelector('.c-table__cell--name')?.textContent.trim();
-                    const value = row.querySelector('.c-table__cell--value')?.textContent.trim();
-                    const change = row.querySelector('.c-table__cell--variation')?.textContent.trim();
-                    const changePercent = row.querySelector('.c-table__cell--variation-percent')?.textContent.trim();
-                    const opening = row.querySelector('.c-table__cell--open')?.textContent.trim();
-                    const high = row.querySelector('.c-table__cell--high')?.textContent.trim();
-                    const low = row.querySelector('.c-table__cell--low')?.textContent.trim();
+                    console.log('Tentative de chargement depuis le fichier statique...');
+                    const response = await fetch(FALLBACK_DATA_URL);
                     
-                    // Déterminer la tendance (hausse ou baisse)
-                    const isDown = row.querySelector('.c-table__cell--variation-percent')?.classList.contains('c-table__cell--down');
-                    const trend = isDown ? 'down' : 'up';
-                    
-                    // Extraire le ticker/symbole (dans l'URL)
-                    const linkElement = row.querySelector('.c-table__cell--name a');
-                    const href = linkElement?.getAttribute('href') || '';
-                    const tickerMatch = href.match(/([^\/]+)$/);
-                    const ticker = tickerMatch ? tickerMatch[1] : '';
-                    
-                    if (name && value) {
-                        indices.push({
-                            name,
-                            ticker,
-                            value,
-                            change,
-                            changePercent,
-                            opening,
-                            high,
-                            low,
-                            trend
-                        });
+                    if (response.ok) {
+                        indicesData = await response.json();
+                        console.log('Données chargées depuis le fichier statique');
+                        renderIndicesData();
+                        showNotification('Utilisation des données locales (peut-être pas à jour)', 'warning');
+                        return;
+                    } else {
+                        console.warn('Fichier statique non disponible:', response.status);
+                        throw new Error('Fichier statique non disponible');
                     }
-                } catch (err) {
-                    console.error('Erreur lors de l\'extraction d\'une ligne:', err);
+                } catch (fileError) {
+                    console.error('Erreur lors du chargement du fichier statique:', fileError);
+                    
+                    // En dernier recours, utiliser des données simulées
+                    indicesData = generateFallbackData();
+                    renderIndicesData();
+                    showNotification('Utilisation des données simulées', 'warning');
                 }
-            });
-            
-            // Grouper les indices par régions
-            const groupedIndices = {
-                europe: indices.filter(index => 
-                    index.name.includes('CAC') || 
-                    index.name.includes('DAX') || 
-                    index.name.includes('FTSE') ||
-                    index.name.includes('STOXX') ||
-                    index.name.includes('AEX') ||
-                    index.name.includes('IBEX') ||
-                    index.name.includes('SMI')
-                ),
-                us: indices.filter(index => 
-                    index.name.includes('DOW') || 
-                    index.name.includes('S&P') || 
-                    index.name.includes('NASDAQ') ||
-                    index.name.includes('NYSE')
-                ),
-                asia: indices.filter(index => 
-                    index.name.includes('NIKKEI') || 
-                    index.name.includes('HANG') || 
-                    index.name.includes('SSE') ||
-                    index.name.includes('BSE') ||
-                    index.name.includes('KOSPI')
-                ),
-                other: indices.filter(index => 
-                    !index.name.includes('CAC') && 
-                    !index.name.includes('DAX') && 
-                    !index.name.includes('FTSE') &&
-                    !index.name.includes('STOXX') &&
-                    !index.name.includes('AEX') &&
-                    !index.name.includes('IBEX') &&
-                    !index.name.includes('SMI') &&
-                    !index.name.includes('DOW') && 
-                    !index.name.includes('S&P') && 
-                    !index.name.includes('NASDAQ') &&
-                    !index.name.includes('NYSE') &&
-                    !index.name.includes('NIKKEI') && 
-                    !index.name.includes('HANG') && 
-                    !index.name.includes('SSE') &&
-                    !index.name.includes('BSE') &&
-                    !index.name.includes('KOSPI')
-                )
-            };
-            
-            // Ajouter des métadonnées
-            indicesData = {
-                indices: groupedIndices,
-                meta: {
-                    source: 'Boursorama',
-                    url: BOURSORAMA_URL,
-                    timestamp: new Date().toISOString(),
-                    count: indices.length
-                }
-            };
-            
-            // Mettre en cache
-            marketIndicesCache = {
-                data: indicesData,
-                timestamp: Date.now()
-            };
-            
-            // Rendre les données dans l'interface
-            renderIndicesData();
-            
-            console.log(`✅ Extraction réussie: ${indices.length} indices récupérés`);
-        } catch (error) {
-            console.error('Erreur lors de l\'extraction des indices:', error);
-            
-            // En cas d'erreur, tenter d'utiliser le cache même s'il est expiré
-            if (marketIndicesCache.data) {
-                console.log('Utilisation du cache expiré suite à une erreur');
-                indicesData = marketIndicesCache.data;
-                renderIndicesData();
-                showNotification('Les données affichées ne sont peut-être pas à jour', 'warning');
-            } else {
-                // Si pas de cache disponible, afficher l'erreur
-                hideElement('indices-loading');
-                showElement('indices-error');
             }
+        } catch (error) {
+            console.error('Erreur lors du chargement des données:', error);
+            hideElement('indices-loading');
+            showElement('indices-error');
         }
     }
     
@@ -516,8 +401,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * Fonction pour simuler des données en cas d'échec
-     * (Utilisée en dernier recours si l'extraction échoue et qu'il n'y a pas de cache)
+     * Fonction pour générer des données simulées en cas d'échec total
      */
     function generateFallbackData() {
         const fallbackData = {
@@ -652,8 +536,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 ]
             },
             meta: {
-                source: "Boursorama (données simulées)",
-                url: BOURSORAMA_URL,
+                source: "Données simulées",
+                url: "",
                 timestamp: new Date().toISOString(),
                 count: 12
             }
