@@ -20,6 +20,35 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
     
+    // Mapping des continents pour le tri
+    const continentOrder = {
+        // Europe
+        "France": 1, "Allemagne": 1, "Royaume-Uni": 1, "Italie": 1, 
+        "Espagne": 1, "Suisse": 1, "Pays-Bas": 1, "Belgique": 1, 
+        "Autriche": 1, "Portugal": 1, "Irlande": 1, "Danemark": 1,
+        "Finlande": 1, "Norvège": 1, "Suède": 1, "Pologne": 1, 
+        "Zone Euro": 1,
+        
+        // Amérique du Nord
+        "États-Unis": 2, "Canada": 2, "Mexique": 2,
+        
+        // Asie
+        "Japon": 3, "Chine": 3, "Hong Kong": 3, "Taïwan": 3,
+        "Corée du Sud": 3, "Singapour": 3, "Inde": 3, "Indonésie": 3,
+        "Malaisie": 3, "Philippines": 3, "Thaïlande": 3,
+        
+        // Océanie
+        "Australie": 4, "Nouvelle-Zélande": 4,
+        
+        // Amérique du Sud
+        "Brésil": 5, "Argentine": 5, "Mexique": 5, "Chili": 5, 
+        "Colombie": 5, "Pérou": 5,
+        
+        // Moyen-Orient et Afrique
+        "Israël": 6, "Émirats Arabes Unis": 6, "Qatar": 6, 
+        "Afrique du Sud": 6, "Maroc": 6
+    };
+    
     // État du scraper
     let isLoading = false;
     let lastUpdate = null;
@@ -182,8 +211,27 @@ document.addEventListener('DOMContentLoaded', function() {
                         `;
                         tableBody.appendChild(emptyRow);
                     } else {
+                        // Trier les indices par continent et pays
+                        const sortedIndices = [...indices].sort((a, b) => {
+                            // D'abord trier par continent
+                            const continentA = continentOrder[a.country] || 9999;
+                            const continentB = continentOrder[b.country] || 9999;
+                            
+                            if (continentA !== continentB) {
+                                return continentA - continentB;
+                            }
+                            
+                            // Ensuite par pays
+                            if (a.country !== b.country) {
+                                return a.country.localeCompare(b.country);
+                            }
+                            
+                            // Enfin par nom d'indice
+                            return (a.index_name || "").localeCompare(b.index_name || "");
+                        });
+                        
                         // Remplir avec les données
-                        indices.forEach(index => {
+                        sortedIndices.forEach(index => {
                             const row = document.createElement('tr');
                             
                             // Création de la ligne avec la structure correcte (comme sur Boursorama)
@@ -258,34 +306,34 @@ document.addEventListener('DOMContentLoaded', function() {
         switch (region) {
             case 'europe':
                 importantIndices = indices.filter(index => 
-                    index.index_name.includes('CAC 40') || 
-                    index.index_name.includes('DAX') || 
-                    index.index_name.includes('FTSE 100') ||
-                    index.index_name.includes('EURO STOXX 50')
+                    (index.index_name || "").includes('CAC 40') || 
+                    (index.index_name || "").includes('DAX') || 
+                    (index.index_name || "").includes('FTSE 100') ||
+                    (index.index_name || "").includes('EURO STOXX 50')
                 );
                 break;
             case 'us':
                 importantIndices = indices.filter(index => 
-                    index.index_name.includes('DOW') || 
-                    index.index_name.includes('S&P 500') || 
-                    index.index_name.includes('NASDAQ') ||
-                    index.index_name.includes('RUSSELL')
+                    (index.index_name || "").includes('DOW') || 
+                    (index.index_name || "").includes('S&P 500') || 
+                    (index.index_name || "").includes('NASDAQ') ||
+                    (index.index_name || "").includes('RUSSELL')
                 );
                 break;
             case 'asia':
                 importantIndices = indices.filter(index => 
-                    index.index_name.includes('NIKKEI') || 
-                    index.index_name.includes('HANG SENG') || 
-                    index.index_name.includes('SSE') ||
-                    index.index_name.includes('KOSPI')
+                    (index.index_name || "").includes('NIKKEI') || 
+                    (index.index_name || "").includes('HANG SENG') || 
+                    (index.index_name || "").includes('SSE') ||
+                    (index.index_name || "").includes('KOSPI')
                 );
                 break;
             case 'other':
                 importantIndices = indices.filter(index => 
-                    index.index_name.includes('BOVESPA') || 
-                    index.index_name.includes('TSX') || 
-                    index.index_name.includes('ASX') ||
-                    index.index_name.includes('RTS')
+                    (index.index_name || "").includes('BOVESPA') || 
+                    (index.index_name || "").includes('TSX') || 
+                    (index.index_name || "").includes('ASX') ||
+                    (index.index_name || "").includes('RTS')
                 );
                 break;
         }
@@ -305,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
         importantIndices.forEach(index => {
             const div = document.createElement('div');
             div.innerHTML = `
-                <div class="font-medium">${index.index_name}</div>
+                <div class="font-medium">${index.index_name || ""}</div>
                 <div class="${index.trend === 'down' ? 'negative' : 'positive'}">
                     ${index.changePercent || '-'} 
                     ${index.ytdChange ? `/ ${index.ytdChange}` : ''}
