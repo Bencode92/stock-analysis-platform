@@ -6,36 +6,41 @@
     <title>TradePulse - Finance Intelligence Platform</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    
+    <!-- Styles originaux -->
+    <link rel="stylesheet" href="landing-style.css">
+    <link rel="stylesheet" href="jeton-style.css">
+    <link rel="stylesheet" href="enhanced-ui.css">
+    
     <!-- Scripts principaux -->
     <script type="module" src="aiintegration.js"></script>
     <script src="https://cdn.tailwindcss.com/"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="enhanced-ui.css">
     <script src="actualites_fix.js"></script>
     
     <!-- Script pour les Top Performers -->
     <script src="top-performers-panel.js"></script>
 </head>
-<body class="bg-bg-primary text-text-primary dark:bg-dark-bg-primary dark:text-dark-text-primary">
+<body>
     <div class="app-container">
-        <!-- Logo et titre -->
-        <header class="app-header">
-            <div class="logo-container">
-                <div class="logo-dot"></div>
-                <h1 class="app-title">TRADEPULSE</h1>
+        <!-- Page d'accueil -->
+        <div class="landing-container">
+            <div class="date-display">
+                <span class="date-inner" id="current-date">12/03/2025</span>
             </div>
-            <div class="tagline">POWERED BY PERPLEXITY AI</div>
-        </header>
-
-        <!-- Bouton de démarrage -->
-        <div class="start-container">
+            
+            <div class="site-brand">
+                <div class="pulse-dot"></div>
+                <h1>TRADEPULSE</h1>
+                <div class="tagline">POWERED BY PERPLEXITY AI</div>
+            </div>
+            
             <button class="start-button">START</button>
+            
+            <div class="landing-footer">
+                © 2025 TradePulse | Finance Intelligence Platform
+            </div>
         </div>
-
-        <!-- Pied de page -->
-        <footer class="app-footer">
-            <div class="copyright">© 2025 TradePulse | Finance Intelligence Platform</div>
-        </footer>
 
         <!-- Contenu principal (caché au démarrage) -->
         <main class="main-content hidden">
@@ -258,9 +263,22 @@
         // Global pour stocker les données de marché
         window.marketData = null;
 
-        // Fonction pour mettre à jour l'heure courante
-        function updateCurrentTime() {
+        // Fonction pour mettre à jour la date et l'heure
+        function updateDateTime() {
             const now = new Date();
+            
+            // Mettre à jour la date sur la page d'accueil
+            const formattedDate = now.toLocaleDateString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+            const currentDateEl = document.getElementById('current-date');
+            if (currentDateEl) {
+                currentDateEl.textContent = formattedDate;
+            }
+            
+            // Mettre à jour l'heure dans l'interface
             const timeString = now.toLocaleTimeString('fr-FR', {
                 hour: '2-digit',
                 minute: '2-digit',
@@ -274,10 +292,8 @@
 
         // Fonction pour revenir à la page d'accueil
         function returnToHomepage() {
+            const landingContainer = document.querySelector('.landing-container');
             const mainContent = document.querySelector('.main-content');
-            const startContainer = document.querySelector('.start-container');
-            const appHeader = document.querySelector('.app-header');
-            const appFooter = document.querySelector('.app-footer');
             
             // Fermer les modals
             document.querySelectorAll('.modal').forEach(modal => {
@@ -287,15 +303,13 @@
             // Masquer le contenu principal
             if (mainContent) mainContent.classList.add('hidden');
             
-            // Afficher les éléments de la page d'accueil
-            if (startContainer) startContainer.classList.remove('hidden');
-            if (appHeader) appHeader.classList.remove('hidden');
-            if (appFooter) appFooter.classList.remove('hidden');
+            // Afficher la page d'accueil
+            if (landingContainer) landingContainer.style.display = 'flex';
         }
 
-        // Mettre à jour l'heure toutes les secondes
-        setInterval(updateCurrentTime, 1000);
-        updateCurrentTime(); // Initialisation
+        // Mettre à jour la date et l'heure toutes les secondes
+        setInterval(updateDateTime, 1000);
+        updateDateTime(); // Initialisation
 
         // Fonction pour charger les données de marché
         async function loadMarketData() {
@@ -470,9 +484,6 @@
 
         // Attacher les événements
         document.addEventListener('DOMContentLoaded', function() {
-            // Chargement initial des données
-            loadMarketData();
-            
             // Ajout de l'événement pour retourner à la page d'accueil en cliquant sur le logo
             const homeLogo = document.getElementById('home-logo');
             if (homeLogo) {
@@ -480,29 +491,9 @@
                 homeLogo.style.cursor = 'pointer'; // Changer le curseur pour indiquer que c'est cliquable
             }
             
-            // Changement d'onglet de région
-            document.querySelectorAll('.region-tab').forEach(tab => {
-                tab.addEventListener('click', function() {
-                    const region = this.dataset.region;
-                    displayMarketData(region);
-                });
-            });
-            
-            // Bouton de rafraîchissement
-            const refreshBtn = document.getElementById('refresh-data');
-            if (refreshBtn) {
-                refreshBtn.addEventListener('click', function() {
-                    this.classList.add('rotating');
-                    loadMarketData().then(() => {
-                        setTimeout(() => {
-                            this.classList.remove('rotating');
-                        }, 1000);
-                    });
-                });
-            }
-            
             // Gestion de l'affichage initial et des modals
             const startButton = document.querySelector('.start-button');
+            const landingContainer = document.querySelector('.landing-container');
             const mainContent = document.querySelector('.main-content');
             const updateModal = document.getElementById('update-modal');
             const authModal = document.getElementById('auth-modal');
@@ -510,13 +501,14 @@
             // Bouton de démarrage
             if (startButton) {
                 startButton.addEventListener('click', function() {
-                    document.querySelector('.start-container').classList.add('hidden');
-                    document.querySelector('.app-header').classList.add('hidden');
-                    document.querySelector('.app-footer').classList.add('hidden');
-                    mainContent.classList.remove('hidden');
+                    if (landingContainer) landingContainer.style.display = 'none';
+                    if (mainContent) mainContent.classList.remove('hidden');
                     
                     // Afficher le modal d'authentification
-                    authModal.classList.add('visible');
+                    if (authModal) authModal.classList.add('visible');
+                    
+                    // Charger les données de marché
+                    loadMarketData();
                 });
             }
             
@@ -528,7 +520,7 @@
                         authModal.classList.remove('visible');
                         // Afficher le modal de mise à jour
                         setTimeout(() => {
-                            updateModal.classList.add('visible');
+                            if (updateModal) updateModal.classList.add('visible');
                         }, 300);
                     });
                 }
@@ -570,6 +562,27 @@
                         }, 50);
                     });
                 }
+            }
+            
+            // Changement d'onglet de région
+            document.querySelectorAll('.region-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const region = this.dataset.region;
+                    displayMarketData(region);
+                });
+            });
+            
+            // Bouton de rafraîchissement
+            const refreshBtn = document.getElementById('refresh-data');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', function() {
+                    this.classList.add('rotating');
+                    loadMarketData().then(() => {
+                        setTimeout(() => {
+                            this.classList.remove('rotating');
+                        }, 1000);
+                    });
+                });
             }
             
             // Gestion du thème
@@ -651,21 +664,5 @@
             });
         });
     </script>
-
-    <style>
-        /* Ajout de styles pour le logo cliquable */
-        #home-logo {
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        
-        #home-logo:hover {
-            transform: scale(1.05);
-        }
-        
-        #home-logo:active {
-            transform: scale(0.95);
-        }
-    </style>
 </body>
 </html>
