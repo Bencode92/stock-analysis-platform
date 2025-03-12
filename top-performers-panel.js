@@ -1,6 +1,6 @@
 /**
  * TradePulse - Composant Top Performers
- * Affiche les indices avec les plus fortes variations quotidiennes et annuelles
+ * Affiche les indices avec les plus fortes variations quotidiennes et annuelles (Top 3 meilleurs et pires)
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -59,11 +59,11 @@ function renderTopPerformers() {
         <div class="top-tab-content ${activeTab === 'daily' ? 'active' : ''}" id="daily-tab">
           <div class="top-performers-grid">
             <div class="top-performers-column">
-              <h4 class="top-column-title positive">Hausses</h4>
+              <h4 class="top-column-title positive">Top 3 Hausses</h4>
               ${renderPerformersList(daily.best, 'positive')}
             </div>
             <div class="top-performers-column">
-              <h4 class="top-column-title negative">Baisses</h4>
+              <h4 class="top-column-title negative">Top 3 Baisses</h4>
               ${renderPerformersList(daily.worst, 'negative')}
             </div>
           </div>
@@ -72,11 +72,11 @@ function renderTopPerformers() {
         <div class="top-tab-content ${activeTab === 'ytd' ? 'active' : ''}" id="ytd-tab">
           <div class="top-performers-grid">
             <div class="top-performers-column">
-              <h4 class="top-column-title positive">Hausses</h4>
+              <h4 class="top-column-title positive">Top 3 Hausses</h4>
               ${renderPerformersList(ytd.best, 'positive', true)}
             </div>
             <div class="top-performers-column">
-              <h4 class="top-column-title negative">Baisses</h4>
+              <h4 class="top-column-title negative">Top 3 Baisses</h4>
               ${renderPerformersList(ytd.worst, 'negative', true)}
             </div>
           </div>
@@ -91,9 +91,12 @@ function renderPerformersList(performers, trendClass, isYtd = false) {
     return '<div class="no-performers">Aucune donnée disponible</div>';
   }
 
+  // Limiter à 3 éléments maximum
+  const topThree = performers.slice(0, 3);
+  
   let html = '<div class="performers-list">';
   
-  performers.forEach(item => {
+  topThree.forEach(item => {
     const percentValue = isYtd ? item.ytdChange : item.changePercent;
     
     html += `
