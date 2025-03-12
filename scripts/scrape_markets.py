@@ -44,6 +44,13 @@ CONFIG = {
             "MERVAL", "BOVESPA", "IPC", "IPSA", "COLCAP", "BVLG", "IBC", "CASE",
             "ISE", "TA", "QE", "FTSE/JSE", "MOEX", "MSX30"
         ]
+    },
+    # Mapping des sélecteurs DOM pour les différentes régions
+    "region_selectors": {
+        "europe": "#europe-tab",
+        "us": "#etats-unis-tab",
+        "asia": "#asie-tab",
+        "other": "#autres-tab"
     }
 }
 
@@ -64,165 +71,204 @@ MARKET_DATA = {
     }
 }
 
-def classify_index(index_data):
-    """Classe un indice dans la bonne région"""
-    name = index_data["name"].upper()
+def get_headers():
+    """Crée des en-têtes HTTP aléatoires pour éviter la détection de bot"""
+    return {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
+        "Referer": "https://www.google.com/"
+    }
+
+def extract_table_data(table):
+    """Extrait les données d'un tableau"""
+    indices = []
+    if not table:
+        return indices
     
-    # Vérifier chaque région
-    for region, keywords in CONFIG["regions"].items():
-        if any(keyword in name for keyword in keywords):
-            MARKET_DATA["indices"][region].append(index_data)
-            return
+    # Trouver les en-têtes pour comprendre la structure des colonnes
+    headers = []
+    header_row = table.find('thead')
+    if header_row:
+        headers = [th.text.strip().lower() for th in header_row.find_all('th')]
+        logger.info(f"En-têtes du tableau: {headers}")
     
-    # Par défaut, ajouter à "other"
-    MARKET_DATA["indices"]["other"].append(index_data)
+    # Déterminer les indices des colonnes importantes
+    name_idx = next((i for i, h in enumerate(headers) if any(keyword in h for keyword in ['nom', 'indice', 'action'])), 0)
+    value_idx = next((i for i, h in enumerate(headers) if any(keyword in h for keyword in ['dernier', 'cours', 'clôture'])), 1)
+    change_idx = next((i for i, h in enumerate(headers) if any(keyword in h for keyword in ['var.', 'variation', 'abs'])), 2)
+    pct_idx = next((i for i, h in enumerate(headers) if '%' in h), 3)
+    
+    # Trouver toutes les lignes de données
+    rows = table.select('tbody tr')
+    logger.info(f"Nombre de lignes trouvées: {len(rows)}")
+    
+    for row in rows:
+        cells = row.find_all('td')
+        if len(cells) < 3:
+            continue
+        
+        try:
+            # Extraire le nom
+            name_cell = cells[name_idx] if name_idx < len(cells) else cells[0]
+            name_el = name_cell.find('a') or name_cell
+            name = name_el.text.strip()
+            
+            # Extraire la valeur
+            value_cell = cells[value_idx] if value_idx < len(cells) else cells[1]
+            value = value_cell.text.strip()
+            
+            # Extraire la variation
+            change_cell = cells[change_idx] if change_idx < len(cells) else None
+            change = change_cell.text.strip() if change_cell else ""
+            
+            # Extraire le pourcentage
+            pct_cell = cells[pct_idx] if pct_idx < len(cells) and pct_idx < len(cells) else None
+            change_percent = pct_cell.text.strip() if pct_cell else ""
+            
+            # Extraire des données supplémentaires si disponibles
+            opening = cells[4].text.strip() if len(cells) > 4 else ""
+            high = cells[5].text.strip() if len(cells) > 5 else ""
+            low = cells[6].text.strip() if len(cells) > 6 else ""
+            
+            # Déterminer la tendance
+            trend = "down" if (change and '-' in change) or (change_percent and '-' in change_percent) else "up"
+            
+            # Créer l'objet indice
+            if name and value:
+                index_data = {
+                    "name": name,
+                    "value": value,
+                    "change": change,
+                    "changePercent": change_percent,
+                    "opening": opening,
+                    "high": high,
+                    "low": low,
+                    "trend": trend
+                }
+                indices.append(index_data)
+        
+        except Exception as e:
+            logger.warning(f"Erreur lors du traitement d'une ligne: {str(e)}")
+    
+    return indices
+
+def classify_indices(indices):
+    """Classe les indices dans les bonnes régions"""
+    for index in indices:
+        name = index["name"].upper()
+        
+        # Vérifier chaque région
+        classified = False
+        for region, keywords in CONFIG["regions"].items():
+            if any(keyword in name for keyword in keywords):
+                MARKET_DATA["indices"][region].append(index)
+                classified = True
+                break
+        
+        # Par défaut, ajouter à "other"
+        if not classified:
+            MARKET_DATA["indices"]["other"].append(index)
+
+def scrape_tab_data(soup, region):
+    """Récupère les données d'un onglet spécifique (Europe, US, Asie, Autres)"""
+    logger.info(f"Traitement de l'onglet: {region}")
+    
+    # Trouver les tableaux dans cet onglet
+    tab_content = soup.select(f"{CONFIG['region_selectors'][region]}-content")
+    if tab_content:
+        # Si on a trouvé le contenu de l'onglet, chercher les tableaux dedans
+        tables = tab_content[0].find_all('table')
+    else:
+        # Sinon, chercher tous les tableaux et filtrer par région
+        tables = soup.find_all('table')
+    
+    logger.info(f"Nombre de tableaux trouvés pour {region}: {len(tables)}")
+    
+    # Traiter chaque tableau
+    indices = []
+    for i, table in enumerate(tables):
+        logger.info(f"Traitement du tableau {i+1}/{len(tables)} pour {region}")
+        table_indices = extract_table_data(table)
+        indices.extend(table_indices)
+    
+    return indices
+
+def direct_scrape_approach(html):
+    """Approche alternative qui recherche directement tous les tableaux"""
+    logger.info("Utilisation de l'approche de scraping directe")
+    
+    soup = BeautifulSoup(html, 'html.parser')
+    all_tables = soup.find_all('table')
+    
+    logger.info(f"Nombre total de tableaux trouvés: {len(all_tables)}")
+    
+    # Extraire les données de tous les tableaux
+    all_indices = []
+    for i, table in enumerate(all_tables):
+        logger.info(f"Traitement du tableau {i+1}/{len(all_tables)}")
+        indices = extract_table_data(table)
+        all_indices.extend(indices)
+    
+    # Classer les indices
+    classify_indices(all_indices)
+    
+    return len(all_indices) > 0
+
+def get_page_content():
+    """Récupère le contenu de la page avec retries"""
+    headers = get_headers()
+    max_retries = 3
+    retry_delay = 2
+    
+    for retry in range(max_retries):
+        try:
+            logger.info(f"Tentative {retry+1}/{max_retries} de récupération de la page")
+            response = requests.get(CONFIG["source_url"], headers=headers, timeout=30)
+            response.raise_for_status()
+            return response.text
+        except Exception as e:
+            logger.warning(f"Erreur lors de la récupération: {str(e)}")
+            if retry < max_retries - 1:
+                time.sleep(retry_delay)
+    
+    return None
 
 def scrape_market_data():
     """Récupère et parse la page de Boursorama"""
     logger.info(f"🔍 Récupération des données depuis {CONFIG['source_url']}...")
     
     try:
-        # En-têtes pour simuler un navigateur
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
-            "Cache-Control": "no-cache",
-            "Pragma": "no-cache",
-            "Referer": "https://www.google.com/"
-        }
+        # Récupérer le contenu de la page
+        html = get_page_content()
+        if not html:
+            logger.error("Impossible de récupérer la page")
+            return False
         
-        # Faire la requête avec retry
-        max_retries = 3
-        retry_delay = 2
-        
-        for retry in range(max_retries):
-            try:
-                response = requests.get(CONFIG["source_url"], headers=headers, timeout=30, verify=False)
-                response.raise_for_status()
-                break
-            except (requests.RequestException, Exception) as e:
-                logger.warning(f"Tentative {retry+1}/{max_retries} échouée: {str(e)}")
-                if retry == max_retries - 1:
-                    raise
-                time.sleep(retry_delay)
-        
-        if response.status_code != 200:
-            raise Exception(f"Erreur HTTP: {response.status_code}")
-        
-        html = response.text
-        
-        # Vérifier qu'on a bien récupéré du HTML
-        if not html or len(html) < 1000 or "<!DOCTYPE html>" not in html:
-            raise Exception("Réponse HTML invalide")
-        
-        logger.info("✅ Page récupérée avec succès")
+        if len(html) < 1000:
+            logger.warning(f"Page trop courte ({len(html)} caractères), possible erreur")
         
         # Parser le HTML
         soup = BeautifulSoup(html, 'html.parser')
         
-        # Trouver tous les tableaux
-        tables = soup.find_all('table')
-        logger.info(f"Nombre de tableaux trouvés: {len(tables)}")
+        # Vérifier la structure pour voir si on a des onglets
+        has_tabs = all(soup.select(selector) for selector in CONFIG["region_selectors"].values())
         
-        # Trouver le tableau des indices
-        indices_table = None
-        for table in tables:
-            headers = [th.text.strip().lower() for th in table.find_all('th')]
-            if any(keyword in "".join(headers) for keyword in ['indice', 'dernier', 'var', 'variation']):
-                indices_table = table
-                logger.info(f"Table des indices trouvée")
-                break
-        
-        if not indices_table:
-            logger.warning("⚠️ Tableau des indices non trouvé")
-            return False
-        
-        # Extraire les données des lignes
-        rows = indices_table.find('tbody').find_all('tr') if indices_table.find('tbody') else indices_table.find_all('tr')
-        logger.info(f"Nombre de lignes trouvées: {len(rows)}")
-        
-        # Parcourir les lignes
-        for row in rows:
-            try:
-                cells = row.find_all('td')
-                
-                if len(cells) >= 3:
-                    # Extraire le nom de l'indice
-                    name_el = row.find('a')
-                    name = name_el.text.strip() if name_el else ""
-                    
-                    # Si pas de lien, essayer la première ou deuxième cellule
-                    if not name and len(cells) > 0:
-                        name = cells[0].text.strip()
-                    if not name and len(cells) > 1:
-                        name = cells[1].text.strip()
-                    
-                    # Vérifier que c'est un nom d'indice valide
-                    if name and len(name) > 1 and not re.match(r'^\d+', name):
-                        # Extraire les valeurs
-                        value = ""
-                        change = ""
-                        change_percent = ""
-                        opening = ""
-                        high = ""
-                        low = ""
-                        
-                        # Parcourir les cellules pour extraire les données
-                        for i in range(1, len(cells)):
-                            text = cells[i].text.strip()
-                            
-                            # Si c'est un pourcentage, c'est probablement la variation en %
-                            if "%" in text and not change_percent:
-                                change_percent = text
-                                continue
-                            
-                            # Si c'est un nombre avec +/-, c'est probablement la variation absolue
-                            if ('+' in text or '-' in text) and re.search(r'[0-9]', text) and not change:
-                                change = text
-                                continue
-                            
-                            # Si c'est un nombre et qu'on n'a pas encore de valeur
-                            if re.search(r'[0-9]', text) and not value:
-                                value = text
-                                continue
-                            
-                            # Si c'est un nombre et qu'on a déjà une valeur mais pas d'ouverture
-                            if re.search(r'[0-9]', text) and value and not opening:
-                                opening = text
-                                continue
-                            
-                            # Si c'est un nombre et qu'on a déjà une valeur et une ouverture mais pas de plus haut
-                            if re.search(r'[0-9]', text) and value and opening and not high:
-                                high = text
-                                continue
-                            
-                            # Si c'est un nombre et qu'on a déjà une valeur, une ouverture et un plus haut mais pas de plus bas
-                            if re.search(r'[0-9]', text) and value and opening and high and not low:
-                                low = text
-                                continue
-                        
-                        # Créer l'indice uniquement si on a au moins une valeur
-                        if value:
-                            # Déterminer la tendance (hausse/baisse)
-                            trend = "down" if (change and '-' in change) or (change_percent and '-' in change_percent) else "up"
-                            
-                            # Créer l'objet indice
-                            index_data = {
-                                "name": name,
-                                "value": value,
-                                "change": change or "",
-                                "changePercent": change_percent or "",
-                                "opening": opening or "",
-                                "high": high or "",
-                                "low": low or "",
-                                "trend": trend
-                            }
-                            
-                            # Classer l'indice
-                            classify_index(index_data)
-            except Exception as e:
-                logger.warning(f"Erreur lors du traitement d'une ligne: {str(e)}")
+        if has_tabs:
+            logger.info("Structure avec onglets détectée, traitement par onglet")
+            
+            # Traiter chaque onglet
+            for region in CONFIG["regions"].keys():
+                region_indices = scrape_tab_data(soup, region)
+                MARKET_DATA["indices"][region].extend(region_indices)
+                logger.info(f"Indices trouvés pour {region}: {len(region_indices)}")
+        else:
+            logger.info("Structure sans onglets détectée, approche directe")
+            if not direct_scrape_approach(html):
+                logger.warning("L'approche directe n'a trouvé aucun indice")
+                return False
         
         # Mettre à jour le compteur
         MARKET_DATA["meta"]["count"] = sum(len(indices) for indices in MARKET_DATA["indices"].values())
