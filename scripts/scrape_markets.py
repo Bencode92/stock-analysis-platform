@@ -4,7 +4,7 @@
 """
 Script d'extraction des données boursières depuis Boursorama
 Utilisé par GitHub Actions pour mettre à jour régulièrement les données
-Version améliorée pour extraire le pays et la variation depuis janvier
+Version améliorée pour extraire correctement le pays et le libellé d'indice
 """
 
 import os
@@ -84,6 +84,7 @@ CONFIG = {
         "belgique": "Belgique",
         "pays-bas": "Pays-Bas",
         "suisse": "Suisse",
+        "autriche": "Autriche",
         "états-unis": "États-Unis",
         "usa": "États-Unis",
         "japon": "Japon",
@@ -95,7 +96,29 @@ CONFIG = {
         "argentine": "Argentine",
         "chili": "Chili",
         "mexique": "Mexique",
-        "australie": "Australie"
+        "australie": "Australie",
+        "zone euro": "Zone Euro"
+    },
+    # Indices standards pour chaque pays
+    "standard_indices": {
+        "France": "CAC 40",
+        "Allemagne": "DAX",
+        "Royaume-Uni": "FTSE 100",
+        "Espagne": "IBEX 35",
+        "Italie": "FTSE MIB",
+        "Belgique": "BEL 20",
+        "Pays-Bas": "AEX",
+        "Suisse": "SMI",
+        "Zone Euro": "EURO STOXX 50",
+        "États-Unis": "S&P 500",
+        "Japon": "NIKKEI 225",
+        "Chine": "SHANGHAI COMPOSITE",
+        "Hong Kong": "HANG SENG",
+        "Corée du Sud": "KOSPI",
+        "Brésil": "BOVESPA",
+        "Argentine": "MERVAL",
+        "Chili": "IPSA",
+        "Australie": "ASX 200"
     }
 }
 
@@ -140,26 +163,75 @@ def get_headers():
         "Referer": "https://www.google.com/"
     }
 
-def extract_country_from_name(name):
-    """Extrait le pays à partir du nom de l'indice"""
-    # Si le pays est entre parenthèses
+def separate_country_and_index(name):
+    """
+    Sépare le nom du pays et le libellé de l'indice à partir du nom complet
+    """
+    # Essayer de trouver un pays connu dans le nom
+    found_country = None
+    index_name = name
+    
+    # Vérifier s'il y a une parenthèse qui pourrait contenir le pays
     if "(" in name and ")" in name:
-        country_match = re.search(r'\((.*?)\)', name)
-        if country_match:
-            country = country_match.group(1).strip().lower()
-            return CONFIG["country_mapping"].get(country, country.capitalize())
+        parts = name.split("(")
+        index_part = parts[0].strip()
+        country_part = parts[1].replace(")", "").strip().lower()
+        
+        if country_part in CONFIG["country_mapping"]:
+            found_country = CONFIG["country_mapping"][country_part]
+            index_name = index_part
     
-    # Chercher des correspondances directes de pays dans le nom
-    name_lower = name.lower()
-    for key, value in CONFIG["country_mapping"].items():
-        if key in name_lower:
-            return value
+    # Si aucun pays n'a été trouvé dans les parenthèses, chercher dans le nom
+    if not found_country:
+        # Recherche de correspondances directes
+        for country_key, country_name in CONFIG["country_mapping"].items():
+            if country_key in name.lower():
+                found_country = country_name
+                # Ne pas modifier l'index_name ici car nous ne savons pas exactement où est le pays dans le nom
+                break
     
-    # Si aucun pays n'a été trouvé
-    return ""
+    # Si toujours pas de pays trouvé, essayer de déterminer à partir des indices connus
+    if not found_country:
+        for standard_country, standard_index in CONFIG["standard_indices"].items():
+            if standard_index.upper() in name.upper():
+                found_country = standard_country
+                break
+    
+    # Si nous avons un pays mais pas clairement un indice, essayer de déterminer l'indice standard
+    if found_country and (index_name == name or len(index_name.strip()) < 3):
+        if found_country in CONFIG["standard_indices"]:
+            index_name = CONFIG["standard_indices"][found_country]
+    
+    # Nettoyage final du nom de l'indice
+    if index_name == name and found_country:
+        # Essayer de remplacer le nom du pays dans le nom complet si nous avons trouvé un pays
+        index_name = name.replace(found_country, "").strip()
+        if len(index_name) < 3:  # Si le nom de l'indice est trop court après suppression
+            index_name = name
+    
+    # Si aucun pays n'a été trouvé, utiliser un pays par défaut basé sur la région
+    if not found_country:
+        if "DAX" in name or "XETRA" in name:
+            found_country = "Allemagne"
+        elif "CAC" in name or "PARIS" in name:
+            found_country = "France"
+        elif "FTSE" in name or "LONDON" in name:
+            found_country = "Royaume-Uni"
+        elif "NASDAQ" in name or "S&P" in name or "DOW" in name:
+            found_country = "États-Unis"
+        elif "NIKKEI" in name or "TOKYO" in name:
+            found_country = "Japon"
+        elif "SHANGHAI" in name or "SHENZHEN" in name:
+            found_country = "Chine"
+        elif "HANG SENG" in name:
+            found_country = "Hong Kong"
+        else:
+            found_country = "International"
+    
+    return found_country, index_name
 
 def extract_table_data(table):
-    """Extrait les données d'un tableau avec améliorations pour le pays et la variation depuis janvier"""
+    """Extrait les données d'un tableau avec séparation pays/indice"""
     indices = []
     if not table:
         return indices
@@ -172,13 +244,16 @@ def extract_table_data(table):
         logger.info(f"En-têtes du tableau: {headers}")
     
     # Déterminer les indices des colonnes importantes
-    name_idx = next((i for i, h in enumerate(headers) if any(keyword in h for keyword in ['nom', 'indice', 'action'])), 0)
+    name_idx = next((i for i, h in enumerate(headers) if any(keyword in h for keyword in ['nom', 'indice', 'action', 'libellé'])), 0)
     value_idx = next((i for i, h in enumerate(headers) if any(keyword in h for keyword in ['dernier', 'cours', 'clôture'])), 1)
     change_idx = next((i for i, h in enumerate(headers) if any(keyword in h for keyword in ['var.', 'variation', 'abs', 'veille'])), 2)
     pct_idx = next((i for i, h in enumerate(headers) if '%' in h), 3)
     
     # Recherche spécifique pour la variation depuis janvier
-    ytd_idx = next((i for i, h in enumerate(headers) if any(keyword in h for keyword in ['1 janv', 'depuis le 1er', 'ytd', 'annuel'])), -1)
+    ytd_idx = next((i for i, h in enumerate(headers) if any(keyword in h for keyword in ['1 janv', 'depuis le 1er', 'ytd', 'annuel', 'var/1janv'])), -1)
+    
+    # Vérifier s'il y a déjà une colonne pays
+    country_idx = next((i for i, h in enumerate(headers) if h == 'pays'), -1)
     
     # Trouver toutes les lignes de données
     rows = table.select('tbody tr')
@@ -195,8 +270,17 @@ def extract_table_data(table):
             name_el = name_cell.find('a') or name_cell
             name = name_el.text.strip()
             
-            # Extraire le pays à partir du nom
-            country = extract_country_from_name(name)
+            # Extraire le pays (si disponible directement)
+            country = None
+            if country_idx >= 0 and country_idx < len(cells):
+                country = cells[country_idx].text.strip()
+            
+            # Si le pays n'est pas disponible directement, l'extraire du nom
+            if not country:
+                country, index_name = separate_country_and_index(name)
+            else:
+                # Si le pays est disponible, le nom de l'indice est simplement le nom
+                index_name = name
             
             # Extraire la valeur (dernier cours)
             value_cell = cells[value_idx] if value_idx < len(cells) else cells[1]
@@ -220,32 +304,22 @@ def extract_table_data(table):
             high = cells[5].text.strip() if len(cells) > 5 else ""
             low = cells[6].text.strip() if len(cells) > 6 else ""
             
-            # Tenter de nettoyer les données pour high et low
-            if high and "%" in high:
-                # Si high contient un pourcentage, c'est probablement une autre donnée
-                # Essayons de trouver la vraie valeur high dans une autre colonne
-                for i in range(4, min(len(cells), 10)):
-                    cell_text = cells[i].text.strip()
-                    if cell_text and "%" not in cell_text and not cell_text.lower() == "voir":
-                        high = cell_text
-                        break
-            
             # Déterminer la tendance
             trend = "down" if (change and '-' in change) or (change_percent and '-' in change_percent) else "up"
             
-            # Créer l'objet indice
+            # Créer l'objet indice avec la structure correcte
             if name and value:
                 index_data = {
-                    "name": name,
-                    "country": country,
-                    "value": value,
-                    "change": change,
-                    "changePercent": change_percent,
-                    "ytdChange": ytd_change,
-                    "opening": opening,
-                    "high": high,
-                    "low": low,
-                    "trend": trend
+                    "country": country,           # Pays
+                    "index_name": index_name,     # Libellé de l'indice
+                    "value": value,               # Dernier cours
+                    "change": change,             # Variation
+                    "changePercent": change_percent,  # Variation %
+                    "ytdChange": ytd_change,      # Variation depuis janvier
+                    "opening": opening,           # Ouverture
+                    "high": high,                 # Plus haut
+                    "low": low,                   # Plus bas
+                    "trend": trend                # Tendance
                 }
                 indices.append(index_data)
                 ALL_INDICES.append(index_data)  # Ajouter à la liste globale pour le top 3
@@ -255,14 +329,18 @@ def extract_table_data(table):
     
     return indices
 
-def is_priority_index(name, region):
+def is_priority_index(index_data, region):
     """Détermine si un indice fait partie des indices prioritaires"""
     # Convertir en majuscules pour la comparaison
-    name_upper = name.upper()
+    country_upper = index_data["country"].upper()
+    index_name_upper = index_data["index_name"].upper()
     
-    # Vérifier si l'indice est dans la liste des prioritaires pour sa région
+    # Vérifier si le pays ou l'indice est dans la liste des prioritaires pour sa région
     for priority_name in CONFIG["priority_indices"][region]:
-        if priority_name.upper() in name_upper or name_upper in priority_name.upper():
+        if (priority_name.upper() in country_upper or 
+            country_upper in priority_name.upper() or
+            priority_name.upper() in index_name_upper or 
+            index_name_upper in priority_name.upper()):
             return True
     
     # Filtrer les indices spécifiques à exclure
@@ -275,13 +353,13 @@ def is_priority_index(name, region):
     
     # Exclure certains indices qui correspondent aux patterns d'exclusion
     for pattern in exclude_patterns:
-        if pattern.upper() in name_upper:
+        if pattern.upper() in index_name_upper:
             return False
     
     # Pour les grands indices généraux, les inclure même s'ils ne sont pas explicitement listés
     general_indices = ["DOW JONES", "S&P", "FTSE", "CAC", "DAX", "NIKKEI", "HANG SENG"]
     for idx in general_indices:
-        if idx.upper() in name_upper and len(name) < 30:  # Éviter les sous-indices trop longs
+        if idx.upper() in index_name_upper and len(index_name_upper) < 30:  # Éviter les sous-indices trop longs
             return True
     
     # Par défaut, ne pas inclure
@@ -289,18 +367,20 @@ def is_priority_index(name, region):
 
 def classify_index(index_data):
     """Classe un indice dans la bonne région et ne garde que les indices prioritaires"""
-    name = index_data["name"].upper()
+    country = index_data["country"].upper()
+    index_name = index_data["index_name"].upper()
     
     # Vérifier chaque région
     for region, keywords in CONFIG["regions"].items():
-        if any(keyword.upper() in name for keyword in keywords):
+        if (any(keyword.upper() in country for keyword in keywords) or
+            any(keyword.upper() in index_name for keyword in keywords)):
             # Ne l'ajouter que s'il s'agit d'un indice prioritaire
-            if is_priority_index(index_data["name"], region):
+            if is_priority_index(index_data, region):
                 MARKET_DATA["indices"][region].append(index_data)
             return region
     
     # Par défaut, tenter d'ajouter à "other" si prioritaire
-    if is_priority_index(index_data["name"], "other"):
+    if is_priority_index(index_data, "other"):
         MARKET_DATA["indices"]["other"].append(index_data)
     return "other"
 
@@ -328,7 +408,7 @@ def scrape_tab_data(soup, region):
         # Filtrer pour ne garder que les indices prioritaires
         filtered_indices = []
         for index in table_indices:
-            if is_priority_index(index["name"], region):
+            if is_priority_index(index, region):
                 filtered_indices.append(index)
         
         indices.extend(filtered_indices)
@@ -403,7 +483,7 @@ def calculate_top_performers():
         if "changePercent" in index and index["changePercent"]:
             # Créer une copie avec la région déterminée
             for region, indices_list in MARKET_DATA["indices"].items():
-                if any(i["name"] == index["name"] for i in indices_list):
+                if any(i["country"] == index["country"] and i["index_name"] == index["index_name"] for i in indices_list):
                     index_copy = index.copy()
                     index_copy["region"] = region
                     indices_with_region.append(index_copy)
@@ -515,7 +595,7 @@ def scrape_market_data():
         
         # Trier les indices par nom dans chaque région
         for region in MARKET_DATA["indices"]:
-            MARKET_DATA["indices"][region] = sorted(MARKET_DATA["indices"][region], key=lambda x: x["name"])
+            MARKET_DATA["indices"][region] = sorted(MARKET_DATA["indices"][region], key=lambda x: x["country"])
         
         # Mise à jour de l'horodatage
         now = datetime.now()
