@@ -83,6 +83,16 @@ MARKET_DATA = {
         "asia": [],
         "other": []
     },
+    "top_performers": {
+        "daily": {
+            "best": [],
+            "worst": []
+        },
+        "ytd": {
+            "best": [],
+            "worst": []
+        }
+    },
     "meta": {
         "source": "Boursorama",
         "url": CONFIG["source_url"],
@@ -91,6 +101,9 @@ MARKET_DATA = {
         "lastUpdated": datetime.now().isoformat()
     }
 }
+
+# Liste pour stocker tous les indices avant le filtrage (pour calculer les Top 3)
+ALL_INDICES = []
 
 def get_headers():
     """Crée des en-têtes HTTP aléatoires pour éviter la détection de bot"""
@@ -121,7 +134,7 @@ def extract_table_data(table):
     value_idx = next((i for i, h in enumerate(headers) if any(keyword in h for keyword in ['dernier', 'cours', 'clôture'])), 1)
     change_idx = next((i for i, h in enumerate(headers) if any(keyword in h for keyword in ['var.', 'variation', 'abs', 'veille'])), 2)
     pct_idx = next((i for i, h in enumerate(headers) if '%' in h), 3)
-    ytd_idx = next((i for i, h in enumerate(headers) if any(keyword in h for keyword in ['1 janv'])), -1)
+    ytd_idx = next((i for i, h in enumerate(headers) if any(keyword in h for keyword in ['1 janv', 'depuis le 1er', 'ytd'])), -1)
     
     # Trouver toutes les lignes de données
     rows = table.select('tbody tr')
@@ -177,6 +190,7 @@ def extract_table_data(table):
                     "trend": trend
                 }
                 indices.append(index_data)
+                ALL_INDICES.append(index_data)  # Ajouter à la liste globale pour le top 3
         
         except Exception as e:
             logger.warning(f"Erreur lors du traitement d'une ligne: {str(e)}")
@@ -225,11 +239,12 @@ def classify_index(index_data):
             # Ne l'ajouter que s'il s'agit d'un indice prioritaire
             if is_priority_index(index_data["name"], region):
                 MARKET_DATA["indices"][region].append(index_data)
-            return
+            return region
     
     # Par défaut, tenter d'ajouter à "other" si prioritaire
     if is_priority_index(index_data["name"], "other"):
         MARKET_DATA["indices"]["other"].append(index_data)
+    return "other"
 
 def scrape_tab_data(soup, region):
     """Récupère les données d'un onglet spécifique (Europe, US, Asie, Autres)"""
@@ -304,11 +319,100 @@ def get_page_content():
     
     return None
 
+def parse_percentage(percent_str):
+    """Convertit une chaîne de pourcentage en nombre flottant"""
+    if not percent_str:
+        return 0.0
+    
+    # Supprimer les caractères non numériques sauf le point décimal et le signe moins
+    clean_str = re.sub(r'[^0-9\.\-]', '', percent_str.replace(',', '.'))
+    
+    try:
+        return float(clean_str)
+    except ValueError:
+        return 0.0
+
+def calculate_top_performers():
+    """Calcule les indices avec les meilleures et pires performances"""
+    logger.info("Calcul des indices avec les meilleures/pires performances...")
+    
+    # Liste pour stocker tous les indices avec leur région
+    indices_with_region = []
+    
+    # Ajouter la région à chaque indice
+    for index in ALL_INDICES:
+        # S'assurer que l'indice a des données de variation
+        if "changePercent" in index and index["changePercent"]:
+            # Créer une copie avec la région déterminée
+            for region, indices_list in MARKET_DATA["indices"].items():
+                if any(i["name"] == index["name"] for i in indices_list):
+                    index_copy = index.copy()
+                    index_copy["region"] = region
+                    indices_with_region.append(index_copy)
+                    break
+    
+    # Filtrer les indices avec des valeurs de pourcentage valides
+    daily_indices = [idx for idx in indices_with_region if idx.get("changePercent")]
+    ytd_indices = [idx for idx in indices_with_region if idx.get("ytdChange")]
+    
+    # Trier par variation quotidienne
+    if daily_indices:
+        # Convertir les pourcentages en valeurs numériques pour le tri
+        for idx in daily_indices:
+            idx["_change_value"] = parse_percentage(idx["changePercent"])
+        
+        # Trier et sélectionner les 3 meilleurs et les 3 pires
+        sorted_daily = sorted(daily_indices, key=lambda x: x["_change_value"], reverse=True)
+        
+        # Sélectionner les 3 meilleurs
+        best_daily = sorted_daily[:3]
+        # Sélectionner les 3 pires (en excluant les valeurs à 0 qui pourraient être des données manquantes)
+        worst_daily = [idx for idx in sorted_daily if idx["_change_value"] != 0]
+        worst_daily = sorted(worst_daily, key=lambda x: x["_change_value"])[:3]
+        
+        # Ajouter aux résultats en supprimant le champ temporaire _change_value
+        for idx in best_daily:
+            idx_copy = {k: v for k, v in idx.items() if k != "_change_value"}
+            MARKET_DATA["top_performers"]["daily"]["best"].append(idx_copy)
+        
+        for idx in worst_daily:
+            idx_copy = {k: v for k, v in idx.items() if k != "_change_value"}
+            MARKET_DATA["top_performers"]["daily"]["worst"].append(idx_copy)
+    
+    # Trier par variation depuis le début de l'année
+    if ytd_indices:
+        # Convertir les pourcentages en valeurs numériques pour le tri
+        for idx in ytd_indices:
+            idx["_ytd_value"] = parse_percentage(idx["ytdChange"])
+        
+        # Trier et sélectionner les 3 meilleurs et les 3 pires
+        sorted_ytd = sorted(ytd_indices, key=lambda x: x["_ytd_value"], reverse=True)
+        
+        # Sélectionner les 3 meilleurs
+        best_ytd = sorted_ytd[:3]
+        # Sélectionner les 3 pires (en excluant les valeurs à 0 qui pourraient être des données manquantes)
+        worst_ytd = [idx for idx in sorted_ytd if idx["_ytd_value"] != 0]
+        worst_ytd = sorted(worst_ytd, key=lambda x: x["_ytd_value"])[:3]
+        
+        # Ajouter aux résultats en supprimant le champ temporaire _ytd_value
+        for idx in best_ytd:
+            idx_copy = {k: v for k, v in idx.items() if k != "_ytd_value"}
+            MARKET_DATA["top_performers"]["ytd"]["best"].append(idx_copy)
+        
+        for idx in worst_ytd:
+            idx_copy = {k: v for k, v in idx.items() if k != "_ytd_value"}
+            MARKET_DATA["top_performers"]["ytd"]["worst"].append(idx_copy)
+    
+    logger.info(f"Top performers calculés. Daily: {len(MARKET_DATA['top_performers']['daily']['best'])} best, {len(MARKET_DATA['top_performers']['daily']['worst'])} worst. YTD: {len(MARKET_DATA['top_performers']['ytd']['best'])} best, {len(MARKET_DATA['top_performers']['ytd']['worst'])} worst.")
+
 def scrape_market_data():
     """Récupère et parse la page de Boursorama"""
     logger.info(f"🔍 Récupération des données depuis {CONFIG['source_url']}...")
     
     try:
+        # Vider la liste globale des indices
+        ALL_INDICES.clear()
+        
         # Récupérer le contenu de la page
         html = get_page_content()
         if not html:
@@ -337,6 +441,9 @@ def scrape_market_data():
             if not direct_scrape_approach(html):
                 logger.warning("L'approche directe n'a trouvé aucun indice")
                 return False
+        
+        # Calculer les indices avec les meilleures et pires performances
+        calculate_top_performers()
         
         # Mettre à jour le compteur
         MARKET_DATA["meta"]["count"] = sum(len(indices) for indices in MARKET_DATA["indices"].values())
