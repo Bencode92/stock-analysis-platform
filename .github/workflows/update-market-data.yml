@@ -20,17 +20,41 @@ jobs:
         with:
           node-version: 16
           
+      - name: Initialize npm if needed
+        run: |
+          if [ ! -f package.json ]; then
+            npm init -y
+          fi
+          
       - name: Install dependencies
         run: npm install axios cheerio
         
+      - name: Create data directory if needed
+        run: mkdir -p data
+        
       - name: Scrape market data
         run: node scripts/scrape-markets.js
+        continue-on-error: true  # Ne pas faire échouer le workflow si le scraping échoue
+        
+      - name: Verify data file exists
+        run: |
+          if [ ! -f data/markets.json ]; then
+            echo "Fichier de données non trouvé, création d'un fichier vide"
+            echo "{}" > data/markets.json
+          fi
         
       - name: Commit and push if changed
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "GitHub Actions"
           
-          # Vérifier s'il y a des changements
+          # Ajouter le fichier data/markets.json (qu'il ait changé ou non)
           git add data/markets.json
-          git diff --staged --quiet || (git commit -m "Update market data [skip ci]" && git push)
+          
+          # Vérifier s'il y a des modifications à commiter
+          if git diff --staged --quiet; then
+            echo "Aucune modification détectée, pas de commit nécessaire"
+          else
+            git commit -m "Update market data [skip ci]"
+            git push
+          fi
