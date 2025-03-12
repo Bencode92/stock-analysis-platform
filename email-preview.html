@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TradePulse - Prévisualisation Email</title>
-    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
             --primary-color: #00ff9d;
@@ -18,7 +20,7 @@
         body {
             background-color: var(--bg-dark);
             color: var(--text-light);
-            font-family: 'Arial', sans-serif;
+            font-family: 'Inter', sans-serif;
             margin: 0;
             padding: 0;
         }
@@ -185,93 +187,482 @@
         .hidden {
             display: none;
         }
+
+        /* Sidebar de navigation verticale */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 80px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            z-index: 101;
+            background-color: rgba(1, 15, 26, 0.95);
+            border-right: 1px solid rgba(0, 255, 135, 0.1);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--primary-color);
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
+        }
+        
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+        }
+        
+        .nav-item {
+            margin-bottom: 20px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            transition: all 0.3s;
+            position: relative;
+            text-decoration: none;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 10px;
+            height: 10px;
+            background-color: #ff4757;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
+        }
+        
+        .nav-item:hover, .nav-item.active {
+            background-color: rgba(0, 255, 135, 0.1);
+            color: var(--primary-color);
+        }
+        
+        .nav-item i {
+            font-size: 1.2rem;
+        }
+
+        /* Adjusted layout for sidebar */
+        .main-content {
+            margin-left: 80px;
+            padding: 20px;
+        }
+
+        /* Dashboard data summary */
+        .data-summary {
+            background-color: var(--bg-medium);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .data-card {
+            background-color: rgba(0, 255, 135, 0.05);
+            border: 1px solid rgba(0, 255, 135, 0.2);
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .data-card h3 {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin: 0 0 8px 0;
+        }
+        
+        .data-card .value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin: 0;
+        }
+        
+        .data-card .description {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+        
+        .sync-info {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--bg-light);
+            display: flex;
+            align-items: center;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+        
+        .sync-info i {
+            color: var(--primary-color);
+            margin-right: 8px;
+        }
+        
+        /* Alert settings */
+        .setting-toggle {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .toggle-label {
+            flex-grow: 1;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 36px;
+            height: 20px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--bg-light);
+            transition: .4s;
+            border-radius: 20px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: var(--text-light);
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: var(--primary-color);
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(16px);
+        }
+        
+        .threshold-group {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .threshold-label {
+            width: 150px;
+        }
+        
+        .threshold-value {
+            width: 80px;
+            text-align: center;
+            padding: 5px;
+            background-color: var(--bg-dark);
+            border: 1px solid var(--bg-light);
+            border-radius: 4px;
+            color: var(--text-light);
+            margin: 0 10px;
+        }
+        
+        .threshold-slider {
+            flex-grow: 1;
+        }
+        
+        /* Network background animation */
+        .network-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+        
+        .node {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+            opacity: 0.4;
+        }
+        
+        .node.pulse {
+            animation: node-pulse 3s infinite;
+        }
+        
+        .connection {
+            position: absolute;
+            height: 1px;
+            transform-origin: 0 0;
+            background: linear-gradient(90deg, transparent, var(--primary-color), transparent);
+            opacity: 0.2;
+        }
+        
+        @keyframes node-pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(2); opacity: 0.1; }
+            100% { transform: scale(1); }
+        }
+
+        /* Responsive styles */
+        @media (max-width: 768px) {
+            .preview-container {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                width: 100%;
+                height: auto;
+                flex-direction: row;
+                padding: 10px 20px;
+                justify-content: space-between;
+                position: fixed;
+                bottom: 0;
+                top: auto;
+                border-top: 1px solid rgba(0, 255, 135, 0.1);
+                border-right: none;
+            }
+            
+            .sidebar-logo {
+                display: none;
+            }
+            
+            .sidebar-nav {
+                flex-direction: row;
+                justify-content: space-around;
+                width: 100%;
+                margin: 0;
+            }
+            
+            .nav-item {
+                margin: 0;
+            }
+            
+            .main-content {
+                margin-left: 0;
+                margin-bottom: 70px;
+            }
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>PRÉVISUALISATION DES ALERTES EMAIL</h1>
-            <div>
-                <a href="actualites.html" class="btn-secondary">Retour au Dashboard</a>
-            </div>
-        </div>
-        
-        <div class="preview-container">
-            <div class="controls">
-                <div class="form-group">
-                    <label>Type de résumé</label>
-                    <select id="emailType">
-                        <option value="daily">Résumé quotidien</option>
-                        <option value="weekly">Résumé hebdomadaire</option>
-                        <option value="alert">Alerte spéciale</option>
-                    </select>
+    <!-- Réseau de fond animé -->
+    <div class="network-background" id="network-background"></div>
+
+    <!-- Sidebar de navigation verticale -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">TP</div>
+        <nav class="sidebar-nav">
+            <a href="actualites.html" class="nav-item" title="Actualités">
+                <i class="fas fa-newspaper"></i>
+            </a>
+            <a href="portefeuilles.html" class="nav-item" title="Portefeuilles">
+                <i class="fas fa-chart-pie"></i>
+            </a>
+            <a href="tableau.html" class="nav-item" title="Tableau de bord">
+                <i class="fas fa-tachometer-alt"></i>
+            </a>
+            <a href="marches.html" class="nav-item" title="Marchés">
+                <i class="fas fa-chart-line"></i>
+            </a>
+            <a href="email-preview.html" class="nav-item active" title="Alertes">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge"></span>
+            </a>
+            <a href="parametres.html" class="nav-item" title="Paramètres">
+                <i class="fas fa-cog"></i>
+            </a>
+        </nav>
+    </aside>
+
+    <div class="main-content">
+        <div class="container">
+            <div class="header">
+                <h1>PRÉVISUALISATION DES ALERTES EMAIL</h1>
+                <div>
+                    <a href="tableau.html" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-tachometer-alt mr-2"></i>Tableau de bord
+                    </a>
                 </div>
-                
-                <div class="form-group">
-                    <label>Portefeuille</label>
-                    <select id="portfolioType">
-                        <option value="aggressive">Agressif (+8.32%)</option>
-                        <option value="moderate">Modéré (+5.47%)</option>
-                        <option value="stable">Stable (+2.19%)</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Email de test</label>
-                    <input type="email" id="testEmail" placeholder="votre@email.com">
-                </div>
-                
-                <button id="sendTestBtn" class="btn-primary">Envoyer un email de test</button>
-                <button id="downloadBtn" class="btn-secondary" style="margin-top: 10px;">Télécharger le Template</button>
-                
-                <div class="form-group" style="margin-top: 20px;">
-                    <label>Préférences d'envoi</label>
-                    <div>
-                        <input type="checkbox" id="dailyEnabled" checked>
-                        <label for="dailyEnabled">Résumé quotidien</label>
-                    </div>
-                    <div>
-                        <input type="checkbox" id="weeklyEnabled" checked>
-                        <label for="weeklyEnabled">Résumé hebdomadaire</label>
-                    </div>
-                    <div>
-                        <input type="checkbox" id="alertsEnabled" checked>
-                        <label for="alertsEnabled">Alertes spéciales</label>
-                    </div>
-                </div>
-                
-                <button id="savePrefsBtn" class="btn-primary" style="margin-top: 10px;">Enregistrer les préférences</button>
             </div>
             
-            <div class="preview">
-                <div class="preview-tabs">
-                    <div class="preview-tab active" data-view="desktop">Desktop</div>
-                    <div class="preview-tab" data-view="tablet">Tablette</div>
-                    <div class="preview-tab" data-view="mobile">Mobile</div>
-                    <div class="preview-tab" data-view="code">Code HTML</div>
+            <div class="preview-container">
+                <div>
+                    <!-- Dashboard Data Summary -->
+                    <div id="dashboard-data-summary" class="data-summary mb-6">
+                        <h2 class="text-lg font-semibold mb-4 text-green-400">Données du Tableau de Bord</h2>
+                        
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <div class="data-card">
+                                <h3>Valeur Totale</h3>
+                                <p class="value" id="summary-total-value">84 213 €</p>
+                            </div>
+                            <div class="data-card">
+                                <h3>Profit/Perte</h3>
+                                <p class="value text-green-400" id="summary-profit-loss">+6 487 €</p>
+                            </div>
+                            <div class="data-card">
+                                <h3>Rendement Annuel</h3>
+                                <p class="value text-green-400" id="summary-annual-return">+7.6%</p>
+                            </div>
+                            <div class="data-card">
+                                <h3>Ratio de Sharpe</h3>
+                                <p class="value" id="summary-sharpe-ratio">0.72</p>
+                            </div>
+                        </div>
+                        
+                        <div class="sync-info">
+                            <i class="fas fa-sync-alt"></i>
+                            <span id="summary-last-sync">Dernière synchronisation: 11 Mars 2025, 09:38:14</span>
+                        </div>
+                        
+                        <button id="refresh-dashboard-data" class="mt-4 w-full bg-transparent border border-green-400 text-green-400 hover:bg-green-400 hover:text-gray-900 transition-colors">
+                            <i class="fas fa-sync-alt mr-2"></i>Actualiser les données
+                        </button>
+                    </div>
+                    
+                    <!-- Controls for Email Type and Preview -->
+                    <div class="controls">
+                        <div class="form-group">
+                            <label>Type d'alerte</label>
+                            <select id="emailType" class="bg-gray-800 border border-gray-700 rounded">
+                                <option value="daily">Résumé quotidien</option>
+                                <option value="weekly">Résumé hebdomadaire</option>
+                                <option value="portfolio">Alertes portefeuille</option>
+                                <option value="market">Alertes marché</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Portefeuille</label>
+                            <select id="portfolioType" class="bg-gray-800 border border-gray-700 rounded">
+                                <option value="aggressive">Agressif (+8.32%)</option>
+                                <option value="moderate">Modéré (+5.47%)</option>
+                                <option value="stable">Stable (+2.19%)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Email de test</label>
+                            <input type="email" id="testEmail" placeholder="votre@email.com" class="bg-gray-800 border border-gray-700 rounded">
+                        </div>
+                        
+                        <button id="sendTestBtn" class="w-full mb-3">
+                            <i class="fas fa-paper-plane mr-2"></i>Envoyer un email de test
+                        </button>
+                        <button id="downloadBtn" class="w-full bg-transparent border border-green-400 text-green-400 hover:bg-green-400 hover:text-gray-900 transition-colors">
+                            <i class="fas fa-download mr-2"></i>Télécharger le Template
+                        </button>
+                        
+                        <hr class="my-5 border-gray-700">
+                        
+                        <h3 class="text-green-400 text-lg font-medium mb-4">Paramètres des alertes</h3>
+                        
+                        <div class="setting-toggle">
+                            <div class="toggle-label">Résumé quotidien</div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="dailyEnabled" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="setting-toggle">
+                            <div class="toggle-label">Résumé hebdomadaire</div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="weeklyEnabled" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="setting-toggle">
+                            <div class="toggle-label">Alertes performance</div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="performanceEnabled" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="threshold-group">
+                            <div class="threshold-label">Seuil variation</div>
+                            <input type="text" class="threshold-value" id="variationThreshold" value="2.5%">
+                            <input type="range" class="threshold-slider" id="variationSlider" min="0.5" max="10" step="0.5" value="2.5">
+                        </div>
+                        
+                        <div class="setting-toggle">
+                            <div class="toggle-label">Alertes marché</div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="marketEnabled" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                        
+                        <div class="threshold-group">
+                            <div class="threshold-label">Seuil indice</div>
+                            <input type="text" class="threshold-value" id="indexThreshold" value="1.5%">
+                            <input type="range" class="threshold-slider" id="indexSlider" min="0.5" max="5" step="0.5" value="1.5">
+                        </div>
+                        
+                        <button id="savePrefsBtn" class="w-full mt-5">
+                            <i class="fas fa-save mr-2"></i>Enregistrer les préférences
+                        </button>
+                    </div>
                 </div>
                 
-                <div class="preview-content">
-                    <div class="preview-view desktop-view">
-                        <div class="preview-frame-container">
-                            <iframe id="previewFrame" class="preview-frame device-desktop" src="email-dashboard-template.html"></iframe>
-                        </div>
+                <div class="preview">
+                    <div class="preview-tabs">
+                        <div class="preview-tab active" data-view="desktop">Desktop</div>
+                        <div class="preview-tab" data-view="tablet">Tablette</div>
+                        <div class="preview-tab" data-view="mobile">Mobile</div>
+                        <div class="preview-tab" data-view="code">Code HTML</div>
                     </div>
                     
-                    <div class="preview-view tablet-view hidden">
-                        <div class="preview-frame-container">
-                            <iframe id="tabletFrame" class="preview-frame device-tablet" src="email-dashboard-template.html"></iframe>
+                    <div class="preview-content">
+                        <div class="preview-view desktop-view">
+                            <div class="preview-frame-container">
+                                <iframe id="previewFrame" class="preview-frame device-desktop" srcdoc="" src=""></iframe>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="preview-view mobile-view hidden">
-                        <div class="preview-frame-container">
-                            <iframe id="mobileFrame" class="preview-frame device-mobile" src="email-dashboard-template.html"></iframe>
+                        
+                        <div class="preview-view tablet-view hidden">
+                            <div class="preview-frame-container">
+                                <iframe id="tabletFrame" class="preview-frame device-tablet" srcdoc="" src=""></iframe>
+                            </div>
                         </div>
-                    </div>
-                    
-                    <div class="preview-view code-view hidden">
-                        <pre id="codeView"></pre>
+                        
+                        <div class="preview-view mobile-view hidden">
+                            <div class="preview-frame-container">
+                                <iframe id="mobileFrame" class="preview-frame device-mobile" srcdoc="" src=""></iframe>
+                            </div>
+                        </div>
+                        
+                        <div class="preview-view code-view hidden">
+                            <pre id="codeView"></pre>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -282,92 +673,591 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Prévisualisation des onglets
+            // Network Background
+            createNetworkBackground();
+            
+            function createNetworkBackground() {
+                const networkBackground = document.getElementById('network-background');
+                networkBackground.innerHTML = '';
+                
+                // Calculate the number of nodes based on screen size
+                const numNodes = Math.min(Math.floor(window.innerWidth * window.innerHeight / 15000), 80);
+                
+                // Create nodes
+                const nodes = [];
+                for (let i = 0; i < numNodes; i++) {
+                    const node = document.createElement('div');
+                    node.className = 'node';
+                    
+                    // Random position
+                    const x = Math.random() * 100;
+                    const y = Math.random() * 100;
+                    
+                    node.style.left = x + '%';
+                    node.style.top = y + '%';
+                    
+                    // Some nodes pulse
+                    if (Math.random() < 0.3) {
+                        node.classList.add('pulse');
+                    }
+                    
+                    networkBackground.appendChild(node);
+                    nodes.push({ element: node, x, y });
+                }
+                
+                // Create connections between some nodes
+                const maxConnections = Math.min(numNodes * 1.5, 80);
+                for (let i = 0; i < maxConnections; i++) {
+                    const nodeA = nodes[Math.floor(Math.random() * nodes.length)];
+                    const nodeB = nodes[Math.floor(Math.random() * nodes.length)];
+                    
+                    if (nodeA !== nodeB) {
+                        createConnection(nodeA, nodeB);
+                    }
+                }
+            }
+            
+            function createConnection(nodeA, nodeB) {
+                const connection = document.createElement('div');
+                connection.className = 'connection';
+                
+                // Calculate angle and distance between the two nodes
+                const dx = nodeB.x - nodeA.x;
+                const dy = nodeB.y - nodeA.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                
+                // Position and size the connection
+                connection.style.width = distance + '%';
+                connection.style.left = nodeA.x + '%';
+                connection.style.top = nodeA.y + '%';
+                connection.style.transform = `rotate(${angle}deg)`;
+                
+                document.getElementById('network-background').appendChild(connection);
+            }
+            
+            // Handle preview tabs
             const tabs = document.querySelectorAll('.preview-tab');
             const views = document.querySelectorAll('.preview-view');
             
             tabs.forEach(tab => {
                 tab.addEventListener('click', function() {
-                    // Onglets actifs
+                    // Active tabs
                     tabs.forEach(t => t.classList.remove('active'));
                     this.classList.add('active');
                     
-                    // Afficher la vue correspondante
+                    // Show corresponding view
                     const viewType = this.getAttribute('data-view');
                     views.forEach(view => view.classList.add('hidden'));
                     document.querySelector(`.${viewType}-view`).classList.remove('hidden');
                     
-                    // Charger le code HTML pour l'onglet de code
+                    // Load HTML code for code tab
                     if (viewType === 'code') {
-                        fetch('email-dashboard-template.html')
-                            .then(response => response.text())
-                            .then(html => {
-                                document.getElementById('codeView').textContent = html;
-                            });
+                        document.getElementById('codeView').textContent = generateEmailHTML();
                     }
                 });
             });
             
-            // Gérer les emails de test
+            // Load dashboard data from localStorage (if synced from tableau.html)
+            loadDashboardData();
+            
+            function loadDashboardData() {
+                const dashboardData = JSON.parse(localStorage.getItem('tradepulse_dashboard_data') || '{}');
+                const dashboardUpdated = localStorage.getItem('tradepulse_dashboard_updated');
+                
+                if (dashboardData && Object.keys(dashboardData).length > 0) {
+                    // Update dashboard summary fields
+                    if (dashboardData.totalValue) {
+                        document.getElementById('summary-total-value').textContent = dashboardData.totalValue;
+                    }
+                    
+                    if (dashboardData.profitLoss) {
+                        document.getElementById('summary-profit-loss').textContent = dashboardData.profitLoss;
+                    }
+                    
+                    if (dashboardData.annualReturn) {
+                        document.getElementById('summary-annual-return').textContent = dashboardData.annualReturn;
+                    }
+                    
+                    if (dashboardData.sharpeRatio) {
+                        document.getElementById('summary-sharpe-ratio').textContent = dashboardData.sharpeRatio;
+                    }
+                }
+                
+                // Update last sync time
+                if (dashboardUpdated) {
+                    const date = new Date(dashboardUpdated);
+                    document.getElementById('summary-last-sync').textContent = `Dernière synchronisation: ${formatDateTime(date)}`;
+                }
+                
+                // Show notification badge if new data is available
+                const notificationBadge = document.querySelector('.notification-badge');
+                if (notificationBadge && dashboardUpdated) {
+                    const lastRead = localStorage.getItem('tradepulse_alert_lastread');
+                    if (!lastRead || new Date(dashboardUpdated) > new Date(lastRead)) {
+                        notificationBadge.style.display = 'block';
+                    } else {
+                        notificationBadge.style.display = 'none';
+                    }
+                }
+                
+                // Mark as read when this page loads
+                localStorage.setItem('tradepulse_alert_lastread', new Date().toISOString());
+            }
+            
+            // Generate email HTML based on template and data
+            function generateEmailHTML() {
+                const emailType = document.getElementById('emailType').value;
+                const portfolioType = document.getElementById('portfolioType').value;
+                
+                // Get dashboard data if available
+                const dashboardData = JSON.parse(localStorage.getItem('tradepulse_dashboard_data') || '{}');
+                
+                // Format today's date
+                const today = new Date();
+                const formattedDate = today.toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                });
+                
+                // Template values
+                let performanceValue = '+8.32%';
+                let performanceClass = 'positive';
+                let portfolioValue = '84 213';
+                let gainValue = '+6 487';
+                let gainClass = 'positive';
+                let sharpeRatio = '0.72';
+                let newsTitle1 = 'La Fed annonce une réunion exceptionnelle';
+                let newsDesc1 = 'La Réserve fédérale américaine vient d\'annoncer une réunion exceptionnelle pour discuter des prochaines mesures sur les taux.';
+                let newsTitle2 = 'Apple lance une nouvelle gamme de produits IA';
+                let newsDesc2 = 'Le géant de la tech dévoile ses premiers produits dédiés à l\'intelligence artificielle.'
+                let newsTitle3 = 'Bitcoin franchit un nouveau seuil à 75 000$';
+                let newsDesc3 = 'La principale cryptomonnaie atteint un nouveau record dans un contexte d\'adoption institutionnelle.';
+                
+                // Use dashboard data if available
+                if (Object.keys(dashboardData).length > 0) {
+                    // Strip currency symbol and spaces if needed
+                    if (dashboardData.totalValue) {
+                        portfolioValue = dashboardData.totalValue.replace('€', '').trim();
+                    }
+                    
+                    if (dashboardData.profitLoss) {
+                        gainValue = dashboardData.profitLoss.replace('€', '').trim();
+                        gainClass = dashboardData.profitLoss.startsWith('+') ? 'positive' : 'negative';
+                    }
+                    
+                    if (dashboardData.annualReturn) {
+                        performanceValue = dashboardData.annualReturn;
+                        performanceClass = dashboardData.annualReturn.startsWith('+') ? 'positive' : 'negative';
+                    }
+                    
+                    if (dashboardData.sharpeRatio) {
+                        sharpeRatio = dashboardData.sharpeRatio;
+                    }
+                    
+                    // If there are assets, get top performer
+                    if (dashboardData.assets && dashboardData.assets.length > 0) {
+                        // Sort by performance
+                        const sortedAssets = [...dashboardData.assets].sort((a, b) => {
+                            const perfA = parseFloat(a.totalPerformance.replace('+', '').replace('%', ''));
+                            const perfB = parseFloat(b.totalPerformance.replace('+', '').replace('%', ''));
+                            return perfB - perfA;
+                        });
+                        
+                        // Add asset news
+                        if (sortedAssets[0]) {
+                            newsTitle3 = `${sortedAssets[0].name} en forte hausse`;
+                            newsDesc3 = `L'actif affiche une performance de ${sortedAssets[0].totalPerformance} et poursuit sa tendance haussière.`;
+                        }
+                    }
+                    
+                    // If there are transactions, mention latest
+                    if (dashboardData.transactions && dashboardData.transactions.length > 0) {
+                        const latestTransaction = dashboardData.transactions[0];
+                        newsTitle2 = `Dernière transaction: ${latestTransaction.type} ${latestTransaction.asset}`;
+                        newsDesc2 = `Transaction de ${latestTransaction.amount} effectuée le ${latestTransaction.date}.`;
+                    }
+                } else {
+                    // Apply variations based on portfolio type
+                    if (portfolioType === 'moderate') {
+                        performanceValue = '+5.47%';
+                        portfolioValue = '52 180';
+                        gainValue = '+2 705';
+                        sharpeRatio = '0.68';
+                    } else if (portfolioType === 'stable') {
+                        performanceValue = '+2.19%';
+                        portfolioValue = '35 420';
+                        gainValue = '+760';
+                        sharpeRatio = '0.61';
+                    }
+                }
+                
+                // Market data
+                const marketData = {
+                    cac40: {
+                        value: '7 628,80',
+                        change: '+0.54%',
+                        class: 'positive'
+                    },
+                    sp500: {
+                        value: '5 125,14',
+                        change: '+0.32%',
+                        class: 'positive'
+                    },
+                    nasdaq: {
+                        value: '16 048,55',
+                        change: '-0.12%',
+                        class: 'negative'
+                    },
+                    eurusd: {
+                        value: '1.0865',
+                        change: '+0.08%',
+                        class: 'positive'
+                    }
+                };
+                
+                // Create email template
+                return `<!DOCTYPE html>
+                <html lang="fr">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>TradePulse - ${emailType === 'daily' ? 'Résumé Quotidien' : 
+                                        emailType === 'weekly' ? 'Résumé Hebdomadaire' : 
+                                        emailType === 'portfolio' ? 'Alerte Portefeuille' : 'Alerte Marché'}</title>
+                    <style>
+                        /* Reset styles */
+                        body { font-family: 'Arial', sans-serif; margin: 0; padding: 0; background-color: #0a1621; color: #ffffff; }
+                        
+                        /* Container */
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0d1f2d; }
+                        
+                        /* Header */
+                        .header { text-align: center; padding: 20px 0; border-bottom: 1px solid #1e3a52; }
+                        .logo { color: #00ff9d; font-size: 28px; font-weight: bold; margin: 0; }
+                        .tagline { color: #9ba1a8; font-size: 14px; margin-top: 5px; }
+                        
+                        /* Sections */
+                        .section { padding: 20px 0; border-bottom: 1px solid #1e3a52; }
+                        .section-title { color: #00ff9d; font-size: 18px; margin-bottom: 15px; }
+                        
+                        /* Performance card */
+                        .performance-card { background-color: #15293c; border-radius: 8px; padding: 15px; margin-bottom: 15px; }
+                        .performance-value { font-size: 24px; font-weight: bold; }
+                        .positive { color: #00ff9d; }
+                        .negative { color: #ff4757; }
+                        .performance-label { color: #9ba1a8; font-size: 14px; margin-top: 5px; }
+                        
+                        /* Metrics */
+                        .metrics { display: flex; justify-content: space-between; margin-top: 15px; }
+                        .metric { text-align: center; flex: 1; }
+                        .metric-value { font-size: 18px; font-weight: bold; }
+                        .metric-label { color: #9ba1a8; font-size: 12px; margin-top: 5px; }
+                        
+                        /* Markets */
+                        .market-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #1e3a52; }
+                        .market-item:last-child { border-bottom: none; }
+                        .market-name { font-weight: bold; }
+                        
+                        /* Events */
+                        .event-item { background-color: #15293c; border-radius: 8px; padding: 15px; margin-bottom: 10px; }
+                        .event-time { color: #00ff9d; font-size: 14px; margin-bottom: 5px; }
+                        .event-title { font-weight: bold; margin-bottom: 5px; }
+                        .event-description { color: #9ba1a8; font-size: 14px; }
+                        
+                        /* Footer */
+                        .footer { text-align: center; padding: 20px 0; color: #9ba1a8; font-size: 12px; }
+                        .footer a { color: #00ff9d; text-decoration: none; }
+                        
+                        /* Responsive */
+                        @media only screen and (max-width: 480px) {
+                            .container { padding: 10px; }
+                            .metrics { flex-direction: column; }
+                            .metric { margin-bottom: 10px; }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        <div class="header">
+                            <div class="logo">TRADEPULSE</div>
+                            <div class="tagline">${emailType === 'daily' ? 'RÉSUMÉ QUOTIDIEN DU ' : 
+                                                  emailType === 'weekly' ? 'RÉSUMÉ HEBDOMADAIRE DU ' : 
+                                                  emailType === 'portfolio' ? 'ALERTE PORTEFEUILLE DU ' : 'ALERTE MARCHÉ DU '} ${formattedDate}</div>
+                        </div>
+                        
+                        <div class="section">
+                            <h2 class="section-title">PERFORMANCE DE VOTRE PORTEFEUILLE</h2>
+                            <div class="performance-card">
+                                <div class="performance-value ${performanceClass}">${performanceValue}</div>
+                                <div class="performance-label">Performance totale</div>
+                                
+                                <div class="metrics">
+                                    <div class="metric">
+                                        <div class="metric-value">${portfolioValue} €</div>
+                                        <div class="metric-label">Valeur totale</div>
+                                    </div>
+                                    <div class="metric">
+                                        <div class="metric-value ${gainClass}">${gainValue} €</div>
+                                        <div class="metric-label">Gain/Perte</div>
+                                    </div>
+                                    <div class="metric">
+                                        <div class="metric-value">${sharpeRatio}</div>
+                                        <div class="metric-label">Ratio de Sharpe</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="section">
+                            <h2 class="section-title">ÉTAT DES MARCHÉS</h2>
+                            
+                            <div class="market-item">
+                                <div class="market-name">CAC 40</div>
+                                <div class="market-value ${marketData.cac40.class}">${marketData.cac40.value} (${marketData.cac40.change})</div>
+                            </div>
+                            
+                            <div class="market-item">
+                                <div class="market-name">S&P 500</div>
+                                <div class="market-value ${marketData.sp500.class}">${marketData.sp500.value} (${marketData.sp500.change})</div>
+                            </div>
+                            
+                            <div class="market-item">
+                                <div class="market-name">NASDAQ</div>
+                                <div class="market-value ${marketData.nasdaq.class}">${marketData.nasdaq.value} (${marketData.nasdaq.change})</div>
+                            </div>
+                            
+                            <div class="market-item">
+                                <div class="market-name">EUR/USD</div>
+                                <div class="market-value ${marketData.eurusd.class}">${marketData.eurusd.value} (${marketData.eurusd.change})</div>
+                            </div>
+                        </div>
+                        
+                        <div class="section">
+                            <h2 class="section-title">ÉVÉNEMENTS IMPORTANTS AUJOURD'HUI</h2>
+                            
+                            <div class="event-item">
+                                <div class="event-time">08:15</div>
+                                <div class="event-title">Réunion exceptionnelle Fed</div>
+                                <div class="event-description">Federal Reserve</div>
+                            </div>
+                            
+                            <div class="event-item">
+                                <div class="event-time">14:30</div>
+                                <div class="event-title">Publication résultats trimestriels</div>
+                                <div class="event-description">Plusieurs entreprises du S&P 500</div>
+                            </div>
+                        </div>
+                        
+                        <div class="section">
+                            <h2 class="section-title">ACTUALITÉS FINANCIÈRES</h2>
+                            
+                            <div class="event-item">
+                                <div class="event-title">${newsTitle1}</div>
+                                <div class="event-description">${newsDesc1}</div>
+                            </div>
+                            
+                            <div class="event-item">
+                                <div class="event-title">${newsTitle2}</div>
+                                <div class="event-description">${newsDesc2}</div>
+                            </div>
+                            
+                            <div class="event-item">
+                                <div class="event-title">${newsTitle3}</div>
+                                <div class="event-description">${newsDesc3}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="footer">
+                            <p>Ce mail est envoyé automatiquement par TradePulse.</p>
+                            <p>Pour modifier vos préférences d'alertes, <a href="https://bencode92.github.io/stock-analysis-platform/email-preview.html">cliquez ici</a>.</p>
+                            <p>© 2025 TradePulse | Finance Intelligence Platform</p>
+                        </div>
+                    </div>
+                </body>
+                </html>`;
+            }
+            
+            // Initial preview rendering
+            updatePreview();
+            
+            // Handle change events on form controls
+            document.getElementById('emailType').addEventListener('change', updatePreview);
+            document.getElementById('portfolioType').addEventListener('change', updatePreview);
+            
+            function updatePreview() {
+                const emailHTML = generateEmailHTML();
+                
+                // Update all frames
+                document.getElementById('previewFrame').srcdoc = emailHTML;
+                document.getElementById('tabletFrame').srcdoc = emailHTML;
+                document.getElementById('mobileFrame').srcdoc = emailHTML;
+                
+                // Update code view if active
+                if (document.querySelector('.preview-tab[data-view="code"]').classList.contains('active')) {
+                    document.getElementById('codeView').textContent = emailHTML;
+                }
+            }
+            
+            // Refresh dashboard data button
+            document.getElementById('refresh-dashboard-data').addEventListener('click', function() {
+                this.innerHTML = '<i class="fas fa-sync-alt fa-spin mr-2"></i>Actualisation...';
+                
+                // Show notification after a delay
+                setTimeout(() => {
+                    loadDashboardData();
+                    updatePreview();
+                    
+                    // Reset button
+                    this.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Actualiser les données';
+                    
+                    // Show notification
+                    showNotification('Données actualisées avec succès !');
+                }, 1000);
+            });
+            
+            // Send test email button
             document.getElementById('sendTestBtn').addEventListener('click', function() {
                 const email = document.getElementById('testEmail').value;
                 if (email) {
-                    // Simuler l'envoi d'email (dans un vrai environnement, cela appellerait votre API)
+                    this.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Envoi en cours...';
+                    
+                    // Simulate sending with delay
                     setTimeout(() => {
+                        // Reset button
+                        this.innerHTML = '<i class="fas fa-paper-plane mr-2"></i>Envoyer un email de test';
+                        
                         const notification = document.getElementById('notification');
                         notification.style.display = 'block';
+                        notification.textContent = 'Email de test envoyé avec succès !';
+                        
                         setTimeout(() => {
                             notification.style.display = 'none';
                         }, 3000);
-                    }, 500);
+                    }, 1500);
                 } else {
-                    alert('Veuillez entrer une adresse email valide');
+                    showNotification('Veuillez entrer une adresse email valide', 'error');
                 }
             });
             
-            // Gérer le téléchargement du template
+            // Download template button
             document.getElementById('downloadBtn').addEventListener('click', function() {
-                fetch('email-dashboard-template.html')
-                    .then(response => response.text())
-                    .then(html => {
-                        const blob = new Blob([html], { type: 'text/html' });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'tradepulse-email-template.html';
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
-                    });
+                const emailHTML = generateEmailHTML();
+                
+                // Create a blob and download link
+                const blob = new Blob([emailHTML], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                
+                a.href = url;
+                a.download = 'tradepulse-email-template.html';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                showNotification('Template téléchargé avec succès !');
             });
             
-            // Enregistrer les préférences
+            // Save preferences button
             document.getElementById('savePrefsBtn').addEventListener('click', function() {
+                this.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Enregistrement...';
+                
+                // Collect preferences
                 const prefs = {
                     daily: document.getElementById('dailyEnabled').checked,
                     weekly: document.getElementById('weeklyEnabled').checked,
-                    alerts: document.getElementById('alertsEnabled').checked
+                    performance: document.getElementById('performanceEnabled').checked,
+                    market: document.getElementById('marketEnabled').checked,
+                    thresholds: {
+                        variation: document.getElementById('variationThreshold').value,
+                        index: document.getElementById('indexThreshold').value
+                    }
                 };
                 
-                // Simuler l'enregistrement des préférences
-                localStorage.setItem('emailPrefs', JSON.stringify(prefs));
+                // Save to localStorage
+                localStorage.setItem('tradepulse_email_prefs', JSON.stringify(prefs));
                 
+                // Reset button after delay
+                setTimeout(() => {
+                    this.innerHTML = '<i class="fas fa-save mr-2"></i>Enregistrer les préférences';
+                    showNotification('Préférences enregistrées avec succès !');
+                }, 1000);
+            });
+            
+            // Load saved preferences
+            loadPreferences();
+            
+            function loadPreferences() {
+                const savedPrefs = localStorage.getItem('tradepulse_email_prefs');
+                if (savedPrefs) {
+                    const prefs = JSON.parse(savedPrefs);
+                    
+                    // Apply to form
+                    document.getElementById('dailyEnabled').checked = prefs.daily;
+                    document.getElementById('weeklyEnabled').checked = prefs.weekly;
+                    document.getElementById('performanceEnabled').checked = prefs.performance;
+                    document.getElementById('marketEnabled').checked = prefs.market;
+                    
+                    if (prefs.thresholds) {
+                        document.getElementById('variationThreshold').value = prefs.thresholds.variation;
+                        document.getElementById('indexThreshold').value = prefs.thresholds.index;
+                        document.getElementById('variationSlider').value = parseFloat(prefs.thresholds.variation);
+                        document.getElementById('indexSlider').value = parseFloat(prefs.thresholds.index);
+                    }
+                }
+            }
+            
+            // Sync sliders and input fields
+            document.getElementById('variationSlider').addEventListener('input', function() {
+                document.getElementById('variationThreshold').value = this.value + '%';
+            });
+            
+            document.getElementById('indexSlider').addEventListener('input', function() {
+                document.getElementById('indexThreshold').value = this.value + '%';
+            });
+            
+            // Handle manual threshold input
+            document.getElementById('variationThreshold').addEventListener('change', function() {
+                let value = parseFloat(this.value.replace('%', ''));
+                if (isNaN(value)) value = 2.5;
+                if (value < 0.5) value = 0.5;
+                if (value > 10) value = 10;
+                
+                this.value = value + '%';
+                document.getElementById('variationSlider').value = value;
+            });
+            
+            document.getElementById('indexThreshold').addEventListener('change', function() {
+                let value = parseFloat(this.value.replace('%', ''));
+                if (isNaN(value)) value = 1.5;
+                if (value < 0.5) value = 0.5;
+                if (value > 5) value = 5;
+                
+                this.value = value + '%';
+                document.getElementById('indexSlider').value = value;
+            });
+            
+            // Utility function for formatted date time
+            function formatDateTime(date) {
+                return `${date.toLocaleDateString('fr-FR')} ${date.toLocaleTimeString('fr-FR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                })}`;
+            }
+            
+            // Show notification helper
+            function showNotification(message, type = 'success') {
                 const notification = document.getElementById('notification');
-                notification.textContent = 'Préférences enregistrées !';
+                notification.textContent = message;
+                notification.style.backgroundColor = type === 'success' ? '#00ff9d' : '#ff4757';
                 notification.style.display = 'block';
+                
                 setTimeout(() => {
                     notification.style.display = 'none';
                 }, 3000);
-            });
-            
-            // Charger les préférences sauvegardées
-            const savedPrefs = localStorage.getItem('emailPrefs');
-            if (savedPrefs) {
-                const prefs = JSON.parse(savedPrefs);
-                document.getElementById('dailyEnabled').checked = prefs.daily;
-                document.getElementById('weeklyEnabled').checked = prefs.weekly;
-                document.getElementById('alertsEnabled').checked = prefs.alerts;
             }
         });
     </script>
