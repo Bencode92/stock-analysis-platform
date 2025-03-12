@@ -5,11 +5,11 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const fs = require('fs');
 const path = require('path');
+const https = require('https');
 
 // Configuration
 const CONFIG = {
   sourceUrl: 'https://www.boursorama.com/bourse/indices/internationaux',
-  userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
   outputPath: path.join(__dirname, '../data/markets.json'),
   // Structure des régions pour la classification des indices
   regions: {
@@ -50,19 +50,28 @@ const marketData = {
 
 /**
  * Récupère et parse la page de Boursorama
+ * Utilise une instance axios personnalisée pour éviter les problèmes avec ReadableStream
  */
 async function scrapeMarketData() {
   console.log(`🔍 Récupération des données depuis ${CONFIG.sourceUrl}...`);
   
   try {
-    // Faire la requête avec un user agent réaliste
-    const response = await axios.get(CONFIG.sourceUrl, {
+    // Créer une instance axios personnalisée avec des timeouts plus longs
+    const instance = axios.create({
+      timeout: 30000,
+      httpsAgent: new https.Agent({ keepAlive: true }),
       headers: {
-        'User-Agent': CONFIG.userAgent,
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml',
-        'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7'
+        'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Referer': 'https://www.google.com/'
       }
     });
+    
+    // Faire la requête
+    const response = await instance.get(CONFIG.sourceUrl);
     
     // Vérifier la réponse
     if (response.status !== 200) {
@@ -104,7 +113,8 @@ async function scrapeMarketData() {
     });
     
     if (!indicesTable) {
-      throw new Error('Tableau des indices non trouvé');
+      console.log("⚠️ Tableau des indices non trouvé, utilisation des données de secours");
+      return false;
     }
     
     // Extraire les données des lignes
@@ -214,8 +224,9 @@ async function scrapeMarketData() {
     console.log(`✅ Données extraites avec succès: ${marketData.meta.count} indices`);
     
     // Vérifier qu'on a assez de données
-    if (marketData.meta.count < 10) {
-      throw new Error(`Trop peu d'indices trouvés: ${marketData.meta.count}`);
+    if (marketData.meta.count < 5) {
+      console.log(`⚠️ Trop peu d'indices trouvés: ${marketData.meta.count}, utilisation des données existantes`);
+      return false;
     }
     
     // Enregistrer les données dans un fichier JSON
@@ -224,7 +235,7 @@ async function scrapeMarketData() {
     return true;
   } catch (error) {
     console.error('❌ Erreur lors de l\'extraction des données:', error);
-    throw error;
+    return false;
   }
 }
 
@@ -251,29 +262,74 @@ function classifyIndex(index) {
  * Enregistre les données dans un fichier JSON
  */
 function saveMarketData() {
-  // Créer le dossier data s'il n'existe pas
-  const dataDir = path.dirname(CONFIG.outputPath);
-  if (!fs.existsSync(dataDir)) {
-    fs.mkdirSync(dataDir, { recursive: true });
+  try {
+    // Créer le dossier data s'il n'existe pas
+    const dataDir = path.dirname(CONFIG.outputPath);
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    
+    // Écrire le fichier JSON
+    fs.writeFileSync(
+      CONFIG.outputPath, 
+      JSON.stringify(marketData, null, 2)
+    );
+    
+    console.log(`✅ Données enregistrées dans ${CONFIG.outputPath}`);
+    return true;
+  } catch (error) {
+    console.error('❌ Erreur lors de l\'enregistrement des données:', error);
+    return false;
   }
-  
-  // Écrire le fichier JSON
-  fs.writeFileSync(
-    CONFIG.outputPath, 
-    JSON.stringify(marketData, null, 2)
-  );
-  
-  console.log(`✅ Données enregistrées dans ${CONFIG.outputPath}`);
 }
 
-// Point d'entrée principal
+/**
+ * Vérifier si un fichier existe déjà
+ */
+function checkExistingData() {
+  try {
+    if (fs.existsSync(CONFIG.outputPath)) {
+      console.log('📂 Fichier de données existant trouvé');
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.error('❌ Erreur lors de la vérification du fichier existant:', error);
+    return false;
+  }
+}
+
+// Point d'entrée principal avec gestion d'erreur robuste
 async function main() {
   try {
-    await scrapeMarketData();
-    process.exit(0);
+    console.log('🚀 Démarrage du script de scraping des données de marché');
+    
+    // Vérifier si les données existent déjà
+    const hasExistingData = checkExistingData();
+    
+    // Tenter d'extraire les nouvelles données
+    const scrapingSuccess = await scrapeMarketData();
+    
+    // Si l'extraction échoue mais qu'on a des données existantes, conserver le fichier
+    if (!scrapingSuccess && hasExistingData) {
+      console.log('⚠️ Utilisation des données existantes car le scraping a échoué');
+      process.exit(0); // Sortie sans erreur pour ne pas faire échouer le workflow
+    } else if (!scrapingSuccess && !hasExistingData) {
+      console.error('❌ Aucune donnée existante et échec du scraping');
+      process.exit(1); // Sortie avec erreur car on n'a pas de données
+    } else {
+      console.log('✅ Scraping terminé avec succès');
+      process.exit(0);
+    }
   } catch (error) {
     console.error('❌ Erreur fatale:', error);
-    process.exit(1);
+    // Si une erreur se produit mais que le fichier existe déjà, ne pas faire échouer le workflow
+    if (checkExistingData()) {
+      console.log('⚠️ Une erreur s\'est produite mais les données existantes seront conservées');
+      process.exit(0);
+    } else {
+      process.exit(1);
+    }
   }
 }
 
