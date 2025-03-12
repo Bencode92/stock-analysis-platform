@@ -1,44 +1,9 @@
 /**
- * marches-script.js - Extraction directe des indices boursiers depuis Boursorama
- * Mise à jour automatique toutes les 15 minutes
+ * marches-script.js - Version simplifiée qui charge des données pré-extraites
+ * Les données sont mises à jour régulièrement par GitHub Actions
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Configuration globale
-    const SCRAPER_CONFIG = {
-        // URL source des données (Boursorama Indices Internationaux)
-        sourceUrl: 'https://www.boursorama.com/bourse/indices/internationaux',
-        
-        // Liste de proxies CORS - on essaiera chacun jusqu'à ce qu'un fonctionne
-        corsProxies: [
-            'https://corsproxy.io/?',
-            'https://api.allorigins.win/raw?url=',
-            'https://thingproxy.freeboard.io/fetch/'
-        ],
-        
-        // Intervalle de mise à jour (15 minutes en ms)
-        updateInterval: 15 * 60 * 1000,
-        
-        // Structure des régions pour la classification des indices
-        regions: {
-            europe: [
-                'CAC', 'DAX', 'FTSE', 'IBEX', 'MIB', 'AEX', 'BEL', 'SMI', 'ATX', 
-                'OMX', 'OMXS', 'ISEQ', 'PSI', 'ATHEX', 'OSEBX', 'STOXX', 'EURO'
-            ],
-            us: [
-                'DOW', 'S&P', 'NASDAQ', 'RUSSELL', 'CBOE', 'NYSE', 'AMEX'
-            ],
-            asia: [
-                'NIKKEI', 'HANG SENG', 'SHANGHAI', 'SHENZHEN', 'KOSPI', 'SENSEX', 
-                'BSE', 'TAIEX', 'STRAITS', 'JAKARTA', 'KLSE', 'KOSDAQ', 'ASX'
-            ],
-            other: [
-                'MERVAL', 'BOVESPA', 'IPC', 'IPSA', 'COLCAP', 'BVLG', 'IBC', 'CASE', 
-                'ISE', 'TA', 'QE', 'FTSE/JSE', 'MOEX', 'MSX30'
-            ]
-        }
-    };
-    
     // Variables globales pour stocker les données
     let indicesData = {
         indices: {
@@ -49,7 +14,6 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         meta: {
             source: 'Boursorama',
-            url: SCRAPER_CONFIG.sourceUrl,
             timestamp: null,
             count: 0,
             isStale: false
@@ -59,8 +23,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // État du scraper
     let isLoading = false;
     let lastUpdate = null;
-    let updateTimer = null;
-    let fetchSuccess = false;
     
     // Initialiser les onglets de région
     initRegionTabs();
@@ -74,9 +36,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Premier chargement des données
     loadIndicesData();
-    
-    // Configurer la mise à jour automatique
-    setupAutoRefresh();
     
     // Ajouter les gestionnaires d'événements
     document.getElementById('refresh-data').addEventListener('click', function() {
@@ -94,24 +53,6 @@ document.addEventListener('DOMContentLoaded', function() {
         showElement('indices-loading');
         loadIndicesData(true);
     });
-    
-    /**
-     * Configure la mise à jour automatique
-     */
-    function setupAutoRefresh() {
-        // Effacer l'ancien timer si existant
-        if (updateTimer) {
-            clearInterval(updateTimer);
-        }
-        
-        // Créer un nouveau timer
-        updateTimer = setInterval(() => {
-            console.log('🔄 Mise à jour automatique des indices...');
-            loadIndicesData();
-        }, SCRAPER_CONFIG.updateInterval);
-        
-        console.log(`⏱️ Mise à jour automatique configurée toutes les ${SCRAPER_CONFIG.updateInterval / 60000} minutes`);
-    }
     
     /**
      * Initialise les onglets de région
@@ -139,7 +80,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * Charge les données d'indices depuis Boursorama
+     * Charge les données d'indices depuis le fichier JSON
      */
     async function loadIndicesData(forceRefresh = false) {
         // Éviter les chargements multiples simultanés
@@ -156,254 +97,44 @@ document.addEventListener('DOMContentLoaded', function() {
         hideElement('indices-container');
         
         try {
-            // Tenter de récupérer les données
-            const success = await fetchIndicesData();
+            // Récupérer les données depuis le fichier JSON
+            // Pour éviter le cache du navigateur en cas de forceRefresh
+            const cacheBuster = forceRefresh ? `?t=${Date.now()}` : '';
+            const response = await fetch(`data/markets.json${cacheBuster}`);
             
-            if (success) {
-                // Données récupérées avec succès
-                indicesData.meta.isStale = false;
-                renderIndicesData();
-                lastUpdate = new Date();
-                fetchSuccess = true;
-            } else {
-                // Échec de la récupération
-                if (!fetchSuccess) {
-                    // Aucune donnée précédente disponible
-                    showElement('indices-error');
-                    hideElement('indices-loading');
-                    hideElement('indices-container');
-                } else {
-                    // On a des données précédentes
-                    indicesData.meta.isStale = true;
-                    renderIndicesData();
-                    showNotification('Impossible de mettre à jour les données. Affichage des valeurs précédentes.', 'warning');
-                }
+            if (!response.ok) {
+                throw new Error(`Erreur de chargement: ${response.status}`);
             }
+            
+            // Charger les données
+            indicesData = await response.json();
+            
+            // Vérifier la fraîcheur des données
+            const dataTimestamp = new Date(indicesData.meta.timestamp);
+            const now = new Date();
+            const dataAge = now - dataTimestamp;
+            const MAX_DATA_AGE = 60 * 60 * 1000; // 1 heure en millisecondes
+            
+            // Marquer les données comme périmées si plus vieilles que MAX_DATA_AGE
+            indicesData.meta.isStale = dataAge > MAX_DATA_AGE;
+            
+            // Afficher une notification si les données sont périmées
+            if (indicesData.meta.isStale) {
+                showNotification('Les données affichées datent de plus d\'une heure', 'warning');
+            }
+            
+            // Afficher les données
+            renderIndicesData();
+            lastUpdate = new Date();
         } catch (error) {
             console.error('❌ Erreur lors du chargement des données:', error);
-            
-            if (fetchSuccess) {
-                // On a des données précédentes
-                indicesData.meta.isStale = true;
-                renderIndicesData();
-                showNotification('Impossible de mettre à jour les données. Affichage des valeurs précédentes.', 'warning');
-            } else {
-                showElement('indices-error');
-                hideElement('indices-loading');
-                hideElement('indices-container');
-            }
+            showElement('indices-error');
+            hideElement('indices-loading');
+            hideElement('indices-container');
         } finally {
             // Réinitialiser l'état
             isLoading = false;
         }
-    }
-    
-    /**
-     * Récupère les données des indices depuis Boursorama en essayant différents proxies CORS
-     */
-    async function fetchIndicesData() {
-        console.log('🔄 Récupération des données depuis Boursorama...');
-        
-        // Essayer chaque proxy CORS jusqu'à ce qu'un fonctionne
-        for (const corsProxy of SCRAPER_CONFIG.corsProxies) {
-            try {
-                console.log(`Tentative avec le proxy: ${corsProxy}`);
-                const url = corsProxy + encodeURIComponent(SCRAPER_CONFIG.sourceUrl);
-                
-                const response = await fetch(url);
-                
-                if (!response.ok) {
-                    console.warn(`Erreur HTTP avec le proxy ${corsProxy}: ${response.status}`);
-                    continue; // Essayer le prochain proxy
-                }
-                
-                const html = await response.text();
-                
-                // Vérifier si nous avons récupéré du HTML valide
-                if (!html || html.length < 1000 || !html.includes('<!DOCTYPE html>')) {
-                    console.warn(`Réponse invalide du proxy ${corsProxy}`);
-                    continue; // Essayer le prochain proxy
-                }
-                
-                console.log(`✅ Proxy ${corsProxy} a fonctionné!`);
-                
-                // Parser le HTML
-                const result = parseIndicesFromHTML(html);
-                
-                // Mettre à jour les méta-données
-                indicesData.meta.timestamp = new Date().toISOString();
-                indicesData.meta.count = 
-                    indicesData.indices.europe.length + 
-                    indicesData.indices.us.length + 
-                    indicesData.indices.asia.length + 
-                    indicesData.indices.other.length;
-                
-                console.log(`✅ Données récupérées avec succès: ${indicesData.meta.count} indices`);
-                
-                // Vérifier si nous avons des données
-                if (indicesData.meta.count === 0) {
-                    console.warn('⚠️ Aucun indice trouvé dans la page Boursorama');
-                    return false;
-                }
-                
-                return true;
-            } catch (error) {
-                console.warn(`❌ Erreur avec le proxy ${corsProxy}:`, error);
-                // Continuer avec le prochain proxy
-            }
-        }
-        
-        console.error('❌ Tous les proxies CORS ont échoué');
-        return false;
-    }
-    
-    /**
-     * Parse les indices depuis le HTML de Boursorama
-     * Utilise une méthode simple et robuste pour extraire les données du tableau
-     */
-    function parseIndicesFromHTML(html) {
-        try {
-            // Réinitialiser les données
-            indicesData.indices = {
-                europe: [],
-                us: [],
-                asia: [],
-                other: []
-            };
-            
-            // Créer un DOM temporaire
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(html, 'text/html');
-            
-            // Trouver tous les tableaux dans la page
-            const tables = doc.querySelectorAll('table');
-            console.log(`Nombre de tableaux trouvés: ${tables.length}`);
-            
-            // Parcourir tous les tableaux pour trouver celui des indices
-            let indicesTable = null;
-            for (const table of tables) {
-                // Vérifier si c'est le tableau des indices (contient des en-têtes typiques)
-                const headers = table.querySelectorAll('th');
-                const headerTexts = Array.from(headers).map(h => h.textContent.trim().toLowerCase());
-                
-                // Chercher des mots-clés typiques dans les en-têtes
-                if (headerTexts.some(text => 
-                    text.includes('indice') || 
-                    text.includes('dernier') || 
-                    text.includes('var') ||
-                    text.includes('variation'))) {
-                    indicesTable = table;
-                    console.log('Table des indices trouvée!');
-                    break;
-                }
-            }
-            
-            if (!indicesTable) {
-                console.warn('Aucun tableau d\'indices trouvé dans la page');
-                return false;
-            }
-            
-            // Extraire les données des lignes
-            const rows = indicesTable.querySelectorAll('tbody tr');
-            console.log(`Nombre de lignes trouvées: ${rows.length}`);
-            
-            // Parcourir les lignes et extraire les données
-            rows.forEach(row => {
-                try {
-                    const cells = row.querySelectorAll('td');
-                    
-                    if (cells.length >= 3) {
-                        // Extraire le nom de l'indice (priorité au texte du lien)
-                        const nameEl = row.querySelector('a');
-                        let name = nameEl ? nameEl.textContent.trim() : '';
-                        
-                        // Si pas de lien, essayer la première ou deuxième cellule
-                        if (!name && cells[0]) name = cells[0].textContent.trim();
-                        if (!name && cells[1]) name = cells[1].textContent.trim();
-                        
-                        // Vérifier que c'est un nom d'indice valide
-                        if (name && name.length > 1 && !name.match(/^\d+/)) {
-                            // Trouver les cellules de valeur et variation
-                            // On ne peut pas supposer des positions fixes, alors on cherche
-                            // les cellules qui ressemblent à des nombres ou pourcentages
-                            let value = '';
-                            let change = '';
-                            let opening = '';
-                            
-                            // Parcourir les cellules
-                            for (let i = 1; i < cells.length; i++) {
-                                const text = cells[i].textContent.trim();
-                                
-                                // Si c'est un pourcentage, c'est probablement la variation
-                                if (text.includes('%') && !change) {
-                                    change = text;
-                                    continue;
-                                }
-                                
-                                // Si c'est un nombre et qu'on n'a pas encore de valeur
-                                if (text.match(/[0-9]/) && !value) {
-                                    value = text;
-                                    continue;
-                                }
-                                
-                                // Si c'est un nombre et qu'on a déjà une valeur mais pas d'ouverture
-                                if (text.match(/[0-9]/) && value && !opening) {
-                                    opening = text;
-                                    continue;
-                                }
-                            }
-                            
-                            // Ne créer l'indice que si on a au moins une valeur et idéalement une variation
-                            if (value) {
-                                // Déterminer la tendance (hausse/baisse)
-                                const trend = change && change.includes('-') ? 'down' : 'up';
-                                
-                                // Créer l'objet indice
-                                const index = {
-                                    name,
-                                    value,
-                                    change: change || '',
-                                    changePercent: change || '',
-                                    opening: opening || '',
-                                    high: '',
-                                    low: '',
-                                    trend
-                                };
-                                
-                                // Classer l'indice dans la bonne région
-                                classifyIndex(index);
-                            }
-                        }
-                    }
-                } catch (rowError) {
-                    console.warn('Erreur lors du traitement d\'une ligne:', rowError);
-                }
-            });
-            
-            return true;
-        } catch (error) {
-            console.error('Erreur lors du parsing du HTML:', error);
-            return false;
-        }
-    }
-    
-    /**
-     * Classe un indice dans la bonne région
-     */
-    function classifyIndex(index) {
-        // Convertir le nom en majuscules pour faciliter la comparaison
-        const name = index.name.toUpperCase();
-        
-        // Vérifier chaque région
-        for (const [region, keywords] of Object.entries(SCRAPER_CONFIG.regions)) {
-            if (keywords.some(keyword => name.includes(keyword))) {
-                indicesData.indices[region].push(index);
-                return;
-            }
-        }
-        
-        // Par défaut, ajouter à "other"
-        indicesData.indices.other.push(index);
     }
     
     /**
@@ -480,7 +211,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showElement('indices-container');
             
         } catch (error) {
-            console.error('❌ Erreur lors de l\\'affichage des données:', error);
+            console.error('❌ Erreur lors de l\'affichage des données:', error);
             hideElement('indices-loading');
             showElement('indices-error');
         }
