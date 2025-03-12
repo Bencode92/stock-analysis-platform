@@ -1,10 +1,8 @@
 name: Update Market Data
 
 on:
-  schedule:
-    # Exécuter toutes les 20 minutes en semaine pendant les heures de marché
-    - cron: '*/20 7-23 * * 1-5'
-  # Permettre le déclenchement manuel
+  # Suppression de la planification automatique
+  # Uniquement le déclenchement manuel
   workflow_dispatch:
 
 jobs:
