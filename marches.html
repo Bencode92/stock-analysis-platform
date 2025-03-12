@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradePulse - Marchés</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        green: {
+                            400: '#00FF87'
+                        }
+                    }
+                },
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif']
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --background-color: #011627; /* Bleu nuit */
+            --light-background-color: #f0f5ff;
+            --text-color: #FFFFFF;
+            --light-text-color: #1a202c;
+            --accent-color: #00FF87; /* Vert néon */
+            --accent-glow: 0 0 20px rgba(0, 255, 135, 0.6);
+            --accent-glow-strong: 0 0 30px rgba(0, 255, 135, 0.8), 0 0 50px rgba(0, 255, 135, 0.4);
+            --transition-time: 0.3s;
+            --header-height: 70px;
+            --sidebar-width: 80px;
+            --card-bg-dark: rgba(1, 30, 52, 0.5);
+            --card-bg-light: rgba(240, 245, 255, 0.8);
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+        }
+        
+        body.dark {
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        
+        body.light {
+            background-color: var(--light-background-color);
+            color: var(--light-text-color);
+        }
+        
+        /* Header */
+        .main-header {
+            position: fixed;
+            top: 0;
+            left: var(--sidebar-width);
+            right: 0;
+            height: var(--header-height);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+        
+        .dark .main-header {
+            background-color: rgba(1, 22, 39, 0.9);
+            border-bottom: 1px solid rgba(0, 255, 135, 0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .light .main-header {
+            background-color: rgba(240, 245, 255, 0.9);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            font-weight: 900;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+        }
+        
+        .logo-container a {
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .dark .logo-container a {
+            color: var(--text-color);
+        }
+        
+        .light .logo-container a {
+            color: var(--light-text-color);
+        }
+        
+        .pulse-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 10px var(--accent-color);
+            animation: pulse 2s infinite;
+        }
+        
+        .main-nav {
+            display: flex;
+            margin-left: 40px;
+        }
+        
+        .main-nav a {
+            margin-right: 30px;
+            padding: 8px 5px;
+            font-weight: 500;
+            position: relative;
+            transition: color 0.3s;
+            text-decoration: none;
+        }
+        
+        .dark .main-nav a {
+            color: var(--text-color);
+        }
+        
+        .light .main-nav a {
+            color: var(--light-text-color);
+        }
+        
+        .main-nav a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--accent-color);
+            transition: width 0.3s;
+        }
+        
+        .main-nav a:hover::after,
+        .main-nav a.active::after {
+            width: 100%;
+        }
+        
+        .main-nav a.active {
+            color: var(--accent-color);
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+        }
+        
+        .market-status {
+            display: flex;
+            align-items: center;
+            margin-right: 30px;
+            font-size: 0.875rem;
+            transition: color 0.3s ease;
+        }
+        
+        .dark .market-status {
+            color: var(--text-color);
+        }
+        
+        .light .market-status {
+            color: var(--light-text-color);
+        }
+        
+        .market-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .market-indicator.green {
+            background-color: #4CAF50;
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+        }
+        
+        .market-time {
+            margin-left: 10px;
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+        
+        .search-button {
+            padding: 10px 20px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+        
+        .dark .search-button {
+            background-color: rgba(0, 255, 135, 0.1);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            color: var(--text-color);
+        }
+        
+        .light .search-button {
+            background-color: rgba(0, 210, 110, 0.1);
+            border: 1px solid rgba(0, 210, 110, 0.3);
+            color: var(--light-text-color);
+        }
+        
+        .search-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .dark .search-button:hover {
+            background-color: rgba(0, 255, 135, 0.2);
+        }
+        
+        .light .search-button:hover {
+            background-color: rgba(0, 210, 110, 0.2);
+        }
+        
+        .search-button i {
+            margin-right: 8px;
+            color: var(--accent-color);
+        }
+        
+        /* Sidebar de navigation verticale */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            z-index: 101;
+            transition: background-color 0.3s ease, border-right 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .dark .sidebar {
+            background-color: rgba(1, 15, 26, 0.95);
+            border-right: 1px solid rgba(0, 255, 135, 0.1);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .light .sidebar {
+            background-color: rgba(230, 240, 255, 0.95);
+            border-right: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--accent-color);
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
+        }
+        
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+        }
+        
+        .nav-item {
+            margin-bottom: 20px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            transition: all 0.3s;
+            position: relative;
+            text-decoration: none;
+        }
+
+        /* Notification badge for alerts */
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 10px;
+            height: 10px;
+            background-color: #ff4757;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
+        }
+        
+        .dark .nav-item {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .light .nav-item {
+            color: rgba(0, 0, 0, 0.7);
+        }
+        
+        .dark .nav-item:hover, .dark .nav-item.active {
+            background-color: rgba(0, 255, 135, 0.1);
+            color: var(--accent-color);
+        }
+        
+        .light .nav-item:hover, .light .nav-item.active {
+            background-color: rgba(0, 210, 110, 0.1);
+            color: var(--accent-color);
+        }
+        
+        .nav-item i {
+            font-size: 1.2rem;
+        }
+        
+        /* Mode sombre/clair toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .theme-toggle-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+        
+        .dark .theme-toggle-btn {
+            color: var(--text-color);
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .light .theme-toggle-btn {
+            color: var(--light-text-color);
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+        
+        .theme-toggle-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Main container */
+        .main-container {
+            margin-left: var(--sidebar-width);
+            margin-top: var(--header-height);
+            padding: 20px;
+            min-height: calc(100vh - var(--header-height));
+            transition: background-color 0.3s ease;
+        }
+
+        /* Glassmorphism cards */
+        .glassmorphism {
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            box-shadow: var(--accent-glow);
+        }
+        
+        .dark .glassmorphism {
+            background-color: rgba(1, 22, 39, 0.7);
+        }
+        
+        .light .glassmorphism {
+            background-color: rgba(240, 245, 255, 0.8);
+        }
+
+        /* Data table styles */
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        .data-table th {
+            padding: 12px 15px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 255, 135, 0.2);
+        }
+        
+        .data-table td {
+            padding: 12px 15px;
+            font-size: 0.85rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .data-table tr:hover td {
+            background-color: rgba(0, 255, 135, 0.05);
+        }
+
+        /* Positive and negative values */
+        .positive {
+            color: var(--accent-color);
+        }
+        
+        .negative {
+            color: #ff4757;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
+        }
+
+        /* Loader */
+        .loader {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(0, 255, 135, 0.2);
+            border-radius: 50%;
+            border-top-color: var(--accent-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Region Tabs */
+        .region-tabs {
+            display: flex;
+            border-bottom: 1px solid rgba(0, 255, 135, 0.2);
+            margin-bottom: 20px;
+        }
+        
+        .region-tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            position: relative;
+            font-weight: 500;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+        
+        .region-tab.active {
+            opacity: 1;
+            color: var(--accent-color);
+        }
+        
+        .region-tab::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--accent-color);
+            transition: width 0.3s ease;
+        }
+        
+        .region-tab.active::after {
+            width: 100%;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-header {
+                left: 0;
+                padding: 0 20px;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                flex-direction: row;
+                padding: 10px 20px;
+                justify-content: space-between;
+                position: fixed;
+                bottom: 0;
+                top: auto;
+                border-top: 1px solid rgba(0, 255, 135, 0.1);
+                border-right: none;
+            }
+            
+            .sidebar-logo {
+                display: none;
+            }
+            
+            .sidebar-nav {
+                flex-direction: row;
+                justify-content: space-around;
+                width: 100%;
+                margin: 0;
+            }
+            
+            .nav-item {
+                margin: 0;
+            }
+            
+            .main-container {
+                margin-left: 0;
+                margin-top: calc(var(--header-height));
+                margin-bottom: 60px;
+            }
+            
+            .main-nav {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="dark">
+    <!-- Bouton du sélecteur de thème -->
+    <div class="theme-toggle">
+        <button id="theme-toggle-btn" class="theme-toggle-btn">
+            <i class="fas fa-moon" id="dark-icon"></i>
+            <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar de navigation verticale -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">TP</div>
+        <nav class="sidebar-nav">
+            <a href="actualites.html" class="nav-item" title="Actualités">
+                <i class="fas fa-newspaper"></i>
+            </a>
+            <a href="portefeuilles.html" class="nav-item" title="Portefeuilles">
+                <i class="fas fa-chart-pie"></i>
+            </a>
+            <a href="tableau.html" class="nav-item" title="Tableau de bord">
+                <i class="fas fa-tachometer-alt"></i>
+            </a>
+            <a href="marches.html" class="nav-item active" title="Marchés">
+                <i class="fas fa-chart-line"></i>
+            </a>
+            <a href="email-preview.html" class="nav-item" title="Alertes">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge"></span>
+            </a>
+            <a href="parametres.html" class="nav-item" title="Paramètres">
+                <i class="fas fa-cog"></i>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Header principal -->
+    <header class="main-header">
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="pulse-dot"></div>
+                <a href="index.html">TRADEPULSE</a>
+            </div>
+            <nav class="main-nav">
+                <a href="actualites.html">Actualités</a>
+                <a href="portefeuilles.html">Portefeuilles</a>
+                <a href="tableau.html">Tableau de bord</a>
+                <a href="marches.html" class="active">Marchés</a>
+            </nav>
+        </div>
+        <div class="header-right">
+            <div class="market-status">
+                <div class="market-indicator green"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time" id="marketTime">09:45:22</span>
+            </div>
+            <a href="recherche.html" class="search-button ripple">
+                <i class="fas fa-search"></i>
+                <span>Ma question</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Container principal -->
+    <main class="main-container">
+        <div class="p-6">
+            <div class="max-w-7xl mx-auto">
+                <!-- Header avec titre et dernière mise à jour -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+                    <div>
+                        <h1 class="text-2xl font-bold mb-1">Indices Boursiers Internationaux</h1>
+                        <p class="text-sm text-gray-400">Dernière mise à jour: <span id="last-update-time">Chargement...</span></p>
+                    </div>
+                    <div class="mt-4 md:mt-0">
+                        <button id="refresh-data" class="px-4 py-2 rounded-md bg-green-400 bg-opacity-10 text-green-400 border border-green-400 border-opacity-30 flex items-center hover:bg-opacity-20 transition-all">
+                            <i class="fas fa-sync-alt mr-2"></i> 
+                            Rafraîchir
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Onglets des régions -->
+                <div class="region-tabs mb-6">
+                    <div class="region-tab active" data-region="europe">Europe</div>
+                    <div class="region-tab" data-region="us">États-Unis</div>
+                    <div class="region-tab" data-region="asia">Asie</div>
+                    <div class="region-tab" data-region="other">Autres</div>
+                </div>
+                
+                <!-- Conteneur pour le tableau des indices -->
+                <div class="glassmorphism rounded-lg p-4 mb-8">
+                    <div id="indices-loading" class="py-10 flex justify-center">
+                        <div class="loader"></div>
+                    </div>
+                    
+                    <div id="indices-error" class="py-10 text-center hidden">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                        <p class="text-lg">Impossible de charger les données des indices.</p>
+                        <button id="retry-button" class="mt-4 px-4 py-2 bg-green-400 bg-opacity-10 text-green-400 rounded-md border border-green-400 border-opacity-30 hover:bg-opacity-20 transition-all">
+                            Réessayer
+                        </button>
+                    </div>
+                    
+                    <div id="indices-container" class="hidden">
+                        <div id="europe-indices" class="region-content">
+                            <div class="overflow-x-auto">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Indice</th>
+                                            <th>Dernier</th>
+                                            <th>Variation</th>
+                                            <th>Variation %</th>
+                                            <th>Ouverture</th>
+                                            <th>Plus Haut</th>
+                                            <th>Plus Bas</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="europe-indices-body">
+                                        <!-- Les données seront injectées ici -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div id="us-indices" class="region-content hidden">
+                            <div class="overflow-x-auto">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Indice</th>
+                                            <th>Dernier</th>
+                                            <th>Variation</th>
+                                            <th>Variation %</th>
+                                            <th>Ouverture</th>
+                                            <th>Plus Haut</th>
+                                            <th>Plus Bas</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="us-indices-body">
+                                        <!-- Les données seront injectées ici -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div id="asia-indices" class="region-content hidden">
+                            <div class="overflow-x-auto">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Indice</th>
+                                            <th>Dernier</th>
+                                            <th>Variation</th>
+                                            <th>Variation %</th>
+                                            <th>Ouverture</th>
+                                            <th>Plus Haut</th>
+                                            <th>Plus Bas</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="asia-indices-body">
+                                        <!-- Les données seront injectées ici -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div id="other-indices" class="region-content hidden">
+                            <div class="overflow-x-auto">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Indice</th>
+                                            <th>Dernier</th>
+                                            <th>Variation</th>
+                                            <th>Variation %</th>
+                                            <th>Ouverture</th>
+                                            <th>Plus Haut</th>
+                                            <th>Plus Bas</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="other-indices-body">
+                                        <!-- Les données seront injectées ici -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Aperçu des marchés mondiaux (carte) -->
+                <div class="glassmorphism rounded-lg p-4 mb-8">
+                    <h2 class="text-lg font-semibold mb-4">Aperçu des marchés mondiaux</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="glassmorphism rounded-lg p-4 flex flex-col">
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="font-medium">Europe</h3>
+                                <span id="europe-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                            </div>
+                            <div id="europe-indices-summary" class="grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <div class="font-medium">CAC 40</div>
+                                    <div class="positive">--</div>
+                                </div>
+                                <div>
+                                    <div class="font-medium">DAX</div>
+                                    <div class="positive">--</div>
+                                </div>
+                                <div>
+                                    <div class="font-medium">FTSE 100</div>
+                                    <div class="positive">--</div>
+                                </div>
+                                <div>
+                                    <div class="font-medium">EURO STOXX 50</div>
+                                    <div class="positive">--</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="glassmorphism rounded-lg p-4 flex flex-col">
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="font-medium">États-Unis</h3>
+                                <span id="us-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                            </div>
+                            <div id="us-indices-summary" class="grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <div class="font-medium">DOW JONES</div>
+                                    <div class="positive">--</div>
+                                </div>
+                                <div>
+                                    <div class="font-medium">S&P 500</div>
+                                    <div class="positive">--</div>
+                                </div>
+                                <div>
+                                    <div class="font-medium">NASDAQ</div>
+                                    <div class="positive">--</div>
+                                </div>
+                                <div>
+                                    <div class="font-medium">RUSSELL 2000</div>
+                                    <div class="positive">--</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="glassmorphism rounded-lg p-4 flex flex-col">
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="font-medium">Asie</h3>
+                                <span id="asia-trend" class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
+                            </div>
+                            <div id="asia-indices-summary" class="grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <div class="font-medium">NIKKEI 225</div>
+                                    <div class="negative">--</div>
+                                </div>
+                                <div>
+                                    <div class="font-medium">HANG SENG</div>
+                                    <div class="negative">--</div>
+                                </div>
+                                <div>
+                                    <div class="font-medium">SSE COMPOSITE</div>
+                                    <div class="negative">--</div>
+                                </div>
+                                <div>
+                                    <div class="font-medium">KOSPI</div>
+                                    <div class="negative">--</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="glassmorphism rounded-lg p-4 flex flex-col">
+                            <div class="flex justify-between items-center mb-2">
+                                <h3 class="font-medium">Autres Marchés</h3>
+                                <span id="other-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                            </div>
+                            <div id="other-indices-summary" class="grid grid-cols-2 gap-2 text-sm">
+                                <div>
+                                    <div class="font-medium">BOVESPA</div>
+                                    <div class="positive">--</div>
+                                </div>
+                                <div>
+                                    <div class="font-medium">TSX</div>
+                                    <div class="positive">--</div>
+                                </div>
+                                <div>
+                                    <div class="font-medium">ASX 200</div>
+                                    <div class="positive">--</div>
+                                </div>
+                                <div>
+                                    <div class="font-medium">RTS</div>
+                                    <div class="positive">--</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Source et avertissement -->
+                <div class="text-center text-sm text-gray-400 mb-4">
+                    <p>Sources: <a href="https://www.boursorama.com/bourse/indices/internationaux" target="_blank" class="text-green-400 hover:underline">Boursorama</a></p>
+                    <p class="mt-2">Les données sont actualisées régulièrement mais peuvent accuser un retard par rapport aux marchés en temps réel.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="marches-script.js"></script>
+</body>
+</html>
