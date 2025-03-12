@@ -1,0 +1,36 @@
+name: Update Market Data
+
+on:
+  schedule:
+    # Exécuter toutes les 20 minutes en semaine pendant les heures de marché
+    - cron: '*/20 7-23 * * 1-5'
+  # Permettre le déclenchement manuel
+  workflow_dispatch:
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          
+      - name: Install dependencies
+        run: npm install axios cheerio
+        
+      - name: Scrape market data
+        run: node scripts/scrape-markets.js
+        
+      - name: Commit and push if changed
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "GitHub Actions"
+          
+          # Vérifier s'il y a des changements
+          git add data/markets.json
+          git diff --staged --quiet || (git commit -m "Update market data [skip ci]" && git push)
