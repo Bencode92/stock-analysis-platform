@@ -1,68 +1,349 @@
 <!DOCTYPE html>
-<html lang="fr" class="dark">
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TradePulse - Finance Intelligence Platform</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="landing-style.css">
-    <link rel="stylesheet" href="jeton-style.css">
+    <link rel="stylesheet" href="modern-fluid.css">
+    <link rel="stylesheet" href="enhanced-ui.css">
     <script type="module" src="aiintegration.js"></script>
+    <style>
+        /* Styles spécifiques pour la page d'accueil avec jeton qui tourne */
+        body {
+            padding: 0;
+            margin: 0;
+            overflow: hidden;
+            background: var(--background);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .landing-container {
+            position: relative;
+            width: 100%;
+            max-width: 1200px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            z-index: 1;
+        }
+
+        /* Arrière-plan financier */
+        #financial-background {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+        }
+
+        /* Logo et titre */
+        .brand {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .logo-title {
+            font-size: 4rem;
+            font-weight: 900;
+            color: #fff;
+            letter-spacing: 0.1em;
+            text-shadow: 0 0 15px rgba(30, 144, 255, 0.5);
+            margin: 0;
+        }
+
+        .tagline {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.8);
+            margin-top: 0.5rem;
+            letter-spacing: 0.2em;
+        }
+
+        /* Jeton qui tourne */
+        .token-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 2rem auto;
+            perspective: 1200px;
+            animation: fadeIn 1.5s ease-out;
+        }
+
+        .token {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            animation: tokenRotate 15s linear infinite;
+        }
+
+        .token-face {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            font-weight: 900;
+            background: radial-gradient(circle at center, #0c1b30 0%, #040a16 100%);
+            border: 2px solid rgba(30, 144, 255, 0.3);
+            box-shadow: 0 0 20px rgba(30, 144, 255, 0.3), 
+                        0 0 40px rgba(30, 144, 255, 0.2), 
+                        inset 0 0 20px rgba(30, 144, 255, 0.1);
+            backface-visibility: hidden;
+        }
+
+        .token-face.front {
+            transform: rotateY(0deg) translateZ(10px);
+        }
+
+        .token-face.back {
+            transform: rotateY(180deg) translateZ(10px);
+        }
+
+        .token-logo {
+            max-width: 70%;
+            max-height: 70%;
+            filter: drop-shadow(0 0 10px rgba(30, 144, 255, 0.8));
+        }
+
+        .token-symbol {
+            font-size: 5rem;
+            color: #1E90FF;
+            text-shadow: 0 0 20px rgba(30, 144, 255, 0.8);
+        }
+
+        @keyframes tokenRotate {
+            0% { transform: rotateY(0); }
+            100% { transform: rotateY(360deg); }
+        }
+
+        /* Bouton CTA */
+        .start-button {
+            margin-top: 3rem;
+            padding: 1.2rem 3.5rem;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--background);
+            background: linear-gradient(90deg, #1E90FF, #4c9fff);
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            letter-spacing: 0.1em;
+            box-shadow: 0 0 20px rgba(30, 144, 255, 0.5);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 1s ease-out;
+        }
+
+        .start-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: all 0.5s ease;
+        }
+
+        .start-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 30px rgba(30, 144, 255, 0.8);
+        }
+
+        .start-button:hover::before {
+            left: 100%;
+        }
+
+        /* Animation de fadeIn */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Traits verts modernes */
+        .green-line {
+            position: absolute;
+            background: linear-gradient(90deg, transparent, rgba(30, 144, 255, 0.5), transparent);
+            height: 1px;
+            width: 80%;
+            z-index: 0;
+            animation: moveLine 8s linear infinite;
+        }
+
+        .green-line:nth-child(1) {
+            top: 10%;
+            left: 0;
+            width: 60%;
+            opacity: 0.3;
+            animation-delay: 0s;
+        }
+
+        .green-line:nth-child(2) {
+            top: 25%;
+            right: 0;
+            width: 40%;
+            opacity: 0.2;
+            animation-delay: 2s;
+            animation-direction: reverse;
+        }
+
+        .green-line:nth-child(3) {
+            top: 65%;
+            left: 10%;
+            width: 70%;
+            opacity: 0.4;
+            animation-delay: 1s;
+        }
+
+        .green-line:nth-child(4) {
+            top: 80%;
+            right: 5%;
+            width: 45%;
+            opacity: 0.25;
+            animation-delay: 3s;
+            animation-direction: reverse;
+        }
+
+        @keyframes moveLine {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Copyright */
+        .copyright {
+            position: absolute;
+            bottom: 1rem;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.5);
+            animation: fadeIn 2s ease-out;
+        }
+
+        /* Media queries pour la responsivité */
+        @media (max-width: 768px) {
+            .logo-title {
+                font-size: 3rem;
+            }
+
+            .token-container {
+                width: 200px;
+                height: 200px;
+            }
+
+            .start-button {
+                padding: 1rem 2.5rem;
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo-title {
+                font-size: 2.2rem;
+            }
+
+            .tagline {
+                font-size: 1rem;
+            }
+
+            .token-container {
+                width: 150px;
+                height: 150px;
+            }
+        }
+    </style>
 </head>
 <body>
+    <!-- Canvas d'arrière-plan pour les animations financières -->
+    <canvas id="financial-background"></canvas>
+
+    <!-- Traits verts modernes -->
+    <div class="green-line"></div>
+    <div class="green-line"></div>
+    <div class="green-line"></div>
+    <div class="green-line"></div>
+
     <div class="landing-container">
-        <!-- Date actuelle stylisée -->
-        <div class="date-display">
-            <div class="date-inner">
-                <span id="current-date">12.03.2025</span>
-            </div>
+        <!-- Logo et titre -->
+        <div class="brand">
+            <h1 class="logo-title">TRADEPULSE</h1>
+            <div class="tagline">FINANCE INTELLIGENCE PLATFORM</div>
         </div>
 
-        <!-- Logo et titre -->
-        <div class="site-brand">
-            <div class="pulse-dot"></div>
-            <h1>TRADEPULSE</h1>
-            <div class="tagline">FINANCE INTELLIGENCE PLATFORM</div>
+        <!-- Jeton tournant -->
+        <div class="token-container">
+            <div class="token">
+                <div class="token-face front">
+                    <div class="token-symbol">TP</div>
+                </div>
+                <div class="token-face back">
+                    <i class="fas fa-chart-line token-logo"></i>
+                </div>
+            </div>
         </div>
 
         <!-- Bouton de démarrage -->
         <button class="start-button">START</button>
 
-        <!-- Pied de page -->
-        <div class="landing-footer">
-            © 2025 TradePulse | POWERED BY PERPLEXITY AI
-        </div>
+        <!-- Copyright -->
+        <div class="copyright">© 2025 TradePulse | POWERED BY PERPLEXITY AI</div>
     </div>
 
+    <!-- Scripts -->
+    <script src="dynamic-background.js"></script>
     <script>
-        // Afficher la date actuelle
-        function updateCurrentDate() {
-            const now = new Date();
-            const formattedDate = now.toLocaleDateString('fr-FR', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-            }).replace(/\//g, '.');
-            document.getElementById('current-date').textContent = formattedDate;
-        }
-        
-        // Mettre à jour la date au chargement
-        document.addEventListener('DOMContentLoaded', updateCurrentDate);
-        
-        // Animation lors du clic sur le bouton START
-        const startButton = document.querySelector('.start-button');
-        if (startButton) {
+        document.addEventListener('DOMContentLoaded', function() {
+            // Animation du jeton
+            const token = document.querySelector('.token');
+            
+            // Bouton de démarrage
+            const startButton = document.querySelector('.start-button');
             startButton.addEventListener('click', function() {
-                this.classList.add('pulse');
-                document.body.classList.add('fade-out');
+                // Effet de pulse
+                this.style.transform = 'scale(0.95)';
                 
-                // Redirection vers la page principale après l'animation
+                // Redirection avec délai
                 setTimeout(() => {
-                    window.location.href = 'dashboard.html';
-                }, 800);
+                    // Transition de sortie
+                    document.body.style.opacity = '0';
+                    document.body.style.transition = 'opacity 0.5s ease';
+                    
+                    // Redirection vers la page d'authentification
+                    setTimeout(() => {
+                        window.location.href = 'auth.html';
+                    }, 500);
+                }, 300);
             });
-        }
+            
+            // Restauration de l'échelle du bouton
+            startButton.addEventListener('transitionend', function() {
+                this.style.transform = '';
+            });
+        });
     </script>
 </body>
 </html>
