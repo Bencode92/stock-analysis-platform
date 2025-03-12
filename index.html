@@ -1,766 +1,548 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TradePulse - Finance Intelligence Platform</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <!-- Scripts principaux -->
+    <script type="module" src="aiintegration.js"></script>
+    <script src="https://cdn.tailwindcss.com/"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="enhanced-ui.css">
-    <style>
-        /* Styles généraux */
-        :root {
-            --background-color: #011627; /* Bleu nuit */
-            --text-color: #FFFFFF;
-            --accent-color: #00FF87; /* Vert néon */
-            --accent-glow: 0 0 10px rgba(0, 255, 135, 0.6);
-            --transition-time: 0.8s;
-        }
-        
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body, html {
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', sans-serif;
-            height: 100%;
-            width: 100%;
-            background-color: var(--background-color);
-            color: var(--text-color);
-            overflow: hidden;
-        }
-        
-        /* Container principal */
-        .container {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            position: relative;
-            text-align: center;
-            padding: 2rem;
-        }
-        
-        /* Effet de particules en arrière-plan */
-        .particles {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-        }
-        
-        /* Zone de la pièce */
-        .coin-container {
-            width: 360px;
-            height: 360px;
-            perspective: 1000px;
-            margin-bottom: 40px;
-            z-index: 2;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-            opacity: 0;
-            animation: fadeIn 1.5s ease forwards 1s;
-        }
-        
-        /* Animation de la pièce */
-        .coin {
-            width: 100%;
-            height: 100%;
-            position: relative;
-            transform-style: preserve-3d;
-            animation: rotate 15s linear infinite;
-            transition: transform 0.3s ease-out;
-        }
-        
-        .coin:hover {
-            animation-play-state: paused;
-        }
-        
-        /* Animation au survol ou interaction */
-        .coin-container:hover .coin {
-            transform: rotateY(180deg);
-        }
-        
-        /* Faces de la pièce */
-        .coin-face {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            backface-visibility: hidden;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            border: 3px solid var(--accent-color);
-            box-shadow: 0 0 20px rgba(0, 255, 153, 0.5), 
-                        0 0 40px rgba(0, 255, 153, 0.3), 
-                        inset 0 0 20px rgba(0, 255, 153, 0.2);
-            background: radial-gradient(ellipse at center, #001e36 0%, #000c14 100%);
-        }
-        
-        /* Face avant */
-        .coin-front {
-            transform: rotateY(0deg);
-        }
-        
-        /* Face arrière (date) */
-        .coin-back {
-            transform: rotateY(180deg);
-        }
-        
-        /* Logo principal */
-        .logo {
-            font-size: 60px;
-            font-weight: 900;
-            letter-spacing: 1px;
-            margin: 0;
-            text-shadow: 0 0 15px rgba(0, 255, 153, 0.7);
-        }
-        
-        /* Point lumineux du logo */
-        .pulse-dot {
-            width: 16px;
-            height: 16px;
-            background-color: var(--accent-color);
-            border-radius: 50%;
-            margin: 10px auto;
-            box-shadow: 0 0 15px rgba(0, 255, 153, 0.8);
-            animation: pulse 2s infinite;
-        }
-        
-        /* Texte secondaire */
-        .subtitle {
-            font-size: 16px;
-            font-weight: 400;
-            opacity: 0.8;
-            margin-top: 16px;
-            letter-spacing: 1px;
-        }
-        
-        /* Date */
-        .date {
-            font-size: 80px;
-            font-weight: 900;
-            margin: 0;
-            color: var(--accent-color);
-            text-shadow: 0 0 20px rgba(0, 255, 153, 0.7);
-        }
-        
-        /* Bouton de démarrage */
-        .start-button {
-            padding: 1.2rem 3.5rem;
-            font-size: clamp(1.2rem, 3vw, 1.8rem);
-            font-weight: 600;
-            background-color: transparent;
-            color: var(--text-color);
-            border: 2px solid var(--accent-color);
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            margin-top: 20px;
-            z-index: 2;
-            letter-spacing: 2px;
-            box-shadow: 0 0 15px rgba(0, 255, 153, 0.3);
-            text-decoration: none;
-            display: inline-block;
-            position: relative;
-            overflow: hidden;
-            opacity: 0;
-            animation: fadeIn 1.5s ease forwards 1.5s;
-        }
-        
-        .start-button:hover {
-            color: var(--background-color);
-            box-shadow: 0 0 25px rgba(0, 255, 153, 0.4);
-        }
-        
-        .start-button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background-color: var(--accent-color);
-            transition: all 0.4s ease;
-            z-index: -1;
-        }
-        
-        .start-button:hover::before {
-            left: 0;
-        }
-        
-        /* Footer */
-        .footer {
-            position: absolute;
-            bottom: 20px;
-            text-align: center;
-            font-size: 14px;
-            opacity: 0;
-            animation: fadeIn 1.5s ease forwards 2s;
-            z-index: 2;
-            color: rgba(255, 255, 255, 0.5);
-        }
-        
-        /* Animations */
-        @keyframes rotate {
-            0% { transform: rotateY(0); }
-            45% { transform: rotateY(1080deg); }
-            50% { transform: rotateY(1080deg); }
-            95% { transform: rotateY(0); }
-            100% { transform: rotateY(0); }
-        }
-        
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(0, 255, 153, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(0, 255, 153, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(0, 255, 153, 0); }
-        }
-        
-        /* Effet d'apparition progressive */
-        @keyframes fadeIn {
-            from { 
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to { 
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        /* NOUVELLE IMPLÉMENTATION - Graphiques financiers en arrière-plan */
-        .financial-background {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-            opacity: 0.15;
-            overflow: hidden;
-        }
-
-        .chart-line {
-            position: absolute;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
-            animation: chart-move 15s infinite linear;
-        }
-
-        .chart-dot {
-            position: absolute;
-            width: 4px;
-            height: 4px;
-            border-radius: 50%;
-            background-color: var(--accent-color);
-            box-shadow: 0 0 6px var(--accent-color);
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes chart-move {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%) rotate(5deg); }
-        }
-        
-        /* NOUVELLE IMPLÉMENTATION - Écran de modal de mise à jour */
-        #update-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(1, 22, 39, 0.9);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        /* Refonte de la modal de mise à jour */
-        .update-modal {
-            background: linear-gradient(135deg, rgba(1, 22, 39, 0.95), rgba(1, 15, 26, 0.95));
-            border: 2px solid var(--accent-color);
-            border-radius: 16px;
-            box-shadow: 0 0 50px rgba(0, 255, 135, 0.3),
-                        inset 0 0 20px rgba(0, 255, 135, 0.1);
-            width: 95%;
-            max-width: 550px;
-            padding: 40px;
-            text-align: center;
-            backdrop-filter: blur(15px);
-            animation: modal-appear 0.6s cubic-bezier(0.19, 1, 0.22, 1);
-        }
-        
-        @keyframes modal-appear {
-            from { 
-                opacity: 0;
-                transform: scale(0.8);
-            }
-            to { 
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-        
-        .modal-title {
-            color: var(--accent-color);
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 25px;
-            text-shadow: 0 0 15px rgba(0, 255, 135, 0.3);
-            letter-spacing: 1px;
-        }
-
-        .modal-title::after {
-            content: '';
-            display: block;
-            width: 60px;
-            height: 3px;
-            background-color: var(--accent-color);
-            margin: 15px auto 0;
-            border-radius: 3px;
-            box-shadow: 0 0 10px rgba(0, 255, 135, 0.6);
-        }
-        
-        .modal-message {
-            font-size: 16px;
-            line-height: 1.7;
-            margin-bottom: 30px;
-            max-width: 90%;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        
-        .last-update-box {
-            background-color: rgba(0, 255, 135, 0.08);
-            border-left: 3px solid var(--accent-color);
-            border-radius: 6px;
-            padding: 15px;
-            margin: 30px 0;
-            text-align: left;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-        }
-
-        .last-update-box i {
-            font-size: 18px;
-            color: var(--accent-color);
-            margin-right: 12px;
-        }
-        
-        .update-time {
-            color: var(--accent-color);
-            font-weight: 600;
-        }
-        
-        .modal-buttons {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            margin-top: 35px;
-        }
-        
-        .modal-btn {
-            padding: 14px 28px;
-            border: 2px solid var(--accent-color);
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            min-width: 180px;
-            background: transparent;
-            color: var(--text-color);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .modal-btn.primary {
-            background-color: var(--accent-color);
-            color: var(--background-color);
-        }
-        
-        .modal-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 255, 135, 0.4);
-        }
-        
-        .modal-btn.primary:hover {
-            background-color: #00d673;
-        }
-        
-        .modal-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(
-                90deg,
-                transparent 0%,
-                rgba(255, 255, 255, 0.2) 50%,
-                transparent 100%
-            );
-            transition: all 0.5s ease;
-        }
-
-        .modal-btn:hover::before {
-            left: 100%;
-        }
-        
-        /* Loader de mise à jour */
-        .update-loader {
-            display: none;
-            text-align: center;
-            margin-top: 30px;
-        }
-        
-        /* Animation améliorée du spinner */
-        .update-spinner {
-            display: inline-block;
-            width: 70px;
-            height: 70px;
-            border: 4px solid rgba(0, 255, 135, 0.1);
-            border-radius: 50%;
-            border-top-color: var(--accent-color);
-            border-left-color: var(--accent-color);
-            animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
-            margin-bottom: 20px;
-            box-shadow: 0 0 15px rgba(0, 255, 135, 0.2);
-        }
-        
-        .update-status {
-            margin-bottom: 15px;
-            font-size: 16px;
-        }
-        
-        /* Amélioration de l'indicateur de progression */
-        .progress-bar-outer {
-            height: 10px; /* Augmentation de l'épaisseur */
-            width: 100%;
-            background-color: rgba(0, 255, 135, 0.1);
-            border-radius: 5px;
-            overflow: hidden;
-            margin: 25px 0;
-            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
-            position: relative;
-        }
-
-        .progress-bar-inner {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, rgba(0, 255, 135, 0.8), rgba(0, 255, 219, 0.9));
-            border-radius: 5px;
-            transition: width 0.3s ease-out;
-            box-shadow: 0 0 10px rgba(0, 255, 135, 0.8);
-            position: relative;
-        }
-
-        .progress-bar-inner::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(
-                90deg,
-                transparent 0%,
-                rgba(255, 255, 255, 0.4) 50%,
-                transparent 100%
-            );
-            animation: progress-shine 1.5s infinite linear;
-        }
-
-        @keyframes progress-shine {
-            from { transform: translateX(-100%); }
-            to { transform: translateX(100%); }
-        }
-
-        .update-percentage {
-            position: absolute;
-            right: 10px;
-            top: -25px;
-            font-size: 14px;
-            color: var(--accent-color);
-            font-weight: 600;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Animation de complétion */
-        .update-complete {
-            display: none;
-            text-align: center;
-            margin-top: 20px;
-        }
-
-        .success-checkmark {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 20px;
-            position: relative;
-            animation: check-appear 0.8s ease forwards;
-        }
-
-        .success-checkmark::before {
-            content: '';
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            background-color: rgba(0, 255, 135, 0.1);
-            transform: scale(0);
-            animation: circle-expand 0.5s ease forwards;
-        }
-
-        .success-checkmark i {
-            font-size: 40px;
-            color: var(--accent-color);
-            position: relative;
-            opacity: 0;
-            animation: check-appear 0.5s ease 0.3s forwards;
-        }
-
-        @keyframes circle-expand {
-            to { transform: scale(1); }
-        }
-
-        @keyframes check-appear {
-            to { opacity: 1; }
-        }
-        
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .coin-container {
-                width: 280px;
-                height: 280px;
-            }
-            
-            .logo {
-                font-size: 40px;
-            }
-            
-            .date {
-                font-size: 60px;
-            }
-            
-            .modal-buttons {
-                flex-direction: column;
-                gap: 15px;
-            }
-            
-            .modal-btn {
-                width: 100%;
-            }
-        }
-    </style>
+    <script src="actualites_fix.js"></script>
+    <!-- Nouveau script pour les Top Performers -->
+    <script src="top-performers.js"></script>
 </head>
-<body>
-    <!-- Sélecteur de thème -->
-    <div class="theme-toggle">
-        <button id="theme-toggle-btn" aria-label="Changer de thème" class="button-press">
-            <i class="fas fa-moon" id="dark-icon"></i>
-            <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
-        </button>
-    </div>
-    
-    <!-- Bouton de personnalisation -->
-    <button id="open-customization" class="customization-btn button-press" aria-label="Personnaliser l'interface">
-        <i class="fas fa-paint-brush"></i>
-    </button>
-    
-    <!-- Panneau de personnalisation -->
-    <div id="customization-panel" class="customization-panel">
-        <div class="panel-header">
-            <h3>Personnalisation</h3>
-            <button id="close-customization" class="close-btn"><i class="fas fa-times"></i></button>
+<body class="bg-bg-primary text-text-primary dark:bg-dark-bg-primary dark:text-dark-text-primary">
+    <div class="app-container">
+        <!-- Logo et titre -->
+        <header class="app-header">
+            <div class="logo-container">
+                <div class="logo-dot"></div>
+                <h1 class="app-title">TRADEPULSE</h1>
+            </div>
+            <div class="tagline">POWERED BY PERPLEXITY AI</div>
+        </header>
+
+        <!-- Bouton de démarrage -->
+        <div class="start-container">
+            <button class="start-button">START</button>
         </div>
-        <div class="panel-content">
-            <div class="customize-section">
-                <h4>Couleur d'accent</h4>
+
+        <!-- Pied de page -->
+        <footer class="app-footer">
+            <div class="copyright">© 2025 TradePulse | Finance Intelligence Platform</div>
+        </footer>
+
+        <!-- Contenu principal (caché au démarrage) -->
+        <main class="main-content hidden">
+            <!-- En-tête de l'application -->
+            <header class="dashboard-header">
+                <div class="logo-container">
+                    <div class="logo-dot"></div>
+                    <h1 class="app-title">TRADEPULSE</h1>
+                </div>
+                <div class="action-buttons">
+                    <button id="theme-toggle-btn" class="button-press">
+                        <i class="fas fa-moon dark-icon"></i>
+                        <i class="fas fa-sun light-icon hidden"></i>
+                    </button>
+                    <button id="open-customization" class="customization-btn button-press">
+                        <i class="fas fa-palette"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Conteneur principal des données de marché -->
+            <div class="market-data-container">
+                <div class="section-header">
+                    <h2>Indices Boursiers Internationaux</h2>
+                    <div class="last-updated">
+                        Dernière mise à jour: <span id="last-update-time">Chargement...</span>
+                    </div>
+                    <button id="refresh-data" class="refresh-button">
+                        <i class="fas fa-sync-alt"></i> Rafraîchir
+                    </button>
+                </div>
+
+                <!-- Onglets des régions -->
+                <div class="region-tabs">
+                    <button class="region-tab active" data-region="europe">Europe</button>
+                    <button class="region-tab" data-region="us">États-Unis</button>
+                    <button class="region-tab" data-region="asia">Asie</button>
+                    <button class="region-tab" data-region="other">Autres</button>
+                </div>
+
+                <!-- Tableau des indices -->
+                <div class="indices-table-container">
+                    <table class="indices-table">
+                        <thead>
+                            <tr>
+                                <th>Indice</th>
+                                <th>Dernier</th>
+                                <th>Variation</th>
+                                <th>Variation %</th>
+                                <th>Ouverture</th>
+                                <th>Plus Haut</th>
+                                <th>Plus Bas</th>
+                            </tr>
+                        </thead>
+                        <tbody id="indices-tbody">
+                            <tr class="loading-row">
+                                <td colspan="7">
+                                    <div class="loading-indicator">
+                                        <div class="spinner"></div>
+                                        <div>Chargement des données...</div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Vue d'ensemble des marchés -->
+                <div class="section-header mt-6">
+                    <h2>Aperçu des marchés mondiaux</h2>
+                </div>
+                <div class="market-overview-container">
+                    <!-- Le composant Top Performers sera inséré ici -->
+                    
+                    <!-- Cartes des régions -->
+                    <div class="region-cards">
+                        <div class="region-card" data-region="europe">
+                            <div class="region-card-header">
+                                <h3>Europe</h3>
+                                <span class="region-trend"></span>
+                            </div>
+                            <div class="region-card-content" id="europe-overview">
+                                <div class="loading-indicator">
+                                    <div class="spinner"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="region-card" data-region="us">
+                            <div class="region-card-header">
+                                <h3>États-Unis</h3>
+                                <span class="region-trend"></span>
+                            </div>
+                            <div class="region-card-content" id="us-overview">
+                                <div class="loading-indicator">
+                                    <div class="spinner"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="region-card" data-region="asia">
+                            <div class="region-card-header">
+                                <h3>Asie</h3>
+                                <span class="region-trend"></span>
+                            </div>
+                            <div class="region-card-content" id="asia-overview">
+                                <div class="loading-indicator">
+                                    <div class="spinner"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="region-card" data-region="other">
+                            <div class="region-card-header">
+                                <h3>Autres Marchés</h3>
+                                <span class="region-trend"></span>
+                            </div>
+                            <div class="region-card-content" id="other-overview">
+                                <div class="loading-indicator">
+                                    <div class="spinner"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Note de source -->
+                <div class="data-source">
+                    Sources: <a href="https://www.boursorama.com" target="_blank" rel="noopener">Boursorama</a>
+                    <div class="data-disclaimer">Les données sont actualisées régulièrement mais peuvent accuser un retard par rapport aux marchés en temps réel.</div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Modal de mise à jour des données -->
+        <div class="modal" id="update-modal">
+            <div class="modal-content">
+                <h2>MISE À JOUR DES DONNÉES</h2>
+                <p>Pour vous offrir les analyses financières les plus précises, nous pouvons mettre à jour les actualités, événements et recommandations de portefeuilles avec les données les plus récentes.</p>
+                <div class="update-info">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Votre dernière mise à jour date du <span id="last-update-date">--/--/---- --:--:--</span></span>
+                </div>
+                <div class="modal-loading hidden">
+                    <div class="spinner"></div>
+                    <p>Mise à jour des actualités et événements...</p>
+                    <div class="progress-bar">
+                        <div class="progress-fill"></div>
+                    </div>
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-btn" id="update-later">Plus tard</button>
+                    <button class="modal-btn primary" id="update-now">Mettre à jour maintenant</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal d'authentification -->
+        <div class="modal" id="auth-modal">
+            <div class="modal-content">
+                <h2>ACCÈS À LA PLATEFORME</h2>
+                <p>Un nouveau système d'authentification arrive bientôt</p>
+                <div class="auth-maintenance">
+                    <div class="maintenance-icon">
+                        <i class="fas fa-cogs"></i>
+                    </div>
+                    <h3>Système en cours de mise à jour</h3>
+                    <p>Nous améliorons notre système d'authentification pour vous offrir une expérience plus sécurisée et plus fluide.</p>
+                    <p>En attendant, vous pouvez accéder à la plateforme et consulter les dernières actualités financières ainsi que nos recommandations d'investissement.</p>
+                </div>
+                <div class="modal-buttons single-button">
+                    <button class="back-btn">ACCÉDER AUX ACTUALITÉS</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel de customisation -->
+        <div id="customization-panel" class="customization-panel">
+            <div class="customization-header">
+                <h3>Personnalisation</h3>
+                <button id="close-customization" class="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="customization-section">
+                <h4>Thème de couleur</h4>
                 <div class="color-options">
-                    <button class="color-option active" data-color="#00FF87" style="background-color: #00FF87;"></button>
-                    <button class="color-option" data-color="#ff6b6b" style="background-color: #ff6b6b;"></button>
-                    <button class="color-option" data-color="#4d79ff" style="background-color: #4d79ff;"></button>
-                    <button class="color-option" data-color="#ffd166" style="background-color: #ffd166;"></button>
-                    <button class="color-option" data-color="#bb6bd9" style="background-color: #bb6bd9;"></button>
+                    <button class="color-option active" data-color="green"></button>
+                    <button class="color-option" data-color="blue"></button>
+                    <button class="color-option" data-color="purple"></button>
+                    <button class="color-option" data-color="orange"></button>
+                    <button class="color-option" data-color="red"></button>
                 </div>
             </div>
-            <div class="customize-section">
-                <h4>Animation de fond</h4>
-                <div class="toggle-switch">
-                    <input type="checkbox" id="bg-animation-toggle" checked>
-                    <label for="bg-animation-toggle"></label>
-                    <span>Activer</span>
-                </div>
-            </div>
-            <div class="customize-section">
-                <h4>Densité de l'interface</h4>
+            <div class="customization-section">
+                <h4>Densité d'affichage</h4>
                 <div class="density-options">
                     <button class="density-option" data-density="compact">Compacte</button>
                     <button class="density-option active" data-density="normal">Normale</button>
                     <button class="density-option" data-density="comfortable">Confortable</button>
                 </div>
             </div>
-            <button id="reset-customization" class="reset-btn">Réinitialiser par défaut</button>
-        </div>
-    </div>
-
-    <div class="container">
-        <div class="particles" id="particles-js"></div>
-        
-        <!-- Arrière-plan dynamique avec graphiques financiers -->
-        <div class="financial-background">
-            <div class="chart-line" style="top: 20%; left: -50%; width: 80%;"></div>
-            <div class="chart-line" style="top: 40%; left: -30%; width: 60%;"></div>
-            <div class="chart-line" style="top: 60%; left: -70%; width: 90%;"></div>
-            <div class="chart-line" style="top: 80%; left: -40%; width: 70%;"></div>
-            
-            <div class="chart-dot" style="top: 20%; left: 30%;"></div>
-            <div class="chart-dot" style="top: 35%; left: 60%;"></div>
-            <div class="chart-dot" style="top: 55%; left: 20%;"></div>
-            <div class="chart-dot" style="top: 75%; left: 50%;"></div>
-        </div>
-        
-        <!-- Conteneur de la pièce -->
-        <div class="coin-container" id="coinContainer">
-            <div class="coin">
-                <!-- Face avant de la pièce -->
-                <div class="coin-face coin-front">
-                    <div class="pulse-dot"></div>
-                    <h1 class="logo">TRADEPULSE</h1>
-                    <p class="subtitle">POWERED BY PERPLEXITY AI</p>
-                </div>
-                
-                <!-- Face arrière de la pièce (date) -->
-                <div class="coin-face coin-back">
-                    <p class="date" id="currentDate">08.03.2025</p>
-                </div>
+            <div class="customization-footer">
+                <button id="reset-customization" class="reset-btn">Réinitialiser par défaut</button>
             </div>
         </div>
-        
-        <!-- Bouton START -->
-        <a href="auth.html" class="start-button button-press ripple" id="startButton">START</a>
-        
-        <footer class="footer">
-            © 2025 TradePulse | Finance Intelligence Platform
-        </footer>
     </div>
 
-    <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
-    <script src="ui-enhancements.js"></script>
-    <script src="user-preferences.js"></script>
-    <script src="auth.js"></script>
-    <script type="module">
-        import PerplexityIntegration from './aiintegration.js';
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            // Mettre à jour la date du jour
-            const now = new Date();
-            const day = String(now.getDate()).padStart(2, '0');
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const year = now.getFullYear();
+    <script>
+        // Global pour stocker les données de marché
+        window.marketData = null;
+
+        // Fonction pour charger les données de marché
+        async function loadMarketData() {
+            try {
+                const response = await fetch('data/markets.json');
+                if (!response.ok) {
+                    throw new Error('Erreur lors du chargement des données');
+                }
+                window.marketData = await response.json();
+                updateLastUpdateTime();
+                displayMarketData('europe'); // Afficher l'Europe par défaut
+                updateMarketOverview();
+                return true;
+            } catch (error) {
+                console.error('Erreur:', error);
+                document.getElementById('indices-tbody').innerHTML = `
+                    <tr class="error-row">
+                        <td colspan="7">
+                            <div class="error-message">
+                                <i class="fas fa-exclamation-circle"></i>
+                                Impossible de charger les données. Veuillez réessayer plus tard.
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return false;
+            }
+        }
+
+        // Mise à jour de l'heure de dernière mise à jour
+        function updateLastUpdateTime() {
+            if (window.marketData && window.marketData.meta && window.marketData.meta.lastUpdated) {
+                const lastUpdated = new Date(window.marketData.meta.lastUpdated);
+                const formattedDate = lastUpdated.toLocaleDateString('fr-FR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                document.getElementById('last-update-time').textContent = formattedDate;
+                document.getElementById('last-update-date').textContent = formattedDate;
+            }
+        }
+
+        // Afficher les données de marché pour une région
+        function displayMarketData(region) {
+            const tbody = document.getElementById('indices-tbody');
             
-            const dateElement = document.getElementById('currentDate');
-            if (dateElement) {
-                dateElement.textContent = `${day}.${month}.${year}`;
-                
-                // Ajouter une légère animation à la date
-                dateElement.style.transform = 'scale(0.95)';
-                setTimeout(() => {
-                    dateElement.style.transition = 'transform 0.5s ease';
-                    dateElement.style.transform = 'scale(1)';
-                }, 500);
+            // Marquer l'onglet actif
+            document.querySelectorAll('.region-tab').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.region === region);
+            });
+            
+            // Vérifier que les données sont disponibles
+            if (!window.marketData || !window.marketData.indices || !window.marketData.indices[region]) {
+                tbody.innerHTML = `
+                    <tr class="error-row">
+                        <td colspan="7">
+                            <div class="error-message">
+                                <i class="fas fa-info-circle"></i>
+                                Aucune donnée disponible pour cette région
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
             }
             
-            // Vérifier si l'utilisateur est connecté
-            const checkLoginStatus = () => {
-                const userData = localStorage.getItem('tradepulse_user');
+            const indices = window.marketData.indices[region];
+            
+            // Vérifier s'il y a des indices
+            if (indices.length === 0) {
+                tbody.innerHTML = `
+                    <tr class="error-row">
+                        <td colspan="7">
+                            <div class="error-message">
+                                <i class="fas fa-info-circle"></i>
+                                Aucune donnée disponible pour cette région
+                            </div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Générer les lignes du tableau
+            let rows = '';
+            indices.forEach(index => {
+                const trendClass = index.trend === 'down' ? 'negative' : 'positive';
                 
-                if (userData) {
-                    try {
-                        const user = JSON.parse(userData);
-                        
-                        // Vérifier si le token est encore valide (par exemple, vérifie si la connexion date de moins de 24h)
-                        const currentTime = Date.now();
-                        const loginTime = user.loginTime || 0;
-                        const dayInMs = 24 * 60 * 60 * 1000;
-                        
-                        return user.isLoggedIn && (currentTime - loginTime < dayInMs);
-                    } catch (error) {
-                        console.error('Erreur lors de la vérification du statut de connexion:', error);
-                        return false;
-                    }
+                rows += `
+                    <tr>
+                        <td class="index-name">${index.name}</td>
+                        <td class="index-value">${index.value}</td>
+                        <td class="index-change ${trendClass}">${index.change}</td>
+                        <td class="index-change-percent ${trendClass}">${index.changePercent}</td>
+                        <td class="index-opening">${index.opening || '-'}</td>
+                        <td class="index-high">${index.high || '-'}</td>
+                        <td class="index-low">${index.low || '-'}</td>
+                    </tr>
+                `;
+            });
+            
+            tbody.innerHTML = rows;
+        }
+
+        // Mettre à jour l'aperçu des marchés
+        function updateMarketOverview() {
+            if (!window.marketData || !window.marketData.indices) return;
+            
+            // Pour chaque région
+            ['europe', 'us', 'asia', 'other'].forEach(region => {
+                const indices = window.marketData.indices[region];
+                const container = document.getElementById(`${region}-overview`);
+                
+                // Vérifier s'il y a des indices
+                if (!indices || indices.length === 0) {
+                    container.innerHTML = `<div class="no-data">Aucune donnée disponible</div>`;
+                    return;
                 }
                 
-                return false;
-            };
+                // Calculer la tendance globale
+                let upCount = 0;
+                let downCount = 0;
+                
+                indices.forEach(index => {
+                    if (index.trend === 'up') upCount++;
+                    else downCount++;
+                });
+                
+                const trend = upCount > downCount ? 'up' : (downCount > upCount ? 'down' : 'neutral');
+                const trendIcon = trend === 'up' ? '↑' : (trend === 'down' ? '↓' : '→');
+                const trendClass = trend === 'up' ? 'positive' : (trend === 'down' ? 'negative' : '');
+                
+                // Mettre à jour l'indicateur de tendance
+                const trendIndicator = container.closest('.region-card').querySelector('.region-trend');
+                trendIndicator.textContent = trendIcon;
+                trendIndicator.className = `region-trend ${trendClass}`;
+                
+                // Afficher jusqu'à 4 indices importants
+                const importantIndices = indices.slice(0, 4);
+                
+                let content = '';
+                importantIndices.forEach(index => {
+                    const valueClass = index.trend === 'up' ? 'positive' : 'negative';
+                    
+                    content += `
+                        <div class="market-overview-item">
+                            <div class="overview-item-name">${index.name}</div>
+                            <div class="overview-item-value">${index.value}</div>
+                            <div class="overview-item-change ${valueClass}">${index.changePercent}</div>
+                        </div>
+                    `;
+                });
+                
+                container.innerHTML = content;
+            });
+        }
+
+        // Attacher les événements
+        document.addEventListener('DOMContentLoaded', function() {
+            // Chargement initial des données
+            loadMarketData();
             
-            // Configuration de l'effet de particules
-            if (window.particlesJS) {
-                particlesJS('particles-js', {
-                    particles: {
-                        number: { value: 80, density: { enable: true, value_area: 800 } },
-                        color: { value: "#00ff99" },
-                        shape: { type: "circle" },
-                        opacity: { value: 0.3, random: true },
-                        size: { value: 3, random: true },
-                        line_linked: {
-                            enable: true,
-                            distance: 150,
-                            color: "#00ff99",
-                            opacity: 0.2,
-                            width: 1
-                        },
-                        move: {
-                            enable: true,
-                            speed: 1,
-                            direction: "none",
-                            random: true,
-                            straight: false,
-                            out_mode: "out",
-                            bounce: false
-                        }
-                    },
-                    interactivity: {
-                        detect_on: "canvas",
-                        events: {
-                            onhover: { enable: true, mode: "grab" },
-                            onclick: { enable: true, mode: "push" },
-                            resize: true
-                        },
-                        modes: {
-                            grab: { distance: 140, line_linked: { opacity: 0.5 } },
-                            push: { particles_nb: 4 }
-                        }
-                    },
-                    retina_detect: true
+            // Changement d'onglet de région
+            document.querySelectorAll('.region-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const region = this.dataset.region;
+                    displayMarketData(region);
+                });
+            });
+            
+            // Bouton de rafraîchissement
+            document.getElementById('refresh-data').addEventListener('click', function() {
+                this.classList.add('rotating');
+                loadMarketData().then(() => {
+                    setTimeout(() => {
+                        this.classList.remove('rotating');
+                    }, 1000);
+                });
+            });
+            
+            // Gestion de l'affichage initial et des modals
+            const startButton = document.querySelector('.start-button');
+            const mainContent = document.querySelector('.main-content');
+            const updateModal = document.getElementById('update-modal');
+            const authModal = document.getElementById('auth-modal');
+            
+            // Bouton de démarrage
+            if (startButton) {
+                startButton.addEventListener('click', function() {
+                    document.querySelector('.start-container').classList.add('hidden');
+                    mainContent.classList.remove('hidden');
+                    
+                    // Afficher le modal d'authentification
+                    authModal.classList.add('visible');
                 });
             }
             
-            // Animation des lignes de graphique
-            const chartLines = document.querySelectorAll('.chart-line');
-            chartLines.forEach((line, index) => {
-                // Ajouter des délais différents pour un effet plus naturel
-                line.style.animationDelay = `${index * 0.8}s`;
-            });
+            // Modal d'authentification
+            if (authModal) {
+                document.querySelector('.back-btn').addEventListener('click', function() {
+                    authModal.classList.remove('visible');
+                    // Afficher le modal de mise à jour
+                    setTimeout(() => {
+                        updateModal.classList.add('visible');
+                    }, 300);
+                });
+            }
+            
+            // Modal de mise à jour
+            if (updateModal) {
+                document.getElementById('update-later').addEventListener('click', function() {
+                    updateModal.classList.remove('visible');
+                });
+                
+                document.getElementById('update-now').addEventListener('click', function() {
+                    const modalLoading = document.querySelector('.modal-loading');
+                    const modalButtons = document.querySelector('.modal-buttons');
+                    
+                    modalButtons.classList.add('hidden');
+                    modalLoading.classList.remove('hidden');
+                    
+                    // Simuler une progression
+                    const progressFill = document.querySelector('.progress-fill');
+                    let progress = 0;
+                    
+                    const interval = setInterval(() => {
+                        progress += 2;
+                        progressFill.style.width = `${progress}%`;
+                        
+                        if (progress >= 100) {
+                            clearInterval(interval);
+                            setTimeout(() => {
+                                updateModal.classList.remove('visible');
+                                loadMarketData(); // Recharger les données
+                            }, 500);
+                        }
+                    }, 50);
+                });
+            }
+            
+            // Gestion du thème
+            const themeToggle = document.getElementById('theme-toggle-btn');
+            if (themeToggle) {
+                themeToggle.addEventListener('click', function() {
+                    document.documentElement.classList.toggle('dark');
+                    document.querySelector('.dark-icon').classList.toggle('hidden');
+                    document.querySelector('.light-icon').classList.toggle('hidden');
+                });
+            }
+            
+            // Panel de personnalisation
+            const customizationPanel = document.getElementById('customization-panel');
+            if (customizationPanel) {
+                // Ouvrir/fermer le panel
+                document.getElementById('open-customization').addEventListener('click', function() {
+                    customizationPanel.classList.add('visible');
+                });
+                
+                document.getElementById('close-customization').addEventListener('click', function() {
+                    customizationPanel.classList.remove('visible');
+                });
+                
+                // Changement de couleur
+                document.querySelectorAll('.color-option').forEach(option => {
+                    option.addEventListener('click', function() {
+                        document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('active'));
+                        this.classList.add('active');
+                        
+                        const color = this.dataset.color;
+                        document.documentElement.setAttribute('data-theme-color', color);
+                    });
+                });
+                
+                // Changement de densité
+                document.querySelectorAll('.density-option').forEach(option => {
+                    option.addEventListener('click', function() {
+                        document.querySelectorAll('.density-option').forEach(opt => opt.classList.remove('active'));
+                        this.classList.add('active');
+                        
+                        const density = this.dataset.density;
+                        document.documentElement.setAttribute('data-density', density);
+                    });
+                });
+                
+                // Réinitialisation
+                document.getElementById('reset-customization').addEventListener('click', function() {
+                    document.documentElement.removeAttribute('data-theme-color');
+                    document.documentElement.removeAttribute('data-density');
+                    
+                    document.querySelector('.color-option[data-color="green"]').classList.add('active');
+                    document.querySelectorAll('.color-option:not([data-color="green"])').forEach(opt => opt.classList.remove('active'));
+                    
+                    document.querySelector('.density-option[data-density="normal"]').classList.add('active');
+                    document.querySelectorAll('.density-option:not([data-density="normal"])').forEach(opt => opt.classList.remove('active'));
+                });
+            }
         });
     </script>
 </body>
