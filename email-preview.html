@@ -260,6 +260,77 @@
             padding: 20px;
         }
 
+        /* Portfolio composition */
+        .composition-box {
+            background-color: var(--bg-medium);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .composition-title {
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .composition-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .composition-bar {
+            height: 6px;
+            border-radius: 3px;
+            background-color: var(--bg-light);
+            margin-top: 5px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .composition-progress {
+            height: 100%;
+            border-radius: 3px;
+        }
+
+        .progress-tech {
+            background-color: var(--primary-color);
+        }
+
+        .progress-finance {
+            background-color: #36A2EB;
+        }
+
+        .progress-health {
+            background-color: #FFCE56;
+        }
+
+        .progress-consumer {
+            background-color: #FF6384;
+        }
+
+        .progress-industry {
+            background-color: #9966FF;
+        }
+
+        .composition-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .composition-name {
+            font-weight: 500;
+        }
+
+        .composition-value {
+            font-weight: 600;
+        }
+
         /* Dashboard data summary */
         .data-summary {
             background-color: var(--bg-medium);
@@ -268,37 +339,7 @@
             margin-bottom: 20px;
         }
         
-        .data-card {
-            background-color: rgba(0, 255, 135, 0.05);
-            border: 1px solid rgba(0, 255, 135, 0.2);
-            border-radius: 6px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-        
-        .data-card h3 {
-            font-size: 14px;
-            color: var(--text-muted);
-            margin: 0 0 8px 0;
-        }
-        
-        .data-card .value {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--primary-color);
-            margin: 0;
-        }
-        
-        .data-card .description {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-top: 5px;
-        }
-        
         .sync-info {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid var(--bg-light);
             display: flex;
             align-items: center;
             font-size: 12px;
@@ -513,36 +554,77 @@
             
             <div class="preview-container">
                 <div>
-                    <!-- Dashboard Data Summary -->
-                    <div id="dashboard-data-summary" class="data-summary mb-6">
-                        <h2 class="text-lg font-semibold mb-4 text-green-400">Données du Tableau de Bord</h2>
-                        
-                        <div class="grid grid-cols-2 gap-3 mb-4">
-                            <div class="data-card">
-                                <h3>Valeur Totale</h3>
-                                <p class="value" id="summary-total-value">52 180 €</p>
-                            </div>
-                            <div class="data-card">
-                                <h3>Profit/Perte</h3>
-                                <p class="value text-green-400" id="summary-profit-loss">+2 705 €</p>
-                            </div>
-                            <div class="data-card">
-                                <h3>Rendement Annuel</h3>
-                                <p class="value text-green-400" id="summary-annual-return">+5.47%</p>
-                            </div>
-                            <div class="data-card">
-                                <h3>Ratio de Sharpe</h3>
-                                <p class="value" id="summary-sharpe-ratio">0.68</p>
+                    <!-- Portfolio Composition -->
+                    <div class="composition-box mb-6">
+                        <h2 class="text-lg font-semibold mb-4 text-green-400">Composition du Portefeuille Modéré</h2>
+
+                        <div class="composition-item">
+                            <div class="w-full">
+                                <div class="composition-label">
+                                    <span class="composition-name">Technologies</span>
+                                    <span class="composition-value">30%</span>
+                                </div>
+                                <div class="composition-bar">
+                                    <div class="composition-progress progress-tech" style="width: 30%"></div>
+                                </div>
                             </div>
                         </div>
                         
-                        <div class="sync-info">
+                        <div class="composition-item">
+                            <div class="w-full">
+                                <div class="composition-label">
+                                    <span class="composition-name">Finance</span>
+                                    <span class="composition-value">25%</span>
+                                </div>
+                                <div class="composition-bar">
+                                    <div class="composition-progress progress-finance" style="width: 25%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="composition-item">
+                            <div class="w-full">
+                                <div class="composition-label">
+                                    <span class="composition-name">Santé</span>
+                                    <span class="composition-value">15%</span>
+                                </div>
+                                <div class="composition-bar">
+                                    <div class="composition-progress progress-health" style="width: 15%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="composition-item">
+                            <div class="w-full">
+                                <div class="composition-label">
+                                    <span class="composition-name">Consommation</span>
+                                    <span class="composition-value">20%</span>
+                                </div>
+                                <div class="composition-bar">
+                                    <div class="composition-progress progress-consumer" style="width: 20%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="composition-item">
+                            <div class="w-full">
+                                <div class="composition-label">
+                                    <span class="composition-name">Industrie</span>
+                                    <span class="composition-value">10%</span>
+                                </div>
+                                <div class="composition-bar">
+                                    <div class="composition-progress progress-industry" style="width: 10%"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="sync-info mt-4">
                             <i class="fas fa-sync-alt"></i>
-                            <span id="summary-last-sync">Dernière synchronisation: 12 Mars 2025, 07:45:12</span>
+                            <span id="summary-last-sync">Les données seront synchronisées avec le tableau de bord</span>
                         </div>
                         
                         <button id="refresh-dashboard-data" class="mt-4 w-full bg-transparent border border-green-400 text-green-400 hover:bg-green-400 hover:text-gray-900 transition-colors">
-                            <i class="fas fa-sync-alt mr-2"></i>Actualiser les données
+                            <i class="fas fa-sync-alt mr-2"></i>Synchroniser avec le tableau de bord
                         </button>
                     </div>
                     
@@ -561,9 +643,9 @@
                         <div class="form-group">
                             <label>Portefeuille</label>
                             <select id="portfolioType" class="bg-gray-800 border border-gray-700 rounded">
-                                <option value="aggressive">Agressif (+8.32%)</option>
-                                <option value="moderate" selected>Modéré (+5.47%)</option>
-                                <option value="stable">Stable (+2.19%)</option>
+                                <option value="aggressive">Agressif</option>
+                                <option value="moderate" selected>Modéré</option>
+                                <option value="stable">Stable</option>
                             </select>
                         </div>
                         
@@ -765,24 +847,8 @@
                 const dashboardData = JSON.parse(localStorage.getItem('tradepulse_dashboard_data') || '{}');
                 const dashboardUpdated = localStorage.getItem('tradepulse_dashboard_updated');
                 
-                if (dashboardData && Object.keys(dashboardData).length > 0) {
-                    // Update dashboard summary fields
-                    if (dashboardData.totalValue) {
-                        document.getElementById('summary-total-value').textContent = dashboardData.totalValue;
-                    }
-                    
-                    if (dashboardData.profitLoss) {
-                        document.getElementById('summary-profit-loss').textContent = dashboardData.profitLoss;
-                    }
-                    
-                    if (dashboardData.annualReturn) {
-                        document.getElementById('summary-annual-return').textContent = dashboardData.annualReturn;
-                    }
-                    
-                    if (dashboardData.sharpeRatio) {
-                        document.getElementById('summary-sharpe-ratio').textContent = dashboardData.sharpeRatio;
-                    }
-                }
+                // Update portfolio composition based on selected type
+                updatePortfolioComposition(document.getElementById('portfolioType').value);
                 
                 // Update last sync time
                 if (dashboardUpdated) {
@@ -804,6 +870,67 @@
                 // Mark as read when this page loads
                 localStorage.setItem('tradepulse_alert_lastread', new Date().toISOString());
             }
+
+            // Update portfolio composition based on selected type
+            function updatePortfolioComposition(portfolioType) {
+                let compositionTitle = document.querySelector('.composition-box h2');
+                let compositions = {};
+                
+                if (portfolioType === 'aggressive') {
+                    compositionTitle.textContent = 'Composition du Portefeuille Agressif';
+                    compositions = {
+                        'Technologies': 45,
+                        'Finance': 15,
+                        'Santé': 10,
+                        'Consommation': 15,
+                        'Industrie': 15
+                    };
+                } else if (portfolioType === 'moderate') {
+                    compositionTitle.textContent = 'Composition du Portefeuille Modéré';
+                    compositions = {
+                        'Technologies': 30,
+                        'Finance': 25,
+                        'Santé': 15,
+                        'Consommation': 20,
+                        'Industrie': 10
+                    };
+                } else if (portfolioType === 'stable') {
+                    compositionTitle.textContent = 'Composition du Portefeuille Stable';
+                    compositions = {
+                        'Technologies': 15,
+                        'Finance': 30,
+                        'Santé': 20,
+                        'Consommation': 25,
+                        'Industrie': 10
+                    };
+                }
+                
+                // Get all composition items
+                const compositionItems = document.querySelectorAll('.composition-item');
+                
+                // Update each item
+                let i = 0;
+                for (const [sector, percentage] of Object.entries(compositions)) {
+                    if (i < compositionItems.length) {
+                        const item = compositionItems[i];
+                        const nameElem = item.querySelector('.composition-name');
+                        const valueElem = item.querySelector('.composition-value');
+                        const progressElem = item.querySelector('.composition-progress');
+                        
+                        nameElem.textContent = sector;
+                        valueElem.textContent = percentage + '%';
+                        progressElem.style.width = percentage + '%';
+                        
+                        i++;
+                    }
+                }
+            }
+            
+            // Handle portfolio type change
+            document.getElementById('portfolioType').addEventListener('change', function() {
+                updatePortfolioComposition(this.value);
+                updatePreview();
+            });
             
             // Generate email HTML based on template and data
             function generateEmailHTML() {
@@ -821,77 +948,36 @@
                     year: 'numeric'
                 });
                 
-                // Default values for moderate portfolio (from dashboard)
-                let performanceValue = '+5.47%';
-                let performanceClass = 'positive';
-                let portfolioValue = '52 180';
-                let gainValue = '+2 705';
-                let gainClass = 'positive';
-                let sharpeRatio = '0.68';
+                // Set portfolio-specific values
+                let performanceValue, portfolioValue, gainValue, sharpeRatio;
+                
+                if (portfolioType === 'aggressive') {
+                    performanceValue = '+8.32%';
+                    portfolioValue = '84 213';
+                    gainValue = '+6 487';
+                    sharpeRatio = '0.72';
+                } else if (portfolioType === 'moderate') {
+                    performanceValue = '+5.47%';
+                    portfolioValue = '52 180';
+                    gainValue = '+2 705';
+                    sharpeRatio = '0.68';
+                } else if (portfolioType === 'stable') {
+                    performanceValue = '+2.19%';
+                    portfolioValue = '35 420';
+                    gainValue = '+760';
+                    sharpeRatio = '0.61';
+                }
+                
+                const performanceClass = 'positive';
+                const gainClass = 'positive';
+                
+                // News content
                 let newsTitle1 = 'La Fed annonce une réunion exceptionnelle';
                 let newsDesc1 = 'La Réserve fédérale américaine vient d\'annoncer une réunion exceptionnelle pour discuter des prochaines mesures sur les taux.';
                 let newsTitle2 = 'Apple lance une nouvelle gamme de produits IA';
-                let newsDesc2 = 'Le géant de la tech dévoile ses premiers produits dédiés à l\'intelligence artificielle.'
+                let newsDesc2 = 'Le géant de la tech dévoile ses premiers produits dédiés à l\'intelligence artificielle.';
                 let newsTitle3 = 'Bitcoin franchit un nouveau seuil à 75 000$';
                 let newsDesc3 = 'La principale cryptomonnaie atteint un nouveau record dans un contexte d\'adoption institutionnelle.';
-                
-                // Use dashboard data if available
-                if (Object.keys(dashboardData).length > 0) {
-                    // Strip currency symbol and spaces if needed
-                    if (dashboardData.totalValue) {
-                        portfolioValue = dashboardData.totalValue.replace('€', '').trim();
-                    }
-                    
-                    if (dashboardData.profitLoss) {
-                        gainValue = dashboardData.profitLoss.replace('€', '').trim();
-                        gainClass = dashboardData.profitLoss.startsWith('+') ? 'positive' : 'negative';
-                    }
-                    
-                    if (dashboardData.annualReturn) {
-                        performanceValue = dashboardData.annualReturn;
-                        performanceClass = dashboardData.annualReturn.startsWith('+') ? 'positive' : 'negative';
-                    }
-                    
-                    if (dashboardData.sharpeRatio) {
-                        sharpeRatio = dashboardData.sharpeRatio;
-                    }
-                    
-                    // If there are assets, get top performer
-                    if (dashboardData.assets && dashboardData.assets.length > 0) {
-                        // Sort by performance
-                        const sortedAssets = [...dashboardData.assets].sort((a, b) => {
-                            const perfA = parseFloat(a.totalPerformance.replace('+', '').replace('%', ''));
-                            const perfB = parseFloat(b.totalPerformance.replace('+', '').replace('%', ''));
-                            return perfB - perfA;
-                        });
-                        
-                        // Add asset news
-                        if (sortedAssets[0]) {
-                            newsTitle3 = `${sortedAssets[0].name} en forte hausse`;
-                            newsDesc3 = `L'actif affiche une performance de ${sortedAssets[0].totalPerformance} et poursuit sa tendance haussière.`;
-                        }
-                    }
-                    
-                    // If there are transactions, mention latest
-                    if (dashboardData.transactions && dashboardData.transactions.length > 0) {
-                        const latestTransaction = dashboardData.transactions[0];
-                        newsTitle2 = `Dernière transaction: ${latestTransaction.type} ${latestTransaction.asset}`;
-                        newsDesc2 = `Transaction de ${latestTransaction.amount} effectuée le ${latestTransaction.date}.`;
-                    }
-                } else {
-                    // Apply variations based on portfolio type selection only if no dashboard data
-                    if (portfolioType === 'aggressive') {
-                        performanceValue = '+8.32%';
-                        portfolioValue = '84 213';
-                        gainValue = '+6 487';
-                        sharpeRatio = '0.72';
-                    } else if (portfolioType === 'stable') {
-                        performanceValue = '+2.19%';
-                        portfolioValue = '35 420';
-                        gainValue = '+760';
-                        sharpeRatio = '0.61';
-                    }
-                }
                 
                 // Market data
                 const marketData = {
@@ -1102,7 +1188,7 @@
             
             // Refresh dashboard data button
             document.getElementById('refresh-dashboard-data').addEventListener('click', function() {
-                this.innerHTML = '<i class="fas fa-sync-alt fa-spin mr-2"></i>Actualisation...';
+                this.innerHTML = '<i class="fas fa-sync-alt fa-spin mr-2"></i>Synchronisation...';
                 
                 // Show notification after a delay
                 setTimeout(() => {
@@ -1110,10 +1196,10 @@
                     updatePreview();
                     
                     // Reset button
-                    this.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Actualiser les données';
+                    this.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Synchroniser avec le tableau de bord';
                     
                     // Show notification
-                    showNotification('Données actualisées avec succès !');
+                    showNotification('Données synchronisées avec succès !');
                 }, 1000);
             });
             
