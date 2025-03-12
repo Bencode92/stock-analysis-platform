@@ -261,87 +261,136 @@
         }
 
         /* Portfolio composition */
-        .composition-box {
+        .portfolio-box {
             background-color: var(--bg-medium);
             border-radius: 8px;
             padding: 20px;
             margin-bottom: 20px;
         }
 
-        .composition-title {
+        .portfolio-title {
             font-weight: 600;
             font-size: 16px;
             color: var(--primary-color);
             margin-bottom: 15px;
         }
 
-        .composition-item {
+        .portfolio-asset {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 10px;
-            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
-        .composition-bar {
-            height: 6px;
-            border-radius: 3px;
-            background-color: var(--bg-light);
-            margin-top: 5px;
-            overflow: hidden;
-            position: relative;
+        .portfolio-asset:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
         }
 
-        .composition-progress {
-            height: 100%;
-            border-radius: 3px;
+        .asset-details {
+            flex-grow: 1;
         }
 
-        .progress-tech {
-            background-color: var(--primary-color);
+        .asset-name {
+            font-weight: 500;
+            margin-bottom: 2px;
         }
 
-        .progress-finance {
-            background-color: #36A2EB;
-        }
-
-        .progress-health {
-            background-color: #FFCE56;
-        }
-
-        .progress-consumer {
-            background-color: #FF6384;
-        }
-
-        .progress-industry {
-            background-color: #9966FF;
-        }
-
-        .composition-label {
-            display: flex;
-            justify-content: space-between;
+        .asset-type {
             font-size: 12px;
             color: var(--text-muted);
         }
 
-        .composition-name {
-            font-weight: 500;
+        .asset-metrics {
+            text-align: right;
         }
 
-        .composition-value {
+        .asset-value {
             font-weight: 600;
+            margin-bottom: 2px;
         }
 
-        /* Dashboard data summary */
-        .data-summary {
-            background-color: var(--bg-medium);
-            border-radius: 8px;
+        .asset-performance {
+            font-size: 12px;
+        }
+
+        .performance-positive {
+            color: var(--primary-color);
+        }
+
+        .performance-negative {
+            color: #ff4757;
+        }
+
+        .no-data-message {
             padding: 20px;
-            margin-bottom: 20px;
+            text-align: center;
+            color: var(--text-muted);
+            font-style: italic;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 6px;
+            margin: 10px 0;
+        }
+
+        .allocation-bar {
+            height: 6px;
+            background-color: rgba(0, 0, 0, 0.2);
+            border-radius: 3px;
+            margin-top: 15px;
+            margin-bottom: 8px;
+            overflow: hidden;
+        }
+
+        .allocation-segment {
+            height: 100%;
+            float: left;
+        }
+
+        .allocation-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+        }
+
+        .allocation-item {
+            display: flex;
+            align-items: center;
+            margin-right: 10px;
+        }
+
+        .allocation-color {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+
+        .allocation-tech {
+            background-color: var(--primary-color);
+        }
+
+        .allocation-finance {
+            background-color: #36A2EB;
+        }
+
+        .allocation-health {
+            background-color: #FFCE56;
+        }
+
+        .allocation-consumer {
+            background-color: #FF6384;
+        }
+
+        .allocation-industry {
+            background-color: #9966FF;
         }
         
         .sync-info {
             display: flex;
             align-items: center;
+            margin-top: 15px;
             font-size: 12px;
             color: var(--text-muted);
         }
@@ -470,6 +519,34 @@
             100% { transform: scale(1); }
         }
 
+        /* Loading spinner */
+        .loading-spinner {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(0, 255, 135, 0.2);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+        }
+
+        .loading-text {
+            margin-top: 15px;
+            color: var(--text-muted);
+        }
+
         /* Responsive styles */
         @media (max-width: 768px) {
             .preview-container {
@@ -555,72 +632,98 @@
             <div class="preview-container">
                 <div>
                     <!-- Portfolio Composition -->
-                    <div class="composition-box mb-6">
-                        <h2 class="text-lg font-semibold mb-4 text-green-400">Composition du Portefeuille Modéré</h2>
+                    <div class="portfolio-box mb-6">
+                        <h2 class="text-lg font-semibold mb-4 text-green-400" id="portfolio-title">Portefeuille Modéré</h2>
 
-                        <div class="composition-item">
-                            <div class="w-full">
-                                <div class="composition-label">
-                                    <span class="composition-name">Technologies</span>
-                                    <span class="composition-value">30%</span>
+                        <!-- Allocation bar -->
+                        <div class="allocation-bar">
+                            <div class="allocation-segment" style="width: 30%; background-color: #00ff9d;"></div>
+                            <div class="allocation-segment" style="width: 25%; background-color: #36A2EB;"></div>
+                            <div class="allocation-segment" style="width: 15%; background-color: #FFCE56;"></div>
+                            <div class="allocation-segment" style="width: 20%; background-color: #FF6384;"></div>
+                            <div class="allocation-segment" style="width: 10%; background-color: #9966FF;"></div>
+                        </div>
+                        <div class="allocation-label mb-6">
+                            <div class="flex flex-wrap">
+                                <div class="allocation-item">
+                                    <div class="allocation-color allocation-tech"></div>
+                                    <span>Tech 30%</span>
                                 </div>
-                                <div class="composition-bar">
-                                    <div class="composition-progress progress-tech" style="width: 30%"></div>
+                                <div class="allocation-item">
+                                    <div class="allocation-color allocation-finance"></div>
+                                    <span>Finance 25%</span>
+                                </div>
+                                <div class="allocation-item">
+                                    <div class="allocation-color allocation-health"></div>
+                                    <span>Santé 15%</span>
+                                </div>
+                                <div class="allocation-item">
+                                    <div class="allocation-color allocation-consumer"></div>
+                                    <span>Conso 20%</span>
+                                </div>
+                                <div class="allocation-item">
+                                    <div class="allocation-color allocation-industry"></div>
+                                    <span>Industrie 10%</span>
                                 </div>
                             </div>
                         </div>
-                        
-                        <div class="composition-item">
-                            <div class="w-full">
-                                <div class="composition-label">
-                                    <span class="composition-name">Finance</span>
-                                    <span class="composition-value">25%</span>
+
+                        <div id="portfolio-assets-list">
+                            <div class="portfolio-asset">
+                                <div class="asset-details">
+                                    <div class="asset-name">Microsoft Corp.</div>
+                                    <div class="asset-type">Actions - Technologies</div>
                                 </div>
-                                <div class="composition-bar">
-                                    <div class="composition-progress progress-finance" style="width: 25%"></div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="composition-item">
-                            <div class="w-full">
-                                <div class="composition-label">
-                                    <span class="composition-name">Santé</span>
-                                    <span class="composition-value">15%</span>
-                                </div>
-                                <div class="composition-bar">
-                                    <div class="composition-progress progress-health" style="width: 15%"></div>
+                                <div class="asset-metrics">
+                                    <div class="asset-value">7 427,70 €</div>
+                                    <div class="asset-performance performance-positive">+22.4%</div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="composition-item">
-                            <div class="w-full">
-                                <div class="composition-label">
-                                    <span class="composition-name">Consommation</span>
-                                    <span class="composition-value">20%</span>
+                            <div class="portfolio-asset">
+                                <div class="asset-details">
+                                    <div class="asset-name">Amundi MSCI World</div>
+                                    <div class="asset-type">ETF - Global</div>
                                 </div>
-                                <div class="composition-bar">
-                                    <div class="composition-progress progress-consumer" style="width: 20%"></div>
+                                <div class="asset-metrics">
+                                    <div class="asset-value">10 507,20 €</div>
+                                    <div class="asset-performance performance-positive">+8.9%</div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="composition-item">
-                            <div class="w-full">
-                                <div class="composition-label">
-                                    <span class="composition-name">Industrie</span>
-                                    <span class="composition-value">10%</span>
+                            <div class="portfolio-asset">
+                                <div class="asset-details">
+                                    <div class="asset-name">Lyxor EURO STOXX 50</div>
+                                    <div class="asset-type">ETF - Europe</div>
                                 </div>
-                                <div class="composition-bar">
-                                    <div class="composition-progress progress-industry" style="width: 10%"></div>
+                                <div class="asset-metrics">
+                                    <div class="asset-value">4 305,40 €</div>
+                                    <div class="asset-performance performance-positive">+7.2%</div>
+                                </div>
+                            </div>
+                            <div class="portfolio-asset">
+                                <div class="asset-details">
+                                    <div class="asset-name">Apple Inc.</div>
+                                    <div class="asset-type">Actions - Technologies</div>
+                                </div>
+                                <div class="asset-metrics">
+                                    <div class="asset-value">5 384,50 €</div>
+                                    <div class="asset-performance performance-positive">+18.5%</div>
+                                </div>
+                            </div>
+                            <div class="portfolio-asset">
+                                <div class="asset-details">
+                                    <div class="asset-name">NVIDIA Corp.</div>
+                                    <div class="asset-type">Actions - Technologies</div>
+                                </div>
+                                <div class="asset-metrics">
+                                    <div class="asset-value">7 122,08 €</div>
+                                    <div class="asset-performance performance-positive">+115.7%</div>
                                 </div>
                             </div>
                         </div>
                         
                         <div class="sync-info mt-4">
                             <i class="fas fa-sync-alt"></i>
-                            <span id="summary-last-sync">Les données seront synchronisées avec le tableau de bord</span>
+                            <span id="summary-last-sync">Données synchro. avec le tableau de bord</span>
                         </div>
                         
                         <button id="refresh-dashboard-data" class="mt-4 w-full bg-transparent border border-green-400 text-green-400 hover:bg-green-400 hover:text-gray-900 transition-colors">
@@ -840,20 +943,174 @@
                 });
             });
             
-            // Load dashboard data from localStorage (if synced from tableau.html)
+            // Portfolio and dashboard data
+            let dashboardData = null;
+            const portfolioData = {
+                aggressive: {
+                    title: "Portefeuille Agressif",
+                    allocation: {
+                        "Technologies": 45,
+                        "Finance": 15,
+                        "Santé": 10,
+                        "Consommation": 15,
+                        "Industrie": 15
+                    },
+                    assets: [
+                        {
+                            name: "NVIDIA Corp.",
+                            type: "Actions - Technologies",
+                            value: "14 896,55 €",
+                            performance: "+115.7%"
+                        },
+                        {
+                            name: "Apple Inc.",
+                            type: "Actions - Technologies",
+                            value: "10 476,58 €",
+                            performance: "+18.5%"
+                        },
+                        {
+                            name: "Microsoft Corp.",
+                            type: "Actions - Technologies",
+                            value: "12 583,92 €",
+                            performance: "+22.4%"
+                        },
+                        {
+                            name: "Tesla Inc.",
+                            type: "Actions - Technologies",
+                            value: "8 235,80 €",
+                            performance: "-12.6%"
+                        },
+                        {
+                            name: "Amazon.com Inc.",
+                            type: "Actions - Technologies",
+                            value: "5 928,32 €",
+                            performance: "+15.3%"
+                        }
+                    ]
+                },
+                moderate: {
+                    title: "Portefeuille Modéré",
+                    allocation: {
+                        "Technologies": 30,
+                        "Finance": 25,
+                        "Santé": 15,
+                        "Consommation": 20,
+                        "Industrie": 10
+                    },
+                    assets: [
+                        {
+                            name: "Microsoft Corp.",
+                            type: "Actions - Technologies",
+                            value: "7 427,70 €",
+                            performance: "+22.4%"
+                        },
+                        {
+                            name: "Amundi MSCI World",
+                            type: "ETF - Global",
+                            value: "10 507,20 €",
+                            performance: "+8.9%"
+                        },
+                        {
+                            name: "Lyxor EURO STOXX 50",
+                            type: "ETF - Europe",
+                            value: "4 305,40 €",
+                            performance: "+7.2%"
+                        },
+                        {
+                            name: "Apple Inc.",
+                            type: "Actions - Technologies",
+                            value: "5 384,50 €",
+                            performance: "+18.5%"
+                        },
+                        {
+                            name: "NVIDIA Corp.",
+                            type: "Actions - Technologies",
+                            value: "7 122,08 €",
+                            performance: "+115.7%"
+                        }
+                    ]
+                },
+                stable: {
+                    title: "Portefeuille Stable",
+                    allocation: {
+                        "Technologies": 15,
+                        "Finance": 30,
+                        "Santé": 20,
+                        "Consommation": 25,
+                        "Industrie": 10
+                    },
+                    assets: [
+                        {
+                            name: "Amundi MSCI World",
+                            type: "ETF - Global",
+                            value: "11 783,60 €",
+                            performance: "+8.9%"
+                        },
+                        {
+                            name: "Lyxor EURO STOXX 50",
+                            type: "ETF - Europe",
+                            value: "5 438,40 €",
+                            performance: "+7.2%"
+                        },
+                        {
+                            name: "BNP Paribas",
+                            type: "Actions - Finance",
+                            value: "4 752,38 €",
+                            performance: "+6.3%"
+                        },
+                        {
+                            name: "Sanofi SA",
+                            type: "Actions - Santé",
+                            value: "3 896,45 €",
+                            performance: "+4.7%"
+                        },
+                        {
+                            name: "Unilever PLC",
+                            type: "Actions - Consommation",
+                            value: "3 254,80 €",
+                            performance: "+2.8%"
+                        }
+                    ]
+                }
+            };
+            
+            // Load dashboard data from localStorage and update portfolio view
             loadDashboardData();
             
             function loadDashboardData() {
-                const dashboardData = JSON.parse(localStorage.getItem('tradepulse_dashboard_data') || '{}');
+                const dashboardContent = localStorage.getItem('tradepulse_dashboard_data');
                 const dashboardUpdated = localStorage.getItem('tradepulse_dashboard_updated');
                 
-                // Update portfolio composition based on selected type
-                updatePortfolioComposition(document.getElementById('portfolioType').value);
-                
-                // Update last sync time
-                if (dashboardUpdated) {
-                    const date = new Date(dashboardUpdated);
-                    document.getElementById('summary-last-sync').textContent = `Dernière synchronisation: ${formatDateTime(date)}`;
+                if (dashboardContent) {
+                    try {
+                        dashboardData = JSON.parse(dashboardContent);
+                        
+                        // If there's dashboard data, use it to update the portfolio
+                        if (dashboardData.assets && dashboardData.assets.length > 0) {
+                            // Show that we're connected to the dashboard
+                            document.getElementById('summary-last-sync').innerHTML = `<span class="text-green-400">✓</span> Connecté au tableau de bord (${formatDateTime(new Date(dashboardUpdated))})`;
+                            
+                            // We need to adapt the dashboard data into our portfolio structure
+                            const activePortfolio = document.getElementById('portfolioType').value;
+                            const adaptedData = adaptDashboardData(dashboardData, activePortfolio);
+                            
+                            // Update the portfolio view with real data
+                            updatePortfolioView(adaptedData);
+                        } else {
+                            // If assets are missing, fallback to our predefined data
+                            const activePortfolio = document.getElementById('portfolioType').value;
+                            updatePortfolioView(portfolioData[activePortfolio]);
+                        }
+                    } catch (error) {
+                        console.error("Error parsing dashboard data:", error);
+                        // On error, use predefined data
+                        const activePortfolio = document.getElementById('portfolioType').value;
+                        updatePortfolioView(portfolioData[activePortfolio]);
+                    }
+                } else {
+                    // If no dashboard data, use predefined data
+                    const activePortfolio = document.getElementById('portfolioType').value;
+                    updatePortfolioView(portfolioData[activePortfolio]);
                 }
                 
                 // Show notification badge if new data is available
@@ -868,68 +1125,140 @@
                 }
                 
                 // Mark as read when this page loads
-                localStorage.setItem('tradepulse_alert_lastread', new Date().toISOString());
+                if (dashboardUpdated) {
+                    localStorage.setItem('tradepulse_alert_lastread', new Date().toISOString());
+                }
             }
-
-            // Update portfolio composition based on selected type
-            function updatePortfolioComposition(portfolioType) {
-                let compositionTitle = document.querySelector('.composition-box h2');
-                let compositions = {};
+            
+            // Adapt dashboard data to our portfolio structure
+            function adaptDashboardData(dashboard, portfolioType) {
+                const adaptedPortfolio = {
+                    title: portfolioData[portfolioType].title,
+                    allocation: portfolioData[portfolioType].allocation,
+                    assets: []
+                };
                 
-                if (portfolioType === 'aggressive') {
-                    compositionTitle.textContent = 'Composition du Portefeuille Agressif';
-                    compositions = {
-                        'Technologies': 45,
-                        'Finance': 15,
-                        'Santé': 10,
-                        'Consommation': 15,
-                        'Industrie': 15
-                    };
-                } else if (portfolioType === 'moderate') {
-                    compositionTitle.textContent = 'Composition du Portefeuille Modéré';
-                    compositions = {
-                        'Technologies': 30,
-                        'Finance': 25,
-                        'Santé': 15,
-                        'Consommation': 20,
-                        'Industrie': 10
-                    };
-                } else if (portfolioType === 'stable') {
-                    compositionTitle.textContent = 'Composition du Portefeuille Stable';
-                    compositions = {
-                        'Technologies': 15,
-                        'Finance': 30,
-                        'Santé': 20,
-                        'Consommation': 25,
-                        'Industrie': 10
-                    };
+                // Check if we have assets
+                if (dashboard.assets && dashboard.assets.length > 0) {
+                    // Sort assets by value (descending)
+                    const sortedAssets = [...dashboard.assets].sort((a, b) => {
+                        const valueA = parseFloat(a.value.replace(/[^\d.-]/g, ''));
+                        const valueB = parseFloat(b.value.replace(/[^\d.-]/g, ''));
+                        return valueB - valueA;
+                    });
+                    
+                    // Get top 5 assets
+                    const topAssets = sortedAssets.slice(0, 5);
+                    
+                    // Process each asset
+                    adaptedPortfolio.assets = topAssets.map(asset => {
+                        return {
+                            name: asset.name,
+                            type: asset.type,
+                            value: asset.value,
+                            performance: asset.totalPerformance
+                        };
+                    });
                 }
                 
-                // Get all composition items
-                const compositionItems = document.querySelectorAll('.composition-item');
+                return adaptedPortfolio;
+            }
+            
+            // Update the portfolio view with data
+            function updatePortfolioView(portfolio) {
+                // Update title
+                document.getElementById('portfolio-title').textContent = portfolio.title;
                 
-                // Update each item
-                let i = 0;
-                for (const [sector, percentage] of Object.entries(compositions)) {
-                    if (i < compositionItems.length) {
-                        const item = compositionItems[i];
-                        const nameElem = item.querySelector('.composition-name');
-                        const valueElem = item.querySelector('.composition-value');
-                        const progressElem = item.querySelector('.composition-progress');
+                // Update allocation bar
+                updateAllocationBar(portfolio.allocation);
+                
+                // Update assets list
+                const assetsList = document.getElementById('portfolio-assets-list');
+                assetsList.innerHTML = '';
+                
+                if (portfolio.assets && portfolio.assets.length > 0) {
+                    portfolio.assets.forEach(asset => {
+                        const isPositive = !asset.performance.startsWith('-');
                         
-                        nameElem.textContent = sector;
-                        valueElem.textContent = percentage + '%';
-                        progressElem.style.width = percentage + '%';
+                        const assetItem = document.createElement('div');
+                        assetItem.className = 'portfolio-asset';
+                        assetItem.innerHTML = `
+                            <div class="asset-details">
+                                <div class="asset-name">${asset.name}</div>
+                                <div class="asset-type">${asset.type}</div>
+                            </div>
+                            <div class="asset-metrics">
+                                <div class="asset-value">${asset.value}</div>
+                                <div class="asset-performance ${isPositive ? 'performance-positive' : 'performance-negative'}">${asset.performance}</div>
+                            </div>
+                        `;
                         
-                        i++;
-                    }
+                        assetsList.appendChild(assetItem);
+                    });
+                } else {
+                    // If no assets, show a message
+                    assetsList.innerHTML = `
+                        <div class="no-data-message">
+                            Aucun actif disponible pour ce portefeuille.
+                        </div>
+                    `;
                 }
+                
+                // Update preview after portfolio update
+                updatePreview();
+            }
+            
+            // Update allocation bar
+            function updateAllocationBar(allocation) {
+                // Get allocation bar and clear it
+                const allocationBar = document.querySelector('.allocation-bar');
+                allocationBar.innerHTML = '';
+                
+                // Get allocation label
+                const allocationLabel = document.querySelector('.allocation-label .flex');
+                allocationLabel.innerHTML = '';
+                
+                // Colors for sectors
+                const colors = {
+                    'Technologies': '#00ff9d',
+                    'Finance': '#36A2EB',
+                    'Santé': '#FFCE56',
+                    'Consommation': '#FF6384',
+                    'Industrie': '#9966FF'
+                };
+                
+                // Add segments to bar and labels for each sector
+                Object.entries(allocation).forEach(([sector, percentage]) => {
+                    // Add segment to bar
+                    const segment = document.createElement('div');
+                    segment.className = 'allocation-segment';
+                    segment.style.width = `${percentage}%`;
+                    segment.style.backgroundColor = colors[sector] || '#ccc';
+                    allocationBar.appendChild(segment);
+                    
+                    // Add label
+                    const label = document.createElement('div');
+                    label.className = 'allocation-item';
+                    label.innerHTML = `
+                        <div class="allocation-color" style="background-color: ${colors[sector] || '#ccc'}"></div>
+                        <span>${sector} ${percentage}%</span>
+                    `;
+                    allocationLabel.appendChild(label);
+                });
             }
             
             // Handle portfolio type change
             document.getElementById('portfolioType').addEventListener('change', function() {
-                updatePortfolioComposition(this.value);
-                updatePreview();
+                const selectedPortfolio = this.value;
+                
+                // If we have dashboard data, try to adapt it
+                if (dashboardData && dashboardData.assets && dashboardData.assets.length > 0) {
+                    const adaptedData = adaptDashboardData(dashboardData, selectedPortfolio);
+                    updatePortfolioView(adaptedData);
+                } else {
+                    // Otherwise use predefined data
+                    updatePortfolioView(portfolioData[selectedPortfolio]);
+                }
             });
             
             // Generate email HTML based on template and data
@@ -937,8 +1266,10 @@
                 const emailType = document.getElementById('emailType').value;
                 const portfolioType = document.getElementById('portfolioType').value;
                 
-                // Get dashboard data if available
-                const dashboardData = JSON.parse(localStorage.getItem('tradepulse_dashboard_data') || '{}');
+                // Get active portfolio data
+                const activePortfolio = dashboardData && dashboardData.assets && dashboardData.assets.length > 0 
+                    ? adaptDashboardData(dashboardData, portfolioType)
+                    : portfolioData[portfolioType];
                 
                 // Format today's date
                 const today = new Date();
@@ -978,6 +1309,31 @@
                 let newsDesc2 = 'Le géant de la tech dévoile ses premiers produits dédiés à l\'intelligence artificielle.';
                 let newsTitle3 = 'Bitcoin franchit un nouveau seuil à 75 000$';
                 let newsDesc3 = 'La principale cryptomonnaie atteint un nouveau record dans un contexte d\'adoption institutionnelle.';
+                
+                // If we have real assets, show those in the email
+                let assetsHTML = '';
+                if (activePortfolio.assets && activePortfolio.assets.length > 0) {
+                    // Take top 3 assets
+                    const topAssets = activePortfolio.assets.slice(0, 3);
+                    
+                    assetsHTML = `
+                        <div class="section">
+                            <h2 class="section-title">ACTIFS DU PORTEFEUILLE</h2>
+                            
+                            ${topAssets.map(asset => {
+                                const isPositive = !asset.performance.startsWith('-');
+                                return `
+                                    <div class="event-item">
+                                        <div class="event-title">${asset.name}</div>
+                                        <div class="event-description">
+                                            Valeur: ${asset.value} | Performance: <span class="${isPositive ? 'positive' : 'negative'}">${asset.performance}</span>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                }
                 
                 // Market data
                 const marketData = {
@@ -1096,6 +1452,8 @@
                             </div>
                         </div>
                         
+                        ${assetsHTML}
+                        
                         <div class="section">
                             <h2 class="section-title">ÉTAT DES MARCHÉS</h2>
                             
@@ -1188,19 +1546,27 @@
             
             // Refresh dashboard data button
             document.getElementById('refresh-dashboard-data').addEventListener('click', function() {
+                const originalText = this.innerHTML;
                 this.innerHTML = '<i class="fas fa-sync-alt fa-spin mr-2"></i>Synchronisation...';
                 
-                // Show notification after a delay
+                // Show loading state in portfolio-assets-list
+                document.getElementById('portfolio-assets-list').innerHTML = `
+                    <div class="loading-container">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">Connexion au tableau de bord...</div>
+                    </div>
+                `;
+                
+                // Try to fetch dashboard data
                 setTimeout(() => {
                     loadDashboardData();
-                    updatePreview();
                     
                     // Reset button
-                    this.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Synchroniser avec le tableau de bord';
+                    this.innerHTML = originalText;
                     
                     // Show notification
                     showNotification('Données synchronisées avec succès !');
-                }, 1000);
+                }, 1500);
             });
             
             // Send test email button
