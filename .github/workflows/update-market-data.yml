@@ -15,25 +15,21 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: Set up Python
+        uses: actions/setup-python@v4
         with:
-          node-version: 18
+          python-version: '3.10'
           
-      - name: Initialize npm if needed
-        run: |
-          if [ ! -f package.json ]; then
-            npm init -y
-          fi
-          
-      - name: Install dependencies
-        run: npm install axios@0.27.2 cheerio
-        
       - name: Create data directory if needed
         run: mkdir -p data
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4
         
       - name: Scrape market data
-        run: node scripts/scrape-markets.js
+        run: python scripts/scrape_markets.py
         continue-on-error: true  # Ne pas faire échouer le workflow si le scraping échoue
         
       - name: Verify data file exists
