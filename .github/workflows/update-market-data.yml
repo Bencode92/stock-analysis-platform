@@ -1,9 +1,12 @@
 name: Update Market Data
 
 on:
-  # Suppression de la planification automatique
   # Uniquement le déclenchement manuel
   workflow_dispatch:
+
+# Ajout des permissions explicites nécessaires pour écrire dans le dépôt
+permissions:
+  contents: write
 
 jobs:
   update-data:
