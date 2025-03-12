@@ -1,5 +1,5 @@
 /**
- * marches-script.js - Version simplifiée qui charge des données pré-extraites
+ * marches-script.js - Version améliorée qui affiche le pays et la variation depuis janvier
  * Les données sont mises à jour régulièrement par GitHub Actions
  */
 
@@ -175,7 +175,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (indices.length === 0) {
                         const emptyRow = document.createElement('tr');
                         emptyRow.innerHTML = `
-                            <td colspan="7" class="text-center py-4 text-gray-400">
+                            <td colspan="6" class="text-center py-4 text-gray-400">
                                 <i class="fas fa-info-circle mr-2"></i>
                                 Aucune donnée disponible pour cette région
                             </td>
@@ -186,14 +186,16 @@ document.addEventListener('DOMContentLoaded', function() {
                         indices.forEach(index => {
                             const row = document.createElement('tr');
                             
+                            // Création de la ligne avec la nouvelle structure
                             row.innerHTML = `
                                 <td class="font-medium">${index.name}</td>
+                                <td>${index.country || '-'}</td>
                                 <td>${index.value || '-'}</td>
-                                <td class="${index.trend === 'down' ? 'negative' : 'positive'}">${index.change || '-'}</td>
                                 <td class="${index.trend === 'down' ? 'negative' : 'positive'}">${index.changePercent || '-'}</td>
-                                <td>${index.opening || '-'}</td>
-                                <td>${index.high || '-'}</td>
-                                <td>${index.low || '-'}</td>
+                                <td class="${index.ytdChange && index.ytdChange.includes('-') ? 'negative' : 'positive'}">${index.ytdChange || '-'}</td>
+                                <td>
+                                    <button class="p-1 px-3 rounded bg-green-400 bg-opacity-10 text-green-400 text-xs">Voir</button>
+                                </td>
                             `;
                             
                             tableBody.appendChild(row);
@@ -304,7 +306,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const div = document.createElement('div');
             div.innerHTML = `
                 <div class="font-medium">${index.name}</div>
-                <div class="${index.trend === 'down' ? 'negative' : 'positive'}">${index.changePercent || '-'}</div>
+                <div class="${index.trend === 'down' ? 'negative' : 'positive'}">
+                    ${index.changePercent || '-'} 
+                    ${index.ytdChange ? `/ ${index.ytdChange}` : ''}
+                </div>
             `;
             summaryContainer.appendChild(div);
         });
