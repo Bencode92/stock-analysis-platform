@@ -12,301 +12,243 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="enhanced-ui.css">
     <script src="actualites_fix.js"></script>
-    <!-- Nouveau script pour les Top Performers -->
-    <script src="top-performers.js"></script>
+    
+    <!-- Script pour les Top Performers -->
+    <script src="top-performers-panel.js"></script>
 </head>
 <body class="bg-bg-primary text-text-primary dark:bg-dark-bg-primary dark:text-dark-text-primary">
     <div class="app-container">
-        <!-- Logo et titre -->
-        <header class="app-header">
-            <div class="logo-container">
+        <!-- Navigation principale -->
+        <nav class="main-nav">
+            <div class="nav-logo">
                 <div class="logo-dot"></div>
-                <h1 class="app-title">TRADEPULSE</h1>
+                <div class="logo-text">TRADEPULSE</div>
             </div>
-            <div class="tagline">POWERED BY PERPLEXITY AI</div>
-        </header>
-
-        <!-- Bouton de démarrage -->
-        <div class="start-container">
-            <button class="start-button">START</button>
-        </div>
-
-        <!-- Pied de page -->
-        <footer class="app-footer">
-            <div class="copyright">© 2025 TradePulse | Finance Intelligence Platform</div>
-        </footer>
-
-        <!-- Contenu principal (caché au démarrage) -->
-        <main class="main-content hidden">
-            <!-- En-tête de l'application -->
-            <header class="dashboard-header">
-                <div class="logo-container">
-                    <div class="logo-dot"></div>
-                    <h1 class="app-title">TRADEPULSE</h1>
+            <ul class="nav-links">
+                <li><a href="#actualites">Actualités</a></li>
+                <li><a href="#portefeuilles">Portefeuilles</a></li>
+                <li><a href="#tableau-de-bord">Tableau de bord</a></li>
+                <li><a href="#marches" class="active">Marchés</a></li>
+            </ul>
+            <div class="nav-right">
+                <div class="market-status">
+                    <span class="status-dot open"></span>
+                    <span class="status-text">Marché ouvert</span>
+                    <span class="market-time">15:43:17</span>
                 </div>
-                <div class="action-buttons">
-                    <button id="theme-toggle-btn" class="button-press">
-                        <i class="fas fa-moon dark-icon"></i>
-                        <i class="fas fa-sun light-icon hidden"></i>
-                    </button>
-                    <button id="open-customization" class="customization-btn button-press">
-                        <i class="fas fa-palette"></i>
-                    </button>
-                </div>
-            </header>
-
-            <!-- Conteneur principal des données de marché -->
-            <div class="market-data-container">
-                <div class="section-header">
-                    <h2>Indices Boursiers Internationaux</h2>
-                    <div class="last-updated">
-                        Dernière mise à jour: <span id="last-update-time">Chargement...</span>
-                    </div>
-                    <button id="refresh-data" class="refresh-button">
-                        <i class="fas fa-sync-alt"></i> Rafraîchir
-                    </button>
-                </div>
-
-                <!-- Onglets des régions -->
-                <div class="region-tabs">
-                    <button class="region-tab active" data-region="europe">Europe</button>
-                    <button class="region-tab" data-region="us">États-Unis</button>
-                    <button class="region-tab" data-region="asia">Asie</button>
-                    <button class="region-tab" data-region="other">Autres</button>
-                </div>
-
-                <!-- Tableau des indices -->
-                <div class="indices-table-container">
-                    <table class="indices-table">
-                        <thead>
-                            <tr>
-                                <th>Indice</th>
-                                <th>Dernier</th>
-                                <th>Variation</th>
-                                <th>Variation %</th>
-                                <th>Ouverture</th>
-                                <th>Plus Haut</th>
-                                <th>Plus Bas</th>
-                            </tr>
-                        </thead>
-                        <tbody id="indices-tbody">
-                            <tr class="loading-row">
-                                <td colspan="7">
-                                    <div class="loading-indicator">
-                                        <div class="spinner"></div>
-                                        <div>Chargement des données...</div>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Vue d'ensemble des marchés -->
-                <div class="section-header mt-6">
-                    <h2>Aperçu des marchés mondiaux</h2>
-                </div>
-                <div class="market-overview-container">
-                    <!-- Le composant Top Performers sera inséré ici -->
-                    
-                    <!-- Cartes des régions -->
-                    <div class="region-cards">
-                        <div class="region-card" data-region="europe">
-                            <div class="region-card-header">
-                                <h3>Europe</h3>
-                                <span class="region-trend"></span>
-                            </div>
-                            <div class="region-card-content" id="europe-overview">
-                                <div class="loading-indicator">
-                                    <div class="spinner"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="region-card" data-region="us">
-                            <div class="region-card-header">
-                                <h3>États-Unis</h3>
-                                <span class="region-trend"></span>
-                            </div>
-                            <div class="region-card-content" id="us-overview">
-                                <div class="loading-indicator">
-                                    <div class="spinner"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="region-card" data-region="asia">
-                            <div class="region-card-header">
-                                <h3>Asie</h3>
-                                <span class="region-trend"></span>
-                            </div>
-                            <div class="region-card-content" id="asia-overview">
-                                <div class="loading-indicator">
-                                    <div class="spinner"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="region-card" data-region="other">
-                            <div class="region-card-header">
-                                <h3>Autres Marchés</h3>
-                                <span class="region-trend"></span>
-                            </div>
-                            <div class="region-card-content" id="other-overview">
-                                <div class="loading-indicator">
-                                    <div class="spinner"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Note de source -->
-                <div class="data-source">
-                    Sources: <a href="https://www.boursorama.com" target="_blank" rel="noopener">Boursorama</a>
-                    <div class="data-disclaimer">Les données sont actualisées régulièrement mais peuvent accuser un retard par rapport aux marchés en temps réel.</div>
-                </div>
-            </div>
-        </main>
-
-        <!-- Modal de mise à jour des données -->
-        <div class="modal" id="update-modal">
-            <div class="modal-content">
-                <h2>MISE À JOUR DES DONNÉES</h2>
-                <p>Pour vous offrir les analyses financières les plus précises, nous pouvons mettre à jour les actualités, événements et recommandations de portefeuilles avec les données les plus récentes.</p>
-                <div class="update-info">
-                    <i class="fas fa-info-circle"></i>
-                    <span>Votre dernière mise à jour date du <span id="last-update-date">--/--/---- --:--:--</span></span>
-                </div>
-                <div class="modal-loading hidden">
-                    <div class="spinner"></div>
-                    <p>Mise à jour des actualités et événements...</p>
-                    <div class="progress-bar">
-                        <div class="progress-fill"></div>
-                    </div>
-                </div>
-                <div class="modal-buttons">
-                    <button class="modal-btn" id="update-later">Plus tard</button>
-                    <button class="modal-btn primary" id="update-now">Mettre à jour maintenant</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal d'authentification -->
-        <div class="modal" id="auth-modal">
-            <div class="modal-content">
-                <h2>ACCÈS À LA PLATEFORME</h2>
-                <p>Un nouveau système d'authentification arrive bientôt</p>
-                <div class="auth-maintenance">
-                    <div class="maintenance-icon">
-                        <i class="fas fa-cogs"></i>
-                    </div>
-                    <h3>Système en cours de mise à jour</h3>
-                    <p>Nous améliorons notre système d'authentification pour vous offrir une expérience plus sécurisée et plus fluide.</p>
-                    <p>En attendant, vous pouvez accéder à la plateforme et consulter les dernières actualités financières ainsi que nos recommandations d'investissement.</p>
-                </div>
-                <div class="modal-buttons single-button">
-                    <button class="back-btn">ACCÉDER AUX ACTUALITÉS</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Panel de customisation -->
-        <div id="customization-panel" class="customization-panel">
-            <div class="customization-header">
-                <h3>Personnalisation</h3>
-                <button id="close-customization" class="close-btn">
-                    <i class="fas fa-times"></i>
+                <button class="search-btn">
+                    <i class="fas fa-search"></i>
+                    <span>Ma question</span>
                 </button>
             </div>
-            <div class="customization-section">
-                <h4>Thème de couleur</h4>
-                <div class="color-options">
-                    <button class="color-option active" data-color="green"></button>
-                    <button class="color-option" data-color="blue"></button>
-                    <button class="color-option" data-color="purple"></button>
-                    <button class="color-option" data-color="orange"></button>
-                    <button class="color-option" data-color="red"></button>
+        </nav>
+
+        <!-- Contenu principal -->
+        <main class="main-content">
+            <!-- En-tête de la page -->
+            <header class="page-header">
+                <h1>Indices Boursiers Internationaux</h1>
+                <div class="last-update">
+                    Dernière mise à jour: <span id="last-update-date">12 mars 2025 à 14:27:38</span> (anciennes données)
+                </div>
+                <button id="refresh-button" class="refresh-btn">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Rafraîchir</span>
+                </button>
+            </header>
+
+            <!-- Onglets des régions -->
+            <div class="region-tabs">
+                <button class="region-tab active" data-region="europe">Europe</button>
+                <button class="region-tab" data-region="us">États-Unis</button>
+                <button class="region-tab" data-region="asia">Asie</button>
+                <button class="region-tab" data-region="other">Autres</button>
+            </div>
+
+            <!-- Tableau des indices -->
+            <div class="indices-table-container">
+                <table class="indices-table">
+                    <thead>
+                        <tr>
+                            <th>Indice</th>
+                            <th>Dernier</th>
+                            <th>Variation</th>
+                            <th>Variation %</th>
+                            <th>Ouverture</th>
+                            <th>Plus Haut</th>
+                            <th>Plus Bas</th>
+                        </tr>
+                    </thead>
+                    <tbody id="indices-data">
+                        <!-- Les données seront chargées dynamiquement -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Aperçu des marchés -->
+            <h2 class="section-title">Aperçu des marchés mondiaux</h2>
+            <div class="market-overview-container">
+                <!-- Les Top Performers seront injectés ici par le script -->
+                
+                <!-- Cartes des régions -->
+                <div class="region-cards">
+                    <div class="region-card">
+                        <div class="region-header">
+                            <h3>Europe</h3>
+                            <span class="trend-indicator up">↑</span>
+                        </div>
+                        <div class="region-content" id="europe-overview">
+                            <div class="region-item">
+                                <div class="item-name">Allemagne</div>
+                                <div class="item-value">1,29 %</div>
+                            </div>
+                            <div class="region-item">
+                                <div class="item-name">Allemagne</div>
+                                <div class="item-value">0,66 %</div>
+                            </div>
+                            <div class="region-item">
+                                <div class="item-name">Belgique</div>
+                                <div class="item-value">2,06 %</div>
+                            </div>
+                            <div class="region-item">
+                                <div class="item-name">Espagne</div>
+                                <div class="item-value negative">-0,81 %</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="region-card">
+                        <div class="region-header">
+                            <h3>États-Unis</h3>
+                            <span class="trend-indicator down">↓</span>
+                        </div>
+                        <div class="region-content" id="us-overview">
+                            <!-- Contenu dynamique -->
+                        </div>
+                    </div>
+                    <div class="region-card">
+                        <div class="region-header">
+                            <h3>Asie</h3>
+                            <span class="trend-indicator down">↓</span>
+                        </div>
+                        <div class="region-content" id="asia-overview">
+                            <!-- Contenu dynamique -->
+                        </div>
+                    </div>
+                    <div class="region-card">
+                        <div class="region-header">
+                            <h3>Autres Marchés</h3>
+                            <span class="trend-indicator up">↑</span>
+                        </div>
+                        <div class="region-content" id="other-overview">
+                            <!-- Contenu dynamique -->
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="customization-section">
-                <h4>Densité d'affichage</h4>
-                <div class="density-options">
-                    <button class="density-option" data-density="compact">Compacte</button>
-                    <button class="density-option active" data-density="normal">Normale</button>
-                    <button class="density-option" data-density="comfortable">Confortable</button>
-                </div>
+
+            <!-- Source des données -->
+            <div class="data-source">
+                <span>Sources: <a href="https://www.boursorama.com" target="_blank" rel="noopener">Boursorama</a></span>
+                <span class="disclaimer">Les données sont actualisées régulièrement mais peuvent accuser un retard par rapport aux marchés en temps réel.</span>
             </div>
-            <div class="customization-footer">
-                <button id="reset-customization" class="reset-btn">Réinitialiser par défaut</button>
-            </div>
-        </div>
+        </main>
     </div>
 
     <script>
-        // Global pour stocker les données de marché
-        window.marketData = null;
-
-        // Fonction pour charger les données de marché
-        async function loadMarketData() {
-            try {
-                const response = await fetch('data/markets.json');
-                if (!response.ok) {
-                    throw new Error('Erreur lors du chargement des données');
-                }
-                window.marketData = await response.json();
-                updateLastUpdateTime();
-                displayMarketData('europe'); // Afficher l'Europe par défaut
-                updateMarketOverview();
-                return true;
-            } catch (error) {
-                console.error('Erreur:', error);
-                document.getElementById('indices-tbody').innerHTML = `
-                    <tr class="error-row">
-                        <td colspan="7">
-                            <div class="error-message">
-                                <i class="fas fa-exclamation-circle"></i>
-                                Impossible de charger les données. Veuillez réessayer plus tard.
-                            </div>
-                        </td>
-                    </tr>
-                `;
-                return false;
-            }
-        }
-
-        // Mise à jour de l'heure de dernière mise à jour
-        function updateLastUpdateTime() {
-            if (window.marketData && window.marketData.meta && window.marketData.meta.lastUpdated) {
-                const lastUpdated = new Date(window.marketData.meta.lastUpdated);
-                const formattedDate = lastUpdated.toLocaleDateString('fr-FR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
+        // Simulation du chargement des données (à remplacer par votre logique réelle)
+        document.addEventListener('DOMContentLoaded', function() {
+            // Simuler le chargement des données depuis votre API ou fichier JSON
+            fetch('data/markets.json')
+                .then(response => response.json())
+                .then(data => {
+                    // Stockage global des données
+                    window.marketData = data;
+                    
+                    // Charger les données par défaut (Europe)
+                    loadRegionData('europe');
+                    
+                    // Mettre à jour la date de dernière mise à jour
+                    if (data.meta && data.meta.lastUpdated) {
+                        const date = new Date(data.meta.lastUpdated);
+                        const formattedDate = date.toLocaleString('fr-FR', {
+                            day: '2-digit',
+                            month: 'long',
+                            year: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit'
+                        });
+                        document.getElementById('last-update-date').textContent = formattedDate;
+                    }
+                })
+                .catch(error => {
+                    console.error('Erreur lors du chargement des données:', error);
+                    document.getElementById('indices-data').innerHTML = `
+                        <tr>
+                            <td colspan="7" class="error-message">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Erreur lors du chargement des données. Veuillez réessayer.
+                            </td>
+                        </tr>
+                    `;
                 });
-                document.getElementById('last-update-time').textContent = formattedDate;
-                document.getElementById('last-update-date').textContent = formattedDate;
-            }
-        }
-
-        // Afficher les données de marché pour une région
-        function displayMarketData(region) {
-            const tbody = document.getElementById('indices-tbody');
             
-            // Marquer l'onglet actif
+            // Gestion des onglets des régions
             document.querySelectorAll('.region-tab').forEach(tab => {
-                tab.classList.toggle('active', tab.dataset.region === region);
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.region-tab').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const region = this.dataset.region;
+                    loadRegionData(region);
+                });
             });
             
-            // Vérifier que les données sont disponibles
+            // Bouton de rafraîchissement
+            document.getElementById('refresh-button').addEventListener('click', function() {
+                this.classList.add('refreshing');
+                
+                // Simuler un temps de chargement
+                setTimeout(() => {
+                    fetch('data/markets.json')
+                        .then(response => response.json())
+                        .then(data => {
+                            window.marketData = data;
+                            const activeRegion = document.querySelector('.region-tab.active').dataset.region;
+                            loadRegionData(activeRegion);
+                            
+                            // Mise à jour de la date
+                            if (data.meta && data.meta.lastUpdated) {
+                                const date = new Date(data.meta.lastUpdated);
+                                const formattedDate = date.toLocaleString('fr-FR', {
+                                    day: '2-digit',
+                                    month: 'long',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit'
+                                });
+                                document.getElementById('last-update-date').textContent = formattedDate;
+                            }
+                            
+                            this.classList.remove('refreshing');
+                        })
+                        .catch(error => {
+                            console.error('Erreur lors du rafraîchissement:', error);
+                            this.classList.remove('refreshing');
+                        });
+                }, 1000);
+            });
+        });
+        
+        // Fonction pour charger les données d'une région
+        function loadRegionData(region) {
             if (!window.marketData || !window.marketData.indices || !window.marketData.indices[region]) {
-                tbody.innerHTML = `
-                    <tr class="error-row">
-                        <td colspan="7">
-                            <div class="error-message">
-                                <i class="fas fa-info-circle"></i>
-                                Aucune donnée disponible pour cette région
-                            </div>
+                document.getElementById('indices-data').innerHTML = `
+                    <tr>
+                        <td colspan="7" class="no-data-message">
+                            <i class="fas fa-info-circle"></i>
+                            Aucune donnée disponible pour cette région
                         </td>
                     </tr>
                 `;
@@ -314,236 +256,444 @@
             }
             
             const indices = window.marketData.indices[region];
+            const tbody = document.getElementById('indices-data');
             
-            // Vérifier s'il y a des indices
-            if (indices.length === 0) {
-                tbody.innerHTML = `
-                    <tr class="error-row">
-                        <td colspan="7">
-                            <div class="error-message">
-                                <i class="fas fa-info-circle"></i>
-                                Aucune donnée disponible pour cette région
-                            </div>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            // Générer les lignes du tableau
-            let rows = '';
+            let html = '';
             indices.forEach(index => {
-                const trendClass = index.trend === 'down' ? 'negative' : 'positive';
+                const variationClass = index.trend === 'up' ? 'positive' : 'negative';
                 
-                rows += `
+                html += `
                     <tr>
-                        <td class="index-name">${index.name}</td>
-                        <td class="index-value">${index.value}</td>
-                        <td class="index-change ${trendClass}">${index.change}</td>
-                        <td class="index-change-percent ${trendClass}">${index.changePercent}</td>
-                        <td class="index-opening">${index.opening || '-'}</td>
-                        <td class="index-high">${index.high || '-'}</td>
-                        <td class="index-low">${index.low || '-'}</td>
+                        <td>${index.name}</td>
+                        <td>${index.value}</td>
+                        <td class="${variationClass}">${index.change}</td>
+                        <td class="${variationClass}">${index.changePercent}</td>
+                        <td>${index.opening || '-'}</td>
+                        <td>${index.high || '-'}</td>
+                        <td class="action-cell">${index.low || '-'}</td>
                     </tr>
                 `;
             });
             
-            tbody.innerHTML = rows;
+            tbody.innerHTML = html || `
+                <tr>
+                    <td colspan="7" class="no-data-message">
+                        <i class="fas fa-info-circle"></i>
+                        Aucune donnée disponible pour cette région
+                    </td>
+                </tr>
+            `;
         }
-
-        // Mettre à jour l'aperçu des marchés
-        function updateMarketOverview() {
-            if (!window.marketData || !window.marketData.indices) return;
-            
-            // Pour chaque région
-            ['europe', 'us', 'asia', 'other'].forEach(region => {
-                const indices = window.marketData.indices[region];
-                const container = document.getElementById(`${region}-overview`);
-                
-                // Vérifier s'il y a des indices
-                if (!indices || indices.length === 0) {
-                    container.innerHTML = `<div class="no-data">Aucune donnée disponible</div>`;
-                    return;
-                }
-                
-                // Calculer la tendance globale
-                let upCount = 0;
-                let downCount = 0;
-                
-                indices.forEach(index => {
-                    if (index.trend === 'up') upCount++;
-                    else downCount++;
-                });
-                
-                const trend = upCount > downCount ? 'up' : (downCount > upCount ? 'down' : 'neutral');
-                const trendIcon = trend === 'up' ? '↑' : (trend === 'down' ? '↓' : '→');
-                const trendClass = trend === 'up' ? 'positive' : (trend === 'down' ? 'negative' : '');
-                
-                // Mettre à jour l'indicateur de tendance
-                const trendIndicator = container.closest('.region-card').querySelector('.region-trend');
-                trendIndicator.textContent = trendIcon;
-                trendIndicator.className = `region-trend ${trendClass}`;
-                
-                // Afficher jusqu'à 4 indices importants
-                const importantIndices = indices.slice(0, 4);
-                
-                let content = '';
-                importantIndices.forEach(index => {
-                    const valueClass = index.trend === 'up' ? 'positive' : 'negative';
-                    
-                    content += `
-                        <div class="market-overview-item">
-                            <div class="overview-item-name">${index.name}</div>
-                            <div class="overview-item-value">${index.value}</div>
-                            <div class="overview-item-change ${valueClass}">${index.changePercent}</div>
-                        </div>
-                    `;
-                });
-                
-                container.innerHTML = content;
-            });
-        }
-
-        // Attacher les événements
-        document.addEventListener('DOMContentLoaded', function() {
-            // Chargement initial des données
-            loadMarketData();
-            
-            // Changement d'onglet de région
-            document.querySelectorAll('.region-tab').forEach(tab => {
-                tab.addEventListener('click', function() {
-                    const region = this.dataset.region;
-                    displayMarketData(region);
-                });
-            });
-            
-            // Bouton de rafraîchissement
-            document.getElementById('refresh-data').addEventListener('click', function() {
-                this.classList.add('rotating');
-                loadMarketData().then(() => {
-                    setTimeout(() => {
-                        this.classList.remove('rotating');
-                    }, 1000);
-                });
-            });
-            
-            // Gestion de l'affichage initial et des modals
-            const startButton = document.querySelector('.start-button');
-            const mainContent = document.querySelector('.main-content');
-            const updateModal = document.getElementById('update-modal');
-            const authModal = document.getElementById('auth-modal');
-            
-            // Bouton de démarrage
-            if (startButton) {
-                startButton.addEventListener('click', function() {
-                    document.querySelector('.start-container').classList.add('hidden');
-                    mainContent.classList.remove('hidden');
-                    
-                    // Afficher le modal d'authentification
-                    authModal.classList.add('visible');
-                });
-            }
-            
-            // Modal d'authentification
-            if (authModal) {
-                document.querySelector('.back-btn').addEventListener('click', function() {
-                    authModal.classList.remove('visible');
-                    // Afficher le modal de mise à jour
-                    setTimeout(() => {
-                        updateModal.classList.add('visible');
-                    }, 300);
-                });
-            }
-            
-            // Modal de mise à jour
-            if (updateModal) {
-                document.getElementById('update-later').addEventListener('click', function() {
-                    updateModal.classList.remove('visible');
-                });
-                
-                document.getElementById('update-now').addEventListener('click', function() {
-                    const modalLoading = document.querySelector('.modal-loading');
-                    const modalButtons = document.querySelector('.modal-buttons');
-                    
-                    modalButtons.classList.add('hidden');
-                    modalLoading.classList.remove('hidden');
-                    
-                    // Simuler une progression
-                    const progressFill = document.querySelector('.progress-fill');
-                    let progress = 0;
-                    
-                    const interval = setInterval(() => {
-                        progress += 2;
-                        progressFill.style.width = `${progress}%`;
-                        
-                        if (progress >= 100) {
-                            clearInterval(interval);
-                            setTimeout(() => {
-                                updateModal.classList.remove('visible');
-                                loadMarketData(); // Recharger les données
-                            }, 500);
-                        }
-                    }, 50);
-                });
-            }
-            
-            // Gestion du thème
-            const themeToggle = document.getElementById('theme-toggle-btn');
-            if (themeToggle) {
-                themeToggle.addEventListener('click', function() {
-                    document.documentElement.classList.toggle('dark');
-                    document.querySelector('.dark-icon').classList.toggle('hidden');
-                    document.querySelector('.light-icon').classList.toggle('hidden');
-                });
-            }
-            
-            // Panel de personnalisation
-            const customizationPanel = document.getElementById('customization-panel');
-            if (customizationPanel) {
-                // Ouvrir/fermer le panel
-                document.getElementById('open-customization').addEventListener('click', function() {
-                    customizationPanel.classList.add('visible');
-                });
-                
-                document.getElementById('close-customization').addEventListener('click', function() {
-                    customizationPanel.classList.remove('visible');
-                });
-                
-                // Changement de couleur
-                document.querySelectorAll('.color-option').forEach(option => {
-                    option.addEventListener('click', function() {
-                        document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('active'));
-                        this.classList.add('active');
-                        
-                        const color = this.dataset.color;
-                        document.documentElement.setAttribute('data-theme-color', color);
-                    });
-                });
-                
-                // Changement de densité
-                document.querySelectorAll('.density-option').forEach(option => {
-                    option.addEventListener('click', function() {
-                        document.querySelectorAll('.density-option').forEach(opt => opt.classList.remove('active'));
-                        this.classList.add('active');
-                        
-                        const density = this.dataset.density;
-                        document.documentElement.setAttribute('data-density', density);
-                    });
-                });
-                
-                // Réinitialisation
-                document.getElementById('reset-customization').addEventListener('click', function() {
-                    document.documentElement.removeAttribute('data-theme-color');
-                    document.documentElement.removeAttribute('data-density');
-                    
-                    document.querySelector('.color-option[data-color="green"]').classList.add('active');
-                    document.querySelectorAll('.color-option:not([data-color="green"])').forEach(opt => opt.classList.remove('active'));
-                    
-                    document.querySelector('.density-option[data-density="normal"]').classList.add('active');
-                    document.querySelectorAll('.density-option:not([data-density="normal"])').forEach(opt => opt.classList.remove('active'));
-                });
-            }
-        });
     </script>
+
+    <style>
+        /* Variables globales */
+        :root {
+            --accent-color: rgb(0, 255, 157);
+            --accent-color-transparent: rgba(0, 255, 157, 0.1);
+            --positive-color: #00c853;
+            --negative-color: #ff5252;
+            --bg-color: #0a1723;
+            --card-bg-color: rgb(13, 25, 36);
+            --border-color: rgba(0, 255, 157, 0.2);
+            --text-color: #ffffff;
+            --text-muted: rgba(255, 255, 255, 0.6);
+        }
+        
+        /* Styles généraux */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        
+        .app-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        /* Navigation principale */
+        .main-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .nav-logo {
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo-dot {
+            width: 10px;
+            height: 10px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .logo-text {
+            font-weight: 700;
+            font-size: 18px;
+            letter-spacing: 1px;
+        }
+        
+        .nav-links {
+            display: flex;
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .nav-links li {
+            margin: 0 15px;
+        }
+        
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 14px;
+            transition: color 0.2s;
+            padding: 5px 0;
+        }
+        
+        .nav-links a:hover {
+            color: var(--text-color);
+        }
+        
+        .nav-links a.active {
+            color: var(--accent-color);
+            border-bottom: 2px solid var(--accent-color);
+        }
+        
+        .nav-right {
+            display: flex;
+            align-items: center;
+        }
+        
+        .market-status {
+            display: flex;
+            align-items: center;
+            margin-right: 20px;
+            font-size: 14px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        
+        .status-dot.open {
+            background-color: var(--positive-color);
+        }
+        
+        .market-time {
+            margin-left: 8px;
+            color: var(--text-muted);
+        }
+        
+        .search-btn {
+            display: flex;
+            align-items: center;
+            background-color: var(--accent-color-transparent);
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 8px 15px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .search-btn i {
+            margin-right: 8px;
+        }
+        
+        .search-btn:hover {
+            background-color: rgba(0, 255, 157, 0.2);
+        }
+        
+        /* Contenu principal */
+        .main-content {
+            padding: 20px;
+        }
+        
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        
+        .page-header h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .last-update {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+        
+        .refresh-btn {
+            display: flex;
+            align-items: center;
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--accent-color);
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .refresh-btn i {
+            margin-right: 8px;
+        }
+        
+        .refresh-btn:hover {
+            background-color: var(--accent-color-transparent);
+        }
+        
+        .refresh-btn.refreshing i {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Onglets des régions */
+        .region-tabs {
+            display: flex;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+        }
+        
+        .region-tab {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            padding: 12px 20px;
+            font-size: 15px;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.2s;
+        }
+        
+        .region-tab:hover {
+            color: var(--text-color);
+        }
+        
+        .region-tab.active {
+            color: var(--accent-color);
+        }
+        
+        .region-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: var(--accent-color);
+        }
+        
+        /* Tableau des indices */
+        .indices-table-container {
+            margin-bottom: 30px;
+            overflow-x: auto;
+        }
+        
+        .indices-table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: var(--card-bg-color);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .indices-table th {
+            text-align: left;
+            padding: 12px 15px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .indices-table td {
+            padding: 12px 15px;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .indices-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .indices-table tr:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+        
+        .positive {
+            color: var(--positive-color);
+        }
+        
+        .negative {
+            color: var(--negative-color);
+        }
+        
+        .action-cell {
+            white-space: nowrap;
+        }
+        
+        .no-data-message, .error-message {
+            text-align: center;
+            padding: 40px;
+            color: var(--text-muted);
+        }
+        
+        .error-message i, .no-data-message i {
+            margin-right: 8px;
+        }
+        
+        /* Section d'aperçu des marchés */
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin: 30px 0 20px;
+        }
+        
+        .market-overview-container {
+            margin-bottom: 30px;
+        }
+        
+        .region-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .region-card {
+            background-color: var(--card-bg-color);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+        
+        .region-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .region-header h3 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0;
+        }
+        
+        .trend-indicator {
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        .trend-indicator.up {
+            color: var(--positive-color);
+        }
+        
+        .trend-indicator.down {
+            color: var(--negative-color);
+        }
+        
+        .region-content {
+            padding: 10px;
+        }
+        
+        .region-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .region-item:last-child {
+            border-bottom: none;
+        }
+        
+        .item-name {
+            font-size: 14px;
+        }
+        
+        .item-value {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--positive-color);
+        }
+        
+        .item-value.negative {
+            color: var(--negative-color);
+        }
+        
+        /* Source des données */
+        .data-source {
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .data-source a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+        
+        .disclaimer {
+            display: block;
+            margin-top: 5px;
+            font-size: 12px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .region-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+            
+            .region-cards {
+                grid-template-columns: 1fr;
+            }
+            
+            .page-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .last-update {
+                margin: 10px 0;
+            }
+        }
+    </style>
 </body>
 </html>
