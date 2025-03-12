@@ -4,6 +4,7 @@
 """
 Script d'extraction des données boursières depuis Boursorama
 Utilisé par GitHub Actions pour mettre à jour régulièrement les données
+Version améliorée pour extraire le pays et la variation depuis janvier
 """
 
 import os
@@ -72,6 +73,29 @@ CONFIG = {
         "us": "#etats-unis-tab",
         "asia": "#asie-tab",
         "other": "#autres-tab"
+    },
+    # Mapping des pays connus pour extraction
+    "country_mapping": {
+        "france": "France",
+        "allemagne": "Allemagne",
+        "royaume-uni": "Royaume-Uni",
+        "espagne": "Espagne",
+        "italie": "Italie",
+        "belgique": "Belgique",
+        "pays-bas": "Pays-Bas",
+        "suisse": "Suisse",
+        "états-unis": "États-Unis",
+        "usa": "États-Unis",
+        "japon": "Japon",
+        "chine": "Chine",
+        "hong kong": "Hong Kong",
+        "corée du sud": "Corée du Sud",
+        "taiwan": "Taiwan",
+        "brésil": "Brésil",
+        "argentine": "Argentine",
+        "chili": "Chili",
+        "mexique": "Mexique",
+        "australie": "Australie"
     }
 }
 
@@ -116,8 +140,26 @@ def get_headers():
         "Referer": "https://www.google.com/"
     }
 
+def extract_country_from_name(name):
+    """Extrait le pays à partir du nom de l'indice"""
+    # Si le pays est entre parenthèses
+    if "(" in name and ")" in name:
+        country_match = re.search(r'\((.*?)\)', name)
+        if country_match:
+            country = country_match.group(1).strip().lower()
+            return CONFIG["country_mapping"].get(country, country.capitalize())
+    
+    # Chercher des correspondances directes de pays dans le nom
+    name_lower = name.lower()
+    for key, value in CONFIG["country_mapping"].items():
+        if key in name_lower:
+            return value
+    
+    # Si aucun pays n'a été trouvé
+    return ""
+
 def extract_table_data(table):
-    """Extrait les données d'un tableau"""
+    """Extrait les données d'un tableau avec améliorations pour le pays et la variation depuis janvier"""
     indices = []
     if not table:
         return indices
@@ -134,7 +176,9 @@ def extract_table_data(table):
     value_idx = next((i for i, h in enumerate(headers) if any(keyword in h for keyword in ['dernier', 'cours', 'clôture'])), 1)
     change_idx = next((i for i, h in enumerate(headers) if any(keyword in h for keyword in ['var.', 'variation', 'abs', 'veille'])), 2)
     pct_idx = next((i for i, h in enumerate(headers) if '%' in h), 3)
-    ytd_idx = next((i for i, h in enumerate(headers) if any(keyword in h for keyword in ['1 janv', 'depuis le 1er', 'ytd'])), -1)
+    
+    # Recherche spécifique pour la variation depuis janvier
+    ytd_idx = next((i for i, h in enumerate(headers) if any(keyword in h for keyword in ['1 janv', 'depuis le 1er', 'ytd', 'annuel'])), -1)
     
     # Trouver toutes les lignes de données
     rows = table.select('tbody tr')
@@ -150,6 +194,9 @@ def extract_table_data(table):
             name_cell = cells[name_idx] if name_idx < len(cells) else cells[0]
             name_el = name_cell.find('a') or name_cell
             name = name_el.text.strip()
+            
+            # Extraire le pays à partir du nom
+            country = extract_country_from_name(name)
             
             # Extraire la valeur (dernier cours)
             value_cell = cells[value_idx] if value_idx < len(cells) else cells[1]
@@ -173,6 +220,16 @@ def extract_table_data(table):
             high = cells[5].text.strip() if len(cells) > 5 else ""
             low = cells[6].text.strip() if len(cells) > 6 else ""
             
+            # Tenter de nettoyer les données pour high et low
+            if high and "%" in high:
+                # Si high contient un pourcentage, c'est probablement une autre donnée
+                # Essayons de trouver la vraie valeur high dans une autre colonne
+                for i in range(4, min(len(cells), 10)):
+                    cell_text = cells[i].text.strip()
+                    if cell_text and "%" not in cell_text and not cell_text.lower() == "voir":
+                        high = cell_text
+                        break
+            
             # Déterminer la tendance
             trend = "down" if (change and '-' in change) or (change_percent and '-' in change_percent) else "up"
             
@@ -180,6 +237,7 @@ def extract_table_data(table):
             if name and value:
                 index_data = {
                     "name": name,
+                    "country": country,
                     "value": value,
                     "change": change,
                     "changePercent": change_percent,
@@ -325,7 +383,7 @@ def parse_percentage(percent_str):
         return 0.0
     
     # Supprimer les caractères non numériques sauf le point décimal et le signe moins
-    clean_str = re.sub(r'[^0-9\.\-]', '', percent_str.replace(',', '.'))
+    clean_str = re.sub(r'[^0-9\\.\\-]', '', percent_str.replace(',', '.'))
     
     try:
         return float(clean_str)
