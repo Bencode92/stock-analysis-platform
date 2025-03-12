@@ -6,541 +6,63 @@
     <title>TradePulse - Finance Intelligence Platform</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-    <!-- Scripts principaux -->
+    <link rel="stylesheet" href="landing-style.css">
+    <link rel="stylesheet" href="jeton-style.css">
     <script type="module" src="aiintegration.js"></script>
-    <script src="https://cdn.tailwindcss.com/"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="enhanced-ui.css">
-    <script src="actualites_fix.js"></script>
 </head>
-<body class="bg-bg-primary text-text-primary dark:bg-dark-bg-primary dark:text-dark-text-primary">
-    <div class="app-container">
-        <!-- Logo et titre -->
-        <header class="app-header">
-            <div class="logo-container">
-                <div class="logo-dot"></div>
-                <h1 class="app-title">TRADEPULSE</h1>
+<body>
+    <div class="landing-container">
+        <!-- Date actuelle stylisée -->
+        <div class="date-display">
+            <div class="date-inner">
+                <span id="current-date">12.03.2025</span>
             </div>
-            <div class="tagline">POWERED BY PERPLEXITY AI</div>
-        </header>
+        </div>
+
+        <!-- Logo et titre -->
+        <div class="site-brand">
+            <div class="pulse-dot"></div>
+            <h1>TRADEPULSE</h1>
+            <div class="tagline">FINANCE INTELLIGENCE PLATFORM</div>
+        </div>
 
         <!-- Bouton de démarrage -->
-        <div class="start-container">
-            <button class="start-button">START</button>
-        </div>
+        <button class="start-button">START</button>
 
         <!-- Pied de page -->
-        <footer class="app-footer">
-            <div class="copyright">© 2025 TradePulse | Finance Intelligence Platform</div>
-        </footer>
-
-        <!-- Contenu principal (caché au démarrage) -->
-        <main class="main-content hidden">
-            <!-- En-tête de l'application -->
-            <header class="dashboard-header">
-                <div class="logo-container">
-                    <div class="logo-dot"></div>
-                    <h1 class="app-title">TRADEPULSE</h1>
-                </div>
-                <div class="action-buttons">
-                    <button id="theme-toggle-btn" class="button-press">
-                        <i class="fas fa-moon dark-icon"></i>
-                        <i class="fas fa-sun light-icon hidden"></i>
-                    </button>
-                    <button id="open-customization" class="customization-btn button-press">
-                        <i class="fas fa-palette"></i>
-                    </button>
-                </div>
-            </header>
-
-            <!-- Conteneur principal des données de marché -->
-            <div class="market-data-container">
-                <div class="section-header">
-                    <h2>Indices Boursiers Internationaux</h2>
-                    <div class="last-updated">
-                        Dernière mise à jour: <span id="last-update-time">Chargement...</span>
-                    </div>
-                    <button id="refresh-data" class="refresh-button">
-                        <i class="fas fa-sync-alt"></i> Rafraîchir
-                    </button>
-                </div>
-
-                <!-- Onglets des régions -->
-                <div class="region-tabs">
-                    <button class="region-tab active" data-region="europe">Europe</button>
-                    <button class="region-tab" data-region="us">États-Unis</button>
-                    <button class="region-tab" data-region="asia">Asie</button>
-                    <button class="region-tab" data-region="other">Autres</button>
-                </div>
-
-                <!-- Tableau des indices -->
-                <div class="indices-table-container">
-                    <table class="indices-table">
-                        <thead>
-                            <tr>
-                                <th>Indice</th>
-                                <th>Dernier</th>
-                                <th>Variation</th>
-                                <th>Variation %</th>
-                                <th>Ouverture</th>
-                                <th>Plus Haut</th>
-                                <th>Plus Bas</th>
-                            </tr>
-                        </thead>
-                        <tbody id="indices-tbody">
-                            <tr class="loading-row">
-                                <td colspan="7">
-                                    <div class="loading-indicator">
-                                        <div class="spinner"></div>
-                                        <div>Chargement des données...</div>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Vue d'ensemble des marchés -->
-                <div class="section-header mt-6">
-                    <h2>Aperçu des marchés mondiaux</h2>
-                </div>
-                <div class="market-overview-container">
-                    <div class="region-cards">
-                        <div class="region-card" data-region="europe">
-                            <div class="region-card-header">
-                                <h3>Europe</h3>
-                                <span class="region-trend"></span>
-                            </div>
-                            <div class="region-card-content" id="europe-overview">
-                                <div class="loading-indicator">
-                                    <div class="spinner"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="region-card" data-region="us">
-                            <div class="region-card-header">
-                                <h3>États-Unis</h3>
-                                <span class="region-trend"></span>
-                            </div>
-                            <div class="region-card-content" id="us-overview">
-                                <div class="loading-indicator">
-                                    <div class="spinner"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="region-card" data-region="asia">
-                            <div class="region-card-header">
-                                <h3>Asie</h3>
-                                <span class="region-trend"></span>
-                            </div>
-                            <div class="region-card-content" id="asia-overview">
-                                <div class="loading-indicator">
-                                    <div class="spinner"></div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="region-card" data-region="other">
-                            <div class="region-card-header">
-                                <h3>Autres Marchés</h3>
-                                <span class="region-trend"></span>
-                            </div>
-                            <div class="region-card-content" id="other-overview">
-                                <div class="loading-indicator">
-                                    <div class="spinner"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Note de source -->
-                <div class="data-source">
-                    Sources: <a href="https://www.boursorama.com" target="_blank" rel="noopener">Boursorama</a>
-                    <div class="data-disclaimer">Les données sont actualisées régulièrement mais peuvent accuser un retard par rapport aux marchés en temps réel.</div>
-                </div>
-            </div>
-        </main>
-
-        <!-- Modal de mise à jour des données -->
-        <div class="modal" id="update-modal">
-            <div class="modal-content">
-                <h2>MISE À JOUR DES DONNÉES</h2>
-                <p>Pour vous offrir les analyses financières les plus précises, nous pouvons mettre à jour les actualités, événements et recommandations de portefeuilles avec les données les plus récentes.</p>
-                <div class="update-info">
-                    <i class="fas fa-info-circle"></i>
-                    <span>Votre dernière mise à jour date du <span id="last-update-date">--/--/---- --:--:--</span></span>
-                </div>
-                <div class="modal-loading hidden">
-                    <div class="spinner"></div>
-                    <p>Mise à jour des actualités et événements...</p>
-                    <div class="progress-bar">
-                        <div class="progress-fill"></div>
-                    </div>
-                </div>
-                <div class="modal-buttons">
-                    <button class="modal-btn" id="update-later">Plus tard</button>
-                    <button class="modal-btn primary" id="update-now">Mettre à jour maintenant</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal d'authentification -->
-        <div class="modal" id="auth-modal">
-            <div class="modal-content">
-                <h2>ACCÈS À LA PLATEFORME</h2>
-                <p>Un nouveau système d'authentification arrive bientôt</p>
-                <div class="auth-maintenance">
-                    <div class="maintenance-icon">
-                        <i class="fas fa-cogs"></i>
-                    </div>
-                    <h3>Système en cours de mise à jour</h3>
-                    <p>Nous améliorons notre système d'authentification pour vous offrir une expérience plus sécurisée et plus fluide.</p>
-                    <p>En attendant, vous pouvez accéder à la plateforme et consulter les dernières actualités financières ainsi que nos recommandations d'investissement.</p>
-                </div>
-                <div class="modal-buttons single-button">
-                    <button class="back-btn">ACCÉDER AUX ACTUALITÉS</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Panel de customisation -->
-        <div id="customization-panel" class="customization-panel">
-            <div class="customization-header">
-                <h3>Personnalisation</h3>
-                <button id="close-customization" class="close-btn">
-                    <i class="fas fa-times"></i>
-                </button>
-            </div>
-            <div class="customization-section">
-                <h4>Thème de couleur</h4>
-                <div class="color-options">
-                    <button class="color-option active" data-color="green"></button>
-                    <button class="color-option" data-color="blue"></button>
-                    <button class="color-option" data-color="purple"></button>
-                    <button class="color-option" data-color="orange"></button>
-                    <button class="color-option" data-color="red"></button>
-                </div>
-            </div>
-            <div class="customization-section">
-                <h4>Densité d'affichage</h4>
-                <div class="density-options">
-                    <button class="density-option" data-density="compact">Compacte</button>
-                    <button class="density-option active" data-density="normal">Normale</button>
-                    <button class="density-option" data-density="comfortable">Confortable</button>
-                </div>
-            </div>
-            <div class="customization-footer">
-                <button id="reset-customization" class="reset-btn">Réinitialiser par défaut</button>
-            </div>
+        <div class="landing-footer">
+            © 2025 TradePulse | POWERED BY PERPLEXITY AI
         </div>
     </div>
 
     <script>
-        // Global pour stocker les données de marché
-        window.marketData = null;
-
-        // Fonction pour charger les données de marché
-        async function loadMarketData() {
-            try {
-                const response = await fetch('data/markets.json');
-                if (!response.ok) {
-                    throw new Error('Erreur lors du chargement des données');
-                }
-                window.marketData = await response.json();
-                updateLastUpdateTime();
-                displayMarketData('europe'); // Afficher l'Europe par défaut
-                updateMarketOverview();
-                return true;
-            } catch (error) {
-                console.error('Erreur:', error);
-                document.getElementById('indices-tbody').innerHTML = `
-                    <tr class="error-row">
-                        <td colspan="7">
-                            <div class="error-message">
-                                <i class="fas fa-exclamation-circle"></i>
-                                Impossible de charger les données. Veuillez réessayer plus tard.
-                            </div>
-                        </td>
-                    </tr>
-                `;
-                return false;
-            }
+        // Afficher la date actuelle
+        function updateCurrentDate() {
+            const now = new Date();
+            const formattedDate = now.toLocaleDateString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            }).replace(/\//g, '.');
+            document.getElementById('current-date').textContent = formattedDate;
         }
-
-        // Mise à jour de l'heure de dernière mise à jour
-        function updateLastUpdateTime() {
-            if (window.marketData && window.marketData.meta && window.marketData.meta.lastUpdated) {
-                const lastUpdated = new Date(window.marketData.meta.lastUpdated);
-                const formattedDate = lastUpdated.toLocaleDateString('fr-FR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-                document.getElementById('last-update-time').textContent = formattedDate;
-                document.getElementById('last-update-date').textContent = formattedDate;
-            }
-        }
-
-        // Afficher les données de marché pour une région
-        function displayMarketData(region) {
-            const tbody = document.getElementById('indices-tbody');
-            
-            // Marquer l'onglet actif
-            document.querySelectorAll('.region-tab').forEach(tab => {
-                tab.classList.toggle('active', tab.dataset.region === region);
-            });
-            
-            // Vérifier que les données sont disponibles
-            if (!window.marketData || !window.marketData.indices || !window.marketData.indices[region]) {
-                tbody.innerHTML = `
-                    <tr class="error-row">
-                        <td colspan="7">
-                            <div class="error-message">
-                                <i class="fas fa-info-circle"></i>
-                                Aucune donnée disponible pour cette région
-                            </div>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            const indices = window.marketData.indices[region];
-            
-            // Vérifier s'il y a des indices
-            if (indices.length === 0) {
-                tbody.innerHTML = `
-                    <tr class="error-row">
-                        <td colspan="7">
-                            <div class="error-message">
-                                <i class="fas fa-info-circle"></i>
-                                Aucune donnée disponible pour cette région
-                            </div>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-            
-            // Générer les lignes du tableau
-            let rows = '';
-            indices.forEach(index => {
-                const trendClass = index.trend === 'down' ? 'negative' : 'positive';
+        
+        // Mettre à jour la date au chargement
+        document.addEventListener('DOMContentLoaded', updateCurrentDate);
+        
+        // Animation lors du clic sur le bouton START
+        const startButton = document.querySelector('.start-button');
+        if (startButton) {
+            startButton.addEventListener('click', function() {
+                this.classList.add('pulse');
+                document.body.classList.add('fade-out');
                 
-                rows += `
-                    <tr>
-                        <td class="index-name">${index.name}</td>
-                        <td class="index-value">${index.value}</td>
-                        <td class="index-change ${trendClass}">${index.change}</td>
-                        <td class="index-change-percent ${trendClass}">${index.changePercent}</td>
-                        <td class="index-opening">${index.opening || '-'}</td>
-                        <td class="index-high">${index.high || '-'}</td>
-                        <td class="index-low">${index.low || '-'}</td>
-                    </tr>
-                `;
-            });
-            
-            tbody.innerHTML = rows;
-        }
-
-        // Mettre à jour l'aperçu des marchés
-        function updateMarketOverview() {
-            if (!window.marketData || !window.marketData.indices) return;
-            
-            // Pour chaque région
-            ['europe', 'us', 'asia', 'other'].forEach(region => {
-                const indices = window.marketData.indices[region];
-                const container = document.getElementById(`${region}-overview`);
-                
-                // Vérifier s'il y a des indices
-                if (!indices || indices.length === 0) {
-                    container.innerHTML = `<div class="no-data">Aucune donnée disponible</div>`;
-                    return;
-                }
-                
-                // Calculer la tendance globale
-                let upCount = 0;
-                let downCount = 0;
-                
-                indices.forEach(index => {
-                    if (index.trend === 'up') upCount++;
-                    else downCount++;
-                });
-                
-                const trend = upCount > downCount ? 'up' : (downCount > upCount ? 'down' : 'neutral');
-                const trendIcon = trend === 'up' ? '↑' : (trend === 'down' ? '↓' : '→');
-                const trendClass = trend === 'up' ? 'positive' : (trend === 'down' ? 'negative' : '');
-                
-                // Mettre à jour l'indicateur de tendance
-                const trendIndicator = container.closest('.region-card').querySelector('.region-trend');
-                trendIndicator.textContent = trendIcon;
-                trendIndicator.className = `region-trend ${trendClass}`;
-                
-                // Afficher jusqu'à 4 indices importants
-                const importantIndices = indices.slice(0, 4);
-                
-                let content = '';
-                importantIndices.forEach(index => {
-                    const valueClass = index.trend === 'up' ? 'positive' : 'negative';
-                    
-                    content += `
-                        <div class="market-overview-item">
-                            <div class="overview-item-name">${index.name}</div>
-                            <div class="overview-item-value">${index.value}</div>
-                            <div class="overview-item-change ${valueClass}">${index.changePercent}</div>
-                        </div>
-                    `;
-                });
-                
-                container.innerHTML = content;
+                // Redirection vers la page principale après l'animation
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 800);
             });
         }
-
-        // Attacher les événements
-        document.addEventListener('DOMContentLoaded', function() {
-            // Chargement initial des données
-            loadMarketData();
-            
-            // Changement d'onglet de région
-            document.querySelectorAll('.region-tab').forEach(tab => {
-                tab.addEventListener('click', function() {
-                    const region = this.dataset.region;
-                    displayMarketData(region);
-                });
-            });
-            
-            // Bouton de rafraîchissement
-            document.getElementById('refresh-data').addEventListener('click', function() {
-                this.classList.add('rotating');
-                loadMarketData().then(() => {
-                    setTimeout(() => {
-                        this.classList.remove('rotating');
-                    }, 1000);
-                });
-            });
-            
-            // Gestion de l'affichage initial et des modals
-            const startButton = document.querySelector('.start-button');
-            const mainContent = document.querySelector('.main-content');
-            const updateModal = document.getElementById('update-modal');
-            const authModal = document.getElementById('auth-modal');
-            
-            // Bouton de démarrage
-            if (startButton) {
-                startButton.addEventListener('click', function() {
-                    document.querySelector('.start-container').classList.add('hidden');
-                    document.querySelector('.app-header').classList.add('hidden');
-                    document.querySelector('.app-footer').classList.add('hidden');
-                    mainContent.classList.remove('hidden');
-                    
-                    // Afficher le modal d'authentification
-                    authModal.classList.add('visible');
-                });
-            }
-            
-            // Modal d'authentification
-            if (authModal) {
-                document.querySelector('.back-btn').addEventListener('click', function() {
-                    authModal.classList.remove('visible');
-                    // Afficher le modal de mise à jour
-                    setTimeout(() => {
-                        updateModal.classList.add('visible');
-                    }, 300);
-                });
-            }
-            
-            // Modal de mise à jour
-            if (updateModal) {
-                document.getElementById('update-later').addEventListener('click', function() {
-                    updateModal.classList.remove('visible');
-                });
-                
-                document.getElementById('update-now').addEventListener('click', function() {
-                    const modalLoading = document.querySelector('.modal-loading');
-                    const modalButtons = document.querySelector('.modal-buttons');
-                    
-                    modalButtons.classList.add('hidden');
-                    modalLoading.classList.remove('hidden');
-                    
-                    // Simuler une progression
-                    const progressFill = document.querySelector('.progress-fill');
-                    let progress = 0;
-                    
-                    const interval = setInterval(() => {
-                        progress += 2;
-                        progressFill.style.width = `${progress}%`;
-                        
-                        if (progress >= 100) {
-                            clearInterval(interval);
-                            setTimeout(() => {
-                                updateModal.classList.remove('visible');
-                                loadMarketData(); // Recharger les données
-                            }, 500);
-                        }
-                    }, 50);
-                });
-            }
-            
-            // Gestion du thème
-            const themeToggle = document.getElementById('theme-toggle-btn');
-            if (themeToggle) {
-                themeToggle.addEventListener('click', function() {
-                    document.documentElement.classList.toggle('dark');
-                    document.querySelector('.dark-icon').classList.toggle('hidden');
-                    document.querySelector('.light-icon').classList.toggle('hidden');
-                });
-            }
-            
-            // Panel de personnalisation
-            const customizationPanel = document.getElementById('customization-panel');
-            if (customizationPanel) {
-                // Ouvrir/fermer le panel
-                document.getElementById('open-customization').addEventListener('click', function() {
-                    customizationPanel.classList.add('visible');
-                });
-                
-                document.getElementById('close-customization').addEventListener('click', function() {
-                    customizationPanel.classList.remove('visible');
-                });
-                
-                // Changement de couleur
-                document.querySelectorAll('.color-option').forEach(option => {
-                    option.addEventListener('click', function() {
-                        document.querySelectorAll('.color-option').forEach(opt => opt.classList.remove('active'));
-                        this.classList.add('active');
-                        
-                        const color = this.dataset.color;
-                        document.documentElement.setAttribute('data-theme-color', color);
-                    });
-                });
-                
-                // Changement de densité
-                document.querySelectorAll('.density-option').forEach(option => {
-                    option.addEventListener('click', function() {
-                        document.querySelectorAll('.density-option').forEach(opt => opt.classList.remove('active'));
-                        this.classList.add('active');
-                        
-                        const density = this.dataset.density;
-                        document.documentElement.setAttribute('data-density', density);
-                    });
-                });
-                
-                // Réinitialisation
-                document.getElementById('reset-customization').addEventListener('click', function() {
-                    document.documentElement.removeAttribute('data-theme-color');
-                    document.documentElement.removeAttribute('data-density');
-                    
-                    document.querySelector('.color-option[data-color="green"]').classList.add('active');
-                    document.querySelectorAll('.color-option:not([data-color="green"])').forEach(opt => opt.classList.remove('active'));
-                    
-                    document.querySelector('.density-option[data-density="normal"]').classList.add('active');
-                    document.querySelectorAll('.density-option:not([data-density="normal"])').forEach(opt => opt.classList.remove('active'));
-                });
-            }
-        });
     </script>
 </body>
 </html>
