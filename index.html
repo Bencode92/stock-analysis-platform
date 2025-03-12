@@ -41,7 +41,7 @@
         <main class="main-content hidden">
             <!-- En-tête de l'application -->
             <header class="dashboard-header">
-                <div class="logo-container">
+                <div class="logo-container" id="home-logo">
                     <div class="logo-dot"></div>
                     <h1 class="app-title">TRADEPULSE</h1>
                 </div>
@@ -266,7 +266,31 @@
                 minute: '2-digit',
                 second: '2-digit'
             });
-            document.getElementById('current-time').textContent = timeString;
+            const currentTimeEl = document.getElementById('current-time');
+            if (currentTimeEl) {
+                currentTimeEl.textContent = timeString;
+            }
+        }
+
+        // Fonction pour revenir à la page d'accueil
+        function returnToHomepage() {
+            const mainContent = document.querySelector('.main-content');
+            const startContainer = document.querySelector('.start-container');
+            const appHeader = document.querySelector('.app-header');
+            const appFooter = document.querySelector('.app-footer');
+            
+            // Fermer les modals
+            document.querySelectorAll('.modal').forEach(modal => {
+                modal.classList.remove('visible');
+            });
+            
+            // Masquer le contenu principal
+            if (mainContent) mainContent.classList.add('hidden');
+            
+            // Afficher les éléments de la page d'accueil
+            if (startContainer) startContainer.classList.remove('hidden');
+            if (appHeader) appHeader.classList.remove('hidden');
+            if (appFooter) appFooter.classList.remove('hidden');
         }
 
         // Mettre à jour l'heure toutes les secondes
@@ -287,16 +311,19 @@
                 return true;
             } catch (error) {
                 console.error('Erreur:', error);
-                document.getElementById('indices-tbody').innerHTML = `
-                    <tr class="error-row">
-                        <td colspan="7">
-                            <div class="error-message">
-                                <i class="fas fa-exclamation-circle"></i>
-                                Impossible de charger les données. Veuillez réessayer plus tard.
-                            </div>
-                        </td>
-                    </tr>
-                `;
+                const tbodyEl = document.getElementById('indices-tbody');
+                if (tbodyEl) {
+                    tbodyEl.innerHTML = `
+                        <tr class="error-row">
+                            <td colspan="7">
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-circle"></i>
+                                    Impossible de charger les données. Veuillez réessayer plus tard.
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                }
                 return false;
             }
         }
@@ -313,14 +340,19 @@
                     minute: '2-digit',
                     second: '2-digit'
                 });
-                document.getElementById('last-update-time').textContent = formattedDate;
-                document.getElementById('last-update-date').textContent = formattedDate;
+                
+                const lastUpdateTimeEl = document.getElementById('last-update-time');
+                const lastUpdateDateEl = document.getElementById('last-update-date');
+                
+                if (lastUpdateTimeEl) lastUpdateTimeEl.textContent = formattedDate;
+                if (lastUpdateDateEl) lastUpdateDateEl.textContent = formattedDate;
             }
         }
 
         // Afficher les données de marché pour une région
         function displayMarketData(region) {
             const tbody = document.getElementById('indices-tbody');
+            if (!tbody) return;
             
             // Marquer l'onglet actif
             document.querySelectorAll('.region-tab').forEach(tab => {
@@ -388,6 +420,7 @@
             ['europe', 'us', 'asia', 'other'].forEach(region => {
                 const indices = window.marketData.indices[region];
                 const container = document.getElementById(`${region}-overview`);
+                if (!container) return;
                 
                 // Vérifier s'il y a des indices
                 if (!indices || indices.length === 0) {
@@ -409,9 +442,11 @@
                 const trendClass = trend === 'up' ? 'positive' : (trend === 'down' ? 'negative' : '');
                 
                 // Mettre à jour l'indicateur de tendance
-                const trendIndicator = container.closest('.region-card').querySelector('.region-trend');
-                trendIndicator.textContent = trendIcon;
-                trendIndicator.className = `region-trend ${trendClass}`;
+                const trendIndicator = container.closest('.region-card')?.querySelector('.region-trend');
+                if (trendIndicator) {
+                    trendIndicator.textContent = trendIcon;
+                    trendIndicator.className = `region-trend ${trendClass}`;
+                }
                 
                 // Afficher jusqu'à 4 indices importants
                 const importantIndices = indices.slice(0, 4);
@@ -438,6 +473,13 @@
             // Chargement initial des données
             loadMarketData();
             
+            // Ajout de l'événement pour retourner à la page d'accueil en cliquant sur le logo
+            const homeLogo = document.getElementById('home-logo');
+            if (homeLogo) {
+                homeLogo.addEventListener('click', returnToHomepage);
+                homeLogo.style.cursor = 'pointer'; // Changer le curseur pour indiquer que c'est cliquable
+            }
+            
             // Changement d'onglet de région
             document.querySelectorAll('.region-tab').forEach(tab => {
                 tab.addEventListener('click', function() {
@@ -447,14 +489,17 @@
             });
             
             // Bouton de rafraîchissement
-            document.getElementById('refresh-data').addEventListener('click', function() {
-                this.classList.add('rotating');
-                loadMarketData().then(() => {
-                    setTimeout(() => {
-                        this.classList.remove('rotating');
-                    }, 1000);
+            const refreshBtn = document.getElementById('refresh-data');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', function() {
+                    this.classList.add('rotating');
+                    loadMarketData().then(() => {
+                        setTimeout(() => {
+                            this.classList.remove('rotating');
+                        }, 1000);
+                    });
                 });
-            });
+            }
             
             // Gestion de l'affichage initial et des modals
             const startButton = document.querySelector('.start-button');
@@ -477,45 +522,54 @@
             
             // Modal d'authentification
             if (authModal) {
-                document.querySelector('.back-btn').addEventListener('click', function() {
-                    authModal.classList.remove('visible');
-                    // Afficher le modal de mise à jour
-                    setTimeout(() => {
-                        updateModal.classList.add('visible');
-                    }, 300);
-                });
+                const backBtn = document.querySelector('.back-btn');
+                if (backBtn) {
+                    backBtn.addEventListener('click', function() {
+                        authModal.classList.remove('visible');
+                        // Afficher le modal de mise à jour
+                        setTimeout(() => {
+                            updateModal.classList.add('visible');
+                        }, 300);
+                    });
+                }
             }
             
             // Modal de mise à jour
             if (updateModal) {
-                document.getElementById('update-later').addEventListener('click', function() {
-                    updateModal.classList.remove('visible');
-                });
+                const updateLaterBtn = document.getElementById('update-later');
+                if (updateLaterBtn) {
+                    updateLaterBtn.addEventListener('click', function() {
+                        updateModal.classList.remove('visible');
+                    });
+                }
                 
-                document.getElementById('update-now').addEventListener('click', function() {
-                    const modalLoading = document.querySelector('.modal-loading');
-                    const modalButtons = document.querySelector('.modal-buttons');
-                    
-                    modalButtons.classList.add('hidden');
-                    modalLoading.classList.remove('hidden');
-                    
-                    // Simuler une progression
-                    const progressFill = document.querySelector('.progress-fill');
-                    let progress = 0;
-                    
-                    const interval = setInterval(() => {
-                        progress += 2;
-                        progressFill.style.width = `${progress}%`;
+                const updateNowBtn = document.getElementById('update-now');
+                if (updateNowBtn) {
+                    updateNowBtn.addEventListener('click', function() {
+                        const modalLoading = document.querySelector('.modal-loading');
+                        const modalButtons = document.querySelector('.modal-buttons');
                         
-                        if (progress >= 100) {
-                            clearInterval(interval);
-                            setTimeout(() => {
-                                updateModal.classList.remove('visible');
-                                loadMarketData(); // Recharger les données
-                            }, 500);
-                        }
-                    }, 50);
-                });
+                        if (modalButtons) modalButtons.classList.add('hidden');
+                        if (modalLoading) modalLoading.classList.remove('hidden');
+                        
+                        // Simuler une progression
+                        const progressFill = document.querySelector('.progress-fill');
+                        let progress = 0;
+                        
+                        const interval = setInterval(() => {
+                            progress += 2;
+                            if (progressFill) progressFill.style.width = `${progress}%`;
+                            
+                            if (progress >= 100) {
+                                clearInterval(interval);
+                                setTimeout(() => {
+                                    updateModal.classList.remove('visible');
+                                    loadMarketData(); // Recharger les données
+                                }, 500);
+                            }
+                        }, 50);
+                    });
+                }
             }
             
             // Gestion du thème
@@ -523,8 +577,8 @@
             if (themeToggle) {
                 themeToggle.addEventListener('click', function() {
                     document.documentElement.classList.toggle('dark');
-                    document.querySelector('.dark-icon').classList.toggle('hidden');
-                    document.querySelector('.light-icon').classList.toggle('hidden');
+                    document.querySelector('.dark-icon')?.classList.toggle('hidden');
+                    document.querySelector('.light-icon')?.classList.toggle('hidden');
                 });
             }
             
@@ -532,13 +586,19 @@
             const customizationPanel = document.getElementById('customization-panel');
             if (customizationPanel) {
                 // Ouvrir/fermer le panel
-                document.getElementById('open-customization').addEventListener('click', function() {
-                    customizationPanel.classList.add('visible');
-                });
+                const openCustomization = document.getElementById('open-customization');
+                if (openCustomization) {
+                    openCustomization.addEventListener('click', function() {
+                        customizationPanel.classList.add('visible');
+                    });
+                }
                 
-                document.getElementById('close-customization').addEventListener('click', function() {
-                    customizationPanel.classList.remove('visible');
-                });
+                const closeCustomization = document.getElementById('close-customization');
+                if (closeCustomization) {
+                    closeCustomization.addEventListener('click', function() {
+                        customizationPanel.classList.remove('visible');
+                    });
+                }
                 
                 // Changement de couleur
                 document.querySelectorAll('.color-option').forEach(option => {
@@ -563,16 +623,19 @@
                 });
                 
                 // Réinitialisation
-                document.getElementById('reset-customization').addEventListener('click', function() {
-                    document.documentElement.removeAttribute('data-theme-color');
-                    document.documentElement.removeAttribute('data-density');
-                    
-                    document.querySelector('.color-option[data-color="green"]').classList.add('active');
-                    document.querySelectorAll('.color-option:not([data-color="green"])').forEach(opt => opt.classList.remove('active'));
-                    
-                    document.querySelector('.density-option[data-density="normal"]').classList.add('active');
-                    document.querySelectorAll('.density-option:not([data-density="normal"])').forEach(opt => opt.classList.remove('active'));
-                });
+                const resetCustomization = document.getElementById('reset-customization');
+                if (resetCustomization) {
+                    resetCustomization.addEventListener('click', function() {
+                        document.documentElement.removeAttribute('data-theme-color');
+                        document.documentElement.removeAttribute('data-density');
+                        
+                        document.querySelector('.color-option[data-color="green"]')?.classList.add('active');
+                        document.querySelectorAll('.color-option:not([data-color="green"])').forEach(opt => opt.classList.remove('active'));
+                        
+                        document.querySelector('.density-option[data-density="normal"]')?.classList.add('active');
+                        document.querySelectorAll('.density-option:not([data-density="normal"])').forEach(opt => opt.classList.remove('active'));
+                    });
+                }
             }
 
             // Navigation entre sections
@@ -588,5 +651,21 @@
             });
         });
     </script>
+
+    <style>
+        /* Ajout de styles pour le logo cliquable */
+        #home-logo {
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        #home-logo:hover {
+            transform: scale(1.05);
+        }
+        
+        #home-logo:active {
+            transform: scale(0.95);
+        }
+    </style>
 </body>
 </html>
