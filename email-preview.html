@@ -520,25 +520,25 @@
                         <div class="grid grid-cols-2 gap-3 mb-4">
                             <div class="data-card">
                                 <h3>Valeur Totale</h3>
-                                <p class="value" id="summary-total-value">84 213 €</p>
+                                <p class="value" id="summary-total-value">52 180 €</p>
                             </div>
                             <div class="data-card">
                                 <h3>Profit/Perte</h3>
-                                <p class="value text-green-400" id="summary-profit-loss">+6 487 €</p>
+                                <p class="value text-green-400" id="summary-profit-loss">+2 705 €</p>
                             </div>
                             <div class="data-card">
                                 <h3>Rendement Annuel</h3>
-                                <p class="value text-green-400" id="summary-annual-return">+7.6%</p>
+                                <p class="value text-green-400" id="summary-annual-return">+5.47%</p>
                             </div>
                             <div class="data-card">
                                 <h3>Ratio de Sharpe</h3>
-                                <p class="value" id="summary-sharpe-ratio">0.72</p>
+                                <p class="value" id="summary-sharpe-ratio">0.68</p>
                             </div>
                         </div>
                         
                         <div class="sync-info">
                             <i class="fas fa-sync-alt"></i>
-                            <span id="summary-last-sync">Dernière synchronisation: 11 Mars 2025, 09:38:14</span>
+                            <span id="summary-last-sync">Dernière synchronisation: 12 Mars 2025, 07:45:12</span>
                         </div>
                         
                         <button id="refresh-dashboard-data" class="mt-4 w-full bg-transparent border border-green-400 text-green-400 hover:bg-green-400 hover:text-gray-900 transition-colors">
@@ -562,7 +562,7 @@
                             <label>Portefeuille</label>
                             <select id="portfolioType" class="bg-gray-800 border border-gray-700 rounded">
                                 <option value="aggressive">Agressif (+8.32%)</option>
-                                <option value="moderate">Modéré (+5.47%)</option>
+                                <option value="moderate" selected>Modéré (+5.47%)</option>
                                 <option value="stable">Stable (+2.19%)</option>
                             </select>
                         </div>
@@ -821,13 +821,13 @@
                     year: 'numeric'
                 });
                 
-                // Template values
-                let performanceValue = '+8.32%';
+                // Default values for moderate portfolio (from dashboard)
+                let performanceValue = '+5.47%';
                 let performanceClass = 'positive';
-                let portfolioValue = '84 213';
-                let gainValue = '+6 487';
+                let portfolioValue = '52 180';
+                let gainValue = '+2 705';
                 let gainClass = 'positive';
-                let sharpeRatio = '0.72';
+                let sharpeRatio = '0.68';
                 let newsTitle1 = 'La Fed annonce une réunion exceptionnelle';
                 let newsDesc1 = 'La Réserve fédérale américaine vient d\'annoncer une réunion exceptionnelle pour discuter des prochaines mesures sur les taux.';
                 let newsTitle2 = 'Apple lance une nouvelle gamme de produits IA';
@@ -879,12 +879,12 @@
                         newsDesc2 = `Transaction de ${latestTransaction.amount} effectuée le ${latestTransaction.date}.`;
                     }
                 } else {
-                    // Apply variations based on portfolio type
-                    if (portfolioType === 'moderate') {
-                        performanceValue = '+5.47%';
-                        portfolioValue = '52 180';
-                        gainValue = '+2 705';
-                        sharpeRatio = '0.68';
+                    // Apply variations based on portfolio type selection only if no dashboard data
+                    if (portfolioType === 'aggressive') {
+                        performanceValue = '+8.32%';
+                        portfolioValue = '84 213';
+                        gainValue = '+6 487';
+                        sharpeRatio = '0.72';
                     } else if (portfolioType === 'stable') {
                         performanceValue = '+2.19%';
                         portfolioValue = '35 420';
