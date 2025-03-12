@@ -50,16 +50,17 @@ const marketData = {
 
 /**
  * Récupère et parse la page de Boursorama
- * Utilise une instance axios personnalisée pour éviter les problèmes avec ReadableStream
+ * Utilise axios avec les bons paramètres pour éviter les problèmes
  */
 async function scrapeMarketData() {
   console.log(`🔍 Récupération des données depuis ${CONFIG.sourceUrl}...`);
   
   try {
-    // Créer une instance axios personnalisée avec des timeouts plus longs
-    const instance = axios.create({
+    // Utilisation d'axios directement sans dépendre de fetch
+    const response = await axios({
+      method: 'get',
+      url: CONFIG.sourceUrl,
       timeout: 30000,
-      httpsAgent: new https.Agent({ keepAlive: true }),
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml',
@@ -67,13 +68,13 @@ async function scrapeMarketData() {
         'Cache-Control': 'no-cache',
         'Pragma': 'no-cache',
         'Referer': 'https://www.google.com/'
-      }
+      },
+      httpsAgent: new https.Agent({ 
+        keepAlive: true,
+        rejectUnauthorized: false // Permet de contourner certaines vérifications SSL
+      })
     });
     
-    // Faire la requête
-    const response = await instance.get(CONFIG.sourceUrl);
-    
-    // Vérifier la réponse
     if (response.status !== 200) {
       throw new Error(`Erreur HTTP: ${response.status}`);
     }
