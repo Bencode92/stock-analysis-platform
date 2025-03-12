@@ -1,5 +1,5 @@
 /**
- * marches-script.js - Version améliorée qui affiche le pays et la variation depuis janvier
+ * marches-script.js - Version corrigée qui correspond à la structure de Boursorama
  * Les données sont mises à jour régulièrement par GitHub Actions
  */
 
@@ -186,10 +186,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         indices.forEach(index => {
                             const row = document.createElement('tr');
                             
-                            // Création de la ligne avec la nouvelle structure
+                            // Création de la ligne avec la structure correcte (comme sur Boursorama)
                             row.innerHTML = `
-                                <td class="font-medium">${index.name}</td>
-                                <td>${index.country || '-'}</td>
+                                <td class="font-medium">${index.country || '-'}</td>
+                                <td>${index.index_name || '-'}</td>
                                 <td>${index.value || '-'}</td>
                                 <td class="${index.trend === 'down' ? 'negative' : 'positive'}">${index.changePercent || '-'}</td>
                                 <td class="${index.ytdChange && index.ytdChange.includes('-') ? 'negative' : 'positive'}">${index.ytdChange || '-'}</td>
@@ -258,34 +258,34 @@ document.addEventListener('DOMContentLoaded', function() {
         switch (region) {
             case 'europe':
                 importantIndices = indices.filter(index => 
-                    index.name.includes('CAC 40') || 
-                    index.name.includes('DAX') || 
-                    index.name.includes('FTSE 100') ||
-                    index.name.includes('EURO STOXX 50')
+                    index.index_name.includes('CAC 40') || 
+                    index.index_name.includes('DAX') || 
+                    index.index_name.includes('FTSE 100') ||
+                    index.index_name.includes('EURO STOXX 50')
                 );
                 break;
             case 'us':
                 importantIndices = indices.filter(index => 
-                    index.name.includes('DOW') || 
-                    index.name.includes('S&P 500') || 
-                    index.name.includes('NASDAQ') ||
-                    index.name.includes('RUSSELL')
+                    index.index_name.includes('DOW') || 
+                    index.index_name.includes('S&P 500') || 
+                    index.index_name.includes('NASDAQ') ||
+                    index.index_name.includes('RUSSELL')
                 );
                 break;
             case 'asia':
                 importantIndices = indices.filter(index => 
-                    index.name.includes('NIKKEI') || 
-                    index.name.includes('HANG SENG') || 
-                    index.name.includes('SSE') ||
-                    index.name.includes('KOSPI')
+                    index.index_name.includes('NIKKEI') || 
+                    index.index_name.includes('HANG SENG') || 
+                    index.index_name.includes('SSE') ||
+                    index.index_name.includes('KOSPI')
                 );
                 break;
             case 'other':
                 importantIndices = indices.filter(index => 
-                    index.name.includes('BOVESPA') || 
-                    index.name.includes('TSX') || 
-                    index.name.includes('ASX') ||
-                    index.name.includes('RTS')
+                    index.index_name.includes('BOVESPA') || 
+                    index.index_name.includes('TSX') || 
+                    index.index_name.includes('ASX') ||
+                    index.index_name.includes('RTS')
                 );
                 break;
         }
@@ -305,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function() {
         importantIndices.forEach(index => {
             const div = document.createElement('div');
             div.innerHTML = `
-                <div class="font-medium">${index.name}</div>
+                <div class="font-medium">${index.index_name}</div>
                 <div class="${index.trend === 'down' ? 'negative' : 'positive'}">
                     ${index.changePercent || '-'} 
                     ${index.ytdChange ? `/ ${index.ytdChange}` : ''}
