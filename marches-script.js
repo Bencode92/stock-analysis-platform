@@ -1,324 +1,418 @@
 /**
- * boursorama-scraper.js - Module de scraping pour indices boursiers
- * Intégration directe dans TradePulse avec mise à jour toutes les 15 minutes
+ * marches-script.js - Extraction directe des indices boursiers depuis Boursorama
+ * Mise à jour automatique toutes les 15 minutes
  */
 
-// Configuration globale
-const SCRAPER_CONFIG = {
-    // URL de Boursorama pour les indices internationaux
-    sourceUrl: 'https://www.boursorama.com/bourse/indices/internationaux',
-    
-    // Proxy CORS pour contourner les restrictions
-    corsProxy: 'https://corsproxy.io/?',
-    
-    // Intervalle de mise à jour (15 minutes en ms)
-    updateInterval: 15 * 60 * 1000,
-    
-    // Structure des régions pour la classification des indices
-    regions: {
-        europe: [
-            'CAC', 'DAX', 'FTSE', 'IBEX', 'MIB', 'AEX', 'BEL', 'SMI', 'ATX', 
-            'OMX', 'OMXS', 'ISEQ', 'PSI', 'ATHEX', 'OSEBX', 'STOXX', 'EURO'
+document.addEventListener('DOMContentLoaded', function() {
+    // Configuration globale
+    const SCRAPER_CONFIG = {
+        // URL source des données (Boursorama Indices Internationaux)
+        sourceUrl: 'https://www.boursorama.com/bourse/indices/internationaux',
+        
+        // Liste de proxies CORS - on essaiera chacun jusqu'à ce qu'un fonctionne
+        corsProxies: [
+            'https://corsproxy.io/?',
+            'https://api.allorigins.win/raw?url=',
+            'https://thingproxy.freeboard.io/fetch/'
         ],
-        us: [
-            'DOW', 'S&P', 'NASDAQ', 'RUSSELL', 'CBOE', 'NYSE', 'AMEX'
-        ],
-        asia: [
-            'NIKKEI', 'HANG SENG', 'SHANGHAI', 'SHENZHEN', 'KOSPI', 'SENSEX', 
-            'BSE', 'TAIEX', 'STRAITS', 'JAKARTA', 'KLSE', 'KOSDAQ', 'ASX'
-        ],
-        other: [
-            'MERVAL', 'BOVESPA', 'IPC', 'IPSA', 'COLCAP', 'BVLG', 'IBC', 'CASE', 
-            'ISE', 'TA', 'QE', 'FTSE/JSE', 'MOEX', 'MSX30'
-        ]
-    }
-};
-
-/**
- * Classe principale pour le scraping et l'affichage des données
- */
-class BoursoramaScraper {
-    constructor() {
-        // Stockage des données
-        this.data = {
-            indices: {
-                europe: [],
-                us: [],
-                asia: [],
-                other: []
-            },
-            meta: {
-                source: 'Boursorama',
-                url: SCRAPER_CONFIG.sourceUrl,
-                timestamp: null,
-                count: 0,
-                isStale: false // Indique si les données ne sont pas fraîches
-            }
-        };
         
-        // État du scraper
-        this.isLoading = false;
-        this.lastUpdate = null;
-        this.updateTimer = null;
-        this.fetchSuccess = false; // Indique si la dernière requête a réussi
+        // Intervalle de mise à jour (15 minutes en ms)
+        updateInterval: 15 * 60 * 1000,
         
-        // Éléments DOM
-        this.elements = {
-            loading: document.getElementById('indices-loading'),
-            error: document.getElementById('indices-error'),
-            container: document.getElementById('indices-container'),
-            lastUpdate: document.getElementById('last-update-time'),
-            refreshButton: document.getElementById('refresh-data'),
-            retryButton: document.getElementById('retry-button')
-        };
-        
-        // Initialisation
-        this.init();
-    }
-    
-    /**
-     * Initialise le scraper
-     */
-    init() {
-        console.log('🔄 Initialisation du scraper Boursorama...');
-        
-        // Configurer les gestionnaires d'événements
-        if (this.elements.refreshButton) {
-            this.elements.refreshButton.addEventListener('click', () => this.refresh(true));
+        // Structure des régions pour la classification des indices
+        regions: {
+            europe: [
+                'CAC', 'DAX', 'FTSE', 'IBEX', 'MIB', 'AEX', 'BEL', 'SMI', 'ATX', 
+                'OMX', 'OMXS', 'ISEQ', 'PSI', 'ATHEX', 'OSEBX', 'STOXX', 'EURO'
+            ],
+            us: [
+                'DOW', 'S&P', 'NASDAQ', 'RUSSELL', 'CBOE', 'NYSE', 'AMEX'
+            ],
+            asia: [
+                'NIKKEI', 'HANG SENG', 'SHANGHAI', 'SHENZHEN', 'KOSPI', 'SENSEX', 
+                'BSE', 'TAIEX', 'STRAITS', 'JAKARTA', 'KLSE', 'KOSDAQ', 'ASX'
+            ],
+            other: [
+                'MERVAL', 'BOVESPA', 'IPC', 'IPSA', 'COLCAP', 'BVLG', 'IBC', 'CASE', 
+                'ISE', 'TA', 'QE', 'FTSE/JSE', 'MOEX', 'MSX30'
+            ]
         }
-        
-        if (this.elements.retryButton) {
-            this.elements.retryButton.addEventListener('click', () => this.refresh(true));
+    };
+    
+    // Variables globales pour stocker les données
+    let indicesData = {
+        indices: {
+            europe: [],
+            us: [],
+            asia: [],
+            other: []
+        },
+        meta: {
+            source: 'Boursorama',
+            url: SCRAPER_CONFIG.sourceUrl,
+            timestamp: null,
+            count: 0,
+            isStale: false
         }
+    };
+    
+    // État du scraper
+    let isLoading = false;
+    let lastUpdate = null;
+    let updateTimer = null;
+    let fetchSuccess = false;
+    
+    // Initialiser les onglets de région
+    initRegionTabs();
+    
+    // Mettre à jour l'horloge du marché
+    updateMarketTime();
+    setInterval(updateMarketTime, 1000);
+    
+    // Initialiser le thème
+    initTheme();
+    
+    // Premier chargement des données
+    loadIndicesData();
+    
+    // Configurer la mise à jour automatique
+    setupAutoRefresh();
+    
+    // Ajouter les gestionnaires d'événements
+    document.getElementById('refresh-data').addEventListener('click', function() {
+        this.innerHTML = '<i class="fas fa-sync-alt fa-spin mr-2"></i> Chargement...';
+        this.disabled = true;
         
-        // Premier chargement des données
-        this.refresh();
-        
-        // Configurer la mise à jour automatique
-        this.setupAutoRefresh();
-        
-        console.log('✅ Scraper Boursorama initialisé avec succès');
-    }
+        loadIndicesData(true).finally(() => {
+            this.innerHTML = '<i class="fas fa-sync-alt mr-2"></i> Rafraîchir';
+            this.disabled = false;
+        });
+    });
+    
+    document.getElementById('retry-button')?.addEventListener('click', function() {
+        hideElement('indices-error');
+        showElement('indices-loading');
+        loadIndicesData(true);
+    });
     
     /**
      * Configure la mise à jour automatique
      */
-    setupAutoRefresh() {
+    function setupAutoRefresh() {
         // Effacer l'ancien timer si existant
-        if (this.updateTimer) {
-            clearInterval(this.updateTimer);
+        if (updateTimer) {
+            clearInterval(updateTimer);
         }
         
         // Créer un nouveau timer
-        this.updateTimer = setInterval(() => {
+        updateTimer = setInterval(() => {
             console.log('🔄 Mise à jour automatique des indices...');
-            this.refresh();
+            loadIndicesData();
         }, SCRAPER_CONFIG.updateInterval);
         
         console.log(`⏱️ Mise à jour automatique configurée toutes les ${SCRAPER_CONFIG.updateInterval / 60000} minutes`);
     }
     
     /**
-     * Rafraîchit les données des indices
+     * Initialise les onglets de région
      */
-    async refresh(userTriggered = false) {
+    function initRegionTabs() {
+        const tabs = document.querySelectorAll('.region-tab');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Mettre à jour les onglets actifs
+                tabs.forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Afficher le contenu correspondant
+                const region = this.getAttribute('data-region');
+                const contents = document.querySelectorAll('.region-content');
+                
+                contents.forEach(content => {
+                    content.classList.add('hidden');
+                });
+                
+                document.getElementById(`${region}-indices`)?.classList.remove('hidden');
+            });
+        });
+    }
+    
+    /**
+     * Charge les données d'indices depuis Boursorama
+     */
+    async function loadIndicesData(forceRefresh = false) {
         // Éviter les chargements multiples simultanés
-        if (this.isLoading) {
+        if (isLoading) {
             console.log('⚠️ Chargement déjà en cours, opération ignorée');
             return;
         }
         
-        this.isLoading = true;
+        isLoading = true;
         
-        // Mettre à jour l'interface pour montrer le chargement
-        this.showLoading();
-        
-        // Si rafraîchissement manuel, mettre à jour le bouton
-        if (userTriggered && this.elements.refreshButton) {
-            this.elements.refreshButton.innerHTML = '<i class="fas fa-sync-alt fa-spin mr-2"></i> Chargement...';
-            this.elements.refreshButton.disabled = true;
-        }
+        // Afficher le loader
+        showElement('indices-loading');
+        hideElement('indices-error');
+        hideElement('indices-container');
         
         try {
-            // Récupérer les données
-            const success = await this.fetchIndicesData();
+            // Tenter de récupérer les données
+            const success = await fetchIndicesData();
             
             if (success) {
-                // Mettre à jour l'interface
-                this.data.meta.isStale = false;
-                this.renderIndicesData();
-                this.lastUpdate = new Date();
-                this.showSuccess();
-                this.fetchSuccess = true;
+                // Données récupérées avec succès
+                indicesData.meta.isStale = false;
+                renderIndicesData();
+                lastUpdate = new Date();
+                fetchSuccess = true;
             } else {
-                // Si c'est la première tentative et qu'elle échoue
-                if (!this.fetchSuccess) {
+                // Échec de la récupération
+                if (!fetchSuccess) {
                     // Aucune donnée précédente disponible
-                    this.showError();
+                    showElement('indices-error');
+                    hideElement('indices-loading');
+                    hideElement('indices-container');
                 } else {
                     // On a des données précédentes
-                    this.data.meta.isStale = true;
-                    this.renderIndicesData();
-                    this.showSuccess();
-                    
-                    // Afficher un message indiquant que les données sont anciennes
-                    this.showNotification('Impossible de mettre à jour les données. Affichage des valeurs précédentes.', 'warning');
+                    indicesData.meta.isStale = true;
+                    renderIndicesData();
+                    showNotification('Impossible de mettre à jour les données. Affichage des valeurs précédentes.', 'warning');
                 }
             }
         } catch (error) {
-            console.error('❌ Erreur lors du rafraîchissement des données:', error);
+            console.error('❌ Erreur lors du chargement des données:', error);
             
-            if (this.fetchSuccess) {
+            if (fetchSuccess) {
                 // On a des données précédentes
-                this.data.meta.isStale = true;
-                this.renderIndicesData();
-                this.showSuccess();
-                this.showNotification('Impossible de mettre à jour les données. Affichage des valeurs précédentes.', 'warning');
+                indicesData.meta.isStale = true;
+                renderIndicesData();
+                showNotification('Impossible de mettre à jour les données. Affichage des valeurs précédentes.', 'warning');
             } else {
-                this.showError();
+                showElement('indices-error');
+                hideElement('indices-loading');
+                hideElement('indices-container');
             }
         } finally {
             // Réinitialiser l'état
-            this.isLoading = false;
-            
-            // Réinitialiser le bouton
-            if (userTriggered && this.elements.refreshButton) {
-                this.elements.refreshButton.innerHTML = '<i class="fas fa-sync-alt mr-2"></i> Rafraîchir';
-                this.elements.refreshButton.disabled = false;
-            }
+            isLoading = false;
         }
     }
     
     /**
-     * Récupère les données des indices depuis Boursorama
+     * Récupère les données des indices depuis Boursorama en essayant différents proxies CORS
      */
-    async fetchIndicesData() {
-        try {
-            console.log('🔄 Récupération des données depuis Boursorama...');
-            
-            // Utiliser le proxy CORS pour contourner les restrictions
-            const url = SCRAPER_CONFIG.corsProxy + SCRAPER_CONFIG.sourceUrl;
-            const response = await fetch(url);
-            
-            if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
+    async function fetchIndicesData() {
+        console.log('🔄 Récupération des données depuis Boursorama...');
+        
+        // Essayer chaque proxy CORS jusqu'à ce qu'un fonctionne
+        for (const corsProxy of SCRAPER_CONFIG.corsProxies) {
+            try {
+                console.log(`Tentative avec le proxy: ${corsProxy}`);
+                const url = corsProxy + encodeURIComponent(SCRAPER_CONFIG.sourceUrl);
+                
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    console.warn(`Erreur HTTP avec le proxy ${corsProxy}: ${response.status}`);
+                    continue; // Essayer le prochain proxy
+                }
+                
+                const html = await response.text();
+                
+                // Vérifier si nous avons récupéré du HTML valide
+                if (!html || html.length < 1000 || !html.includes('<!DOCTYPE html>')) {
+                    console.warn(`Réponse invalide du proxy ${corsProxy}`);
+                    continue; // Essayer le prochain proxy
+                }
+                
+                console.log(`✅ Proxy ${corsProxy} a fonctionné!`);
+                
+                // Parser le HTML
+                const result = parseIndicesFromHTML(html);
+                
+                // Mettre à jour les méta-données
+                indicesData.meta.timestamp = new Date().toISOString();
+                indicesData.meta.count = 
+                    indicesData.indices.europe.length + 
+                    indicesData.indices.us.length + 
+                    indicesData.indices.asia.length + 
+                    indicesData.indices.other.length;
+                
+                console.log(`✅ Données récupérées avec succès: ${indicesData.meta.count} indices`);
+                
+                // Vérifier si nous avons des données
+                if (indicesData.meta.count === 0) {
+                    console.warn('⚠️ Aucun indice trouvé dans la page Boursorama');
+                    return false;
+                }
+                
+                return true;
+            } catch (error) {
+                console.warn(`❌ Erreur avec le proxy ${corsProxy}:`, error);
+                // Continuer avec le prochain proxy
             }
+        }
+        
+        console.error('❌ Tous les proxies CORS ont échoué');
+        return false;
+    }
+    
+    /**
+     * Parse les indices depuis le HTML de Boursorama
+     * Utilise une méthode simple et robuste pour extraire les données du tableau
+     */
+    function parseIndicesFromHTML(html) {
+        try {
+            // Réinitialiser les données
+            indicesData.indices = {
+                europe: [],
+                us: [],
+                asia: [],
+                other: []
+            };
             
-            const html = await response.text();
-            
-            // Parser le HTML
+            // Créer un DOM temporaire
             const parser = new DOMParser();
             const doc = parser.parseFromString(html, 'text/html');
             
-            // Extraire les données
-            this.parseIndicesFromHTML(doc);
+            // Trouver tous les tableaux dans la page
+            const tables = doc.querySelectorAll('table');
+            console.log(`Nombre de tableaux trouvés: ${tables.length}`);
             
-            // Mettre à jour les méta-données
-            this.data.meta.timestamp = new Date().toISOString();
-            this.data.meta.count = 
-                this.data.indices.europe.length + 
-                this.data.indices.us.length + 
-                this.data.indices.asia.length + 
-                this.data.indices.other.length;
+            // Parcourir tous les tableaux pour trouver celui des indices
+            let indicesTable = null;
+            for (const table of tables) {
+                // Vérifier si c'est le tableau des indices (contient des en-têtes typiques)
+                const headers = table.querySelectorAll('th');
+                const headerTexts = Array.from(headers).map(h => h.textContent.trim().toLowerCase());
+                
+                // Chercher des mots-clés typiques dans les en-têtes
+                if (headerTexts.some(text => 
+                    text.includes('indice') || 
+                    text.includes('dernier') || 
+                    text.includes('var') ||
+                    text.includes('variation'))) {
+                    indicesTable = table;
+                    console.log('Table des indices trouvée!');
+                    break;
+                }
+            }
             
-            console.log(`✅ Données récupérées avec succès: ${this.data.meta.count} indices`);
-            
-            // Vérifier si nous avons des données
-            if (this.data.meta.count === 0) {
-                console.warn('⚠️ Aucun indice trouvé dans la page Boursorama');
+            if (!indicesTable) {
+                console.warn('Aucun tableau d\'indices trouvé dans la page');
                 return false;
             }
             
+            // Extraire les données des lignes
+            const rows = indicesTable.querySelectorAll('tbody tr');
+            console.log(`Nombre de lignes trouvées: ${rows.length}`);
+            
+            // Parcourir les lignes et extraire les données
+            rows.forEach(row => {
+                try {
+                    const cells = row.querySelectorAll('td');
+                    
+                    if (cells.length >= 3) {
+                        // Extraire le nom de l'indice (priorité au texte du lien)
+                        const nameEl = row.querySelector('a');
+                        let name = nameEl ? nameEl.textContent.trim() : '';
+                        
+                        // Si pas de lien, essayer la première ou deuxième cellule
+                        if (!name && cells[0]) name = cells[0].textContent.trim();
+                        if (!name && cells[1]) name = cells[1].textContent.trim();
+                        
+                        // Vérifier que c'est un nom d'indice valide
+                        if (name && name.length > 1 && !name.match(/^\d+/)) {
+                            // Trouver les cellules de valeur et variation
+                            // On ne peut pas supposer des positions fixes, alors on cherche
+                            // les cellules qui ressemblent à des nombres ou pourcentages
+                            let value = '';
+                            let change = '';
+                            let opening = '';
+                            
+                            // Parcourir les cellules
+                            for (let i = 1; i < cells.length; i++) {
+                                const text = cells[i].textContent.trim();
+                                
+                                // Si c'est un pourcentage, c'est probablement la variation
+                                if (text.includes('%') && !change) {
+                                    change = text;
+                                    continue;
+                                }
+                                
+                                // Si c'est un nombre et qu'on n'a pas encore de valeur
+                                if (text.match(/[0-9]/) && !value) {
+                                    value = text;
+                                    continue;
+                                }
+                                
+                                // Si c'est un nombre et qu'on a déjà une valeur mais pas d'ouverture
+                                if (text.match(/[0-9]/) && value && !opening) {
+                                    opening = text;
+                                    continue;
+                                }
+                            }
+                            
+                            // Ne créer l'indice que si on a au moins une valeur et idéalement une variation
+                            if (value) {
+                                // Déterminer la tendance (hausse/baisse)
+                                const trend = change && change.includes('-') ? 'down' : 'up';
+                                
+                                // Créer l'objet indice
+                                const index = {
+                                    name,
+                                    value,
+                                    change: change || '',
+                                    changePercent: change || '',
+                                    opening: opening || '',
+                                    high: '',
+                                    low: '',
+                                    trend
+                                };
+                                
+                                // Classer l'indice dans la bonne région
+                                classifyIndex(index);
+                            }
+                        }
+                    }
+                } catch (rowError) {
+                    console.warn('Erreur lors du traitement d\'une ligne:', rowError);
+                }
+            });
+            
             return true;
         } catch (error) {
-            console.error('❌ Erreur lors de la récupération des données:', error);
+            console.error('Erreur lors du parsing du HTML:', error);
             return false;
         }
     }
     
     /**
-     * Parse les indices depuis le HTML de Boursorama
-     */
-    parseIndicesFromHTML(doc) {
-        // Réinitialiser les données
-        this.data.indices = {
-            europe: [],
-            us: [],
-            asia: [],
-            other: []
-        };
-        
-        // Sélectionner les lignes du tableau
-        const rows = doc.querySelectorAll('table tbody tr');
-        
-        // Pour chaque ligne, extraire les informations
-        rows.forEach(row => {
-            const cells = row.querySelectorAll('td');
-            
-            if (cells.length > 0) {
-                // Extraire le nom de l'indice
-                const nameEl = row.querySelector('a');
-                const name = nameEl ? nameEl.textContent.trim() : cells[1].textContent.trim();
-                
-                // Vérifier que c'est un nom d'indice valide
-                if (name && name.length > 1 && !name.match(/^\d+/)) {
-                    // Extraire les autres informations
-                    const value = cells[2] ? cells[2].textContent.trim() : '';
-                    const change = cells[3] ? cells[3].textContent.trim() : '';
-                    const opening = cells[4] ? cells[4].textContent.trim() : '';
-                    
-                    // Certaines cellules Boursorama peuvent contenir des valeurs vides comme "-"
-                    // Ne créer l'objet indice que si nous avons au moins une valeur et une variation
-                    if (value && value !== '-' && change && change !== '-') {
-                        // Déterminer la tendance (hausse/baisse)
-                        const trend = change.includes('-') ? 'down' : 'up';
-                        
-                        // Créer l'objet indice
-                        const index = {
-                            name,
-                            value,
-                            change,
-                            changePercent: change,
-                            opening: opening !== '-' ? opening : '',
-                            high: '',
-                            low: '',
-                            trend
-                        };
-                        
-                        // Classer l'indice dans la bonne région
-                        this.classifyIndex(index);
-                    }
-                }
-            }
-        });
-    }
-    
-    /**
      * Classe un indice dans la bonne région
      */
-    classifyIndex(index) {
+    function classifyIndex(index) {
         // Convertir le nom en majuscules pour faciliter la comparaison
         const name = index.name.toUpperCase();
         
         // Vérifier chaque région
         for (const [region, keywords] of Object.entries(SCRAPER_CONFIG.regions)) {
             if (keywords.some(keyword => name.includes(keyword))) {
-                this.data.indices[region].push(index);
+                indicesData.indices[region].push(index);
                 return;
             }
         }
         
         // Par défaut, ajouter à "other"
-        this.data.indices.other.push(index);
+        indicesData.indices.other.push(index);
     }
     
     /**
-     * Affiche les données des indices dans l'interface
+     * Affiche les données d'indices dans l'interface
      */
-    renderIndicesData() {
+    function renderIndicesData() {
         try {
             // Mettre à jour l'horodatage
-            const timestamp = new Date(this.data.meta.timestamp);
+            const timestamp = new Date(indicesData.meta.timestamp);
             let formattedDate = timestamp.toLocaleDateString('fr-FR', {
                 day: '2-digit',
                 month: 'long',
@@ -329,26 +423,17 @@ class BoursoramaScraper {
             });
             
             // Ajouter un indicateur si les données sont périmées
-            if (this.data.meta.isStale) {
+            if (indicesData.meta.isStale) {
                 formattedDate += ' (anciennes données)';
             }
             
-            if (this.elements.lastUpdate) {
-                this.elements.lastUpdate.textContent = formattedDate;
-                
-                // Ajouter une classe visuelle si les données sont périmées
-                if (this.data.meta.isStale) {
-                    this.elements.lastUpdate.classList.add('text-yellow-400');
-                } else {
-                    this.elements.lastUpdate.classList.remove('text-yellow-400');
-                }
-            }
+            document.getElementById('last-update-time').textContent = formattedDate;
             
             // Générer le HTML pour chaque région
             const regions = ['europe', 'us', 'asia', 'other'];
             
             regions.forEach(region => {
-                const indices = this.data.indices[region] || [];
+                const indices = indicesData.indices[region] || [];
                 const tableBody = document.getElementById(`${region}-indices-body`);
                 
                 if (tableBody) {
@@ -385,20 +470,26 @@ class BoursoramaScraper {
                     }
                     
                     // Mettre à jour le résumé
-                    this.updateRegionSummary(region, indices);
+                    updateRegionSummary(region, indices);
                 }
             });
             
-            console.log('✅ Interface mise à jour avec succès');
+            // Masquer le loader et afficher les données
+            hideElement('indices-loading');
+            hideElement('indices-error');
+            showElement('indices-container');
+            
         } catch (error) {
-            console.error('❌ Erreur lors de l\'affichage des données:', error);
+            console.error('❌ Erreur lors de l\\'affichage des données:', error);
+            hideElement('indices-loading');
+            showElement('indices-error');
         }
     }
     
     /**
      * Met à jour le résumé des indices pour une région donnée
      */
-    updateRegionSummary(region, indices) {
+    function updateRegionSummary(region, indices) {
         const summaryContainer = document.getElementById(`${region}-indices-summary`);
         const trendElement = document.getElementById(`${region}-trend`);
         
@@ -489,9 +580,23 @@ class BoursoramaScraper {
     }
     
     /**
-     * Affiche une notification
+     * Fonctions utilitaires
      */
-    showNotification(message, type = 'info') {
+    function showElement(id) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.classList.remove('hidden');
+        }
+    }
+    
+    function hideElement(id) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.classList.add('hidden');
+        }
+    }
+    
+    function showNotification(message, type = 'info') {
         // Vérifier si une notification existe déjà
         let notification = document.querySelector('.notification-popup');
         if (!notification) {
@@ -545,116 +650,58 @@ class BoursoramaScraper {
     }
     
     /**
-     * Fonctions pour gérer l'affichage
+     * Met à jour l'heure du marché
      */
-    showLoading() {
-        if (this.elements.loading) this.elements.loading.classList.remove('hidden');
-        if (this.elements.error) this.elements.error.classList.add('hidden');
-        if (this.elements.container) this.elements.container.classList.add('hidden');
-    }
-    
-    showSuccess() {
-        if (this.elements.loading) this.elements.loading.classList.add('hidden');
-        if (this.elements.error) this.elements.error.classList.add('hidden');
-        if (this.elements.container) this.elements.container.classList.remove('hidden');
-    }
-    
-    showError() {
-        if (this.elements.loading) this.elements.loading.classList.add('hidden');
-        if (this.elements.error) this.elements.error.classList.remove('hidden');
-        if (this.elements.container) this.elements.container.classList.add('hidden');
-    }
-}
-
-// Initialiser le scraper au chargement de la page
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialiser le scraper
-    window.boursoramaScraper = new BoursoramaScraper();
-    
-    // Initialiser les autres fonctionnalités de la page
-    initTheme();
-    initRegionTabs();
-    updateMarketTime();
-    setInterval(updateMarketTime, 1000);
-});
-
-/**
- * Initialise les onglets de région
- */
-function initRegionTabs() {
-    const tabs = document.querySelectorAll('.region-tab');
-    
-    tabs.forEach(tab => {
-        tab.addEventListener('click', function() {
-            // Mettre à jour les onglets actifs
-            tabs.forEach(t => t.classList.remove('active'));
-            this.classList.add('active');
-            
-            // Afficher le contenu correspondant
-            const region = this.getAttribute('data-region');
-            const contents = document.querySelectorAll('.region-content');
-            
-            contents.forEach(content => {
-                content.classList.add('hidden');
-            });
-            
-            document.getElementById(`${region}-indices`)?.classList.remove('hidden');
-        });
-    });
-}
-
-/**
- * Met à jour l'heure du marché
- */
-function updateMarketTime() {
-    const now = new Date();
-    const hours = now.getHours().toString().padStart(2, '0');
-    const minutes = now.getMinutes().toString().padStart(2, '0');
-    const seconds = now.getSeconds().toString().padStart(2, '0');
-    const timeStr = `${hours}:${minutes}:${seconds}`;
-    
-    const marketTimeElement = document.getElementById('marketTime');
-    if (marketTimeElement) {
-        marketTimeElement.textContent = timeStr;
-    }
-}
-
-/**
- * Gestion du mode sombre/clair
- */
-function initTheme() {
-    const themeToggleBtn = document.getElementById('theme-toggle-btn');
-    const darkIcon = document.getElementById('dark-icon');
-    const lightIcon = document.getElementById('light-icon');
-    
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'light') {
-        document.body.classList.remove('dark');
-        document.body.classList.add('light');
-        document.documentElement.classList.remove('dark');
-        darkIcon.style.display = 'none';
-        lightIcon.style.display = 'block';
-    } else {
-        document.body.classList.add('dark');
-        document.body.classList.remove('light');
-        document.documentElement.classList.add('dark');
-        darkIcon.style.display = 'block';
-        lightIcon.style.display = 'none';
-    }
-    
-    themeToggleBtn.addEventListener('click', function() {
-        document.body.classList.toggle('dark');
-        document.body.classList.toggle('light');
-        document.documentElement.classList.toggle('dark');
+    function updateMarketTime() {
+        const now = new Date();
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        const seconds = now.getSeconds().toString().padStart(2, '0');
+        const timeStr = `${hours}:${minutes}:${seconds}`;
         
-        if (document.body.classList.contains('dark')) {
-            darkIcon.style.display = 'block';
-            lightIcon.style.display = 'none';
-            localStorage.setItem('theme', 'dark');
-        } else {
+        const marketTimeElement = document.getElementById('marketTime');
+        if (marketTimeElement) {
+            marketTimeElement.textContent = timeStr;
+        }
+    }
+    
+    /**
+     * Gestion du mode sombre/clair
+     */
+    function initTheme() {
+        const themeToggleBtn = document.getElementById('theme-toggle-btn');
+        const darkIcon = document.getElementById('dark-icon');
+        const lightIcon = document.getElementById('light-icon');
+        
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'light') {
+            document.body.classList.remove('dark');
+            document.body.classList.add('light');
+            document.documentElement.classList.remove('dark');
             darkIcon.style.display = 'none';
             lightIcon.style.display = 'block';
-            localStorage.setItem('theme', 'light');
+        } else {
+            document.body.classList.add('dark');
+            document.body.classList.remove('light');
+            document.documentElement.classList.add('dark');
+            darkIcon.style.display = 'block';
+            lightIcon.style.display = 'none';
         }
-    });
-}
+        
+        themeToggleBtn.addEventListener('click', function() {
+            document.body.classList.toggle('dark');
+            document.body.classList.toggle('light');
+            document.documentElement.classList.toggle('dark');
+            
+            if (document.body.classList.contains('dark')) {
+                darkIcon.style.display = 'block';
+                lightIcon.style.display = 'none';
+                localStorage.setItem('theme', 'dark');
+            } else {
+                darkIcon.style.display = 'none';
+                lightIcon.style.display = 'block';
+                localStorage.setItem('theme', 'light');
+            }
+        });
+    }
+});
