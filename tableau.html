@@ -1,0 +1,1547 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradePulse - Tableau de Bord</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        green: {
+                            400: '#00FF87'
+                        }
+                    }
+                },
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif']
+                }
+            }
+        }
+    </script>
+    <style>
+        :root {
+            --background-color: #011627; /* Bleu nuit */
+            --light-background-color: #f0f5ff;
+            --text-color: #FFFFFF;
+            --light-text-color: #1a202c;
+            --accent-color: #00FF87; /* Vert néon */
+            --accent-glow: 0 0 20px rgba(0, 255, 135, 0.6);
+            --accent-glow-strong: 0 0 30px rgba(0, 255, 135, 0.8), 0 0 50px rgba(0, 255, 135, 0.4);
+            --transition-time: 0.3s;
+            --header-height: 70px;
+            --sidebar-width: 80px;
+            --card-bg-dark: rgba(1, 30, 52, 0.5);
+            --card-bg-light: rgba(240, 245, 255, 0.8);
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+        }
+        
+        body.dark {
+            background-color: var(--background-color);
+            color: var(--text-color);
+        }
+        
+        body.light {
+            background-color: var(--light-background-color);
+            color: var(--light-text-color);
+        }
+        
+        /* Header */
+        .main-header {
+            position: fixed;
+            top: 0;
+            left: var(--sidebar-width);
+            right: 0;
+            height: var(--header-height);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+        
+        .dark .main-header {
+            background-color: rgba(1, 22, 39, 0.9);
+            border-bottom: 1px solid rgba(0, 255, 135, 0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .light .main-header {
+            background-color: rgba(240, 245, 255, 0.9);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            font-weight: 900;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+        }
+        
+        .logo-container a {
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        
+        .dark .logo-container a {
+            color: var(--text-color);
+        }
+        
+        .light .logo-container a {
+            color: var(--light-text-color);
+        }
+        
+        .pulse-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 10px var(--accent-color);
+            animation: pulse 2s infinite;
+        }
+        
+        .main-nav {
+            display: flex;
+            margin-left: 40px;
+        }
+        
+        .main-nav a {
+            margin-right: 30px;
+            padding: 8px 5px;
+            font-weight: 500;
+            position: relative;
+            transition: color 0.3s;
+            text-decoration: none;
+        }
+        
+        .dark .main-nav a {
+            color: var(--text-color);
+        }
+        
+        .light .main-nav a {
+            color: var(--light-text-color);
+        }
+        
+        .main-nav a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--accent-color);
+            transition: width 0.3s;
+        }
+        
+        .main-nav a:hover::after,
+        .main-nav a.active::after {
+            width: 100%;
+        }
+        
+        .main-nav a.active {
+            color: var(--accent-color);
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+        }
+        
+        .market-status {
+            display: flex;
+            align-items: center;
+            margin-right: 30px;
+            font-size: 0.875rem;
+            transition: color 0.3s ease;
+        }
+        
+        .dark .market-status {
+            color: var(--text-color);
+        }
+        
+        .light .market-status {
+            color: var(--light-text-color);
+        }
+        
+        .market-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .market-indicator.green {
+            background-color: #4CAF50;
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+        }
+        
+        .market-time {
+            margin-left: 10px;
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+        
+        .search-button {
+            padding: 10px 20px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+        
+        .dark .search-button {
+            background-color: rgba(0, 255, 135, 0.1);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            color: var(--text-color);
+        }
+        
+        .light .search-button {
+            background-color: rgba(0, 210, 110, 0.1);
+            border: 1px solid rgba(0, 210, 110, 0.3);
+            color: var(--light-text-color);
+        }
+        
+        .search-button:hover {
+            transform: translateY(-2px);
+        }
+        
+        .dark .search-button:hover {
+            background-color: rgba(0, 255, 135, 0.2);
+        }
+        
+        .light .search-button:hover {
+            background-color: rgba(0, 210, 110, 0.2);
+        }
+        
+        .search-button i {
+            margin-right: 8px;
+            color: var(--accent-color);
+        }
+        
+        /* Sidebar de navigation verticale */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            z-index: 101;
+            transition: background-color 0.3s ease, border-right 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .dark .sidebar {
+            background-color: rgba(1, 15, 26, 0.95);
+            border-right: 1px solid rgba(0, 255, 135, 0.1);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .light .sidebar {
+            background-color: rgba(230, 240, 255, 0.95);
+            border-right: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--accent-color);
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
+        }
+        
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+        }
+        
+        .nav-item {
+            margin-bottom: 20px;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 8px;
+            transition: all 0.3s;
+            position: relative;
+            text-decoration: none;
+        }
+
+        /* Notification badge for alerts */
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 10px;
+            height: 10px;
+            background-color: #ff4757;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
+        }
+        
+        .dark .nav-item {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .light .nav-item {
+            color: rgba(0, 0, 0, 0.7);
+        }
+        
+        .dark .nav-item:hover, .dark .nav-item.active {
+            background-color: rgba(0, 255, 135, 0.1);
+            color: var(--accent-color);
+        }
+        
+        .light .nav-item:hover, .light .nav-item.active {
+            background-color: rgba(0, 210, 110, 0.1);
+            color: var(--accent-color);
+        }
+        
+        .nav-item i {
+            font-size: 1.2rem;
+        }
+        
+        /* Mode sombre/clair toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .theme-toggle-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+        
+        .dark .theme-toggle-btn {
+            color: var(--text-color);
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .light .theme-toggle-btn {
+            color: var(--light-text-color);
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+        
+        .theme-toggle-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Main container */
+        .main-container {
+            margin-left: var(--sidebar-width);
+            margin-top: var(--header-height);
+            padding: 20px;
+            min-height: calc(100vh - var(--header-height));
+            transition: background-color 0.3s ease;
+        }
+
+        /* Card styles based on theme */
+        .dark .bg-gray-800 {
+            background-color: rgba(30, 41, 59, 0.7);
+        }
+        
+        .light .bg-gray-800 {
+            background-color: rgba(240, 245, 255, 0.8);
+        }
+        
+        .dark .bg-gray-900 {
+            background-color: #011627;
+        }
+        
+        .light .bg-gray-900 {
+            background-color: #f0f5ff;
+        }
+        
+        /* Animated network background */
+        .network-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+        
+        .node {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            opacity: 0.4;
+        }
+        
+        .node.pulse {
+            animation: node-pulse 3s infinite;
+        }
+        
+        .connection {
+            position: absolute;
+            height: 1px;
+            transform-origin: 0 0;
+            background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+            opacity: 0.2;
+        }
+
+        /* Glassmorphism cards */
+        .glassmorphism {
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            box-shadow: var(--accent-glow);
+        }
+        
+        .dark .glassmorphism {
+            background-color: rgba(1, 22, 39, 0.7);
+        }
+        
+        .light .glassmorphism {
+            background-color: rgba(240, 245, 255, 0.8);
+        }
+
+        /* Animations */
+        @keyframes pulse-circle {
+            0% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1.05); opacity: 0.5; }
+            100% { transform: scale(1); opacity: 0.3; }
+        }
+        
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
+        }
+        
+        @keyframes node-pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(2); opacity: 0.1; }
+            100% { transform: scale(1); }
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        /* Data table styles */
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        .data-table th {
+            padding: 12px 15px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(0, 255, 135, 0.2);
+        }
+        
+        .data-table td {
+            padding: 12px 15px;
+            font-size: 0.85rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .data-table tr:hover td {
+            background-color: rgba(0, 255, 135, 0.05);
+        }
+
+        .action-btn {
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.75rem;
+        }
+        
+        .action-btn.view {
+            background-color: rgba(0, 255, 135, 0.1);
+            color: var(--accent-color);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+        }
+        
+        .action-btn.view:hover {
+            background-color: rgba(0, 255, 135, 0.2);
+        }
+
+        /* Positive and negative values */
+        .positive {
+            color: var(--accent-color);
+        }
+        
+        .negative {
+            color: #ff4757;
+        }
+
+        /* Donut chart label */
+        .donut-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        
+        .donut-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+        
+        .donut-label-text {
+            font-size: 0.75rem;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* Select and export buttons */
+        .select-period {
+            padding: 6px 12px;
+            background-color: rgba(1, 30, 52, 0.6);
+            border: 1px solid rgba(0, 255, 135, 0.2);
+            color: var(--text-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        
+        .select-period:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+        
+        .export-btn {
+            display: inline-flex;
+            align-items: center;
+            padding: 7px 15px;
+            background-color: rgba(0, 255, 135, 0.1);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            color: var(--accent-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .export-btn:hover {
+            background-color: rgba(0, 255, 135, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .export-btn i {
+            margin-right: 6px;
+        }
+
+        /* Synchronize button */
+        .sync-button {
+            display: inline-flex;
+            align-items: center;
+            padding: 10px 20px;
+            background-color: rgba(0, 255, 135, 0.1);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            color: var(--accent-color);
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        
+        .sync-button:hover {
+            background-color: rgba(0, 255, 135, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .sync-button i {
+            margin-right: 8px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-header {
+                left: 0;
+                padding: 0 20px;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: auto;
+                flex-direction: row;
+                padding: 10px 20px;
+                justify-content: space-between;
+                position: fixed;
+                bottom: 0;
+                top: auto;
+                border-top: 1px solid rgba(0, 255, 135, 0.1);
+                border-right: none;
+            }
+            
+            .sidebar-logo {
+                display: none;
+            }
+            
+            .sidebar-nav {
+                flex-direction: row;
+                justify-content: space-around;
+                width: 100%;
+                margin: 0;
+            }
+            
+            .nav-item {
+                margin: 0;
+            }
+            
+            .main-container {
+                margin-left: 0;
+                margin-top: calc(var(--header-height));
+                margin-bottom: 60px;
+            }
+            
+            .main-nav {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body class="dark">
+    <!-- Réseau de fond animé -->
+    <div class="network-background" id="network-background"></div>
+
+    <!-- Bouton du sélecteur de thème -->
+    <div class="theme-toggle">
+        <button id="theme-toggle-btn" class="theme-toggle-btn">
+            <i class="fas fa-moon" id="dark-icon"></i>
+            <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar de navigation verticale -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">TP</div>
+        <nav class="sidebar-nav">
+            <a href="actualites.html" class="nav-item" title="Actualités">
+                <i class="fas fa-newspaper"></i>
+            </a>
+            <a href="portefeuilles.html" class="nav-item" title="Portefeuilles">
+                <i class="fas fa-chart-pie"></i>
+            </a>
+            <a href="tableau.html" class="nav-item active" title="Tableau de bord">
+                <i class="fas fa-tachometer-alt"></i>
+            </a>
+            <a href="marches.html" class="nav-item" title="Marchés">
+                <i class="fas fa-chart-line"></i>
+            </a>
+            <a href="email-preview.html" class="nav-item" title="Alertes">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge"></span>
+            </a>
+            <a href="parametres.html" class="nav-item" title="Paramètres">
+                <i class="fas fa-cog"></i>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Header principal -->
+    <header class="main-header">
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="pulse-dot"></div>
+                <a href="index.html">TRADEPULSE</a>
+            </div>
+            <nav class="main-nav">
+                <a href="actualites.html">Actualités</a>
+                <a href="portefeuilles.html">Portefeuilles</a>
+                <a href="tableau.html" class="active">Tableau de bord</a>
+            </nav>
+        </div>
+        <div class="header-right">
+            <div class="market-status">
+                <div class="market-indicator green"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time" id="marketTime">09:45:22</span>
+            </div>
+            <a href="recherche.html" class="search-button ripple">
+                <i class="fas fa-search"></i>
+                <span>Ma question</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Container principal -->
+    <main class="main-container">
+        <div class="p-6">
+            <div class="max-w-7xl mx-auto">
+                <!-- Header avec titre et synchronisation -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+                    <div>
+                        <h1 class="text-2xl font-bold mb-1">Tableau de Bord</h1>
+                        <p class="text-sm text-gray-400">Dernière mise à jour: <span id="last-update-time">11 Mars 2025, 09:38:14</span></p>
+                    </div>
+                    <div class="mt-4 md:mt-0 flex items-center gap-4">
+                        <button id="sync-with-email" class="sync-button">
+                            <i class="fas fa-sync-alt"></i>
+                            Synchroniser avec les alertes
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Grille des cartes de performance -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                    <!-- Carte 1: Valeur totale -->
+                    <div class="glassmorphism rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-gray-400">Valeur Totale</span>
+                            <i class="fas fa-euro-sign text-sm text-gray-400"></i>
+                        </div>
+                        <div class="text-3xl font-bold" id="total-value">84 213 €</div>
+                        <div class="text-sm text-gray-400 mt-1">
+                            <span class="positive"><i class="fas fa-arrow-up mr-1"></i> +3.2%</span> depuis le dernier mois
+                        </div>
+                    </div>
+                    
+                    <!-- Carte 2: Profit/Perte -->
+                    <div class="glassmorphism rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-gray-400">Profit/Perte</span>
+                            <i class="fas fa-chart-line text-sm text-gray-400"></i>
+                        </div>
+                        <div class="text-3xl font-bold positive" id="profit-loss">+6 487 €</div>
+                        <div class="text-sm text-gray-400 mt-1">
+                            <span class="positive"><i class="fas fa-arrow-up mr-1"></i> +8.32%</span> depuis l'achat
+                        </div>
+                    </div>
+                    
+                    <!-- Carte 3: Rendement Annuel -->
+                    <div class="glassmorphism rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-gray-400">Rendement Annuel</span>
+                            <i class="fas fa-percentage text-sm text-gray-400"></i>
+                        </div>
+                        <div class="text-3xl font-bold positive" id="annual-return">+7.6%</div>
+                        <div class="text-sm text-gray-400 mt-1">
+                            <span class="positive"><i class="fas fa-arrow-up mr-1"></i> +0.8%</span> vs S&P 500
+                        </div>
+                    </div>
+                    
+                    <!-- Carte 4: Ratio de Sharpe -->
+                    <div class="glassmorphism rounded-lg p-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm text-gray-400">Ratio de Sharpe</span>
+                            <i class="fas fa-balance-scale text-sm text-gray-400"></i>
+                        </div>
+                        <div class="text-3xl font-bold" id="sharpe-ratio">0.72</div>
+                        <div class="text-sm text-gray-400 mt-1">
+                            <span class="positive"><i class="fas fa-arrow-up mr-1"></i> +0.05</span> depuis le dernier trimestre
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Graphiques de performance et répartition -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                    <!-- Performance graph -->
+                    <div class="glassmorphism rounded-lg p-4 col-span-2">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-semibold">Performance</h2>
+                            <select id="performance-period" class="select-period">
+                                <option value="1M">1M</option>
+                                <option value="3M">3M</option>
+                                <option value="6M">6M</option>
+                                <option value="1A" selected>1A</option>
+                                <option value="MAX">MAX</option>
+                            </select>
+                        </div>
+                        <div style="height: 250px;">
+                            <canvas id="performanceChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <!-- Allocation graph -->
+                    <div class="glassmorphism rounded-lg p-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h2 class="text-lg font-semibold">Répartition</h2>
+                            <div class="text-xs text-gray-400">12 actifs</div>
+                        </div>
+                        <div style="height: 250px; position: relative;">
+                            <canvas id="allocationChart"></canvas>
+                            <div class="donut-label">
+                                <div class="donut-value" id="allocation-percentage">40%</div>
+                                <div class="donut-label-text">Tech</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tableau des actifs -->
+                <div class="glassmorphism rounded-lg p-4 mb-8">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold">Actifs</h2>
+                        <button class="export-btn" id="export-assets">
+                            <i class="fas fa-file-export"></i>
+                            Exporter
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="data-table" id="assets-table">
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Type</th>
+                                    <th>Prix</th>
+                                    <th>Quantité</th>
+                                    <th>Valeur</th>
+                                    <th>Variation (24h)</th>
+                                    <th>Performance Globale</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="font-medium">Apple Inc.</td>
+                                    <td>Actions</td>
+                                    <td>215.38 €</td>
+                                    <td>25</td>
+                                    <td>5 384.50 €</td>
+                                    <td class="positive">+1.24%</td>
+                                    <td class="positive">+18.5%</td>
+                                    <td><button class="action-btn view">Détails</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="font-medium">Microsoft Corp.</td>
+                                    <td>Actions</td>
+                                    <td>412.65 €</td>
+                                    <td>18</td>
+                                    <td>7 427.70 €</td>
+                                    <td class="positive">+0.65%</td>
+                                    <td class="positive">+22.4%</td>
+                                    <td><button class="action-btn view">Détails</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="font-medium">Tesla Inc.</td>
+                                    <td>Actions</td>
+                                    <td>175.23 €</td>
+                                    <td>30</td>
+                                    <td>5 256.90 €</td>
+                                    <td class="negative">-2.34%</td>
+                                    <td class="negative">-12.6%</td>
+                                    <td><button class="action-btn view">Détails</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="font-medium">Amundi MSCI World</td>
+                                    <td>ETF</td>
+                                    <td>87.56 €</td>
+                                    <td>120</td>
+                                    <td>10 507.20 €</td>
+                                    <td class="positive">+0.42%</td>
+                                    <td class="positive">+8.9%</td>
+                                    <td><button class="action-btn view">Détails</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="font-medium">Lyxor EURO STOXX 50</td>
+                                    <td>ETF</td>
+                                    <td>45.32 €</td>
+                                    <td>95</td>
+                                    <td>4 305.40 €</td>
+                                    <td class="positive">+0.53%</td>
+                                    <td class="positive">+7.2%</td>
+                                    <td><button class="action-btn view">Détails</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="font-medium">Amazon.com Inc.</td>
+                                    <td>Actions</td>
+                                    <td>178.45 €</td>
+                                    <td>15</td>
+                                    <td>2 676.75 €</td>
+                                    <td class="positive">+0.87%</td>
+                                    <td class="positive">+15.3%</td>
+                                    <td><button class="action-btn view">Détails</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="font-medium">NVIDIA Corp.</td>
+                                    <td>Actions</td>
+                                    <td>890.26 €</td>
+                                    <td>8</td>
+                                    <td>7 122.08 €</td>
+                                    <td class="positive">+2.14%</td>
+                                    <td class="positive">+115.7%</td>
+                                    <td><button class="action-btn view">Détails</button></td>
+                                </tr>
+                                <tr>
+                                    <td class="font-medium">Alphabet Inc.</td>
+                                    <td>Actions</td>
+                                    <td>145.68 €</td>
+                                    <td>12</td>
+                                    <td>1 748.16 €</td>
+                                    <td class="negative">-0.34%</td>
+                                    <td class="positive">+10.2%</td>
+                                    <td><button class="action-btn view">Détails</button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <!-- Dernières Opérations -->
+                <div class="glassmorphism rounded-lg p-4 mb-8">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold">Dernières Opérations</h2>
+                        <button class="export-btn" id="export-transactions">
+                            <i class="fas fa-file-export"></i>
+                            Exporter
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="data-table" id="transactions-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Actif</th>
+                                    <th>Prix</th>
+                                    <th>Quantité</th>
+                                    <th>Montant</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>10 Mar 2025</td>
+                                    <td><span class="px-2 py-1 bg-green-400 bg-opacity-10 text-green-400 rounded-full text-xs">Achat</span></td>
+                                    <td>NVIDIA Corp.</td>
+                                    <td>872.50 €</td>
+                                    <td>3</td>
+                                    <td>2 617.50 €</td>
+                                    <td><span class="px-2 py-1 bg-green-400 bg-opacity-10 text-green-400 rounded-full text-xs">Confirmé</span></td>
+                                </tr>
+                                <tr>
+                                    <td>08 Mar 2025</td>
+                                    <td><span class="px-2 py-1 bg-red-400 bg-opacity-10 text-red-400 rounded-full text-xs">Vente</span></td>
+                                    <td>Meta Platforms Inc.</td>
+                                    <td>485.25 €</td>
+                                    <td>5</td>
+                                    <td>2 426.25 €</td>
+                                    <td><span class="px-2 py-1 bg-green-400 bg-opacity-10 text-green-400 rounded-full text-xs">Confirmé</span></td>
+                                </tr>
+                                <tr>
+                                    <td>05 Mar 2025</td>
+                                    <td><span class="px-2 py-1 bg-green-400 bg-opacity-10 text-green-400 rounded-full text-xs">Achat</span></td>
+                                    <td>Amundi MSCI World</td>
+                                    <td>86.42 €</td>
+                                    <td>20</td>
+                                    <td>1 728.40 €</td>
+                                    <td><span class="px-2 py-1 bg-green-400 bg-opacity-10 text-green-400 rounded-full text-xs">Confirmé</span></td>
+                                </tr>
+                                <tr>
+                                    <td>01 Mar 2025</td>
+                                    <td><span class="px-2 py-1 bg-green-400 bg-opacity-10 text-green-400 rounded-full text-xs">Achat</span></td>
+                                    <td>Apple Inc.</td>
+                                    <td>212.85 €</td>
+                                    <td>5</td>
+                                    <td>1 064.25 €</td>
+                                    <td><span class="px-2 py-1 bg-green-400 bg-opacity-10 text-green-400 rounded-full text-xs">Confirmé</span></td>
+                                </tr>
+                                <tr>
+                                    <td>25 Fév 2025</td>
+                                    <td><span class="px-2 py-1 bg-red-400 bg-opacity-10 text-red-400 rounded-full text-xs">Vente</span></td>
+                                    <td>Tesla Inc.</td>
+                                    <td>182.60 €</td>
+                                    <td>7</td>
+                                    <td>1 278.20 €</td>
+                                    <td><span class="px-2 py-1 bg-green-400 bg-opacity-10 text-green-400 rounded-full text-xs">Confirmé</span></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Créer un réseau de fond
+            const networkBackground = document.getElementById('network-background');
+            createNetworkBackground();
+            
+            function createNetworkBackground() {
+                // Effacer le contenu existant
+                networkBackground.innerHTML = '';
+                
+                // Calculer le nombre de nœuds en fonction de la taille de l'écran
+                const numNodes = Math.min(Math.floor(window.innerWidth * window.innerHeight / 15000), 80);
+                
+                // Créer les nœuds
+                const nodes = [];
+                for (let i = 0; i < numNodes; i++) {
+                    const node = document.createElement('div');
+                    node.className = 'node';
+                    
+                    // Position aléatoire
+                    const x = Math.random() * 100;
+                    const y = Math.random() * 100;
+                    
+                    node.style.left = x + '%';
+                    node.style.top = y + '%';
+                    
+                    // Certains nœuds pulsent
+                    if (Math.random() < 0.3) {
+                        node.classList.add('pulse');
+                    }
+                    
+                    networkBackground.appendChild(node);
+                    nodes.push({ element: node, x, y });
+                }
+                
+                // Créer des connexions entre certains nœuds
+                const maxConnections = Math.min(numNodes * 1.5, 80);
+                for (let i = 0; i < maxConnections; i++) {
+                    const nodeA = nodes[Math.floor(Math.random() * nodes.length)];
+                    const nodeB = nodes[Math.floor(Math.random() * nodes.length)];
+                    
+                    if (nodeA !== nodeB) {
+                        createConnection(nodeA, nodeB);
+                    }
+                }
+                
+                // Animer les nœuds périodiquement
+                setInterval(() => {
+                    nodes.forEach(node => {
+                        if (Math.random() < 0.1) {
+                            const newX = node.x + (Math.random() * 10 - 5);
+                            const newY = node.y + (Math.random() * 10 - 5);
+                            
+                            node.x = Math.max(0, Math.min(100, newX));
+                            node.y = Math.max(0, Math.min(100, newY));
+                            
+                            node.element.style.transition = 'all 5s ease';
+                            node.element.style.left = node.x + '%';
+                            node.element.style.top = node.y + '%';
+                        }
+                    });
+                }, 3000);
+            }
+            
+            function createConnection(nodeA, nodeB) {
+                const connection = document.createElement('div');
+                connection.className = 'connection';
+                
+                // Calculer l'angle et la distance entre les deux nœuds
+                const dx = nodeB.x - nodeA.x;
+                const dy = nodeB.y - nodeA.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                
+                // Positionner et dimensionner la connexion
+                connection.style.width = distance + '%';
+                connection.style.left = nodeA.x + '%';
+                connection.style.top = nodeA.y + '%';
+                connection.style.transform = `rotate(${angle}deg)`;
+                
+                networkBackground.appendChild(connection);
+            }
+            
+            // Redimensionner le réseau lors du redimensionnement de la fenêtre
+            window.addEventListener('resize', () => {
+                createNetworkBackground();
+            });
+            
+            // Initialisation du thème
+            initTheme();
+            
+            // Gestion du mode sombre/clair
+            const themeToggleBtn = document.getElementById('theme-toggle-btn');
+            const darkIcon = document.getElementById('dark-icon');
+            const lightIcon = document.getElementById('light-icon');
+            
+            themeToggleBtn.addEventListener('click', function() {
+                document.body.classList.toggle('dark');
+                document.body.classList.toggle('light');
+                document.documentElement.classList.toggle('dark');
+                
+                // Mettre à jour l'apparence du bouton
+                if (document.body.classList.contains('dark')) {
+                    darkIcon.style.display = 'block';
+                    lightIcon.style.display = 'none';
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    darkIcon.style.display = 'none';
+                    lightIcon.style.display = 'block';
+                    localStorage.setItem('theme', 'light');
+                }
+                
+                // Redessiner les graphiques pour s'adapter au thème
+                updateCharts();
+            });
+            
+            function initTheme() {
+                const savedTheme = localStorage.getItem('theme');
+                if (savedTheme === 'light') {
+                    document.body.classList.remove('dark');
+                    document.body.classList.add('light');
+                    document.documentElement.classList.remove('dark');
+                    darkIcon.style.display = 'none';
+                    lightIcon.style.display = 'block';
+                } else {
+                    document.body.classList.add('dark');
+                    document.body.classList.remove('light');
+                    document.documentElement.classList.add('dark');
+                    darkIcon.style.display = 'block';
+                    lightIcon.style.display = 'none';
+                }
+            }
+            
+            // Update market time
+            function updateMarketTime() {
+                const now = new Date();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                const seconds = now.getSeconds().toString().padStart(2, '0');
+                const timeStr = `${hours}:${minutes}:${seconds}`;
+                
+                const marketTimeElement = document.getElementById('marketTime');
+                if (marketTimeElement) {
+                    marketTimeElement.textContent = timeStr;
+                }
+            }
+            
+            updateMarketTime();
+            setInterval(updateMarketTime, 1000);
+            
+            // Charts
+            let performanceChart;
+            let allocationChart;
+            
+            function initCharts() {
+                // Performance Chart
+                const perfCtx = document.getElementById('performanceChart').getContext('2d');
+                const gradientFill = perfCtx.createLinearGradient(0, 0, 0, 250);
+                gradientFill.addColorStop(0, 'rgba(0, 255, 135, 0.2)');
+                gradientFill.addColorStop(1, 'rgba(0, 255, 135, 0)');
+                
+                const isDarkMode = document.body.classList.contains('dark');
+                const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+                const textColor = isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)';
+                
+                performanceChart = new Chart(perfCtx, {
+                    type: 'line',
+                    data: {
+                        labels: ['Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc', 'Jan', 'Fév', 'Mar'],
+                        datasets: [{
+                            label: 'Performance',
+                            data: [77500, 79200, 80800, 82100, 81600, 83200, 85500, 84800, 86200, 87500, 83800, 84213],
+                            borderColor: '#00FF87',
+                            borderWidth: 2,
+                            pointBackgroundColor: '#00FF87',
+                            pointBorderColor: '#00FF87',
+                            pointRadius: 3,
+                            pointHoverRadius: 5,
+                            tension: 0.3,
+                            fill: true,
+                            backgroundColor: gradientFill
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                mode: 'index',
+                                intersect: false,
+                                backgroundColor: isDarkMode ? 'rgba(1, 22, 39, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                                titleColor: isDarkMode ? '#fff' : '#000',
+                                bodyColor: isDarkMode ? '#fff' : '#000',
+                                borderColor: '#00FF87',
+                                borderWidth: 1,
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        if (label) {
+                                            label += ': ';
+                                        }
+                                        if (context.parsed.y !== null) {
+                                            label += new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(context.parsed.y);
+                                        }
+                                        return label;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                grid: {
+                                    color: gridColor
+                                },
+                                ticks: {
+                                    color: textColor,
+                                    callback: function(value) {
+                                        if (value >= 1000) {
+                                            return value / 1000 + 'k €';
+                                        }
+                                        return value + ' €';
+                                    }
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: gridColor
+                                },
+                                ticks: {
+                                    color: textColor
+                                }
+                            }
+                        },
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        }
+                    }
+                });
+                
+                // Allocation Chart
+                const allocCtx = document.getElementById('allocationChart').getContext('2d');
+                allocationChart = new Chart(allocCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Technologies', 'Finance', 'Santé', 'Consommation', 'Industrie', 'Autres'],
+                        datasets: [{
+                            data: [40, 20, 15, 10, 10, 5],
+                            backgroundColor: [
+                                '#00FF87',
+                                '#36A2EB',
+                                '#FFCE56',
+                                '#FF6384',
+                                '#9966FF',
+                                '#4BC0C0'
+                            ],
+                            borderWidth: 2,
+                            borderColor: isDarkMode ? 'rgba(1, 22, 39, 0.8)' : 'rgba(255, 255, 255, 0.8)'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    padding: 15,
+                                    color: textColor,
+                                    font: {
+                                        size: 11
+                                    }
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: isDarkMode ? 'rgba(1, 22, 39, 0.9)' : 'rgba(255, 255, 255, 0.9)',
+                                titleColor: isDarkMode ? '#fff' : '#000',
+                                bodyColor: isDarkMode ? '#fff' : '#000',
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.raw || 0;
+                                        return `${label}: ${value}%`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Update donut label on hover
+                document.getElementById('allocationChart').addEventListener('mousemove', (event) => {
+                    const activePoints = allocationChart.getElementsAtEventForMode(event, 'nearest', { intersect: true }, true);
+                    
+                    if (activePoints.length > 0) {
+                        const firstPoint = activePoints[0];
+                        const label = allocationChart.data.labels[firstPoint.index];
+                        const value = allocationChart.data.datasets[0].data[firstPoint.index];
+                        
+                        document.getElementById('allocation-percentage').textContent = value + '%';
+                        document.querySelector('.donut-label-text').textContent = label;
+                    }
+                });
+            }
+            
+            function updateCharts() {
+                if (performanceChart && allocationChart) {
+                    // Mettre à jour les couleurs en fonction du thème
+                    const isDarkMode = document.body.classList.contains('dark');
+                    const gridColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+                    const textColor = isDarkMode ? 'rgba(255, 255, 255, 0.6)' : 'rgba(0, 0, 0, 0.6)';
+                    
+                    // Performance Chart
+                    performanceChart.options.scales.y.grid.color = gridColor;
+                    performanceChart.options.scales.x.grid.color = gridColor;
+                    performanceChart.options.scales.y.ticks.color = textColor;
+                    performanceChart.options.scales.x.ticks.color = textColor;
+                    
+                    performanceChart.options.plugins.tooltip.backgroundColor = isDarkMode ? 'rgba(1, 22, 39, 0.9)' : 'rgba(255, 255, 255, 0.9)';
+                    performanceChart.options.plugins.tooltip.titleColor = isDarkMode ? '#fff' : '#000';
+                    performanceChart.options.plugins.tooltip.bodyColor = isDarkMode ? '#fff' : '#000';
+                    
+                    // Allocation Chart
+                    allocationChart.data.datasets[0].borderColor = isDarkMode ? 'rgba(1, 22, 39, 0.8)' : 'rgba(255, 255, 255, 0.8)';
+                    allocationChart.options.plugins.legend.labels.color = textColor;
+                    
+                    allocationChart.options.plugins.tooltip.backgroundColor = isDarkMode ? 'rgba(1, 22, 39, 0.9)' : 'rgba(255, 255, 255, 0.9)';
+                    allocationChart.options.plugins.tooltip.titleColor = isDarkMode ? '#fff' : '#000';
+                    allocationChart.options.plugins.tooltip.bodyColor = isDarkMode ? '#fff' : '#000';
+                    
+                    // Mettre à jour les graphiques
+                    performanceChart.update();
+                    allocationChart.update();
+                }
+            }
+            
+            // Initialize charts after DOM is loaded
+            initCharts();
+            
+            // Sync with email alerts
+            document.getElementById('sync-with-email').addEventListener('click', function() {
+                // Changer le bouton pour montrer que la synchronisation est en cours
+                this.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i> Synchronisation...';
+                
+                // Simuler un délai pour la synchronisation
+                setTimeout(() => {
+                    // Collecter les données à synchroniser
+                    const dashboardData = {
+                        totalValue: document.getElementById('total-value').textContent,
+                        profitLoss: document.getElementById('profit-loss').textContent,
+                        annualReturn: document.getElementById('annual-return').textContent,
+                        sharpeRatio: document.getElementById('sharpe-ratio').textContent,
+                        assets: [],
+                        transactions: []
+                    };
+                    
+                    // Collecter les données des actifs
+                    const assetRows = document.querySelectorAll('#assets-table tbody tr');
+                    assetRows.forEach(row => {
+                        const cells = row.querySelectorAll('td');
+                        dashboardData.assets.push({
+                            name: cells[0].textContent,
+                            type: cells[1].textContent,
+                            price: cells[2].textContent,
+                            quantity: cells[3].textContent,
+                            value: cells[4].textContent,
+                            dayChange: cells[5].textContent,
+                            totalPerformance: cells[6].textContent
+                        });
+                    });
+                    
+                    // Collecter les données des transactions
+                    const transactionRows = document.querySelectorAll('#transactions-table tbody tr');
+                    transactionRows.forEach(row => {
+                        const cells = row.querySelectorAll('td');
+                        dashboardData.transactions.push({
+                            date: cells[0].textContent,
+                            type: cells[1].textContent,
+                            asset: cells[2].textContent,
+                            price: cells[3].textContent,
+                            quantity: cells[4].textContent,
+                            amount: cells[5].textContent,
+                            status: cells[6].textContent
+                        });
+                    });
+                    
+                    // Mettre les données dans localStorage pour que email-preview.html puisse y accéder
+                    localStorage.setItem('tradepulse_dashboard_data', JSON.stringify(dashboardData));
+                    localStorage.setItem('tradepulse_dashboard_updated', new Date().toISOString());
+                    
+                    // Ajouter un badge de notification
+                    const notificationBadge = document.querySelector('.notification-badge');
+                    if (notificationBadge) {
+                        notificationBadge.style.display = 'block';
+                    }
+                    
+                    // Restituer le bouton
+                    this.innerHTML = '<i class="fas fa-sync-alt"></i> Synchroniser avec les alertes';
+                    
+                    // Afficher un message de confirmation
+                    showNotification('Données synchronisées avec les alertes email !');
+                }, 1500);
+            });
+            
+            // Notification function
+            function showNotification(message) {
+                // Check if a notification already exists
+                let notification = document.querySelector('.notification-popup');
+                if (!notification) {
+                    notification = document.createElement('div');
+                    notification.className = 'notification-popup';
+                    notification.style.position = 'fixed';
+                    notification.style.bottom = '20px';
+                    notification.style.right = '20px';
+                    notification.style.padding = '15px 25px';
+                    notification.style.backgroundColor = 'rgba(0, 255, 135, 0.1)';
+                    notification.style.borderLeft = '3px solid var(--accent-color)';
+                    notification.style.borderRadius = '4px';
+                    notification.style.color = 'var(--text-color)';
+                    notification.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.2)';
+                    notification.style.zIndex = '1000';
+                    notification.style.opacity = '0';
+                    notification.style.transform = 'translateY(20px)';
+                    notification.style.transition = 'opacity 0.3s, transform 0.3s';
+                    document.body.appendChild(notification);
+                }
+                
+                notification.textContent = message;
+                
+                // Animate the notification
+                setTimeout(() => {
+                    notification.style.opacity = '1';
+                    notification.style.transform = 'translateY(0)';
+                    
+                    // Auto hide after 4 seconds
+                    setTimeout(() => {
+                        notification.style.opacity = '0';
+                        notification.style.transform = 'translateY(20px)';
+                        
+                        // Remove after fade out
+                        setTimeout(() => {
+                            if (notification.parentNode) {
+                                notification.parentNode.removeChild(notification);
+                            }
+                        }, 300);
+                    }, 4000);
+                }, 100);
+            }
+            
+            // Enable export buttons
+            document.getElementById('export-assets').addEventListener('click', function() {
+                exportTableToCSV('assets-table', 'tradepulse_assets.csv');
+            });
+            
+            document.getElementById('export-transactions').addEventListener('click', function() {
+                exportTableToCSV('transactions-table', 'tradepulse_transactions.csv');
+            });
+            
+            function exportTableToCSV(tableId, filename) {
+                const table = document.getElementById(tableId);
+                const rows = table.querySelectorAll('tr');
+                const csvContent = [];
+                
+                // Add header row
+                const headerRow = [];
+                const headers = rows[0].querySelectorAll('th');
+                headers.forEach(header => {
+                    headerRow.push('"' + header.textContent.trim() + '"');
+                });
+                csvContent.push(headerRow.join(','));
+                
+                // Add data rows
+                for (let i = 1; i < rows.length; i++) {
+                    const row = [];
+                    const cells = rows[i].querySelectorAll('td');
+                    cells.forEach(cell => {
+                        // Get text content without HTML
+                        const text = cell.textContent.trim().replace(/"/g, '""');
+                        row.push('"' + text + '"');
+                    });
+                    csvContent.push(row.join(','));
+                }
+                
+                // Create a CSV blob and download
+                const csv = csvContent.join('\n');
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                
+                // Create a download link
+                const url = URL.createObjectURL(blob);
+                link.setAttribute('href', url);
+                link.setAttribute('download', filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                showNotification('Export réussi !');
+            }
+            
+            // Performance period change
+            document.getElementById('performance-period').addEventListener('change', function() {
+                const period = this.value;
+                let newData;
+                
+                // Simulate different data for different time periods
+                switch (period) {
+                    case '1M':
+                        newData = [83200, 82800, 83500, 84000, 83600, 84213];
+                        performanceChart.data.labels = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Aujourdhui'];
+                        break;
+                    case '3M':
+                        newData = [81600, 82300, 83000, 84500, 83800, 83000, 82500, 83200, 83800, 84400, 84000, 84213];
+                        performanceChart.data.labels = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6', 'P7', 'P8', 'P9', 'P10', 'P11', 'Aujourdhui'];
+                        break;
+                    case '6M':
+                        newData = [80800, 81200, 82000, 81600, 82500, 83200, 84000, 83500, 84200, 84800, 84000, 84213];
+                        performanceChart.data.labels = ['Oct', 'Oct', 'Nov', 'Nov', 'Déc', 'Déc', 'Jan', 'Jan', 'Fév', 'Fév', 'Mar', 'Mar'];
+                        break;
+                    case '1A':
+                        newData = [77500, 79200, 80800, 82100, 81600, 83200, 85500, 84800, 86200, 87500, 83800, 84213];
+                        performanceChart.data.labels = ['Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc', 'Jan', 'Fév', 'Mar'];
+                        break;
+                    case 'MAX':
+                        newData = [65000, 67800, 70200, 72500, 75000, 73800, 76500, 78200, 77000, 79500, 81000, 82500, 81200, 83500, 84213];
+                        performanceChart.data.labels = ['2022', '', '', '', '2023', '', '', '', '', '2024', '', '', '', '', '2025'];
+                        break;
+                }
+                
+                // Update the chart data
+                performanceChart.data.datasets[0].data = newData;
+                performanceChart.update();
+            });
+        });
+    </script>
+</body>
+</html>
