@@ -492,13 +492,18 @@ document.addEventListener('DOMContentLoaded', function() {
         let trendClass = 'neutral';
         let trendIcon = '';
         
-        if (positiveIndices >= 3) {
-            trendClass = 'positive';
-            trendIcon = '<i class="fas fa-arrow-up"></i>';
-        } else if (negativeIndices >= 3) {
+        // CORRECTION DE LA LOGIQUE : Si 3 ou plus sont négatifs, tendance négative
+        if (negativeIndices >= 3) {
             trendClass = 'negative';
             trendIcon = '<i class="fas fa-arrow-down"></i>';
-        } else {
+        }
+        // Si 3 ou plus sont positifs, tendance positive
+        else if (positiveIndices >= 3) {
+            trendClass = 'positive';
+            trendIcon = '<i class="fas fa-arrow-up"></i>';
+        } 
+        // Sinon (2 positifs et 2 négatifs), tendance neutre
+        else {
             trendClass = 'neutral';
             trendIcon = '<i class="fas fa-arrows-alt-h"></i>';
         }
@@ -534,7 +539,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!percentStr) return 0;
         
         // Enlever le symbole % et autres caractères non numériques, sauf le - et le .
-        const value = percentStr.replace(/[^0-9\\.\\-]/g, '');
+        const value = percentStr.replace(/[^0-9\\\\.\\\\-]/g, '');
         return parseFloat(value) || 0;
     }
     
