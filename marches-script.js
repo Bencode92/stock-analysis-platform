@@ -349,10 +349,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
             case 'north-america':
                 importantIndices = indices.filter(index => 
-                    (index.index_name || "").includes('DOW') || 
                     (index.index_name || "").includes('S&P 500') || 
-                    (index.index_name || "").includes('NASDAQ') ||
-                    (index.index_name || "").includes('TSX')
+                    (index.index_name || "").includes('DOW JONES INDUSTRIAL') || 
+                    (index.index_name || "").includes('NASDAQ Composite') ||
+                    (index.index_name || "").includes('S&P/TSX 60')
                 );
                 break;
             case 'latin-america':
@@ -365,18 +365,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
             case 'asia':
                 importantIndices = indices.filter(index => 
-                    (index.index_name || "").includes('NIKKEI') || 
-                    (index.index_name || "").includes('HANG SENG') || 
-                    (index.index_name || "").includes('SSE') ||
-                    (index.index_name || "").includes('KOSPI')
+                    (index.index_name || "").includes('NIKKEI 225') || 
+                    (index.index_name || "").includes('HANG SENG HK COMPOSITE') || 
+                    (index.index_name || "").includes('SHANGHAI COMPOSITE') ||
+                    (index.index_name || "").includes('BSE SENSEX')
                 );
                 break;
             case 'other':
                 importantIndices = indices.filter(index => 
-                    (index.index_name || "").includes('ASX') || 
-                    (index.index_name || "").includes('TA 35') || 
-                    (index.index_name || "").includes('QE Index') ||
-                    (index.index_name || "").includes('FTSE/JSE')
+                    (index.index_name || "").includes('NASDAQ South Africa Large Mid Cap') || 
+                    (index.index_name || "").includes('NASDAQ Australia Large Mid Cap') || 
+                    (index.index_name || "").includes('NASDAQ Israel Large Mid Cap') ||
+                    (index.index_name || "").includes('NASDAQ Morocco Large Mid Cap')
                 );
                 break;
         }
