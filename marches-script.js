@@ -294,6 +294,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
             
+            // Calculer et afficher les top performers
+            updateTopPerformers();
+            
             // Masquer le loader et afficher les données
             hideElement('indices-loading');
             hideElement('indices-error');
@@ -428,6 +431,99 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
             summaryContainer.appendChild(div);
+        });
+    }
+    
+    /**
+     * Fonction pour extraire la valeur numérique d'un pourcentage
+     */
+    function extractPercentageValue(percentStr) {
+        if (!percentStr) return 0;
+        
+        // Enlever le symbole % et autres caractères non numériques, sauf le - et le .
+        const value = percentStr.replace(/[^0-9\.\-]/g, '');
+        return parseFloat(value) || 0;
+    }
+    
+    /**
+     * Calcule et affiche les top performers
+     */
+    function updateTopPerformers() {
+        // Collecter tous les indices de toutes les régions
+        const allIndices = [];
+        const regions = ['europe', 'north-america', 'latin-america', 'asia', 'other'];
+        
+        regions.forEach(region => {
+            if (indicesData.indices[region] && indicesData.indices[region].length) {
+                allIndices.push(...indicesData.indices[region]);
+            }
+        });
+        
+        // Si pas assez d'indices, ne rien faire
+        if (allIndices.length < 3) {
+            return;
+        }
+        
+        // Préparer les indices avec des valeurs numériques pour les classements
+        const preparedIndices = allIndices.map(index => {
+            const changePercentValue = extractPercentageValue(index.changePercent);
+            const ytdChangeValue = extractPercentageValue(index.ytdChange);
+            
+            return {
+                ...index,
+                changePercentValue,
+                ytdChangeValue
+            };
+        });
+        
+        // Filtrer les indices sans données numériques valides
+        const filteredIndices = preparedIndices.filter(
+            index => !isNaN(index.changePercentValue) && !isNaN(index.ytdChangeValue)
+        );
+        
+        // Obtenir les tops et flops pour var%
+        const topDaily = [...filteredIndices].sort((a, b) => b.changePercentValue - a.changePercentValue).slice(0, 3);
+        const bottomDaily = [...filteredIndices].sort((a, b) => a.changePercentValue - b.changePercentValue).slice(0, 3);
+        
+        // Obtenir les tops et flops pour YTD
+        const topYTD = [...filteredIndices].sort((a, b) => b.ytdChangeValue - a.ytdChangeValue).slice(0, 3);
+        const bottomYTD = [...filteredIndices].sort((a, b) => a.ytdChangeValue - b.ytdChangeValue).slice(0, 3);
+        
+        // Mettre à jour le HTML
+        updateTopPerformersHTML('daily-top', topDaily, 'changePercent');
+        updateTopPerformersHTML('daily-bottom', bottomDaily, 'changePercent');
+        updateTopPerformersHTML('ytd-top', topYTD, 'ytdChange');
+        updateTopPerformersHTML('ytd-bottom', bottomYTD, 'ytdChange');
+    }
+    
+    /**
+     * Met à jour le HTML pour une section de top performers
+     */
+    function updateTopPerformersHTML(containerId, indices, valueField) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        // Vider le conteneur
+        container.innerHTML = '';
+        
+        // Générer le HTML pour chaque indice
+        indices.forEach((index, i) => {
+            const row = document.createElement('div');
+            row.className = 'flex justify-between items-center py-2 border-b border-gray-700 last:border-0';
+            
+            const valueClass = (index[valueField] || "").includes('-') ? 'negative' : 'positive';
+            
+            row.innerHTML = `
+                <div class="flex-1">
+                    <div class="font-medium">${index.index_name || ""}</div>
+                    <div class="text-xs text-gray-400">${index.country || ""}</div>
+                </div>
+                <div class="text-right ${valueClass} font-bold">
+                    ${index[valueField] || "-"}
+                </div>
+            `;
+            
+            container.appendChild(row);
         });
     }
     
