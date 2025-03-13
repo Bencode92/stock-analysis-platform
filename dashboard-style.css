@@ -1,0 +1,218 @@
+/* Styles améliorés pour une meilleure aération et espacement - inspiré du design Halo UI/UX */
+
+/* Variables de base */
+:root {
+    --background-color: #010e19; /* Bleu nuit plus profond */
+    --card-bg: rgba(12, 30, 50, 0.7);
+    --card-hover-bg: rgba(14, 35, 55, 0.8);
+    --accent-color: #00FF87; /* Vert néon */
+    --text-color: #FFFFFF;
+    --card-spacing: 24px;
+    --card-radius: 16px;
+    --section-spacing: 40px;
+    --card-padding: 24px;
+    --header-spacing: 22px;
+}
+
+/* Styles de base améliorés */
+body {
+    background-color: var(--background-color);
+    letter-spacing: 0.02em;
+    line-height: 1.7;
+}
+
+/* Style des cartes plus espacé */
+.glassmorphism {
+    background-color: var(--card-bg);
+    border-radius: var(--card-radius);
+    margin-bottom: var(--card-spacing);
+    padding: 0;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    transition: all 0.3s ease;
+}
+
+.glassmorphism:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 255, 135, 0.2);
+}
+
+/* En-têtes de cartes mieux définis */
+.card-header, 
+.flex.justify-between.items-center.p-5.border-b.border-neon-green.border-opacity-20.bg-\[\#011e34\].bg-opacity-70 {
+    padding: var(--header-spacing) var(--card-padding);
+    background-color: rgba(10, 35, 60, 0.8);
+    border-radius: var(--card-radius) var(--card-radius) 0 0;
+    border-bottom: 1px solid rgba(0, 255, 135, 0.2);
+}
+
+/* Contenu des cartes */
+.card-content, 
+.p-6, 
+.p-5 {
+    padding: var(--card-padding);
+}
+
+/* Améliorations des titres */
+.section-title,
+.text-neon-green.font-semibold.text-lg {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    margin-bottom: 8px;
+}
+
+/* Rangées plus aérées */
+.market-index-col,
+.performer-row,
+tr,
+.legend-item,
+.grid-cols-3 > div {
+    padding: 16px;
+    margin-bottom: 8px;
+    transition: all 0.2s ease;
+}
+
+/* Hover effects pour les lignes */
+tr:hover,
+.market-index-col:hover,
+.performer-row:hover {
+    background-color: var(--card-hover-bg);
+    transform: translateX(3px);
+}
+
+/* Boutons plus espacés et élégants */
+.btn, 
+.search-button, 
+.portfolio-filter, 
+button[id*="generate"], 
+button[id*="refresh"] {
+    padding: 12px 20px;
+    border-radius: var(--card-radius);
+    letter-spacing: 0.02em;
+    transition: all 0.25s ease;
+    margin: 8px 0;
+}
+
+.btn:hover, 
+.search-button:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2), 0 0 10px rgba(0, 255, 135, 0.3);
+}
+
+/* Espacement entre sections */
+.dashboard-section,
+.mb-10,
+.mb-8 {
+    margin-bottom: var(--section-spacing);
+}
+
+/* Améliorations du layout global */
+.grid {
+    gap: 24px;
+}
+
+/* Tableaux plus aérés */
+table {
+    border-spacing: 0 4px;
+}
+
+th {
+    padding: 16px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.85rem;
+}
+
+td {
+    padding: 16px;
+    font-size: 0.95rem;
+}
+
+/* Grilles d'indices plus aérées */
+.market-overview-grid,
+.others-grid {
+    gap: 1px;
+    border-radius: var(--card-radius);
+    margin-bottom: 16px;
+}
+
+/* Headers des régions plus visibles */
+.market-region-header {
+    padding: 16px 20px;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+/* Meilleure mise en évidence des valeurs chiffrées */
+.market-value,
+.market-ytd,
+.text-2xl.font-bold,
+.trend-up,
+.trend-down {
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.trend-up {
+    background-color: rgba(0, 255, 135, 0.1);
+}
+
+.trend-down {
+    background-color: rgba(255, 75, 75, 0.1);
+}
+
+/* Amélioration de l'espacement pour les cartes des top performers */
+.top-performers-grid {
+    gap: 20px;
+}
+
+.performer-card {
+    border-radius: var(--card-radius);
+}
+
+/* Espace entre widgets */
+#markets-widget > div {
+    margin-bottom: 30px;
+}
+
+/* Charts mieux espacés */
+.donut-chart-container,
+canvas {
+    margin: 16px 0;
+}
+
+/* Add animation effects */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.glassmorphism, .card-header {
+    animation: fadeIn 0.5s ease forwards;
+}
+
+/* Add subtle hover effects to interactive elements */
+.nav-item:hover, 
+.market-index-col:hover, 
+.legend-item:hover {
+    border-left: 3px solid var(--accent-color);
+    padding-left: 20px;
+}
+
+/* Improved status indicators */
+.market-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 10px;
+    box-shadow: 0 0 10px currentColor;
+}
+
+/* Better alignment for values */
+.value, .text-2xl.font-bold {
+    letter-spacing: 0.05em;
+    font-family: 'Orbitron', sans-serif;
+    font-weight: 700;
+}
