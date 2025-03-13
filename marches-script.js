@@ -297,6 +297,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Calculer et afficher les top performers
             updateTopPerformers();
             
+            // Mettre à jour l'aperçu des marchés mondiaux
+            updateMarketOverview();
+            
             // Masquer le loader et afficher les données
             hideElement('indices-loading');
             hideElement('indices-error');
@@ -307,6 +310,114 @@ document.addEventListener('DOMContentLoaded', function() {
             hideElement('indices-loading');
             showElement('indices-error');
         }
+    }
+    
+    /**
+     * Met à jour l'aperçu des marchés mondiaux
+     */
+    function updateMarketOverview() {
+        try {
+            console.log('Mise à jour de l\'aperçu des marchés mondiaux...');
+            
+            // Europe
+            updateMarketOverviewRegion('europe', [
+                { name: 'CAC 40', selector: '.market-index-col[data-index="cac40"]' },
+                { name: 'DAX', selector: '.market-index-col[data-index="dax"]' },
+                { name: 'FTSE 100', selector: '.market-index-col[data-index="ftse100"]' },
+                { name: 'EURO STOXX 50', selector: '.market-index-col[data-index="eurostoxx50"]' }
+            ]);
+            
+            // Amérique du Nord
+            updateMarketOverviewRegion('north-america', [
+                { name: 'S&P 500', selector: '.market-index-col[data-index="sp500"]' },
+                { name: 'DOW JONES', selector: '.market-index-col[data-index="dowjones"]' },
+                { name: 'NASDAQ Composite', selector: '.market-index-col[data-index="nasdaq"]' },
+                { name: 'S&P/TSX 60', selector: '.market-index-col[data-index="sptsx"]' }
+            ]);
+            
+            // Asie
+            updateMarketOverviewRegion('asia', [
+                { name: 'NIKKEI 225', selector: '.market-index-col[data-index="nikkei"]' },
+                { name: 'HANG SENG', selector: '.market-index-col[data-index="hangseng"]' },
+                { name: 'SHANGHAI COMPOSITE', selector: '.market-index-col[data-index="shanghai"]' },
+                { name: 'BSE SENSEX', selector: '.market-index-col[data-index="sensex"]' }
+            ]);
+            
+            // Amérique Latine
+            updateMarketOverviewRegion('latin-america', [
+                { name: 'BOVESPA', selector: '.market-index-col[data-index="bovespa"]' },
+                { name: 'IPC', selector: '.market-index-col[data-index="ipc"]' },
+                { name: 'MERVAL', selector: '.market-index-col[data-index="merval"]' },
+                { name: 'IPSA', selector: '.market-index-col[data-index="ipsa"]' }
+            ]);
+            
+            // Autres régions
+            updateMarketOverviewRegion('other', [
+                { name: 'South Africa', selector: '.market-index-col[data-index="southafrica"]' },
+                { name: 'Australia', selector: '.market-index-col[data-index="australia"]' },
+                { name: 'Israel', selector: '.market-index-col[data-index="israel"]' },
+                { name: 'Morocco', selector: '.market-index-col[data-index="morocco"]' }
+            ]);
+            
+            console.log('Mise à jour de l\'aperçu des marchés terminée');
+        } catch (error) {
+            console.error('❌ Erreur lors de la mise à jour de l\'aperçu des marchés:', error);
+        }
+    }
+    
+    /**
+     * Met à jour une région spécifique de l'aperçu des marchés
+     */
+    function updateMarketOverviewRegion(region, indicesInfo) {
+        indicesInfo.forEach(indexInfo => {
+            try {
+                // Trouver l'élément dans le DOM
+                const container = document.querySelector(indexInfo.selector);
+                if (!container) {
+                    console.warn(`Élément non trouvé pour le sélecteur: ${indexInfo.selector}`);
+                    return;
+                }
+                
+                // Trouver l'indice correspondant dans les données
+                const index = findIndexByName(region, indexInfo.name);
+                if (!index) {
+                    console.warn(`Indice non trouvé: ${indexInfo.name} dans la région ${region}`);
+                    return;
+                }
+                
+                // Mettre à jour les valeurs
+                const nameElement = container.querySelector('.market-index-name');
+                const valueElement = container.querySelector('.market-value');
+                const ytdElement = container.querySelector('.market-ytd');
+                
+                if (nameElement) {
+                    nameElement.textContent = index.index_name;
+                }
+                
+                if (valueElement) {
+                    valueElement.textContent = index.changePercent || '0,00 %';
+                    valueElement.className = 'market-value ' + (index.changePercent && index.changePercent.includes('-') ? 'negative' : 'positive');
+                }
+                
+                if (ytdElement) {
+                    ytdElement.textContent = index.ytdChange || '0,00 %';
+                    ytdElement.className = 'market-ytd ' + (index.ytdChange && index.ytdChange.includes('-') ? 'negative' : 'positive');
+                }
+            } catch (error) {
+                console.error(`Erreur lors de la mise à jour de ${indexInfo.name}:`, error);
+            }
+        });
+    }
+    
+    /**
+     * Trouve un indice par son nom
+     */
+    function findIndexByName(region, name) {
+        if (!indicesData.indices[region]) return null;
+        
+        return indicesData.indices[region].find(index => 
+            index.index_name && index.index_name.includes(name)
+        );
     }
     
     /**
@@ -441,7 +552,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!percentStr) return 0;
         
         // Enlever le symbole % et autres caractères non numériques, sauf le - et le .
-        const value = percentStr.replace(/[^0-9\.\-]/g, '');
+        const value = percentStr.replace(/[^0-9\\.\\-]/g, '');
         return parseFloat(value) || 0;
     }
     
