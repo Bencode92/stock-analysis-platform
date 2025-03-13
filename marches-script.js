@@ -8,7 +8,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let indicesData = {
         indices: {
             europe: [],
-            us: [],
+            "north-america": [],
+            "latin-america": [],
             asia: [],
             other: []
         },
@@ -23,30 +24,59 @@ document.addEventListener('DOMContentLoaded', function() {
     // Mapping des continents pour le tri
     const continentOrder = {
         // Europe
-        "France": 1, "Allemagne": 1, "Royaume-Uni": 1, "Italie": 1, 
-        "Espagne": 1, "Suisse": 1, "Pays-Bas": 1, "Belgique": 1, 
-        "Autriche": 1, "Portugal": 1, "Irlande": 1, "Danemark": 1,
-        "Finlande": 1, "Norvège": 1, "Suède": 1, "Pologne": 1, 
-        "Zone Euro": 1,
+        "France": "europe", 
+        "Allemagne": "europe", 
+        "Royaume-Uni": "europe", 
+        "Italie": "europe", 
+        "Espagne": "europe", 
+        "Suisse": "europe", 
+        "Pays-Bas": "europe", 
+        "Belgique": "europe", 
+        "Autriche": "europe", 
+        "Portugal": "europe", 
+        "Irlande": "europe", 
+        "Danemark": "europe",
+        "Finlande": "europe", 
+        "Norvège": "europe", 
+        "Suède": "europe", 
+        "Pologne": "europe", 
+        "Zone Euro": "europe",
         
         // Amérique du Nord
-        "États-Unis": 2, "Canada": 2, "Mexique": 2,
+        "États-Unis": "north-america", 
+        "Canada": "north-america",
+        
+        // Amérique Latine
+        "Brésil": "latin-america", 
+        "Mexique": "latin-america",
+        "Argentine": "latin-america", 
+        "Chili": "latin-america", 
+        "Colombie": "latin-america", 
+        "Pérou": "latin-america",
         
         // Asie
-        "Japon": 3, "Chine": 3, "Hong Kong": 3, "Taïwan": 3,
-        "Corée du Sud": 3, "Singapour": 3, "Inde": 3, "Indonésie": 3,
-        "Malaisie": 3, "Philippines": 3, "Thaïlande": 3,
+        "Japon": "asia", 
+        "Chine": "asia", 
+        "Hong Kong": "asia", 
+        "Taïwan": "asia",
+        "Corée du Sud": "asia", 
+        "Singapour": "asia", 
+        "Inde": "asia", 
+        "Indonésie": "asia",
+        "Malaisie": "asia", 
+        "Philippines": "asia", 
+        "Thaïlande": "asia",
         
         // Océanie
-        "Australie": 4, "Nouvelle-Zélande": 4,
-        
-        // Amérique du Sud
-        "Brésil": 5, "Argentine": 5, "Mexique": 5, "Chili": 5, 
-        "Colombie": 5, "Pérou": 5,
+        "Australie": "other", 
+        "Nouvelle-Zélande": "other",
         
         // Moyen-Orient et Afrique
-        "Israël": 6, "Émirats Arabes Unis": 6, "Qatar": 6, 
-        "Afrique du Sud": 6, "Maroc": 6
+        "Israël": "other", 
+        "Émirats Arabes Unis": "other", 
+        "Qatar": "other", 
+        "Afrique du Sud": "other", 
+        "Maroc": "other"
     };
     
     // État du scraper
@@ -136,7 +166,33 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Charger les données
-            indicesData = await response.json();
+            const rawData = await response.json();
+            
+            // Réorganiser les données selon les nouvelles régions
+            indicesData = {
+                indices: {
+                    europe: [],
+                    "north-america": [],
+                    "latin-america": [],
+                    asia: [],
+                    other: []
+                },
+                meta: rawData.meta
+            };
+            
+            // Redistribuer les indices en fonction du mapping des continents
+            const allIndices = [
+                ...(rawData.indices.europe || []), 
+                ...(rawData.indices.us || []), 
+                ...(rawData.indices.asia || []), 
+                ...(rawData.indices.other || [])
+            ];
+            
+            allIndices.forEach(index => {
+                const country = index.country || "";
+                const continent = continentOrder[country] || "other";
+                indicesData.indices[continent].push(index);
+            });
             
             // Vérifier la fraîcheur des données
             const dataTimestamp = new Date(indicesData.meta.timestamp);
@@ -190,7 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('last-update-time').textContent = formattedDate;
             
             // Générer le HTML pour chaque région
-            const regions = ['europe', 'us', 'asia', 'other'];
+            const regions = ['europe', 'north-america', 'latin-america', 'asia', 'other'];
             
             regions.forEach(region => {
                 const indices = indicesData.indices[region] || [];
@@ -211,22 +267,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         `;
                         tableBody.appendChild(emptyRow);
                     } else {
-                        // Trier les indices par continent et pays
+                        // Trier les indices par pays puis par nom d'indice
                         const sortedIndices = [...indices].sort((a, b) => {
-                            // D'abord trier par continent
-                            const continentA = continentOrder[a.country] || 9999;
-                            const continentB = continentOrder[b.country] || 9999;
-                            
-                            if (continentA !== continentB) {
-                                return continentA - continentB;
-                            }
-                            
-                            // Ensuite par pays
+                            // D'abord trier par pays
                             if (a.country !== b.country) {
-                                return a.country.localeCompare(b.country);
+                                return (a.country || "").localeCompare(b.country || "");
                             }
                             
-                            // Enfin par nom d'indice
+                            // Ensuite par nom d'indice
                             return (a.index_name || "").localeCompare(b.index_name || "");
                         });
                         
@@ -312,12 +360,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     (index.index_name || "").includes('EURO STOXX 50')
                 );
                 break;
-            case 'us':
+            case 'north-america':
                 importantIndices = indices.filter(index => 
                     (index.index_name || "").includes('DOW') || 
                     (index.index_name || "").includes('S&P 500') || 
                     (index.index_name || "").includes('NASDAQ') ||
-                    (index.index_name || "").includes('RUSSELL')
+                    (index.index_name || "").includes('TSX')
+                );
+                break;
+            case 'latin-america':
+                importantIndices = indices.filter(index => 
+                    (index.index_name || "").includes('BOVESPA') || 
+                    (index.index_name || "").includes('IPC') || 
+                    (index.index_name || "").includes('MERVAL') ||
+                    (index.index_name || "").includes('IPSA')
                 );
                 break;
             case 'asia':
@@ -330,10 +386,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 break;
             case 'other':
                 importantIndices = indices.filter(index => 
-                    (index.index_name || "").includes('BOVESPA') || 
-                    (index.index_name || "").includes('TSX') || 
-                    (index.index_name || "").includes('ASX') ||
-                    (index.index_name || "").includes('RTS')
+                    (index.index_name || "").includes('ASX') || 
+                    (index.index_name || "").includes('TA 35') || 
+                    (index.index_name || "").includes('QE Index') ||
+                    (index.index_name || "").includes('FTSE/JSE')
                 );
                 break;
         }
