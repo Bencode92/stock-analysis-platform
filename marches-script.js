@@ -97,16 +97,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadIndicesData();
     
     // Ajouter les gestionnaires d'événements
-    document.getElementById('refresh-data').addEventListener('click', function() {
-        this.innerHTML = '<i class="fas fa-sync-alt fa-spin mr-2"></i> Chargement...';
-        this.disabled = true;
-        
-        loadIndicesData(true).finally(() => {
-            this.innerHTML = '<i class="fas fa-sync-alt mr-2"></i> Rafraîchir';
-            this.disabled = false;
-        });
-    });
-    
     document.getElementById('retry-button')?.addEventListener('click', function() {
         hideElement('indices-error');
         showElement('indices-loading');
@@ -343,14 +333,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 { name: 'BSE SENSEX', selector: '.market-index-col[data-index="sensex"]' }
             ]);
             
-            // Amérique Latine
-            updateMarketOverviewRegion('latin-america', [
-                { name: 'BOVESPA', selector: '.market-index-col[data-index="bovespa"]' },
-                { name: 'IPC', selector: '.market-index-col[data-index="ipc"]' },
-                { name: 'MERVAL', selector: '.market-index-col[data-index="merval"]' },
-                { name: 'IPSA', selector: '.market-index-col[data-index="ipsa"]' }
-            ]);
-            
             // Autres régions
             updateMarketOverviewRegion('other', [
                 { name: 'South Africa', selector: '.market-index-col[data-index="southafrica"]' },
@@ -462,14 +444,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     (index.index_name || "").includes('S&P/TSX 60')
                 );
                 break;
-            case 'latin-america':
-                importantIndices = indices.filter(index => 
-                    (index.index_name || "").includes('BOVESPA') || 
-                    (index.index_name || "").includes('IPC') || 
-                    (index.index_name || "").includes('MERVAL') ||
-                    (index.index_name || "").includes('IPSA')
-                );
-                break;
             case 'asia':
                 importantIndices = indices.filter(index => 
                     (index.index_name || "").includes('NIKKEI 225') || 
@@ -484,6 +458,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     (index.index_name || "").includes('NASDAQ Australia Large Mid Cap') || 
                     (index.index_name || "").includes('NASDAQ Israel Large Mid Cap') ||
                     (index.index_name || "").includes('NASDAQ Morocco Large Mid Cap')
+                );
+                break;
+            case 'latin-america':
+                importantIndices = indices.filter(index => 
+                    (index.index_name || "").includes('BOVESPA') || 
+                    (index.index_name || "").includes('IPC') || 
+                    (index.index_name || "").includes('MERVAL') ||
+                    (index.index_name || "").includes('IPSA')
                 );
                 break;
         }
