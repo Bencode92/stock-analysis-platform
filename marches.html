@@ -27,18 +27,25 @@
     </script>
     <style>
         :root {
-            --background-color: #011627; /* Bleu nuit */
+            --background-color: #0a1929; /* Bleu nuit plus profond */
             --light-background-color: #f0f5ff;
             --text-color: #FFFFFF;
             --light-text-color: #1a202c;
             --accent-color: #00FF87; /* Vert néon */
-            --accent-glow: 0 0 20px rgba(0, 255, 135, 0.6);
-            --accent-glow-strong: 0 0 30px rgba(0, 255, 135, 0.8), 0 0 50px rgba(0, 255, 135, 0.4);
+            --accent-subtle: rgba(0, 255, 135, 0.15);
+            --accent-medium: rgba(0, 255, 135, 0.3);
+            --accent-strong: rgba(0, 255, 135, 0.6);
+            --card-bg: rgba(10, 30, 50, 0.6);
+            --card-header: rgba(15, 40, 65, 0.8);
+            --card-border: rgba(0, 255, 135, 0.2);
+            --accent-glow: 0 0 15px rgba(0, 255, 135, 0.2);
+            --accent-glow-strong: 0 0 20px rgba(0, 255, 135, 0.3);
             --transition-time: 0.3s;
             --header-height: 70px;
             --sidebar-width: 80px;
-            --card-bg-dark: rgba(1, 30, 52, 0.5);
-            --card-bg-light: rgba(240, 245, 255, 0.8);
+            --negative-color: #ff4757;
+            --neutral-color: #aaaaaa;
+            --separator-color: rgba(255, 255, 255, 0.07);
         }
         
         body {
@@ -47,10 +54,15 @@
             font-family: 'Inter', sans-serif;
             transition: background-color 0.3s ease, color 0.3s ease;
             overflow-x: hidden;
+            letter-spacing: 0.01em;
+            line-height: 1.6;
         }
         
         body.dark {
             background-color: var(--background-color);
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 255, 135, 0.08) 0%, transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(0, 100, 255, 0.05) 0%, transparent 20%);
             color: var(--text-color);
         }
         
@@ -77,8 +89,8 @@
         }
         
         .dark .main-header {
-            background-color: rgba(1, 22, 39, 0.9);
-            border-bottom: 1px solid rgba(0, 255, 135, 0.1);
+            background-color: rgba(10, 25, 41, 0.85);
+            border-bottom: 1px solid var(--card-border);
             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
         }
         
@@ -93,7 +105,7 @@
             align-items: center;
         }
         
-        .logo-containers {
+        .logo-container {
             display: flex;
             align-items: center;
             font-weight: 900;
@@ -108,6 +120,7 @@
         
         .dark .logo-container a {
             color: var(--text-color);
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
         }
         
         .light .logo-container a {
@@ -139,7 +152,7 @@
         }
         
         .dark .main-nav a {
-            color: var(--text-color);
+            color: rgba(255, 255, 255, 0.8);
         }
         
         .light .main-nav a {
@@ -207,7 +220,7 @@
         
         .search-button {
             padding: 10px 20px;
-            border-radius: 6px;
+            border-radius: 8px;
             display: flex;
             align-items: center;
             transition: all 0.3s;
@@ -215,8 +228,8 @@
         }
         
         .dark .search-button {
-            background-color: rgba(0, 255, 135, 0.1);
-            border: 1px solid rgba(0, 255, 135, 0.3);
+            background-color: var(--accent-subtle);
+            border: 1px solid var(--accent-medium);
             color: var(--text-color);
         }
         
@@ -228,10 +241,11 @@
         
         .search-button:hover {
             transform: translateY(-2px);
+            box-shadow: var(--accent-glow);
         }
         
         .dark .search-button:hover {
-            background-color: rgba(0, 255, 135, 0.2);
+            background-color: var(--accent-medium);
         }
         
         .light .search-button:hover {
@@ -259,8 +273,8 @@
         }
         
         .dark .sidebar {
-            background-color: rgba(1, 15, 26, 0.95);
-            border-right: 1px solid rgba(0, 255, 135, 0.1);
+            background-color: rgba(8, 20, 35, 0.95);
+            border-right: 1px solid var(--card-border);
             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
         }
         
@@ -286,13 +300,13 @@
         }
         
         .nav-item {
-            margin-bottom: 20px;
-            width: 40px;
-            height: 40px;
+            margin-bottom: 24px;
+            width: 42px;
+            height: 42px;
             display: flex;
             justify-content: center;
             align-items: center;
-            border-radius: 8px;
+            border-radius: 10px;
             transition: all 0.3s;
             position: relative;
             text-decoration: none;
@@ -319,8 +333,10 @@
         }
         
         .dark .nav-item:hover, .dark .nav-item.active {
-            background-color: rgba(0, 255, 135, 0.1);
+            background-color: var(--accent-subtle);
             color: var(--accent-color);
+            box-shadow: var(--accent-glow);
+            transform: translateY(-2px);
         }
         
         .light .nav-item:hover, .light .nav-item.active {
@@ -372,24 +388,30 @@
         .main-container {
             margin-left: var(--sidebar-width);
             margin-top: var(--header-height);
-            padding: 20px;
+            padding: 24px;
             min-height: calc(100vh - var(--header-height));
             transition: background-color 0.3s ease;
         }
 
         /* Glassmorphism cards */
         .glassmorphism {
-            backdrop-filter: blur(8px);
-            border: 1px solid rgba(0, 255, 135, 0.3);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
             box-shadow: var(--accent-glow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
         
         .dark .glassmorphism {
-            background-color: rgba(1, 22, 39, 0.7);
+            background-color: var(--card-bg);
         }
         
         .light .glassmorphism {
             background-color: rgba(240, 245, 255, 0.8);
+        }
+        
+        .glassmorphism:hover {
+            box-shadow: var(--accent-glow-strong);
         }
 
         /* Data table styles */
@@ -400,17 +422,21 @@
         }
         
         .data-table th {
-            padding: 12px 15px;
+            padding: 14px 16px;
             font-weight: 600;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             text-align: left;
-            border-bottom: 1px solid rgba(0, 255, 135, 0.2);
+            border-bottom: 1px solid var(--card-border);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: rgba(255, 255, 255, 0.8);
+            background-color: var(--card-header);
         }
         
         .data-table td {
-            padding: 12px 15px;
-            font-size: 0.85rem;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 16px;
+            font-size: 0.9rem;
+            border-bottom: 1px solid var(--separator-color);
         }
         
         .data-table tr:last-child td {
@@ -418,20 +444,66 @@
         }
         
         .data-table tr:hover td {
-            background-color: rgba(0, 255, 135, 0.05);
+            background-color: var(--accent-subtle);
         }
 
         /* Positive, negative, and neutral values */
         .positive {
             color: var(--accent-color);
+            font-weight: 600;
         }
         
         .negative {
-            color: #ff4757;
+            color: var(--negative-color);
+            font-weight: 600;
         }
         
         .neutral {
-            color: #aaaaaa;
+            color: var(--neutral-color);
+            font-weight: 600;
+        }
+
+        /* Section titles */
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 3px;
+            background-color: var(--accent-color);
+            margin-right: 10px;
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+
+        /* Cards with consistent headers */
+        .card-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--card-border);
+            background-color: var(--card-header);
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card-header h3 {
+            font-weight: 600;
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .card-body {
+            padding: 16px;
         }
 
         /* Animations */
@@ -460,37 +532,95 @@
         /* Region Tabs */
         .region-tabs {
             display: flex;
-            border-bottom: 1px solid rgba(0, 255, 135, 0.2);
-            margin-bottom: 20px;
+            border-bottom: 1px solid var(--card-border);
+            margin-bottom: 24px;
+            background-color: var(--card-header);
+            border-radius: 8px;
+            overflow: hidden;
         }
         
         .region-tab {
-            padding: 10px 20px;
+            padding: 14px 24px;
             cursor: pointer;
             position: relative;
             font-weight: 500;
             opacity: 0.7;
-            transition: opacity 0.3s ease;
+            transition: all 0.3s ease;
+            letter-spacing: 0.02em;
+        }
+        
+        .region-tab:hover {
+            background-color: var(--accent-subtle);
+            opacity: 0.9;
         }
         
         .region-tab.active {
             opacity: 1;
             color: var(--accent-color);
+            background-color: var(--accent-subtle);
         }
         
         .region-tab::after {
             content: '';
             position: absolute;
-            bottom: -1px;
+            bottom: 0;
             left: 0;
             width: 0;
-            height: 2px;
+            height: 3px;
             background-color: var(--accent-color);
             transition: width 0.3s ease;
+            box-shadow: 0 0 8px var(--accent-color);
         }
         
         .region-tab.active::after {
             width: 100%;
+        }
+        
+        /* Top performers styling */
+        .performer-item {
+            padding: 12px;
+            border-bottom: 1px solid var(--separator-color);
+            transition: background-color 0.2s ease;
+        }
+        
+        .performer-item:last-child {
+            border-bottom: none;
+        }
+        
+        .performer-item:hover {
+            background-color: var(--accent-subtle);
+        }
+        
+        .performer-name {
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        
+        .performer-country {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .performer-value {
+            font-weight: 700;
+            letter-spacing: 0.02em;
+        }
+
+        /* Button styling */
+        .action-button {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            background-color: var(--accent-subtle);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-medium);
+        }
+        
+        .action-button:hover {
+            background-color: var(--accent-medium);
+            transform: translateY(-1px);
         }
 
         /* Responsive */
@@ -509,7 +639,7 @@
                 position: fixed;
                 bottom: 0;
                 top: auto;
-                border-top: 1px solid rgba(0, 255, 135, 0.1);
+                border-top: 1px solid var(--card-border);
                 border-right: none;
             }
             
@@ -536,6 +666,11 @@
             
             .main-nav {
                 display: none;
+            }
+            
+            .region-tabs {
+                overflow-x: auto;
+                white-space: nowrap;
             }
         }
     </style>
@@ -607,217 +742,221 @@
         <div class="p-6">
             <div class="max-w-7xl mx-auto">
                 <!-- Header avec titre et dernière mise à jour -->
-                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10">
                     <div>
-                        <h1 class="text-2xl font-bold mb-1">Indices Boursiers Internationaux</h1>
-                        <p class="text-sm text-gray-400">Dernière mise à jour: <span id="last-update-time">Chargement...</span></p>
+                        <h1 class="text-3xl font-bold mb-2">Indices Boursiers Internationaux</h1>
+                        <p class="text-gray-400">Dernière mise à jour: <span id="last-update-time" class="font-medium">Chargement...</span></p>
                     </div>
                     <div class="mt-4 md:mt-0">
-                        <button id="refresh-data" class="px-4 py-2 rounded-md bg-green-400 bg-opacity-10 text-green-400 border border-green-400 border-opacity-30 flex items-center hover:bg-opacity-20 transition-all">
+                        <button id="refresh-data" class="search-button">
                             <i class="fas fa-sync-alt mr-2"></i> 
                             Rafraîchir
                         </button>
                     </div>
                 </div>
                 
-                <!-- Onglets des régions -->
-                <div class="region-tabs mb-6">
-                    <div class="region-tab active" data-region="europe">Europe</div>
-                    <div class="region-tab" data-region="north-america">Amérique du Nord</div>
-                    <div class="region-tab" data-region="latin-america">Amérique Latine</div>
-                    <div class="region-tab" data-region="asia">Asie</div>
-                    <div class="region-tab" data-region="other">Autres</div>
-                </div>
-                
-                <!-- Conteneur pour le tableau des indices -->
-                <div class="glassmorphism rounded-lg p-4 mb-8">
-                    <div id="indices-loading" class="py-10 flex justify-center">
-                        <div class="loader"></div>
-                    </div>
-                    
-                    <div id="indices-error" class="py-10 text-center hidden">
-                        <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
-                        <p class="text-lg">Impossible de charger les données des indices.</p>
-                        <button id="retry-button" class="mt-4 px-4 py-2 bg-green-400 bg-opacity-10 text-green-400 rounded-md border border-green-400 border-opacity-30 hover:bg-opacity-20 transition-all">
-                            Réessayer
-                        </button>
-                    </div>
-                    
-                    <div id="indices-container" class="hidden">
-                        <div id="europe-indices" class="region-content">
-                            <div class="overflow-x-auto">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>PAYS</th>
-                                            <th>LIBELLÉ</th>
-                                            <th>DERNIER</th>
-                                            <th>VAR. %</th>
-                                            <th>VAR/1JANV</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="europe-indices-body">
-                                        <!-- Les données seront injectées ici -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        
-                        <div id="north-america-indices" class="region-content hidden">
-                            <div class="overflow-x-auto">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>PAYS</th>
-                                            <th>LIBELLÉ</th>
-                                            <th>DERNIER</th>
-                                            <th>VAR. %</th>
-                                            <th>VAR/1JANV</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="north-america-indices-body">
-                                        <!-- Les données seront injectées ici -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        
-                        <div id="latin-america-indices" class="region-content hidden">
-                            <div class="overflow-x-auto">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>PAYS</th>
-                                            <th>LIBELLÉ</th>
-                                            <th>DERNIER</th>
-                                            <th>VAR. %</th>
-                                            <th>VAR/1JANV</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="latin-america-indices-body">
-                                        <!-- Les données seront injectées ici -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        
-                        <div id="asia-indices" class="region-content hidden">
-                            <div class="overflow-x-auto">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>PAYS</th>
-                                            <th>LIBELLÉ</th>
-                                            <th>DERNIER</th>
-                                            <th>VAR. %</th>
-                                            <th>VAR/1JANV</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="asia-indices-body">
-                                        <!-- Les données seront injectées ici -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                        
-                        <div id="other-indices" class="region-content hidden">
-                            <div class="overflow-x-auto">
-                                <table class="data-table">
-                                    <thead>
-                                        <tr>
-                                            <th>PAYS</th>
-                                            <th>LIBELLÉ</th>
-                                            <th>DERNIER</th>
-                                            <th>VAR. %</th>
-                                            <th>VAR/1JANV</th>
-                                            <th>Actions</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="other-indices-body">
-                                        <!-- Les données seront injectées ici -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
                 <!-- Top Performers -->
-                <div class="glassmorphism rounded-lg p-4 mb-8">
-                    <h2 class="text-lg font-semibold mb-4">Top Performers</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="mb-10">
+                    <h2 class="section-title mb-6">Top Performers</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <!-- Top 3 Hausse Quotidienne -->
-                        <div class="glassmorphism rounded-lg p-4 flex flex-col">
-                            <div class="flex justify-between items-center mb-2">
-                                <h3 class="font-medium">Top 3 Hausse (VAR %)</h3>
+                        <div class="glassmorphism rounded-lg overflow-hidden">
+                            <div class="card-header">
+                                <h3>Top 3 Hausse (VAR %)</h3>
                                 <span class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
                             </div>
-                            <div id="daily-top" class="flex flex-col">
+                            <div id="daily-top" class="card-body">
                                 <!-- Contenu ajouté dynamiquement -->
-                                <div class="flex justify-between items-center py-2 border-b border-gray-700">
-                                    <div class="flex-1">
-                                        <div class="font-medium">Chargement...</div>
-                                        <div class="text-xs text-gray-400"></div>
+                                <div class="performer-item flex justify-between items-center">
+                                    <div>
+                                        <div class="performer-name">Chargement...</div>
+                                        <div class="performer-country"></div>
                                     </div>
-                                    <div class="text-right positive font-bold">--</div>
+                                    <div class="performer-value positive">--</div>
                                 </div>
                             </div>
                         </div>
                         
                         <!-- Top 3 Baisse Quotidienne -->
-                        <div class="glassmorphism rounded-lg p-4 flex flex-col">
-                            <div class="flex justify-between items-center mb-2">
-                                <h3 class="font-medium">Top 3 Baisse (VAR %)</h3>
+                        <div class="glassmorphism rounded-lg overflow-hidden">
+                            <div class="card-header">
+                                <h3>Top 3 Baisse (VAR %)</h3>
                                 <span class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
                             </div>
-                            <div id="daily-bottom" class="flex flex-col">
+                            <div id="daily-bottom" class="card-body">
                                 <!-- Contenu ajouté dynamiquement -->
-                                <div class="flex justify-between items-center py-2 border-b border-gray-700">
-                                    <div class="flex-1">
-                                        <div class="font-medium">Chargement...</div>
-                                        <div class="text-xs text-gray-400"></div>
+                                <div class="performer-item flex justify-between items-center">
+                                    <div>
+                                        <div class="performer-name">Chargement...</div>
+                                        <div class="performer-country"></div>
                                     </div>
-                                    <div class="text-right negative font-bold">--</div>
+                                    <div class="performer-value negative">--</div>
                                 </div>
                             </div>
                         </div>
                         
                         <!-- Top 3 Hausse YTD -->
-                        <div class="glassmorphism rounded-lg p-4 flex flex-col">
-                            <div class="flex justify-between items-center mb-2">
-                                <h3 class="font-medium">Top 3 Hausse (YTD)</h3>
+                        <div class="glassmorphism rounded-lg overflow-hidden">
+                            <div class="card-header">
+                                <h3>Top 3 Hausse (YTD)</h3>
                                 <span class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
                             </div>
-                            <div id="ytd-top" class="flex flex-col">
+                            <div id="ytd-top" class="card-body">
                                 <!-- Contenu ajouté dynamiquement -->
-                                <div class="flex justify-between items-center py-2 border-b border-gray-700">
-                                    <div class="flex-1">
-                                        <div class="font-medium">Chargement...</div>
-                                        <div class="text-xs text-gray-400"></div>
+                                <div class="performer-item flex justify-between items-center">
+                                    <div>
+                                        <div class="performer-name">Chargement...</div>
+                                        <div class="performer-country"></div>
                                     </div>
-                                    <div class="text-right positive font-bold">--</div>
+                                    <div class="performer-value positive">--</div>
                                 </div>
                             </div>
                         </div>
                         
                         <!-- Top 3 Baisse YTD -->
-                        <div class="glassmorphism rounded-lg p-4 flex flex-col">
-                            <div class="flex justify-between items-center mb-2">
-                                <h3 class="font-medium">Top 3 Baisse (YTD)</h3>
+                        <div class="glassmorphism rounded-lg overflow-hidden">
+                            <div class="card-header">
+                                <h3>Top 3 Baisse (YTD)</h3>
                                 <span class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
                             </div>
-                            <div id="ytd-bottom" class="flex flex-col">
+                            <div id="ytd-bottom" class="card-body">
                                 <!-- Contenu ajouté dynamiquement -->
-                                <div class="flex justify-between items-center py-2 border-b border-gray-700">
-                                    <div class="flex-1">
-                                        <div class="font-medium">Chargement...</div>
-                                        <div class="text-xs text-gray-400"></div>
+                                <div class="performer-item flex justify-between items-center">
+                                    <div>
+                                        <div class="performer-name">Chargement...</div>
+                                        <div class="performer-country"></div>
                                     </div>
-                                    <div class="text-right negative font-bold">--</div>
+                                    <div class="performer-value negative">--</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Onglets des régions -->
+                <div class="mb-8">
+                    <h2 class="section-title mb-6">Indices par région</h2>
+                    <div class="region-tabs mb-6">
+                        <div class="region-tab active" data-region="europe">Europe</div>
+                        <div class="region-tab" data-region="north-america">Amérique du Nord</div>
+                        <div class="region-tab" data-region="latin-america">Amérique Latine</div>
+                        <div class="region-tab" data-region="asia">Asie</div>
+                        <div class="region-tab" data-region="other">Autres</div>
+                    </div>
+                    
+                    <!-- Conteneur pour le tableau des indices -->
+                    <div class="glassmorphism rounded-lg overflow-hidden">
+                        <div id="indices-loading" class="py-16 flex justify-center">
+                            <div class="loader"></div>
+                        </div>
+                        
+                        <div id="indices-error" class="py-16 text-center hidden">
+                            <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                            <p class="text-lg">Impossible de charger les données des indices.</p>
+                            <button id="retry-button" class="mt-4 search-button inline-flex items-center">
+                                <i class="fas fa-sync-alt mr-2"></i>
+                                Réessayer
+                            </button>
+                        </div>
+                        
+                        <div id="indices-container" class="hidden">
+                            <div id="europe-indices" class="region-content">
+                                <div class="overflow-x-auto">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>PAYS</th>
+                                                <th>LIBELLÉ</th>
+                                                <th>DERNIER</th>
+                                                <th>VAR. %</th>
+                                                <th>VAR/1JANV</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="europe-indices-body">
+                                            <!-- Les données seront injectées ici -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div id="north-america-indices" class="region-content hidden">
+                                <div class="overflow-x-auto">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>PAYS</th>
+                                                <th>LIBELLÉ</th>
+                                                <th>DERNIER</th>
+                                                <th>VAR. %</th>
+                                                <th>VAR/1JANV</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="north-america-indices-body">
+                                            <!-- Les données seront injectées ici -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div id="latin-america-indices" class="region-content hidden">
+                                <div class="overflow-x-auto">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>PAYS</th>
+                                                <th>LIBELLÉ</th>
+                                                <th>DERNIER</th>
+                                                <th>VAR. %</th>
+                                                <th>VAR/1JANV</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="latin-america-indices-body">
+                                            <!-- Les données seront injectées ici -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div id="asia-indices" class="region-content hidden">
+                                <div class="overflow-x-auto">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>PAYS</th>
+                                                <th>LIBELLÉ</th>
+                                                <th>DERNIER</th>
+                                                <th>VAR. %</th>
+                                                <th>VAR/1JANV</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="asia-indices-body">
+                                            <!-- Les données seront injectées ici -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div id="other-indices" class="region-content hidden">
+                                <div class="overflow-x-auto">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>PAYS</th>
+                                                <th>LIBELLÉ</th>
+                                                <th>DERNIER</th>
+                                                <th>VAR. %</th>
+                                                <th>VAR/1JANV</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="other-indices-body">
+                                            <!-- Les données seront injectées ici -->
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -825,104 +964,104 @@
                 </div>
                 
                 <!-- Aperçu des marchés mondiaux (carte) -->
-                <div class="glassmorphism rounded-lg p-4 mb-8">
-                    <h2 class="text-lg font-semibold mb-4">Aperçu des marchés mondiaux</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div class="glassmorphism rounded-lg p-4 flex flex-col">
-                            <div class="flex justify-between items-center mb-2">
-                                <h3 class="font-medium">Europe</h3>
+                <div class="mb-10">
+                    <h2 class="section-title mb-6">Aperçu des marchés mondiaux</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="glassmorphism rounded-lg overflow-hidden">
+                            <div class="card-header">
+                                <h3>Europe</h3>
                                 <span id="europe-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
                             </div>
-                            <div id="europe-indices-summary" class="grid grid-cols-2 gap-2 text-sm">
-                                <div>
-                                    <div class="font-medium">CAC 40</div>
+                            <div id="europe-indices-summary" class="grid grid-cols-2 gap-3 p-4 text-sm">
+                                <div class="p-2">
+                                    <div class="font-medium mb-1">CAC 40</div>
                                     <div class="positive">--</div>
                                 </div>
-                                <div>
-                                    <div class="font-medium">DAX</div>
+                                <div class="p-2">
+                                    <div class="font-medium mb-1">DAX</div>
                                     <div class="positive">--</div>
                                 </div>
-                                <div>
-                                    <div class="font-medium">FTSE 100</div>
+                                <div class="p-2">
+                                    <div class="font-medium mb-1">FTSE 100</div>
                                     <div class="positive">--</div>
                                 </div>
-                                <div>
-                                    <div class="font-medium">EURO STOXX 50</div>
+                                <div class="p-2">
+                                    <div class="font-medium mb-1">EURO STOXX 50</div>
                                     <div class="positive">--</div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="glassmorphism rounded-lg p-4 flex flex-col">
-                            <div class="flex justify-between items-center mb-2">
-                                <h3 class="font-medium">Amérique du Nord</h3>
+                        <div class="glassmorphism rounded-lg overflow-hidden">
+                            <div class="card-header">
+                                <h3>Amérique du Nord</h3>
                                 <span id="north-america-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
                             </div>
-                            <div id="north-america-indices-summary" class="grid grid-cols-2 gap-2 text-sm">
-                                <div>
-                                    <div class="font-medium">S&P 500 INDEX</div>
+                            <div id="north-america-indices-summary" class="grid grid-cols-2 gap-3 p-4 text-sm">
+                                <div class="p-2">
+                                    <div class="font-medium mb-1">S&P 500 INDEX</div>
                                     <div class="positive">--</div>
                                 </div>
-                                <div>
-                                    <div class="font-medium">DOW JONES INDUSTRIAL</div>
+                                <div class="p-2">
+                                    <div class="font-medium mb-1">DOW JONES INDUSTRIAL</div>
                                     <div class="positive">--</div>
                                 </div>
-                                <div>
-                                    <div class="font-medium">NASDAQ Composite</div>
+                                <div class="p-2">
+                                    <div class="font-medium mb-1">NASDAQ Composite</div>
                                     <div class="positive">--</div>
                                 </div>
-                                <div>
-                                    <div class="font-medium">S&P/TSX 60</div>
+                                <div class="p-2">
+                                    <div class="font-medium mb-1">S&P/TSX 60</div>
                                     <div class="positive">--</div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="glassmorphism rounded-lg p-4 flex flex-col">
-                            <div class="flex justify-between items-center mb-2">
-                                <h3 class="font-medium">Asie</h3>
+                        <div class="glassmorphism rounded-lg overflow-hidden">
+                            <div class="card-header">
+                                <h3>Asie</h3>
                                 <span id="asia-trend" class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
                             </div>
-                            <div id="asia-indices-summary" class="grid grid-cols-2 gap-2 text-sm">
-                                <div>
-                                    <div class="font-medium">NIKKEI 225</div>
+                            <div id="asia-indices-summary" class="grid grid-cols-2 gap-3 p-4 text-sm">
+                                <div class="p-2">
+                                    <div class="font-medium mb-1">NIKKEI 225</div>
                                     <div class="negative">--</div>
                                 </div>
-                                <div>
-                                    <div class="font-medium">HANG SENG HK COMPOSITE</div>
+                                <div class="p-2">
+                                    <div class="font-medium mb-1">HANG SENG HK COMPOSITE</div>
                                     <div class="negative">--</div>
                                 </div>
-                                <div>
-                                    <div class="font-medium">SHANGHAI COMPOSITE</div>
+                                <div class="p-2">
+                                    <div class="font-medium mb-1">SHANGHAI COMPOSITE</div>
                                     <div class="negative">--</div>
                                 </div>
-                                <div>
-                                    <div class="font-medium">BSE SENSEX</div>
+                                <div class="p-2">
+                                    <div class="font-medium mb-1">BSE SENSEX</div>
                                     <div class="negative">--</div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="glassmorphism rounded-lg p-4 flex flex-col">
-                            <div class="flex justify-between items-center mb-2">
-                                <h3 class="font-medium">Amérique Latine</h3>
+                        <div class="glassmorphism rounded-lg overflow-hidden">
+                            <div class="card-header">
+                                <h3>Amérique Latine</h3>
                                 <span id="latin-america-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
                             </div>
-                            <div id="latin-america-indices-summary" class="grid grid-cols-2 gap-2 text-sm">
-                                <div>
-                                    <div class="font-medium">BOVESPA</div>
+                            <div id="latin-america-indices-summary" class="grid grid-cols-2 gap-3 p-4 text-sm">
+                                <div class="p-2">
+                                    <div class="font-medium mb-1">BOVESPA</div>
                                     <div class="positive">--</div>
                                 </div>
-                                <div>
-                                    <div class="font-medium">IPC (Mexique)</div>
+                                <div class="p-2">
+                                    <div class="font-medium mb-1">IPC (Mexique)</div>
                                     <div class="positive">--</div>
                                 </div>
-                                <div>
-                                    <div class="font-medium">MERVAL</div>
+                                <div class="p-2">
+                                    <div class="font-medium mb-1">MERVAL</div>
                                     <div class="positive">--</div>
                                 </div>
-                                <div>
-                                    <div class="font-medium">IPSA</div>
+                                <div class="p-2">
+                                    <div class="font-medium mb-1">IPSA</div>
                                     <div class="positive">--</div>
                                 </div>
                             </div>
@@ -930,28 +1069,30 @@
                     </div>
                     
                     <!-- Ajout de la section "Autres" -->
-                    <div class="mt-4">
-                        <div class="glassmorphism rounded-lg p-4 flex flex-col">
-                            <div class="flex justify-between items-center mb-2">
-                                <h3 class="font-medium">Autres</h3>
+                    <div class="mt-6">
+                        <div class="glassmorphism rounded-lg overflow-hidden">
+                            <div class="card-header">
+                                <h3>Autres régions</h3>
                                 <span id="other-trend" class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
                             </div>
-                            <div id="other-indices-summary" class="grid grid-cols-4 gap-2 text-sm">
-                                <div>
-                                    <div class="font-medium">NASDAQ South Africa Large Mid Cap</div>
-                                    <div class="negative">--</div>
-                                </div>
-                                <div>
-                                    <div class="font-medium">NASDAQ Australia Large Mid Cap</div>
-                                    <div class="negative">--</div>
-                                </div>
-                                <div>
-                                    <div class="font-medium">NASDAQ Israel Large Mid Cap</div>
-                                    <div class="negative">--</div>
-                                </div>
-                                <div>
-                                    <div class="font-medium">NASDAQ Morocco Large Mid Cap</div>
-                                    <div class="negative">--</div>
+                            <div class="p-4">
+                                <div id="other-indices-summary" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                    <div class="p-2">
+                                        <div class="font-medium mb-1">NASDAQ South Africa</div>
+                                        <div class="negative">--</div>
+                                    </div>
+                                    <div class="p-2">
+                                        <div class="font-medium mb-1">NASDAQ Australia</div>
+                                        <div class="negative">--</div>
+                                    </div>
+                                    <div class="p-2">
+                                        <div class="font-medium mb-1">NASDAQ Israel</div>
+                                        <div class="negative">--</div>
+                                    </div>
+                                    <div class="p-2">
+                                        <div class="font-medium mb-1">NASDAQ Morocco</div>
+                                        <div class="negative">--</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -959,7 +1100,7 @@
                 </div>
                 
                 <!-- Source et avertissement -->
-                <div class="text-center text-sm text-gray-400 mb-4">
+                <div class="text-center text-sm text-gray-400 mb-6 p-4 glassmorphism rounded-lg bg-opacity-50">
                     <p>Sources: <a href="https://www.boursorama.com/bourse/indices/internationaux" target="_blank" class="text-green-400 hover:underline">Boursorama</a></p>
                     <p class="mt-2">Les données sont actualisées régulièrement mais peuvent accuser un retard par rapport aux marchés en temps réel.</p>
                 </div>
