@@ -34,16 +34,20 @@ CONFIG = {
             "CAC 40", "DAX", "FTSE 100", "EURO STOXX 50", "Euro Stoxx 50", "BEL 20", "IBEX", "FTSE MIB", "AEX", "SMI",
             "Zone Euro", "Belgique", "France", "Allemagne", "Royaume-Uni", "Espagne", "Italie", "Pays-Bas", "Suisse"
         ],
-        "us": [
+        "north-america": [
             "DOW JONES", "Dow Jones", "S&P 500", "NASDAQ", "NASDAQ COMPOSITE", "RUSSELL 2000", 
-            "DJIA", "US", "États-Unis"
+            "DJIA", "US", "États-Unis", "Canada", "TSX", "S&P/TSX"
+        ],
+        "latin-america": [
+            "MERVAL", "BOVESPA", "Brésil", "Argentine", "Chili", "Mexique", "IPC MEXICO", "IPSA", "COLCAP"
         ],
         "asia": [
             "NIKKEI", "NIKKEI 225", "HANG SENG", "SHANGHAI COMPOSITE", "SHENZHEN COMPONENT", 
             "KOSPI", "Taiwan", "TAIEX", "Japon", "Chine", "Hong Kong", "Corée du Sud"
         ],
         "other": [
-            "MSCI WORLD", "MSCI", "MERVAL", "BOVESPA", "Brésil", "Argentine", "Chili", "Mexique", "IPC MEXICO"
+            "MSCI WORLD", "MSCI", "ASX", "Australie", "Nouvelle-Zélande", "Israël", 
+            "Émirats Arabes Unis", "Qatar", "Afrique du Sud", "Maroc"
         ]
     },
     # Structure des régions pour la classification des indices
@@ -51,26 +55,34 @@ CONFIG = {
         "europe": [
             "CAC", "DAX", "FTSE", "IBEX", "MIB", "AEX", "BEL", "SMI", "ATX",
             "OMX", "OMXS", "ISEQ", "PSI", "ATHEX", "OSEBX", "STOXX", "EURO", "EURONEXT",
-            "FRANCE", "ALLEMAGNE", "ROYAUME-UNI", "ESPAGNE", "ITALIE", "PAYS-BAS", "SUISSE", "BELGIQUE"
+            "FRANCE", "ALLEMAGNE", "ROYAUME-UNI", "ESPAGNE", "ITALIE", "PAYS-BAS", "SUISSE", "BELGIQUE",
+            "AUTRICHE", "DANEMARK", "FINLANDE", "IRLANDE", "POLOGNE", "PORTUGAL", "NORVÈGE", "SUÈDE"
         ],
-        "us": [
-            "DOW", "S&P", "NASDAQ", "RUSSELL", "CBOE", "NYSE", "AMEX", "DJIA", "US", "ÉTATS-UNIS"
+        "north-america": [
+            "DOW", "S&P", "NASDAQ", "RUSSELL", "CBOE", "NYSE", "AMEX", "DJIA", "US", "ÉTATS-UNIS",
+            "CANADA", "TSX", "S&P/TSX"
+        ],
+        "latin-america": [
+            "MERVAL", "BOVESPA", "IPC", "IPSA", "COLCAP", "BVLG", "IBC",
+            "BRÉSIL", "ARGENTINE", "CHILI", "MEXIQUE", "COLOMBIE", "PÉROU"
         ],
         "asia": [
             "NIKKEI", "HANG SENG", "SHANGHAI", "SHENZHEN", "KOSPI", "SENSEX",
-            "BSE", "TAIEX", "STRAITS", "JAKARTA", "KLSE", "KOSDAQ", "ASX",
-            "JAPON", "CHINE", "HONG KONG", "CORÉE DU SUD", "TAIWAN"
+            "BSE", "TAIEX", "STRAITS", "JAKARTA", "KLSE", "KOSDAQ",
+            "JAPON", "CHINE", "HONG KONG", "CORÉE DU SUD", "TAIWAN", "INDE", "INDONÉSIE",
+            "MALAISIE", "PHILIPPINES", "THAÏLANDE", "SINGAPOUR"
         ],
         "other": [
-            "MERVAL", "BOVESPA", "IPC", "IPSA", "COLCAP", "BVLG", "IBC", "CASE",
-            "ISE", "TA", "QE", "FTSE/JSE", "MOEX", "MSX30", "MSCI",
-            "BRÉSIL", "ARGENTINE", "CHILI", "MEXIQUE"
+            "ASX", "NZX", "TA", "QE", "FTSE/JSE", "MOEX", "MSX30", "MSCI",
+            "AUSTRALIE", "NOUVELLE-ZÉLANDE", "ISRAËL", "ÉMIRATS ARABES UNIS", "QATAR", 
+            "AFRIQUE DU SUD", "MAROC", "INTERNATIONAL"
         ]
     },
     # Mapping des sélecteurs DOM pour les différentes régions
     "region_selectors": {
         "europe": "#europe-tab",
-        "us": "#etats-unis-tab",
+        "north-america": "#etats-unis-tab",
+        "latin-america": "#autres-tab",
         "asia": "#asie-tab",
         "other": "#autres-tab"
     },
@@ -85,18 +97,40 @@ CONFIG = {
         "pays-bas": "Pays-Bas",
         "suisse": "Suisse",
         "autriche": "Autriche",
+        "danemark": "Danemark",
+        "finlande": "Finlande",
+        "irlande": "Irlande",
+        "pologne": "Pologne",
+        "portugal": "Portugal",
+        "norvège": "Norvège",
+        "suède": "Suède",
         "états-unis": "États-Unis",
         "usa": "États-Unis",
+        "canada": "Canada",
         "japon": "Japon",
         "chine": "Chine",
         "hong kong": "Hong Kong",
         "corée du sud": "Corée du Sud",
         "taiwan": "Taiwan",
+        "inde": "Inde",
+        "indonésie": "Indonésie",
+        "malaisie": "Malaisie",
+        "philippines": "Philippines",
+        "thaïlande": "Thaïlande",
+        "singapour": "Singapour",
         "brésil": "Brésil",
         "argentine": "Argentine",
         "chili": "Chili",
         "mexique": "Mexique",
+        "colombie": "Colombie",
+        "pérou": "Pérou",
         "australie": "Australie",
+        "nouvelle-zélande": "Nouvelle-Zélande",
+        "israël": "Israël",
+        "émirats arabes unis": "Émirats Arabes Unis",
+        "qatar": "Qatar",
+        "afrique du sud": "Afrique du Sud",
+        "maroc": "Maroc",
         "zone euro": "Zone Euro"
     },
     # Indices standards pour chaque pays
@@ -111,6 +145,7 @@ CONFIG = {
         "Suisse": "SMI",
         "Zone Euro": "EURO STOXX 50",
         "États-Unis": "S&P 500",
+        "Canada": "S&P/TSX",
         "Japon": "NIKKEI 225",
         "Chine": "SHANGHAI COMPOSITE",
         "Hong Kong": "HANG SENG",
@@ -118,7 +153,59 @@ CONFIG = {
         "Brésil": "BOVESPA",
         "Argentine": "MERVAL",
         "Chili": "IPSA",
+        "Mexique": "IPC MEXICO",
         "Australie": "ASX 200"
+    },
+    # Mapping des régions pour chaque pays
+    "country_region_mapping": {
+        "France": "europe",
+        "Allemagne": "europe",
+        "Royaume-Uni": "europe",
+        "Espagne": "europe",
+        "Italie": "europe",
+        "Belgique": "europe",
+        "Pays-Bas": "europe",
+        "Suisse": "europe",
+        "Autriche": "europe",
+        "Danemark": "europe",
+        "Finlande": "europe",
+        "Irlande": "europe",
+        "Pologne": "europe",
+        "Portugal": "europe",
+        "Norvège": "europe",
+        "Suède": "europe",
+        "Zone Euro": "europe",
+        
+        "États-Unis": "north-america",
+        "Canada": "north-america",
+        
+        "Brésil": "latin-america",
+        "Argentine": "latin-america",
+        "Chili": "latin-america",
+        "Mexique": "latin-america",
+        "Colombie": "latin-america",
+        "Pérou": "latin-america",
+        
+        "Japon": "asia",
+        "Chine": "asia",
+        "Hong Kong": "asia",
+        "Corée du Sud": "asia",
+        "Taiwan": "asia",
+        "Inde": "asia",
+        "Indonésie": "asia",
+        "Malaisie": "asia",
+        "Philippines": "asia",
+        "Thaïlande": "asia",
+        "Singapour": "asia",
+        
+        "Australie": "other",
+        "Nouvelle-Zélande": "other",
+        "Israël": "other",
+        "Émirats Arabes Unis": "other",
+        "Qatar": "other",
+        "Afrique du Sud": "other",
+        "Maroc": "other",
+        "International": "other"
     }
 }
 
@@ -126,7 +213,8 @@ CONFIG = {
 MARKET_DATA = {
     "indices": {
         "europe": [],
-        "us": [],
+        "north-america": [],
+        "latin-america": [],
         "asia": [],
         "other": []
     },
@@ -219,12 +307,22 @@ def separate_country_and_index(name):
             found_country = "Royaume-Uni"
         elif "NASDAQ" in name or "S&P" in name or "DOW" in name:
             found_country = "États-Unis"
+        elif "TSX" in name or "TORONTO" in name:
+            found_country = "Canada"
         elif "NIKKEI" in name or "TOKYO" in name:
             found_country = "Japon"
         elif "SHANGHAI" in name or "SHENZHEN" in name:
             found_country = "Chine"
         elif "HANG SENG" in name:
             found_country = "Hong Kong"
+        elif "BOVESPA" in name or "BRAZIL" in name:
+            found_country = "Brésil"
+        elif "MERVAL" in name:
+            found_country = "Argentine"
+        elif "IPSA" in name:
+            found_country = "Chili"
+        elif "IPC" in name and "MEXICO" in name:
+            found_country = "Mexique"
         else:
             found_country = "International"
     
@@ -329,6 +427,20 @@ def extract_table_data(table):
     
     return indices
 
+def determine_region(country):
+    """Détermine la région basée sur le pays"""
+    if country in CONFIG["country_region_mapping"]:
+        return CONFIG["country_region_mapping"][country]
+    
+    # Si le pays n'est pas trouvé dans le mapping, chercher par correspondance partielle
+    country_upper = country.upper()
+    for region, keywords in CONFIG["regions"].items():
+        if any(keyword.upper() in country_upper for keyword in keywords):
+            return region
+    
+    # Par défaut, classer comme "other"
+    return "other"
+
 def is_priority_index(index_data, region):
     """Détermine si un indice fait partie des indices prioritaires"""
     # Convertir en majuscules pour la comparaison
@@ -357,7 +469,7 @@ def is_priority_index(index_data, region):
             return False
     
     # Pour les grands indices généraux, les inclure même s'ils ne sont pas explicitement listés
-    general_indices = ["DOW JONES", "S&P", "FTSE", "CAC", "DAX", "NIKKEI", "HANG SENG"]
+    general_indices = ["DOW JONES", "S&P", "FTSE", "CAC", "DAX", "NIKKEI", "HANG SENG", "BOVESPA", "IPC", "MERVAL", "IPSA", "TSX"]
     for idx in general_indices:
         if idx.upper() in index_name_upper and len(index_name_upper) < 30:  # Éviter les sous-indices trop longs
             return True
@@ -367,22 +479,15 @@ def is_priority_index(index_data, region):
 
 def classify_index(index_data):
     """Classe un indice dans la bonne région et ne garde que les indices prioritaires"""
-    country = index_data["country"].upper()
-    index_name = index_data["index_name"].upper()
+    # Déterminer la région en fonction du pays
+    country = index_data["country"]
+    region = determine_region(country)
     
-    # Vérifier chaque région
-    for region, keywords in CONFIG["regions"].items():
-        if (any(keyword.upper() in country for keyword in keywords) or
-            any(keyword.upper() in index_name for keyword in keywords)):
-            # Ne l'ajouter que s'il s'agit d'un indice prioritaire
-            if is_priority_index(index_data, region):
-                MARKET_DATA["indices"][region].append(index_data)
-            return region
+    # Ne l'ajouter que s'il s'agit d'un indice prioritaire
+    if is_priority_index(index_data, region):
+        MARKET_DATA["indices"][region].append(index_data)
     
-    # Par défaut, tenter d'ajouter à "other" si prioritaire
-    if is_priority_index(index_data, "other"):
-        MARKET_DATA["indices"]["other"].append(index_data)
-    return "other"
+    return region
 
 def scrape_tab_data(soup, region):
     """Récupère les données d'un onglet spécifique (Europe, US, Asie, Autres)"""
@@ -481,13 +586,14 @@ def calculate_top_performers():
     for index in ALL_INDICES:
         # S'assurer que l'indice a des données de variation
         if "changePercent" in index and index["changePercent"]:
+            # Déterminer la région
+            country = index["country"]
+            region = determine_region(country)
+            
             # Créer une copie avec la région déterminée
-            for region, indices_list in MARKET_DATA["indices"].items():
-                if any(i["country"] == index["country"] and i["index_name"] == index["index_name"] for i in indices_list):
-                    index_copy = index.copy()
-                    index_copy["region"] = region
-                    indices_with_region.append(index_copy)
-                    break
+            index_copy = index.copy()
+            index_copy["region"] = region
+            indices_with_region.append(index_copy)
     
     # Filtrer les indices avec des valeurs de pourcentage valides
     daily_indices = [idx for idx in indices_with_region if idx.get("changePercent")]
@@ -551,6 +657,10 @@ def scrape_market_data():
         # Vider la liste globale des indices
         ALL_INDICES.clear()
         
+        # Réinitialiser les données d'indice
+        for region in MARKET_DATA["indices"]:
+            MARKET_DATA["indices"][region] = []
+        
         # Récupérer le contenu de la page
         html = get_page_content()
         if not html:
@@ -569,16 +679,29 @@ def scrape_market_data():
         if has_tabs:
             logger.info("Structure avec onglets détectée, traitement par onglet")
             
-            # Traiter chaque onglet
-            for region in CONFIG["regions"].keys():
-                region_indices = scrape_tab_data(soup, region)
+            # Traiter chaque onglet (ancien format)
+            for region_key in CONFIG["region_selectors"].keys():
+                region_indices = scrape_tab_data(soup, region_key)
                 # Pas besoin d'ajouter ici car scrape_tab_data filtre déjà
-                logger.info(f"Indices trouvés pour {region}: {len(region_indices)}")
+                logger.info(f"Indices trouvés pour {region_key}: {len(region_indices)}")
         else:
             logger.info("Structure sans onglets détectée, approche directe")
             if not direct_scrape_approach(html):
                 logger.warning("L'approche directe n'a trouvé aucun indice")
                 return False
+        
+        # Traiter tous les indices non classés
+        for index in ALL_INDICES:
+            # Vérifier s'il est déjà dans une région
+            is_already_added = False
+            for region_indices in MARKET_DATA["indices"].values():
+                if any(i["country"] == index["country"] and i["index_name"] == index["index_name"] for i in region_indices):
+                    is_already_added = True
+                    break
+            
+            # S'il n'est pas déjà ajouté, le classifier dans la bonne région
+            if not is_already_added:
+                classify_index(index)
         
         # Calculer les indices avec les meilleures et pires performances
         calculate_top_performers()
