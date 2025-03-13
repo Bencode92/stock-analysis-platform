@@ -43,6 +43,10 @@ jobs:
         run: python scripts/scrape_markets.py
         continue-on-error: true  # Ne pas faire échouer le workflow si le scraping échoue
         
+      - name: Add missing indices
+        run: python scripts/scrape_markets_stocks.py
+        continue-on-error: true  # Ne pas faire échouer le workflow si l'ajout échoue
+        
       - name: Verify data file exists
         run: |
           if [ ! -f data/markets.json ]; then
