@@ -72,47 +72,58 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateMarketWidget(sp500, nasdaq, cac40) {
         // Identifier et mettre à jour les éléments pour S&P 500
         if (sp500) {
-            updateIndex('S&P 500', sp500.value, sp500.changePercent);
+            updateIndex('S&P 500', sp500);
         }
         
         // Identifier et mettre à jour les éléments pour NASDAQ
         if (nasdaq) {
-            updateIndex('NASDAQ', nasdaq.value, nasdaq.changePercent);
+            updateIndex('NASDAQ', nasdaq);
         }
         
         // Identifier et mettre à jour les éléments pour CAC 40
         if (cac40) {
-            updateIndex('CAC 40', cac40.value, cac40.changePercent);
+            updateIndex('CAC 40', cac40);
         }
     }
     
     // Fonction pour mettre à jour un indice spécifique
-    function updateIndex(name, value, changePercent) {
-        // Obtenir tous les blocs de marché
-        const marketBlocks = document.querySelectorAll('#markets-widget .bg-\\[\\#011E34\\].bg-opacity-70.p-4.rounded-lg');
+    function updateIndex(name, indexData) {
+        if (!indexData) return;
+
+        // Obtenir tous les blocs de marché dans le widget
+        const marketBlocks = document.querySelectorAll('#markets-widget .bg-\\[\\#011E34\\].bg-opacity-70.p-5.rounded-lg');
         
         // Parcourir chaque bloc et trouver celui contenant le nom de l'indice
         for (const block of marketBlocks) {
             const titleElement = block.querySelector('.font-medium');
             if (titleElement && titleElement.textContent === name) {
-                // Mise à jour de la valeur
+                // Mise à jour de la valeur de l'indice
                 const valueElement = block.querySelector('.text-2xl.font-bold');
-                if (valueElement) valueElement.textContent = value;
+                if (valueElement) valueElement.textContent = indexData.value || '';
                 
-                // Mise à jour de la variation
+                // Mise à jour de la variation en pourcentage
                 const variationElement = block.querySelector('.text-sm');
                 if (variationElement) {
+                    const changePercent = indexData.changePercent || '0.00%';
                     const isPositive = !changePercent.includes('-');
+                    
                     variationElement.textContent = changePercent;
                     variationElement.className = isPositive 
-                        ? 'text-sm trend-up px-2 py-0.5 rounded bg-green-900 bg-opacity-20'
-                        : 'text-sm trend-down px-2 py-0.5 rounded bg-red-900 bg-opacity-20';
+                        ? 'text-sm trend-up px-3 py-1 rounded-full bg-green-900 bg-opacity-20'
+                        : 'text-sm trend-down px-3 py-1 rounded-full bg-red-900 bg-opacity-20';
                 }
                 
-                // Supprimer les valeurs d'ouverture, haut, bas
-                const detailsGrid = block.querySelector('.grid');
-                if (detailsGrid) {
-                    detailsGrid.innerHTML = '';
+                // Mise à jour des détails (ouverture, haut, bas)
+                const detailsGrid = block.querySelector('.grid.grid-cols-3.gap-3.text-xs');
+                if (detailsGrid && detailsGrid.children.length >= 3) {
+                    // Mettre à jour les valeurs d'ouverture, haut et bas si présentes
+                    const ouvElement = detailsGrid.children[0].querySelector('.font-medium');
+                    const hautElement = detailsGrid.children[1].querySelector('.font-medium');
+                    const basElement = detailsGrid.children[2].querySelector('.font-medium');
+                    
+                    if (ouvElement) ouvElement.textContent = indexData.opening || '-';
+                    if (hautElement) hautElement.textContent = indexData.high || '-';
+                    if (basElement) basElement.textContent = indexData.low || '-';
                 }
                 
                 break;
