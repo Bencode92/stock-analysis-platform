@@ -143,23 +143,6 @@
             transform: translateY(-2px);
         }
         
-        /* Connecteurs visuels entre sections */
-        .connector {
-            position: absolute;
-            border-top: 2px dashed rgba(0, 255, 135, 0.5);
-            transform-origin: 0 0;
-            z-index: -1;
-        }
-        
-        .connector-arrow {
-            position: absolute;
-            width: 0;
-            height: 0;
-            border-style: solid;
-            border-width: 6px 0 6px 8px;
-            border-color: transparent transparent transparent rgba(0, 255, 135, 0.5);
-        }
-        
         /* Barre de progression pour les crédits API */
         .progress-bar {
             height: 8px;
@@ -525,24 +508,6 @@
             transform: translateX(5px);
         }
         
-        /* Connecteur visuel entre les sections */
-        .connection-line {
-            position: absolute;
-            width: 40px;
-            border-top: 2px dashed rgba(0, 255, 135, 0.3);
-            transform-origin: 0 0;
-            z-index: 0;
-        }
-        
-        .connection-arrow {
-            position: absolute;
-            width: 0;
-            height: 0;
-            border-style: solid;
-            border-width: 5px 0 5px 8px;
-            border-color: transparent transparent transparent rgba(0, 255, 135, 0.5);
-        }
-
         /* Style pour la notification d'email de résumé */
         .email-summary-notification {
             position: fixed;
@@ -818,107 +783,89 @@
             }
         }
 
-        /* Ajouts pour améliorer l'interface */
-        .search-box {
-            position: relative;
-            margin-right: 15px;
-        }
-
-        .search-input {
-            background-color: rgba(1, 30, 52, 0.6);
-            border: 1px solid rgba(0, 255, 135, 0.2);
-            color: white;
-            padding: 8px 35px 8px 12px;
-            border-radius: 8px;
-            width: 200px;
-            font-size: 14px;
-            transition: all 0.3s ease;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2);
-            width: 240px;
-        }
-
-        .search-icon {
-            position: absolute;
-            right: 10px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: rgba(255, 255, 255, 0.5);
-            pointer-events: none;
-        }
-
-        /* Tooltips informatifs */
-        .info-tooltip {
-            position: relative;
-            display: inline-block;
-            margin-left: 5px;
-            cursor: help;
-        }
-
-        .info-tooltip i {
-            color: var(--accent-color);
-            opacity: 0.7;
-            font-size: 0.85em;
-        }
-
-        .info-tooltip .tooltip-content {
-            visibility: hidden;
-            opacity: 0;
-            width: 220px;
-            background-color: rgba(1, 30, 52, 0.95);
-            color: #fff;
-            text-align: left;
-            border-radius: 6px;
-            padding: 10px;
-            position: absolute;
-            z-index: 100;
-            bottom: 125%;
-            left: 50%;
-            transform: translateX(-50%);
-            transition: opacity 0.3s;
+        /* Nouveaux styles pour l'interface réorganisée */
+        .welcome-banner {
+            background-color: rgba(1, 30, 52, 0.7);
+            border-radius: 16px;
             border: 1px solid var(--card-border);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            font-size: 0.85rem;
-            pointer-events: none;
+            padding: 20px;
+            margin-bottom: 20px;
         }
 
-        .info-tooltip:hover .tooltip-content {
-            visibility: visible;
-            opacity: 1;
-        }
-
-        /* Mode zen et bouton correspondant */
-        .zen-mode-btn {
-            background-color: rgba(0, 255, 135, 0.1);
+        .welcome-title {
             color: var(--accent-color);
-            border: 1px solid rgba(0, 255, 135, 0.3);
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
+            font-weight: 600;
             display: flex;
             align-items: center;
-            justify-content: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .welcome-description {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.95rem;
+            margin-bottom: 15px;
+        }
+
+        .understand-btn {
+            background-color: rgba(0, 255, 135, 0.15);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            color: var(--accent-color);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
 
-        .zen-mode-btn:hover {
-            background-color: rgba(0, 255, 135, 0.2);
+        .understand-btn:hover {
+            background-color: rgba(0, 255, 135, 0.25);
             transform: translateY(-2px);
         }
 
-        body.zen-mode .network-background,
-        body.zen-mode .connection-line,
-        body.zen-mode .connection-arrow {
-            opacity: 0.1;
+        .central-date {
+            text-align: center;
+            margin-bottom: 20px;
         }
 
-        /* Valeur centrale pour le donut chart */
-        .donut-center {
+        .tab-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .tab-button {
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            flex-grow: 1;
+            text-align: center;
+        }
+
+        .tab-button.active {
+            background-color: rgba(0, 255, 135, 0.15);
+            color: var(--accent-color);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+        }
+
+        .tab-button:not(.active) {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .tab-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .central-value {
             position: absolute;
             top: 50%;
             left: 50%;
@@ -926,31 +873,65 @@
             text-align: center;
         }
 
-        .donut-center-label {
-            font-size: 0.7rem;
-            color: rgba(255, 255, 255, 0.7);
+        .central-value-label {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.6);
             text-transform: uppercase;
             letter-spacing: 0.05em;
         }
 
-        .donut-center-value {
+        .central-value-amount {
             font-size: 1.2rem;
             font-weight: 700;
             color: var(--accent-color);
         }
 
-        /* Mini-graphique sparklines pour les performances */
-        .sparkline-container {
-            display: inline-block;
-            margin-left: 5px;
-            vertical-align: middle;
-            height: 20px;
-            width: 50px;
+        .top-performers-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
         }
 
-        .sparkline {
-            width: 100%;
-            height: 100%;
+        .performer-card {
+            background-color: rgba(1, 30, 52, 0.4);
+            border-radius: 12px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .performer-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+
+        .performer-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .performer-up {
+            color: #4CAF50;
+        }
+
+        .performer-down {
+            color: #FF5252;
+        }
+
+        .performer-value {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .performer-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
         }
     </style>
 </head>
@@ -998,20 +979,11 @@
             </nav>
         </div>
         <div class="header-right">
-            <!-- Barre de recherche rapide -->
-            <div class="search-box">
-                <input type="text" class="search-input" placeholder="Rechercher un actif..." id="quickSearch">
-                <i class="fas fa-search search-icon"></i>
-            </div>
             <div class="market-status">
                 <div class="market-indicator green"></div>
                 <span>Marché ouvert</span>
                 <span class="market-time" id="marketTime">09:45:22</span>
             </div>
-            <!-- Bouton Mode Zen -->
-            <button class="zen-mode-btn" id="zenModeToggle" aria-label="Activer/désactiver le mode zen" title="Mode zen">
-                <i class="fas fa-compress-alt"></i>
-            </button>
             <a href="recherche.html" class="search-button ripple">
                 <i class="fas fa-search"></i>
                 <span>Ma question</span>
@@ -1022,305 +994,42 @@
     <!-- Conteneur principal -->
     <main class="main-container">
         <div class="dashboard-container">
-            <!-- En-tête avec date futuriste -->
-            <div class="text-center mb-10 relative">
-                <div class="futuristic-date text-4xl" id="currentDate">11.03.2025</div>
-                <div class="time-display text-xl mt-1" id="currentTime">09:45:22</div>
+            <!-- Bannière de bienvenue -->
+            <div class="welcome-banner">
+                <div class="welcome-title">
+                    <i class="fas fa-info-circle"></i>
+                    Bienvenue sur votre tableau de bord TradePulse
+                </div>
+                <div class="welcome-description">
+                    Ce tableau de bord affiche une vue d'ensemble de votre portefeuille, des marchés et des événements importants. Utilisez les filtres "Agressif", "Modéré" et "Stable" pour changer de vue de portefeuille. Les données des marchés sont mises à jour en temps réel.
+                </div>
+                <button class="understand-btn">
+                    <i class="fas fa-check"></i>
+                    J'ai compris
+                </button>
             </div>
 
-            <!-- Structure principale du dashboard: 3 colonnes -->
-            <div class="grid grid-cols-1 lg:grid-cols-[1fr_2fr_1fr] gap-8 relative">
-                
-                <!-- COLONNE GAUCHE: Composants + Actualités -->
-                <div class="flex flex-col gap-8">
-                    <!-- Widget Répartition par classe d'actifs -->
-                    <div class="glassmorphism relative" id="asset-allocation-widget">
-                        <div class="flex justify-between items-center p-5 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
-                            <h3 class="text-neon-green font-semibold text-lg flex items-center">
-                                <i class="fas fa-chart-pie mr-2"></i>
-                                Répartition par classe d'actifs
-                            </h3>
-                            <button class="text-white opacity-70 hover:opacity-100 widget-control" data-widget="asset-allocation" aria-label="Contrôler l'affichage de la répartition des actifs" aria-expanded="true">
-                                <i class="fas fa-ellipsis-v"></i>
-                            </button>
-                        </div>
-                        <div class="p-6">
-                            <!-- Donut chart des classes d'actifs -->
-                            <div class="donut-chart-container" style="height: 180px">
-                                <canvas id="assetAllocationChart"></canvas>
-                                <!-- Valeur centrale -->
-                                <div class="donut-center">
-                                    <div class="donut-center-label">VALEUR TOTALE</div>
-                                    <div class="donut-center-value">32 415€</div>
-                                </div>
-                            </div>
-                            
-                            <!-- Légende avec tooltips informatifs -->
-                            <div class="donut-legend mt-5">
-                                <div class="legend-item">
-                                    <div class="legend-color bg-green-500"></div>
-                                    <span>Actions</span>
-                                    <span class="info-tooltip">
-                                        <i class="fas fa-info-circle"></i>
-                                        <span class="tooltip-content">Actions de sociétés cotées en bourse représentant une part de propriété dans l'entreprise. Généralement plus volatiles mais avec un meilleur potentiel de croissance à long terme.</span>
-                                    </span>
-                                    <span class="legend-value">62%</span>
-                                </div>
-                                <div class="legend-item">
-                                    <div class="legend-color bg-blue-500"></div>
-                                    <span>ETFs</span>
-                                    <span class="info-tooltip">
-                                        <i class="fas fa-info-circle"></i>
-                                        <span class="tooltip-content">Fonds négociés en bourse qui suivent un indice, un secteur ou une classe d'actifs. Offrent une diversification instantanée à moindre coût.</span>
-                                    </span>
-                                    <span class="legend-value">20%</span>
-                                </div>
-                                <div class="legend-item">
-                                    <div class="legend-color bg-yellow-500"></div>
-                                    <span>Crypto</span>
-                                    <span class="info-tooltip">
-                                        <i class="fas fa-info-circle"></i>
-                                        <span class="tooltip-content">Actifs numériques basés sur la technologie blockchain. Très volatils et considérés comme des investissements à haut risque avec un potentiel de rendement élevé.</span>
-                                    </span>
-                                    <span class="legend-value">15%</span>
-                                </div>
-                                <div class="legend-item">
-                                    <div class="legend-color bg-purple-500"></div>
-                                    <span>Obligations</span>
-                                    <span class="info-tooltip">
-                                        <i class="fas fa-info-circle"></i>
-                                        <span class="tooltip-content">Titres de créance émis par des gouvernements ou des entreprises. Généralement moins risqués que les actions, avec des rendements plus stables mais généralement plus faibles.</span>
-                                    </span>
-                                    <span class="legend-value">3%</span>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- Connecteur visuel vers le portefeuille -->
-                        <div class="connection-line hidden lg:block absolute -right-10 top-1/2 w-10"></div>
-                        <div class="connection-arrow hidden lg:block absolute -right-2 top-1/2"></div>
-                    </div>
+            <!-- Date centrale -->
+            <div class="central-date">
+                <div class="futuristic-date text-4xl" id="currentDate">13.03.2025</div>
+                <div class="time-display text-xl mt-1" id="currentTime">16:25:34</div>
+            </div>
 
-                    <!-- Widget Actualités importantes -->
-                    <div class="glassmorphism relative" id="news-widget">
-                        <div class="flex justify-between items-center p-5 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
-                            <h3 class="text-neon-green font-semibold text-lg flex items-center">
-                                <i class="fas fa-newspaper mr-2"></i>
-                                Actualités importantes
-                            </h3>
-                            <button class="text-white opacity-70 hover:opacity-100 widget-control" data-widget="news" aria-label="Contrôler l'affichage des actualités" aria-expanded="true">
-                                <i class="fas fa-ellipsis-v"></i>
-                            </button>
-                        </div>
-                        <div class="p-5">
-                            <div class="space-y-4">
-                                <!-- Actualité 1 -->
-                                <a href="actualites.html#event-fed" class="p-4 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-neon-green hover:translate-x-1 transition-transform news-card block">
-                                    <h4 class="font-medium mb-2">La Fed annonce une réunion exceptionnelle sur les taux</h4>
-                                    <div class="flex justify-between text-xs text-white text-opacity-70">
-                                        <span>Federal Reserve</span>
-                                        <span>Il y a 1h</span>
-                                    </div>
-                                </a>
-                                
-                                <!-- Actualité 2 -->
-                                <a href="actualites.html#event-lvmh" class="p-4 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-neon-green hover:translate-x-1 transition-transform news-card block">
-                                    <h4 class="font-medium mb-2">LVMH dévoile des résultats trimestriels supérieurs aux attentes</h4>
-                                    <div class="flex justify-between text-xs text-white text-opacity-70">
-                                        <span>LVMH</span>
-                                        <span>Il y a 3h</span>
-                                    </div>
-                                </a>
-                                
-                                <!-- Actualité 3 -->
-                                <a href="actualites.html#event-btc" class="p-4 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-neon-green hover:translate-x-1 transition-transform news-card block">
-                                    <h4 class="font-medium mb-2">Bitcoin franchit un nouveau seuil à 75 000$</h4>
-                                    <div class="flex justify-between text-xs text-white text-opacity-70">
-                                        <span>CoinDesk</span>
-                                        <span>Il y a 2j</span>
-                                    </div>
-                                </a>
-                            </div>
-                            
-                            <a href="actualites.html" class="mt-5 text-neon-green text-sm inline-flex items-center hover:underline font-medium">
-                                Voir toutes les actualités <i class="fas fa-arrow-right ml-2"></i>
-                            </a>
-                        </div>
-                        <!-- Connecteur visuel vers les événements -->
-                        <div class="connection-line hidden lg:block absolute -right-10 bottom-10 w-10 transform rotate-45"></div>
-                        <div class="connection-arrow hidden lg:block absolute -right-2 bottom-10 transform rotate-45"></div>
-                    </div>
-                </div>
-                
-                <!-- COLONNE CENTRALE: Portefeuille principal -->
-                <div class="flex flex-col gap-8">
-                    <!-- Widget du portefeuille (sans graphique, avec composants détaillés) -->
-                    <div class="glassmorphism" id="portfolio-widget">
-                        <div class="flex justify-between items-center p-5 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
-                            <h3 class="text-neon-green font-semibold text-lg flex items-center">
-                                <i class="fas fa-wallet mr-2"></i>
-                                Mon portefeuille
-                            </h3>
-                            <div class="flex gap-2">
-                                <button class="px-3 py-1.5 text-sm rounded-md bg-neon-green bg-opacity-10 border border-neon-green border-opacity-30 text-neon-green portfolio-filter active" data-portfolio="aggressive">
-                                    Agressif
-                                </button>
-                                <button class="px-3 py-1.5 text-sm rounded-md bg-transparent border border-white border-opacity-20 text-white text-opacity-70 portfolio-filter" data-portfolio="moderate">
-                                    Modéré
-                                </button>
-                                <button class="px-3 py-1.5 text-sm rounded-md bg-transparent border border-white border-opacity-20 text-white text-opacity-70 portfolio-filter" data-portfolio="stable">
-                                    Stable
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="p-6">
-                            <!-- En-tête avec statut du portefeuille -->
-                            <div class="mb-5 p-3 bg-black bg-opacity-20 rounded-lg flex justify-between items-center">
-                                <div>
-                                    <span class="text-xs text-white text-opacity-60">PERFORMANCE TOTALE</span>
-                                    <div class="text-xl font-bold text-neon-green">+7.2%</div>
-                                </div>
-                                <div class="text-right">
-                                    <span class="text-xs text-white text-opacity-60">DERNIER MOIS</span>
-                                    <div class="text-lg font-bold text-neon-green">+9.8%</div>
-                                </div>
-                            </div>
-                            
-                            <!-- Tableau des composants du portefeuille -->
-                            <div>
-                                <h4 class="font-medium mb-4 text-neon-green text-opacity-90 flex items-center">
-                                    <i class="fas fa-list-ul mr-2"></i>
-                                    Composants du portefeuille
-                                </h4>
-                                <div class="overflow-x-auto">
-                                    <table class="portfolio-table">
-                                        <thead>
-                                            <tr class="text-left text-sm border-b border-white border-opacity-10">
-                                                <th class="pb-3">Actif</th>
-                                                <th class="pb-3">Type</th>
-                                                <th class="pb-3 text-right">Allocation</th>
-                                                <th class="pb-3 text-right">Perf.</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <tr class="border-b border-white border-opacity-5">
-                                                <td class="py-3">NVIDIA Corporation</td>
-                                                <td>
-                                                    <span class="px-2 py-0.5 text-xs rounded bg-green-500 bg-opacity-20 text-green-400">
-                                                        STOCK
-                                                    </span>
-                                                </td>
-                                                <td class="text-right font-medium">30%</td>
-                                                <td class="text-right font-medium trend-up flex items-center justify-end">
-                                                    <i class="fas fa-caret-up mr-1"></i>+5.5%
-                                                    <span class="sparkline-container" data-trend="up">
-                                                        <canvas class="sparkline" data-values="[95,98,97,99,102,101,105]"></canvas>
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                            <tr class="border-b border-white border-opacity-5">
-                                                <td class="py-3">Tesla, Inc.</td>
-                                                <td>
-                                                    <span class="px-2 py-0.5 text-xs rounded bg-green-500 bg-opacity-20 text-green-400">
-                                                        STOCK
-                                                    </span>
-                                                </td>
-                                                <td class="text-right font-medium">20%</td>
-                                                <td class="text-right font-medium trend-up flex items-center justify-end">
-                                                    <i class="fas fa-caret-up mr-1"></i>+3.3%
-                                                    <span class="sparkline-container" data-trend="up">
-                                                        <canvas class="sparkline" data-values="[97,99,98,102,101,103,103]"></canvas>
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                            <tr class="border-b border-white border-opacity-5">
-                                                <td class="py-3">Bitcoin</td>
-                                                <td>
-                                                    <span class="px-2 py-0.5 text-xs rounded bg-yellow-500 bg-opacity-20 text-yellow-400">
-                                                        CRYPTO
-                                                    </span>
-                                                </td>
-                                                <td class="text-right font-medium">15%</td>
-                                                <td class="text-right font-medium trend-up flex items-center justify-end">
-                                                    <i class="fas fa-caret-up mr-1"></i>+18.7%
-                                                    <span class="sparkline-container" data-trend="up">
-                                                        <canvas class="sparkline" data-values="[95,102,107,106,112,118,119]"></canvas>
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                            <tr class="border-b border-white border-opacity-5">
-                                                <td class="py-3">Ethereum</td>
-                                                <td>
-                                                    <span class="px-2 py-0.5 text-xs rounded bg-yellow-500 bg-opacity-20 text-yellow-400">
-                                                        CRYPTO
-                                                    </span>
-                                                </td>
-                                                <td class="text-right font-medium">10%</td>
-                                                <td class="text-right font-medium trend-up flex items-center justify-end">
-                                                    <i class="fas fa-caret-up mr-1"></i>+9.5%
-                                                    <span class="sparkline-container" data-trend="up">
-                                                        <canvas class="sparkline" data-values="[98,99,103,106,105,108,109]"></canvas>
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                            <tr class="border-b border-white border-opacity-5">
-                                                <td class="py-3">ARK Innovation ETF</td>
-                                                <td>
-                                                    <span class="px-2 py-0.5 text-xs rounded bg-blue-500 bg-opacity-20 text-blue-400">
-                                                        ETF
-                                                    </span>
-                                                </td>
-                                                <td class="text-right font-medium">15%</td>
-                                                <td class="text-right font-medium trend-up flex items-center justify-end">
-                                                    <i class="fas fa-caret-up mr-1"></i>+2.2%
-                                                    <span class="sparkline-container" data-trend="up">
-                                                        <canvas class="sparkline" data-values="[99,100,99,101,101,102,102]"></canvas>
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td class="py-3">Palantir Technologies</td>
-                                                <td>
-                                                    <span class="px-2 py-0.5 text-xs rounded bg-green-500 bg-opacity-20 text-green-400">
-                                                        STOCK
-                                                    </span>
-                                                </td>
-                                                <td class="text-right font-medium">10%</td>
-                                                <td class="text-right font-medium trend-up flex items-center justify-end">
-                                                    <i class="fas fa-caret-up mr-1"></i>+3.8%
-                                                    <span class="sparkline-container" data-trend="up">
-                                                        <canvas class="sparkline" data-values="[100,102,101,103,102,104,104]"></canvas>
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            
-                            <div class="flex mt-6 justify-between">
-                                <a href="portefeuille.html" class="btn btn-secondary">
-                                    Voir le portefeuille complet <i class="fas fa-arrow-right ml-1"></i>
-                                </a>
-                                
-                                <a href="email-preview.html" id="generateEmailBtn" class="btn btn-primary">
-                                    <i class="fas fa-envelope"></i> Générer un résumé
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Widget Événements du jour (en bas) -->
-                    <div class="glassmorphism relative" id="events-widget">
-                        <div class="flex justify-between items-center p-5 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
+            <!-- Nouvelle structure à 2 sections principales -->
+            <div class="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-6">
+                <!-- SECTION GAUCHE: Portefeuille et événements -->
+                <div class="flex flex-col gap-6">
+                    <!-- Événements du jour (maintenant en haut) -->
+                    <div class="glassmorphism" id="events-widget">
+                        <div class="flex justify-between items-center p-4 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
                             <h3 class="text-neon-green font-semibold text-lg flex items-center">
                                 <i class="fas fa-calendar-alt mr-2"></i>
-                                Événements du jour
+                                Agenda financier du jour
                             </h3>
-                            <div class="text-sm text-white text-opacity-70" id="events-date">11 Mars 2025</div>
+                            <div class="text-sm text-white text-opacity-70" id="events-date">13 Mars 2025</div>
                         </div>
-                        <div class="p-6">
-                            <div class="flex gap-6 overflow-x-auto pb-3 events-container">
+                        <div class="p-4">
+                            <div class="flex gap-4 overflow-x-auto pb-3 events-container">
                                 <!-- Événement 1 -->
                                 <div class="flex items-center p-4 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-red-500 min-w-[300px] event-card">
                                     <div class="flex flex-col items-center justify-center bg-black bg-opacity-30 w-14 h-14 rounded-lg mr-4">
@@ -1368,113 +1077,383 @@
                             </div>
                             
                             <a href="actualites.html" class="btn btn-secondary mt-4 inline-flex">
-                                Voir le calendrier complet <i class="fas fa-arrow-right"></i>
+                                Voir le calendrier complet <i class="fas fa-arrow-right ml-1"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Détails du portefeuille (avec onglets plus lisibles) -->
+                    <div class="glassmorphism" id="portfolio-widget">
+                        <div class="flex justify-between items-center p-4 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
+                            <h3 class="text-neon-green font-semibold text-lg flex items-center">
+                                <i class="fas fa-wallet mr-2"></i>
+                                Détails du portefeuille
+                            </h3>
+                        </div>
+                        
+                        <!-- Onglets de sélection de portefeuille -->
+                        <div class="p-4 pb-0">
+                            <div class="tab-controls">
+                                <button class="tab-button active portfolio-filter" data-portfolio="aggressive">Agressif</button>
+                                <button class="tab-button portfolio-filter" data-portfolio="moderate">Modéré</button>
+                                <button class="tab-button portfolio-filter" data-portfolio="stable">Stable</button>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4">
+                            <!-- Résumé des performances -->
+                            <div class="flex justify-between mb-4">
+                                <div class="p-3 bg-black bg-opacity-20 rounded-lg flex-1 mr-2">
+                                    <div class="text-xs text-white text-opacity-60">PERFORMANCE TOTALE</div>
+                                    <div class="text-xl font-bold text-neon-green">+7.2%</div>
+                                </div>
+                                <div class="p-3 bg-black bg-opacity-20 rounded-lg flex-1 ml-2">
+                                    <div class="text-xs text-white text-opacity-60">DERNIER MOIS</div>
+                                    <div class="text-xl font-bold text-neon-green">+9.8%</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Tableau des composants du portefeuille -->
+                            <div>
+                                <h4 class="font-medium mb-3 text-white text-opacity-80 flex items-center">
+                                    <i class="fas fa-list-ul mr-2 text-neon-green"></i>
+                                    Composants du portefeuille
+                                </h4>
+                                <div class="overflow-x-auto">
+                                    <table class="portfolio-table">
+                                        <thead>
+                                            <tr class="text-left text-sm border-b border-white border-opacity-10">
+                                                <th class="pb-3">Actif (Nom)</th>
+                                                <th class="pb-3">Type</th>
+                                                <th class="pb-3 text-right">Allocation (%)</th>
+                                                <th class="pb-3 text-right">Perf. (Variation)</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr class="border-b border-white border-opacity-5">
+                                                <td class="py-3">NVIDIA Corporation</td>
+                                                <td>
+                                                    <span class="px-2 py-0.5 text-xs rounded bg-green-500 bg-opacity-20 text-green-400">
+                                                        STOCK
+                                                    </span>
+                                                </td>
+                                                <td class="text-right font-medium">30%</td>
+                                                <td class="text-right font-medium trend-up">
+                                                    <i class="fas fa-caret-up mr-1"></i>+5.5%
+                                                </td>
+                                            </tr>
+                                            <tr class="border-b border-white border-opacity-5">
+                                                <td class="py-3">Tesla, Inc.</td>
+                                                <td>
+                                                    <span class="px-2 py-0.5 text-xs rounded bg-green-500 bg-opacity-20 text-green-400">
+                                                        STOCK
+                                                    </span>
+                                                </td>
+                                                <td class="text-right font-medium">20%</td>
+                                                <td class="text-right font-medium trend-up">
+                                                    <i class="fas fa-caret-up mr-1"></i>+3.3%
+                                                </td>
+                                            </tr>
+                                            <tr class="border-b border-white border-opacity-5">
+                                                <td class="py-3">Bitcoin</td>
+                                                <td>
+                                                    <span class="px-2 py-0.5 text-xs rounded bg-yellow-500 bg-opacity-20 text-yellow-400">
+                                                        CRYPTO
+                                                    </span>
+                                                </td>
+                                                <td class="text-right font-medium">15%</td>
+                                                <td class="text-right font-medium trend-up">
+                                                    <i class="fas fa-caret-up mr-1"></i>+18.7%
+                                                </td>
+                                            </tr>
+                                            <tr class="border-b border-white border-opacity-5">
+                                                <td class="py-3">Ethereum</td>
+                                                <td>
+                                                    <span class="px-2 py-0.5 text-xs rounded bg-yellow-500 bg-opacity-20 text-yellow-400">
+                                                        CRYPTO
+                                                    </span>
+                                                </td>
+                                                <td class="text-right font-medium">10%</td>
+                                                <td class="text-right font-medium trend-up">
+                                                    <i class="fas fa-caret-up mr-1"></i>+9.5%
+                                                </td>
+                                            </tr>
+                                            <tr class="border-b border-white border-opacity-5">
+                                                <td class="py-3">ARK Innovation ETF</td>
+                                                <td>
+                                                    <span class="px-2 py-0.5 text-xs rounded bg-blue-500 bg-opacity-20 text-blue-400">
+                                                        ETF
+                                                    </span>
+                                                </td>
+                                                <td class="text-right font-medium">15%</td>
+                                                <td class="text-right font-medium trend-up">
+                                                    <i class="fas fa-caret-up mr-1"></i>+2.2%
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td class="py-3">Palantir Technologies</td>
+                                                <td>
+                                                    <span class="px-2 py-0.5 text-xs rounded bg-green-500 bg-opacity-20 text-green-400">
+                                                        STOCK
+                                                    </span>
+                                                </td>
+                                                <td class="text-right font-medium">10%</td>
+                                                <td class="text-right font-medium trend-up">
+                                                    <i class="fas fa-caret-up mr-1"></i>+3.8%
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <div class="flex mt-4 justify-between">
+                                <a href="portefeuille.html" class="btn btn-secondary">
+                                    Voir le portefeuille complet <i class="fas fa-arrow-right ml-1"></i>
+                                </a>
+                                
+                                <a href="email-preview.html" id="generateEmailBtn" class="btn btn-primary">
+                                    <i class="fas fa-envelope"></i> Générer un résumé
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Actualités importantes -->
+                    <div class="glassmorphism" id="news-widget">
+                        <div class="flex justify-between items-center p-4 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
+                            <h3 class="text-neon-green font-semibold text-lg flex items-center">
+                                <i class="fas fa-newspaper mr-2"></i>
+                                Dernières actualités
+                            </h3>
+                        </div>
+                        <div class="p-4">
+                            <div class="space-y-3">
+                                <!-- Actualité 1 -->
+                                <a href="actualites.html#event-fed" class="p-3 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-neon-green hover:translate-x-1 transition-transform news-card block">
+                                    <h4 class="font-medium mb-2">La Fed annonce une réunion exceptionnelle sur les taux</h4>
+                                    <div class="flex justify-between text-xs text-white text-opacity-70">
+                                        <span>Federal Reserve</span>
+                                        <span>Il y a 1h</span>
+                                    </div>
+                                </a>
+                                
+                                <!-- Actualité 2 -->
+                                <a href="actualites.html#event-lvmh" class="p-3 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-neon-green hover:translate-x-1 transition-transform news-card block">
+                                    <h4 class="font-medium mb-2">LVMH dévoile des résultats trimestriels supérieurs aux attentes</h4>
+                                    <div class="flex justify-between text-xs text-white text-opacity-70">
+                                        <span>LVMH</span>
+                                        <span>Il y a 3h</span>
+                                    </div>
+                                </a>
+                                
+                                <!-- Actualité 3 -->
+                                <a href="actualites.html#event-btc" class="p-3 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-neon-green hover:translate-x-1 transition-transform news-card block">
+                                    <h4 class="font-medium mb-2">Bitcoin franchit un nouveau seuil à 75 000$</h4>
+                                    <div class="flex justify-between text-xs text-white text-opacity-70">
+                                        <span>CoinDesk</span>
+                                        <span>Il y a 2j</span>
+                                    </div>
+                                </a>
+                            </div>
+                            
+                            <a href="actualites.html" class="btn btn-secondary mt-4 inline-flex">
+                                Voir toutes les actualités <i class="fas fa-arrow-right ml-1"></i>
                             </a>
                         </div>
                     </div>
                 </div>
                 
-                <!-- COLONNE DROITE: Marchés -->
-                <div class="flex flex-col gap-8">                    
-                    <!-- Widget Marchés (plus gros) -->
+                <!-- SECTION DROITE: Composition et marchés -->
+                <div class="flex flex-col gap-6">
+                    <!-- Composition du portefeuille -->
+                    <div class="glassmorphism" id="asset-allocation-widget">
+                        <div class="flex justify-between items-center p-4 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
+                            <h3 class="text-neon-green font-semibold text-lg flex items-center">
+                                <i class="fas fa-chart-pie mr-2"></i>
+                                Composition de votre portefeuille
+                            </h3>
+                        </div>
+                        <div class="p-4">
+                            <h4 class="text-sm text-white text-opacity-70 mb-3">Répartition de vos investissements par type d'actifs</h4>
+                            
+                            <!-- Donut chart des classes d'actifs -->
+                            <div class="donut-chart-container" style="height: 180px; position: relative;">
+                                <canvas id="assetAllocationChart"></canvas>
+                                <!-- Valeur centrale -->
+                                <div class="central-value">
+                                    <div class="central-value-label">VALEUR TOTALE</div>
+                                    <div class="central-value-amount">32 415€</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Légende -->
+                            <div class="donut-legend mt-4">
+                                <div class="legend-item">
+                                    <div class="legend-color bg-green-500"></div>
+                                    <span>Actions</span>
+                                    <span class="legend-value">62%</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color bg-blue-500"></div>
+                                    <span>ETFs</span>
+                                    <span class="legend-value">20%</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color bg-yellow-500"></div>
+                                    <span>Crypto</span>
+                                    <span class="legend-value">15%</span>
+                                </div>
+                                <div class="legend-item">
+                                    <div class="legend-color bg-purple-500"></div>
+                                    <span>Obligations</span>
+                                    <span class="legend-value">3%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Aperçu des marchés -->
                     <div class="glassmorphism" id="markets-widget">
-                        <div class="flex justify-between items-center p-5 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
+                        <div class="flex justify-between items-center p-4 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
                             <h3 class="text-neon-green font-semibold text-lg flex items-center">
                                 <i class="fas fa-globe mr-2"></i>
-                                Marchés
+                                Aperçu des marchés
                             </h3>
-                            <div class="text-sm text-white text-opacity-70 px-3 py-1 bg-[#011E34] bg-opacity-70 rounded-full flex items-center">
+                            <div class="text-xs text-white text-opacity-70 px-3 py-1 bg-[#011E34] bg-opacity-70 rounded-full flex items-center">
                                 <i class="fas fa-sync-alt fa-spin mr-2 text-neon-green"></i>
                                 Temps réel
                             </div>
                         </div>
-                        <div class="p-6 space-y-6">
+                        <div class="p-4">
+                            <h4 class="text-sm text-white text-opacity-70 mb-3">Indices principaux et performances du jour</h4>
+                            
                             <!-- Indice 1: S&P 500 -->
-                            <div class="bg-[#011E34] bg-opacity-70 p-5 rounded-lg">
-                                <div class="flex justify-between mb-2">
+                            <div class="bg-[#011E34] bg-opacity-70 p-3 rounded-lg mb-3">
+                                <div class="flex justify-between mb-1">
                                     <div class="font-medium">S&P 500</div>
-                                    <div class="text-sm trend-up px-3 py-1 rounded-full bg-green-900 bg-opacity-20 flex items-center">
-                                        <i class="fas fa-caret-up mr-1"></i> +0.68%
+                                    <div class="text-sm trend-up px-2 py-0.5 rounded-full bg-green-900 bg-opacity-20 flex items-center">
+                                        <i class="fas fa-caret-up mr-1"></i> 0.00%
                                     </div>
                                 </div>
-                                <div class="text-2xl font-bold mb-3 flex items-end">
-                                    5,187.52
-                                    <span class="ml-2 text-xs text-white text-opacity-50">+34.27 pts</span>
-                                </div>
-                                <div class="grid grid-cols-3 gap-3 text-xs">
+                                <div class="text-2xl font-bold mb-1">5 599,30</div>
+                                <div class="grid grid-cols-3 gap-2 text-xs">
                                     <div class="bg-black bg-opacity-20 p-2 rounded text-center">
                                         <div class="text-white text-opacity-70">Ouv.</div>
-                                        <div class="font-medium">5,153.25</div>
+                                        <div class="font-medium">5 599,30</div>
                                     </div>
                                     <div class="bg-black bg-opacity-20 p-2 rounded text-center">
                                         <div class="text-white text-opacity-70">Haut</div>
-                                        <div class="font-medium">5,198.41</div>
+                                        <div class="font-medium">-4,80%</div>
                                     </div>
                                     <div class="bg-black bg-opacity-20 p-2 rounded text-center">
                                         <div class="text-white text-opacity-70">Bas</div>
-                                        <div class="font-medium">5,145.20</div>
+                                        <div class="font-medium">-</div>
                                     </div>
                                 </div>
                             </div>
                             
-                            <!-- Indice 2: NASDAQ (plus gros) -->
-                            <div class="bg-[#011E34] bg-opacity-70 p-5 rounded-lg">
-                                <div class="flex justify-between mb-2">
+                            <!-- Indice 2: NASDAQ -->
+                            <div class="bg-[#011E34] bg-opacity-70 p-3 rounded-lg mb-3">
+                                <div class="flex justify-between mb-1">
                                     <div class="font-medium">NASDAQ</div>
-                                    <div class="text-sm trend-up px-3 py-1 rounded-full bg-green-900 bg-opacity-20 flex items-center">
-                                        <i class="fas fa-caret-up mr-1"></i> +1.12%
+                                    <div class="text-sm trend-up px-2 py-0.5 rounded-full bg-green-900 bg-opacity-20 flex items-center">
+                                        <i class="fas fa-caret-up mr-1"></i> 0.00%
                                     </div>
                                 </div>
-                                <div class="text-2xl font-bold mb-3 flex items-end">
-                                    16,342.15
-                                    <span class="ml-2 text-xs text-white text-opacity-50">+179.37 pts</span>
-                                </div>
-                                <div class="grid grid-cols-3 gap-3 text-xs">
+                                <div class="text-2xl font-bold mb-1">17 648,45</div>
+                                <div class="grid grid-cols-3 gap-2 text-xs">
                                     <div class="bg-black bg-opacity-20 p-2 rounded text-center">
                                         <div class="text-white text-opacity-70">Ouv.</div>
-                                        <div class="font-medium">16,162.78</div>
+                                        <div class="font-medium">17 648,45</div>
                                     </div>
                                     <div class="bg-black bg-opacity-20 p-2 rounded text-center">
                                         <div class="text-white text-opacity-70">Haut</div>
-                                        <div class="font-medium">16,385.29</div>
+                                        <div class="font-medium">-6,61%</div>
                                     </div>
                                     <div class="bg-black bg-opacity-20 p-2 rounded text-center">
                                         <div class="text-white text-opacity-70">Bas</div>
-                                        <div class="font-medium">16,122.35</div>
+                                        <div class="font-medium">Voir</div>
                                     </div>
                                 </div>
                             </div>
                             
                             <!-- Indice 3: CAC 40 -->
-                            <div class="bg-[#011E34] bg-opacity-70 p-5 rounded-lg">
-                                <div class="flex justify-between mb-2">
+                            <div class="bg-[#011E34] bg-opacity-70 p-3 rounded-lg mb-3">
+                                <div class="flex justify-between mb-1">
                                     <div class="font-medium">CAC 40</div>
-                                    <div class="text-sm trend-down px-3 py-1 rounded-full bg-red-900 bg-opacity-20 flex items-center">
-                                        <i class="fas fa-caret-down mr-1"></i> -0.23%
+                                    <div class="text-sm trend-down px-2 py-0.5 rounded-full bg-red-900 bg-opacity-20 flex items-center">
+                                        <i class="fas fa-caret-down mr-1"></i> -0.25%
                                     </div>
                                 </div>
-                                <div class="text-2xl font-bold mb-3 flex items-end">
-                                    8,052.21
-                                    <span class="ml-2 text-xs text-white text-opacity-50">-18.94 pts</span>
-                                </div>
-                                <div class="grid grid-cols-3 gap-3 text-xs">
-                                    <div class="bg-black bg-opacity-20 p-2 rounded text-center">
-                                        <div class="text-white text-opacity-70">Ouv.</div>
-                                        <div class="font-medium">8,071.15</div>
+                                <div class="text-2xl font-bold mb-1">7 969,10</div>
+                            </div>
+                            
+                            <!-- Aperçu des marchés mondiaux -->
+                            <div class="mt-4">
+                                <h4 class="text-sm text-neon-green mb-2 flex items-center">
+                                    <i class="fas fa-globe-europe mr-2"></i>
+                                    Aperçu des marchés mondiaux
+                                </h4>
+                                <div class="grid grid-cols-2 gap-2 text-sm">
+                                    <div class="p-2 bg-[#011E34] bg-opacity-70 rounded-lg text-center">
+                                        <div>Europe</div>
+                                        <div class="trend-down text-xs"><i class="fas fa-caret-down"></i></div>
                                     </div>
-                                    <div class="bg-black bg-opacity-20 p-2 rounded text-center">
-                                        <div class="text-white text-opacity-70">Haut</div>
-                                        <div class="font-medium">8,085.32</div>
+                                    <div class="p-2 bg-[#011E34] bg-opacity-70 rounded-lg text-center">
+                                        <div>Amérique du Nord</div>
+                                        <div class="trend-up text-xs"><i class="fas fa-caret-up"></i></div>
                                     </div>
-                                    <div class="bg-black bg-opacity-20 p-2 rounded text-center">
-                                        <div class="text-white text-opacity-70">Bas</div>
-                                        <div class="font-medium">8,045.78</div>
+                                    <div class="p-2 bg-[#011E34] bg-opacity-70 rounded-lg text-center">
+                                        <div>Amérique Latine</div>
+                                        <div class="trend-up text-xs"><i class="fas fa-caret-up"></i></div>
+                                    </div>
+                                    <div class="p-2 bg-[#011E34] bg-opacity-70 rounded-lg text-center">
+                                        <div>Asie</div>
+                                        <div class="trend-down text-xs"><i class="fas fa-caret-down"></i></div>
                                     </div>
                                 </div>
                             </div>
                             
-                            <a href="marches.html" class="btn btn-primary w-full justify-center">
-                                Consulter tous les marchés <i class="fas fa-arrow-right ml-2"></i>
+                            <!-- Top Performers -->
+                            <div class="mt-4">
+                                <h4 class="text-sm text-neon-green mb-2 flex items-center justify-between">
+                                    <span><i class="fas fa-trophy mr-2"></i> Top Performers du jour</span>
+                                    <span class="text-xs text-white text-opacity-60">Var %</span>
+                                </h4>
+                                <div class="top-performers-grid">
+                                    <!-- Top Hausses -->
+                                    <div class="performer-card">
+                                        <div class="performer-header">
+                                            <div class="performer-title performer-up">
+                                                <i class="fas fa-caret-up"></i> Top 3 Hausses
+                                            </div>
+                                        </div>
+                                        <div class="performer-value">CBOE VIX INDEX</div>
+                                        <div class="performer-details">
+                                            <span>États-Unis</span>
+                                            <span class="performer-up">+1,40%</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Top Baisses -->
+                                    <div class="performer-card">
+                                        <div class="performer-header">
+                                            <div class="performer-title performer-down">
+                                                <i class="fas fa-caret-down"></i> Top 3 Baisses
+                                            </div>
+                                        </div>
+                                        <div class="performer-value">NASDAQ Taiwan Large</div>
+                                        <div class="performer-details">
+                                            <span>Mid Cap Index</span>
+                                            <span class="performer-down">-1,6%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <a href="marches.html" class="btn btn-primary mt-4 w-full justify-center">
+                                Consulter tous les marchés <i class="fas fa-arrow-right ml-1"></i>
                             </a>
                         </div>
                     </div>
@@ -1485,11 +1464,6 @@
 
     <!-- Notification de résumé email -->
     <div class="email-summary-notification" id="emailNotification">
-        <div class="absolute top-2 right-2">
-            <button class="text-white opacity-50 hover:opacity-100" id="closeNotification" aria-label="Fermer la notification">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
         <div class="flex items-center mb-3">
             <div class="email-notification-icon">
                 <i class="fas fa-envelope"></i>
@@ -1500,7 +1474,7 @@
             </div>
         </div>
         <p class="text-sm text-white text-opacity-80 mb-2">
-            Un résumé de votre portefeuille <span class="text-neon-green font-medium">Agressif</span> a été généré avec les performances et recommandations actuelles.
+            Un résumé de votre portefeuille a été généré. Souhaitez-vous le prévisualiser?
         </p>
         <div class="email-notification-actions">
             <button class="email-notification-secondary" id="dismissNotification">Plus tard</button>
@@ -1585,14 +1559,10 @@
                     // Retirer la classe active de tous les boutons
                     document.querySelectorAll('.portfolio-filter').forEach(btn => {
                         btn.classList.remove('active');
-                        btn.classList.remove('bg-neon-green', 'bg-opacity-10', 'border-neon-green', 'border-opacity-30', 'text-neon-green');
-                        btn.classList.add('bg-transparent', 'border-white', 'border-opacity-20', 'text-white', 'text-opacity-70');
                     });
                     
                     // Ajouter la classe active au bouton cliqué
                     this.classList.add('active');
-                    this.classList.remove('bg-transparent', 'border-white', 'border-opacity-20', 'text-white', 'text-opacity-70');
-                    this.classList.add('bg-neon-green', 'bg-opacity-10', 'border-neon-green', 'border-opacity-30', 'text-neon-green');
                     
                     // Changer les données du portefeuille selon le filtre
                     currentPortfolio = this.getAttribute('data-portfolio');
@@ -1601,23 +1571,21 @@
                 });
             });
             
-            // Contrôles des widgets (minimiser/maximiser)
-            document.querySelectorAll('.widget-control').forEach(button => {
-                button.addEventListener('click', function() {
-                    const widgetId = this.getAttribute('data-widget');
-                    const widgetContent = this.closest('.glassmorphism').querySelector('.p-6, .p-5');
-                    
-                    if (widgetContent.style.display === 'none') {
-                        widgetContent.style.display = 'block';
-                        this.innerHTML = '<i class="fas fa-ellipsis-v"></i>';
-                        this.setAttribute('aria-expanded', 'true');
-                    } else {
-                        widgetContent.style.display = 'none';
-                        this.innerHTML = '<i class="fas fa-ellipsis-h"></i>';
-                        this.setAttribute('aria-expanded', 'false');
-                    }
+            // Bouton "J'ai compris" dans la bannière de bienvenue
+            const understandBtn = document.querySelector('.understand-btn');
+            const welcomeBanner = document.querySelector('.welcome-banner');
+            
+            if (understandBtn && welcomeBanner) {
+                understandBtn.addEventListener('click', function() {
+                    welcomeBanner.style.display = 'none';
+                    localStorage.setItem('tradepulse_welcome_dismissed', 'true');
                 });
-            });
+                
+                // Vérifier si l'utilisateur a déjà fermé la bannière
+                if (localStorage.getItem('tradepulse_welcome_dismissed') === 'true') {
+                    welcomeBanner.style.display = 'none';
+                }
+            }
 
             // Bouton de génération de résumé email
             document.getElementById('generateEmailBtn').addEventListener('click', function(e) {
@@ -1628,56 +1596,14 @@
                 document.getElementById('emailNotification').classList.add('show');
             });
 
-            // Boutons de fermeture des notifications
+            // Bouton de rejet de la notification
             document.getElementById('dismissNotification').addEventListener('click', function() {
-                document.getElementById('emailNotification').classList.remove('show');
-            });
-            
-            document.getElementById('closeNotification').addEventListener('click', function() {
                 document.getElementById('emailNotification').classList.remove('show');
             });
 
             // Bouton de prévisualisation d'email
             document.getElementById('viewEmailPreview').addEventListener('click', function() {
                 window.location.href = 'email-preview.html';
-            });
-            
-            // Mode Zen
-            document.getElementById('zenModeToggle').addEventListener('click', function() {
-                document.body.classList.toggle('zen-mode');
-                
-                if (document.body.classList.contains('zen-mode')) {
-                    this.innerHTML = '<i class="fas fa-expand-alt"></i>';
-                    this.setAttribute('title', 'Mode normal');
-                } else {
-                    this.innerHTML = '<i class="fas fa-compress-alt"></i>';
-                    this.setAttribute('title', 'Mode zen');
-                }
-            });
-            
-            // Barre de recherche rapide
-            document.getElementById('quickSearch').addEventListener('input', function() {
-                const searchTerm = this.value.toLowerCase();
-                
-                // Recherche dans les actifs du portefeuille
-                document.querySelectorAll('#portfolio-widget tbody tr').forEach(row => {
-                    const assetName = row.querySelector('td:first-child').textContent.toLowerCase();
-                    
-                    if (searchTerm === '' || assetName.includes(searchTerm)) {
-                        row.style.display = '';
-                    } else {
-                        row.style.display = 'none';
-                    }
-                });
-                
-                // Mise en évidence des résultats dans les actualités
-                document.querySelectorAll('.news-card h4').forEach(title => {
-                    if (searchTerm !== '' && title.textContent.toLowerCase().includes(searchTerm)) {
-                        title.closest('.news-card').classList.add('border-yellow-400', 'border-opacity-80');
-                    } else {
-                        title.closest('.news-card').classList.remove('border-yellow-400', 'border-opacity-80');
-                    }
-                });
             });
             
             // Fonctions
@@ -1687,13 +1613,8 @@
                 // Effacer le contenu existant
                 networkBackground.innerHTML = '';
                 
-                // Vérifier si l'appareil est mobile
-                const isMobile = window.innerWidth < 768;
-                
                 // Calculer le nombre de nœuds en fonction de la taille de l'écran
-                const numNodes = isMobile 
-                    ? Math.min(Math.floor(window.innerWidth * window.innerHeight / 30000), 30)
-                    : Math.min(Math.floor(window.innerWidth * window.innerHeight / 15000), 80);
+                const numNodes = Math.min(Math.floor(window.innerWidth * window.innerHeight / 15000), 80);
                 
                 // Créer les nœuds
                 const nodes = [];
@@ -1718,10 +1639,7 @@
                 }
                 
                 // Créer des connexions entre certains nœuds
-                const maxConnections = isMobile
-                    ? Math.min(numNodes * 1.2, 30)
-                    : Math.min(numNodes * 1.5, 80);
-                
+                const maxConnections = Math.min(numNodes * 1.5, 80);
                 for (let i = 0; i < maxConnections; i++) {
                     const nodeA = nodes[Math.floor(Math.random() * nodes.length)];
                     const nodeB = nodes[Math.floor(Math.random() * nodes.length)];
@@ -1862,44 +1780,6 @@
                 
                 // Créer le graphique
                 new Chart(ctx, config);
-                
-                // Créer les mini-graphiques sparklines
-                createSparklines();
-            }
-            
-            function createSparklines() {
-                document.querySelectorAll('.sparkline').forEach(canvas => {
-                    const ctx = canvas.getContext('2d');
-                    const values = [95, 98, 97, 100, 102, 104, 105]; // Valeurs fictives ou récupérées de l'attribut data
-                    const trend = canvas.closest('.sparkline-container').getAttribute('data-trend');
-                    
-                    // Définir les dimensions du canvas
-                    const width = canvas.width;
-                    const height = canvas.height;
-                    
-                    // Trouver les valeurs min et max pour l'échelle
-                    const min = Math.min(...values);
-                    const max = Math.max(...values);
-                    const range = max - min;
-                    
-                    // Définir la couleur en fonction de la tendance
-                    ctx.strokeStyle = trend === 'up' ? '#4CAF50' : '#FF5252';
-                    ctx.lineWidth = 1.5;
-                    
-                    // Dessiner la ligne
-                    ctx.beginPath();
-                    values.forEach((value, index) => {
-                        const x = (index / (values.length - 1)) * width;
-                        const y = height - ((value - min) / range) * height;
-                        
-                        if (index === 0) {
-                            ctx.moveTo(x, y);
-                        } else {
-                            ctx.lineTo(x, y);
-                        }
-                    });
-                    ctx.stroke();
-                });
             }
             
             function updatePortfolioData(portfolioType) {
@@ -1926,11 +1806,8 @@
                             </span>
                         </td>
                         <td class="text-right font-medium">${component.allocation}</td>
-                        <td class="text-right font-medium ${trendClass} flex items-center justify-end">
+                        <td class="text-right font-medium ${trendClass}">
                             <i class="fas ${trendIcon} mr-1"></i>${component.performance}
-                            <span class="sparkline-container" data-trend="${isPerfPositive ? 'up' : 'down'}">
-                                <canvas class="sparkline"></canvas>
-                            </span>
                         </td>
                     `;
                     
@@ -1943,21 +1820,18 @@
                 // Mettre à jour la légende
                 updateLegendValues(data.pieData);
                 
-                // Mettre à jour le résumé de performance
-                const performanceHeader = document.querySelector('#portfolio-widget .mb-5');
-                if (performanceHeader) {
-                    performanceHeader.querySelector('.text-xl').textContent = data.performance;
-                    performanceHeader.querySelectorAll('.text-lg')[0].textContent = data.monthlyPerformance;
-                }
+                // Mettre à jour les valeurs de performance
+                const perfTotal = document.querySelector('#portfolio-widget .flex-1:first-child .text-xl');
+                const perfMonth = document.querySelector('#portfolio-widget .flex-1:last-child .text-xl');
+                
+                if (perfTotal) perfTotal.textContent = data.performance;
+                if (perfMonth) perfMonth.textContent = data.monthlyPerformance;
                 
                 // Mettre à jour la valeur centrale du donut
-                const donutValue = document.querySelector('.donut-center-value');
-                if (donutValue) {
-                    donutValue.textContent = data.value;
+                const centralValueElement = document.querySelector('.central-value-amount');
+                if (centralValueElement) {
+                    centralValueElement.textContent = data.value;
                 }
-                
-                // Recréer les mini-graphiques
-                createSparklines();
             }
             
             // Fonction utilitaire pour obtenir la classe CSS en fonction du type d'actif
