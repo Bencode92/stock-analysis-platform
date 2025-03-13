@@ -1084,9 +1084,9 @@
                                     Voir le portefeuille complet <i class="fas fa-arrow-right ml-1"></i>
                                 </a>
                                 
-                                <button id="generateEmailBtn" class="btn btn-primary">
+                                <a href="email-preview.html" id="generateEmailBtn" class="btn btn-primary">
                                     <i class="fas fa-envelope"></i> Générer un résumé
-                                </button>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -1145,7 +1145,7 @@
                                 </div>
                             </div>
                             
-                            <a href="events.html" class="btn btn-secondary mt-4 inline-flex">
+                            <a href="actualites.html" class="btn btn-secondary mt-4 inline-flex">
                                 Voir le calendrier complet <i class="fas fa-arrow-right"></i>
                             </a>
                         </div>
@@ -1376,7 +1376,7 @@
             });
 
             // Bouton de génération de résumé email
-            document.getElementById('generateEmailBtn').addEventListener('click', function() {
+            document.getElementById('generateEmailBtn').addEventListener('click', function(e) {
                 // Sauvegarder les données actuelles du portefeuille
                 savePortfolioData(currentPortfolio);
                 
