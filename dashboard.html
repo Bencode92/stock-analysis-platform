@@ -41,6 +41,10 @@
             --transition-time: 0.3s;
             --header-height: 70px;
             --sidebar-width: 80px;
+            --card-bg: rgba(1, 22, 39, 0.6);
+            --card-border: rgba(0, 255, 135, 0.2);
+            --card-hover-border: rgba(0, 255, 135, 0.4);
+            --card-header-bg: rgba(1, 30, 52, 0.8);
         }
         
         body {
@@ -49,6 +53,8 @@
             min-height: 100vh;
             overflow-x: hidden;
             color: var(--text-color);
+            line-height: 1.6;
+            letter-spacing: 0.015em;
         }
         
         /* Réseau de fond animé */
@@ -100,16 +106,16 @@
             position: absolute;
             top: 50%;
             height: 2px;
-            width: 50px;
+            width: 60px;
             background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
         }
         
         .futuristic-date::before {
-            right: 110%;
+            right: 120%;
         }
         
         .futuristic-date::after {
-            left: 110%;
+            left: 120%;
         }
         
         .time-display {
@@ -120,18 +126,20 @@
         
         /* Effets de glassmorphisme pour les cartes */
         .glassmorphism {
-            background-color: rgba(1, 22, 39, 0.6);
+            background-color: var(--card-bg);
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(0, 255, 135, 0.2);
+            border: 1px solid var(--card-border);
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
             border-radius: 16px;
             transition: all 0.3s ease;
+            overflow: hidden;
         }
         
         .glassmorphism:hover {
-            border-color: rgba(0, 255, 135, 0.4);
+            border-color: var(--card-hover-border);
             box-shadow: 0 8px 32px rgba(0, 255, 135, 0.15);
+            transform: translateY(-2px);
         }
         
         /* Connecteurs visuels entre sections */
@@ -154,14 +162,14 @@
         /* Barre de progression pour les crédits API */
         .progress-bar {
             height: 8px;
-            border-radius: 4px;
+            border-radius: 8px;
             overflow: hidden;
             background-color: rgba(255, 255, 255, 0.1);
         }
         
         .progress-value {
             height: 100%;
-            border-radius: 4px;
+            border-radius: 8px;
             background: linear-gradient(90deg, #00FF87, #00FFFF);
             box-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
             transition: width 1.5s ease;
@@ -207,16 +215,16 @@
             flex-direction: column;
             align-items: center;
             flex-grow: 1;
+            gap: 22px;
         }
         
         .nav-item {
-            margin-bottom: 20px;
-            width: 40px;
-            height: 40px;
+            width: 48px;
+            height: 48px;
             display: flex;
             justify-content: center;
             align-items: center;
-            border-radius: 8px;
+            border-radius: 12px;
             transition: all 0.3s;
             color: rgba(255, 255, 255, 0.7);
             text-decoration: none;
@@ -226,10 +234,11 @@
         .nav-item:hover, .nav-item.active {
             background-color: rgba(0, 255, 135, 0.1);
             color: var(--accent-color);
+            transform: translateY(-2px);
         }
         
         .nav-item i {
-            font-size: 1.2rem;
+            font-size: 1.3rem;
         }
 
         /* Notification badge for alerts */
@@ -288,10 +297,10 @@
         .main-nav {
             display: flex;
             margin-left: 40px;
+            gap: 30px;
         }
         
         .main-nav a {
-            margin-right: 30px;
             padding: 8px 5px;
             font-weight: 500;
             position: relative;
@@ -323,12 +332,12 @@
         .header-right {
             display: flex;
             align-items: center;
+            gap: 20px;
         }
         
         .market-status {
             display: flex;
             align-items: center;
-            margin-right: 30px;
             font-size: 0.875rem;
         }
         
@@ -351,9 +360,9 @@
         }
         
         .search-button {
-            padding: 10px 20px;
+            padding: 12px 22px;
             background-color: rgba(0, 255, 135, 0.1);
-            border-radius: 6px;
+            border-radius: 12px;
             display: flex;
             align-items: center;
             transition: all 0.3s;
@@ -386,6 +395,42 @@
             margin: 0 auto;
         }
         
+        /* Styles améliorés pour les cards */
+        .card-header {
+            background-color: var(--card-header-bg);
+            padding: 16px;
+            border-bottom: 1px solid var(--card-border);
+        }
+        
+        .card-content {
+            padding: 20px;
+        }
+        
+        /* Styles pour les sections */
+        .dashboard-section {
+            margin-bottom: 2rem;
+        }
+        
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 3px;
+            background-color: var(--accent-color);
+            margin-right: 10px;
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+        
         /* Donut chart pour la répartition d'actifs */
         .donut-chart-container {
             position: relative;
@@ -405,19 +450,23 @@
         .legend-item {
             display: flex;
             align-items: center;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            padding: 6px 10px;
+            border-radius: 8px;
+            background-color: rgba(0, 0, 0, 0.15);
         }
         
         .legend-color {
-            width: 12px;
-            height: 12px;
-            border-radius: 3px;
-            margin-right: 8px;
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            margin-right: 12px;
         }
         
         .legend-value {
             margin-left: auto;
             font-weight: 600;
+            font-size: 0.95rem;
         }
         
         /* Animations */
@@ -456,6 +505,8 @@
         .event-card {
             position: relative;
             transition: all 0.3s ease;
+            border-radius: 12px;
+            overflow: hidden;
         }
         
         .event-card:hover {
@@ -465,6 +516,8 @@
         .news-card {
             position: relative;
             transition: all 0.3s ease;
+            border-radius: 12px;
+            overflow: hidden;
         }
         
         .news-card:hover {
@@ -496,8 +549,8 @@
             right: 20px;
             background-color: rgba(1, 22, 39, 0.9);
             border: 1px solid rgba(0, 255, 135, 0.4);
-            border-radius: 10px;
-            padding: 15px;
+            border-radius: 15px;
+            padding: 20px;
             backdrop-filter: blur(10px);
             box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
             z-index: 1000;
@@ -513,25 +566,28 @@
         .email-notification-icon {
             background-color: rgba(0, 255, 135, 0.15);
             border-radius: 50%;
-            width: 38px;
-            height: 38px;
+            width: 42px;
+            height: 42px;
             display: flex;
             justify-content: center;
             align-items: center;
             color: var(--accent-color);
-            margin-right: 10px;
+            margin-right: 12px;
+            font-size: 1.2rem;
         }
 
         .email-notification-actions {
             display: flex;
             justify-content: space-between;
-            margin-top: 10px;
+            margin-top: 15px;
+            gap: 10px;
         }
 
         .email-notification-actions button {
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 13px;
+            padding: 8px 14px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
             transition: all 0.3s ease;
             cursor: pointer;
         }
@@ -540,20 +596,159 @@
             background-color: var(--accent-color);
             color: var(--background-color);
             border: none;
+            flex: 1.5;
         }
 
         .email-notification-secondary {
             background-color: transparent;
             color: white;
             border: 1px solid rgba(255, 255, 255, 0.3);
+            flex: 1;
         }
 
         .email-notification-primary:hover {
             background-color: rgba(0, 255, 135, 0.8);
+            transform: translateY(-2px);
         }
 
         .email-notification-secondary:hover {
             background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+        }
+
+        /* Styles pour les tableaux */
+        .data-table {
+            width: 100%;
+            border-spacing: 0;
+            border-collapse: separate;
+        }
+
+        .data-table th {
+            padding: 12px 16px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.8);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .data-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            font-size: 0.95rem;
+        }
+
+        .data-table tbody tr:hover {
+            background-color: rgba(0, 255, 135, 0.05);
+        }
+
+        .data-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Widget-specific styles */
+        #markets-widget .text-2xl.font-bold {
+            font-size: 1.75rem;
+            margin: 10px 0;
+            font-weight: 700;
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 0.05em;
+        }
+
+        /* Stats cards */
+        .stat-card {
+            background-color: rgba(1, 30, 52, 0.4);
+            border-radius: 12px;
+            padding: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            background-color: rgba(1, 30, 52, 0.6);
+            transform: translateY(-2px);
+        }
+
+        .stat-card .title {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 4px;
+        }
+
+        .stat-card .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .stat-card .change {
+            font-size: 0.9rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            margin-top: 4px;
+        }
+
+        /* Portfolio tables */
+        .portfolio-table {
+            width: 100%;
+            border-spacing: 0;
+        }
+
+        .portfolio-table th {
+            padding: 10px 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.7);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .portfolio-table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .portfolio-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .portfolio-table tr:hover {
+            background-color: rgba(0, 255, 135, 0.05);
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 8px 16px;
+            border-radius: 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background-color: rgba(0, 255, 135, 0.15);
+            color: var(--accent-color);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+        }
+
+        .btn-primary:hover {
+            background-color: rgba(0, 255, 135, 0.25);
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background-color: rgba(255, 255, 255, 0.05);
+            color: rgba(255, 255, 255, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
         }
         
         /* Responsive */
@@ -568,7 +763,7 @@
                 bottom: 0;
                 top: auto;
                 width: 100%;
-                height: 60px;
+                height: 70px;
                 flex-direction: row;
                 justify-content: space-around;
                 border-right: none;
@@ -584,10 +779,13 @@
                 justify-content: space-around;
                 width: 100%;
                 margin: 0;
+                gap: 10px;
             }
             
             .nav-item {
                 margin: 0;
+                width: 40px;
+                height: 40px;
             }
             
             .main-header {
@@ -601,7 +799,8 @@
             
             .main-container {
                 margin-left: 0;
-                margin-bottom: 60px;
+                margin-bottom: 70px;
+                padding: 20px 15px;
             }
             
             .futuristic-date {
@@ -610,6 +809,11 @@
             
             .time-display {
                 font-size: 1rem;
+            }
+            
+            .futuristic-date::before, 
+            .futuristic-date::after {
+                width: 40px;
             }
         }
     </style>
@@ -674,32 +878,32 @@
     <main class="main-container">
         <div class="dashboard-container">
             <!-- En-tête avec date futuriste -->
-            <div class="text-center mb-8 relative">
+            <div class="text-center mb-10 relative">
                 <div class="futuristic-date text-4xl" id="currentDate">11.03.2025</div>
                 <div class="time-display text-xl mt-1" id="currentTime">09:45:22</div>
             </div>
 
             <!-- Structure principale du dashboard: 3 colonnes -->
-            <div class="grid grid-cols-1 lg:grid-cols-[1fr_2fr_1fr] gap-6 relative">
+            <div class="grid grid-cols-1 lg:grid-cols-[1fr_2fr_1fr] gap-8 relative">
                 
                 <!-- COLONNE GAUCHE: Composants + Actualités -->
-                <div class="flex flex-col gap-6">
+                <div class="flex flex-col gap-8">
                     <!-- Widget Répartition par classe d'actifs -->
                     <div class="glassmorphism relative" id="asset-allocation-widget">
-                        <div class="flex justify-between items-center p-4 border-b border-neon-green border-opacity-20">
+                        <div class="flex justify-between items-center p-5 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
                             <h3 class="text-neon-green font-semibold text-lg">Répartition par classe d'actifs</h3>
                             <button class="text-white opacity-70 hover:opacity-100 widget-control" data-widget="asset-allocation">
                                 <i class="fas fa-ellipsis-v"></i>
                             </button>
                         </div>
-                        <div class="p-5">
+                        <div class="p-6">
                             <!-- Donut chart des classes d'actifs -->
                             <div class="donut-chart-container" style="height: 180px">
                                 <canvas id="assetAllocationChart"></canvas>
                             </div>
                             
                             <!-- Légende -->
-                            <div class="donut-legend mt-4">
+                            <div class="donut-legend mt-5">
                                 <div class="legend-item">
                                     <div class="legend-color bg-green-500"></div>
                                     <span>Actions</span>
@@ -729,17 +933,17 @@
 
                     <!-- Widget Actualités importantes -->
                     <div class="glassmorphism relative" id="news-widget">
-                        <div class="flex justify-between items-center p-4 border-b border-neon-green border-opacity-20">
+                        <div class="flex justify-between items-center p-5 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
                             <h3 class="text-neon-green font-semibold text-lg">Actualités importantes</h3>
                             <button class="text-white opacity-70 hover:opacity-100 widget-control" data-widget="news">
                                 <i class="fas fa-ellipsis-v"></i>
                             </button>
                         </div>
-                        <div class="p-4">
+                        <div class="p-5">
                             <div class="space-y-4">
                                 <!-- Actualité 1 -->
-                                <a href="actualites.html#event-fed" class="p-3 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-neon-green hover:translate-x-1 transition-transform news-card block">
-                                    <h4 class="font-medium mb-1">La Fed annonce une réunion exceptionnelle sur les taux</h4>
+                                <a href="actualites.html#event-fed" class="p-4 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-neon-green hover:translate-x-1 transition-transform news-card block">
+                                    <h4 class="font-medium mb-2">La Fed annonce une réunion exceptionnelle sur les taux</h4>
                                     <div class="flex justify-between text-xs text-white text-opacity-70">
                                         <span>Federal Reserve</span>
                                         <span>Il y a 1h</span>
@@ -747,8 +951,8 @@
                                 </a>
                                 
                                 <!-- Actualité 2 -->
-                                <a href="actualites.html#event-lvmh" class="p-3 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-neon-green hover:translate-x-1 transition-transform news-card block">
-                                    <h4 class="font-medium mb-1">LVMH dévoile des résultats trimestriels supérieurs aux attentes</h4>
+                                <a href="actualites.html#event-lvmh" class="p-4 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-neon-green hover:translate-x-1 transition-transform news-card block">
+                                    <h4 class="font-medium mb-2">LVMH dévoile des résultats trimestriels supérieurs aux attentes</h4>
                                     <div class="flex justify-between text-xs text-white text-opacity-70">
                                         <span>LVMH</span>
                                         <span>Il y a 3h</span>
@@ -756,8 +960,8 @@
                                 </a>
                                 
                                 <!-- Actualité 3 -->
-                                <a href="actualites.html#event-btc" class="p-3 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-neon-green hover:translate-x-1 transition-transform news-card block">
-                                    <h4 class="font-medium mb-1">Bitcoin franchit un nouveau seuil à 75 000$</h4>
+                                <a href="actualites.html#event-btc" class="p-4 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-neon-green hover:translate-x-1 transition-transform news-card block">
+                                    <h4 class="font-medium mb-2">Bitcoin franchit un nouveau seuil à 75 000$</h4>
                                     <div class="flex justify-between text-xs text-white text-opacity-70">
                                         <span>CoinDesk</span>
                                         <span>Il y a 2j</span>
@@ -765,7 +969,7 @@
                                 </a>
                             </div>
                             
-                            <a href="actualites.html" class="mt-4 text-neon-green text-sm inline-flex items-center hover:underline">
+                            <a href="actualites.html" class="mt-5 text-neon-green text-sm inline-flex items-center hover:underline font-medium">
                                 Voir toutes les actualités <i class="fas fa-arrow-right ml-2"></i>
                             </a>
                         </div>
@@ -776,38 +980,38 @@
                 </div>
                 
                 <!-- COLONNE CENTRALE: Portefeuille principal -->
-                <div class="flex flex-col gap-6">
+                <div class="flex flex-col gap-8">
                     <!-- Widget du portefeuille (sans graphique, avec composants détaillés) -->
                     <div class="glassmorphism" id="portfolio-widget">
-                        <div class="flex justify-between items-center p-4 border-b border-neon-green border-opacity-20">
+                        <div class="flex justify-between items-center p-5 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
                             <h3 class="text-neon-green font-semibold text-lg">Mon portefeuille</h3>
                             <div class="flex gap-2">
-                                <button class="px-3 py-1 text-xs rounded bg-neon-green bg-opacity-10 border border-neon-green border-opacity-30 text-neon-green portfolio-filter active" data-portfolio="aggressive">
+                                <button class="px-3 py-1.5 text-sm rounded-md bg-neon-green bg-opacity-10 border border-neon-green border-opacity-30 text-neon-green portfolio-filter active" data-portfolio="aggressive">
                                     Agressif
                                 </button>
-                                <button class="px-3 py-1 text-xs rounded bg-transparent border border-white border-opacity-20 text-white text-opacity-70 portfolio-filter" data-portfolio="moderate">
+                                <button class="px-3 py-1.5 text-sm rounded-md bg-transparent border border-white border-opacity-20 text-white text-opacity-70 portfolio-filter" data-portfolio="moderate">
                                     Modéré
                                 </button>
-                                <button class="px-3 py-1 text-xs rounded bg-transparent border border-white border-opacity-20 text-white text-opacity-70 portfolio-filter" data-portfolio="stable">
+                                <button class="px-3 py-1.5 text-sm rounded-md bg-transparent border border-white border-opacity-20 text-white text-opacity-70 portfolio-filter" data-portfolio="stable">
                                     Stable
                                 </button>
                             </div>
                         </div>
                         
-                        <div class="p-5">
+                        <div class="p-6">
                             <!-- Valeur totale et performances - Sans graphique -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
-                                <div class="bg-[#011E34] bg-opacity-70 p-4 rounded-lg border border-neon-green border-opacity-10">
-                                    <div class="text-white text-opacity-70 text-sm mb-1">Valeur totale</div>
-                                    <div class="text-2xl font-bold" id="totalPortfolioValue">32,415.25 €</div>
-                                    <div class="text-sm trend-up flex items-center mt-1" id="portfolioPerformance">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-7">
+                                <div class="stat-card border border-neon-green border-opacity-10">
+                                    <div class="title">Valeur totale</div>
+                                    <div class="value" id="totalPortfolioValue">32,415.25 €</div>
+                                    <div class="trend-up change" id="portfolioPerformance">
                                         <i class="fas fa-caret-up mr-1"></i> +7.2% (7j)
                                     </div>
                                 </div>
                                 
-                                <div class="bg-[#011E34] bg-opacity-70 p-4 rounded-lg">
-                                    <div class="text-white text-opacity-70 text-sm mb-1">Performance mensuelle</div>
-                                    <div class="text-2xl font-bold" id="monthlyPerformance">+9.8%</div>
+                                <div class="stat-card">
+                                    <div class="title">Performance mensuelle</div>
+                                    <div class="value" id="monthlyPerformance">+9.8%</div>
                                     <div class="text-sm text-white text-opacity-70 mt-1" id="benchmarkPerformance">
                                         vs +3.1% (S&P 500)
                                     </div>
@@ -816,15 +1020,15 @@
                             
                             <!-- Tableau des composants du portefeuille -->
                             <div>
-                                <h4 class="font-medium mb-3">Composants du portefeuille</h4>
+                                <h4 class="font-medium mb-4 text-neon-green text-opacity-90">Composants du portefeuille</h4>
                                 <div class="overflow-x-auto">
-                                    <table class="w-full">
+                                    <table class="portfolio-table">
                                         <thead>
-                                            <tr class="text-left text-white text-opacity-70 text-sm border-b border-white border-opacity-10">
-                                                <th class="pb-2">Actif</th>
-                                                <th class="pb-2">Type</th>
-                                                <th class="pb-2 text-right">Allocation</th>
-                                                <th class="pb-2 text-right">Perf.</th>
+                                            <tr class="text-left text-sm border-b border-white border-opacity-10">
+                                                <th class="pb-3">Actif</th>
+                                                <th class="pb-3">Type</th>
+                                                <th class="pb-3 text-right">Allocation</th>
+                                                <th class="pb-3 text-right">Perf.</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -893,13 +1097,13 @@
                                 </div>
                             </div>
                             
-                            <div class="flex mt-4 justify-between">
-                                <a href="portefeuille.html" class="text-neon-green text-sm inline-flex items-center hover:underline">
-                                    Voir le portefeuille complet <i class="fas fa-arrow-right ml-2"></i>
+                            <div class="flex mt-6 justify-between">
+                                <a href="portefeuille.html" class="btn btn-secondary">
+                                    Voir le portefeuille complet <i class="fas fa-arrow-right ml-1"></i>
                                 </a>
                                 
-                                <button id="generateEmailBtn" class="text-sm text-neon-green border border-neon-green border-opacity-30 bg-neon-green bg-opacity-10 px-3 py-1.5 rounded hover:bg-opacity-20 transition-all inline-flex items-center">
-                                    <i class="fas fa-envelope mr-2"></i> Générer un résumé
+                                <button id="generateEmailBtn" class="btn btn-primary">
+                                    <i class="fas fa-envelope"></i> Générer un résumé
                                 </button>
                             </div>
                         </div>
@@ -907,15 +1111,15 @@
                     
                     <!-- Widget Événements du jour (en bas) -->
                     <div class="glassmorphism relative" id="events-widget">
-                        <div class="flex justify-between items-center p-4 border-b border-neon-green border-opacity-20">
+                        <div class="flex justify-between items-center p-5 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
                             <h3 class="text-neon-green font-semibold text-lg">Événements du jour</h3>
                             <div class="text-sm text-white text-opacity-70" id="events-date">11 Mars 2025</div>
                         </div>
-                        <div class="p-5">
-                            <div class="flex gap-5 overflow-x-auto pb-2 events-container">
+                        <div class="p-6">
+                            <div class="flex gap-6 overflow-x-auto pb-3 events-container">
                                 <!-- Événement 1 -->
-                                <div class="flex items-center p-3 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-red-500 min-w-[280px] event-card">
-                                    <div class="flex flex-col items-center justify-center bg-black bg-opacity-30 w-12 h-12 rounded mr-3">
+                                <div class="flex items-center p-4 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-red-500 min-w-[300px] event-card">
+                                    <div class="flex flex-col items-center justify-center bg-black bg-opacity-30 w-14 h-14 rounded-lg mr-4">
                                         <div class="text-lg font-bold">11</div>
                                         <div class="text-xs text-white text-opacity-60">MAR</div>
                                     </div>
@@ -923,14 +1127,14 @@
                                         <div class="font-medium mb-1">Réunion exceptionnelle Fed</div>
                                         <div class="text-neon-green text-sm">08:15</div>
                                     </div>
-                                    <div class="w-8 h-8 flex items-center justify-center rounded-full bg-red-500 bg-opacity-20 text-red-400">
+                                    <div class="w-10 h-10 flex items-center justify-center rounded-full bg-red-500 bg-opacity-20 text-red-400">
                                         <i class="fas fa-chart-line"></i>
                                     </div>
                                 </div>
                                 
                                 <!-- Événement 2 -->
-                                <div class="flex items-center p-3 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-yellow-500 min-w-[280px] event-card">
-                                    <div class="flex flex-col items-center justify-center bg-black bg-opacity-30 w-12 h-12 rounded mr-3">
+                                <div class="flex items-center p-4 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-yellow-500 min-w-[300px] event-card">
+                                    <div class="flex flex-col items-center justify-center bg-black bg-opacity-30 w-14 h-14 rounded-lg mr-4">
                                         <div class="text-lg font-bold">11</div>
                                         <div class="text-xs text-white text-opacity-60">MAR</div>
                                     </div>
@@ -938,14 +1142,14 @@
                                         <div class="font-medium mb-1">Résultats trimestriels Amazon</div>
                                         <div class="text-neon-green text-sm">16:30</div>
                                     </div>
-                                    <div class="w-8 h-8 flex items-center justify-center rounded-full bg-yellow-500 bg-opacity-20 text-yellow-400">
+                                    <div class="w-10 h-10 flex items-center justify-center rounded-full bg-yellow-500 bg-opacity-20 text-yellow-400">
                                         <i class="fas fa-chart-line"></i>
                                     </div>
                                 </div>
                                 
                                 <!-- Événement 3 -->
-                                <div class="flex items-center p-3 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-red-500 min-w-[280px] event-card">
-                                    <div class="flex flex-col items-center justify-center bg-black bg-opacity-30 w-12 h-12 rounded mr-3">
+                                <div class="flex items-center p-4 bg-[#011E34] bg-opacity-70 rounded-lg border-l-2 border-red-500 min-w-[300px] event-card">
+                                    <div class="flex flex-col items-center justify-center bg-black bg-opacity-30 w-14 h-14 rounded-lg mr-4">
                                         <div class="text-lg font-bold">11</div>
                                         <div class="text-xs text-white text-opacity-60">MAR</div>
                                     </div>
@@ -953,42 +1157,42 @@
                                         <div class="font-medium mb-1">Données emploi Zone Euro</div>
                                         <div class="text-neon-green text-sm">11:00</div>
                                     </div>
-                                    <div class="w-8 h-8 flex items-center justify-center rounded-full bg-red-500 bg-opacity-20 text-red-400">
+                                    <div class="w-10 h-10 flex items-center justify-center rounded-full bg-red-500 bg-opacity-20 text-red-400">
                                         <i class="fas fa-chart-line"></i>
                                     </div>
                                 </div>
                             </div>
                             
-                            <a href="events.html" class="mt-4 text-neon-green text-sm inline-flex items-center hover:underline">
-                                Voir le calendrier complet <i class="fas fa-arrow-right ml-2"></i>
+                            <a href="events.html" class="btn btn-secondary mt-4 inline-flex">
+                                Voir le calendrier complet <i class="fas fa-arrow-right"></i>
                             </a>
                         </div>
                     </div>
                 </div>
                 
                 <!-- COLONNE DROITE: Crédits IA et Marchés -->
-                <div class="flex flex-col gap-6">
+                <div class="flex flex-col gap-8">
                     <!-- Widget Crédits IA et dernière mise à jour -->
                     <div class="glassmorphism relative" id="ai-credits-widget">
-                        <div class="flex justify-between items-center p-4 border-b border-neon-green border-opacity-20">
+                        <div class="flex justify-between items-center p-5 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
                             <h3 class="text-neon-green font-semibold text-lg">Crédits IA</h3>
-                            <button class="text-white opacity-70 hover:opacity-100 refresh-btn">
+                            <button class="text-white opacity-70 hover:opacity-100 refresh-btn p-2 rounded-full hover:bg-[#011E34] hover:bg-opacity-70">
                                 <i class="fas fa-sync-alt"></i>
                             </button>
                         </div>
-                        <div class="p-5">
+                        <div class="p-6">
                             <!-- Questions IA par jour -->
-                            <div class="mb-3">
-                                <div class="text-xl font-bold mb-2">Questions IA: 3 par jour</div>
-                                <div class="bg-[#011E34] bg-opacity-70 p-3 rounded-lg flex justify-between items-center">
+                            <div class="mb-5">
+                                <div class="text-xl font-bold mb-3">Questions IA: 3 par jour</div>
+                                <div class="bg-[#011E34] bg-opacity-70 p-4 rounded-lg flex justify-between items-center">
                                     <span>Questions restantes aujourd'hui:</span>
                                     <span class="font-bold text-neon-green text-xl">2/3</span>
                                 </div>
                             </div>
                             
                             <!-- Barre de progression -->
-                            <div class="mb-5">
-                                <div class="flex justify-between text-sm mb-1">
+                            <div class="mb-6">
+                                <div class="flex justify-between text-sm mb-2">
                                     <span>Crédits totaux</span>
                                     <span>4,250 / 5,000</span>
                                 </div>
@@ -998,29 +1202,29 @@
                             </div>
                             
                             <!-- Détails des crédits -->
-                            <div class="grid grid-cols-2 gap-4 mb-5">
-                                <div class="bg-[#011E34] bg-opacity-70 p-3 rounded-lg text-center">
+                            <div class="grid grid-cols-2 gap-5 mb-6">
+                                <div class="bg-[#011E34] bg-opacity-70 p-4 rounded-lg text-center">
                                     <div class="text-neon-green text-xl font-bold">750</div>
                                     <div class="text-xs text-white text-opacity-70">Utilisés ce mois</div>
                                 </div>
-                                <div class="bg-[#011E34] bg-opacity-70 p-3 rounded-lg text-center">
+                                <div class="bg-[#011E34] bg-opacity-70 p-4 rounded-lg text-center">
                                     <div class="text-neon-green text-xl font-bold">30</div>
                                     <div class="text-xs text-white text-opacity-70">Jours restants</div>
                                 </div>
                             </div>
                             
                             <!-- Dernière mise à jour -->
-                            <div class="flex items-center bg-neon-green bg-opacity-10 p-3 rounded">
-                                <i class="fas fa-clock text-neon-green mr-3"></i>
+                            <div class="flex items-center bg-neon-green bg-opacity-10 p-4 rounded-lg">
+                                <i class="fas fa-clock text-neon-green mr-3 text-lg"></i>
                                 <div class="text-sm">
                                     <div>Dernière mise à jour:</div>
-                                    <div class="font-medium" id="lastUpdateTime">11/03/2025 09:15:32</div>
+                                    <div class="font-medium mt-1" id="lastUpdateTime">11/03/2025 09:15:32</div>
                                 </div>
                             </div>
                             
                             <!-- Lien vers la page de questions IA -->
-                            <a href="recherche.html" class="mt-4 text-neon-green text-sm inline-flex items-center hover:underline">
-                                <i class="fas fa-robot mr-2"></i>
+                            <a href="recherche.html" class="btn btn-primary mt-5 w-full justify-center">
+                                <i class="fas fa-robot"></i>
                                 Poser une question à l'IA
                             </a>
                         </div>
@@ -1031,16 +1235,16 @@
                     
                     <!-- Widget Marchés (plus gros) -->
                     <div class="glassmorphism" id="markets-widget">
-                        <div class="flex justify-between items-center p-4 border-b border-neon-green border-opacity-20">
+                        <div class="flex justify-between items-center p-5 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
                             <h3 class="text-neon-green font-semibold text-lg">Marchés</h3>
-                            <div class="text-sm text-white text-opacity-70">Temps réel</div>
+                            <div class="text-sm text-white text-opacity-70 px-3 py-1 bg-[#011E34] bg-opacity-70 rounded-full">Temps réel</div>
                         </div>
-                        <div class="p-5 space-y-5">
+                        <div class="p-6 space-y-6">
                             <!-- Indice 1: S&P 500 -->
-                            <div class="bg-[#011E34] bg-opacity-70 p-4 rounded-lg">
+                            <div class="bg-[#011E34] bg-opacity-70 p-5 rounded-lg">
                                 <div class="flex justify-between mb-2">
                                     <div class="font-medium">S&P 500</div>
-                                    <div class="text-sm trend-up px-2 py-0.5 rounded bg-green-900 bg-opacity-20">
+                                    <div class="text-sm trend-up px-3 py-1 rounded-full bg-green-900 bg-opacity-20">
                                         +0.68%
                                     </div>
                                 </div>
@@ -1062,10 +1266,10 @@
                             </div>
                             
                             <!-- Indice 2: NASDAQ (plus gros) -->
-                            <div class="bg-[#011E34] bg-opacity-70 p-4 rounded-lg">
+                            <div class="bg-[#011E34] bg-opacity-70 p-5 rounded-lg">
                                 <div class="flex justify-between mb-2">
                                     <div class="font-medium">NASDAQ</div>
-                                    <div class="text-sm trend-up px-2 py-0.5 rounded bg-green-900 bg-opacity-20">
+                                    <div class="text-sm trend-up px-3 py-1 rounded-full bg-green-900 bg-opacity-20">
                                         +1.12%
                                     </div>
                                 </div>
@@ -1087,10 +1291,10 @@
                             </div>
                             
                             <!-- Indice 3: CAC 40 -->
-                            <div class="bg-[#011E34] bg-opacity-70 p-4 rounded-lg">
+                            <div class="bg-[#011E34] bg-opacity-70 p-5 rounded-lg">
                                 <div class="flex justify-between mb-2">
                                     <div class="font-medium">CAC 40</div>
-                                    <div class="text-sm trend-down px-2 py-0.5 rounded bg-red-900 bg-opacity-20">
+                                    <div class="text-sm trend-down px-3 py-1 rounded-full bg-red-900 bg-opacity-20">
                                         -0.23%
                                     </div>
                                 </div>
@@ -1111,7 +1315,7 @@
                                 </div>
                             </div>
                             
-                            <a href="marches.html" class="text-neon-green text-sm inline-flex items-center hover:underline">
+                            <a href="marches.html" class="btn btn-primary w-full justify-center">
                                 Consulter tous les marchés <i class="fas fa-arrow-right ml-2"></i>
                             </a>
                         </div>
@@ -1242,7 +1446,7 @@
             document.querySelectorAll('.widget-control').forEach(button => {
                 button.addEventListener('click', function() {
                     const widgetId = this.getAttribute('data-widget');
-                    const widgetContent = this.closest('.glassmorphism').querySelector('.p-5');
+                    const widgetContent = this.closest('.glassmorphism').querySelector('.p-6, .p-5');
                     
                     if (widgetContent.style.display === 'none') {
                         widgetContent.style.display = 'block';
@@ -1467,10 +1671,10 @@
                 
                 const perfElement = document.getElementById('portfolioPerformance');
                 if (data.performance.startsWith('+')) {
-                    perfElement.className = 'text-sm trend-up flex items-center mt-1';
+                    perfElement.className = 'trend-up change';
                     perfElement.innerHTML = `<i class="fas fa-caret-up mr-1"></i> ${data.performance} (7j)`;
                 } else {
-                    perfElement.className = 'text-sm trend-down flex items-center mt-1';
+                    perfElement.className = 'trend-down change';
                     perfElement.innerHTML = `<i class="fas fa-caret-down mr-1"></i> ${data.performance} (7j)`;
                 }
                 
@@ -1565,7 +1769,7 @@
             if (aiWidget) {
                 aiWidget.addEventListener('mouseenter', function() {
                     this.style.boxShadow = '0 0 15px rgba(0, 255, 135, 0.3)';
-                    this.style.transform = 'translateY(-5px)';
+                    this.style.transform = 'translateY(-2px)';
                     this.style.transition = 'all 0.3s ease';
                 });
                 
