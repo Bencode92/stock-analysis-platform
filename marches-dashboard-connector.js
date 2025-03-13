@@ -1,6 +1,6 @@
 /**
  * marches-dashboard-connector.js
- * Script pour afficher les indices principaux et les top performers dans le dashboard
+ * Script pour afficher les indices principaux, les top performers et les tendances régionales
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -26,6 +26,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Création et mise à jour des top performers
             createTopPerformers(data);
+            
+            // Ajout des tendances régionales
+            addRegionalTrends(data);
             
             console.log('Données des marchés mises à jour avec succès');
         } catch (error) {
@@ -256,6 +259,131 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             
             listElement.appendChild(item);
+        });
+    }
+    
+    // Fonction pour déterminer la tendance d'une région
+    function calculateRegionTrend(data, region) {
+        if (!data || !data.indices || !data.indices[region] || !data.indices[region].length) {
+            return { trend: 'neutral', icon: '<i class="fas fa-arrows-alt-h"></i>' };
+        }
+        
+        // Calculer le nombre d'indices positifs et négatifs
+        let positiveCount = 0;
+        let negativeCount = 0;
+        let totalCount = 0;
+        
+        data.indices[region].forEach(index => {
+            if (index.changePercent) {
+                totalCount++;
+                if (index.changePercent.includes('-')) {
+                    negativeCount++;
+                } else {
+                    positiveCount++;
+                }
+            }
+        });
+        
+        // Déterminer la tendance en fonction de la majorité
+        if (totalCount === 0) {
+            return { trend: 'neutral', icon: '<i class="fas fa-arrows-alt-h"></i>' };
+        }
+        
+        const positiveRatio = positiveCount / totalCount;
+        
+        if (positiveRatio >= 0.6) {
+            return { trend: 'positive', icon: '<i class="fas fa-arrow-up"></i>' };
+        } else if (positiveRatio <= 0.4) {
+            return { trend: 'negative', icon: '<i class="fas fa-arrow-down"></i>' };
+        } else {
+            return { trend: 'neutral', icon: '<i class="fas fa-arrows-alt-h"></i>' };
+        }
+    }
+    
+    // Fonction pour ajouter les tendances régionales
+    function addRegionalTrends(data) {
+        // Obtenir l'élément parent (section marché)
+        const marketsWidget = document.getElementById('markets-widget');
+        if (!marketsWidget) {
+            console.error("Section des marchés non trouvée");
+            return;
+        }
+        
+        // Vérifier si la section existe déjà
+        let trendsSection = document.getElementById('regional-trends-section');
+        
+        if (!trendsSection) {
+            // Créer la nouvelle section
+            trendsSection = document.createElement('div');
+            trendsSection.id = 'regional-trends-section';
+            trendsSection.className = 'mt-6';
+            
+            // Ajouter le titre 
+            const title = document.createElement('div');
+            title.className = 'flex justify-between items-center p-4 border-b border-neon-green border-opacity-20';
+            title.innerHTML = `
+                <h3 class="text-neon-green font-semibold text-lg">Aperçu des marchés mondiaux</h3>
+                <div class="text-sm text-white text-opacity-70">Tendance du jour</div>
+            `;
+            
+            // Créer le conteneur pour les tendances
+            const container = document.createElement('div');
+            container.className = 'p-5 grid grid-cols-2 md:grid-cols-3 gap-4';
+            container.id = 'regional-trends-container';
+            
+            trendsSection.appendChild(title);
+            trendsSection.appendChild(container);
+            
+            // Ajouter la section au widget des marchés avant les top performers
+            const topPerformersSection = document.getElementById('top-performers-section');
+            if (topPerformersSection) {
+                marketsWidget.insertBefore(trendsSection, topPerformersSection);
+            } else {
+                marketsWidget.appendChild(trendsSection);
+            }
+        }
+        
+        // Mettre à jour les tendances régionales
+        const container = document.getElementById('regional-trends-container');
+        if (!container) return;
+        
+        // Vider le conteneur
+        container.innerHTML = '';
+        
+        // Définir les régions et leurs noms d'affichage
+        const regions = [
+            { id: 'europe', name: 'Europe' },
+            { id: 'north-america', name: 'Amérique du Nord' },
+            { id: 'latin-america', name: 'Amérique Latine' },
+            { id: 'asia', name: 'Asie' },
+            { id: 'other', name: 'Autres régions' }
+        ];
+        
+        // Ajouter chaque région
+        regions.forEach(region => {
+            const { trend, icon } = calculateRegionTrend(data, region.id);
+            
+            const regionElement = document.createElement('div');
+            regionElement.className = 'glassmorphism p-4 rounded-lg flex items-center justify-between';
+            
+            let trendClass = '';
+            switch(trend) {
+                case 'positive':
+                    trendClass = 'trend-up';
+                    break;
+                case 'negative':
+                    trendClass = 'trend-down';
+                    break;
+                default:
+                    trendClass = 'text-gray-400';
+            }
+            
+            regionElement.innerHTML = `
+                <div class="font-medium">${region.name}</div>
+                <div class="text-lg ${trendClass}">${icon}</div>
+            `;
+            
+            container.appendChild(regionElement);
         });
     }
     
