@@ -1000,25 +1000,6 @@
                         </div>
                         
                         <div class="p-6">
-                            <!-- Valeur totale et performances - Sans graphique -->
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-7">
-                                <div class="stat-card border border-neon-green border-opacity-10">
-                                    <div class="title">Valeur totale</div>
-                                    <div class="value" id="totalPortfolioValue">32,415.25 €</div>
-                                    <div class="trend-up change" id="portfolioPerformance">
-                                        <i class="fas fa-caret-up mr-1"></i> +7.2% (7j)
-                                    </div>
-                                </div>
-                                
-                                <div class="stat-card">
-                                    <div class="title">Performance mensuelle</div>
-                                    <div class="value" id="monthlyPerformance">+9.8%</div>
-                                    <div class="text-sm text-white text-opacity-70 mt-1" id="benchmarkPerformance">
-                                        vs +3.1% (S&P 500)
-                                    </div>
-                                </div>
-                            </div>
-                            
                             <!-- Tableau des composants du portefeuille -->
                             <div>
                                 <h4 class="font-medium mb-4 text-neon-green text-opacity-90">Composants du portefeuille</h4>
@@ -1171,69 +1152,8 @@
                     </div>
                 </div>
                 
-                <!-- COLONNE DROITE: Crédits IA et Marchés -->
-                <div class="flex flex-col gap-8">
-                    <!-- Widget Crédits IA et dernière mise à jour -->
-                    <div class="glassmorphism relative" id="ai-credits-widget">
-                        <div class="flex justify-between items-center p-5 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
-                            <h3 class="text-neon-green font-semibold text-lg">Crédits IA</h3>
-                            <button class="text-white opacity-70 hover:opacity-100 refresh-btn p-2 rounded-full hover:bg-[#011E34] hover:bg-opacity-70">
-                                <i class="fas fa-sync-alt"></i>
-                            </button>
-                        </div>
-                        <div class="p-6">
-                            <!-- Questions IA par jour -->
-                            <div class="mb-5">
-                                <div class="text-xl font-bold mb-3">Questions IA: 3 par jour</div>
-                                <div class="bg-[#011E34] bg-opacity-70 p-4 rounded-lg flex justify-between items-center">
-                                    <span>Questions restantes aujourd'hui:</span>
-                                    <span class="font-bold text-neon-green text-xl">2/3</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Barre de progression -->
-                            <div class="mb-6">
-                                <div class="flex justify-between text-sm mb-2">
-                                    <span>Crédits totaux</span>
-                                    <span>4,250 / 5,000</span>
-                                </div>
-                                <div class="progress-bar">
-                                    <div id="creditProgressBar" class="progress-value w-0"></div>
-                                </div>
-                            </div>
-                            
-                            <!-- Détails des crédits -->
-                            <div class="grid grid-cols-2 gap-5 mb-6">
-                                <div class="bg-[#011E34] bg-opacity-70 p-4 rounded-lg text-center">
-                                    <div class="text-neon-green text-xl font-bold">750</div>
-                                    <div class="text-xs text-white text-opacity-70">Utilisés ce mois</div>
-                                </div>
-                                <div class="bg-[#011E34] bg-opacity-70 p-4 rounded-lg text-center">
-                                    <div class="text-neon-green text-xl font-bold">30</div>
-                                    <div class="text-xs text-white text-opacity-70">Jours restants</div>
-                                </div>
-                            </div>
-                            
-                            <!-- Dernière mise à jour -->
-                            <div class="flex items-center bg-neon-green bg-opacity-10 p-4 rounded-lg">
-                                <i class="fas fa-clock text-neon-green mr-3 text-lg"></i>
-                                <div class="text-sm">
-                                    <div>Dernière mise à jour:</div>
-                                    <div class="font-medium mt-1" id="lastUpdateTime">11/03/2025 09:15:32</div>
-                                </div>
-                            </div>
-                            
-                            <!-- Lien vers la page de questions IA -->
-                            <a href="recherche.html" class="btn btn-primary mt-5 w-full justify-center">
-                                <i class="fas fa-robot"></i>
-                                Poser une question à l'IA
-                            </a>
-                        </div>
-                        <!-- Connecteur visuel vers l'API de recherche -->
-                        <div class="connection-line hidden lg:block absolute -left-10 top-10 w-10 transform -rotate-45"></div>
-                        <div class="connection-arrow hidden lg:block absolute -left-2 top-10 transform -rotate-45"></div>
-                    </div>
-                    
+                <!-- COLONNE DROITE: Marchés -->
+                <div class="flex flex-col gap-8">                    
                     <!-- Widget Marchés (plus gros) -->
                     <div class="glassmorphism" id="markets-widget">
                         <div class="flex justify-between items-center p-5 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
@@ -1362,11 +1282,6 @@
             // Initialiser le graphique de répartition d'actifs
             initAssetAllocationChart();
             
-            // Animer la barre de progression des crédits
-            setTimeout(() => {
-                document.getElementById('creditProgressBar').style.width = '85%';
-            }, 500);
-            
             // Données des portefeuilles pour synchronisation avec les emails
             const portfolioData = {
                 'aggressive': {
@@ -1458,15 +1373,6 @@
                         this.innerHTML = '<i class="fas fa-ellipsis-h"></i>';
                     }
                 });
-            });
-            
-            // Bouton de rafraîchissement des crédits IA
-            document.querySelector('.refresh-btn').addEventListener('click', function() {
-                this.classList.add('animate-spin');
-                setTimeout(() => {
-                    this.classList.remove('animate-spin');
-                    updateLastUpdateTime();
-                }, 1000);
             });
 
             // Bouton de génération de résumé email
@@ -1668,21 +1574,6 @@
                 // Obtenir les données du portefeuille sélectionné
                 const data = portfolioData[portfolioType];
                 
-                // Mettre à jour les informations principales
-                document.getElementById('totalPortfolioValue').textContent = data.value;
-                
-                const perfElement = document.getElementById('portfolioPerformance');
-                if (data.performance.startsWith('+')) {
-                    perfElement.className = 'trend-up change';
-                    perfElement.innerHTML = `<i class="fas fa-caret-up mr-1"></i> ${data.performance} (7j)`;
-                } else {
-                    perfElement.className = 'trend-down change';
-                    perfElement.innerHTML = `<i class="fas fa-caret-down mr-1"></i> ${data.performance} (7j)`;
-                }
-                
-                document.getElementById('monthlyPerformance').textContent = data.monthlyPerformance;
-                document.getElementById('benchmarkPerformance').textContent = `vs ${data.benchmark}`;
-                
                 // Mettre à jour le tableau des composants
                 const tableBody = document.querySelector('#portfolio-widget tbody');
                 tableBody.innerHTML = '';
@@ -1747,12 +1638,6 @@
                 });
             }
             
-            function updateLastUpdateTime() {
-                const now = new Date();
-                const formattedDate = `${now.toLocaleDateString('fr-FR')} ${now.toLocaleTimeString('fr-FR')}`;
-                document.getElementById('lastUpdateTime').textContent = formattedDate;
-            }
-            
             // Fonction pour sauvegarder les données du portefeuille dans le localStorage
             function savePortfolioData(portfolioType) {
                 const data = portfolioData[portfolioType];
@@ -1765,21 +1650,6 @@
                 e.preventDefault();
                 window.location.href = 'recherche.html';
             });
-
-            // Ajouter un effet visuel lors du survol du widget des crédits IA
-            const aiWidget = document.getElementById('ai-credits-widget');
-            if (aiWidget) {
-                aiWidget.addEventListener('mouseenter', function() {
-                    this.style.boxShadow = '0 0 15px rgba(0, 255, 135, 0.3)';
-                    this.style.transform = 'translateY(-2px)';
-                    this.style.transition = 'all 0.3s ease';
-                });
-                
-                aiWidget.addEventListener('mouseleave', function() {
-                    this.style.boxShadow = '';
-                    this.style.transform = '';
-                });
-            }
 
             // Redimensionner le réseau lors du redimensionnement de la fenêtre
             window.addEventListener('resize', () => {
