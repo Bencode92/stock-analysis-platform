@@ -168,31 +168,18 @@ document.addEventListener('DOMContentLoaded', function() {
             // Charger les données
             const rawData = await response.json();
             
-            // Réorganiser les données selon les nouvelles régions
+            // S'assurer que toutes les régions existent dans les données
+            // Utiliser directement les données comme elles sont déjà structurées
             indicesData = {
                 indices: {
-                    europe: [],
-                    "north-america": [],
-                    "latin-america": [],
-                    asia: [],
-                    other: []
+                    europe: rawData.indices.europe || [],
+                    "north-america": rawData.indices["north-america"] || [],
+                    "latin-america": rawData.indices["latin-america"] || [],
+                    asia: rawData.indices.asia || [],
+                    other: rawData.indices.other || []
                 },
                 meta: rawData.meta
             };
-            
-            // Redistribuer les indices en fonction du mapping des continents
-            const allIndices = [
-                ...(rawData.indices.europe || []), 
-                ...(rawData.indices.us || []), 
-                ...(rawData.indices.asia || []), 
-                ...(rawData.indices.other || [])
-            ];
-            
-            allIndices.forEach(index => {
-                const country = index.country || "";
-                const continent = continentOrder[country] || "other";
-                indicesData.indices[continent].push(index);
-            });
             
             // Vérifier la fraîcheur des données
             const dataTimestamp = new Date(indicesData.meta.timestamp);
