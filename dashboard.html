@@ -817,6 +817,141 @@
                 width: 40px;
             }
         }
+
+        /* Ajouts pour améliorer l'interface */
+        .search-box {
+            position: relative;
+            margin-right: 15px;
+        }
+
+        .search-input {
+            background-color: rgba(1, 30, 52, 0.6);
+            border: 1px solid rgba(0, 255, 135, 0.2);
+            color: white;
+            padding: 8px 35px 8px 12px;
+            border-radius: 8px;
+            width: 200px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2);
+            width: 240px;
+        }
+
+        .search-icon {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: rgba(255, 255, 255, 0.5);
+            pointer-events: none;
+        }
+
+        /* Tooltips informatifs */
+        .info-tooltip {
+            position: relative;
+            display: inline-block;
+            margin-left: 5px;
+            cursor: help;
+        }
+
+        .info-tooltip i {
+            color: var(--accent-color);
+            opacity: 0.7;
+            font-size: 0.85em;
+        }
+
+        .info-tooltip .tooltip-content {
+            visibility: hidden;
+            opacity: 0;
+            width: 220px;
+            background-color: rgba(1, 30, 52, 0.95);
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 100;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: opacity 0.3s;
+            border: 1px solid var(--card-border);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            font-size: 0.85rem;
+            pointer-events: none;
+        }
+
+        .info-tooltip:hover .tooltip-content {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* Mode zen et bouton correspondant */
+        .zen-mode-btn {
+            background-color: rgba(0, 255, 135, 0.1);
+            color: var(--accent-color);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .zen-mode-btn:hover {
+            background-color: rgba(0, 255, 135, 0.2);
+            transform: translateY(-2px);
+        }
+
+        body.zen-mode .network-background,
+        body.zen-mode .connection-line,
+        body.zen-mode .connection-arrow {
+            opacity: 0.1;
+        }
+
+        /* Valeur centrale pour le donut chart */
+        .donut-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+        }
+
+        .donut-center-label {
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.7);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .donut-center-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--accent-color);
+        }
+
+        /* Mini-graphique sparklines pour les performances */
+        .sparkline-container {
+            display: inline-block;
+            margin-left: 5px;
+            vertical-align: middle;
+            height: 20px;
+            width: 50px;
+        }
+
+        .sparkline {
+            width: 100%;
+            height: 100%;
+        }
     </style>
 </head>
 <body class="dark">
@@ -863,11 +998,20 @@
             </nav>
         </div>
         <div class="header-right">
+            <!-- Barre de recherche rapide -->
+            <div class="search-box">
+                <input type="text" class="search-input" placeholder="Rechercher un actif..." id="quickSearch">
+                <i class="fas fa-search search-icon"></i>
+            </div>
             <div class="market-status">
                 <div class="market-indicator green"></div>
                 <span>Marché ouvert</span>
                 <span class="market-time" id="marketTime">09:45:22</span>
             </div>
+            <!-- Bouton Mode Zen -->
+            <button class="zen-mode-btn" id="zenModeToggle" aria-label="Activer/désactiver le mode zen" title="Mode zen">
+                <i class="fas fa-compress-alt"></i>
+            </button>
             <a href="recherche.html" class="search-button ripple">
                 <i class="fas fa-search"></i>
                 <span>Ma question</span>
@@ -892,8 +1036,11 @@
                     <!-- Widget Répartition par classe d'actifs -->
                     <div class="glassmorphism relative" id="asset-allocation-widget">
                         <div class="flex justify-between items-center p-5 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
-                            <h3 class="text-neon-green font-semibold text-lg">Répartition par classe d'actifs</h3>
-                            <button class="text-white opacity-70 hover:opacity-100 widget-control" data-widget="asset-allocation">
+                            <h3 class="text-neon-green font-semibold text-lg flex items-center">
+                                <i class="fas fa-chart-pie mr-2"></i>
+                                Répartition par classe d'actifs
+                            </h3>
+                            <button class="text-white opacity-70 hover:opacity-100 widget-control" data-widget="asset-allocation" aria-label="Contrôler l'affichage de la répartition des actifs" aria-expanded="true">
                                 <i class="fas fa-ellipsis-v"></i>
                             </button>
                         </div>
@@ -901,28 +1048,49 @@
                             <!-- Donut chart des classes d'actifs -->
                             <div class="donut-chart-container" style="height: 180px">
                                 <canvas id="assetAllocationChart"></canvas>
+                                <!-- Valeur centrale -->
+                                <div class="donut-center">
+                                    <div class="donut-center-label">VALEUR TOTALE</div>
+                                    <div class="donut-center-value">32 415€</div>
+                                </div>
                             </div>
                             
-                            <!-- Légende -->
+                            <!-- Légende avec tooltips informatifs -->
                             <div class="donut-legend mt-5">
                                 <div class="legend-item">
                                     <div class="legend-color bg-green-500"></div>
                                     <span>Actions</span>
+                                    <span class="info-tooltip">
+                                        <i class="fas fa-info-circle"></i>
+                                        <span class="tooltip-content">Actions de sociétés cotées en bourse représentant une part de propriété dans l'entreprise. Généralement plus volatiles mais avec un meilleur potentiel de croissance à long terme.</span>
+                                    </span>
                                     <span class="legend-value">62%</span>
                                 </div>
                                 <div class="legend-item">
                                     <div class="legend-color bg-blue-500"></div>
                                     <span>ETFs</span>
+                                    <span class="info-tooltip">
+                                        <i class="fas fa-info-circle"></i>
+                                        <span class="tooltip-content">Fonds négociés en bourse qui suivent un indice, un secteur ou une classe d'actifs. Offrent une diversification instantanée à moindre coût.</span>
+                                    </span>
                                     <span class="legend-value">20%</span>
                                 </div>
                                 <div class="legend-item">
                                     <div class="legend-color bg-yellow-500"></div>
                                     <span>Crypto</span>
+                                    <span class="info-tooltip">
+                                        <i class="fas fa-info-circle"></i>
+                                        <span class="tooltip-content">Actifs numériques basés sur la technologie blockchain. Très volatils et considérés comme des investissements à haut risque avec un potentiel de rendement élevé.</span>
+                                    </span>
                                     <span class="legend-value">15%</span>
                                 </div>
                                 <div class="legend-item">
                                     <div class="legend-color bg-purple-500"></div>
                                     <span>Obligations</span>
+                                    <span class="info-tooltip">
+                                        <i class="fas fa-info-circle"></i>
+                                        <span class="tooltip-content">Titres de créance émis par des gouvernements ou des entreprises. Généralement moins risqués que les actions, avec des rendements plus stables mais généralement plus faibles.</span>
+                                    </span>
                                     <span class="legend-value">3%</span>
                                 </div>
                             </div>
@@ -935,8 +1103,11 @@
                     <!-- Widget Actualités importantes -->
                     <div class="glassmorphism relative" id="news-widget">
                         <div class="flex justify-between items-center p-5 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
-                            <h3 class="text-neon-green font-semibold text-lg">Actualités importantes</h3>
-                            <button class="text-white opacity-70 hover:opacity-100 widget-control" data-widget="news">
+                            <h3 class="text-neon-green font-semibold text-lg flex items-center">
+                                <i class="fas fa-newspaper mr-2"></i>
+                                Actualités importantes
+                            </h3>
+                            <button class="text-white opacity-70 hover:opacity-100 widget-control" data-widget="news" aria-label="Contrôler l'affichage des actualités" aria-expanded="true">
                                 <i class="fas fa-ellipsis-v"></i>
                             </button>
                         </div>
@@ -985,7 +1156,10 @@
                     <!-- Widget du portefeuille (sans graphique, avec composants détaillés) -->
                     <div class="glassmorphism" id="portfolio-widget">
                         <div class="flex justify-between items-center p-5 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
-                            <h3 class="text-neon-green font-semibold text-lg">Mon portefeuille</h3>
+                            <h3 class="text-neon-green font-semibold text-lg flex items-center">
+                                <i class="fas fa-wallet mr-2"></i>
+                                Mon portefeuille
+                            </h3>
                             <div class="flex gap-2">
                                 <button class="px-3 py-1.5 text-sm rounded-md bg-neon-green bg-opacity-10 border border-neon-green border-opacity-30 text-neon-green portfolio-filter active" data-portfolio="aggressive">
                                     Agressif
@@ -1000,9 +1174,24 @@
                         </div>
                         
                         <div class="p-6">
+                            <!-- En-tête avec statut du portefeuille -->
+                            <div class="mb-5 p-3 bg-black bg-opacity-20 rounded-lg flex justify-between items-center">
+                                <div>
+                                    <span class="text-xs text-white text-opacity-60">PERFORMANCE TOTALE</span>
+                                    <div class="text-xl font-bold text-neon-green">+7.2%</div>
+                                </div>
+                                <div class="text-right">
+                                    <span class="text-xs text-white text-opacity-60">DERNIER MOIS</span>
+                                    <div class="text-lg font-bold text-neon-green">+9.8%</div>
+                                </div>
+                            </div>
+                            
                             <!-- Tableau des composants du portefeuille -->
                             <div>
-                                <h4 class="font-medium mb-4 text-neon-green text-opacity-90">Composants du portefeuille</h4>
+                                <h4 class="font-medium mb-4 text-neon-green text-opacity-90 flex items-center">
+                                    <i class="fas fa-list-ul mr-2"></i>
+                                    Composants du portefeuille
+                                </h4>
                                 <div class="overflow-x-auto">
                                     <table class="portfolio-table">
                                         <thead>
@@ -1022,7 +1211,12 @@
                                                     </span>
                                                 </td>
                                                 <td class="text-right font-medium">30%</td>
-                                                <td class="text-right font-medium trend-up">+5.5%</td>
+                                                <td class="text-right font-medium trend-up flex items-center justify-end">
+                                                    <i class="fas fa-caret-up mr-1"></i>+5.5%
+                                                    <span class="sparkline-container" data-trend="up">
+                                                        <canvas class="sparkline" data-values="[95,98,97,99,102,101,105]"></canvas>
+                                                    </span>
+                                                </td>
                                             </tr>
                                             <tr class="border-b border-white border-opacity-5">
                                                 <td class="py-3">Tesla, Inc.</td>
@@ -1032,7 +1226,12 @@
                                                     </span>
                                                 </td>
                                                 <td class="text-right font-medium">20%</td>
-                                                <td class="text-right font-medium trend-up">+3.3%</td>
+                                                <td class="text-right font-medium trend-up flex items-center justify-end">
+                                                    <i class="fas fa-caret-up mr-1"></i>+3.3%
+                                                    <span class="sparkline-container" data-trend="up">
+                                                        <canvas class="sparkline" data-values="[97,99,98,102,101,103,103]"></canvas>
+                                                    </span>
+                                                </td>
                                             </tr>
                                             <tr class="border-b border-white border-opacity-5">
                                                 <td class="py-3">Bitcoin</td>
@@ -1042,7 +1241,12 @@
                                                     </span>
                                                 </td>
                                                 <td class="text-right font-medium">15%</td>
-                                                <td class="text-right font-medium trend-up">+18.7%</td>
+                                                <td class="text-right font-medium trend-up flex items-center justify-end">
+                                                    <i class="fas fa-caret-up mr-1"></i>+18.7%
+                                                    <span class="sparkline-container" data-trend="up">
+                                                        <canvas class="sparkline" data-values="[95,102,107,106,112,118,119]"></canvas>
+                                                    </span>
+                                                </td>
                                             </tr>
                                             <tr class="border-b border-white border-opacity-5">
                                                 <td class="py-3">Ethereum</td>
@@ -1052,7 +1256,12 @@
                                                     </span>
                                                 </td>
                                                 <td class="text-right font-medium">10%</td>
-                                                <td class="text-right font-medium trend-up">+9.5%</td>
+                                                <td class="text-right font-medium trend-up flex items-center justify-end">
+                                                    <i class="fas fa-caret-up mr-1"></i>+9.5%
+                                                    <span class="sparkline-container" data-trend="up">
+                                                        <canvas class="sparkline" data-values="[98,99,103,106,105,108,109]"></canvas>
+                                                    </span>
+                                                </td>
                                             </tr>
                                             <tr class="border-b border-white border-opacity-5">
                                                 <td class="py-3">ARK Innovation ETF</td>
@@ -1062,7 +1271,12 @@
                                                     </span>
                                                 </td>
                                                 <td class="text-right font-medium">15%</td>
-                                                <td class="text-right font-medium trend-up">+2.2%</td>
+                                                <td class="text-right font-medium trend-up flex items-center justify-end">
+                                                    <i class="fas fa-caret-up mr-1"></i>+2.2%
+                                                    <span class="sparkline-container" data-trend="up">
+                                                        <canvas class="sparkline" data-values="[99,100,99,101,101,102,102]"></canvas>
+                                                    </span>
+                                                </td>
                                             </tr>
                                             <tr>
                                                 <td class="py-3">Palantir Technologies</td>
@@ -1072,7 +1286,12 @@
                                                     </span>
                                                 </td>
                                                 <td class="text-right font-medium">10%</td>
-                                                <td class="text-right font-medium trend-up">+3.8%</td>
+                                                <td class="text-right font-medium trend-up flex items-center justify-end">
+                                                    <i class="fas fa-caret-up mr-1"></i>+3.8%
+                                                    <span class="sparkline-container" data-trend="up">
+                                                        <canvas class="sparkline" data-values="[100,102,101,103,102,104,104]"></canvas>
+                                                    </span>
+                                                </td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -1094,7 +1313,10 @@
                     <!-- Widget Événements du jour (en bas) -->
                     <div class="glassmorphism relative" id="events-widget">
                         <div class="flex justify-between items-center p-5 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
-                            <h3 class="text-neon-green font-semibold text-lg">Événements du jour</h3>
+                            <h3 class="text-neon-green font-semibold text-lg flex items-center">
+                                <i class="fas fa-calendar-alt mr-2"></i>
+                                Événements du jour
+                            </h3>
                             <div class="text-sm text-white text-opacity-70" id="events-date">11 Mars 2025</div>
                         </div>
                         <div class="p-6">
@@ -1157,19 +1379,28 @@
                     <!-- Widget Marchés (plus gros) -->
                     <div class="glassmorphism" id="markets-widget">
                         <div class="flex justify-between items-center p-5 border-b border-neon-green border-opacity-20 bg-[#011e34] bg-opacity-70">
-                            <h3 class="text-neon-green font-semibold text-lg">Marchés</h3>
-                            <div class="text-sm text-white text-opacity-70 px-3 py-1 bg-[#011E34] bg-opacity-70 rounded-full">Temps réel</div>
+                            <h3 class="text-neon-green font-semibold text-lg flex items-center">
+                                <i class="fas fa-globe mr-2"></i>
+                                Marchés
+                            </h3>
+                            <div class="text-sm text-white text-opacity-70 px-3 py-1 bg-[#011E34] bg-opacity-70 rounded-full flex items-center">
+                                <i class="fas fa-sync-alt fa-spin mr-2 text-neon-green"></i>
+                                Temps réel
+                            </div>
                         </div>
                         <div class="p-6 space-y-6">
                             <!-- Indice 1: S&P 500 -->
                             <div class="bg-[#011E34] bg-opacity-70 p-5 rounded-lg">
                                 <div class="flex justify-between mb-2">
                                     <div class="font-medium">S&P 500</div>
-                                    <div class="text-sm trend-up px-3 py-1 rounded-full bg-green-900 bg-opacity-20">
-                                        +0.68%
+                                    <div class="text-sm trend-up px-3 py-1 rounded-full bg-green-900 bg-opacity-20 flex items-center">
+                                        <i class="fas fa-caret-up mr-1"></i> +0.68%
                                     </div>
                                 </div>
-                                <div class="text-2xl font-bold mb-3">5,187.52</div>
+                                <div class="text-2xl font-bold mb-3 flex items-end">
+                                    5,187.52
+                                    <span class="ml-2 text-xs text-white text-opacity-50">+34.27 pts</span>
+                                </div>
                                 <div class="grid grid-cols-3 gap-3 text-xs">
                                     <div class="bg-black bg-opacity-20 p-2 rounded text-center">
                                         <div class="text-white text-opacity-70">Ouv.</div>
@@ -1190,11 +1421,14 @@
                             <div class="bg-[#011E34] bg-opacity-70 p-5 rounded-lg">
                                 <div class="flex justify-between mb-2">
                                     <div class="font-medium">NASDAQ</div>
-                                    <div class="text-sm trend-up px-3 py-1 rounded-full bg-green-900 bg-opacity-20">
-                                        +1.12%
+                                    <div class="text-sm trend-up px-3 py-1 rounded-full bg-green-900 bg-opacity-20 flex items-center">
+                                        <i class="fas fa-caret-up mr-1"></i> +1.12%
                                     </div>
                                 </div>
-                                <div class="text-2xl font-bold mb-3">16,342.15</div>
+                                <div class="text-2xl font-bold mb-3 flex items-end">
+                                    16,342.15
+                                    <span class="ml-2 text-xs text-white text-opacity-50">+179.37 pts</span>
+                                </div>
                                 <div class="grid grid-cols-3 gap-3 text-xs">
                                     <div class="bg-black bg-opacity-20 p-2 rounded text-center">
                                         <div class="text-white text-opacity-70">Ouv.</div>
@@ -1215,11 +1449,14 @@
                             <div class="bg-[#011E34] bg-opacity-70 p-5 rounded-lg">
                                 <div class="flex justify-between mb-2">
                                     <div class="font-medium">CAC 40</div>
-                                    <div class="text-sm trend-down px-3 py-1 rounded-full bg-red-900 bg-opacity-20">
-                                        -0.23%
+                                    <div class="text-sm trend-down px-3 py-1 rounded-full bg-red-900 bg-opacity-20 flex items-center">
+                                        <i class="fas fa-caret-down mr-1"></i> -0.23%
                                     </div>
                                 </div>
-                                <div class="text-2xl font-bold mb-3">8,052.21</div>
+                                <div class="text-2xl font-bold mb-3 flex items-end">
+                                    8,052.21
+                                    <span class="ml-2 text-xs text-white text-opacity-50">-18.94 pts</span>
+                                </div>
                                 <div class="grid grid-cols-3 gap-3 text-xs">
                                     <div class="bg-black bg-opacity-20 p-2 rounded text-center">
                                         <div class="text-white text-opacity-70">Ouv.</div>
@@ -1248,6 +1485,11 @@
 
     <!-- Notification de résumé email -->
     <div class="email-summary-notification" id="emailNotification">
+        <div class="absolute top-2 right-2">
+            <button class="text-white opacity-50 hover:opacity-100" id="closeNotification" aria-label="Fermer la notification">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
         <div class="flex items-center mb-3">
             <div class="email-notification-icon">
                 <i class="fas fa-envelope"></i>
@@ -1258,7 +1500,7 @@
             </div>
         </div>
         <p class="text-sm text-white text-opacity-80 mb-2">
-            Un résumé de votre portefeuille a été généré. Souhaitez-vous le prévisualiser?
+            Un résumé de votre portefeuille <span class="text-neon-green font-medium">Agressif</span> a été généré avec les performances et recommandations actuelles.
         </p>
         <div class="email-notification-actions">
             <button class="email-notification-secondary" id="dismissNotification">Plus tard</button>
@@ -1368,9 +1610,11 @@
                     if (widgetContent.style.display === 'none') {
                         widgetContent.style.display = 'block';
                         this.innerHTML = '<i class="fas fa-ellipsis-v"></i>';
+                        this.setAttribute('aria-expanded', 'true');
                     } else {
                         widgetContent.style.display = 'none';
                         this.innerHTML = '<i class="fas fa-ellipsis-h"></i>';
+                        this.setAttribute('aria-expanded', 'false');
                     }
                 });
             });
@@ -1384,14 +1628,56 @@
                 document.getElementById('emailNotification').classList.add('show');
             });
 
-            // Bouton de rejet de la notification
+            // Boutons de fermeture des notifications
             document.getElementById('dismissNotification').addEventListener('click', function() {
+                document.getElementById('emailNotification').classList.remove('show');
+            });
+            
+            document.getElementById('closeNotification').addEventListener('click', function() {
                 document.getElementById('emailNotification').classList.remove('show');
             });
 
             // Bouton de prévisualisation d'email
             document.getElementById('viewEmailPreview').addEventListener('click', function() {
                 window.location.href = 'email-preview.html';
+            });
+            
+            // Mode Zen
+            document.getElementById('zenModeToggle').addEventListener('click', function() {
+                document.body.classList.toggle('zen-mode');
+                
+                if (document.body.classList.contains('zen-mode')) {
+                    this.innerHTML = '<i class="fas fa-expand-alt"></i>';
+                    this.setAttribute('title', 'Mode normal');
+                } else {
+                    this.innerHTML = '<i class="fas fa-compress-alt"></i>';
+                    this.setAttribute('title', 'Mode zen');
+                }
+            });
+            
+            // Barre de recherche rapide
+            document.getElementById('quickSearch').addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                // Recherche dans les actifs du portefeuille
+                document.querySelectorAll('#portfolio-widget tbody tr').forEach(row => {
+                    const assetName = row.querySelector('td:first-child').textContent.toLowerCase();
+                    
+                    if (searchTerm === '' || assetName.includes(searchTerm)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
+                
+                // Mise en évidence des résultats dans les actualités
+                document.querySelectorAll('.news-card h4').forEach(title => {
+                    if (searchTerm !== '' && title.textContent.toLowerCase().includes(searchTerm)) {
+                        title.closest('.news-card').classList.add('border-yellow-400', 'border-opacity-80');
+                    } else {
+                        title.closest('.news-card').classList.remove('border-yellow-400', 'border-opacity-80');
+                    }
+                });
             });
             
             // Fonctions
@@ -1401,8 +1687,13 @@
                 // Effacer le contenu existant
                 networkBackground.innerHTML = '';
                 
+                // Vérifier si l'appareil est mobile
+                const isMobile = window.innerWidth < 768;
+                
                 // Calculer le nombre de nœuds en fonction de la taille de l'écran
-                const numNodes = Math.min(Math.floor(window.innerWidth * window.innerHeight / 15000), 80);
+                const numNodes = isMobile 
+                    ? Math.min(Math.floor(window.innerWidth * window.innerHeight / 30000), 30)
+                    : Math.min(Math.floor(window.innerWidth * window.innerHeight / 15000), 80);
                 
                 // Créer les nœuds
                 const nodes = [];
@@ -1427,7 +1718,10 @@
                 }
                 
                 // Créer des connexions entre certains nœuds
-                const maxConnections = Math.min(numNodes * 1.5, 80);
+                const maxConnections = isMobile
+                    ? Math.min(numNodes * 1.2, 30)
+                    : Math.min(numNodes * 1.5, 80);
+                
                 for (let i = 0; i < maxConnections; i++) {
                     const nodeA = nodes[Math.floor(Math.random() * nodes.length)];
                     const nodeB = nodes[Math.floor(Math.random() * nodes.length)];
@@ -1568,6 +1862,44 @@
                 
                 // Créer le graphique
                 new Chart(ctx, config);
+                
+                // Créer les mini-graphiques sparklines
+                createSparklines();
+            }
+            
+            function createSparklines() {
+                document.querySelectorAll('.sparkline').forEach(canvas => {
+                    const ctx = canvas.getContext('2d');
+                    const values = [95, 98, 97, 100, 102, 104, 105]; // Valeurs fictives ou récupérées de l'attribut data
+                    const trend = canvas.closest('.sparkline-container').getAttribute('data-trend');
+                    
+                    // Définir les dimensions du canvas
+                    const width = canvas.width;
+                    const height = canvas.height;
+                    
+                    // Trouver les valeurs min et max pour l'échelle
+                    const min = Math.min(...values);
+                    const max = Math.max(...values);
+                    const range = max - min;
+                    
+                    // Définir la couleur en fonction de la tendance
+                    ctx.strokeStyle = trend === 'up' ? '#4CAF50' : '#FF5252';
+                    ctx.lineWidth = 1.5;
+                    
+                    // Dessiner la ligne
+                    ctx.beginPath();
+                    values.forEach((value, index) => {
+                        const x = (index / (values.length - 1)) * width;
+                        const y = height - ((value - min) / range) * height;
+                        
+                        if (index === 0) {
+                            ctx.moveTo(x, y);
+                        } else {
+                            ctx.lineTo(x, y);
+                        }
+                    });
+                    ctx.stroke();
+                });
             }
             
             function updatePortfolioData(portfolioType) {
@@ -1582,6 +1914,10 @@
                     const row = document.createElement('tr');
                     row.className = 'border-b border-white border-opacity-5';
                     
+                    const isPerfPositive = component.performance.startsWith('+');
+                    const trendClass = isPerfPositive ? 'trend-up' : 'trend-down';
+                    const trendIcon = isPerfPositive ? 'fa-caret-up' : 'fa-caret-down';
+                    
                     row.innerHTML = `
                         <td class="py-3">${component.name}</td>
                         <td>
@@ -1590,7 +1926,12 @@
                             </span>
                         </td>
                         <td class="text-right font-medium">${component.allocation}</td>
-                        <td class="text-right font-medium ${component.performance.startsWith('+') ? 'trend-up' : 'trend-down'}">${component.performance}</td>
+                        <td class="text-right font-medium ${trendClass} flex items-center justify-end">
+                            <i class="fas ${trendIcon} mr-1"></i>${component.performance}
+                            <span class="sparkline-container" data-trend="${isPerfPositive ? 'up' : 'down'}">
+                                <canvas class="sparkline"></canvas>
+                            </span>
+                        </td>
                     `;
                     
                     tableBody.appendChild(row);
@@ -1601,6 +1942,22 @@
                 
                 // Mettre à jour la légende
                 updateLegendValues(data.pieData);
+                
+                // Mettre à jour le résumé de performance
+                const performanceHeader = document.querySelector('#portfolio-widget .mb-5');
+                if (performanceHeader) {
+                    performanceHeader.querySelector('.text-xl').textContent = data.performance;
+                    performanceHeader.querySelectorAll('.text-lg')[0].textContent = data.monthlyPerformance;
+                }
+                
+                // Mettre à jour la valeur centrale du donut
+                const donutValue = document.querySelector('.donut-center-value');
+                if (donutValue) {
+                    donutValue.textContent = data.value;
+                }
+                
+                // Recréer les mini-graphiques
+                createSparklines();
             }
             
             // Fonction utilitaire pour obtenir la classe CSS en fonction du type d'actif
