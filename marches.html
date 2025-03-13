@@ -463,7 +463,135 @@
             font-weight: 600;
         }
 
-        /* Section titles */
+        /* Aperçu des marchés mondiaux spécifique */
+        .market-overview-section {
+            margin-bottom: 2rem;
+        }
+        
+        .market-overview-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: center;
+        }
+        
+        .market-overview-title::before {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 3px;
+            background-color: var(--accent-color);
+            margin-right: 10px;
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+        
+        .market-overview-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .market-overview-card {
+            background-color: rgba(20, 40, 65, 0.7);
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .market-overview-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--accent-glow-strong);
+        }
+        
+        .market-overview-header {
+            background-color: rgba(25, 45, 70, 0.8);
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--card-border);
+        }
+        
+        .market-overview-header h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #ffffff;
+        }
+        
+        .market-overview-body {
+            padding: 0;
+        }
+        
+        .market-index-item {
+            padding: 14px 18px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            justify-content: space-between;
+            transition: background-color 0.2s;
+        }
+        
+        .market-index-item:last-child {
+            border-bottom: none;
+        }
+        
+        .market-index-item:hover {
+            background-color: rgba(0, 255, 135, 0.05);
+        }
+        
+        .market-index-name {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.9);
+            margin-bottom: 4px;
+        }
+        
+        .market-index-values {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        
+        .market-value-daily {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 2px;
+            letter-spacing: 0.01em;
+        }
+        
+        .market-value-ytd {
+            font-size: 0.85rem;
+            font-weight: 500;
+            opacity: 0.8;
+        }
+        
+        /* Pour les badges de variation */
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-align: center;
+            min-width: 65px;
+        }
+        
+        .badge-positive {
+            background-color: rgba(0, 255, 135, 0.15);
+            color: var(--accent-color);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+        }
+        
+        .badge-negative {
+            background-color: rgba(255, 71, 87, 0.15);
+            color: var(--negative-color);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+        }
+        
+        /* Autres styles */
         .section-title {
             font-size: 1.4rem;
             font-weight: 700;
@@ -963,135 +1091,238 @@
                     </div>
                 </div>
                 
-                <!-- Aperçu des marchés mondiaux (carte) -->
-                <div class="mb-10">
-                    <h2 class="section-title mb-6">Aperçu des marchés mondiaux</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div class="glassmorphism rounded-lg overflow-hidden">
-                            <div class="card-header">
+                <!-- Aperçu des marchés mondiaux (version améliorée) -->
+                <div class="market-overview-section">
+                    <h2 class="market-overview-title">Aperçu des marchés mondiaux</h2>
+                    
+                    <div class="market-overview-container">
+                        <!-- EUROPE -->
+                        <div class="market-overview-card">
+                            <div class="market-overview-header">
                                 <h3>Europe</h3>
                                 <span id="europe-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
                             </div>
-                            <div id="europe-indices-summary" class="grid grid-cols-2 gap-3 p-4 text-sm">
-                                <div class="p-2">
-                                    <div class="font-medium mb-1">CAC 40</div>
-                                    <div class="positive">--</div>
+                            <div class="market-overview-body">
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">CAC 40</div>
+                                    </div>
+                                    <div class="market-index-values">
+                                        <div id="cac40-daily" class="market-value-daily positive">--</div>
+                                        <div id="cac40-ytd" class="market-value-ytd positive">--</div>
+                                    </div>
                                 </div>
-                                <div class="p-2">
-                                    <div class="font-medium mb-1">DAX</div>
-                                    <div class="positive">--</div>
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">DAX</div>
+                                    </div>
+                                    <div class="market-index-values">
+                                        <div id="dax-daily" class="market-value-daily positive">--</div>
+                                        <div id="dax-ytd" class="market-value-ytd positive">--</div>
+                                    </div>
                                 </div>
-                                <div class="p-2">
-                                    <div class="font-medium mb-1">FTSE 100</div>
-                                    <div class="positive">--</div>
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">FTSE 100</div>
+                                    </div>
+                                    <div class="market-index-values">
+                                        <div id="ftse-daily" class="market-value-daily positive">--</div>
+                                        <div id="ftse-ytd" class="market-value-ytd positive">--</div>
+                                    </div>
                                 </div>
-                                <div class="p-2">
-                                    <div class="font-medium mb-1">EURO STOXX 50</div>
-                                    <div class="positive">--</div>
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">EURO STOXX 50</div>
+                                    </div>
+                                    <div class="market-index-values">
+                                        <div id="stoxx-daily" class="market-value-daily positive">--</div>
+                                        <div id="stoxx-ytd" class="market-value-ytd positive">--</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="glassmorphism rounded-lg overflow-hidden">
-                            <div class="card-header">
+                        <!-- AMÉRIQUE DU NORD -->
+                        <div class="market-overview-card">
+                            <div class="market-overview-header">
                                 <h3>Amérique du Nord</h3>
                                 <span id="north-america-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
                             </div>
-                            <div id="north-america-indices-summary" class="grid grid-cols-2 gap-3 p-4 text-sm">
-                                <div class="p-2">
-                                    <div class="font-medium mb-1">S&P 500 INDEX</div>
-                                    <div class="positive">--</div>
+                            <div class="market-overview-body">
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">S&P 500 INDEX</div>
+                                    </div>
+                                    <div class="market-index-values">
+                                        <div id="sp500-daily" class="market-value-daily positive">--</div>
+                                        <div id="sp500-ytd" class="market-value-ytd negative">--</div>
+                                    </div>
                                 </div>
-                                <div class="p-2">
-                                    <div class="font-medium mb-1">DOW JONES INDUSTRIAL</div>
-                                    <div class="positive">--</div>
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">DOW JONES INDUSTRIAL</div>
+                                    </div>
+                                    <div class="market-index-values">
+                                        <div id="dow-daily" class="market-value-daily negative">--</div>
+                                        <div id="dow-ytd" class="market-value-ytd negative">--</div>
+                                    </div>
                                 </div>
-                                <div class="p-2">
-                                    <div class="font-medium mb-1">NASDAQ Composite</div>
-                                    <div class="positive">--</div>
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">NASDAQ Composite</div>
+                                    </div>
+                                    <div class="market-index-values">
+                                        <div id="nasdaq-daily" class="market-value-daily positive">--</div>
+                                        <div id="nasdaq-ytd" class="market-value-ytd negative">--</div>
+                                    </div>
                                 </div>
-                                <div class="p-2">
-                                    <div class="font-medium mb-1">S&P/TSX 60</div>
-                                    <div class="positive">--</div>
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">S&P/TSX 60</div>
+                                    </div>
+                                    <div class="market-index-values">
+                                        <div id="tsx-daily" class="market-value-daily positive">--</div>
+                                        <div id="tsx-ytd" class="market-value-ytd positive">--</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="glassmorphism rounded-lg overflow-hidden">
-                            <div class="card-header">
+                        <!-- ASIE -->
+                        <div class="market-overview-card">
+                            <div class="market-overview-header">
                                 <h3>Asie</h3>
                                 <span id="asia-trend" class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
                             </div>
-                            <div id="asia-indices-summary" class="grid grid-cols-2 gap-3 p-4 text-sm">
-                                <div class="p-2">
-                                    <div class="font-medium mb-1">NIKKEI 225</div>
-                                    <div class="negative">--</div>
+                            <div class="market-overview-body">
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">NIKKEI 225</div>
+                                    </div>
+                                    <div class="market-index-values">
+                                        <div id="nikkei-daily" class="market-value-daily negative">--</div>
+                                        <div id="nikkei-ytd" class="market-value-ytd negative">--</div>
+                                    </div>
                                 </div>
-                                <div class="p-2">
-                                    <div class="font-medium mb-1">HANG SENG HK COMPOSITE</div>
-                                    <div class="negative">--</div>
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">HANG SENG HK COMPOSITE</div>
+                                    </div>
+                                    <div class="market-index-values">
+                                        <div id="hangseng-daily" class="market-value-daily negative">--</div>
+                                        <div id="hangseng-ytd" class="market-value-ytd positive">--</div>
+                                    </div>
                                 </div>
-                                <div class="p-2">
-                                    <div class="font-medium mb-1">SHANGHAI COMPOSITE</div>
-                                    <div class="negative">--</div>
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">SHANGHAI COMPOSITE</div>
+                                    </div>
+                                    <div class="market-index-values">
+                                        <div id="shanghai-daily" class="market-value-daily negative">--</div>
+                                        <div id="shanghai-ytd" class="market-value-ytd positive">--</div>
+                                    </div>
                                 </div>
-                                <div class="p-2">
-                                    <div class="font-medium mb-1">BSE SENSEX</div>
-                                    <div class="negative">--</div>
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">BSE SENSEX</div>
+                                    </div>
+                                    <div class="market-index-values">
+                                        <div id="sensex-daily" class="market-value-daily positive">--</div>
+                                        <div id="sensex-ytd" class="market-value-ytd positive">--</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="glassmorphism rounded-lg overflow-hidden">
-                            <div class="card-header">
+                        <!-- AMÉRIQUE LATINE -->
+                        <div class="market-overview-card">
+                            <div class="market-overview-header">
                                 <h3>Amérique Latine</h3>
                                 <span id="latin-america-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
                             </div>
-                            <div id="latin-america-indices-summary" class="grid grid-cols-2 gap-3 p-4 text-sm">
-                                <div class="p-2">
-                                    <div class="font-medium mb-1">BOVESPA</div>
-                                    <div class="positive">--</div>
+                            <div class="market-overview-body">
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">BOVESPA</div>
+                                    </div>
+                                    <div class="market-index-values">
+                                        <div id="bovespa-daily" class="market-value-daily positive">--</div>
+                                        <div id="bovespa-ytd" class="market-value-ytd positive">--</div>
+                                    </div>
                                 </div>
-                                <div class="p-2">
-                                    <div class="font-medium mb-1">IPC (Mexique)</div>
-                                    <div class="positive">--</div>
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">IPC (Mexique)</div>
+                                    </div>
+                                    <div class="market-index-values">
+                                        <div id="ipc-daily" class="market-value-daily positive">--</div>
+                                        <div id="ipc-ytd" class="market-value-ytd positive">--</div>
+                                    </div>
                                 </div>
-                                <div class="p-2">
-                                    <div class="font-medium mb-1">MERVAL</div>
-                                    <div class="positive">--</div>
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">MERVAL</div>
+                                    </div>
+                                    <div class="market-index-values">
+                                        <div id="merval-daily" class="market-value-daily positive">--</div>
+                                        <div id="merval-ytd" class="market-value-ytd negative">--</div>
+                                    </div>
                                 </div>
-                                <div class="p-2">
-                                    <div class="font-medium mb-1">IPSA</div>
-                                    <div class="positive">--</div>
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">IPSA</div>
+                                    </div>
+                                    <div class="market-index-values">
+                                        <div id="ipsa-daily" class="market-value-daily negative">--</div>
+                                        <div id="ipsa-ytd" class="market-value-ytd positive">--</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- Ajout de la section "Autres" -->
-                    <div class="mt-6">
-                        <div class="glassmorphism rounded-lg overflow-hidden">
-                            <div class="card-header">
-                                <h3>Autres régions</h3>
-                                <span id="other-trend" class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
-                            </div>
-                            <div class="p-4">
-                                <div id="other-indices-summary" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                                    <div class="p-2">
-                                        <div class="font-medium mb-1">NASDAQ South Africa</div>
-                                        <div class="negative">--</div>
+                    <!-- AUTRES RÉGIONS -->
+                    <div class="market-overview-card mt-6">
+                        <div class="market-overview-header">
+                            <h3>Autres régions</h3>
+                            <span id="other-trend" class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
+                        </div>
+                        <div class="market-overview-body">
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">NASDAQ South Africa</div>
                                     </div>
-                                    <div class="p-2">
-                                        <div class="font-medium mb-1">NASDAQ Australia</div>
-                                        <div class="negative">--</div>
+                                    <div class="market-index-values">
+                                        <div id="southafrica-daily" class="market-value-daily negative">-1,24 %</div>
+                                        <div id="southafrica-ytd" class="market-value-ytd positive">6,81 %</div>
                                     </div>
-                                    <div class="p-2">
-                                        <div class="font-medium mb-1">NASDAQ Israel</div>
-                                        <div class="negative">--</div>
+                                </div>
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">NASDAQ Australia</div>
                                     </div>
-                                    <div class="p-2">
-                                        <div class="font-medium mb-1">NASDAQ Morocco</div>
-                                        <div class="negative">--</div>
+                                    <div class="market-index-values">
+                                        <div id="australia-daily" class="market-value-daily negative">-1,03 %</div>
+                                        <div id="australia-ytd" class="market-value-ytd negative">-3,57 %</div>
+                                    </div>
+                                </div>
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">NASDAQ Israel</div>
+                                    </div>
+                                    <div class="market-index-values">
+                                        <div id="israel-daily" class="market-value-daily positive">2,13 %</div>
+                                        <div id="israel-ytd" class="market-value-ytd negative">-0,79 %</div>
+                                    </div>
+                                </div>
+                                <div class="market-index-item">
+                                    <div>
+                                        <div class="market-index-name">NASDAQ Morocco</div>
+                                    </div>
+                                    <div class="market-index-values">
+                                        <div id="morocco-daily" class="market-value-daily negative">-0,81 %</div>
+                                        <div id="morocco-ytd" class="market-value-ytd positive">9,82 %</div>
                                     </div>
                                 </div>
                             </div>
@@ -1109,5 +1340,85 @@
     </main>
 
     <script src="marches-script.js"></script>
+    <script>
+        // Script pour mettre à jour les valeurs de l'aperçu des marchés mondiaux
+        document.addEventListener('DOMContentLoaded', function() {
+            // Cette fonction sera appelée après le chargement des données
+            // par le script principal marches-script.js
+            const originalUpdateRegionSummary = window.updateRegionSummary;
+            
+            if (typeof originalUpdateRegionSummary === 'function') {
+                window.updateRegionSummary = function(region, indices) {
+                    // Appeler la fonction originale
+                    originalUpdateRegionSummary(region, indices);
+                    
+                    // Mettre à jour également les nouveaux éléments spécifiques
+                    updateMarketOverview(region, indices);
+                };
+            }
+            
+            // Fonction pour mettre à jour les valeurs de l'aperçu
+            function updateMarketOverview(region, indices) {
+                // Uniquement pour tester - à remplacer par la vraie implémentation
+                console.log(`Mise à jour de l'aperçu pour ${region} avec ${indices.length} indices`);
+                
+                // Mettez à jour les éléments spécifiques ici
+                if (region === 'europe') {
+                    updateSpecificIndex(indices, 'CAC 40', 'cac40');
+                    updateSpecificIndex(indices, 'DAX', 'dax');
+                    updateSpecificIndex(indices, 'FTSE 100', 'ftse');
+                    updateSpecificIndex(indices, 'EURO STOXX 50', 'stoxx');
+                }
+                else if (region === 'north-america') {
+                    updateSpecificIndex(indices, 'S&P 500', 'sp500');
+                    updateSpecificIndex(indices, 'DOW JONES', 'dow');
+                    updateSpecificIndex(indices, 'NASDAQ Composite', 'nasdaq');
+                    updateSpecificIndex(indices, 'S&P/TSX', 'tsx');
+                }
+                else if (region === 'asia') {
+                    updateSpecificIndex(indices, 'NIKKEI', 'nikkei');
+                    updateSpecificIndex(indices, 'HANG SENG', 'hangseng');
+                    updateSpecificIndex(indices, 'SHANGHAI', 'shanghai');
+                    updateSpecificIndex(indices, 'SENSEX', 'sensex');
+                }
+                else if (region === 'latin-america') {
+                    updateSpecificIndex(indices, 'BOVESPA', 'bovespa');
+                    updateSpecificIndex(indices, 'IPC', 'ipc');
+                    updateSpecificIndex(indices, 'MERVAL', 'merval');
+                    updateSpecificIndex(indices, 'IPSA', 'ipsa');
+                }
+                else if (region === 'other') {
+                    updateSpecificIndex(indices, 'South Africa', 'southafrica');
+                    updateSpecificIndex(indices, 'Australia', 'australia');
+                    updateSpecificIndex(indices, 'Israel', 'israel');
+                    updateSpecificIndex(indices, 'Morocco', 'morocco');
+                }
+            }
+            
+            function updateSpecificIndex(indices, searchTerm, elementPrefix) {
+                const index = indices.find(idx => 
+                    (idx.index_name || "").includes(searchTerm) || 
+                    (idx.country || "").includes(searchTerm)
+                );
+                
+                if (index) {
+                    const dailyElement = document.getElementById(`${elementPrefix}-daily`);
+                    const ytdElement = document.getElementById(`${elementPrefix}-ytd`);
+                    
+                    if (dailyElement) {
+                        dailyElement.textContent = index.changePercent || "--";
+                        dailyElement.className = 'market-value-daily ' + 
+                            ((index.changePercent || "").includes('-') ? 'negative' : 'positive');
+                    }
+                    
+                    if (ytdElement) {
+                        ytdElement.textContent = index.ytdChange || "--";
+                        ytdElement.className = 'market-value-ytd ' + 
+                            ((index.ytdChange || "").includes('-') ? 'negative' : 'positive');
+                    }
+                }
+            }
+        });
+    </script>
 </body>
 </html>
