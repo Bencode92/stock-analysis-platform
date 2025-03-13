@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   # Ajout d'un déclenchement automatique toutes les 30 minutes
   schedule:
-    - cron: '*/30 * * * *'  # Exécuter toutes les 30 minutes, tous les jours
+    - cron: '0,30 * * * *'  # Exécuter à minuit et à la 30e minute de chaque heure
 
 # Configuration des permissions
 permissions:
@@ -14,6 +14,8 @@ permissions:
 jobs:
   update-data:
     runs-on: ubuntu-latest
+    # Définir un timeout plus court pour éviter les longues exécutions
+    timeout-minutes: 10
     
     steps:
       - name: Checkout repository
