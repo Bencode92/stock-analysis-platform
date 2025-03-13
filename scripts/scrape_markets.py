@@ -56,7 +56,7 @@ CONFIG = {
             "CAC", "DAX", "FTSE", "IBEX", "MIB", "AEX", "BEL", "SMI", "ATX",
             "OMX", "OMXS", "ISEQ", "PSI", "ATHEX", "OSEBX", "STOXX", "EURO", "EURONEXT",
             "FRANCE", "ALLEMAGNE", "ROYAUME-UNI", "ESPAGNE", "ITALIE", "PAYS-BAS", "SUISSE", "BELGIQUE",
-            "AUTRICHE", "DANEMARK", "FINLANDE", "IRLANDE", "POLOGNE", "PORTUGAL", "NORVÈGE", "SUÈDE"
+            "AUTRICHE", "DANEMARK", "FINLANDE", "IRLANDE", "POLOGNE", "PORTUGAL", "NORVÈGE", "SUÈDE", "UK"
         ],
         "north-america": [
             "DOW", "S&P", "NASDAQ", "RUSSELL", "CBOE", "NYSE", "AMEX", "DJIA", "US", "ÉTATS-UNIS",
@@ -91,6 +91,9 @@ CONFIG = {
         "france": "France",
         "allemagne": "Allemagne",
         "royaume-uni": "Royaume-Uni",
+        "royaume uni": "Royaume-Uni",
+        "uk": "Royaume-Uni",
+        "great britain": "Royaume-Uni",
         "espagne": "Espagne",
         "italie": "Italie",
         "belgique": "Belgique",
@@ -161,6 +164,7 @@ CONFIG = {
         "France": "europe",
         "Allemagne": "europe",
         "Royaume-Uni": "europe",
+        "Royaume Uni": "europe",
         "Espagne": "europe",
         "Italie": "europe",
         "Belgique": "europe",
@@ -197,6 +201,7 @@ CONFIG = {
         "Philippines": "asia",
         "Thaïlande": "asia",
         "Singapour": "asia",
+        "Taïwan": "asia",
         
         "Australie": "other",
         "Nouvelle-Zélande": "other",
@@ -205,7 +210,9 @@ CONFIG = {
         "Qatar": "other",
         "Afrique du Sud": "other",
         "Maroc": "other",
-        "International": "other"
+        "International": "other",
+        "Égypte": "other",
+        "Turquie": "other"
     }
 }
 
@@ -250,6 +257,20 @@ def get_headers():
         "Pragma": "no-cache",
         "Referer": "https://www.google.com/"
     }
+
+def normalize_country_name(country):
+    """Normalise le nom du pays pour éviter les problèmes d'espace ou de trait d'union"""
+    if not country:
+        return "International"
+    
+    # Standardiser le nom des pays qui pourraient avoir plusieurs formes
+    normalized = country.replace(" Uni", "-Uni").replace("Royaume ", "Royaume-")
+    
+    # Pour le cas particulier du Royaume-Uni
+    if normalized.lower() in ['uk', 'grande bretagne', 'grande-bretagne', 'royaume uni', 'royaume-uni']:
+        return "Royaume-Uni"
+    
+    return normalized
 
 def separate_country_and_index(name):
     """
@@ -303,7 +324,7 @@ def separate_country_and_index(name):
             found_country = "Allemagne"
         elif "CAC" in name or "PARIS" in name:
             found_country = "France"
-        elif "FTSE" in name or "LONDON" in name:
+        elif "FTSE" in name or "LONDON" in name or "UK" in name.upper():
             found_country = "Royaume-Uni"
         elif "NASDAQ" in name or "S&P" in name or "DOW" in name:
             found_country = "États-Unis"
@@ -325,6 +346,9 @@ def separate_country_and_index(name):
             found_country = "Mexique"
         else:
             found_country = "International"
+    
+    # Normaliser le nom du pays
+    found_country = normalize_country_name(found_country)
     
     return found_country, index_name
 
@@ -380,6 +404,9 @@ def extract_table_data(table):
                 # Si le pays est disponible, le nom de l'indice est simplement le nom
                 index_name = name
             
+            # Normaliser le nom du pays
+            country = normalize_country_name(country)
+            
             # Extraire la valeur (dernier cours)
             value_cell = cells[value_idx] if value_idx < len(cells) else cells[1]
             value = value_cell.text.strip()
@@ -429,8 +456,11 @@ def extract_table_data(table):
 
 def determine_region(country):
     """Détermine la région basée sur le pays"""
-    if country in CONFIG["country_region_mapping"]:
-        return CONFIG["country_region_mapping"][country]
+    # Normaliser le nom du pays pour la recherche
+    normalized_country = normalize_country_name(country)
+    
+    if normalized_country in CONFIG["country_region_mapping"]:
+        return CONFIG["country_region_mapping"][normalized_country]
     
     # Si le pays n'est pas trouvé dans le mapping, chercher par correspondance partielle
     country_upper = country.upper()
