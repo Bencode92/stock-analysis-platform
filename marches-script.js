@@ -269,13 +269,17 @@ document.addEventListener('DOMContentLoaded', function() {
                         sortedIndices.forEach(index => {
                             const row = document.createElement('tr');
                             
+                            // Déterminer la classe CSS pour les valeurs (positif/négatif)
+                            const changeClass = index.changePercent && index.changePercent.includes('-') ? 'negative' : 'positive';
+                            const ytdClass = index.ytdChange && index.ytdChange.includes('-') ? 'negative' : 'positive';
+                            
                             // Création de la ligne avec la structure correcte (comme sur Boursorama)
                             row.innerHTML = `
                                 <td class="font-medium">${index.country || '-'}</td>
                                 <td>${index.index_name || '-'}</td>
                                 <td>${index.value || '-'}</td>
-                                <td class="${index.trend === 'down' ? 'negative' : 'positive'}">${index.changePercent || '-'}</td>
-                                <td class="${index.ytdChange && index.ytdChange.includes('-') ? 'negative' : 'positive'}">${index.ytdChange || '-'}</td>
+                                <td class="${changeClass}">${index.changePercent || '-'}</td>
+                                <td class="${ytdClass}">${index.ytdChange || '-'}</td>
                                 <td>
                                     <button class="p-1 px-3 rounded bg-green-400 bg-opacity-10 text-green-400 text-xs">Voir</button>
                                 </td>
@@ -323,17 +327,6 @@ document.addEventListener('DOMContentLoaded', function() {
             trendElement.innerHTML = '';
             return;
         }
-        
-        // Compter les indices en hausse et en baisse
-        const upCount = indices.filter(index => index.trend === 'up').length;
-        const downCount = indices.filter(index => index.trend === 'down').length;
-        
-        // Déterminer la tendance générale
-        const overallTrend = upCount >= downCount ? 'up' : 'down';
-        trendElement.className = overallTrend === 'up' ? 'text-sm positive' : 'text-sm negative';
-        trendElement.innerHTML = overallTrend === 'up' ? 
-            '<i class="fas fa-arrow-up"></i>' : 
-            '<i class="fas fa-arrow-down"></i>';
         
         // Sélectionner les indices importants pour cette région
         let importantIndices = [];
@@ -390,16 +383,48 @@ document.addEventListener('DOMContentLoaded', function() {
             importantIndices.push(remainingIndices[0]);
         }
         
+        // Compter les indices positifs et négatifs pour déterminer la tendance
+        const positiveIndices = importantIndices.filter(index => 
+            !(index.changePercent || "").includes('-')
+        ).length;
+        
+        const negativeIndices = importantIndices.filter(index => 
+            (index.changePercent || "").includes('-')
+        ).length;
+        
+        // Déterminer la tendance générale en fonction du décompte
+        let trendClass = 'neutral';
+        let trendIcon = '';
+        
+        if (positiveIndices >= 3) {
+            trendClass = 'positive';
+            trendIcon = '<i class="fas fa-arrow-up"></i>';
+        } else if (negativeIndices >= 3) {
+            trendClass = 'negative';
+            trendIcon = '<i class="fas fa-arrow-down"></i>';
+        } else {
+            trendClass = 'neutral';
+            trendIcon = '<i class="fas fa-arrows-alt-h"></i>';
+        }
+        
+        // Mettre à jour la tendance
+        trendElement.className = `text-sm ${trendClass}`;
+        trendElement.innerHTML = trendIcon;
+        
         // Générer le HTML
         summaryContainer.innerHTML = '';
         
         importantIndices.forEach(index => {
+            // Déterminer la classe pour la variation
+            const changeClass = (index.changePercent || "").includes('-') ? 'negative' : 'positive';
+            const ytdClass = (index.ytdChange || "").includes('-') ? 'negative' : 'positive';
+            
             const div = document.createElement('div');
             div.innerHTML = `
                 <div class="font-medium">${index.index_name || ""}</div>
-                <div class="${index.trend === 'down' ? 'negative' : 'positive'}">
+                <div class="${changeClass}">
                     ${index.changePercent || '-'} 
-                    ${index.ytdChange ? `/ ${index.ytdChange}` : ''}
+                    ${index.ytdChange ? `/ <span class="${ytdClass}">${index.ytdChange}</span>` : ''}
                 </div>
             `;
             summaryContainer.appendChild(div);
