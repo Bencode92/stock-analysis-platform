@@ -93,7 +93,7 @@
             align-items: center;
         }
         
-        .logo-container {
+        .logo-containers {
             display: flex;
             align-items: center;
             font-weight: 900;
@@ -103,7 +103,7 @@
         
         .logo-container a {
             text-decoration: none;
-            transition: color 0.3s ease;
+            $transition: color 0.3s ease;
         }
         
         .dark .logo-container a {
@@ -619,7 +619,8 @@
                 <!-- Onglets des régions -->
                 <div class="region-tabs mb-6">
                     <div class="region-tab active" data-region="europe">Europe</div>
-                    <div class="region-tab" data-region="us">États-Unis</div>
+                    <div class="region-tab" data-region="north-america">Amérique du Nord</div>
+                    <div class="region-tab" data-region="latin-america">Amérique Latine</div>
                     <div class="region-tab" data-region="asia">Asie</div>
                     <div class="region-tab" data-region="other">Autres</div>
                 </div>
@@ -659,7 +660,7 @@
                             </div>
                         </div>
                         
-                        <div id="us-indices" class="region-content hidden">
+                        <div id="north-america-indices" class="region-content hidden">
                             <div class="overflow-x-auto">
                                 <table class="data-table">
                                     <thead>
@@ -672,7 +673,27 @@
                                             <th>Actions</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="us-indices-body">
+                                    <tbody id="north-america-indices-body">
+                                        <!-- Les données seront injectées ici -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                        <div id="latin-america-indices" class="region-content hidden">
+                            <div class="overflow-x-auto">
+                                <table class="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>PAYS</th>
+                                            <th>LIBELLÉ</th>
+                                            <th>DERNIER</th>
+                                            <th>VAR. %</th>
+                                            <th>VAR/1JANV</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="latin-america-indices-body">
                                         <!-- Les données seront injectées ici -->
                                     </tbody>
                                 </table>
@@ -752,10 +773,10 @@
                         
                         <div class="glassmorphism rounded-lg p-4 flex flex-col">
                             <div class="flex justify-between items-center mb-2">
-                                <h3 class="font-medium">États-Unis</h3>
-                                <span id="us-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                                <h3 class="font-medium">Amérique du Nord</h3>
+                                <span id="north-america-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
                             </div>
-                            <div id="us-indices-summary" class="grid grid-cols-2 gap-2 text-sm">
+                            <div id="north-america-indices-summary" class="grid grid-cols-2 gap-2 text-sm">
                                 <div>
                                     <div class="font-medium">DOW JONES</div>
                                     <div class="positive">--</div>
@@ -769,7 +790,7 @@
                                     <div class="positive">--</div>
                                 </div>
                                 <div>
-                                    <div class="font-medium">RUSSELL 2000</div>
+                                    <div class="font-medium">TSX</div>
                                     <div class="positive">--</div>
                                 </div>
                             </div>
@@ -802,24 +823,24 @@
                         
                         <div class="glassmorphism rounded-lg p-4 flex flex-col">
                             <div class="flex justify-between items-center mb-2">
-                                <h3 class="font-medium">Autres Marchés</h3>
-                                <span id="other-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                                <h3 class="font-medium">Amérique Latine</h3>
+                                <span id="latin-america-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
                             </div>
-                            <div id="other-indices-summary" class="grid grid-cols-2 gap-2 text-sm">
+                            <div id="latin-america-indices-summary" class="grid grid-cols-2 gap-2 text-sm">
                                 <div>
                                     <div class="font-medium">BOVESPA</div>
                                     <div class="positive">--</div>
                                 </div>
                                 <div>
-                                    <div class="font-medium">TSX</div>
+                                    <div class="font-medium">IPC (Mexique)</div>
                                     <div class="positive">--</div>
                                 </div>
                                 <div>
-                                    <div class="font-medium">ASX 200</div>
+                                    <div class="font-medium">MERVAL</div>
                                     <div class="positive">--</div>
                                 </div>
                                 <div>
-                                    <div class="font-medium">RTS</div>
+                                    <div class="font-medium">IPSA</div>
                                     <div class="positive">--</div>
                                 </div>
                             </div>
