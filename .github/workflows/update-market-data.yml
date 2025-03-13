@@ -3,9 +3,9 @@ name: Update Market Data
 on:
   # Déclenchement manuel
   workflow_dispatch:
-  # Ajout d'un déclenchement automatique quotidien
+  # Ajout d'un déclenchement automatique toutes les 30 minutes
   schedule:
-    - cron: '0 8 * * 1-5'  # Exécuter à 8h du matin du lundi au vendredi
+    - cron: '*/30 * * * *'  # Exécuter toutes les 30 minutes, tous les jours
 
 # Configuration des permissions
 permissions:
