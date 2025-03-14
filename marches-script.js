@@ -409,15 +409,17 @@ document.addEventListener('DOMContentLoaded', function() {
         const summaryContainer = document.getElementById(`${region}-indices-summary`);
         const trendElement = document.getElementById(`${region}-trend`);
         
-        if (!summaryContainer || !trendElement) return;
+        if (!trendElement) return;
         
         // Si pas d'indices, afficher un message
         if (!indices.length) {
-            summaryContainer.innerHTML = `
-                <div class="col-span-2 text-center text-gray-400">
-                    Aucune donnée disponible
-                </div>
-            `;
+            if (summaryContainer) {
+                summaryContainer.innerHTML = `
+                    <div class="col-span-2 text-center text-gray-400">
+                        Aucune donnée disponible
+                    </div>
+                `;
+            }
             
             // Masquer la tendance
             trendElement.innerHTML = '';
@@ -522,39 +524,41 @@ document.addEventListener('DOMContentLoaded', function() {
         trendElement.innerHTML = trendIcon;
         
         // Générer le HTML
-        summaryContainer.innerHTML = '';
-        
-        importantIndices.forEach(index => {
-            // Déterminer la classe pour la variation
-            let changeClass = 'neutral';
-            const changePercent = index.changePercent || "";
+        if (summaryContainer) {
+            summaryContainer.innerHTML = '';
             
-            if (changePercent.includes('-')) {
-                changeClass = 'negative';
-            } else if (changePercent !== '0,00 %' && changePercent !== '0.00 %' && changePercent !== '0 %') {
-                changeClass = 'positive';
-            }
-            
-            // Déterminer la classe pour YTD
-            let ytdClass = 'neutral';
-            const ytdChange = index.ytdChange || "";
-            
-            if (ytdChange.includes('-')) {
-                ytdClass = 'negative';
-            } else if (ytdChange !== '0,00 %' && ytdChange !== '0.00 %' && ytdChange !== '0 %') {
-                ytdClass = 'positive';
-            }
-            
-            const div = document.createElement('div');
-            div.innerHTML = `
-                <div class="font-medium">${index.index_name || ""}</div>
-                <div class="${changeClass}">
-                    ${index.changePercent || '-'} 
-                    ${index.ytdChange ? `/ <span class="${ytdClass}">${index.ytdChange}</span>` : ''}
-                </div>
-            `;
-            summaryContainer.appendChild(div);
-        });
+            importantIndices.forEach(index => {
+                // Déterminer la classe pour la variation
+                let changeClass = 'neutral';
+                const changePercent = index.changePercent || "";
+                
+                if (changePercent.includes('-')) {
+                    changeClass = 'negative';
+                } else if (changePercent !== '0,00 %' && changePercent !== '0.00 %' && changePercent !== '0 %') {
+                    changeClass = 'positive';
+                }
+                
+                // Déterminer la classe pour YTD
+                let ytdClass = 'neutral';
+                const ytdChange = index.ytdChange || "";
+                
+                if (ytdChange.includes('-')) {
+                    ytdClass = 'negative';
+                } else if (ytdChange !== '0,00 %' && ytdChange !== '0.00 %' && ytdChange !== '0 %') {
+                    ytdClass = 'positive';
+                }
+                
+                const div = document.createElement('div');
+                div.innerHTML = `
+                    <div class="font-medium">${index.index_name || ""}</div>
+                    <div class="${changeClass}">
+                        ${index.changePercent || '-'} 
+                        ${index.ytdChange ? `/ <span class="${ytdClass}">${index.ytdChange}</span>` : ''}
+                    </div>
+                `;
+                summaryContainer.appendChild(div);
+            });
+        }
     }
     
     /**
@@ -564,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!percentStr) return 0;
         
         // Enlever le symbole % et autres caractères non numériques, sauf le - et le .
-        const value = percentStr.replace(/[^0-9\\\\.\\\\-]/g, '');
+        const value = percentStr.replace(/[^0-9\\\\\\\\.\\\\\\\\-]/g, '');
         return parseFloat(value) || 0;
     }
     
