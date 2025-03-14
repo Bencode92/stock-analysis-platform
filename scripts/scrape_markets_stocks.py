@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Script pour ajouter manuellement les indices boursiers majeurs du Canada et de l'Inde
-qui pourraient être manquants dans les données collectées de Boursorama
+Script pour ajouter manuellement les indices boursiers majeurs qui pourraient être manquants 
+dans les données collectées de Boursorama
+Note: Les indices du Canada et de l'Inde ont été désactivés comme demandé
 """
 
 import os
@@ -16,59 +17,61 @@ DATA_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file_
 
 # Indices additionnels à ajouter (si non présents)
 ADDITIONAL_INDICES = {
-    # Indices Canadiens
+    # Indices Canadiens - DÉSACTIVÉS
     "north-america": [
-        {
-            "country": "Canada",
-            "index_name": "S&P/TSX Composite",
-            "value": "24 777,91",
-            "change": "0,78 %",
-            "changePercent": "0,78 %",
-            "ytdChange": "5,21 %",
-            "opening": "24 584,04",
-            "high": "",
-            "low": "",
-            "trend": "up"
-        },
-        {
-            "country": "Canada",
-            "index_name": "S&P/TSX 60",
-            "value": "1 491,78",
-            "change": "0,82 %",
-            "changePercent": "0,82 %",
-            "ytdChange": "4,95 %",
-            "opening": "1 479,66",
-            "high": "",
-            "low": "",
-            "trend": "up"
-        }
+        # Ces indices ont été commentés pour ne plus les ajouter automatiquement
+        # {
+        #     "country": "Canada",
+        #     "index_name": "S&P/TSX Composite",
+        #     "value": "24 777,91",
+        #     "change": "0,78 %",
+        #     "changePercent": "0,78 %",
+        #     "ytdChange": "5,21 %",
+        #     "opening": "24 584,04",
+        #     "high": "",
+        #     "low": "",
+        #     "trend": "up"
+        # },
+        # {
+        #     "country": "Canada",
+        #     "index_name": "S&P/TSX 60",
+        #     "value": "1 491,78",
+        #     "change": "0,82 %",
+        #     "changePercent": "0,82 %",
+        #     "ytdChange": "4,95 %",
+        #     "opening": "1 479,66",
+        #     "high": "",
+        #     "low": "",
+        #     "trend": "up"
+        # }
     ],
-    # Indices Indiens
+    # Indices Indiens - DÉSACTIVÉS
     "asia": [
-        {
-            "country": "Inde",
-            "index_name": "BSE SENSEX",
-            "value": "74 339,44",
-            "change": "0,14 %",
-            "changePercent": "0,14 %",
-            "ytdChange": "2,86 %",
-            "opening": "74 235,26",
-            "high": "",
-            "low": "",
-            "trend": "up"
-        },
-        {
-            "country": "Inde",
-            "index_name": "NIFTY 50",
-            "value": "22 624,80",
-            "change": "0,17 %",
-            "changePercent": "0,17 %",
-            "ytdChange": "3,09 %",
-            "opening": "22 587,95",
-            "high": "",
-            "low": "",
-            "trend": "up"
-        }
+        # Ces indices ont été commentés pour ne plus les ajouter automatiquement
+        # {
+        #     "country": "Inde",
+        #     "index_name": "BSE SENSEX",
+        #     "value": "74 339,44",
+        #     "change": "0,14 %",
+        #     "changePercent": "0,14 %",
+        #     "ytdChange": "2,86 %",
+        #     "opening": "74 235,26",
+        #     "high": "",
+        #     "low": "",
+        #     "trend": "up"
+        # },
+        # {
+        #     "country": "Inde",
+        #     "index_name": "NIFTY 50",
+        #     "value": "22 624,80",
+        #     "change": "0,17 %",
+        #     "changePercent": "0,17 %",
+        #     "ytdChange": "3,09 %",
+        #     "opening": "22 587,95",
+        #     "high": "",
+        #     "low": "",
+        #     "trend": "up"
+        # }
     ]
 }
 
@@ -137,6 +140,7 @@ def main():
     """Point d'entrée principal"""
     try:
         print("🚀 Vérification et ajout des indices manquants...")
+        print("⚠️ Note: Les indices du Canada et de l'Inde ont été désactivés comme demandé")
         
         # Charger les données existantes
         data = load_market_data()
