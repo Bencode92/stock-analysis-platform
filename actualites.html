@@ -9,6 +9,7 @@
     <script type="module" src="aiintegration.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="actualites-style.css">
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -41,6 +42,7 @@
             --sidebar-width: 80px;
             --card-bg-dark: rgba(1, 30, 52, 0.5);
             --card-bg-light: rgba(240, 245, 255, 0.8);
+            --text-secondary: rgba(255, 255, 255, 0.7);
         }
         
         body {
@@ -420,6 +422,42 @@
             border-color: rgba(0, 0, 0, 0.1);
         }
 
+        /* Footer */
+        .page-footer {
+            background: var(--dark-panel);
+            padding: 20px 40px;
+            text-align: center;
+            position: relative;
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0, 255, 135, 0.2);
+            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .data-source-info {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .data-source-info p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+        }
+        
+        .data-source-info i {
+            margin-right: 8px;
+            color: var(--accent-color);
+        }
+        
+        .update-time {
+            color: var(--accent-color);
+            font-weight: 500;
+        }
+
         /* Animated network background */
         .network-background {
             position: fixed;
@@ -506,270 +544,6 @@
             background-color: rgba(240, 245, 255, 0.8);
         }
 
-        /* Event cards */
-        .event-card {
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-        
-        .event-card::before {
-            content: '';
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            background: linear-gradient(45deg, var(--accent-color), transparent, var(--accent-color));
-            z-index: -1;
-            opacity: 0;
-            border-radius: inherit;
-            transition: opacity 0.3s ease;
-        }
-        
-        .event-card:hover::before {
-            opacity: 0.2;
-        }
-        
-        .dark .event-card:hover {
-            background-color: rgba(1, 30, 52, 0.9);
-        }
-        
-        .light .event-card:hover {
-            background-color: rgba(240, 245, 255, 0.9);
-        }
-
-        /* Top featured articles */
-        .featured-article {
-            position: relative;
-            overflow: hidden;
-            transition: all 0.3s ease;
-        }
-        
-        .featured-article::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 60%;
-            background: linear-gradient(to top, rgba(1, 22, 39, 0.8), transparent);
-            z-index: 1;
-        }
-        
-        .featured-article:hover {
-            transform: translateY(-5px);
-        }
-        
-        .featured-content {
-            position: relative;
-            z-index: 2;
-        }
-        
-        .featured-badge {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            padding: 5px 10px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            backdrop-filter: blur(5px);
-            z-index: 2;
-        }
-        
-        .dark .featured-badge {
-            background-color: rgba(0, 255, 135, 0.15);
-            color: var(--accent-color);
-            border: 1px solid rgba(0, 255, 135, 0.3);
-        }
-        
-        .light .featured-badge {
-            background-color: rgba(0, 210, 110, 0.15);
-            color: var(--accent-color);
-            border: 1px solid rgba(0, 210, 110, 0.3);
-        }
-
-        /* Modal de mise à jour */
-        #update-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(1, 22, 39, 0.9);
-            z-index: 9999;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .update-modal {
-            background: linear-gradient(135deg, rgba(1, 22, 39, 0.95), rgba(1, 15, 26, 0.95));
-            border: 2px solid var(--accent-color);
-            border-radius: 16px;
-            box-shadow: 0 0 50px rgba(0, 255, 135, 0.3),
-                        inset 0 0 20px rgba(0, 255, 135, 0.1);
-            width: 95%;
-            max-width: 550px;
-            padding: 40px;
-            text-align: center;
-            backdrop-filter: blur(15px);
-            animation: modal-appear 0.6s cubic-bezier(0.19, 1, 0.22, 1);
-        }
-        
-        @keyframes modal-appear {
-            from { 
-                opacity: 0;
-                transform: scale(0.8);
-            }
-            to { 
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-        
-        .modal-title {
-            color: var(--accent-color);
-            font-size: 28px;
-            font-weight: 700;
-            margin-bottom: 25px;
-            text-shadow: 0 0 15px rgba(0, 255, 135, 0.3);
-            letter-spacing: 1px;
-        }
-
-        .modal-title::after {
-            content: '';
-            display: block;
-            width: 60px;
-            height: 3px;
-            background-color: var(--accent-color);
-            margin: 15px auto 0;
-            border-radius: 3px;
-            box-shadow: 0 0 10px rgba(0, 255, 135, 0.6);
-        }
-        
-        .modal-message {
-            font-size: 16px;
-            line-height: 1.7;
-            margin-bottom: 30px;
-            max-width: 90%;
-            margin-left: auto;
-            margin-right: auto;
-        }
-        
-        .last-update-box {
-            background-color: rgba(0, 255, 135, 0.08);
-            border-left: 3px solid var(--accent-color);
-            border-radius: 6px;
-            padding: 15px;
-            margin: 30px 0;
-            text-align: left;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-        }
-
-        .last-update-box i {
-            font-size: 18px;
-            color: var(--accent-color);
-            margin-right: 12px;
-        }
-        
-        .update-time {
-            color: var(--accent-color);
-            font-weight: 600;
-        }
-        
-        .modal-buttons {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            margin-top: 35px;
-        }
-        
-        .modal-btn {
-            padding: 14px 28px;
-            border: 2px solid var(--accent-color);
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            min-width: 180px;
-            background: transparent;
-            color: var(--text-color);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .modal-btn.primary {
-            background-color: var(--accent-color);
-            color: var(--background-color);
-        }
-        
-        .modal-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 20px rgba(0, 255, 135, 0.4);
-        }
-        
-        .modal-btn.primary:hover {
-            background-color: #00d673;
-        }
-        
-        .modal-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(
-                90deg,
-                transparent 0%,
-                rgba(255, 255, 255, 0.2) 50%,
-                transparent 100%
-            );
-            transition: all 0.5s ease;
-        }
-
-        .modal-btn:hover::before {
-            left: 100%;
-        }
-        
-        /* Style pour news-item caché */
-        .hidden-item {
-            display: none !important;
-        }
-
-        /* Animation pour les éléments filtrés */
-        .fade-in {
-            animation: fadeIn 0.5s ease forwards;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Filtre actif */
-        .filter-active {
-            background-color: rgba(0, 255, 135, 0.1) !important;
-            color: #00FF87 !important;
-            border-color: #00FF87 !important;
-            border-opacity: 0.3 !important;
-        }
-
-        /* Nouvel effet de flottement/mouvement pour les cartes */
-        .news-item, .event-item {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .news-item:hover, .event-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0, 255, 135, 0.15);
-        }
-
         /* Animations */
         @keyframes pulse-circle {
             0% { transform: scale(1); opacity: 0.3; }
@@ -792,50 +566,6 @@
         @keyframes float {
             0%, 100% { transform: translateY(0px); }
             50% { transform: translateY(-10px); }
-        }
-        
-        /* Button styles */
-        .neon-button {
-            position: relative;
-            display: inline-block;
-            padding: 10px 20px;
-            color: var(--accent-color);
-            background: transparent;
-            border: 1px solid var(--accent-color);
-            border-radius: 5px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            font-weight: 600;
-            font-size: 14px;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            cursor: pointer;
-        }
-        
-        .neon-button:hover {
-            background-color: var(--accent-color);
-            color: #011627;
-            box-shadow: var(--accent-glow);
-        }
-        
-        .neon-button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(
-                90deg,
-                transparent 0%,
-                rgba(255, 255, 255, 0.2) 50%,
-                transparent 100%
-            );
-            transition: all 0.6s ease;
-        }
-        
-        .neon-button:hover::before {
-            left: 100%;
         }
         
         /* Responsive */
@@ -882,53 +612,6 @@
             .main-nav {
                 display: none;
             }
-        }
-
-        /* Animations pour les messages "pas de contenu" */
-        @keyframes pulse {
-            0% { opacity: 0.6; transform: scale(1); }
-            50% { opacity: 1; transform: scale(1.05); }
-            100% { opacity: 0.6; transform: scale(1); }
-        }
-
-        .animate-pulse {
-            animation: pulse 2s infinite ease-in-out;
-        }
-
-        /* Animation d'apparition pour les messages */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        #no-events-message, #no-news-message {
-            animation: fadeInUp 0.5s ease-out forwards;
-        }
-
-        /* Style pour les messages vides */
-        #no-events-message, #no-news-message {
-            background: rgba(30, 41, 59, 0.3);
-            border: 1px solid rgba(0, 255, 135, 0.1);
-            backdrop-filter: blur(5px);
-        }
-
-        /* Amélioration de la visibilité des boutons de filtre actifs */
-        .filter-active {
-            position: relative;
-            overflow: hidden;
-        }
-
-        .filter-active::after {
-            content: '';
-            position: absolute;
-            top: -10px;
-            left: -10px;
-            right: -10px;
-            bottom: -10px;
-            background: radial-gradient(circle at center, rgba(0, 255, 135, 0.2) 0%, transparent 70%);
-            z-index: -1;
-            opacity: 0.7;
-            animation: pulse 2s infinite;
         }
     </style>
 </head>
@@ -1029,59 +712,10 @@
                         </div>
                     </div>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <!-- Événement 1 (aujourd'hui) -->
-                        <div class="bg-gray-800 bg-opacity-60 p-3 rounded-lg border-l-2 border-red-500 flex items-start event-item event-card" data-date="today">
-                            <div class="flex-shrink-0 w-12 h-12 bg-gray-900 rounded-lg flex flex-col items-center justify-center mr-3">
-                                <span class="text-sm font-bold">11</span>
-                                <span class="text-xs text-gray-400">MAR</span>
-                            </div>
-                            <div class="flex-grow">
-                                <div class="flex items-center">
-                                    <span class="text-xs px-1.5 py-0.5 bg-red-900 bg-opacity-20 text-red-400 rounded mr-2">
-                                        Important
-                                    </span>
-                                    <span class="text-xs text-green-400">08:15</span>
-                                </div>
-                                <h3 class="text-sm font-medium my-1">Réunion exceptionnelle Fed</h3>
-                                <p class="text-xs text-gray-400">Federal Reserve</p>
-                            </div>
-                        </div>
-                        
-                        <!-- Événement 2 (cette semaine) -->
-                        <div class="bg-gray-800 bg-opacity-60 p-3 rounded-lg border-l-2 border-red-500 flex items-start event-item event-card" data-date="week">
-                            <div class="flex-shrink-0 w-12 h-12 bg-gray-900 rounded-lg flex flex-col items-center justify-center mr-3">
-                                <span class="text-sm font-bold">12</span>
-                                <span class="text-xs text-gray-400">MAR</span>
-                            </div>
-                            <div class="flex-grow">
-                                <div class="flex items-center">
-                                    <span class="text-xs px-1.5 py-0.5 bg-red-900 bg-opacity-20 text-red-400 rounded mr-2">
-                                        Important
-                                    </span>
-                                    <span class="text-xs text-green-400">10:30</span>
-                                </div>
-                                <h3 class="text-sm font-medium my-1">IPC US (Inflation)</h3>
-                                <p class="text-xs text-gray-400">Bureau of Labor Statistics</p>
-                            </div>
-                        </div>
-                        
-                        <!-- Événement 3 (cette semaine) -->
-                        <div class="bg-gray-800 bg-opacity-60 p-3 rounded-lg border-l-2 border-yellow-500 flex items-start event-item event-card" data-date="week">
-                            <div class="flex-shrink-0 w-12 h-12 bg-gray-900 rounded-lg flex flex-col items-center justify-center mr-3">
-                                <span class="text-sm font-bold">15</span>
-                                <span class="text-xs text-gray-400">MAR</span>
-                            </div>
-                            <div class="flex-grow">
-                                <div class="flex items-center">
-                                    <span class="text-xs px-1.5 py-0.5 bg-yellow-900 bg-opacity-20 text-yellow-400 rounded mr-2">
-                                        Moyen
-                                    </span>
-                                    <span class="text-xs text-green-400">14:00</span>
-                                </div>
-                                <h3 class="text-sm font-medium my-1">Sommet G20 Finance</h3>
-                                <p class="text-xs text-gray-400">G20</p>
-                            </div>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="events-container">
+                        <div class="loading-state">
+                            <div class="loading-spinner"></div>
+                            <p>Chargement des événements à venir...</p>
                         </div>
                     </div>
                 </div>
@@ -1139,94 +773,9 @@
                     <h2 class="text-lg font-semibold mb-4">À LA UNE</h2>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" id="featured-news">
-                        <!-- Article 1 -->
-                        <div class="glassmorphism rounded-xl overflow-hidden border-opacity-20 group hover:border-green-400 hover:border-opacity-30 transition-all duration-300 news-item featured-article" data-category="economie" data-impact="negative" data-country="us" data-date="2025-03-07">
-                            <div class="relative h-48 bg-gray-800">
-                                <div class="featured-badge">Économie</div>
-                                <div class="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent opacity-60"></div>
-                                <div class="absolute bottom-3 left-3 right-3 featured-content">
-                                    <div class="flex justify-between items-center mb-1">
-                                        <span class="text-xs px-2 py-0.5 bg-green-400 bg-opacity-20 text-green-400 rounded-full">
-                                            Économie
-                                        </span>
-                                        <span class="text-xs text-white flex items-center">
-                                            <span class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5"></span>
-                                            Il y a 1h
-                                        </span>
-                                    </div>
-                                    <h3 class="text-lg font-semibold text-white">La Fed annonce une réunion exceptionnelle sur les taux</h3>
-                                </div>
-                            </div>
-                            
-                            <div class="p-4">
-                                <div class="mb-3 text-xs text-gray-400 flex justify-between">
-                                    <span>Federal Reserve</span>
-                                    <span>7 Mars 2025</span>
-                                </div>
-                                
-                                <p class="text-sm text-gray-300 mb-4">
-                                    La Réserve fédérale américaine vient d'annoncer la tenue d'une réunion exceptionnelle le 10 mars pour discuter des prochaines mesures concernant les taux d'intérêt.
-                                </p>
-                                
-                                <div class="px-3 py-2 bg-gray-900 bg-opacity-50 rounded border-l-2 border-red-400 mb-3">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <span class="text-xs font-medium">Analyse</span>
-                                        <span class="text-xs text-red-400">Impact négatif</span>
-                                    </div>
-                                    <p class="text-xs text-gray-400">
-                                        Cette annonce surprise laisse présager une possible hausse des taux plus tôt que prévu.
-                                    </p>
-                                </div>
-                                
-                                <a href="#" class="text-xs text-green-400 hover:underline">
-                                    Consulter la source →
-                                </a>
-                            </div>
-                        </div>
-                        
-                        <!-- Article 2 -->
-                        <div class="glassmorphism rounded-xl overflow-hidden border-opacity-20 group hover:border-green-400 hover:border-opacity-30 transition-all duration-300 news-item featured-article" data-category="entreprises" data-impact="positive" data-country="fr" data-date="2025-03-07">
-                            <div class="relative h-48 bg-gray-800">
-                                <div class="featured-badge">Entreprises</div>
-                                <div class="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent opacity-60"></div>
-                                <div class="absolute bottom-3 left-3 right-3 featured-content">
-                                    <div class="flex justify-between items-center mb-1">
-                                        <span class="text-xs px-2 py-0.5 bg-green-400 bg-opacity-20 text-green-400 rounded-full">
-                                            Entreprises
-                                        </span>
-                                        <span class="text-xs text-white flex items-center">
-                                            <span class="w-1.5 h-1.5 bg-yellow-400 rounded-full mr-1.5"></span>
-                                            Il y a 3h
-                                        </span>
-                                    </div>
-                                    <h3 class="text-lg font-semibold text-white">LVMH dévoile des résultats trimestriels supérieurs aux attentes</h3>
-                                </div>
-                            </div>
-                            
-                            <div class="p-4">
-                                <div class="mb-3 text-xs text-gray-400 flex justify-between">
-                                    <span>LVMH</span>
-                                    <span>7 Mars 2025</span>
-                                </div>
-                                
-                                <p class="text-sm text-gray-300 mb-4">
-                                    Le leader mondial du luxe annonce un chiffre d'affaires en hausse de 12% par rapport à l'année précédente, dépassant les prévisions des analystes.
-                                </p>
-                                
-                                <div class="px-3 py-2 bg-gray-900 bg-opacity-50 rounded border-l-2 border-green-400 mb-3">
-                                    <div class="flex items-center justify-between mb-1">
-                                        <span class="text-xs font-medium">Analyse</span>
-                                        <span class="text-xs text-green-400">Impact positif</span>
-                                    </div>
-                                    <p class="text-xs text-gray-400">
-                                        Ces résultats confirment la résilience du secteur du luxe face aux incertitudes économiques.
-                                    </p>
-                                </div>
-                                
-                                <a href="#" class="text-xs text-green-400 hover:underline">
-                                    Consulter la source →
-                                </a>
-                            </div>
+                        <div class="loading-state">
+                            <div class="loading-spinner"></div>
+                            <p>Chargement des actualités à la une...</p>
                         </div>
                     </div>
                 </div>
@@ -1235,83 +784,10 @@
                 <div class="mb-8">
                     <h2 class="text-lg font-semibold mb-4">ACTUALITÉS RÉCENTES</h2>
                     
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-5" id="recent-news">
-                        <!-- Actualité 1 -->
-                        <div class="glassmorphism rounded-lg p-4 hover:border-green-400 hover:border-opacity-30 transition-all duration-300 news-item" data-category="marches" data-impact="neutral" data-country="eu" data-date="2025-03-09">
-                            <div class="flex justify-between items-center mb-3">
-                                <span class="text-xs px-2 py-0.5 bg-green-400 bg-opacity-20 text-green-400 rounded-full">
-                                    Marchés
-                                </span>
-                                <span class="text-xs text-gray-400 flex items-center">
-                                    <span class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5"></span>
-                                    Il y a 45min
-                                </span>
-                            </div>
-                            
-                            <h3 class="text-base font-medium mb-2">La BCE maintient ses taux directeurs inchangés</h3>
-                            
-                            <p class="text-sm text-gray-400 mb-3">
-                                Lors de sa réunion mensuelle, la BCE a décidé de maintenir son taux de dépôt à 3,25%.
-                            </p>
-                            
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-gray-500">BCE</span>
-                                <span class="text-gray-400 flex items-center gap-1">
-                                    <span class="px-1.5 py-0.5 bg-gray-700 rounded">Impact neutre</span>
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <!-- Actualité 2 -->
-                        <div class="glassmorphism rounded-lg p-4 hover:border-green-400 hover:border-opacity-30 transition-all duration-300 news-item" data-category="tech" data-impact="positive" data-country="us" data-date="2025-03-08">
-                            <div class="flex justify-between items-center mb-3">
-                                <span class="text-xs px-2 py-0.5 bg-green-400 bg-opacity-20 text-green-400 rounded-full">
-                                    Tech
-                                </span>
-                                <span class="text-xs text-gray-400 flex items-center">
-                                    <span class="w-1.5 h-1.5 bg-yellow-400 rounded-full mr-1.5"></span>
-                                    Il y a 5h
-                                </span>
-                            </div>
-                            
-                            <h3 class="text-base font-medium mb-2">Apple lance une nouvelle gamme de produits IA</h3>
-                            
-                            <p class="text-sm text-gray-400 mb-3">
-                                Le géant de la tech dévoile ses premiers produits dédiés à l'intelligence artificielle.
-                            </p>
-                            
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-gray-500">Apple Inc.</span>
-                                <span class="text-gray-400 flex items-center gap-1">
-                                    <span class="px-1.5 py-0.5 bg-green-900 bg-opacity-20 text-green-400 rounded">Impact positif</span>
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <!-- Actualité 3 -->
-                        <div class="glassmorphism rounded-lg p-4 hover:border-green-400 hover:border-opacity-30 transition-all duration-300 news-item" data-category="crypto" data-impact="positive" data-country="other" data-date="2025-03-07">
-                            <div class="flex justify-between items-center mb-3">
-                                <span class="text-xs px-2 py-0.5 bg-green-400 bg-opacity-20 text-green-400 rounded-full">
-                                    Crypto
-                                </span>
-                                <span class="text-xs text-gray-400 flex items-center">
-                                    <span class="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1.5"></span>
-                                    Il y a 2j
-                                </span>
-                            </div>
-                            
-                            <h3 class="text-base font-medium mb-2">Bitcoin franchit un nouveau seuil à 75 000$</h3>
-                            
-                            <p class="text-sm text-gray-400 mb-3">
-                                La principale cryptomonnaie atteint un nouveau record dans un contexte d'adoption institutionnelle.
-                            </p>
-                            
-                            <div class="flex justify-between items-center text-xs">
-                                <span class="text-gray-500">CoinDesk</span>
-                                <span class="text-gray-400 flex items-center gap-1">
-                                    <span class="px-1.5 py-0.5 bg-green-900 bg-opacity-20 text-green-400 rounded">Impact positif</span>
-                                </span>
-                            </div>
+                    <div class="news-grid" id="recent-news">
+                        <div class="loading-state">
+                            <div class="loading-spinner"></div>
+                            <p>Chargement des actualités récentes...</p>
                         </div>
                     </div>
                 </div>
@@ -1326,30 +802,15 @@
         </div>
     </main>
 
-    <!-- Modal de mise à jour -->
-    <div id="update-overlay">
-        <div class="update-modal">
-            <h2 class="modal-title">MISE À JOUR DES DONNÉES</h2>
-            <p class="modal-message">
-                Nous mettons régulièrement à jour nos données pour vous fournir les informations financières les plus précises et actuelles.
-            </p>
-            
-            <div class="last-update-box">
-                <i class="fas fa-info-circle"></i>
-                <div>
-                    Votre dernière mise à jour date du <span class="update-time" id="modalLastUpdateTime">09/03/2023</span>
-                </div>
-            </div>
-            
-            <div class="modal-buttons">
-                <button class="modal-btn" id="skipUpdateBtn">Plus tard</button>
-                <button class="modal-btn primary" id="proceedUpdateBtn">Mettre à jour</button>
-            </div>
+    <footer class="page-footer">
+        <div class="data-source-info">
+            <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel</p>
+            <p><i class="fas fa-robot"></i> Analyses sectorielles et actualités fournies par Perplexity Sonar</p>
+            <p><i class="fas fa-clock"></i> Dernière mise à jour: <span class="update-time" id="updateTime">09/03/2025 10:15:53</span></p>
         </div>
-    </div>
+    </footer>
 
-    <!-- Script de correction pour les filtres -->
-    <script src="actualites_fix.js"></script>
+    <script src="actualites.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -1510,196 +971,22 @@
             updateMarketTime();
             setInterval(updateMarketTime, 1000);
             
-            // Récupérer les données de l'API Perplexity
-            const initializeNewsData = () => {
-                if (window.perplexityIntegration) {
-                    // Récupérer les données d'actualités
-                    const newsData = window.perplexityIntegration.getNewsData();
-                    if (newsData && newsData.lastUpdated) {
-                        // Les données sont disponibles, mais on ne les utilise pas dans cette version
-                        // car on a un design prédéfini avec du contenu statique
-                        updateLastUpdateTime(newsData.lastUpdated);
-                    }
-                } else {
-                    // L'intégration n'est pas encore disponible, réessayer
-                    setTimeout(initializeNewsData, 500);
-                }
-            };
-
-            // Initialiser l'intégration avec les données
-            initializeNewsData();
-            
-            // Vérifier s'il existe une date de dernière mise à jour
-            const lastUpdateTime = localStorage.getItem('tradepulse_last_update');
-            if (lastUpdateTime) {
-                const date = new Date(parseInt(lastUpdateTime));
-                updateLastUpdateTime(date);
-            }
-            
-            // Vérifier si une mise à jour est nécessaire
-            const needUpdate = localStorage.getItem('tradepulse_need_update');
-            if (needUpdate === 'true') {
-                showUpdateModal();
-                localStorage.removeItem('tradepulse_need_update');
-            }
-            
-            // Configurer les boutons du modal de mise à jour
-            const skipUpdateBtn = document.getElementById('skipUpdateBtn');
-            const proceedUpdateBtn = document.getElementById('proceedUpdateBtn');
-            
-            if (skipUpdateBtn) {
-                skipUpdateBtn.addEventListener('click', function() {
-                    hideUpdateModal();
-                });
-            }
-            
-            if (proceedUpdateBtn) {
-                proceedUpdateBtn.addEventListener('click', async function() {
-                    hideUpdateModal();
-                    
-                    try {
-                        if (window.perplexityIntegration) {
-                            // Simuler une mise à jour des données
-                            const result = await window.perplexityIntegration.updateData();
-                            
-                            // Stocker l'heure de la mise à jour
-                            localStorage.setItem('tradepulse_last_update', Date.now().toString());
-                            
-                            // On pourrait utiliser les nouvelles données pour mettre à jour l'interface,
-                            // mais ici on garde l'interface statique pour le design prédéfini
-                            if (result && result.newsData) {
-                                updateLastUpdateTime(result.newsData.lastUpdated);
-                            }
-                        }
-                    } catch (error) {
-                        console.error('Error updating data:', error);
-                    }
-                });
-            }
-
-            // Gestion du bouton "Voir plus"
-            const loadMoreBtn = document.getElementById('load-more-btn');
-            if (loadMoreBtn) {
-                loadMoreBtn.addEventListener('click', function() {
-                    this.innerHTML = '<i class="fas fa-circle-notch fa-spin mr-2"></i> Chargement...';
-                    
-                    // Simuler un chargement
-                    setTimeout(() => {
-                        // Créer de nouvelles actualités dynamiquement
-                        const recentNews = document.getElementById('recent-news');
-                        
-                        // Nouvelles actualités à ajouter
-                        const newArticles = [
-                            {
-                                category: 'economie',
-                                impact: 'negative',
-                                country: 'us',
-                                date: '2025-03-06',
-                                title: 'Hausse inattendue du taux de chômage américain',
-                                source: 'Bureau of Labor Statistics',
-                                time: 'Il y a 3j',
-                                content: 'Le taux de chômage aux États-Unis a augmenté de 0,2 point pour atteindre 3,8%, surprenant les analystes qui anticipaient une stabilité.'
-                            },
-                            {
-                                category: 'tech',
-                                impact: 'positive',
-                                country: 'us',
-                                date: '2025-03-05',
-                                title: 'Microsoft dévoile sa nouvelle génération d\'IA',
-                                source: 'Microsoft',
-                                time: 'Il y a 4j',
-                                content: 'Le géant technologique a présenté sa nouvelle plateforme d\'intelligence artificielle destinée aux entreprises, promettant un gain de productivité substantiel.'
-                            },
-                            {
-                                category: 'marches',
-                                impact: 'neutral',
-                                country: 'eu',
-                                date: '2025-03-06',
-                                title: 'Les marchés européens clôturent en légère hausse',
-                                source: 'Euronext',
-                                time: 'Il y a 3j',
-                                content: 'Les principaux indices européens ont terminé la séance en légère hausse malgré les tensions géopolitiques persistantes.'
-                            }
-                        ];
-                        
-                        // Ajouter chaque nouvelle actualité
-                        newArticles.forEach(article => {
-                            const newItem = document.createElement('div');
-                            newItem.className = 'glassmorphism rounded-lg p-4 hover:border-green-400 hover:border-opacity-30 transition-all duration-300 news-item fade-in';
-                            newItem.dataset.category = article.category;
-                            newItem.dataset.impact = article.impact;
-                            newItem.dataset.country = article.country;
-                            newItem.dataset.date = article.date;
-                            
-                            // Simuler la structure HTML d'une actualité
-                            newItem.innerHTML = `
-                                <div class="flex justify-between items-center mb-3">
-                                    <span class="text-xs px-2 py-0.5 bg-green-400 bg-opacity-20 text-green-400 rounded-full">
-                                        ${article.category.charAt(0).toUpperCase() + article.category.slice(1)}
-                                    </span>
-                                    <span class="text-xs text-gray-400 flex items-center">
-                                        <span class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1.5"></span>
-                                        ${article.time}
-                                    </span>
-                                </div>
-                                
-                                <h3 class="text-base font-medium mb-2">${article.title}</h3>
-                                
-                                <p class="text-sm text-gray-400 mb-3">
-                                    ${article.content}
-                                </p>
-                                
-                                <div class="flex justify-between items-center text-xs">
-                                    <span class="text-gray-500">${article.source}</span>
-                                    <span class="text-gray-400 flex items-center gap-1">
-                                        <span class="px-1.5 py-0.5 ${article.impact === 'positive' ? 'bg-green-900 bg-opacity-20 text-green-400' : (article.impact === 'negative' ? 'bg-red-900 bg-opacity-20 text-red-400' : 'bg-gray-700')} rounded">
-                                            Impact ${article.impact === 'positive' ? 'positif' : (article.impact === 'negative' ? 'négatif' : 'neutre')}
-                                        </span>
-                                    </span>
-                                </div>
-                            `;
-                            
-                            // Ajouter au container
-                            recentNews.appendChild(newItem);
-                        });
-                        
-                        // Rétablir le texte du bouton
-                        this.textContent = 'Voir plus d\'actualités';
-                    }, 1000);
-                });
-            }
-            
-            // Fonctions auxiliaires
-            function updateLastUpdateTime(timestamp) {
-                const date = new Date(timestamp);
-                document.querySelectorAll('.update-time').forEach(el => {
-                    el.textContent = formatDateTime(date);
-                });
-            }
-            
-            function formatDateTime(date) {
-                const dateStr = date.toLocaleDateString('fr-FR');
-                const timeStr = date.toLocaleTimeString('fr-FR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    second: '2-digit'
-                });
-                return `${dateStr} ${timeStr}`;
-            }
-            
-            function showUpdateModal() {
-                const overlay = document.getElementById('update-overlay');
-                if (overlay) {
-                    overlay.style.display = 'flex';
+            // Mettre à jour l'heure de dernière mise à jour
+            function updateLastUpdateTime() {
+                const updateTimeElement = document.getElementById('updateTime');
+                if (updateTimeElement) {
+                    const now = new Date();
+                    const dateStr = now.toLocaleDateString('fr-FR');
+                    const timeStr = now.toLocaleTimeString('fr-FR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                    updateTimeElement.textContent = `${dateStr} ${timeStr}`;
                 }
             }
             
-            function hideUpdateModal() {
-                const overlay = document.getElementById('update-overlay');
-                if (overlay) {
-                    overlay.style.display = 'none';
-                }
-            }
+            updateLastUpdateTime();
         });
     </script>
 </body>
