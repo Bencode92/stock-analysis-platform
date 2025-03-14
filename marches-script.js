@@ -359,6 +359,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 { name: 'CBOE VIX INDEX', selector: '.market-index-col[data-index="sptsx"]' } // Changé ici
             ]);
             
+            // Amérique Latine - NOUVEAU
+            updateMarketOverviewRegion('latin-america', [
+                { name: 'BUENOS AIRES MERVAL', selector: '.market-index-col[data-index="merval"]' },
+                { name: 'NASDAQ Brazil', selector: '.market-index-col[data-index="brazil"]' },
+                { name: 'NASDAQ Chile', selector: '.market-index-col[data-index="chile"]' },
+                { name: 'NASDAQ Mexico', selector: '.market-index-col[data-index="mexico"]' }
+            ]);
+            
             // Asie - Remplacer BSE SENSEX par CSI 100 INDEX
             updateMarketOverviewRegion('asia', [
                 { name: 'NIKKEI 225', selector: '.market-index-col[data-index="nikkei"]' },
@@ -480,6 +488,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     (index.index_name || "").includes('CBOE VIX INDEX') // Modifié ici (S&P/TSX 60 -> CBOE VIX INDEX)
                 );
                 break;
+            case 'latin-america':
+                importantIndices = indices.filter(index => 
+                    (index.index_name || "").includes('MERVAL') || 
+                    (index.index_name || "").includes('Brazil') || 
+                    (index.index_name || "").includes('Chile') ||
+                    (index.index_name || "").includes('Mexico')
+                );
+                break;
             case 'asia':
                 importantIndices = indices.filter(index => 
                     (index.index_name || "").includes('NIKKEI 225') || 
@@ -494,14 +510,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     (index.index_name || "").includes('NASDAQ Australia Large Mid Cap') || 
                     (index.index_name || "").includes('NASDAQ Israel Large Mid Cap') ||
                     (index.index_name || "").includes('NASDAQ Morocco Large Mid Cap')
-                );
-                break;
-            case 'latin-america':
-                importantIndices = indices.filter(index => 
-                    (index.index_name || "").includes('BOVESPA') || 
-                    (index.index_name || "").includes('IPC') || 
-                    (index.index_name || "").includes('MERVAL') ||
-                    (index.index_name || "").includes('IPSA')
                 );
                 break;
         }
@@ -602,7 +610,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!percentStr) return 0;
         
         // Enlever le symbole % et autres caractères non numériques, sauf le - et le .
-        const value = percentStr.replace(/[^0-9\\\\\\\\\\\\\\\\.\\\\\\\\\\\\\\\\-]/g, '');
+        const value = percentStr.replace(/[^0-9\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\.\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\-]/g, '');
         return parseFloat(value) || 0;
     }
     
