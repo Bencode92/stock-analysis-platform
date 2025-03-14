@@ -301,8 +301,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Ajouter le guide
-    addDashboardGuide();
+    // Ne pas ajouter le guide car il existe déjà dans le HTML
+    // addDashboardGuide(); // Commenté pour éviter le doublon avec le message d'accueil
     
     // Améliorer les sections
     enhanceSections();
