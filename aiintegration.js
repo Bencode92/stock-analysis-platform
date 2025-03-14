@@ -97,12 +97,10 @@ class PerplexityIntegration {
                     await this.updateData();
                 } catch (secondError) {
                     console.error('❌ API toujours inaccessible après tentative de réveil:', secondError.message);
-                    this.loadFallbackData();
+                    // Plus de fallback data, on affiche juste un message d'erreur dans l'UI
+                    this.handleApiError();
                 }
             }, 5000); // 5 secondes de délai pour laisser le temps au service de se réveiller
-            
-            // Charger les données de secours pendant ce temps
-            this.loadFallbackData();
         }
     }
     
@@ -153,224 +151,56 @@ class PerplexityIntegration {
     }
     
     /**
-     * Charge des données de secours en cas d'erreur avec l'API
+     * Gère les erreurs d'API en affichant des messages d'erreur appropriés
      */
-    loadFallbackData() {
-        console.log('⚠️ Chargement des données de secours...');
+    handleApiError() {
+        console.log('⚠️ Affichage des messages d\'erreur dans l\'interface');
         
-        // Simuler des données pour le développement
-        const now = new Date();
-        const dateStr = now.toLocaleDateString('fr-FR');
+        // Actualités
+        const newsGrid = document.querySelector('.news-grid');
+        if (newsGrid) {
+            newsGrid.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Impossible de charger les actualités</h3>
+                    <p>Nous rencontrons un problème de connexion avec notre service. Veuillez réessayer ultérieurement.</p>
+                    <button class="retry-button" onclick="window.perplexityIntegration.updateNews()">
+                        <i class="fas fa-sync-alt"></i> Réessayer
+                    </button>
+                </div>
+            `;
+        }
         
-        this.newsData = {
-            us: [
-                {
-                    source: "Federal Reserve",
-                    date: dateStr,
-                    time: "08:30",
-                    title: "La Fed annonce une réunion exceptionnelle",
-                    content: "La Réserve fédérale américaine a programmé une réunion exceptionnelle pour discuter des dernières évolutions économiques. Les analystes anticipent un possible ajustement de la politique monétaire."
-                },
-                {
-                    source: "Markets US",
-                    time: "10:15",
-                    date: dateStr,
-                    title: "Les résultats trimestriels dépassent les attentes",
-                    content: "Les grandes entreprises technologiques américaines ont présenté des résultats trimestriels largement supérieurs aux attentes des analystes, témoignant de la robustesse du secteur malgré l'environnement économique incertain."
-                },
-                {
-                    source: "Treasury Department",
-                    time: "14:45",
-                    date: dateStr,
-                    title: "Hausse des rendements obligataires américains",
-                    content: "Les rendements des bons du Trésor américain ont augmenté suite aux dernières données d'inflation, reflétant les inquiétudes des investisseurs concernant la politique monétaire à venir."
-                }
-            ],
-            france: [
-                {
-                    source: "Banque de France",
-                    date: dateStr,
-                    time: "09:00",
-                    title: "Révision à la hausse des prévisions de croissance",
-                    content: "La Banque de France a revu à la hausse ses prévisions de croissance pour l'année en cours, citant une reprise plus vigoureuse que prévu dans les secteurs des services et de l'industrie."
-                },
-                {
-                    source: "CAC 40",
-                    date: dateStr,
-                    time: "13:30",
-                    title: "Le CAC 40 atteint un nouveau sommet historique",
-                    content: "L'indice principal de la Bourse de Paris a franchi un nouveau record, porté par les performances exceptionnelles des valeurs du luxe et de l'aéronautique."
-                },
-                {
-                    source: "Ministère de l'Économie",
-                    date: dateStr,
-                    time: "11:15",
-                    title: "Nouvelles mesures fiscales pour soutenir l'innovation",
-                    content: "Le gouvernement français annonce un renforcement des incitations fiscales pour les entreprises investissant dans la recherche et développement, visant à stimuler l'innovation et la compétitivité internationale."
-                }
-            ],
-            lastUpdated: now.toISOString()
-        };
+        // Portefeuilles
+        const portfolioContainers = [
+            document.getElementById('aggressiveDetails'),
+            document.getElementById('moderateDetails'),
+            document.getElementById('stableDetails')
+        ];
         
-        this.portfolios = {
-            agressif: [
-                {
-                    name: "NVIDIA Corporation",
-                    symbol: "NVDA",
-                    type: "STOCK",
-                    allocation: 25,
-                    reason: "Leader incontesté des puces IA avec un nouveau record historique selon les actualités du jour, bénéficiant directement de la demande croissante pour l'IA."
-                },
-                {
-                    name: "Tesla, Inc.",
-                    symbol: "TSLA",
-                    type: "STOCK",
-                    allocation: 22,
-                    reason: "L'augmentation de production dans la gigafactory de Berlin annoncée cette semaine crée une opportunité immédiate dans un secteur haussier."
-                },
-                {
-                    name: "Amazon.com, Inc.",
-                    symbol: "AMZN",
-                    type: "STOCK",
-                    allocation: 18,
-                    reason: "Sa nouvelle stratégie logistique annoncée cette semaine promet d'améliorer ses performances à court terme."
-                },
-                {
-                    name: "Invesco QQQ Trust",
-                    symbol: "QQQ",
-                    type: "ETF",
-                    allocation: 10,
-                    reason: "Exposition aux grandes entreprises technologiques qui bénéficient de la tendance haussière actuelle du secteur tech."
-                },
-                {
-                    name: "iShares Global Clean Energy ETF",
-                    symbol: "ICLN",
-                    type: "ETF",
-                    allocation: 8,
-                    reason: "Profite des initiatives de transition énergétique mentionnées dans les actualités récentes."
-                },
-                {
-                    name: "Bitcoin",
-                    symbol: "BTC",
-                    type: "CRYPTO",
-                    allocation: 12,
-                    reason: "Le rebond significatif suite aux commentaires de la SEC cette semaine crée une opportunité tactique à court terme."
-                },
-                {
-                    name: "Ethereum",
-                    symbol: "ETH",
-                    type: "CRYPTO",
-                    allocation: 5,
-                    reason: "Bénéficie actuellement du développement des applications décentralisées et suit la tendance haussière récente du Bitcoin."
+        portfolioContainers.forEach(container => {
+            if (container) {
+                const tableContainer = container.querySelector('.portfolio-table');
+                if (tableContainer) {
+                    const tableHeader = tableContainer.querySelector('.table-header');
+                    tableContainer.innerHTML = '';
+                    if (tableHeader) tableContainer.appendChild(tableHeader);
+                    
+                    tableContainer.insertAdjacentHTML('beforeend', `
+                        <div class="table-row error-row">
+                            <div class="error-message">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <h3>Impossible de charger les données du portefeuille</h3>
+                                <p>Nous rencontrons un problème de connexion avec notre service. Veuillez réessayer ultérieurement.</p>
+                                <button class="retry-button" onclick="window.perplexityIntegration.updatePortfolios()">
+                                    <i class="fas fa-sync-alt"></i> Réessayer
+                                </button>
+                            </div>
+                        </div>
+                    `);
                 }
-            ],
-            modere: [
-                {
-                    name: "Microsoft Corporation",
-                    symbol: "MSFT",
-                    type: "STOCK",
-                    allocation: 15,
-                    reason: "Position dominante dans le cloud et l'IA, profitant de la tendance haussière du secteur technologique avec un profil de risque modéré."
-                },
-                {
-                    name: "Amazon.com, Inc.",
-                    symbol: "AMZN",
-                    type: "STOCK",
-                    allocation: 12,
-                    reason: "Sa nouvelle stratégie logistique dévoilée cette semaine et sa diversification sectorielle offrent un bon équilibre risque/rendement."
-                },
-                {
-                    name: "SPDR S&P 500 ETF Trust",
-                    symbol: "SPY",
-                    type: "ETF",
-                    allocation: 20,
-                    reason: "Diversification large sur le marché américain pour réduire la volatilité globale du portefeuille."
-                },
-                {
-                    name: "Invesco QQQ Trust",
-                    symbol: "QQQ",
-                    type: "ETF",
-                    allocation: 15,
-                    reason: "Exposition contrôlée au secteur technologique pour capturer la croissance sans risque excessif."
-                },
-                {
-                    name: "iShares 20+ Year Treasury Bond ETF",
-                    symbol: "TLT",
-                    type: "BOND",
-                    allocation: 15,
-                    reason: "Protection contre la volatilité des marchés actions dans un contexte d'incertitude économique."
-                },
-                {
-                    name: "NVIDIA Corporation",
-                    symbol: "NVDA",
-                    type: "STOCK",
-                    allocation: 10,
-                    reason: "Exposition limitée au leader des puces IA pour bénéficier de la croissance sans surpondération."
-                },
-                {
-                    name: "iShares iBoxx $ Investment Grade Corporate Bond ETF",
-                    symbol: "LQD",
-                    type: "BOND",
-                    allocation: 8,
-                    reason: "Rendements supérieurs aux bons du Trésor avec un risque modéré."
-                },
-                {
-                    name: "Bitcoin",
-                    symbol: "BTC",
-                    type: "CRYPTO",
-                    allocation: 5,
-                    reason: "Exposition limitée pour diversification, suite aux commentaires positifs de la SEC cette semaine."
-                }
-            ],
-            stable: [
-                {
-                    name: "Vanguard Total Bond Market ETF",
-                    symbol: "BND",
-                    type: "BOND",
-                    allocation: 25,
-                    reason: "Large diversification obligataire offrant stabilité et préservation du capital dans le contexte actuel."
-                },
-                {
-                    name: "Johnson & Johnson",
-                    symbol: "JNJ",
-                    type: "STOCK",
-                    allocation: 15,
-                    reason: "Valeur défensive peu corrélée aux turbulences du marché, offrant stabilité et dividendes dans un contexte d'incertitude."
-                },
-                {
-                    name: "Microsoft Corporation",
-                    symbol: "MSFT",
-                    type: "STOCK",
-                    allocation: 10,
-                    reason: "Entreprise à forte capitalisation avec solides fondamentaux et flux de trésorerie stable, offrant à la fois sécurité et croissance modérée."
-                },
-                {
-                    name: "SPDR S&P 500 ETF Trust",
-                    symbol: "SPY",
-                    type: "ETF",
-                    allocation: 15,
-                    reason: "Exposition large au marché avec une volatilité moindre que les secteurs individuels."
-                },
-                {
-                    name: "iShares 20+ Year Treasury Bond ETF",
-                    symbol: "TLT",
-                    type: "BOND",
-                    allocation: 20,
-                    reason: "Protection maximale contre l'incertitude des marchés, particulièrement utile suite aux annonces récentes de la BCE."
-                },
-                {
-                    name: "iShares iBoxx $ Investment Grade Corporate Bond ETF",
-                    symbol: "LQD",
-                    type: "BOND",
-                    allocation: 15,
-                    reason: "Rendement prévisible avec risque limité grâce aux obligations d'entreprises de qualité."
-                }
-            ],
-            lastUpdated: now.toISOString()
-        };
-        
-        // Mise à jour des affichages sur le site
-        this.updateUI();
+            }
+        });
     }
     
     /**
@@ -393,7 +223,7 @@ class PerplexityIntegration {
             return { newsData, portfoliosData };
         } catch (error) {
             console.error('❌ Erreur lors de la mise à jour des données:', error);
-            this.loadFallbackData();
+            this.handleApiError();
             throw error;
         }
     }
@@ -404,6 +234,17 @@ class PerplexityIntegration {
     async updateNews() {
         try {
             console.log('🔍 Récupération des actualités depuis l\'API...');
+            
+            // Afficher un état de chargement dans l'UI si nécessaire
+            const newsGrid = document.querySelector('.news-grid');
+            if (newsGrid) {
+                newsGrid.innerHTML = `
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <p>Chargement des dernières actualités financières...</p>
+                    </div>
+                `;
+            }
             
             // Appel à l'API via le proxy avec retry
             const data = await this.fetchWithRetry(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.news}`, {
@@ -424,10 +265,30 @@ class PerplexityIntegration {
             this.newsData = data;
             
             console.log('✅ Actualités mises à jour avec succès');
+            
+            // Mettre à jour l'UI des actualités immédiatement
+            this.updateNewsUI();
+            
             return this.newsData;
             
         } catch (error) {
             console.error('❌ Erreur lors de la mise à jour des actualités:', error);
+            
+            // Afficher message d'erreur dans l'UI
+            const newsGrid = document.querySelector('.news-grid');
+            if (newsGrid) {
+                newsGrid.innerHTML = `
+                    <div class="error-message">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Impossible de charger les actualités</h3>
+                        <p>Nous rencontrons un problème de connexion avec notre service. Veuillez réessayer ultérieurement.</p>
+                        <button class="retry-button" onclick="window.perplexityIntegration.updateNews()">
+                            <i class="fas fa-sync-alt"></i> Réessayer
+                        </button>
+                    </div>
+                `;
+            }
+            
             throw error;
         }
     }
@@ -438,6 +299,34 @@ class PerplexityIntegration {
     async updatePortfolios() {
         try {
             console.log('🔍 Récupération des portefeuilles depuis l\'API...');
+            
+            // Afficher un état de chargement dans l'UI pour chaque portefeuille
+            const portfolioContainers = [
+                document.getElementById('aggressiveDetails'),
+                document.getElementById('moderateDetails'),
+                document.getElementById('stableDetails')
+            ];
+            
+            portfolioContainers.forEach(container => {
+                if (container) {
+                    const tableContainer = container.querySelector('.portfolio-table');
+                    if (tableContainer) {
+                        // Conserver l'en-tête
+                        const tableHeader = tableContainer.querySelector('.table-header');
+                        tableContainer.innerHTML = '';
+                        if (tableHeader) tableContainer.appendChild(tableHeader);
+                        
+                        tableContainer.insertAdjacentHTML('beforeend', `
+                            <div class="table-row loading-row">
+                                <div class="loading-indicator">
+                                    <div class="pulse-dot"></div>
+                                    <p>Génération du portefeuille optimisé via Perplexity AI...</p>
+                                </div>
+                            </div>
+                        `);
+                    }
+                }
+            });
             
             // Appel à l'API via le proxy avec retry
             const data = await this.fetchWithRetry(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.portfolios}`, {
@@ -458,10 +347,46 @@ class PerplexityIntegration {
             this.portfolios = data;
             
             console.log('✅ Portefeuilles mis à jour avec succès');
+            
+            // Mettre à jour l'UI des portefeuilles immédiatement
+            this.updatePortfoliosUI();
+            
             return this.portfolios;
             
         } catch (error) {
             console.error('❌ Erreur lors de la mise à jour des portefeuilles:', error);
+            
+            // Afficher message d'erreur dans l'UI pour chaque portefeuille
+            const portfolioContainers = [
+                document.getElementById('aggressiveDetails'),
+                document.getElementById('moderateDetails'),
+                document.getElementById('stableDetails')
+            ];
+            
+            portfolioContainers.forEach(container => {
+                if (container) {
+                    const tableContainer = container.querySelector('.portfolio-table');
+                    if (tableContainer) {
+                        const tableHeader = tableContainer.querySelector('.table-header');
+                        tableContainer.innerHTML = '';
+                        if (tableHeader) tableContainer.appendChild(tableHeader);
+                        
+                        tableContainer.insertAdjacentHTML('beforeend', `
+                            <div class="table-row error-row">
+                                <div class="error-message">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <h3>Impossible de charger les données du portefeuille</h3>
+                                    <p>Nous rencontrons un problème de connexion avec notre service. Veuillez réessayer ultérieurement.</p>
+                                    <button class="retry-button" onclick="window.perplexityIntegration.updatePortfolios()">
+                                        <i class="fas fa-sync-alt"></i> Réessayer
+                                    </button>
+                                </div>
+                            </div>
+                        `);
+                    }
+                }
+            });
+            
             throw error;
         }
     }
@@ -497,11 +422,6 @@ class PerplexityIntegration {
             
         } catch (error) {
             console.error('❌ Erreur lors de la recherche:', error);
-            // Utilisez simulatePerplexityResponse si elle est disponible globalement
-            if (typeof simulatePerplexityResponse === 'function') {
-                console.log('⚠️ Utilisation des données simulées pour la recherche');
-                return simulatePerplexityResponse(query);
-            }
             throw error;
         }
     }
@@ -539,7 +459,7 @@ class PerplexityIntegration {
             
         } catch (error) {
             console.error('❌ Erreur lors de la recherche Sonar:', error);
-            // Fallback vers la recherche standard ou simulée
+            // Fallback vers la recherche standard
             try {
                 console.log('⚠️ Fallback vers recherche standard');
                 // Désactiver temporairement Sonar pour éviter une boucle
@@ -549,10 +469,6 @@ class PerplexityIntegration {
                 API_CONFIG.useSonar = originalSonarSetting;
                 return result;
             } catch (fallbackError) {
-                if (typeof simulatePerplexityResponse === 'function') {
-                    console.log('⚠️ Utilisation des données simulées pour la recherche');
-                    return simulatePerplexityResponse(query);
-                }
                 throw error;
             }
         }
@@ -590,6 +506,24 @@ class PerplexityIntegration {
         if (!newsGrid) return;
         
         try {
+            // Vérifier si nous avons des données d'actualités
+            if (!this.newsData || !this.newsData.us || !this.newsData.france || 
+                this.newsData.us.length === 0 && this.newsData.france.length === 0) {
+                
+                // Aucune donnée disponible
+                newsGrid.innerHTML = `
+                    <div class="no-data-message">
+                        <i class="fas fa-newspaper"></i>
+                        <h3>Aucune actualité disponible</h3>
+                        <p>Nous n'avons pas pu récupérer les dernières actualités. Veuillez réessayer ultérieurement.</p>
+                        <button class="retry-button" onclick="window.perplexityIntegration.updateNews()">
+                            <i class="fas fa-sync-alt"></i> Actualiser
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
             // Fusion des actualités US et françaises
             const allNews = [...this.newsData.us, ...this.newsData.france];
             
@@ -600,11 +534,23 @@ class PerplexityIntegration {
                 return dateB - dateA;
             });
             
-            // Sélectionner les 10 actualités les plus récentes
-            const recentNews = sortedNews.slice(0, 10);
+            // Si aucune actualité n'est disponible après le tri
+            if (sortedNews.length === 0) {
+                newsGrid.innerHTML = `
+                    <div class="no-data-message">
+                        <i class="fas fa-newspaper"></i>
+                        <h3>Aucune actualité disponible</h3>
+                        <p>Nous n'avons pas pu récupérer les dernières actualités. Veuillez réessayer ultérieurement.</p>
+                        <button class="retry-button" onclick="window.perplexityIntegration.updateNews()">
+                            <i class="fas fa-sync-alt"></i> Actualiser
+                        </button>
+                    </div>
+                `;
+                return;
+            }
             
             // Créer le HTML pour chaque actualité
-            const newsHTML = recentNews.map((news, index) => {
+            const newsHTML = sortedNews.map((news, index) => {
                 return `
                 <div class="news-card ${index === 0 ? 'major-news' : ''}">
                     <div class="news-content">
@@ -629,6 +575,18 @@ class PerplexityIntegration {
             console.log('✅ Interface des actualités mise à jour');
         } catch (error) {
             console.error('❌ Erreur lors de la mise à jour de l\'interface des actualités:', error);
+            
+            // Afficher un message d'erreur
+            newsGrid.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Erreur lors de l'affichage des actualités</h3>
+                    <p>Une erreur s'est produite lors de l'affichage des actualités. Veuillez réessayer ultérieurement.</p>
+                    <button class="retry-button" onclick="window.perplexityIntegration.updateNews()">
+                        <i class="fas fa-sync-alt"></i> Réessayer
+                    </button>
+                </div>
+            `;
         }
     }
     
@@ -645,32 +603,38 @@ class PerplexityIntegration {
         
         try {
             // Mise à jour du portefeuille agressif
-            if (portfolioDetailsAgressif) {
+            if (portfolioDetailsAgressif && this.portfolios.agressif && this.portfolios.agressif.length > 0) {
                 this.updatePortfolioTable(portfolioDetailsAgressif, this.portfolios.agressif);
                 if (typeof initAggressiveChart === 'function') {
                     initAggressiveChart();
                 }
+            } else if (portfolioDetailsAgressif) {
+                this.showPortfolioError(portfolioDetailsAgressif);
             }
             
             // Mise à jour du portefeuille modéré
-            if (portfolioDetailsModere) {
+            if (portfolioDetailsModere && this.portfolios.modere && this.portfolios.modere.length > 0) {
                 this.updatePortfolioTable(portfolioDetailsModere, this.portfolios.modere);
                 if (typeof initModerateChart === 'function') {
                     initModerateChart();
                 }
+            } else if (portfolioDetailsModere) {
+                this.showPortfolioError(portfolioDetailsModere);
             }
             
             // Mise à jour du portefeuille stable
-            if (portfolioDetailsStable) {
+            if (portfolioDetailsStable && this.portfolios.stable && this.portfolios.stable.length > 0) {
                 this.updatePortfolioTable(portfolioDetailsStable, this.portfolios.stable);
                 if (typeof initStableChart === 'function') {
                     initStableChart();
                 }
+            } else if (portfolioDetailsStable) {
+                this.showPortfolioError(portfolioDetailsStable);
             }
             
             // Mise à jour de l'horodatage des portefeuilles
             const updateTimestamp = document.getElementById('updateTimestamp');
-            if (updateTimestamp) {
+            if (updateTimestamp && this.portfolios.lastUpdated) {
                 const date = new Date(this.portfolios.lastUpdated);
                 const dateStr = date.toLocaleDateString('fr-FR');
                 const timeStr = date.toLocaleTimeString('fr-FR', {
@@ -684,6 +648,36 @@ class PerplexityIntegration {
             console.log('✅ Interface des portefeuilles mise à jour');
         } catch (error) {
             console.error('❌ Erreur lors de la mise à jour de l\'interface des portefeuilles:', error);
+            
+            // Afficher message d'erreur pour chaque portefeuille
+            if (portfolioDetailsAgressif) this.showPortfolioError(portfolioDetailsAgressif);
+            if (portfolioDetailsModere) this.showPortfolioError(portfolioDetailsModere);
+            if (portfolioDetailsStable) this.showPortfolioError(portfolioDetailsStable);
+        }
+    }
+    
+    /**
+     * Affiche un message d'erreur dans un conteneur de portefeuille
+     */
+    showPortfolioError(container) {
+        const tableContainer = container.querySelector('.portfolio-table');
+        if (tableContainer) {
+            const tableHeader = tableContainer.querySelector('.table-header');
+            tableContainer.innerHTML = '';
+            if (tableHeader) tableContainer.appendChild(tableHeader);
+            
+            tableContainer.insertAdjacentHTML('beforeend', `
+                <div class="table-row error-row">
+                    <div class="error-message">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Données non disponibles</h3>
+                        <p>Nous n'avons pas pu récupérer les données de ce portefeuille. Veuillez réessayer ultérieurement.</p>
+                        <button class="retry-button" onclick="window.perplexityIntegration.updatePortfolios()">
+                            <i class="fas fa-sync-alt"></i> Actualiser
+                        </button>
+                    </div>
+                </div>
+            `);
         }
     }
     
@@ -696,6 +690,26 @@ class PerplexityIntegration {
         
         // Conserver l'en-tête de la table
         const tableHeader = tableContainer.querySelector('.table-header');
+        
+        // Vérifier si nous avons des données
+        if (!portfolioData || portfolioData.length === 0) {
+            tableContainer.innerHTML = '';
+            if (tableHeader) tableContainer.appendChild(tableHeader);
+            
+            tableContainer.insertAdjacentHTML('beforeend', `
+                <div class="table-row error-row">
+                    <div class="error-message">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <h3>Aucune donnée disponible</h3>
+                        <p>Nous n'avons pas pu récupérer les données de ce portefeuille. Veuillez réessayer ultérieurement.</p>
+                        <button class="retry-button" onclick="window.perplexityIntegration.updatePortfolios()">
+                            <i class="fas fa-sync-alt"></i> Actualiser
+                        </button>
+                    </div>
+                </div>
+            `);
+            return;
+        }
         
         // Créer les lignes pour chaque actif
         const rowsHTML = portfolioData.map(asset => {
