@@ -11,7 +11,7 @@ import os
 import json
 import sys
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 from bs4 import BeautifulSoup
 import re
 import logging
@@ -238,9 +238,9 @@ MARKET_DATA = {
     "meta": {
         "source": "Boursorama",
         "url": CONFIG["source_url"],
-        "timestamp": datetime.now().isoformat(),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
         "count": 0,
-        "lastUpdated": datetime.now().isoformat()
+        "lastUpdated": datetime.now(timezone.utc).isoformat()
     }
 }
 
@@ -598,7 +598,7 @@ def parse_percentage(percent_str):
         return 0.0
     
     # Supprimer les caractères non numériques sauf le point décimal et le signe moins
-    clean_str = re.sub(r'[^0-9\\.\\-]', '', percent_str.replace(',', '.'))
+    clean_str = re.sub(r'[^0-9\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\.\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\-]/g', '', percent_str.replace(',', '.'))
     
     try:
         return float(clean_str)
@@ -751,7 +751,7 @@ def scrape_market_data():
             MARKET_DATA["indices"][region] = sorted(MARKET_DATA["indices"][region], key=lambda x: x["country"])
         
         # Mise à jour de l'horodatage
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         MARKET_DATA["meta"]["timestamp"] = now.isoformat()
         MARKET_DATA["meta"]["lastUpdated"] = now.isoformat()
         
