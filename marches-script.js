@@ -479,30 +479,39 @@ document.addEventListener('DOMContentLoaded', function() {
             importantIndices.push(remainingIndices[0]);
         }
         
-        // Compter les indices positifs et négatifs pour déterminer la tendance
-        const positiveIndices = importantIndices.filter(index => 
-            !(index.changePercent || "").includes('-')
-        ).length;
+        // Compter les indices positifs, négatifs et neutres (0,00%)
+        const positiveIndices = importantIndices.filter(index => {
+            const changePercent = index.changePercent || "";
+            return !changePercent.includes('-') && changePercent.trim() !== '0,00 %' && changePercent.trim() !== '0.00 %' && changePercent.trim() !== '0 %';
+        }).length;
         
-        const negativeIndices = importantIndices.filter(index => 
-            (index.changePercent || "").includes('-')
-        ).length;
+        const negativeIndices = importantIndices.filter(index => {
+            const changePercent = index.changePercent || "";
+            return changePercent.includes('-') && changePercent.trim() !== '0,00 %' && changePercent.trim() !== '0.00 %' && changePercent.trim() !== '0 %';
+        }).length;
+        
+        const neutralIndices = importantIndices.filter(index => {
+            const changePercent = index.changePercent || "";
+            return changePercent.trim() === '0,00 %' || changePercent.trim() === '0.00 %' || changePercent.trim() === '0 %';
+        }).length;
+        
+        console.log(`Région ${region}: ${positiveIndices} positifs, ${negativeIndices} négatifs, ${neutralIndices} neutres`);
         
         // Déterminer la tendance générale en fonction du décompte
         let trendClass = 'neutral';
         let trendIcon = '';
         
-        // CORRECTION DE LA LOGIQUE : Si 3 ou plus sont négatifs, tendance négative
+        // Règle mise à jour : si au moins 3 indices sont négatifs, tendance négative
         if (negativeIndices >= 3) {
             trendClass = 'negative';
             trendIcon = '<i class="fas fa-arrow-down"></i>';
         }
-        // Si 3 ou plus sont positifs, tendance positive
+        // Si au moins 3 indices sont positifs, tendance positive
         else if (positiveIndices >= 3) {
             trendClass = 'positive';
             trendIcon = '<i class="fas fa-arrow-up"></i>';
         } 
-        // Sinon (2 positifs et 2 négatifs), tendance neutre
+        // Sinon (mix d'indices positifs, négatifs et neutres), tendance neutre
         else {
             trendClass = 'neutral';
             trendIcon = '<i class="fas fa-arrows-alt-h"></i>';
@@ -517,8 +526,24 @@ document.addEventListener('DOMContentLoaded', function() {
         
         importantIndices.forEach(index => {
             // Déterminer la classe pour la variation
-            const changeClass = (index.changePercent || "").includes('-') ? 'negative' : 'positive';
-            const ytdClass = (index.ytdChange || "").includes('-') ? 'negative' : 'positive';
+            let changeClass = 'neutral';
+            const changePercent = index.changePercent || "";
+            
+            if (changePercent.includes('-')) {
+                changeClass = 'negative';
+            } else if (changePercent !== '0,00 %' && changePercent !== '0.00 %' && changePercent !== '0 %') {
+                changeClass = 'positive';
+            }
+            
+            // Déterminer la classe pour YTD
+            let ytdClass = 'neutral';
+            const ytdChange = index.ytdChange || "";
+            
+            if (ytdChange.includes('-')) {
+                ytdClass = 'negative';
+            } else if (ytdChange !== '0,00 %' && ytdChange !== '0.00 %' && ytdChange !== '0 %') {
+                ytdClass = 'positive';
+            }
             
             const div = document.createElement('div');
             div.innerHTML = `
