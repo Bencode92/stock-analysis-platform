@@ -9,6 +9,9 @@ const API_CONFIG = {
     // URL du serveur proxy (mise à jour avec l'URL Render valide)
     baseUrl: 'https://stock-analysis-platform-q9tc.onrender.com',
     
+    // Activation de Sonar
+    useSonar: true,
+    
     // Mode debug pour afficher plus d'informations dans la console
     debug: true,
     
@@ -16,7 +19,8 @@ const API_CONFIG = {
     endpoints: {
         news: '/api/perplexity/news',
         portfolios: '/api/perplexity/portfolios',
-        search: '/api/perplexity/search'
+        search: '/api/perplexity/search',
+        sonar: '/api/perplexity/sonar' // Nouvel endpoint pour Sonar
     },
     
     // Intervalle de mise à jour (en millisecondes)
@@ -56,6 +60,7 @@ class PerplexityIntegration {
     async init() {
         console.log('Initialisation de l\'intégration Perplexity...');
         console.log('URL de l\'API:', API_CONFIG.baseUrl);
+        console.log('Mode Sonar:', API_CONFIG.useSonar ? 'Activé' : 'Désactivé');
         
         try {
             // Vérifier si l'API est accessible avec retry
@@ -406,7 +411,9 @@ class PerplexityIntegration {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({})
+                body: JSON.stringify({
+                    useSonar: API_CONFIG.useSonar // Indiquer si on doit utiliser Sonar
+                })
             });
             
             if (API_CONFIG.debug) {
@@ -438,7 +445,9 @@ class PerplexityIntegration {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({})
+                body: JSON.stringify({
+                    useSonar: API_CONFIG.useSonar // Indiquer si on doit utiliser Sonar
+                })
             });
             
             if (API_CONFIG.debug) {
@@ -461,8 +470,13 @@ class PerplexityIntegration {
      * Effectue une recherche personnalisée avec Perplexity
      */
     async search(query) {
+        // Si Sonar est activé, rediriger vers searchWithSonar
+        if (API_CONFIG.useSonar) {
+            return this.searchWithSonar(query);
+        }
+        
         try {
-            console.log(`🔍 Recherche: "${query}"`);
+            console.log(`🔍 Recherche standard: "${query}"`);
             console.log(`📡 URL complète: ${API_CONFIG.baseUrl}${API_CONFIG.endpoints.search}`);
             
             // Appel à l'API via le proxy avec retry
@@ -489,6 +503,58 @@ class PerplexityIntegration {
                 return simulatePerplexityResponse(query);
             }
             throw error;
+        }
+    }
+    
+    /**
+     * Effectue une recherche avec Perplexity Sonar
+     */
+    async searchWithSonar(query) {
+        try {
+            console.log(`🔍 Recherche Sonar: "${query}"`);
+            console.log(`📡 URL complète: ${API_CONFIG.baseUrl}${API_CONFIG.endpoints.sonar}`);
+            
+            // Appel à l'API Sonar via le proxy avec retry
+            const data = await this.fetchWithRetry(`${API_CONFIG.baseUrl}${API_CONFIG.endpoints.sonar}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    query,
+                    options: {
+                        mode: 'sonar',
+                        enhance_precision: true,
+                        include_financial_metrics: true
+                    }
+                })
+            });
+            
+            if (API_CONFIG.debug) {
+                console.log('📊 Résultats de recherche Sonar reçus:', data);
+            }
+            
+            console.log('✅ Recherche Sonar effectuée avec succès');
+            return data;
+            
+        } catch (error) {
+            console.error('❌ Erreur lors de la recherche Sonar:', error);
+            // Fallback vers la recherche standard ou simulée
+            try {
+                console.log('⚠️ Fallback vers recherche standard');
+                // Désactiver temporairement Sonar pour éviter une boucle
+                const originalSonarSetting = API_CONFIG.useSonar;
+                API_CONFIG.useSonar = false;
+                const result = await this.search(query);
+                API_CONFIG.useSonar = originalSonarSetting;
+                return result;
+            } catch (fallbackError) {
+                if (typeof simulatePerplexityResponse === 'function') {
+                    console.log('⚠️ Utilisation des données simulées pour la recherche');
+                    return simulatePerplexityResponse(query);
+                }
+                throw error;
+            }
         }
     }
     
