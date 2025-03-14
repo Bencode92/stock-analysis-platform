@@ -1403,11 +1403,15 @@
             if (understandBtn && welcomeBanner) {
                 understandBtn.addEventListener('click', function() {
                     welcomeBanner.style.display = 'none';
+                    
+                    // Utiliser les deux clés pour la compatibilité avec les deux implémentations
+                    localStorage.setItem('dashboardGuideHidden', 'true');
                     localStorage.setItem('tradepulse_welcome_dismissed', 'true');
                 });
                 
-                // Vérifier si l'utilisateur a déjà fermé la bannière
-                if (localStorage.getItem('tradepulse_welcome_dismissed') === 'true') {
+                // Vérifier les deux clés pour la compatibilité
+                if (localStorage.getItem('dashboardGuideHidden') === 'true' || 
+                    localStorage.getItem('tradepulse_welcome_dismissed') === 'true') {
                     welcomeBanner.style.display = 'none';
                 }
             }
