@@ -1,349 +1,994 @@
 <!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TradePulse - Finance Intelligence Platform</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="modern-fluid.css">
-    <link rel="stylesheet" href="enhanced-ui.css">
-    <script type="module" src="aiintegration.js"></script>
-    <style>
-        /* Styles spécifiques pour la page d'accueil avec jeton qui tourne */
-        body {
-            padding: 0;
-            margin: 0;
-            overflow: hidden;
-            background: var(--background);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .landing-container {
-            position: relative;
-            width: 100%;
-            max-width: 1200px;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-            z-index: 1;
-        }
-
-        /* Arrière-plan financier */
-        #financial-background {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 0;
-        }
-
-        /* Logo et titre */
-        .brand {
-            text-align: center;
-            margin-bottom: 3rem;
-            animation: fadeInDown 1s ease-out;
-        }
-
-        .logo-title {
-            font-size: 4rem;
-            font-weight: 900;
-            color: #fff;
-            letter-spacing: 0.1em;
-            text-shadow: 0 0 15px rgba(30, 144, 255, 0.5);
-            margin: 0;
-        }
-
-        .tagline {
-            font-size: 1.2rem;
-            color: rgba(255, 255, 255, 0.8);
-            margin-top: 0.5rem;
-            letter-spacing: 0.2em;
-        }
-
-        /* Jeton qui tourne */
-        .token-container {
-            position: relative;
-            width: 300px;
-            height: 300px;
-            margin: 2rem auto;
-            perspective: 1200px;
-            animation: fadeIn 1.5s ease-out;
-        }
-
-        .token {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            transform-style: preserve-3d;
-            animation: tokenRotate 15s linear infinite;
-        }
-
-        .token-face {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            border-radius: 50%;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
-            font-weight: 900;
-            background: radial-gradient(circle at center, #0c1b30 0%, #040a16 100%);
-            border: 2px solid rgba(30, 144, 255, 0.3);
-            box-shadow: 0 0 20px rgba(30, 144, 255, 0.3), 
-                        0 0 40px rgba(30, 144, 255, 0.2), 
-                        inset 0 0 20px rgba(30, 144, 255, 0.1);
-            backface-visibility: hidden;
-        }
-
-        .token-face.front {
-            transform: rotateY(0deg) translateZ(10px);
-        }
-
-        .token-face.back {
-            transform: rotateY(180deg) translateZ(10px);
-        }
-
-        .token-logo {
-            max-width: 70%;
-            max-height: 70%;
-            filter: drop-shadow(0 0 10px rgba(30, 144, 255, 0.8));
-        }
-
-        .token-symbol {
-            font-size: 5rem;
-            color: #1E90FF;
-            text-shadow: 0 0 20px rgba(30, 144, 255, 0.8);
-        }
-
-        @keyframes tokenRotate {
-            0% { transform: rotateY(0); }
-            100% { transform: rotateY(360deg); }
-        }
-
-        /* Bouton CTA */
-        .start-button {
-            margin-top: 3rem;
-            padding: 1.2rem 3.5rem;
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: var(--background);
-            background: linear-gradient(90deg, #1E90FF, #4c9fff);
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            letter-spacing: 0.1em;
-            box-shadow: 0 0 20px rgba(30, 144, 255, 0.5);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            animation: fadeInUp 1s ease-out;
-        }
-
-        .start-button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            transition: all 0.5s ease;
-        }
-
-        .start-button:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 0 30px rgba(30, 144, 255, 0.8);
-        }
-
-        .start-button:hover::before {
-            left: 100%;
-        }
-
-        /* Animation de fadeIn */
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        /* Traits verts modernes */
-        .green-line {
-            position: absolute;
-            background: linear-gradient(90deg, transparent, rgba(30, 144, 255, 0.5), transparent);
-            height: 1px;
-            width: 80%;
-            z-index: 0;
-            animation: moveLine 8s linear infinite;
-        }
-
-        .green-line:nth-child(1) {
-            top: 10%;
-            left: 0;
-            width: 60%;
-            opacity: 0.3;
-            animation-delay: 0s;
-        }
-
-        .green-line:nth-child(2) {
-            top: 25%;
-            right: 0;
-            width: 40%;
-            opacity: 0.2;
-            animation-delay: 2s;
-            animation-direction: reverse;
-        }
-
-        .green-line:nth-child(3) {
-            top: 65%;
-            left: 10%;
-            width: 70%;
-            opacity: 0.4;
-            animation-delay: 1s;
-        }
-
-        .green-line:nth-child(4) {
-            top: 80%;
-            right: 5%;
-            width: 45%;
-            opacity: 0.25;
-            animation-delay: 3s;
-            animation-direction: reverse;
-        }
-
-        @keyframes moveLine {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-
-        /* Copyright */
-        .copyright {
-            position: absolute;
-            bottom: 1rem;
-            font-size: 0.8rem;
-            color: rgba(255, 255, 255, 0.5);
-            animation: fadeIn 2s ease-out;
-        }
-
-        /* Media queries pour la responsivité */
-        @media (max-width: 768px) {
-            .logo-title {
-                font-size: 3rem;
-            }
-
-            .token-container {
-                width: 200px;
-                height: 200px;
-            }
-
-            .start-button {
-                padding: 1rem 2.5rem;
-                font-size: 1rem;
-            }
-        }
-
-        @media (max-width: 480px) {
-            .logo-title {
-                font-size: 2.2rem;
-            }
-
-            .tagline {
-                font-size: 1rem;
-            }
-
-            .token-container {
-                width: 150px;
-                height: 150px;
-            }
-        }
-    </style>
-</head>
-<body>
-    <!-- Canvas d'arrière-plan pour les animations financières -->
-    <canvas id="financial-background"></canvas>
-
-    <!-- Traits verts modernes -->
-    <div class="green-line"></div>
-    <div class="green-line"></div>
-    <div class="green-line"></div>
-    <div class="green-line"></div>
-
-    <div class="landing-container">
-        <!-- Logo et titre -->
-        <div class="brand">
-            <h1 class="logo-title">TRADEPULSE</h1>
-            <div class="tagline">FINANCE INTELLIGENCE PLATFORM</div>
-        </div>
-
-        <!-- Jeton tournant -->
-        <div class="token-container">
-            <div class="token">
-                <div class="token-face front">
-                    <div class="token-symbol">TP</div>
-                </div>
-                <div class="token-face back">
-                    <i class="fas fa-chart-line token-logo"></i>
-                </div>
-            </div>
-        </div>
-
-        <!-- Bouton de démarrage -->
-        <button class="start-button">START</button>
-
-        <!-- Copyright -->
-        <div class="copyright">© 2025 TradePulse | POWERED BY PERPLEXITY AI</div>
-    </div>
-
-    <!-- Scripts -->
-    <script src="dynamic-background.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Animation du jeton
-            const token = document.querySelector('.token');
-            
-            // Bouton de démarrage
-            const startButton = document.querySelector('.start-button');
-            startButton.addEventListener('click', function() {
-                // Effet de pulse
-                this.style.transform = 'scale(0.95)';
-                
-                // Redirection avec délai
-                setTimeout(() => {
-                    // Transition de sortie
-                    document.body.style.opacity = '0';
-                    document.body.style.transition = 'opacity 0.5s ease';
-                    
-                    // Redirection vers la page d'authentification
-                    setTimeout(() => {
-                        window.location.href = 'auth.html';
-                    }, 500);
-                }, 300);
-            });
-            
-            // Restauration de l'échelle du bouton
-            startButton.addEventListener('transitionend', function() {
-                this.style.transform = '';
-            });
-        });
-    </script>
-</body>
-</html>
+ <html lang="fr">
+ <head>
+     <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <title>TradePulse - Finance Intelligence Platform</title>
+     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+     <link rel="stylesheet" href="enhanced-ui.css">
+     <style>
+         /* Styles généraux */
+         :root {
+             --background-color: #011627; /* Bleu nuit */
+             --text-color: #FFFFFF;
+             --accent-color: #00FF87; /* Vert néon */
+             --accent-glow: 0 0 10px rgba(0, 255, 135, 0.6);
+             --transition-time: 0.8s;
+         }
+ 
+         * {
+             margin: 0;
+             padding: 0;
+             box-sizing: border-box;
+         }
+ 
+         body, html {
+             margin: 0;
+             padding: 0;
+             font-family: 'Inter', sans-serif;
+             height: 100%;
+             width: 100%;
+             background-color: var(--background-color);
+             color: var(--text-color);
+             overflow: hidden;
+         }
+ 
+         /* Container principal */
+         .container {
+             display: flex;
+             flex-direction: column;
+             justify-content: center;
+             align-items: center;
+             height: 100vh;
+             position: relative;
+             text-align: center;
+             padding: 2rem;
+         }
+ 
+         /* Effet de particules en arrière-plan */
+         .particles {
+             position: absolute;
+             top: 0;
+             left: 0;
+             width: 100%;
+             height: 100%;
+             z-index: 1;
+         }
+ 
+         /* Zone de la pièce */
+         .coin-container {
+             width: 360px;
+             height: 360px;
+             perspective: 1000px;
+             margin-bottom: 40px;
+             z-index: 2;
+             cursor: pointer;
+             -webkit-tap-highlight-color: transparent;
+             opacity: 0;
+             animation: fadeIn 1.5s ease forwards 1s;
+         }
+ 
+         /* Animation de la pièce */
+         .coin {
+             width: 100%;
+             height: 100%;
+             position: relative;
+             transform-style: preserve-3d;
+             animation: rotate 15s linear infinite;
+             transition: transform 0.3s ease-out;
+         }
+ 
+         .coin:hover {
+             animation-play-state: paused;
+         }
+ 
+         /* Animation au survol ou interaction */
+         .coin-container:hover .coin {
+             transform: rotateY(180deg);
+         }
+ 
+         /* Faces de la pièce */
+         .coin-face {
+             position: absolute;
+             width: 100%;
+             height: 100%;
+             border-radius: 50%;
+             backface-visibility: hidden;
+             display: flex;
+             flex-direction: column;
+             justify-content: center;
+             align-items: center;
+             text-align: center;
+             border: 3px solid var(--accent-color);
+             box-shadow: 0 0 20px rgba(0, 255, 153, 0.5), 
+                         0 0 40px rgba(0, 255, 153, 0.3), 
+                         inset 0 0 20px rgba(0, 255, 153, 0.2);
+             background: radial-gradient(ellipse at center, #001e36 0%, #000c14 100%);
+         }
+ 
+         /* Face avant */
+         .coin-front {
+             transform: rotateY(0deg);
+         }
+ 
+         /* Face arrière (date) */
+         .coin-back {
+             transform: rotateY(180deg);
+         }
+ 
+         /* Logo principal */
+         .logo {
+             font-size: 60px;
+             font-weight: 900;
+             letter-spacing: 1px;
+             margin: 0;
+             text-shadow: 0 0 15px rgba(0, 255, 153, 0.7);
+         }
+ 
+         /* Point lumineux du logo */
+         .pulse-dot {
+             width: 16px;
+             height: 16px;
+             background-color: var(--accent-color);
+             border-radius: 50%;
+             margin: 10px auto;
+             box-shadow: 0 0 15px rgba(0, 255, 153, 0.8);
+             animation: pulse 2s infinite;
+         }
+ 
+         /* Texte secondaire */
+         .subtitle {
+             font-size: 16px;
+             font-weight: 400;
+             opacity: 0.8;
+             margin-top: 16px;
+             letter-spacing: 1px;
+         }
+ 
+         /* Date */
+         .date {
+             font-size: 80px;
+             font-weight: 900;
+             margin: 0;
+             color: var(--accent-color);
+             text-shadow: 0 0 20px rgba(0, 255, 153, 0.7);
+         }
+ 
+         /* Bouton de démarrage */
+         .start-button {
+             padding: 1.2rem 3.5rem;
+             font-size: clamp(1.2rem, 3vw, 1.8rem);
+             font-weight: 600;
+             background-color: transparent;
+             color: var(--text-color);
+             border: 2px solid var(--accent-color);
+             border-radius: 4px;
+             cursor: pointer;
+             transition: all 0.3s ease;
+             margin-top: 20px;
+             z-index: 2;
+             letter-spacing: 2px;
+             box-shadow: 0 0 15px rgba(0, 255, 153, 0.3);
+             text-decoration: none;
+             display: inline-block;
+             position: relative;
+             overflow: hidden;
+             opacity: 0;
+             animation: fadeIn 1.5s ease forwards 1.5s;
+         }
+ 
+         .start-button:hover {
+             color: var(--background-color);
+             box-shadow: 0 0 25px rgba(0, 255, 153, 0.4);
+         }
+ 
+         .start-button::before {
+             content: '';
+             position: absolute;
+             top: 0;
+             left: -100%;
+             width: 100%;
+             height: 100%;
+             background-color: var(--accent-color);
+             transition: all 0.4s ease;
+             z-index: -1;
+         }
+ 
+         .start-button:hover::before {
+             left: 0;
+         }
+ 
+         /* Footer */
+         .footer {
+             position: absolute;
+             bottom: 20px;
+             text-align: center;
+             font-size: 14px;
+             opacity: 0;
+             animation: fadeIn 1.5s ease forwards 2s;
+             z-index: 2;
+             color: rgba(255, 255, 255, 0.5);
+         }
+ 
+         /* Animations */
+         @keyframes rotate {
+             0% { transform: rotateY(0); }
+             45% { transform: rotateY(1080deg); }
+             50% { transform: rotateY(1080deg); }
+             95% { transform: rotateY(0); }
+             100% { transform: rotateY(0); }
+         }
+ 
+         @keyframes pulse {
+             0% { box-shadow: 0 0 0 0 rgba(0, 255, 153, 0.7); }
+             70% { box-shadow: 0 0 0 10px rgba(0, 255, 153, 0); }
+             100% { box-shadow: 0 0 0 0 rgba(0, 255, 153, 0); }
+         }
+ 
+         /* Effet d'apparition progressive */
+         @keyframes fadeIn {
+             from { 
+                 opacity: 0;
+                 transform: translateY(20px);
+             }
+             to { 
+                 opacity: 1;
+                 transform: translateY(0);
+             }
+         }
+ 
+         /* NOUVELLE IMPLÉMENTATION - Graphiques financiers en arrière-plan */
+         .financial-background {
+             position: absolute;
+             top: 0;
+             left: 0;
+             width: 100%;
+             height: 100%;
+             z-index: 0;
+             opacity: 0.15;
+             overflow: hidden;
+         }
+ 
+         .chart-line {
+             position: absolute;
+             height: 2px;
+             background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+             animation: chart-move 15s infinite linear;
+         }
+ 
+         .chart-dot {
+             position: absolute;
+             width: 4px;
+             height: 4px;
+             border-radius: 50%;
+             background-color: var(--accent-color);
+             box-shadow: 0 0 6px var(--accent-color);
+             animation: pulse 2s infinite;
+         }
+ 
+         @keyframes chart-move {
+             0% { transform: translateX(-100%); }
+             100% { transform: translateX(100%) rotate(5deg); }
+         }
+ 
+         /* NOUVELLE IMPLÉMENTATION - Écran de modal de mise à jour */
+         #update-overlay {
+             display: none;
+             position: fixed;
+             top: 0;
+             left: 0;
+             width: 100%;
+             height: 100%;
+             background: rgba(1, 22, 39, 0.9);
+             z-index: 9999;
+             justify-content: center;
+             align-items: center;
+         }
+ 
+         /* Refonte de la modal de mise à jour */
+         .update-modal {
+             background: linear-gradient(135deg, rgba(1, 22, 39, 0.95), rgba(1, 15, 26, 0.95));
+             border: 2px solid var(--accent-color);
+             border-radius: 16px;
+             box-shadow: 0 0 50px rgba(0, 255, 135, 0.3),
+                         inset 0 0 20px rgba(0, 255, 135, 0.1);
+             width: 95%;
+             max-width: 550px;
+             padding: 40px;
+             text-align: center;
+             backdrop-filter: blur(15px);
+             animation: modal-appear 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+         }
+ 
+         @keyframes modal-appear {
+             from { 
+                 opacity: 0;
+                 transform: scale(0.8);
+             }
+             to { 
+                 opacity: 1;
+                 transform: scale(1);
+             }
+         }
+ 
+         .modal-title {
+             color: var(--accent-color);
+             font-size: 28px;
+             font-weight: 700;
+             margin-bottom: 25px;
+             text-shadow: 0 0 15px rgba(0, 255, 135, 0.3);
+             letter-spacing: 1px;
+         }
+ 
+         .modal-title::after {
+             content: '';
+             display: block;
+             width: 60px;
+             height: 3px;
+             background-color: var(--accent-color);
+             margin: 15px auto 0;
+             border-radius: 3px;
+             box-shadow: 0 0 10px rgba(0, 255, 135, 0.6);
+         }
+ 
+         .modal-message {
+             font-size: 16px;
+             line-height: 1.7;
+             margin-bottom: 30px;
+             max-width: 90%;
+             margin-left: auto;
+             margin-right: auto;
+         }
+ 
+         .last-update-box {
+             background-color: rgba(0, 255, 135, 0.08);
+             border-left: 3px solid var(--accent-color);
+             border-radius: 6px;
+             padding: 15px;
+             margin: 30px 0;
+             text-align: left;
+             font-size: 14px;
+             display: flex;
+             align-items: center;
+         }
+ 
+         .last-update-box i {
+             font-size: 18px;
+             color: var(--accent-color);
+             margin-right: 12px;
+         }
+ 
+         .update-time {
+             color: var(--accent-color);
+             font-weight: 600;
+         }
+ 
+         .modal-buttons {
+             display: flex;
+             gap: 20px;
+             justify-content: center;
+             margin-top: 35px;
+         }
+ 
+         .modal-btn {
+             padding: 14px 28px;
+             border: 2px solid var(--accent-color);
+             border-radius: 8px;
+             font-size: 15px;
+             font-weight: 600;
+             cursor: pointer;
+             transition: all 0.3s ease;
+             min-width: 180px;
+             background: transparent;
+             color: var(--text-color);
+             position: relative;
+             overflow: hidden;
+         }
+ 
+         .modal-btn.primary {
+             background-color: var(--accent-color);
+             color: var(--background-color);
+         }
+ 
+         .modal-btn:hover {
+             transform: translateY(-3px);
+             box-shadow: 0 8px 20px rgba(0, 255, 135, 0.4);
+         }
+ 
+         .modal-btn.primary:hover {
+             background-color: #00d673;
+         }
+ 
+         .modal-btn::before {
+             content: '';
+             position: absolute;
+             top: 0;
+             left: -100%;
+             width: 100%;
+             height: 100%;
+             background: linear-gradient(
+                 90deg,
+                 transparent 0%,
+                 rgba(255, 255, 255, 0.2) 50%,
+                 transparent 100%
+             );
+             transition: all 0.5s ease;
+         }
+ 
+         .modal-btn:hover::before {
+             left: 100%;
+         }
+ 
+         /* Loader de mise à jour */
+         .update-loader {
+             display: none;
+             text-align: center;
+             margin-top: 30px;
+         }
+ 
+         /* Animation améliorée du spinner */
+         .update-spinner {
+             display: inline-block;
+             width: 70px;
+             height: 70px;
+             border: 4px solid rgba(0, 255, 135, 0.1);
+             border-radius: 50%;
+             border-top-color: var(--accent-color);
+             border-left-color: var(--accent-color);
+             animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+             margin-bottom: 20px;
+             box-shadow: 0 0 15px rgba(0, 255, 135, 0.2);
+         }
+ 
+         .update-status {
+             margin-bottom: 15px;
+             font-size: 16px;
+         }
+ 
+         /* Amélioration de l'indicateur de progression */
+         .progress-bar-outer {
+             height: 10px; /* Augmentation de l'épaisseur */
+             width: 100%;
+             background-color: rgba(0, 255, 135, 0.1);
+             border-radius: 5px;
+             overflow: hidden;
+             margin: 25px 0;
+             box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+             position: relative;
+         }
+ 
+         .progress-bar-inner {
+             height: 100%;
+             width: 0%;
+             background: linear-gradient(90deg, rgba(0, 255, 135, 0.8), rgba(0, 255, 219, 0.9));
+             border-radius: 5px;
+             transition: width 0.3s ease-out;
+             box-shadow: 0 0 10px rgba(0, 255, 135, 0.8);
+             position: relative;
+         }
+ 
+         .progress-bar-inner::after {
+             content: "";
+             position: absolute;
+             top: 0;
+             left: 0;
+             right: 0;
+             bottom: 0;
+             background: linear-gradient(
+                 90deg,
+                 transparent 0%,
+                 rgba(255, 255, 255, 0.4) 50%,
+                 transparent 100%
+             );
+             animation: progress-shine 1.5s infinite linear;
+         }
+ 
+         @keyframes progress-shine {
+             from { transform: translateX(-100%); }
+             to { transform: translateX(100%); }
+         }
+ 
+         .update-percentage {
+             position: absolute;
+             right: 10px;
+             top: -25px;
+             font-size: 14px;
+             color: var(--accent-color);
+             font-weight: 600;
+         }
+ 
+         @keyframes spin {
+             0% { transform: rotate(0deg); }
+             100% { transform: rotate(360deg); }
+         }
+ 
+         /* Animation de complétion */
+         .update-complete {
+             display: none;
+             text-align: center;
+             margin-top: 20px;
+         }
+ 
+         .success-checkmark {
+             width: 80px;
+             height: 80px;
+             margin: 0 auto 20px;
+             position: relative;
+             animation: check-appear 0.8s ease forwards;
+         }
+ 
+         .success-checkmark::before {
+             content: '';
+             position: absolute;
+             width: 100%;
+             height: 100%;
+             border-radius: 50%;
+             background-color: rgba(0, 255, 135, 0.1);
+             transform: scale(0);
+             animation: circle-expand 0.5s ease forwards;
+         }
+ 
+         .success-checkmark i {
+             font-size: 40px;
+             color: var(--accent-color);
+             position: relative;
+             opacity: 0;
+             animation: check-appear 0.5s ease 0.3s forwards;
+         }
+ 
+         @keyframes circle-expand {
+             to { transform: scale(1); }
+         }
+ 
+         @keyframes check-appear {
+             to { opacity: 1; }
+         }
+ 
+         /* Responsive adjustments */
+         @media (max-width: 768px) {
+             .coin-container {
+                 width: 280px;
+                 height: 280px;
+             }
+ 
+             .logo {
+                 font-size: 40px;
+             }
+ 
+             .date {
+                 font-size: 60px;
+             }
+ 
+             .modal-buttons {
+                 flex-direction: column;
+                 gap: 15px;
+             }
+ 
+             .modal-btn {
+                 width: 100%;
+             }
+         }
+     </style>
+ </head>
+ <body>
+     <!-- Sélecteur de thème -->
+     <div class="theme-toggle">
+         <button id="theme-toggle-btn" aria-label="Changer de thème" class="button-press">
+             <i class="fas fa-moon" id="dark-icon"></i>
+             <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
+         </button>
+     </div>
+ 
+     <!-- Bouton de personnalisation -->
+     <button id="open-customization" class="customization-btn button-press" aria-label="Personnaliser l'interface">
+         <i class="fas fa-paint-brush"></i>
+     </button>
+ 
+     <!-- Panneau de personnalisation -->
+     <div id="customization-panel" class="customization-panel">
+         <div class="panel-header">
+             <h3>Personnalisation</h3>
+             <button id="close-customization" class="close-btn"><i class="fas fa-times"></i></button>
+         </div>
+         <div class="panel-content">
+             <div class="customize-section">
+                 <h4>Couleur d'accent</h4>
+                 <div class="color-options">
+                     <button class="color-option active" data-color="#00FF87" style="background-color: #00FF87;"></button>
+                     <button class="color-option" data-color="#ff6b6b" style="background-color: #ff6b6b;"></button>
+                     <button class="color-option" data-color="#4d79ff" style="background-color: #4d79ff;"></button>
+                     <button class="color-option" data-color="#ffd166" style="background-color: #ffd166;"></button>
+                     <button class="color-option" data-color="#bb6bd9" style="background-color: #bb6bd9;"></button>
+                 </div>
+             </div>
+             <div class="customize-section">
+                 <h4>Animation de fond</h4>
+                 <div class="toggle-switch">
+                     <input type="checkbox" id="bg-animation-toggle" checked>
+                     <label for="bg-animation-toggle"></label>
+                     <span>Activer</span>
+                 </div>
+             </div>
+             <div class="customize-section">
+                 <h4>Densité de l'interface</h4>
+                 <div class="density-options">
+                     <button class="density-option" data-density="compact">Compacte</button>
+                     <button class="density-option active" data-density="normal">Normale</button>
+                     <button class="density-option" data-density="comfortable">Confortable</button>
+                 </div>
+             </div>
+             <button id="reset-customization" class="reset-btn">Réinitialiser par défaut</button>
+         </div>
+     </div>
+ 
+     <div class="container">
+         <div class="particles" id="particles-js"></div>
+ 
+         <!-- Arrière-plan dynamique avec graphiques financiers -->
+         <div class="financial-background">
+             <div class="chart-line" style="top: 20%; left: -50%; width: 80%;"></div>
+             <div class="chart-line" style="top: 40%; left: -30%; width: 60%;"></div>
+             <div class="chart-line" style="top: 60%; left: -70%; width: 90%;"></div>
+             <div class="chart-line" style="top: 80%; left: -40%; width: 70%;"></div>
+ 
+             <div class="chart-dot" style="top: 20%; left: 30%;"></div>
+             <div class="chart-dot" style="top: 35%; left: 60%;"></div>
+             <div class="chart-dot" style="top: 55%; left: 20%;"></div>
+             <div class="chart-dot" style="top: 75%; left: 50%;"></div>
+         </div>
+ 
+         <!-- Conteneur de la pièce -->
+         <div class="coin-container" id="coinContainer">
+             <div class="coin">
+                 <!-- Face avant de la pièce -->
+                 <div class="coin-face coin-front">
+                     <div class="pulse-dot"></div>
+                     <h1 class="logo">TRADEPULSE</h1>
+                     <p class="subtitle">POWERED BY PERPLEXITY AI</p>
+                 </div>
+ 
+                 <!-- Face arrière de la pièce (date) -->
+                 <div class="coin-face coin-back">
+                     <p class="date" id="currentDate">08.03.2025</p>
+                 </div>
+             </div>
+         </div>
+ 
+         <!-- Bouton START -->
+         <a href="auth.html" class="start-button button-press ripple" id="startButton">START</a>
+ 
+         <footer class="footer">
+             © 2025 TradePulse | Finance Intelligence Platform
+         </footer>
+     </div>
+ 
+     <!-- NOUVELLE IMPLÉMENTATION - Modal de mise à jour -->
+     <div id="update-overlay">
+         <div class="update-modal">
+             <h2 class="modal-title">Mise à jour des données</h2>
+             
+             <p class="modal-message">Souhaitez-vous mettre à jour les données financières pour obtenir les dernières actualités et recommandations de portefeuille?</p>
+             
+             <div class="last-update-box" id="last-update-info">
+                 <i class="fas fa-history"></i>
+                 <div>
+                     Dernière mise à jour: <span id="update-time" class="update-time">--/--/---- --:--:--</span>
+                 </div>
+             </div>
+             
+             <div class="modal-buttons" id="modal-buttons">
+                 <button class="modal-btn primary button-press ripple" id="update-yes">
+                     <i class="fas fa-sync-alt"></i> Mettre à jour
+                 </button>
+                 <button class="modal-btn button-press ripple" id="update-no">
+                     <i class="fas fa-forward"></i> Continuer sans mise à jour
+                 </button>
+             </div>
+             
+             <!-- Loader pour la mise à jour -->
+             <div class="update-loader" id="update-loader">
+                 <div class="update-spinner"></div>
+                 <div class="update-status" id="update-status">Mise à jour en cours...</div>
+                 <div class="progress-bar-outer">
+                     <div class="progress-bar-inner" id="progress-bar">
+                         <span class="update-percentage" id="progress-percentage">0%</span>
+                     </div>
+                 </div>
+             </div>
+             
+             <!-- Animation de complétion de mise à jour -->
+             <div class="update-complete" id="update-complete">
+                 <div class="success-checkmark">
+                     <i class="fas fa-check"></i>
+                 </div>
+                 <h3 class="complete-title">Mise à jour terminée!</h3>
+                 <p class="complete-message">Vos données sont maintenant à jour.</p>
+             </div>
+         </div>
+     </div>
+ 
+     <!-- Scripts -->
+     <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+     <script src="ui-enhancements.js"></script>
+     <script src="user-preferences.js"></script>
+     <script src="auth.js"></script>
+     <script type="module">
+         import PerplexityIntegration from './aiintegration.js';
+ 
+         document.addEventListener('DOMContentLoaded', function() {
+             // Mettre à jour la date du jour
+             const now = new Date();
+             const day = String(now.getDate()).padStart(2, '0');
+             const month = String(now.getMonth() + 1).padStart(2, '0');
+             const year = now.getFullYear();
+ 
+             const dateElement = document.getElementById('currentDate');
+             if (dateElement) {
+                 dateElement.textContent = `${day}.${month}.${year}`;
+ 
+                 // Ajouter une légère animation à la date
+                 dateElement.style.transform = 'scale(0.95)';
+                 setTimeout(() => {
+                     dateElement.style.transition = 'transform 0.5s ease';
+                     dateElement.style.transform = 'scale(1)';
+                 }, 500);
+             }
+ 
+             // Vérifier si l'utilisateur est connecté
+             const checkLoginStatus = () => {
+                 const userData = localStorage.getItem('tradepulse_user');
+ 
+                 if (userData) {
+                     try {
+                         const user = JSON.parse(userData);
+ 
+                         // Vérifier si le token est encore valide (par exemple, vérifie si la connexion date de moins de 24h)
+                         const currentTime = Date.now();
+                         const loginTime = user.loginTime || 0;
+                         const dayInMs = 24 * 60 * 60 * 1000;
+ 
+                         return user.isLoggedIn && (currentTime - loginTime < dayInMs);
+                     } catch (error) {
+                         console.error('Erreur lors de la vérification du statut de connexion:', error);
+                         return false;
+                     }
+                 }
+ 
+                 return false;
+             };
+ 
+             // Éléments du DOM
+             const updateOverlay = document.getElementById('update-overlay');
+             const lastUpdateInfo = document.getElementById('last-update-info');
+             const updateTimeElement = document.getElementById('update-time');
+             const updateYesBtn = document.getElementById('update-yes');
+             const updateNoBtn = document.getElementById('update-no');
+             const modalButtons = document.getElementById('modal-buttons');
+             const updateLoader = document.getElementById('update-loader');
+             const updateStatus = document.getElementById('update-status');
+             const progressBar = document.getElementById('progress-bar');
+             const progressPercentage = document.getElementById('progress-percentage');
+             const updateComplete = document.getElementById('update-complete');
+             const startButton = document.getElementById('startButton');
+             
+             // Vérifier s'il existe une date de dernière mise à jour
+             const lastUpdateTime = localStorage.getItem('tradepulse_last_update');
+             
+             if (lastUpdateTime) {
+                 const date = new Date(parseInt(lastUpdateTime));
+                 updateTimeElement.textContent = formatDateTime(date);
+                 lastUpdateInfo.style.display = 'flex';
+             } else {
+                 lastUpdateInfo.style.display = 'none';
+             }
+             
+             // Remplacer le comportement par défaut du bouton START s'il est déjà connecté
+             if (checkLoginStatus()) {
+                 startButton.addEventListener('click', function(e) {
+                     e.preventDefault();
+                     showUpdateModal();
+                 });
+             }
+             
+             // Afficher la modal quand on clique sur la pièce
+             document.getElementById('coinContainer').addEventListener('click', function() {
+                 // Vérifier si l'utilisateur est connecté
+                 if (!checkLoginStatus()) {
+                     // Rediriger vers la page de connexion
+                     window.location.href = 'auth.html';
+                     return;
+                 }
+                 
+                 showUpdateModal();
+             });
+             
+             // Fonction pour afficher la modal de mise à jour
+             function showUpdateModal() {
+                 // Ajouter un effet de transition avant d'afficher la modal
+                 if (window.uiEnhancer) {
+                     window.uiEnhancer.showPageTransition(false);
+                     setTimeout(() => {
+                         // Afficher la modal avec display flex
+                         updateOverlay.style.display = 'flex';
+                     }, 300);
+                 } else {
+                     // Afficher la modal directement si l'enhancer n'est pas disponible
+                     updateOverlay.style.display = 'flex';
+                 }
+                 
+                 // Attacher les événements aux boutons
+                 updateYesBtn.addEventListener('click', handleUpdateClick);
+                 updateNoBtn.addEventListener('click', handleContinueClick);
+             }
+             
+             // Gérer le clic sur "Mettre à jour"
+             function handleUpdateClick() {
+                 // Effet de pulsation sur le bouton
+                 updateYesBtn.classList.add('updating');
+                 
+                 // Cacher les boutons
+                 modalButtons.style.display = 'none';
+                 
+                 // Afficher le loader
+                 updateLoader.style.display = 'block';
+                 
+                 // Initialiser la barre de progression
+                 let progress = 0;
+                 progressBar.style.width = '0%';
+                 progressPercentage.textContent = '0%';
+                 
+                 // Mise à jour de la barre de progression
+                 const updateInterval = setInterval(() => {
+                     progress += 2;
+                     if (progress <= 100) {
+                         progressBar.style.width = `${progress}%`;
+                         progressPercentage.textContent = `${progress}%`;
+                         
+                         if (progress <= 30) {
+                             updateStatus.textContent = 'Téléchargement des actualités...';
+                         } else if (progress <= 60) {
+                             updateStatus.textContent = 'Mise à jour des portefeuilles...';
+                         } else if (progress <= 90) {
+                             updateStatus.textContent = 'Analyse des données...';
+                         } else {
+                             updateStatus.textContent = 'Finalisation...';
+                         }
+                         
+                         // Ajouter un effet de pulsation à certains points clés
+                         if (progress === 30 || progress === 60 || progress === 90) {
+                             progressBar.classList.add('updating');
+                             setTimeout(() => {
+                                 progressBar.classList.remove('updating');
+                             }, 1000);
+                         }
+                     } else {
+                         clearInterval(updateInterval);
+                         completeUpdate(true);
+                     }
+                 }, 50);
+                 
+                 // Initialiser l'API Perplexity
+                 let perplexityInstance = null;
+                 
+                 if (!window.perplexityIntegration) {
+                     perplexityInstance = new PerplexityIntegration();
+                     window.perplexityIntegration = perplexityInstance;
+                 }
+                 
+                 // Mise à jour des données
+                 if (window.perplexityIntegration) {
+                     window.perplexityIntegration.updateData()
+                         .then(() => {
+                             // La mise à jour visuelle continue avec l'intervalle ci-dessus
+                         })
+                         .catch(error => {
+                             console.error('Erreur lors de la mise à jour des données:', error);
+                             // La mise à jour visuelle continue même en cas d'erreur
+                         });
+                 } else if (perplexityInstance) {
+                     perplexityInstance.updateData()
+                         .then(() => {
+                             // La mise à jour visuelle continue avec l'intervalle ci-dessus
+                         })
+                         .catch(error => {
+                             console.error('Erreur lors de la mise à jour des données:', error);
+                             // La mise à jour visuelle continue même en cas d'erreur
+                         });
+                 }
+             }
+             
+             // Gérer le clic sur "Continuer sans mise à jour"
+             function handleContinueClick() {
+                 // Rediriger vers la page des actualités avec une transition
+                 if (window.uiEnhancer) {
+                     window.uiEnhancer.navigateTo('actualites.html');
+                 } else {
+                     window.location.href = 'actualites.html';
+                 }
+             }
+             
+             // Fonction pour finaliser la mise à jour
+             function completeUpdate(updated) {
+                 // Mettre à jour la date de dernière mise à jour si nécessaire
+                 if (updated) {
+                     localStorage.setItem('tradepulse_last_update', Date.now().toString());
+                 }
+                 
+                 // Afficher l'animation de complétion
+                 updateLoader.style.display = 'none';
+                 updateComplete.style.display = 'block';
+                 
+                 // Rediriger vers la page des actualités avec une transition après un délai
+                 setTimeout(() => {
+                     if (window.uiEnhancer) {
+                         window.uiEnhancer.navigateTo('actualites.html');
+                     } else {
+                         window.location.href = 'actualites.html';
+                     }
+                 }, 2000);
+             }
+             
+             // Formater une date et heure
+             function formatDateTime(date) {
+                 const dateStr = date.toLocaleDateString('fr-FR');
+                 const timeStr = date.toLocaleTimeString('fr-FR', {
+                     hour: '2-digit',
+                     minute: '2-digit',
+                     second: '2-digit'
+                 });
+                 return `${dateStr} ${timeStr}`;
+             }
+             
+             // Configuration de l'effet de particules
+             if (window.particlesJS) {
+                 particlesJS('particles-js', {
+                     particles: {
+                         number: { value: 80, density: { enable: true, value_area: 800 } },
+                         color: { value: "#00ff99" },
+                         shape: { type: "circle" },
+                         opacity: { value: 0.3, random: true },
+                         size: { value: 3, random: true },
+                         line_linked: {
+                             enable: true,
+                             distance: 150,
+                             color: "#00ff99",
+                             opacity: 0.2,
+                             width: 1
+                         },
+                         move: {
+                             enable: true,
+                             speed: 1,
+                             direction: "none",
+                             random: true,
+                             straight: false,
+                             out_mode: "out",
+                             bounce: false
+                         }
+                     },
+                     interactivity: {
+                         detect_on: "canvas",
+                         events: {
+                             onhover: { enable: true, mode: "grab" },
+                             onclick: { enable: true, mode: "push" },
+                             resize: true
+                         },
+                         modes: {
+                             grab: { distance: 140, line_linked: { opacity: 0.5 } },
+                             push: { particles_nb: 4 }
+                         }
+                     },
+                     retina_detect: true
+                 });
+             }
+ 
+             // Animation des lignes de graphique
+             const chartLines = document.querySelectorAll('.chart-line');
+             chartLines.forEach((line, index) => {
+                 // Ajouter des délais différents pour un effet plus naturel
+                 line.style.animationDelay = `${index * 0.8}s`;
+             });
+         });
+     </script>
+ </body>
+ </html>
