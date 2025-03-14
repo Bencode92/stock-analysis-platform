@@ -351,20 +351,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 { name: 'EURO STOXX 50', selector: '.market-index-col[data-index="eurostoxx50"]' }
             ]);
             
-            // Amérique du Nord
+            // Amérique du Nord - Remplacer S&P/TSX 60 par CBOE VIX INDEX
             updateMarketOverviewRegion('north-america', [
                 { name: 'S&P 500', selector: '.market-index-col[data-index="sp500"]' },
                 { name: 'DOW JONES', selector: '.market-index-col[data-index="dowjones"]' },
                 { name: 'NASDAQ Composite', selector: '.market-index-col[data-index="nasdaq"]' },
-                { name: 'S&P/TSX 60', selector: '.market-index-col[data-index="sptsx"]' }
+                { name: 'CBOE VIX INDEX', selector: '.market-index-col[data-index="sptsx"]' } // Changé ici
             ]);
             
-            // Asie
+            // Asie - Remplacer BSE SENSEX par CSI 100 INDEX
             updateMarketOverviewRegion('asia', [
                 { name: 'NIKKEI 225', selector: '.market-index-col[data-index="nikkei"]' },
                 { name: 'HANG SENG', selector: '.market-index-col[data-index="hangseng"]' },
                 { name: 'SHANGHAI COMPOSITE', selector: '.market-index-col[data-index="shanghai"]' },
-                { name: 'BSE SENSEX', selector: '.market-index-col[data-index="sensex"]' }
+                { name: 'CSI 100 INDEX', selector: '.market-index-col[data-index="sensex"]' } // Changé ici
             ]);
             
             // Autres régions
@@ -477,7 +477,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     (index.index_name || "").includes('S&P 500') || 
                     (index.index_name || "").includes('DOW JONES INDUSTRIAL') || 
                     (index.index_name || "").includes('NASDAQ Composite') ||
-                    (index.index_name || "").includes('S&P/TSX 60')
+                    (index.index_name || "").includes('CBOE VIX INDEX') // Modifié ici (S&P/TSX 60 -> CBOE VIX INDEX)
                 );
                 break;
             case 'asia':
@@ -485,7 +485,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     (index.index_name || "").includes('NIKKEI 225') || 
                     (index.index_name || "").includes('HANG SENG HK COMPOSITE') || 
                     (index.index_name || "").includes('SHANGHAI COMPOSITE') ||
-                    (index.index_name || "").includes('BSE SENSEX')
+                    (index.index_name || "").includes('CSI 100 INDEX') // Modifié ici (BSE SENSEX -> CSI 100 INDEX)
                 );
                 break;
             case 'other':
@@ -602,7 +602,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!percentStr) return 0;
         
         // Enlever le symbole % et autres caractères non numériques, sauf le - et le .
-        const value = percentStr.replace(/[^0-9\\\\\\\\.\\\\\\\\-]/g, '');
+        const value = percentStr.replace(/[^0-9\\\\\\\\\\\\\\\\.\\\\\\\\\\\\\\\\-]/g, '');
         return parseFloat(value) || 0;
     }
     
