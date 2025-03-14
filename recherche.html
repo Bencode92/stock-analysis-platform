@@ -406,6 +406,32 @@
             margin-top: 5px;
         }
         
+        /* Badge Sonar */
+        .sonar-badge {
+            display: inline-flex;
+            align-items: center;
+            background: linear-gradient(to right, rgba(0, 255, 135, 0.15), rgba(15, 228, 255, 0.15));
+            padding: 8px 15px;
+            border-radius: 20px;
+            margin-bottom: 15px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--accent-color);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 135, 0.2);
+        }
+        
+        .sonar-badge i {
+            margin-right: 8px;
+            animation: sonar-pulse 2s infinite;
+        }
+        
+        @keyframes sonar-pulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+        
         /* Search form styles */
         .search-form {
             margin-bottom: 40px;
@@ -934,6 +960,9 @@
                 <div class="search-icon">
                     <i class="fas fa-robot"></i>
                 </div>
+                <div class="sonar-badge">
+                    <i class="fas fa-broadcast-tower"></i> SONAR ACTIVÉ
+                </div>
                 <h2 class="holographic">Posez une question sur les marchés, les actifs ou les stratégies d'investissement</h2>
                 <p>Notre intelligence artificielle analysera les dernières informations et vous fournira une réponse détaillée avec des sources fiables.</p>
                 
@@ -975,7 +1004,7 @@
                         <div class="pulse-dot"></div>
                         <div class="pulse-dot"></div>
                     </div>
-                    <p>Analyse des marchés en cours...</p>
+                    <p>Analyse des marchés en cours avec Sonar...</p>
                 </div>
                 
                 <!-- Résultats (masqués initialement) -->
@@ -983,7 +1012,7 @@
                     <div class="answer-header">
                         <div class="perplexity-badge">
                             <i class="fas fa-robot"></i>
-                            <span>Propulsé par Perplexity AI</span>
+                            <span>Propulsé par Perplexity Sonar</span>
                         </div>
                         <div class="timestamp" id="answerTimestamp">07/03/2025 • 10:15</div>
                     </div>
@@ -1019,7 +1048,7 @@
     <footer class="page-footer">
         <div class="data-source-info">
             <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel</p>
-            <p><i class="fas fa-robot"></i> Analyses sectorielles et recherche intelligente fournies par Perplexity AI</p>
+            <p><i class="fas fa-robot"></i> Analyses sectorielles et recherche intelligente fournies par Perplexity Sonar</p>
             <p><i class="fas fa-clock"></i> Dernière mise à jour: <span class="update-time" id="updateTime">09/03/2025 10:15:53</span></p>
         </div>
     </footer>
@@ -1051,6 +1080,9 @@
             
             // Créer l'animation des circuits
             createCircuitAnimation();
+            
+            // Vérifier si Sonar est activé
+            checkSonarEnabled();
             
             // Afficher la section de débogage si nécessaire
             if (DEBUG_MODE) {
@@ -1143,6 +1175,33 @@
                     }
                 }
             });
+            
+            // Fonction pour vérifier si Sonar est activé
+            function checkSonarEnabled() {
+                // Vérifier si Sonar est activé via l'API
+                if (window.perplexityIntegration && window.perplexityIntegration.API_CONFIG && window.perplexityIntegration.API_CONFIG.useSonar) {
+                    // Sonar est activé, afficher le badge
+                    document.querySelector('.sonar-badge').style.display = 'inline-flex';
+                    
+                    // Mettre à jour le badge Perplexity pour indiquer l'utilisation de Sonar
+                    const perplexityBadge = document.querySelector('.perplexity-badge');
+                    perplexityBadge.innerHTML = '<i class="fas fa-robot"></i><span>Propulsé par Perplexity Sonar</span>';
+                    perplexityBadge.style.background = 'linear-gradient(to right, rgba(0, 255, 135, 0.2), rgba(15, 228, 255, 0.2))';
+                    
+                    // Mettre à jour le texte de chargement
+                    document.querySelector('.loading-state p').textContent = 'Analyse des marchés en cours avec Sonar...';
+                } else {
+                    // Sonar n'est pas activé, masquer le badge
+                    document.querySelector('.sonar-badge').style.display = 'none';
+                    
+                    // Mettre à jour le badge Perplexity pour indiquer l'utilisation standard
+                    const perplexityBadge = document.querySelector('.perplexity-badge');
+                    perplexityBadge.innerHTML = '<i class="fas fa-robot"></i><span>Propulsé par Perplexity AI</span>';
+                    
+                    // Mettre à jour le texte de chargement
+                    document.querySelector('.loading-state p').textContent = 'Analyse des marchés en cours...';
+                }
+            }
             
             // Fonction pour récupérer le quota de questions
             function getQuestionsQuota() {
@@ -1398,6 +1457,16 @@
                 });
                 relatedButtons.appendChild(button);
             });
+            
+            // Mettre à jour le badge Perplexity en fonction de Sonar
+            const perplexityBadge = document.querySelector('.perplexity-badge');
+            if (window.perplexityIntegration && window.perplexityIntegration.API_CONFIG && window.perplexityIntegration.API_CONFIG.useSonar) {
+                perplexityBadge.innerHTML = '<i class="fas fa-robot"></i><span>Propulsé par Perplexity Sonar</span>';
+                perplexityBadge.style.background = 'linear-gradient(to right, rgba(0, 255, 135, 0.2), rgba(15, 228, 255, 0.2))';
+            } else {
+                perplexityBadge.innerHTML = '<i class="fas fa-robot"></i><span>Propulsé par Perplexity AI</span>';
+                perplexityBadge.style.background = 'linear-gradient(to right, rgba(0, 255, 135, 0.1), rgba(15, 228, 255, 0.1))';
+            }
         }
         
         // Fonction de simulation de réponse Perplexity (comme fallback)
