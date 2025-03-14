@@ -93,6 +93,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialiser le thème
     initTheme();
     
+    // Ajouter les étiquettes VAR % et YTD
+    addDataLabels();
+    
     // Premier chargement des données
     loadIndicesData();
     
@@ -102,6 +105,37 @@ document.addEventListener('DOMContentLoaded', function() {
         showElement('indices-loading');
         loadIndicesData(true);
     });
+    
+    /**
+     * Ajoute les étiquettes VAR % et YTD au-dessus des valeurs
+     */
+    function addDataLabels() {
+        // Sélectionner toutes les cellules d'indices
+        const indexCols = document.querySelectorAll('.market-index-col');
+        
+        indexCols.forEach(col => {
+            const dataContainer = col.querySelector('.market-index-data');
+            if (dataContainer) {
+                // Créer le conteneur pour les étiquettes
+                const labelsContainer = document.createElement('div');
+                labelsContainer.className = 'market-index-labels';
+                labelsContainer.style.display = 'flex';
+                labelsContainer.style.justifyContent = 'space-between';
+                labelsContainer.style.fontSize = '0.7rem';
+                labelsContainer.style.color = 'rgba(255, 255, 255, 0.5)';
+                labelsContainer.style.marginBottom = '2px';
+                
+                // Créer les étiquettes
+                labelsContainer.innerHTML = `
+                    <div style="min-width: 62px; text-align: right;">VAR %</div>
+                    <div style="min-width: 62px; text-align: right;">YTD</div>
+                `;
+                
+                // Insérer les étiquettes avant les données
+                col.insertBefore(labelsContainer, dataContainer);
+            }
+        });
+    }
     
     /**
      * Initialise les onglets de région
