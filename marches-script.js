@@ -240,6 +240,10 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             // Mettre à jour l'horodatage
             const timestamp = new Date(indicesData.meta.timestamp);
+            
+            // Ajuster l'heure pour le fuseau horaire français (UTC+1)
+            timestamp.setHours(timestamp.getHours() + 1);
+            
             let formattedDate = timestamp.toLocaleDateString('fr-FR', {
                 day: '2-digit',
                 month: 'long',
