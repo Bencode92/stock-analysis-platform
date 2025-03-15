@@ -5,6 +5,10 @@ on:
     - cron: '0 5,13,21 * * *'  # 3 fois par jour (5h, 13h, 21h)
   workflow_dispatch:  # Permet de déclencher manuellement
 
+# Ajout des permissions explicites
+permissions:
+  contents: write  # Autorise l'écriture dans le dépôt
+
 jobs:
   update-data:
     runs-on: ubuntu-latest
