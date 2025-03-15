@@ -1,46 +1,96 @@
 import os
 import json
 import time
+import requests
 from datetime import datetime
 import random
 
 # Configuration
-API_KEY = os.environ.get("PERPLEXITY_API_KEY")
+RENDER_API_URL = os.environ.get("RENDER_API_URL", "https://stock-analysis-platform-q9tc.onrender.com")
 DATA_DIR = "./data"
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# Essayer d'importer la bibliothèque Perplexity
-try:
-    from perplexity import Perplexity
-    client = Perplexity(api_key=API_KEY) if API_KEY else None
-    PERPLEXITY_AVAILABLE = API_KEY is not None
-except ImportError:
-    print("⚠️ Bibliothèque Perplexity non disponible, utilisation du mode de secours")
-    PERPLEXITY_AVAILABLE = False
-    client = None
-
-def extract_json_from_text(text):
-    """Extrait le JSON d'une réponse textuelle"""
+def fetch_data_from_render(endpoint, payload=None):
+    """Récupère les données depuis Render qui proxie vers Perplexity"""
+    print(f"🔍 Récupération des données depuis Render: {endpoint}")
+    
     try:
-        # Trouver les indices du premier { et du dernier }
-        start_idx = text.find('{')
-        end_idx = text.rfind('}')
+        if payload is None:
+            payload = {"useSonar": True}
+            
+        # Appel à l'API Render
+        response = requests.post(
+            f"{RENDER_API_URL}{endpoint}", 
+            json=payload,
+            timeout=30  # Timeout de 30 secondes
+        )
         
-        if start_idx == -1:
-            # Essayer avec [ si pas de {
-            start_idx = text.find('[')
-            end_idx = text.rfind(']')
+        # Vérifier si la requête a réussi
+        if response.status_code != 200:
+            print(f"❌ Erreur HTTP: {response.status_code}")
+            print(f"Détails: {response.text}")
+            return None
         
-        if start_idx == -1 or end_idx == -1:
-            raise ValueError("Aucun JSON trouvé dans le texte")
-        
-        # Extraire le JSON
-        json_str = text[start_idx:end_idx+1]
-        return json.loads(json_str)
+        # Extraire les données JSON
+        data = response.json()
+        return data
     except Exception as e:
-        print(f"❌ Erreur lors de l'extraction du JSON: {e}")
-        print(f"Texte: {text[:100]}...")
-        raise
+        print(f"❌ Erreur lors de la récupération des données depuis Render: {e}")
+        return None
+
+def get_financial_news():
+    """Récupère les actualités financières via Render/Perplexity"""
+    print("📰 Récupération des actualités financières...")
+    
+    # Tentative de récupération via Render
+    news_data = fetch_data_from_render("/api/perplexity/news")
+    
+    # Si échec, générer des données de secours
+    if news_data is None:
+        print("⚠️ Utilisation des données d'actualités de secours")
+        news_data = generate_fallback_news()
+    else:
+        print(f"✅ Actualités récupérées: {len(news_data.get('us', []))} US, {len(news_data.get('france', []))} France")
+    
+    # Valider et compléter la structure
+    validate_news_structure(news_data)
+    
+    return news_data
+
+def get_portfolio_recommendations():
+    """Récupère les recommandations de portefeuille via Render/Perplexity"""
+    print("💼 Récupération des recommandations de portefeuille...")
+    
+    # Tentative de récupération via Render
+    portfolios_data = fetch_data_from_render("/api/perplexity/portfolios")
+    
+    # Si échec, générer des données de secours
+    if portfolios_data is None:
+        print("⚠️ Utilisation des données de portefeuille de secours")
+        portfolios_data = generate_fallback_portfolios()
+    else:
+        print(f"✅ Portefeuilles récupérés: agressif: {len(portfolios_data.get('agressif', []))}, modere: {len(portfolios_data.get('modere', []))}, stable: {len(portfolios_data.get('stable', []))}")
+    
+    # Vérifier que marketContext existe
+    if 'marketContext' not in portfolios_data:
+        portfolios_data['marketContext'] = {
+            "mainTrend": "bullish",
+            "volatilityLevel": "moderate",
+            "keyEvents": ["Publication de résultats trimestriels", "Données économiques mitigées"],
+            "sectorOutlook": {
+                "tech": "positive",
+                "finance": "neutral",
+                "energy": "neutral",
+                "healthcare": "positive",
+                "consumer": "neutral"
+            }
+        }
+    
+    # S'assurer que lastUpdated est présent
+    if 'lastUpdated' not in portfolios_data:
+        portfolios_data['lastUpdated'] = datetime.now().isoformat()
+    
+    return portfolios_data
 
 def validate_news_structure(data):
     """Valide et corrige la structure des actualités"""
@@ -129,316 +179,6 @@ def map_category(category):
         return "crypto"
     else:
         return "marches"  # Par défaut
-
-def get_financial_news():
-    """Récupère les actualités financières via Perplexity ou génère des données de secours"""
-    print("📰 Récupération des actualités financières...")
-    
-    if not PERPLEXITY_AVAILABLE:
-        print("⚠️ API Perplexity non disponible, génération de données factices")
-        return generate_fallback_news()
-    
-    try:
-        prompt = """
-        Donne-moi les actualités financières les plus importantes d'aujourd'hui, organisées selon ce format exact:
-        {
-          "us": [
-            {
-              "title": "Titre précis de l'actualité",
-              "content": "Description de 2-3 phrases sur cette actualité",
-              "source": "Source (ex: Bloomberg, WSJ, Reuters)",
-              "date": "JJ/MM/YYYY",
-              "time": "HH:MM",
-              "category": "Une des catégories suivantes: marches, economie, entreprises, tech, crypto",
-              "impact": "Une valeur parmi: positive, negative, neutral",
-              "country": "us"
-            },
-            ... (9 autres actualités importantes)
-          ],
-          "france": [
-            {
-              "title": "Titre de l'actualité française",
-              "content": "Description de 2-3 phrases",
-              "source": "Source (ex: Les Échos, Le Figaro, BFM Business)",
-              "date": "JJ/MM/YYYY",
-              "time": "HH:MM",
-              "category": "Une des catégories suivantes: marches, economie, entreprises, tech, crypto",
-              "impact": "Une valeur parmi: positive, negative, neutral",
-              "country": "fr"
-            },
-            ... (5 autres actualités françaises importantes)
-          ],
-          "events": [
-            {
-              "title": "Titre de l'événement (ex: Publication résultats Apple)",
-              "date": "JJ/MM/YYYY",
-              "time": "HH:MM",
-              "type": "Une valeur parmi: earnings, economic, policy, ipo, merger",
-              "importance": "Une valeur parmi: high, medium, low"
-            },
-            ... (8 événements à venir)
-          ]
-        }
-        
-        Réponds UNIQUEMENT avec ce JSON, sans introduction ni conclusion.
-        """
-        
-        # Utiliser Sonar pour des résultats optimaux
-        response = client.query(prompt, mode="sonar")
-        news_data = extract_json_from_text(response.answer)
-        
-        # Valider et corriger la structure
-        validate_news_structure(news_data)
-        
-        print(f"✅ Actualités récupérées: {len(news_data.get('us', []))} US, {len(news_data.get('france', []))} France")
-        return news_data
-    except Exception as e:
-        print(f"❌ Erreur lors de la récupération des actualités: {e}")
-        return generate_fallback_news()
-
-def get_portfolio_recommendations(news_data):
-    """Génère des recommandations de portefeuille basées sur les actualités"""
-    print("💼 Génération des recommandations de portefeuille...")
-    
-    if not PERPLEXITY_AVAILABLE:
-        print("⚠️ API Perplexity non disponible, génération de portefeuilles factices")
-        return generate_fallback_portfolios()
-    
-    portfolios = {
-        "agressif": [],
-        "modere": [],
-        "stable": [],
-        "lastUpdated": datetime.now().isoformat(),
-        "marketContext": {
-            "mainTrend": "bullish",
-            "volatilityLevel": "moderate",
-            "keyEvents": [],
-            "sectorOutlook": {}
-        }
-    }
-    
-    try:
-        # Extraire les tendances des actualités pour le contexte
-        market_trends = extract_market_trends(news_data)
-        portfolios["marketContext"] = market_trends
-        
-        # Générer chaque type de portefeuille
-        for portfolio_type in ["agressif", "modere", "stable"]:
-            # Synthétiser les actualités pour le contexte
-            news_summary = summarize_news(news_data)
-            
-            prompt = f"""
-            En tenant compte des actualités financières suivantes:
-            {news_summary}
-            
-            Et des tendances de marché:
-            - Tendance principale: {market_trends['mainTrend']}
-            - Niveau de volatilité: {market_trends['volatilityLevel']}
-            - Événements clés: {', '.join(market_trends['keyEvents'])}
-            
-            Génère des recommandations pour un portefeuille {portfolio_type} avec exactement 8 instruments.
-            Réponds en JSON strict sans commentaires, avec ce format exact:
-            [
-              {{
-                "name": "Nom complet de l'entreprise/ETF",
-                "symbol": "SYMB",
-                "type": "Action/ETF/Obligation/REIT/Matières premières",
-                "allocation": 15,
-                "reason": "Raison de l'inclusion dans le portefeuille",
-                "sector": "Secteur",
-                "risk": "high/medium/low",
-                "change": 1.2
-              }},
-              ...
-            ]
-            
-            Les allocations doivent totaliser exactement 100%.
-            Pour un portefeuille {portfolio_type}, adapte le niveau de risque et les types d'instruments.
-            """
-            
-            # Utiliser Sonar pour des résultats optimaux
-            response = client.query(prompt, mode="sonar")
-            portfolio_data = extract_json_from_text(response.answer)
-            
-            # Valider et ajuster les données du portefeuille
-            validate_portfolio(portfolio_data, portfolio_type)
-            
-            portfolios[portfolio_type] = portfolio_data
-            
-            # Pause pour éviter la limite de taux de l'API
-            time.sleep(2)
-        
-        return portfolios
-    except Exception as e:
-        print(f"❌ Erreur lors de la génération des portefeuilles: {e}")
-        return generate_fallback_portfolios()
-
-def extract_market_trends(news_data):
-    """Extrait les tendances du marché à partir des actualités"""
-    # Analyse des actualités pour déterminer la tendance
-    positive_count = 0
-    negative_count = 0
-    
-    # Compter les impacts positifs/négatifs
-    for region in ["us", "france"]:
-        for news in news_data.get(region, []):
-            if news.get("impact") == "positive":
-                positive_count += 1
-            elif news.get("impact") == "negative":
-                negative_count += 1
-    
-    # Déterminer la tendance principale
-    if positive_count > negative_count * 1.5:
-        main_trend = "bullish"
-    elif negative_count > positive_count * 1.5:
-        main_trend = "bearish"
-    else:
-        main_trend = "neutral"
-    
-    # Extraire les événements clés des actualités
-    key_events = []
-    for region in ["us", "france"]:
-        for news in news_data.get(region, [])[:3]:  # Prendre les 3 premières actualités de chaque région
-            if news.get("impact") in ["positive", "negative"]:
-                key_events.append(news.get("title", "").split(":", 1)[-1].strip())
-    
-    # Limiter à 3 événements maximum
-    key_events = key_events[:3]
-    
-    # Évaluer les secteurs
-    sectors = {
-        "tech": 0,
-        "finance": 0,
-        "energy": 0,
-        "healthcare": 0,
-        "consumer": 0
-    }
-    
-    # Analyse simplifiée par mots-clés
-    sector_keywords = {
-        "tech": ["tech", "technology", "digital", "software", "hardware", "apple", "microsoft", "google", "meta", "ai"],
-        "finance": ["bank", "finance", "financial", "investment", "stock", "market", "trading", "broker"],
-        "energy": ["oil", "gas", "energy", "renewable", "solar", "wind", "petroleum", "coal"],
-        "healthcare": ["health", "pharma", "medical", "biotech", "drug", "healthcare", "medicine"],
-        "consumer": ["retail", "consumer", "shop", "food", "beverage", "luxury", "goods"]
-    }
-    
-    # Analyse basique par mots-clés
-    for region in ["us", "france"]:
-        for news in news_data.get(region, []):
-            content = (news.get("title", "") + " " + news.get("content", "")).lower()
-            for sector, keywords in sector_keywords.items():
-                for keyword in keywords:
-                    if keyword in content:
-                        # Bonus pour l'impact
-                        if news.get("impact") == "positive":
-                            sectors[sector] += 1
-                        elif news.get("impact") == "negative":
-                            sectors[sector] -= 1
-                        break
-    
-    # Générer l'outlook sectoriel
-    sector_outlook = {}
-    for sector, score in sectors.items():
-        if score > 2:
-            sector_outlook[sector] = "positive"
-        elif score < -2:
-            sector_outlook[sector] = "negative"
-        else:
-            sector_outlook[sector] = "neutral"
-    
-    # Évaluer la volatilité
-    events = news_data.get("events", [])
-    high_importance_events = sum(1 for event in events if event.get("importance") == "high")
-    
-    if high_importance_events >= 3:
-        volatility = "high"
-    elif high_importance_events >= 1:
-        volatility = "moderate"
-    else:
-        volatility = "low"
-    
-    return {
-        "mainTrend": main_trend,
-        "volatilityLevel": volatility,
-        "keyEvents": key_events,
-        "sectorOutlook": sector_outlook
-    }
-
-def summarize_news(news_data):
-    """Crée un résumé des actualités pour le prompt de portefeuille"""
-    summary = ""
-    
-    # Résumer les actualités US
-    summary += "Actualités US importantes:\n"
-    for news in news_data.get("us", [])[:5]:  # Limiter à 5 actualités
-        summary += f"- {news.get('title', '')}: {news.get('impact', 'neutral')} ({news.get('category', '')})\n"
-    
-    # Résumer les actualités françaises
-    summary += "\nActualités françaises importantes:\n"
-    for news in news_data.get("france", [])[:3]:  # Limiter à 3 actualités
-        summary += f"- {news.get('title', '')}: {news.get('impact', 'neutral')} ({news.get('category', '')})\n"
-    
-    # Résumer les événements
-    summary += "\nÉvénements à venir:\n"
-    for event in news_data.get("events", [])[:3]:  # Limiter à 3 événements
-        summary += f"- {event.get('title', '')} ({event.get('date', '')}): {event.get('importance', 'medium')}\n"
-    
-    return summary
-
-def validate_portfolio(portfolio, portfolio_type):
-    """Valide et ajuste un portefeuille"""
-    if not portfolio:
-        return
-    
-    # Vérifier les champs obligatoires pour chaque instrument
-    required_fields = ["name", "symbol", "type", "allocation", "reason", "sector", "risk"]
-    valid_types = ["Action", "ETF", "Obligation", "REIT", "Matières premières"]
-    valid_risks = ["high", "medium", "low"]
-    
-    for instrument in portfolio:
-        for field in required_fields:
-            if field not in instrument:
-                if field == "allocation":
-                    instrument[field] = 0
-                elif field == "type":
-                    instrument[field] = valid_types[0]
-                elif field == "risk":
-                    instrument[field] = valid_risks[1]
-                elif field == "sector":
-                    instrument[field] = "Divers"
-                else:
-                    instrument[field] = ""
-        
-        # Standardiser le type
-        if instrument["type"] not in valid_types:
-            instrument["type"] = valid_types[0]
-        
-        # Standardiser le risque
-        if instrument["risk"] not in valid_risks:
-            instrument["risk"] = valid_risks[1]
-        
-        # Ajouter le champ change s'il est absent
-        if "change" not in instrument:
-            # Générer un changement aléatoire entre -5% et +5%
-            instrument["change"] = round(random.uniform(-5.0, 5.0), 2)
-    
-    # Vérifier que la somme des allocations est égale à 100%
-    total_allocation = sum(instrument.get("allocation", 0) for instrument in portfolio)
-    
-    if total_allocation != 100:
-        # Ajuster proportionnellement
-        if total_allocation > 0:
-            adjustment_factor = 100 / total_allocation
-            for instrument in portfolio:
-                instrument["allocation"] = round(instrument["allocation"] * adjustment_factor)
-        else:
-            # Si total est 0, distribution équitable
-            equal_allocation = 100 // len(portfolio)
-            remainder = 100 % len(portfolio)
-            
-            for i, instrument in enumerate(portfolio):
-                instrument["allocation"] = equal_allocation + (1 if i < remainder else 0)
 
 def generate_fallback_news():
     """Génère des données d'actualités de secours"""
@@ -838,9 +578,13 @@ def generate_fallback_portfolios():
         "modere": moderate_portfolio,
         "stable": stable_portfolio,
         "marketContext": {
-            "mainTrend": "neutral",
+            "mainTrend": "bullish",
             "volatilityLevel": "moderate",
-            "keyEvents": ["Publication de résultats trimestriels", "Données économiques mitigées"],
+            "keyEvents": [
+                "Décision de maintien des taux par la Fed",
+                "Résultats financiers du secteur tech",
+                "Hausse du Bitcoin au-delà des 60 000$"
+            ],
             "sectorOutlook": {
                 "tech": "positive",
                 "finance": "neutral",
@@ -871,7 +615,7 @@ def main():
     save_data(news_data, "news.json")
     
     # Générer les recommandations de portefeuille basées sur les actualités
-    portfolios_data = get_portfolio_recommendations(news_data)
+    portfolios_data = get_portfolio_recommendations()
     save_data(portfolios_data, "portfolios.json")
     
     print(f"✅ Mise à jour des données terminée à {datetime.now().isoformat()}")
