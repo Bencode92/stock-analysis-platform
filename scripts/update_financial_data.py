@@ -282,28 +282,28 @@ def generate_fallback_news():
     events = [
         {
             "title": "Publication des résultats trimestriels de Microsoft",
-            "date": (future_date.replace(day=future_date.day + 5)).strftime("%d/%m/%Y"),
+            "date": (future_date.replace(day=min(future_date.day + 5, 28))).strftime("%d/%m/%Y"),
             "time": "16:30",
             "type": "earnings",
             "importance": "high"
         },
         {
             "title": "Réunion de la BCE sur les taux d'intérêt",
-            "date": (future_date.replace(day=future_date.day + 10)).strftime("%d/%m/%Y"),
+            "date": (future_date.replace(day=min(future_date.day + 10, 28))).strftime("%d/%m/%Y"),
             "time": "13:45",
             "type": "policy",
             "importance": "high"
         },
         {
             "title": "Publication des chiffres de l'emploi américain",
-            "date": (future_date.replace(day=future_date.day + 3)).strftime("%d/%m/%Y"),
+            "date": (future_date.replace(day=min(future_date.day + 3, 28))).strftime("%d/%m/%Y"),
             "time": "14:30",
             "type": "economic",
             "importance": "medium"
         },
         {
             "title": "Introduction en bourse de TechFuture Inc.",
-            "date": (future_date.replace(day=future_date.day + 15)).strftime("%d/%m/%Y"),
+            "date": (future_date.replace(day=min(future_date.day + 15, 28))).strftime("%d/%m/%Y"),
             "time": "09:30",
             "type": "ipo",
             "importance": "medium"
