@@ -2,6 +2,8 @@
  * aiintegration.js - Intégration de Perplexity AI pour TradePulse
  * Ce script gère les requêtes vers l'API Perplexity pour obtenir 
  * des actualités financières et des recommandations de portefeuille en temps réel.
+ * 
+ * Version modifiée pour utiliser les fichiers JSON statiques générés par GitHub Actions.
  */
 
 // Configuration de l'API
@@ -31,6 +33,15 @@ const API_CONFIG = {
         timeout: 15000,
         retries: 3,
         retryDelay: 2000
+    },
+    
+    // Nouvelles options pour les données statiques
+    staticData: {
+        enabled: true, // Utiliser les fichiers JSON statiques par défaut
+        paths: {
+            news: './data/news.json',
+            portfolios: './data/portfolios.json'
+        }
     }
 };
 
@@ -40,6 +51,7 @@ class PerplexityIntegration {
         this.newsData = {
             us: [],
             france: [],
+            events: [],
             lastUpdated: null
         };
         
@@ -47,8 +59,12 @@ class PerplexityIntegration {
             agressif: [],
             modere: [],
             stable: [],
+            marketContext: {},
             lastUpdated: null
         };
+        
+        // Flag pour suivre la disponibilité de l'API
+        this.apiAvailable = false;
         
         // Initialisation des données
         this.init();
@@ -58,12 +74,46 @@ class PerplexityIntegration {
      * Initialise l'intégration avec Perplexity
      */
     async init() {
-        console.log('Initialisation de l\'intégration Perplexity...');
-        console.log('URL de l\'API:', API_CONFIG.baseUrl);
-        console.log('Mode Sonar:', API_CONFIG.useSonar ? 'Activé' : 'Désactivé');
+        console.log('Initialisation de l\'intégration TradePulse...');
         
         try {
-            // Vérifier si l'API est accessible avec retry
+            // Essayer d'abord de charger les données statiques
+            if (API_CONFIG.staticData.enabled) {
+                await this.loadStaticData();
+                console.log('✅ Données statiques chargées avec succès');
+            }
+            
+            // Même si les données statiques sont chargées, nous vérifions si l'API est disponible
+            // pour les futures recherches mais sans bloquer l'interface
+            this.checkApiAvailability();
+            
+            // Si nous n'utilisons pas les données statiques, charger depuis l'API
+            if (!API_CONFIG.staticData.enabled) {
+                await this.updateData();
+            }
+            
+            // Configurer une mise à jour périodique des données
+            setInterval(() => {
+                if (API_CONFIG.staticData.enabled) {
+                    this.loadStaticData();
+                } else if (this.apiAvailable) {
+                    this.updateData();
+                }
+            }, API_CONFIG.updatesInterval);
+            
+            console.log('✅ Intégration TradePulse initialisée avec succès');
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'initialisation:', error.message);
+            this.handleApiError();
+        }
+    }
+    
+    /**
+     * Vérifie si l'API est disponible (en arrière-plan)
+     */
+    async checkApiAvailability() {
+        try {
+            console.log('🔍 Vérification de la disponibilité de l\'API...');
             await this.fetchWithRetry(`${API_CONFIG.baseUrl}`, {
                 method: 'GET',
                 headers: {
@@ -71,37 +121,117 @@ class PerplexityIntegration {
                 }
             }, true);
             
-            console.log('✅ API accessible');
-            
-            // Charger les données pour la première fois
-            await this.updateData();
-            
-            // Configurer une mise à jour périodique
-            setInterval(() => this.updateData(), API_CONFIG.updatesInterval);
-            
-            console.log('✅ Intégration Perplexity initialisée avec succès');
+            this.apiAvailable = true;
+            console.log('✅ API Perplexity disponible pour les recherches');
+            return true;
         } catch (error) {
-            console.error('❌ API inaccessible:', error.message);
-            console.log('⚠️ Tentative de réveil du service Render...');
-            
-            // Deuxième tentative après un délai pour laisser le temps au service de se réveiller
-            setTimeout(async () => {
-                try {
-                    await this.fetchWithRetry(`${API_CONFIG.baseUrl}`, {
-                        method: 'GET',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        }
-                    }, true);
-                    console.log('✅ API accessible après réveil');
-                    await this.updateData();
-                } catch (secondError) {
-                    console.error('❌ API toujours inaccessible après tentative de réveil:', secondError.message);
-                    // Plus de fallback data, on affiche juste un message d'erreur dans l'UI
-                    this.handleApiError();
-                }
-            }, 5000); // 5 secondes de délai pour laisser le temps au service de se réveiller
+            this.apiAvailable = false;
+            console.log('⚠️ API Perplexity non disponible. Utilisation des données statiques uniquement.');
+            return false;
         }
+    }
+    
+    /**
+     * Charge les données depuis les fichiers JSON statiques
+     */
+    async loadStaticData() {
+        try {
+            console.log('🔍 Chargement des données statiques...');
+            
+            // Afficher un état de chargement dans l'UI si nécessaire
+            this.showLoadingState();
+            
+            // Éviter la mise en cache des fichiers JSON
+            const timestamp = new Date().getTime();
+            
+            // Chargement des actualités
+            const newsResponse = await fetch(`${API_CONFIG.staticData.paths.news}?t=${timestamp}`);
+            if (!newsResponse.ok) {
+                throw new Error(`Erreur de chargement des actualités: ${newsResponse.status}`);
+            }
+            
+            // Chargement des portefeuilles
+            const portfoliosResponse = await fetch(`${API_CONFIG.staticData.paths.portfolios}?t=${timestamp}`);
+            if (!portfoliosResponse.ok) {
+                throw new Error(`Erreur de chargement des portefeuilles: ${portfoliosResponse.status}`);
+            }
+            
+            // Mise à jour des données
+            this.newsData = await newsResponse.json();
+            this.portfolios = await portfoliosResponse.json();
+            
+            // Mise à jour de l'interface
+            this.updateUI();
+            
+            console.log('✅ Données statiques chargées avec succès');
+            return { newsData: this.newsData, portfoliosData: this.portfolios };
+        } catch (error) {
+            console.error('❌ Erreur lors du chargement des données statiques:', error);
+            
+            // En cas d'erreur, on essaie une fois l'API si disponible
+            if (this.apiAvailable && !API_CONFIG.staticData.enabled) {
+                console.log('⚠️ Tentative de chargement depuis l\'API...');
+                return this.updateData();
+            } else {
+                this.handleApiError();
+                throw error;
+            }
+        }
+    }
+    
+    /**
+     * Affiche l'état de chargement dans l'interface
+     */
+    showLoadingState() {
+        // Actualités
+        const newsGrid = document.querySelector('.news-grid');
+        if (newsGrid) {
+            newsGrid.innerHTML = `
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Chargement des dernières actualités financières...</p>
+                </div>
+            `;
+        }
+        
+        // Événements
+        const eventsContainer = document.getElementById('events-container');
+        if (eventsContainer) {
+            eventsContainer.innerHTML = `
+                <div class="loading-state">
+                    <div class="loading-spinner"></div>
+                    <p>Chargement des événements à venir...</p>
+                </div>
+            `;
+        }
+        
+        // Portefeuilles
+        const portfolioContainers = [
+            document.getElementById('aggressiveDetails'),
+            document.getElementById('moderateDetails'),
+            document.getElementById('stableDetails')
+        ];
+        
+        portfolioContainers.forEach(container => {
+            if (container) {
+                const tableContainer = container.querySelector('.portfolio-table');
+                if (tableContainer) {
+                    // Conserver l'en-tête
+                    const tableHeader = tableContainer.querySelector('.table-header');
+                    tableContainer.innerHTML = '';
+                    if (tableHeader) tableContainer.appendChild(tableHeader);
+                    
+                    tableContainer.insertAdjacentHTML('beforeend', `
+                        <div class="table-row loading-row">
+                            <div class="loading-indicator">
+                                <div class="pulse-dot"></div>
+                                <p>Chargement des données du portefeuille...</p>
+                            </div>
+                        </div>
+                    `);
+                }
+            }
+        });
     }
     
     /**
@@ -164,7 +294,7 @@ class PerplexityIntegration {
                     <i class="fas fa-exclamation-triangle"></i>
                     <h3>Impossible de charger les actualités</h3>
                     <p>Nous rencontrons un problème de connexion avec notre service. Veuillez réessayer ultérieurement.</p>
-                    <button class="retry-button" onclick="window.perplexityIntegration.updateNews()">
+                    <button class="retry-button" onclick="window.perplexityIntegration.loadStaticData()">
                         <i class="fas fa-sync-alt"></i> Réessayer
                     </button>
                 </div>
@@ -192,7 +322,7 @@ class PerplexityIntegration {
                                 <i class="fas fa-exclamation-triangle"></i>
                                 <h3>Impossible de charger les données du portefeuille</h3>
                                 <p>Nous rencontrons un problème de connexion avec notre service. Veuillez réessayer ultérieurement.</p>
-                                <button class="retry-button" onclick="window.perplexityIntegration.updatePortfolios()">
+                                <button class="retry-button" onclick="window.perplexityIntegration.loadStaticData()">
                                     <i class="fas fa-sync-alt"></i> Réessayer
                                 </button>
                             </div>
@@ -204,12 +334,17 @@ class PerplexityIntegration {
     }
     
     /**
-     * Met à jour les données depuis Perplexity
+     * Met à jour les données depuis Perplexity (via API)
      */
     async updateData() {
         console.log('🔄 Mise à jour des données depuis Perplexity...');
         
         try {
+            if (!this.apiAvailable) {
+                console.log('⚠️ API non disponible, utilisation des données statiques');
+                return this.loadStaticData();
+            }
+            
             // Mettre à jour les actualités et les portefeuilles en parallèle
             const [newsData, portfoliosData] = await Promise.all([
                 this.updateNews(),
@@ -223,8 +358,15 @@ class PerplexityIntegration {
             return { newsData, portfoliosData };
         } catch (error) {
             console.error('❌ Erreur lors de la mise à jour des données:', error);
-            this.handleApiError();
-            throw error;
+            
+            // En cas d'erreur, on essaie de charger les données statiques
+            if (API_CONFIG.staticData.enabled) {
+                console.log('⚠️ Tentative de chargement depuis les fichiers statiques...');
+                return this.loadStaticData();
+            } else {
+                this.handleApiError();
+                throw error;
+            }
         }
     }
     
@@ -274,6 +416,17 @@ class PerplexityIntegration {
         } catch (error) {
             console.error('❌ Erreur lors de la mise à jour des actualités:', error);
             
+            // En cas d'erreur, on essaie de charger les données statiques
+            if (API_CONFIG.staticData.enabled) {
+                console.log('⚠️ Tentative de chargement des actualités depuis les fichiers statiques...');
+                const response = await fetch(API_CONFIG.staticData.paths.news);
+                if (response.ok) {
+                    this.newsData = await response.json();
+                    this.updateNewsUI();
+                    return this.newsData;
+                }
+            }
+            
             // Afficher message d'erreur dans l'UI
             const newsGrid = document.querySelector('.news-grid');
             if (newsGrid) {
@@ -282,7 +435,7 @@ class PerplexityIntegration {
                         <i class="fas fa-exclamation-triangle"></i>
                         <h3>Impossible de charger les actualités</h3>
                         <p>Nous rencontrons un problème de connexion avec notre service. Veuillez réessayer ultérieurement.</p>
-                        <button class="retry-button" onclick="window.perplexityIntegration.updateNews()">
+                        <button class="retry-button" onclick="window.perplexityIntegration.loadStaticData()">
                             <i class="fas fa-sync-alt"></i> Réessayer
                         </button>
                     </div>
@@ -356,6 +509,17 @@ class PerplexityIntegration {
         } catch (error) {
             console.error('❌ Erreur lors de la mise à jour des portefeuilles:', error);
             
+            // En cas d'erreur, on essaie de charger les données statiques
+            if (API_CONFIG.staticData.enabled) {
+                console.log('⚠️ Tentative de chargement des portefeuilles depuis les fichiers statiques...');
+                const response = await fetch(API_CONFIG.staticData.paths.portfolios);
+                if (response.ok) {
+                    this.portfolios = await response.json();
+                    this.updatePortfoliosUI();
+                    return this.portfolios;
+                }
+            }
+            
             // Afficher message d'erreur dans l'UI pour chaque portefeuille
             const portfolioContainers = [
                 document.getElementById('aggressiveDetails'),
@@ -377,7 +541,7 @@ class PerplexityIntegration {
                                     <i class="fas fa-exclamation-triangle"></i>
                                     <h3>Impossible de charger les données du portefeuille</h3>
                                     <p>Nous rencontrons un problème de connexion avec notre service. Veuillez réessayer ultérieurement.</p>
-                                    <button class="retry-button" onclick="window.perplexityIntegration.updatePortfolios()">
+                                    <button class="retry-button" onclick="window.perplexityIntegration.loadStaticData()">
                                         <i class="fas fa-sync-alt"></i> Réessayer
                                     </button>
                                 </div>
@@ -395,9 +559,37 @@ class PerplexityIntegration {
      * Effectue une recherche personnalisée avec Perplexity
      */
     async search(query) {
+        // Vérifier si l'API est disponible
+        if (!this.apiAvailable) {
+            return {
+                answer: "Désolé, mais l'API n'est pas disponible actuellement. Veuillez réessayer plus tard.",
+                limited: true
+            };
+        }
+        
+        // Vérifier si nous avons atteint la limite journalière
+        const currentDate = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const requestsKey = `tradepulse_search_requests_${currentDate}`;
+        const currentRequests = parseInt(localStorage.getItem(requestsKey) || '0');
+        
+        const DAILY_SEARCH_LIMIT = 10; // Limite de 10 recherches par jour
+        
+        if (currentRequests >= DAILY_SEARCH_LIMIT) {
+            // Limite atteinte
+            return {
+                answer: "Désolé, la limite quotidienne de recherches a été atteinte. Les réponses sont limitées pour conserver nos crédits API. Veuillez réessayer demain ou utiliser les données préchargées.",
+                limited: true
+            };
+        }
+        
         // Si Sonar est activé, rediriger vers searchWithSonar
         if (API_CONFIG.useSonar) {
-            return this.searchWithSonar(query);
+            const result = await this.searchWithSonar(query);
+            
+            // Incrémenter le compteur
+            localStorage.setItem(requestsKey, (currentRequests + 1).toString());
+            
+            return result;
         }
         
         try {
@@ -416,6 +608,9 @@ class PerplexityIntegration {
             if (API_CONFIG.debug) {
                 console.log('📊 Résultats de recherche reçus:', data);
             }
+            
+            // Incrémenter le compteur
+            localStorage.setItem(requestsKey, (currentRequests + 1).toString());
             
             console.log('✅ Recherche effectuée avec succès');
             return data;
@@ -459,6 +654,7 @@ class PerplexityIntegration {
             
         } catch (error) {
             console.error('❌ Erreur lors de la recherche Sonar:', error);
+            
             // Fallback vers la recherche standard
             try {
                 console.log('⚠️ Fallback vers recherche standard');
@@ -481,6 +677,9 @@ class PerplexityIntegration {
         // Mise à jour des actualités dans l'interface
         this.updateNewsUI();
         
+        // Mise à jour des événements dans l'interface
+        this.updateEventsUI();
+        
         // Mise à jour des portefeuilles dans l'interface
         this.updatePortfoliosUI();
         
@@ -495,6 +694,67 @@ class PerplexityIntegration {
             });
             el.textContent = `${dateStr} ${timeStr}`;
         });
+    }
+    
+    /**
+     * Met à jour la section des événements dans l'interface
+     */
+    updateEventsUI() {
+        // Vérifier si nous sommes sur la page des actualités
+        const eventsContainer = document.getElementById('events-container');
+        if (!eventsContainer) return;
+        
+        try {
+            // Vérifier si nous avons des données d'événements
+            if (!this.newsData || !this.newsData.events || this.newsData.events.length === 0) {
+                eventsContainer.innerHTML = `
+                    <div class="no-data-message">
+                        <i class="fas fa-calendar-alt"></i>
+                        <h3>Aucun événement disponible</h3>
+                        <p>Nous n'avons pas pu récupérer les événements à venir.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Créer le HTML pour chaque événement
+            const eventsHTML = this.newsData.events.map(event => {
+                const importanceClass = event.importance || 'medium';
+                
+                return `
+                <div class="event-card ${importanceClass}-importance">
+                    <div class="event-date">
+                        <div class="event-day">${event.date.split('/')[0]}</div>
+                        <div class="event-month">${event.date.split('/')[1]}</div>
+                    </div>
+                    <div class="event-content">
+                        <div class="event-title">${event.title}</div>
+                        <div class="event-details">
+                            <span class="event-time"><i class="fas fa-clock"></i> ${event.time}</span>
+                            <span class="event-type ${event.type}">${event.type}</span>
+                            <span class="event-importance ${event.importance}"><i class="fas fa-signal"></i> ${event.importance}</span>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+            
+            // Mettre à jour le conteneur des événements
+            eventsContainer.innerHTML = eventsHTML;
+            
+            console.log('✅ Interface des événements mise à jour');
+        } catch (error) {
+            console.error('❌ Erreur lors de la mise à jour de l\'interface des événements:', error);
+            
+            // Afficher un message d'erreur
+            eventsContainer.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Erreur lors de l'affichage des événements</h3>
+                    <p>Une erreur s'est produite lors de l'affichage des événements.</p>
+                </div>
+            `;
+        }
     }
     
     /**
@@ -516,7 +776,7 @@ class PerplexityIntegration {
                         <i class="fas fa-newspaper"></i>
                         <h3>Aucune actualité disponible</h3>
                         <p>Nous n'avons pas pu récupérer les dernières actualités. Veuillez réessayer ultérieurement.</p>
-                        <button class="retry-button" onclick="window.perplexityIntegration.updateNews()">
+                        <button class="retry-button" onclick="window.perplexityIntegration.loadStaticData()">
                             <i class="fas fa-sync-alt"></i> Actualiser
                         </button>
                     </div>
@@ -541,7 +801,7 @@ class PerplexityIntegration {
                         <i class="fas fa-newspaper"></i>
                         <h3>Aucune actualité disponible</h3>
                         <p>Nous n'avons pas pu récupérer les dernières actualités. Veuillez réessayer ultérieurement.</p>
-                        <button class="retry-button" onclick="window.perplexityIntegration.updateNews()">
+                        <button class="retry-button" onclick="window.perplexityIntegration.loadStaticData()">
                             <i class="fas fa-sync-alt"></i> Actualiser
                         </button>
                     </div>
@@ -582,7 +842,7 @@ class PerplexityIntegration {
                     <i class="fas fa-exclamation-triangle"></i>
                     <h3>Erreur lors de l'affichage des actualités</h3>
                     <p>Une erreur s'est produite lors de l'affichage des actualités. Veuillez réessayer ultérieurement.</p>
-                    <button class="retry-button" onclick="window.perplexityIntegration.updateNews()">
+                    <button class="retry-button" onclick="window.perplexityIntegration.loadStaticData()">
                         <i class="fas fa-sync-alt"></i> Réessayer
                     </button>
                 </div>
@@ -645,6 +905,13 @@ class PerplexityIntegration {
                 updateTimestamp.textContent = `${dateStr} à ${timeStr}`;
             }
             
+            // Mise à jour du contexte de marché si présent
+            const marketTrendElement = document.getElementById('marketTrend');
+            if (marketTrendElement && this.portfolios.marketContext && this.portfolios.marketContext.mainTrend) {
+                marketTrendElement.textContent = this.portfolios.marketContext.mainTrend;
+                marketTrendElement.className = `market-trend ${this.portfolios.marketContext.mainTrend}`;
+            }
+            
             console.log('✅ Interface des portefeuilles mise à jour');
         } catch (error) {
             console.error('❌ Erreur lors de la mise à jour de l\'interface des portefeuilles:', error);
@@ -672,7 +939,7 @@ class PerplexityIntegration {
                         <i class="fas fa-exclamation-triangle"></i>
                         <h3>Données non disponibles</h3>
                         <p>Nous n'avons pas pu récupérer les données de ce portefeuille. Veuillez réessayer ultérieurement.</p>
-                        <button class="retry-button" onclick="window.perplexityIntegration.updatePortfolios()">
+                        <button class="retry-button" onclick="window.perplexityIntegration.loadStaticData()">
                             <i class="fas fa-sync-alt"></i> Actualiser
                         </button>
                     </div>
@@ -702,7 +969,7 @@ class PerplexityIntegration {
                         <i class="fas fa-exclamation-triangle"></i>
                         <h3>Aucune donnée disponible</h3>
                         <p>Nous n'avons pas pu récupérer les données de ce portefeuille. Veuillez réessayer ultérieurement.</p>
-                        <button class="retry-button" onclick="window.perplexityIntegration.updatePortfolios()">
+                        <button class="retry-button" onclick="window.perplexityIntegration.loadStaticData()">
                             <i class="fas fa-sync-alt"></i> Actualiser
                         </button>
                     </div>
@@ -713,6 +980,9 @@ class PerplexityIntegration {
         
         // Créer les lignes pour chaque actif
         const rowsHTML = portfolioData.map(asset => {
+            const changeClass = asset.change >= 0 ? 'positive' : 'negative';
+            const changeSymbol = asset.change >= 0 ? '+' : '';
+            
             return `
             <div class="table-row">
                 <div class="cell instrument-cell">
@@ -724,6 +994,9 @@ class PerplexityIntegration {
                     <span class="asset-type ${asset.type.toLowerCase()}">${asset.type}</span>
                 </div>
                 <div class="cell allocation">${asset.allocation}%</div>
+                ${asset.change !== undefined ? `
+                <div class="cell change ${changeClass}">${changeSymbol}${asset.change}%</div>
+                ` : ''}
             </div>
             `;
         }).join('');
