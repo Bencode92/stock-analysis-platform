@@ -5,9 +5,8 @@ on:
     - cron: '10 5,13,21 * * *'  # 3 fois par jour (5h10, 13h10, 21h10)
   workflow_dispatch:  # Permet de déclencher manuellement
 
-# Ajout des permissions explicites
 permissions:
-  contents: write  # Autorise l'écriture dans le dépôt
+  contents: write
 
 jobs:
   update-data:
@@ -15,9 +14,6 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-        with:
-          token: ${{ github.token }}
-          fetch-depth: 0  # Récupérer tout l'historique
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -31,24 +27,67 @@ jobs:
 
       - name: Run data update script
         run: python scripts/update_financial_data.py
-      
-      - name: Check for changes
-        id: check_changes
+        
+      - name: Upload News Data via GitHub API
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          git add data/
-          if [ -n "$(git status --porcelain)" ]; then
-            echo "::set-output name=changes_exist::true"
+          # Lire le contenu du fichier news.json
+          NEWS_CONTENT=$(cat data/news.json)
+          
+          # Vérifier si le fichier existe déjà pour obtenir son SHA
+          RESP=$(curl -s -H "Authorization: token $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/contents/data/news.json")
+          SHA=$(echo "$RESP" | jq -r '.sha // empty')
+          
+          # Construire la charge utile JSON pour l'API
+          if [ -n "$SHA" ]; then
+            # Mettre à jour le fichier existant
+            DATA=$(jq -n --arg content "$(echo "$NEWS_CONTENT" | base64 -w 0)" \
+                      --arg message "📊 Update news data: $(date)" \
+                      --arg sha "$SHA" \
+                      '{message: $message, content: $content, sha: $sha}')
           else
-            echo "::set-output name=changes_exist::false"
+            # Créer un nouveau fichier
+            DATA=$(jq -n --arg content "$(echo "$NEWS_CONTENT" | base64 -w 0)" \
+                      --arg message "📊 Create news data: $(date)" \
+                      '{message: $message, content: $content}')
           fi
-      
-      - name: Commit and push changes
-        if: steps.check_changes.outputs.changes_exist == 'true'
-        uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: "📊 Update financial data: $(date)"
-          file_pattern: data/*
-          commit_user_name: TradePulse Bot
-          commit_user_email: action@github.com
-          commit_author: TradePulse Bot <action@github.com>
-          push_options: '--force'  # Utiliser force push si nécessaire
+          
+          # Envoyer la requête à l'API GitHub
+          curl -X PUT -H "Authorization: token $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$DATA" \
+            "https://api.github.com/repos/${{ github.repository }}/contents/data/news.json"
+
+      - name: Upload Portfolios Data via GitHub API
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Lire le contenu du fichier portfolios.json
+          PORTFOLIOS_CONTENT=$(cat data/portfolios.json)
+          
+          # Vérifier si le fichier existe déjà pour obtenir son SHA
+          RESP=$(curl -s -H "Authorization: token $GH_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/contents/data/portfolios.json")
+          SHA=$(echo "$RESP" | jq -r '.sha // empty')
+          
+          # Construire la charge utile JSON pour l'API
+          if [ -n "$SHA" ]; then
+            # Mettre à jour le fichier existant
+            DATA=$(jq -n --arg content "$(echo "$PORTFOLIOS_CONTENT" | base64 -w 0)" \
+                      --arg message "📊 Update portfolios data: $(date)" \
+                      --arg sha "$SHA" \
+                      '{message: $message, content: $content, sha: $sha}')
+          else
+            # Créer un nouveau fichier
+            DATA=$(jq -n --arg content "$(echo "$PORTFOLIOS_CONTENT" | base64 -w 0)" \
+                      --arg message "📊 Create portfolios data: $(date)" \
+                      '{message: $message, content: $content}')
+          fi
+          
+          # Envoyer la requête à l'API GitHub
+          curl -X PUT -H "Authorization: token $GH_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "$DATA" \
+            "https://api.github.com/repos/${{ github.repository }}/contents/data/portfolios.json"
