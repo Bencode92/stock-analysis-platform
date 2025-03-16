@@ -2,7 +2,7 @@ name: Update Financial Data
 
 on:
   schedule:
-    - cron: '10 5,13,21 * * *'  # 3 fois par jour (5h10, 13h10, 21h10) - légèrement décalé pour éviter les conflits
+    - cron: '10 5,13,21 * * *'  # 3 fois par jour (5h10, 13h10, 21h10)
   workflow_dispatch:  # Permet de déclencher manuellement
 
 # Ajout des permissions explicites
@@ -13,9 +13,11 @@ jobs:
   update-data:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v3
         with:
-          fetch-depth: 0  # Récupérer tout l'historique pour faciliter le rebase
+          token: ${{ github.token }}
+          fetch-depth: 0  # Récupérer tout l'historique
       
       - name: Set up Python
         uses: actions/setup-python@v4
@@ -30,16 +32,23 @@ jobs:
       - name: Run data update script
         run: python scripts/update_financial_data.py
       
-      - name: Commit and push if there are changes
+      - name: Check for changes
+        id: check_changes
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "TradePulse Bot"
           git add data/
-          if git diff --staged --quiet; then
-            echo "No changes detected"
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::set-output name=changes_exist::true"
           else
-            # Récupérer les derniers changements distants d'abord
-            git pull --rebase origin main
-            git commit -m "📊 Update financial data: $(date)"
-            git push
+            echo "::set-output name=changes_exist::false"
           fi
+      
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.changes_exist == 'true'
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "📊 Update financial data: $(date)"
+          file_pattern: data/*
+          commit_user_name: TradePulse Bot
+          commit_user_email: action@github.com
+          commit_author: TradePulse Bot <action@github.com>
+          push_options: '--force'  # Utiliser force push si nécessaire
