@@ -572,7 +572,7 @@ class PerplexityIntegration {
         const requestsKey = `tradepulse_search_requests_${currentDate}`;
         const currentRequests = parseInt(localStorage.getItem(requestsKey) || '0');
         
-        const DAILY_SEARCH_LIMIT = 10; // Limite de 10 recherches par jour
+        const DAILY_SEARCH_LIMIT = 10; // Limite de 10 recherches par jour par utilisateur
         
         if (currentRequests >= DAILY_SEARCH_LIMIT) {
             // Limite atteinte
@@ -950,6 +950,7 @@ class PerplexityIntegration {
     
     /**
      * Met à jour une table de portefeuille spécifique
+     * Version améliorée avec support pour différents formats de données
      */
     updatePortfolioTable(container, portfolioData) {
         const tableContainer = container.querySelector('.portfolio-table');
@@ -978,8 +979,22 @@ class PerplexityIntegration {
             return;
         }
         
-        // Créer les lignes pour chaque actif
-        const rowsHTML = portfolioData.map(asset => {
+        // Normaliser les données pour gérer différents formats (FR/EN)
+        const normalizedData = portfolioData.map(asset => {
+            return {
+                // Utiliser || pour prendre la première valeur non-undefined
+                name: asset.name || asset.nom || "",
+                symbol: asset.symbol || asset.symbole || "",
+                type: asset.type || "",
+                allocation: asset.allocation || 0,
+                reason: asset.reason || asset.justification || "",
+                // Fournir une valeur par défaut de 0 si change est absent
+                change: typeof asset.change !== 'undefined' ? asset.change : 0
+            };
+        });
+        
+        // Créer les lignes pour chaque actif avec les données normalisées
+        const rowsHTML = normalizedData.map(asset => {
             const changeClass = asset.change >= 0 ? 'positive' : 'negative';
             const changeSymbol = asset.change >= 0 ? '+' : '';
             
@@ -994,9 +1009,7 @@ class PerplexityIntegration {
                     <span class="asset-type ${asset.type.toLowerCase()}">${asset.type}</span>
                 </div>
                 <div class="cell allocation">${asset.allocation}%</div>
-                ${asset.change !== undefined ? `
                 <div class="cell change ${changeClass}">${changeSymbol}${asset.change}%</div>
-                ` : ''}
             </div>
             `;
         }).join('');
