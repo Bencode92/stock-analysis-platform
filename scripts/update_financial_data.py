@@ -49,39 +49,59 @@ def normalize_portfolio_data(data):
         if portfolio_type in data:
             new_assets = []
             for asset in data[portfolio_type]:
-                new_asset = {}
+                # Créer un nouvel objet d'actif standardisé (avec les clés anglaises)
+                new_asset = {
+                    # Pour les noms/titres
+                    "name": asset.get("name", asset.get("nom", "")),
+                    # Pour les symboles
+                    "symbol": asset.get("symbol", asset.get("symbole", "")),
+                    # Type d'actif
+                    "type": asset.get("type", ""),
+                    # Allocation en pourcentage
+                    "allocation": asset.get("allocation", 0),
+                    # Justification/raison
+                    "reason": asset.get("reason", asset.get("justification", "")),
+                    # Variation (obligatoire pour l'interface, par défaut à 0)
+                    "change": asset.get("change", 0),
+                    # Secteur (optionnel)
+                    "sector": asset.get("sector", asset.get("secteur", "")),
+                    # Risque (optionnel)
+                    "risk": asset.get("risk", asset.get("risque", "medium"))
+                }
                 
-                # Mapper les clés françaises vers l'anglais
-                if "nom" in asset:
-                    new_asset["name"] = asset["nom"]
-                elif "name" in asset:
-                    new_asset["name"] = asset["name"]
-                    
-                if "symbole" in asset:
-                    new_asset["symbol"] = asset["symbole"]
-                elif "symbol" in asset:
-                    new_asset["symbol"] = asset["symbol"]
-                    
-                if "type" in asset:
-                    new_asset["type"] = asset["type"]
-                    
-                if "allocation" in asset:
-                    new_asset["allocation"] = asset["allocation"]
-                    
-                if "justification" in asset:
-                    new_asset["reason"] = asset["justification"]
-                elif "reason" in asset:
-                    new_asset["reason"] = asset["reason"]
+                # S'assurer que les champs obligatoires ont des valeurs valides
+                if not new_asset["name"]:
+                    new_asset["name"] = f"Actif {len(new_assets) + 1}"
                 
-                # Assurer que change existe toujours, même à 0
-                if "change" in asset:
-                    new_asset["change"] = asset["change"]
-                else:
-                    new_asset["change"] = 0
-                    
+                if not new_asset["symbol"]:
+                    # Générer un symbole basé sur le nom si absent
+                    words = new_asset["name"].split()
+                    new_asset["symbol"] = "".join([word[0].upper() for word in words if word])[:4]
+                
+                # Ajouter l'actif normalisé à la liste
                 new_assets.append(new_asset)
             
+            # Remplacer les anciennes données par les nouvelles données normalisées
             data[portfolio_type] = new_assets
+    
+    # S'assurer que marketContext est présent avec des valeurs par défaut
+    if "marketContext" not in data:
+        data["marketContext"] = {
+            "mainTrend": "bullish",
+            "volatilityLevel": "moderate",
+            "keyEvents": ["Publication de résultats trimestriels", "Données économiques mitigées"],
+            "sectorOutlook": {
+                "tech": "positive",
+                "finance": "neutral",
+                "energy": "neutral",
+                "healthcare": "positive",
+                "consumer": "neutral"
+            }
+        }
+    
+    # S'assurer que lastUpdated est présent
+    if "lastUpdated" not in data:
+        data["lastUpdated"] = datetime.now().isoformat()
             
     return data
 
@@ -116,26 +136,7 @@ def get_portfolio_recommendations():
         print("⚠️ Utilisation des données de portefeuille de secours")
         portfolios_data = generate_fallback_portfolios()
     else:
-        print(f"✅ Portefeuilles récupérés: agressif: {len(portfolios_data.get('agressif', []))}, modere: {len(portfolios_data.get('modere', []))}, stable: {len(portfolios_data.get('stable', []))}")
-    
-    # Vérifier que marketContext existe
-    if 'marketContext' not in portfolios_data:
-        portfolios_data['marketContext'] = {
-            "mainTrend": "bullish",
-            "volatilityLevel": "moderate",
-            "keyEvents": ["Publication de résultats trimestriels", "Données économiques mitigées"],
-            "sectorOutlook": {
-                "tech": "positive",
-                "finance": "neutral",
-                "energy": "neutral",
-                "healthcare": "positive",
-                "consumer": "neutral"
-            }
-        }
-    
-    # S'assurer que lastUpdated est présent
-    if 'lastUpdated' not in portfolios_data:
-        portfolios_data['lastUpdated'] = datetime.now().isoformat()
+        print(f"✅ Portefeuilles récupérés: agressif: {len(portfolios_data.get('agressif', []))}, modere: {len(portfolios_data.get('modere', []))}, stable: {len(portfolios_data.get('stable', []))}") 
     
     # Valider et standardiser la structure des portefeuilles
     portfolios_data = validate_portfolio_structure(portfolios_data)
@@ -152,7 +153,7 @@ def validate_portfolio_structure(data):
             elif key == "marketContext":
                 data[key] = {
                     "mainTrend": "neutral",
-                    "volatilityLevel": "medium",
+                    "volatilityLevel": "medium", 
                     "keyEvents": [],
                     "sectorOutlook": {}
                 }
@@ -171,8 +172,19 @@ def validate_portfolio_structure(data):
                 "allocation": asset.get("allocation", 0),
                 "reason": asset.get("reason") or asset.get("justification", ""),
                 "change": asset.get("change", 0),  # Valeur par défaut
-                "sector": asset.get("sector", "")
+                "sector": asset.get("sector", asset.get("secteur", "")),
+                "risk": asset.get("risk", asset.get("risque", "medium"))
             }
+            
+            # S'assurer que les champs obligatoires ont des valeurs valides
+            if not standardized_asset["name"]:
+                standardized_asset["name"] = f"Actif {len(standardized_assets) + 1}"
+            
+            if not standardized_asset["symbol"]:
+                # Générer un symbole basé sur le nom si absent
+                words = standardized_asset["name"].split()
+                standardized_asset["symbol"] = "".join([word[0].upper() for word in words if word])[:4]
+            
             standardized_assets.append(standardized_asset)
         
         # Remplacer les données originales par les données standardisées
@@ -409,17 +421,17 @@ def generate_fallback_portfolios():
     """Génère des données de portefeuilles de secours"""
     print("⚠️ Génération de données de portefeuilles de secours")
     
-    # Portefeuille agressif - MODIFIÉ AVEC LES BONNES CLÉS
+    # Portefeuille agressif - STRUCTURE AMÉLIORÉE
     aggressive_portfolio = [
         {
-            "name": "Apple Inc.",                 # Changé de "nom" à "name"
-            "symbol": "AAPL",                     # Changé de "symbole" à "symbol" 
+            "name": "Apple Inc.",
+            "symbol": "AAPL",
             "type": "Action",
             "allocation": 15,
             "reason": "Leader technologique avec potentiel de croissance",
             "sector": "Technologie",
             "risk": "medium",
-            "change": 1.8                         # Ajouté le champ "change" obligatoire
+            "change": 1.8
         },
         {
             "name": "NVIDIA Corporation",
