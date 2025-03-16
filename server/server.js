@@ -19,21 +19,28 @@ if (!PERPLEXITY_API_KEY) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configuration CORS pour n'accepter que les requêtes de votre domaine
+// Configuration CORS plus permissive
 const corsOptions = {
-  origin: ['https://bencode92.github.io', 'http://localhost:5500'], // Ajoutez votre domaine de développement local si nécessaire
-  methods: ['GET', 'POST'],
-  allowedHeaders: ['Content-Type']
+  origin: '*', // Accepte toutes les origines (temporairement pour le débogage)
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 };
 
 // Middleware
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Middleware de log pour le débogage
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} [${req.method}] ${req.originalUrl} - Origin: ${req.headers.origin}`);
+  next();
+});
+
 // Route API pour les actualités financières
 app.post('/api/perplexity/news', async (req, res) => {
   try {
-    const prompt = "Donne-moi un résumé des actualités financières du jour concernant les marchés US et français. Format: 3 actualités principales par marché, avec source, date, heure, titre et contenu. Pour chaque actualité, mentionne l'impact potentiel sur les investissements. Présente les données dans un format JSON structuré avec deux catégories: us et france.";
+    const prompt = "Donne-moi un résumé des actualités financières du jour concernant les marchés US et français. Format: 3 actualités principales par marché, avec source, date, heure, title et content. Pour chaque actualité, mentionne l'impact potentiel sur les investissements. Présente les données dans un format JSON structuré avec deux catégories: us et france.";
     
     const response = await axios.post('https://api.perplexity.ai/chat/completions', {
       model: 'sonar-pro',
@@ -54,11 +61,50 @@ app.post('/api/perplexity/news', async (req, res) => {
     // Nettoyer le JSON si nécessaire (enlever les backticks et identifiants json)
     perplexityResponse = perplexityResponse.replace(/```json\n|```\n|```/g, '').trim();
     
+    // Logger la réponse pour le débogage
+    console.log('Réponse brute de Perplexity:', perplexityResponse.substring(0, 200) + '...');
+    
     // Parser le JSON
     const newsData = JSON.parse(perplexityResponse);
     
+    // Uniformiser la structure des données
+    if (newsData.us) {
+      newsData.us = newsData.us.map(item => {
+        return {
+          source: item.source,
+          title: item.title || item.titre || '', 
+          content: item.content || item.contenu || '',
+          date: item.date,
+          time: item.time || item.heure || '',
+          category: item.category || 'marches',
+          impact: item.impact || 'neutral',
+          country: 'us'
+        };
+      });
+    }
+    
+    if (newsData.france) {
+      newsData.france = newsData.france.map(item => {
+        return {
+          source: item.source,
+          title: item.title || item.titre || '', 
+          content: item.content || item.contenu || '',
+          date: item.date,
+          time: item.time || item.heure || '',
+          category: item.category || 'marches',
+          impact: item.impact || 'neutral',
+          country: 'fr'
+        };
+      });
+    }
+    
     // Ajouter un timestamp pour le frontend
     newsData.lastUpdated = new Date().toISOString();
+    
+    // Ajout des événements si manquants
+    if (!newsData.events) {
+      newsData.events = [];
+    }
     
     res.json(newsData);
   } catch (error) {
@@ -94,11 +140,76 @@ app.post('/api/perplexity/portfolios', async (req, res) => {
     // Nettoyer le JSON si nécessaire
     perplexityResponse = perplexityResponse.replace(/```json\n|```\n|```/g, '').trim();
     
+    // Logger la réponse pour le débogage
+    console.log('Réponse brute de Perplexity (portefeuilles):', perplexityResponse.substring(0, 200) + '...');
+    
     // Parser le JSON
     const portfoliosData = JSON.parse(perplexityResponse);
     
+    // Uniformiser la structure des données
+    if (portfoliosData.agressif) {
+      portfoliosData.agressif = portfoliosData.agressif.map(item => {
+        return {
+          name: item.name || item.nom || '',
+          symbol: item.symbol || item.symbole || '',
+          type: item.type || 'ETF',
+          allocation: item.allocation,
+          reason: item.reason || item.justification || '',
+          sector: item.sector || '',
+          risk: item.risk || 'medium',
+          change: item.change || 0
+        };
+      });
+    }
+    
+    if (portfoliosData.modere) {
+      portfoliosData.modere = portfoliosData.modere.map(item => {
+        return {
+          name: item.name || item.nom || '',
+          symbol: item.symbol || item.symbole || '',
+          type: item.type || 'ETF',
+          allocation: item.allocation,
+          reason: item.reason || item.justification || '',
+          sector: item.sector || '',
+          risk: item.risk || 'medium',
+          change: item.change || 0
+        };
+      });
+    }
+    
+    if (portfoliosData.stable) {
+      portfoliosData.stable = portfoliosData.stable.map(item => {
+        return {
+          name: item.name || item.nom || '',
+          symbol: item.symbol || item.symbole || '',
+          type: item.type || 'ETF',
+          allocation: item.allocation,
+          reason: item.reason || item.justification || '',
+          sector: item.sector || '',
+          risk: item.risk || 'low',
+          change: item.change || 0
+        };
+      });
+    }
+    
     // Ajouter un timestamp pour le frontend
     portfoliosData.lastUpdated = new Date().toISOString();
+    
+    // Ajouter le contexte de marché s'il est manquant
+    if (!portfoliosData.marketContext) {
+      portfoliosData.marketContext = {
+        "mainTrend": "bullish",
+        "volatilityLevel": "moderate",
+        "keyEvents": ["Publication de résultats trimestriels", "Données économiques mitigées"],
+        "sectorOutlook": {
+          "tech": "positive",
+          "finance": "neutral",
+          "energy": "neutral",
+          "healthcare": "positive",
+          "consumer": "neutral"
+        }
+      };
+    }
     
     res.json(portfoliosData);
   } catch (error) {
@@ -118,6 +229,8 @@ app.post('/api/perplexity/search', async (req, res) => {
     if (!query) {
       return res.status(400).json({ error: 'La requête de recherche est requise' });
     }
+    
+    console.log(`Recherche reçue: "${query}"`);
     
     const response = await axios.post('https://api.perplexity.ai/chat/completions', {
       model: 'sonar-pro',
@@ -162,16 +275,32 @@ app.post('/api/perplexity/search', async (req, res) => {
   }
 });
 
+// Route de santé pour vérifier si le serveur est en ligne
+app.get('/health', (req, res) => {
+  res.json({ 
+    status: 'ok', 
+    time: new Date().toISOString(),
+    origin: req.headers.origin || 'unknown',
+    cors: {
+      enabled: true,
+      origins: corsOptions.origin
+    }
+  });
+});
+
 // Route de base pour vérifier si le serveur est en ligne
 app.get('/', (req, res) => {
   res.json({ 
     status: 'online', 
     message: 'TradePulse API Server is running',
     endpoints: [
+      '/health',
       '/api/perplexity/news',
       '/api/perplexity/portfolios',
       '/api/perplexity/search'
-    ] 
+    ],
+    version: '1.1.0',
+    lastUpdated: new Date().toISOString()
   });
 });
 
@@ -179,4 +308,5 @@ app.get('/', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Serveur proxy Perplexity démarré sur le port ${PORT}`);
   console.log(`📡 API accessible sur http://localhost:${PORT}`);
+  console.log(`📁 Configuration CORS:`, corsOptions);
 });
