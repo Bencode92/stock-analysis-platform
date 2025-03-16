@@ -9,10 +9,16 @@ import random
 RENDER_API_URL = os.environ.get("RENDER_API_URL", "https://stock-analysis-platform-q9tc.onrender.com")
 DATA_DIR = "./data"
 os.makedirs(DATA_DIR, exist_ok=True)
+USE_FALLBACK_ONLY = True  # Force l'utilisation des données de secours uniquement
 
 def fetch_data_from_render(endpoint, payload=None):
     """Récupère les données depuis Render qui proxie vers Perplexity"""
     print(f"🔍 Récupération des données depuis Render: {endpoint}")
+    
+    # Si on force les données de secours, on ne fait pas de requête
+    if USE_FALLBACK_ONLY:
+        print("⚠️ Mode données de secours activé, pas de requête API")
+        return None
     
     try:
         if payload is None:
