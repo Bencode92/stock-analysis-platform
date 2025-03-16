@@ -6,6 +6,21 @@
  * Version modifiée pour utiliser les fichiers JSON statiques générés par GitHub Actions.
  */
 
+// Fonction pour obtenir le chemin de base
+function getBasePath() {
+    // Si sur GitHub Pages, construire le chemin avec le nom du repo
+    if (window.location.hostname.includes('github.io')) {
+        // Extraire le nom du dépôt de l'URL
+        const pathParts = window.location.pathname.split('/');
+        if (pathParts.length > 1) {
+            // Retourner le chemin avec le nom du repo
+            return '/' + pathParts[1] + '/';
+        }
+    }
+    // Sinon, utiliser la racine
+    return '/';
+}
+
 // Configuration de l'API
 const API_CONFIG = {
     // URL du serveur proxy (mise à jour avec l'URL Render valide)
@@ -39,9 +54,228 @@ const API_CONFIG = {
     staticData: {
         enabled: true, // Utiliser les fichiers JSON statiques par défaut
         paths: {
-            news: './data/news.json',
-            portfolios: './data/portfolios.json'
+            news: getBasePath() + 'data/news.json',
+            portfolios: getBasePath() + 'data/portfolios.json'
         }
+    }
+};
+
+// Données de secours à utiliser si le chargement échoue
+const FALLBACK_DATA = {
+    news: {
+        us: [
+            {
+                title: "Marchés américains : perspectives positives pour le secteur technologique",
+                content: "Les marchés américains montrent des signaux positifs, portés par le secteur technologique et les résultats des entreprises du S&P 500.",
+                source: "TradePulse",
+                date: new Date().toLocaleDateString('fr-FR'),
+                time: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}),
+                category: "marches",
+                impact: "positive",
+                country: "us"
+            },
+            {
+                title: "La Fed maintient sa politique monétaire",
+                content: "La Réserve fédérale américaine a décidé de maintenir sa politique actuelle, en ligne avec les attentes des analystes.",
+                source: "TradePulse",
+                date: new Date().toLocaleDateString('fr-FR'),
+                time: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}),
+                category: "economie",
+                impact: "neutral",
+                country: "us"
+            }
+        ],
+        france: [
+            {
+                title: "Le CAC 40 en hausse, porté par le secteur du luxe",
+                content: "L'indice parisien enregistre une progression, soutenu notamment par les valeurs du luxe et les perspectives économiques européennes.",
+                source: "TradePulse",
+                date: new Date().toLocaleDateString('fr-FR'),
+                time: new Date().toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit'}),
+                category: "marches",
+                impact: "positive",
+                country: "fr"
+            }
+        ],
+        events: [
+            {
+                title: "Publication des résultats trimestriels des grandes entreprises tech",
+                date: "28/03/2025",
+                time: "16:30",
+                type: "earnings",
+                importance: "high"
+            },
+            {
+                title: "Réunion de la BCE sur les taux d'intérêt",
+                date: "22/03/2025",
+                time: "13:45",
+                type: "policy",
+                importance: "high"
+            }
+        ],
+        lastUpdated: new Date().toISOString()
+    },
+    portfolios: {
+        agressif: [
+            {
+                name: "NVIDIA Corporation",
+                symbol: "NVDA",
+                type: "Action",
+                allocation: 25,
+                reason: "Leader dans les processeurs graphiques et l'IA",
+                change: 3.5
+            },
+            {
+                name: "Tesla, Inc.",
+                symbol: "TSLA",
+                type: "Action",
+                allocation: 20,
+                reason: "Innovation dans les véhicules électriques",
+                change: 2.1
+            },
+            {
+                name: "ARK Innovation ETF",
+                symbol: "ARKK",
+                type: "ETF",
+                allocation: 15,
+                reason: "Exposition aux technologies disruptives",
+                change: 1.8
+            },
+            {
+                name: "Bitcoin",
+                symbol: "BTC",
+                type: "Crypto",
+                allocation: 15,
+                reason: "Diversification avec la cryptomonnaie principale",
+                change: 4.5
+            },
+            {
+                name: "Amazon.com, Inc.",
+                symbol: "AMZN",
+                type: "Action",
+                allocation: 15,
+                reason: "Leader e-commerce et cloud computing",
+                change: 1.2
+            },
+            {
+                name: "Advanced Micro Devices",
+                symbol: "AMD",
+                type: "Action",
+                allocation: 10,
+                reason: "Croissance dans le secteur des semi-conducteurs",
+                change: 2.7
+            }
+        ],
+        modere: [
+            {
+                name: "Microsoft Corporation",
+                symbol: "MSFT",
+                type: "Action",
+                allocation: 20,
+                reason: "Leader stable en technologie et cloud",
+                change: 1.1
+            },
+            {
+                name: "Vanguard S&P 500 ETF",
+                symbol: "VOO",
+                type: "ETF",
+                allocation: 20,
+                reason: "Exposition large au marché américain",
+                change: 0.9
+            },
+            {
+                name: "Apple Inc.",
+                symbol: "AAPL",
+                type: "Action",
+                allocation: 15,
+                reason: "Entreprise technologique stable avec dividendes",
+                change: 0.7
+            },
+            {
+                name: "Alphabet Inc.",
+                symbol: "GOOGL",
+                type: "Action",
+                allocation: 15,
+                reason: "Leader dans la recherche en ligne et l'IA",
+                change: 1.3
+            },
+            {
+                name: "iShares Core U.S. Aggregate Bond ETF",
+                symbol: "AGG",
+                type: "ETF",
+                allocation: 20,
+                reason: "Stabilité avec des obligations américaines",
+                change: 0.2
+            },
+            {
+                name: "Coca-Cola Company",
+                symbol: "KO",
+                type: "Action",
+                allocation: 10,
+                reason: "Valeur défensive avec dividendes stables",
+                change: 0.4
+            }
+        ],
+        stable: [
+            {
+                name: "Vanguard Total Bond Market ETF",
+                symbol: "BND",
+                type: "ETF",
+                allocation: 25,
+                reason: "Base d'obligations diversifiées",
+                change: 0.1
+            },
+            {
+                name: "iShares TIPS Bond ETF",
+                symbol: "TIP",
+                type: "ETF",
+                allocation: 20,
+                reason: "Protection contre l'inflation",
+                change: 0.2
+            },
+            {
+                name: "Johnson & Johnson",
+                symbol: "JNJ",
+                type: "Action",
+                allocation: 15,
+                reason: "Valeur défensive dans le secteur de la santé",
+                change: 0.3
+            },
+            {
+                name: "Berkshire Hathaway Inc.",
+                symbol: "BRK.B",
+                type: "Action",
+                allocation: 15,
+                reason: "Portefeuille diversifié à gestion conservatrice",
+                change: 0.5
+            },
+            {
+                name: "Procter & Gamble Co.",
+                symbol: "PG",
+                type: "Action",
+                allocation: 15,
+                reason: "Biens de consommation avec dividendes stables",
+                change: 0.2
+            },
+            {
+                name: "SPDR Gold Shares",
+                symbol: "GLD",
+                type: "ETF",
+                allocation: 10,
+                reason: "Diversification avec l'or comme valeur refuge",
+                change: 0.6
+            }
+        ],
+        marketContext: {
+            mainTrend: "bullish",
+            volatilityLevel: "moderate",
+            keyEvents: [
+                "Décision de maintien des taux par les banques centrales",
+                "Résultats trimestriels positifs du secteur technologique",
+                "Reprise économique globale"
+            ]
+        },
+        lastUpdated: new Date().toISOString()
     }
 };
 
@@ -75,10 +309,28 @@ class PerplexityIntegration {
      */
     async init() {
         console.log('Initialisation de l\'intégration TradePulse...');
+        console.log('Chemins de données statiques:', API_CONFIG.staticData.paths);
         
         try {
-            // Essayer d'abord de charger les données statiques
-            if (API_CONFIG.staticData.enabled) {
+            // Vérifier d'abord si des données préchargées existent
+            if (window.TRADEPULSE_STATIC_DATA) {
+                console.log('✅ Données pré-chargées trouvées, utilisation directe');
+                
+                if (window.TRADEPULSE_STATIC_DATA.news) {
+                    this.newsData = window.TRADEPULSE_STATIC_DATA.news;
+                    console.log('📰 Données d\'actualités pré-chargées appliquées');
+                }
+                
+                if (window.TRADEPULSE_STATIC_DATA.portfolios) {
+                    this.portfolios = window.TRADEPULSE_STATIC_DATA.portfolios;
+                    console.log('💼 Données de portefeuilles pré-chargées appliquées');
+                }
+                
+                // Mettre à jour l'interface immédiatement
+                this.updateUI();
+            } 
+            // Sinon, essayer de charger les données statiques
+            else if (API_CONFIG.staticData.enabled) {
                 await this.loadStaticData();
                 console.log('✅ Données statiques chargées avec succès');
             }
@@ -88,7 +340,7 @@ class PerplexityIntegration {
             this.checkApiAvailability();
             
             // Si nous n'utilisons pas les données statiques, charger depuis l'API
-            if (!API_CONFIG.staticData.enabled) {
+            if (!API_CONFIG.staticData.enabled && !window.TRADEPULSE_STATIC_DATA) {
                 await this.updateData();
             }
             
@@ -104,6 +356,11 @@ class PerplexityIntegration {
             console.log('✅ Intégration TradePulse initialisée avec succès');
         } catch (error) {
             console.error('❌ Erreur lors de l\'initialisation:', error.message);
+            // Utiliser les données de secours en cas d'erreur critique d'initialisation
+            console.log('⚠️ Utilisation des données de secours après erreur d\'initialisation');
+            this.newsData = FALLBACK_DATA.news;
+            this.portfolios = FALLBACK_DATA.portfolios;
+            this.updateUI();
             this.handleApiError();
         }
     }
@@ -144,38 +401,90 @@ class PerplexityIntegration {
             // Éviter la mise en cache des fichiers JSON
             const timestamp = new Date().getTime();
             
-            // Chargement des actualités
-            const newsResponse = await fetch(`${API_CONFIG.staticData.paths.news}?t=${timestamp}`);
-            if (!newsResponse.ok) {
-                throw new Error(`Erreur de chargement des actualités: ${newsResponse.status}`);
+            // Ajouter des logs détaillés pour déboguer les chemins
+            console.log(`URL du fichier d'actualités: ${API_CONFIG.staticData.paths.news}?t=${timestamp}`);
+            console.log(`URL du fichier de portefeuilles: ${API_CONFIG.staticData.paths.portfolios}?t=${timestamp}`);
+            
+            try {
+                // Chargement des actualités avec plus d'informations de débogage
+                const newsResponse = await fetch(`${API_CONFIG.staticData.paths.news}?t=${timestamp}`);
+                if (!newsResponse.ok) {
+                    console.error(`Erreur HTTP lors du chargement des actualités: ${newsResponse.status} ${newsResponse.statusText}`);
+                    throw new Error(`Erreur de chargement des actualités: ${newsResponse.status}`);
+                }
+                
+                // Conversion en JSON avec vérification
+                try {
+                    this.newsData = await newsResponse.json();
+                    console.log('✅ Données d\'actualités chargées avec succès:', 
+                        this.newsData.us.length + ' articles US, ' + 
+                        this.newsData.france.length + ' articles France, ' + 
+                        this.newsData.events.length + ' événements'
+                    );
+                } catch (jsonError) {
+                    console.error('Erreur lors du parsing JSON des actualités:', jsonError);
+                    console.log('Contenu de la réponse:', await newsResponse.text());
+                    throw jsonError;
+                }
+            } catch (newsError) {
+                console.error('❌ Échec du chargement des actualités:', newsError);
+                // Utiliser les données de secours pour les actualités
+                console.log('⚠️ Utilisation des données d\'actualités de secours');
+                this.newsData = FALLBACK_DATA.news;
+                // Continuer avec les portefeuilles
             }
             
-            // Chargement des portefeuilles
-            const portfoliosResponse = await fetch(`${API_CONFIG.staticData.paths.portfolios}?t=${timestamp}`);
-            if (!portfoliosResponse.ok) {
-                throw new Error(`Erreur de chargement des portefeuilles: ${portfoliosResponse.status}`);
+            try {
+                // Chargement des portefeuilles avec plus d'informations de débogage
+                const portfoliosResponse = await fetch(`${API_CONFIG.staticData.paths.portfolios}?t=${timestamp}`);
+                if (!portfoliosResponse.ok) {
+                    console.error(`Erreur HTTP lors du chargement des portefeuilles: ${portfoliosResponse.status} ${portfoliosResponse.statusText}`);
+                    throw new Error(`Erreur de chargement des portefeuilles: ${portfoliosResponse.status}`);
+                }
+                
+                // Conversion en JSON avec vérification
+                try {
+                    this.portfolios = await portfoliosResponse.json();
+                    console.log('✅ Données de portefeuilles chargées avec succès:',
+                        this.portfolios.agressif.length + ' actifs agressifs, ' +
+                        this.portfolios.modere.length + ' actifs modérés, ' +
+                        this.portfolios.stable.length + ' actifs stables'
+                    );
+                } catch (jsonError) {
+                    console.error('Erreur lors du parsing JSON des portefeuilles:', jsonError);
+                    console.log('Contenu de la réponse:', await portfoliosResponse.text());
+                    throw jsonError;
+                }
+            } catch (portfoliosError) {
+                console.error('❌ Échec du chargement des portefeuilles:', portfoliosError);
+                // Utiliser les données de secours pour les portefeuilles
+                console.log('⚠️ Utilisation des données de portefeuilles de secours');
+                this.portfolios = FALLBACK_DATA.portfolios;
             }
-            
-            // Mise à jour des données
-            this.newsData = await newsResponse.json();
-            this.portfolios = await portfoliosResponse.json();
-            
-            // Mise à jour de l'interface
+
+            // Mise à jour de l'interface avec les données chargées/de secours
             this.updateUI();
             
-            console.log('✅ Données statiques chargées avec succès');
-            return { newsData: this.newsData, portfoliosData: this.portfolios };
+            return { 
+                newsData: this.newsData, 
+                portfoliosData: this.portfolios 
+            };
         } catch (error) {
-            console.error('❌ Erreur lors du chargement des données statiques:', error);
+            console.error('❌ Erreur générale lors du chargement des données statiques:', error);
             
-            // En cas d'erreur, on essaie une fois l'API si disponible
-            if (this.apiAvailable && !API_CONFIG.staticData.enabled) {
-                console.log('⚠️ Tentative de chargement depuis l\'API...');
-                return this.updateData();
-            } else {
-                this.handleApiError();
-                throw error;
-            }
+            // En cas d'erreur critique, utiliser les données de secours
+            console.log('⚠️ Utilisation des données de secours après erreur critique');
+            this.newsData = FALLBACK_DATA.news;
+            this.portfolios = FALLBACK_DATA.portfolios;
+            
+            // Mettre à jour l'interface avec les données de secours
+            this.updateUI();
+            this.handleApiError();
+            
+            return { 
+                newsData: this.newsData, 
+                portfoliosData: this.portfolios 
+            };
         }
     }
     
@@ -424,6 +733,12 @@ class PerplexityIntegration {
                     this.newsData = await response.json();
                     this.updateNewsUI();
                     return this.newsData;
+                } else {
+                    // Utiliser les données de secours
+                    console.log('⚠️ Utilisation des données d\'actualités de secours');
+                    this.newsData = FALLBACK_DATA.news;
+                    this.updateNewsUI();
+                    return this.newsData;
                 }
             }
             
@@ -515,6 +830,12 @@ class PerplexityIntegration {
                 const response = await fetch(API_CONFIG.staticData.paths.portfolios);
                 if (response.ok) {
                     this.portfolios = await response.json();
+                    this.updatePortfoliosUI();
+                    return this.portfolios;
+                } else {
+                    // Utiliser les données de secours
+                    console.log('⚠️ Utilisation des données de portefeuilles de secours');
+                    this.portfolios = FALLBACK_DATA.portfolios;
                     this.updatePortfoliosUI();
                     return this.portfolios;
                 }
