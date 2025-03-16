@@ -33,10 +33,57 @@ def fetch_data_from_render(endpoint, payload=None):
         
         # Extraire les données JSON
         data = response.json()
+        
+        # Transformer les données si nécessaire (noms de clés français -> anglais)
+        if endpoint == "/api/perplexity/portfolios":
+            data = normalize_portfolio_data(data)
+            
         return data
     except Exception as e:
         print(f"❌ Erreur lors de la récupération des données depuis Render: {e}")
         return None
+
+def normalize_portfolio_data(data):
+    """Normalise les noms de clés des portefeuilles (français -> anglais)"""
+    for portfolio_type in ["agressif", "modere", "stable"]:
+        if portfolio_type in data:
+            new_assets = []
+            for asset in data[portfolio_type]:
+                new_asset = {}
+                
+                # Mapper les clés françaises vers l'anglais
+                if "nom" in asset:
+                    new_asset["name"] = asset["nom"]
+                elif "name" in asset:
+                    new_asset["name"] = asset["name"]
+                    
+                if "symbole" in asset:
+                    new_asset["symbol"] = asset["symbole"]
+                elif "symbol" in asset:
+                    new_asset["symbol"] = asset["symbol"]
+                    
+                if "type" in asset:
+                    new_asset["type"] = asset["type"]
+                    
+                if "allocation" in asset:
+                    new_asset["allocation"] = asset["allocation"]
+                    
+                if "justification" in asset:
+                    new_asset["reason"] = asset["justification"]
+                elif "reason" in asset:
+                    new_asset["reason"] = asset["reason"]
+                
+                # Assurer que change existe toujours, même à 0
+                if "change" in asset:
+                    new_asset["change"] = asset["change"]
+                else:
+                    new_asset["change"] = 0
+                    
+                new_assets.append(new_asset)
+            
+            data[portfolio_type] = new_assets
+            
+    return data
 
 def get_financial_news():
     """Récupère les actualités financières via Render/Perplexity"""
@@ -90,7 +137,48 @@ def get_portfolio_recommendations():
     if 'lastUpdated' not in portfolios_data:
         portfolios_data['lastUpdated'] = datetime.now().isoformat()
     
+    # Valider et standardiser la structure des portefeuilles
+    portfolios_data = validate_portfolio_structure(portfolios_data)
+    
     return portfolios_data
+
+def validate_portfolio_structure(data):
+    """Valide et corrige la structure des portefeuilles"""
+    required_keys = ["agressif", "modere", "stable", "marketContext", "lastUpdated"]
+    for key in required_keys:
+        if key not in data:
+            if key == "lastUpdated":
+                data[key] = datetime.now().isoformat()
+            elif key == "marketContext":
+                data[key] = {
+                    "mainTrend": "neutral",
+                    "volatilityLevel": "medium",
+                    "keyEvents": [],
+                    "sectorOutlook": {}
+                }
+            else:
+                data[key] = []
+    
+    # Standardiser le format de chaque élément de portefeuille
+    for portfolio_type in ["agressif", "modere", "stable"]:
+        standardized_assets = []
+        for asset in data[portfolio_type]:
+            # Créer un dictionnaire avec les bonnes clés (en anglais)
+            standardized_asset = {
+                "name": asset.get("name") or asset.get("nom", ""),
+                "symbol": asset.get("symbol") or asset.get("symbole", ""),
+                "type": asset.get("type", ""),
+                "allocation": asset.get("allocation", 0),
+                "reason": asset.get("reason") or asset.get("justification", ""),
+                "change": asset.get("change", 0),  # Valeur par défaut
+                "sector": asset.get("sector", "")
+            }
+            standardized_assets.append(standardized_asset)
+        
+        # Remplacer les données originales par les données standardisées
+        data[portfolio_type] = standardized_assets
+    
+    return data
 
 def validate_news_structure(data):
     """Valide et corrige la structure des actualités"""
@@ -321,17 +409,17 @@ def generate_fallback_portfolios():
     """Génère des données de portefeuilles de secours"""
     print("⚠️ Génération de données de portefeuilles de secours")
     
-    # Portefeuille agressif
+    # Portefeuille agressif - MODIFIÉ AVEC LES BONNES CLÉS
     aggressive_portfolio = [
         {
-            "name": "Apple Inc.",
-            "symbol": "AAPL",
+            "name": "Apple Inc.",                 # Changé de "nom" à "name"
+            "symbol": "AAPL",                     # Changé de "symbole" à "symbol" 
             "type": "Action",
             "allocation": 15,
             "reason": "Leader technologique avec potentiel de croissance",
             "sector": "Technologie",
             "risk": "medium",
-            "change": 1.8
+            "change": 1.8                         # Ajouté le champ "change" obligatoire
         },
         {
             "name": "NVIDIA Corporation",
