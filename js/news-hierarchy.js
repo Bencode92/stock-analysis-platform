@@ -335,7 +335,8 @@ function displayRecentNews(news) {
                           
         // Texte descriptif de l'impact
         const impactText = item.impact === 'negative' ? 'Impact négatif' : 
-                         item.impact === 'positive' ? 'Impact positif' : 'Impact neutre';
+                         item.impact === 'positive' ? 'Impact positif' : 
+                         'Impact neutre';
 
         const newsCard = document.createElement('div');
         newsCard.className = 'news-card';
@@ -353,7 +354,7 @@ function displayRecentNews(news) {
                         <span class="news-time">${item.time || ''}</span>
                     </div>
                 </div>
-                <div class="mb-2">
+                <div class="indicators-container">
                     <span class="impact-indicator ${impactClass}">${impactText}</span>
                     <span class="impact-indicator">${item.category || 'Finance'}</span>
                 </div>
