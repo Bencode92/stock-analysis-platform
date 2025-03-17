@@ -15,8 +15,8 @@
     <link rel="stylesheet" href="events-style.css">
     <!-- Ajout du script events-loader.js -->
     <script src="events-loader.js"></script>
-    <!-- Ajout du nouveau script de redémarrage pour événements -->
-    <script src="event-renderer.js"></script>
+    <!-- Ajout du script de filtrage des événements par période -->
+    <script src="js/events-filter.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -734,13 +734,16 @@
                             <i class="fas fa-calendar-alt mr-2"></i>ÉVÉNEMENTS À VENIR
                         </h2>
                         <div class="flex gap-2">
-                            <button id="high-impact-btn" class="text-xs text-red-500 px-2 py-1 border border-red-500 border-opacity-30 rounded filter-button">
-                                Impact élevé
+                            <button id="today-btn" class="text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded filter-active">
+                                Aujourd'hui
                             </button>
-                            <button id="medium-impact-btn" class="text-xs text-yellow-500 px-2 py-1 border border-yellow-500 border-opacity-30 rounded filter-button">
-                                Impact moyen
+                            <button id="week-btn" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded">
+                                Cette semaine
                             </button>
-                            <button id="all-impact-btn" class="text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded filter-button active">
+                            <button id="essential-btn" class="text-xs text-red-500 px-2 py-1 border border-red-500 border-opacity-30 rounded">
+                                Essentiels
+                            </button>
+                            <button id="all-events-btn" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded">
                                 Tous
                             </button>
                         </div>
@@ -1010,49 +1013,6 @@
             }
             
             updateLastUpdateTime();
-            
-            // Gestionnaire pour les filtres d'événements
-            const highImpactBtn = document.getElementById('high-impact-btn');
-            const mediumImpactBtn = document.getElementById('medium-impact-btn');
-            const allImpactBtn = document.getElementById('all-impact-btn');
-            
-            if (highImpactBtn && mediumImpactBtn && allImpactBtn) {
-                // Filtres pour les événements
-                highImpactBtn.addEventListener('click', function() {
-                    toggleActiveFilter(this);
-                    filterEventsByImpact('high');
-                });
-                
-                mediumImpactBtn.addEventListener('click', function() {
-                    toggleActiveFilter(this);
-                    filterEventsByImpact('medium');
-                });
-                
-                allImpactBtn.addEventListener('click', function() {
-                    toggleActiveFilter(this);
-                    filterEventsByImpact('all');
-                });
-            }
-            
-            function filterEventsByImpact(impactLevel) {
-                const eventElements = document.querySelectorAll('#events-container .event-card');
-                
-                eventElements.forEach(element => {
-                    if (impactLevel === 'all') {
-                        element.style.display = 'flex';
-                    } else {
-                        const impact = element.dataset.impact;
-                        element.style.display = (impact === impactLevel) ? 'flex' : 'none';
-                    }
-                });
-            }
-            
-            function toggleActiveFilter(button) {
-                document.querySelectorAll('.filter-button.active').forEach(el => {
-                    el.classList.remove('active');
-                });
-                button.classList.add('active');
-            }
         });
     </script>
 </body>
