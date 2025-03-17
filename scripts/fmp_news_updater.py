@@ -3,11 +3,11 @@
 
 """
 Script d'extraction des actualités et événements depuis Financial Modeling Prep
+- General News API: Pour l'actualité économique générale (priorité)
+- FMP Articles API: Pour les articles rédigés par FMP (analyses générales)
 - Stock News API: Pour les actions et ETF
 - Crypto News API: Pour les cryptomonnaies
-- General News API: Pour l'actualité économique générale
 - Press Releases API: Pour les communiqués de presse des entreprises
-- FMP Articles API: Pour les articles rédigés par FMP
 """
 
 import os
@@ -27,15 +27,21 @@ NEWS_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__
 CONFIG = {
     "api_key": os.environ.get("FMP_API_KEY", ""),
     "endpoints": {
+        "general_news": "https://financialmodelingprep.com/stable/news/general-latest",
+        "fmp_articles": "https://financialmodelingprep.com/stable/fmp-articles",
         "stock_news": "https://financialmodelingprep.com/stable/news/stock-latest",
         "crypto_news": "https://financialmodelingprep.com/stable/news/crypto-latest", 
-        "general_news": "https://financialmodelingprep.com/stable/news/general-latest",
         "press_releases": "https://financialmodelingprep.com/stable/news/press-releases-latest",
-        "fmp_articles": "https://financialmodelingprep.com/stable/fmp-articles",
         "earnings_calendar": "https://financialmodelingprep.com/api/v3/earning_calendar",
         "economic_calendar": "https://financialmodelingprep.com/api/v3/economic_calendar"
     },
-    "news_limit": 30,  # Nombre d'actualités par catégorie
+    "news_limits": {
+        "general_news": 50,     # Plus d'actualités générales
+        "fmp_articles": 30,     # Articles d'analyse prioritaires
+        "stock_news": 20,       # Actualités spécifiques aux actions
+        "crypto_news": 15,      # Actualités crypto
+        "press_releases": 10    # Communiqués de presse
+    },
     "days_ahead": 14   # Nombre de jours à l'avance pour les événements
 }
 
@@ -69,40 +75,40 @@ def fetch_api_data(endpoint, params=None):
         logger.error(f"❌ Erreur lors de la récupération depuis {endpoint}: {str(e)}")
         return []
 
+def get_general_news():
+    """Récupère les actualités économiques générales (priorité la plus élevée)"""
+    params = {
+        "limit": CONFIG["news_limits"]["general_news"]
+    }
+    return fetch_api_data(CONFIG["endpoints"]["general_news"], params)
+
+def get_fmp_articles():
+    """Récupère les articles rédigés par FMP (analyses générales)"""
+    params = {
+        "limit": CONFIG["news_limits"]["fmp_articles"]
+    }
+    return fetch_api_data(CONFIG["endpoints"]["fmp_articles"], params)
+
 def get_stock_news():
     """Récupère les actualités des actions"""
     params = {
-        "limit": CONFIG["news_limit"]
+        "limit": CONFIG["news_limits"]["stock_news"]
     }
     return fetch_api_data(CONFIG["endpoints"]["stock_news"], params)
 
 def get_crypto_news():
     """Récupère les actualités des cryptomonnaies"""
     params = {
-        "limit": CONFIG["news_limit"]
+        "limit": CONFIG["news_limits"]["crypto_news"]
     }
     return fetch_api_data(CONFIG["endpoints"]["crypto_news"], params)
-
-def get_general_news():
-    """Récupère les actualités économiques générales"""
-    params = {
-        "limit": CONFIG["news_limit"]
-    }
-    return fetch_api_data(CONFIG["endpoints"]["general_news"], params)
 
 def get_press_releases():
     """Récupère les communiqués de presse"""
     params = {
-        "limit": CONFIG["news_limit"]
+        "limit": CONFIG["news_limits"]["press_releases"]
     }
     return fetch_api_data(CONFIG["endpoints"]["press_releases"], params)
-
-def get_fmp_articles():
-    """Récupère les articles rédigés par FMP"""
-    params = {
-        "limit": CONFIG["news_limit"]
-    }
-    return fetch_api_data(CONFIG["endpoints"]["fmp_articles"], params)
 
 def get_earnings_calendar():
     """Récupère le calendrier des résultats d'entreprises"""
@@ -126,18 +132,53 @@ def get_economic_calendar():
     }
     return fetch_api_data(CONFIG["endpoints"]["economic_calendar"], params)
 
-def determine_category(article):
-    """Détermine la catégorie de l'actualité"""
+def determine_category(article, source=None):
+    """
+    Détermine la catégorie de l'actualité
+    - generale: actualités économiques générales et analyses de marché
+    - crypto: actualités cryptomonnaies
+    - marches: actualités ETF, indices, taux d'intérêt
+    - entreprises: actualités spécifiques aux entreprises
+    """
+    # Source prioritaire pour les articles FMP et general_news
+    if source == "fmp_articles" or source == "general_news":
+        return "generale"
+        
+    # Vérification du symbole pour la crypto
     if article.get("symbol") and any(ticker in str(article.get("symbol")) for ticker in ["BTC", "ETH", "CRYPTO", "COIN"]):
         return "crypto"
         
+    # Analyse du texte pour déterminer la catégorie
     text = (article.get("text", "") + " " + article.get("title", "")).lower()
     
-    if any(word in text for word in ["crypto", "bitcoin", "ethereum", "blockchain"]):
+    # Mots-clés par catégorie
+    generale_keywords = [
+        "economy", "économie", "market overview", "financial markets", "global markets", 
+        "market update", "market outlook", "economic outlook", "bilan", "perspectives", 
+        "weekly summary", "monthly report", "central bank", "banque centrale", "fed",
+        "reserve fédérale", "federal reserve", "bce", "ecb", "government", "politique",
+        "policy", "market news", "markets today", "today in finance"
+    ]
+    
+    crypto_keywords = [
+        "crypto", "bitcoin", "ethereum", "blockchain", "token", "defi", "nft", 
+        "altcoin", "binance", "coinbase", "mining", "miner", "wallet", "staking",
+        "web3", "cryptocurrency"
+    ]
+    
+    markets_keywords = [
+        "etf", "fund", "fonds", "index", "s&p", "dow", "cac", "nasdaq", "bond", "treasury", 
+        "yield", "matières premières", "commodities", "oil", "gold", "pétrole", "or", 
+        "interest rate", "taux d'intérêt", "rendement", "bourse", "stock market", 
+        "bull market", "bear market", "rally", "correction", "volatility", "vix"
+    ]
+    
+    # Vérifier les catégories par priorité
+    if any(word in text for word in generale_keywords):
+        return "generale"
+    elif any(word in text for word in crypto_keywords):
         return "crypto"
-    elif any(word in text for word in ["fed", "bce", "inflation", "taux", "pib", "interest rate"]):
-        return "economie"
-    elif any(word in text for word in ["etf", "fund", "index", "s&p", "dow", "cac", "nasdaq", "bond", "treasury", "yield"]):
+    elif any(word in text for word in markets_keywords):
         return "marches"
     else:
         return "entreprises"
@@ -152,9 +193,23 @@ def determine_country(article):
         country = "fr"
     
     text = (article.get("text", "") + " " + article.get("title", "")).lower()
-    french_keywords = ["france", "français", "paris", "cac", "bourse de paris", "euronext"]
+    french_keywords = [
+        "france", "français", "paris", "cac", "bourse de paris", "euronext",
+        "amf", "autorité des marchés", "bercy", "matignon", "elysée", "bpifrance",
+        "française", "hexagone", "société générale", "bnp", "crédit agricole",
+        "lvmh", "l'oréal", "air liquide", "safran", "psa", "renault", "orange",
+        "sanofi", "total", "engie", "veolia", "carrefour", "michelin", "schneider"
+    ]
+    
+    european_keywords = [
+        "europe", "eurozone", "euro", "european", "européen", "bruxelles",
+        "allemagne", "italie", "espagne", "bce", "ecb", "ue", "eu", "commission européenne"
+    ]
     
     if any(keyword in text for keyword in french_keywords):
+        country = "fr"
+    elif any(keyword in text for keyword in european_keywords) and country != "fr":
+        # Marquer européen comme français si pas déjà identifié comme français
         country = "fr"
         
     return country
@@ -178,8 +233,19 @@ def determine_impact(article):
     # Analyse basique du texte si pas de sentiment fourni
     text = (article.get("text", "") + " " + article.get("title", "")).lower()
     
-    positive_words = ["surge", "soar", "gain", "rise", "jump", "boost", "recovery", "profit", "beat", "success", "bullish"]
-    negative_words = ["drop", "fall", "decline", "loss", "plunge", "tumble", "crisis", "risk", "warning", "concern", "bearish"]
+    positive_words = [
+        "surge", "soar", "gain", "rise", "jump", "boost", "recovery", "profit", 
+        "beat", "success", "bullish", "upward", "rally", "outperform", "growth",
+        "positive", "optimistic", "momentum", "exceed", "improvement", "confidence",
+        "strong", "strength", "uptick", "upgrade", "hausse", "progresse", "augmente"
+    ]
+    
+    negative_words = [
+        "drop", "fall", "decline", "loss", "plunge", "tumble", "crisis", "risk", 
+        "warning", "concern", "bearish", "downward", "slump", "underperform", "recession",
+        "negative", "pessimistic", "weakness", "miss", "downgrade", "cut", "reduction",
+        "pressure", "struggle", "slowdown", "baisse", "chute", "recule", "diminue" 
+    ]
     
     positive_count = sum(1 for word in positive_words if word in text)
     negative_count = sum(1 for word in negative_words if word in text)
@@ -213,7 +279,7 @@ def format_time(date_str):
         # Fallback en cas d'erreur
         return "00:00"
 
-def normalize_article(article):
+def normalize_article(article, source=None):
     """Normalise les différents formats d'articles FMP en un format standard"""
     # Gérer les différents formats selon l'endpoint
     
@@ -225,14 +291,14 @@ def normalize_article(article):
         text = article.get("content", "")
         date = article.get("date", "")
         symbol = article.get("tickers", "")
-        source = article.get("site", "Financial Modeling Prep")
+        site = article.get("site", "Financial Modeling Prep")
         url = article.get("link", "")
     # Pour les autres endpoints
     else:
         text = article.get("text", "")
         date = article.get("publishedDate", "")
         symbol = article.get("symbol", "")
-        source = article.get("site", article.get("publisher", ""))
+        site = article.get("site", article.get("publisher", ""))
         url = article.get("url", "")
     
     # Retourner un article normalisé
@@ -241,40 +307,71 @@ def normalize_article(article):
         "text": text,
         "publishedDate": date,
         "symbol": symbol,
-        "site": source,
-        "url": url
+        "site": site,
+        "url": url,
+        "source_type": source  # Ajout du type de source pour la classification
     }
 
-def process_news_data(all_news):
-    """Traite et formate les actualités FMP pour correspondre au format TradePulse"""
+def process_news_data(news_sources):
+    """
+    Traite et formate les actualités FMP pour correspondre au format TradePulse
+    
+    news_sources: dictionnaire de listes d'articles par source 
+    (ex: {"general_news": [...], "fmp_articles": [...], ...})
+    """
     formatted_data = {
-        "us": [],
-        "france": [],
+        "generale": [],     # Nouvelle catégorie principale pour actualités générales
+        "entreprises": [],  # Actualités spécifiques d'entreprises
+        "marches": [],      # Actualités sur les marchés, ETFs, indices
+        "crypto": [],       # Actualités cryptomonnaies
+        "us": [],           # Actualités US (toutes catégories)
+        "france": [],       # Actualités France (toutes catégories)
         "lastUpdated": datetime.now().isoformat()
     }
     
-    for article in all_news:
-        # Normaliser les champs d'articles
-        normalized = normalize_article(article)
-        
-        # Données essentielles
-        news_item = {
-            "title": normalized["title"],
-            "content": normalized["text"],
-            "source": normalized["site"],
-            "date": format_date(normalized["publishedDate"]),
-            "time": format_time(normalized["publishedDate"]),
-            "category": determine_category(normalized),
-            "impact": determine_impact(normalized),
-            "country": determine_country(normalized),
-            "url": normalized.get("url", "")
-        }
-        
-        # Ajouter à la section appropriée
-        if news_item["country"] == "fr":
-            formatted_data["france"].append(news_item)
-        else:
-            formatted_data["us"].append(news_item)
+    # Traiter chaque source d'actualités
+    all_news = []
+    
+    for source_type, articles in news_sources.items():
+        for article in articles:
+            # Normaliser l'article
+            normalized = normalize_article(article, source_type)
+            
+            # Données essentielles
+            news_item = {
+                "title": normalized["title"],
+                "content": normalized["text"],
+                "source": normalized["site"],
+                "date": format_date(normalized["publishedDate"]),
+                "time": format_time(normalized["publishedDate"]),
+                "category": determine_category(normalized, source_type),
+                "impact": determine_impact(normalized),
+                "country": determine_country(normalized),
+                "url": normalized.get("url", "")
+            }
+            
+            # Ajouter à toutes les catégories appropriées
+            all_news.append(news_item)
+            
+            # Ajouter à la section par pays
+            if news_item["country"] == "fr":
+                formatted_data["france"].append(news_item)
+            else:
+                formatted_data["us"].append(news_item)
+                
+            # Ajouter à la section par catégorie
+            category = news_item["category"]
+            if category in formatted_data:
+                formatted_data[category].append(news_item)
+    
+    # Trier chaque catégorie par date (plus récent en premier)
+    for category in formatted_data:
+        if category != "lastUpdated":
+            formatted_data[category] = sorted(
+                formatted_data[category], 
+                key=lambda x: (x["date"], x["time"]), 
+                reverse=True
+            )
     
     return formatted_data
 
@@ -315,8 +412,12 @@ def update_news_json_file(news_data, events):
     """Met à jour le fichier news.json avec les données formatées"""
     try:
         output_data = {
-            "us": news_data["us"][:15],  # Limiter à 15 actualités américaines
-            "france": news_data["france"][:15],  # Limiter à 15 actualités françaises
+            "generale": news_data["generale"][:20],    # Actualités générales (priorité)
+            "entreprises": news_data["entreprises"][:10], # Entreprises
+            "marches": news_data["marches"][:10],      # Marchés
+            "crypto": news_data["crypto"][:5],         # Crypto
+            "us": news_data["us"][:15],                # US
+            "france": news_data["france"][:15],        # France
             "events": events,
             "lastUpdated": datetime.now().isoformat()
         }
@@ -340,28 +441,37 @@ def main():
         existing_data = read_existing_news()
         
         # 1. Récupérer les différentes actualités
+        general_news = get_general_news()
+        fmp_articles = get_fmp_articles()
         stock_news = get_stock_news()
         crypto_news = get_crypto_news()
-        general_news = get_general_news()
         press_releases = get_press_releases()
-        fmp_articles = get_fmp_articles()
         
         # 2. Récupérer les événements
         earnings = get_earnings_calendar()
         economic = get_economic_calendar()
         
-        # 3. Combiner toutes les actualités
-        all_news = stock_news + crypto_news + general_news + press_releases + fmp_articles
-        logger.info(f"Total des actualités récupérées: {len(all_news)}")
+        # 3. Organiser les sources d'actualités
+        news_sources = {
+            "general_news": general_news,
+            "fmp_articles": fmp_articles,
+            "stock_news": stock_news,
+            "crypto_news": crypto_news,
+            "press_releases": press_releases
+        }
+        
+        # Compter le nombre total d'actualités
+        total_news = sum(len(articles) for articles in news_sources.values())
+        logger.info(f"Total des actualités récupérées: {total_news}")
         
         # Vérifier si nous avons des données
-        if not all_news:
+        if total_news == 0:
             logger.warning("Aucune actualité récupérée, utilisation des données existantes")
             if existing_data:
                 return True
         
         # 4. Traiter et formater les données
-        news_data = process_news_data(all_news)
+        news_data = process_news_data(news_sources)
         events = process_events_data(earnings, economic)
         
         # 5. Mettre à jour le fichier JSON
