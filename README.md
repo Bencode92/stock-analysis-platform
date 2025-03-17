@@ -1,33 +1,35 @@
 # TradePulse - Plateforme d'Analyse Financière en Temps Réel
 
-TradePulse est une application web moderne d'analyse financière qui utilise l'intelligence artificielle pour fournir des insights en temps réel sur les marchés financiers.
+TradePulse est une application web moderne d'analyse financière qui fournit des insights en temps réel sur les marchés financiers.
 
-## 🆕 Mise à jour importante : Système hybride avec GitHub Actions
+## 🆕 Mise à jour importante : Intégration avec Financial Modeling Prep (FMP)
 
-Nous avons implémenté un nouveau système hybride qui utilise GitHub Actions pour générer périodiquement des données financières via Perplexity AI, puis les stocke dans des fichiers JSON statiques. Cette approche offre plusieurs avantages :
+Nous avons remplacé l'intégration avec Perplexity AI par Financial Modeling Prep (FMP), une API spécialisée dans les données financières. Cette nouvelle intégration offre plusieurs avantages :
 
-- **Économie de crédits API** - Génération périodique plutôt qu'à chaque visite utilisateur
-- **Performances améliorées** - Chargement rapide de fichiers JSON au lieu d'appels API
-- **Fiabilité accrue** - Fonctionnement même lorsque l'API est indisponible
-- **Limites contrôlées** - Recherches personnalisées limitées à 10 par jour par utilisateur
+- **Données financières spécialisées** - Informations précises sur les actions, ETF et cryptomonnaies
+- **Sources vérifiables** - Actualités provenant de sources financières reconnues
+- **Événements économiques** - Calendrier des résultats d'entreprises et annonces économiques
+- **Classification optimisée** - Meilleure détection des pays, impacts et catégories
+- **Performance améliorée** - Utilisation de GitHub Actions et fichiers JSON statiques
 
-Pour configurer ce système, consultez le fichier [SETUP.md](SETUP.md).
+Pour en savoir plus sur cette intégration, consultez le fichier [docs/FMP-INTEGRATION.md](docs/FMP-INTEGRATION.md).
 
 ## Fonctionnalités principales
 
-- **Actualités financières en temps réel** : Obtient les dernières actualités financières d'aujourd'hui via l'API Perplexity
+- **Actualités financières en temps réel** : Obtient les dernières actualités financières via l'API FMP
+- **Suivi des événements économiques** : Affiche les événements à venir (résultats, annonces, etc.)
 - **Analyse sectorielle** : Identifie les secteurs haussiers et baissiers basés sur l'actualité récente
 - **Recommandations d'instruments financiers** : Suggère des actions, ETF et cryptomonnaies pertinentes
-- **Portefeuille optimisé** : Génère un portefeuille équilibré adapté au contexte actuel avec Perplexity AI
+- **Portefeuille optimisé** : Présente des portefeuilles équilibrés adaptés à différents profils de risque
 - **Visualisation intuitive** : Présente les données de manière claire et interactive
 
 ## Améliorations techniques
 
-### 1. Intégration API et Génération Statique
+### 1. Intégration FMP et Génération Statique
 
-- Intégration directe avec l'API Perplexity via proxy
-- **NOUVEAU** : Génération périodique des données via GitHub Actions
-- Utilisation du modèle `sonar-medium-online` pour obtenir des actualités en temps réel
+- Intégration avec Financial Modeling Prep pour des données financières spécialisées
+- Génération périodique des données via GitHub Actions (toutes les 4 heures)
+- Classification automatique des actualités par pays, catégorie et impact
 
 ### 2. Architecture modulaire
 
@@ -37,8 +39,8 @@ Pour configurer ce système, consultez le fichier [SETUP.md](SETUP.md).
 
 ### 3. Optimisation des performances
 
-- **NOUVEAU** : Système de chargement des données statiques
-- Mécanisme de fallback robuste
+- Système de chargement des données statiques depuis JSON
+- Mécanisme de fallback robuste en cas d'indisponibilité de l'API
 - Mise à jour périodique des données en arrière-plan
 
 ### 4. Expérience utilisateur
@@ -54,17 +56,29 @@ tradepulse/
 ├── .github/            # Configuration GitHub Actions
 │   └── workflows/      # Workflows automatisés
 ├── data/               # Données financières statiques générées
-│   ├── news.json       # Actualités financières
+│   ├── news.json       # Actualités et événements financiers
 │   └── portfolios.json # Recommandations de portefeuille
+├── docs/               # Documentation
+│   └── FMP-INTEGRATION.md # Documentation sur l'intégration FMP
 ├── scripts/            # Scripts pour la génération de données
-│   └── update_financial_data.py   # Script principal
+│   └── fmp_news_updater.py # Script d'extraction des données FMP
 ├── public/             # Ressources statiques
-├── aiintegration.js    # Intégration Perplexity adaptée
+├── aiintegration.js    # Module d'intégration des données
 ├── index.html          # Page d'accueil
 ├── actualites.html     # Page des actualités
 ├── portefeuille.html   # Page des portefeuilles
 └── README.md           # Documentation
 ```
+
+## Configuration requise
+
+Pour utiliser l'intégration FMP, vous devez:
+
+1. Créer un compte sur [Financial Modeling Prep](https://financialmodelingprep.com/)
+2. Souscrire au plan STARTER (recommandé, 29$/mois)
+3. Ajouter votre clé API comme secret GitHub (`FMP_API_KEY`)
+
+Consultez [docs/FMP-INTEGRATION.md](docs/FMP-INTEGRATION.md) pour plus de détails.
 
 ## Contributeurs
 
