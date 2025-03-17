@@ -1,0 +1,57 @@
+/* 
+ * news-impact-indicators.css
+ * Styles spécifiques pour les indicateurs d'impact dans la section des actualités générales
+ */
+
+/* Styles de base pour tous les indicateurs d'impact */
+.impact-indicator {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin-right: 6px;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+}
+
+/* Indicateurs dans le contenu des news-content (section générale) */
+.news-content .impact-indicator {
+    margin-top: 5px;
+    margin-bottom: 10px;
+}
+
+/* Couleurs spécifiques selon l'impact */
+.impact-positive, .impact-indicator.impact-positive {
+    background-color: rgba(16, 185, 129, 0.2);
+    color: #10B981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.impact-negative, .impact-indicator.impact-negative {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #EF4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.impact-neutral, .impact-indicator.impact-neutral {
+    background-color: rgba(234, 179, 8, 0.2);
+    color: #EAB308;
+    border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+/* Espacement entre les métadonnées et les indicateurs */
+.news-content .news-meta + div {
+    margin-top: 10px;
+    margin-bottom: 10px;
+}
+
+/* S'assurer que tous les indicateurs s'affichent bien en ligne */
+.news-content .indicators-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 10px;
+    margin-bottom: 12px;
+}
