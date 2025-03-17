@@ -15,8 +15,8 @@
     <link rel="stylesheet" href="events-style.css">
     <!-- Ajout du script events-loader.js -->
     <script src="events-loader.js"></script>
-    <!-- Ajout du script de filtrage des événements par période -->
-    <script src="js/events-filter.js"></script>
+    <!-- Ajout du nouveau script de redémarrage pour événements -->
+    <script src="event-renderer.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -734,16 +734,13 @@
                             <i class="fas fa-calendar-alt mr-2"></i>ÉVÉNEMENTS À VENIR
                         </h2>
                         <div class="flex gap-2">
-                            <button id="today-btn" class="text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded filter-active">
-                                Aujourd'hui
+                            <button id="high-impact-btn" class="text-xs text-red-500 px-2 py-1 border border-red-500 border-opacity-30 rounded filter-button">
+                                Impact élevé
                             </button>
-                            <button id="week-btn" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded">
-                                Cette semaine
+                            <button id="medium-impact-btn" class="text-xs text-yellow-500 px-2 py-1 border border-yellow-500 border-opacity-30 rounded filter-button">
+                                Impact moyen
                             </button>
-                            <button id="essential-btn" class="text-xs text-red-500 px-2 py-1 border border-red-500 border-opacity-30 rounded">
-                                Essentiels
-                            </button>
-                            <button id="all-events-btn" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded">
+                            <button id="all-impact-btn" class="text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded filter-button active">
                                 Tous
                             </button>
                         </div>
@@ -782,12 +779,7 @@
                         </div>
                         
                         <div class="flex flex-wrap gap-2">
-                            <select id="sort-select" class="text-xs md:text-sm px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700 rounded-full">
-                                <option value="recent">Plus récent</option>
-                                <option value="older">Plus ancien</option>
-                                <option value="impact-high">Impact (élevé à faible)</option>
-                                <option value="impact-low">Impact (faible à élevé)</option>
-                            </select>
+                            <!-- Suppression du filtre "Plus récent" -->
                             <select id="impact-select" class="text-xs md:text-sm px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700 rounded-full">
                                 <option value="all">Tous impacts</option>
                                 <option value="positive">Positif</option>
@@ -837,6 +829,7 @@
 
     <script src="actualites.js"></script>
     <script src="js/news-hierarchy.js"></script>
+    <script src="js/news-filters.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -1013,6 +1006,49 @@
             }
             
             updateLastUpdateTime();
+            
+            // Gestionnaire pour les filtres d'événements
+            const highImpactBtn = document.getElementById('high-impact-btn');
+            const mediumImpactBtn = document.getElementById('medium-impact-btn');
+            const allImpactBtn = document.getElementById('all-impact-btn');
+            
+            if (highImpactBtn && mediumImpactBtn && allImpactBtn) {
+                // Filtres pour les événements
+                highImpactBtn.addEventListener('click', function() {
+                    toggleActiveFilter(this);
+                    filterEventsByImpact('high');
+                });
+                
+                mediumImpactBtn.addEventListener('click', function() {
+                    toggleActiveFilter(this);
+                    filterEventsByImpact('medium');
+                });
+                
+                allImpactBtn.addEventListener('click', function() {
+                    toggleActiveFilter(this);
+                    filterEventsByImpact('all');
+                });
+            }
+            
+            function filterEventsByImpact(impactLevel) {
+                const eventElements = document.querySelectorAll('#events-container .event-card');
+                
+                eventElements.forEach(element => {
+                    if (impactLevel === 'all') {
+                        element.style.display = 'flex';
+                    } else {
+                        const impact = element.dataset.impact;
+                        element.style.display = (impact === impactLevel) ? 'flex' : 'none';
+                    }
+                });
+            }
+            
+            function toggleActiveFilter(button) {
+                document.querySelectorAll('.filter-button.active').forEach(el => {
+                    el.classList.remove('active');
+                });
+                button.classList.add('active');
+            }
         });
     </script>
 </body>
