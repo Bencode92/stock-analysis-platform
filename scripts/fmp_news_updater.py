@@ -3,11 +3,11 @@
 
 """
 Script d'extraction des actualités et événements depuis Financial Modeling Prep
-- General News API: Pour l'actualité économique générale (priorité)
-- FMP Articles API: Pour les articles rédigés par FMP (analyses générales)
+- General News API: Pour l'actualité économique générale
 - Stock News API: Pour les actions et ETF
 - Crypto News API: Pour les cryptomonnaies
 - Press Releases API: Pour les communiqués de presse des entreprises
+- FMP Articles API: Pour les articles rédigés par FMP
 """
 
 import os
@@ -36,21 +36,17 @@ CONFIG = {
         "economic_calendar": "https://financialmodelingprep.com/api/v3/economic_calendar"
     },
     "news_limits": {
-        "general_news": 15,    # Réduit à 15 articles récupérés
-        "fmp_articles": 10,    # Réduit à 10 articles
-        "stock_news": 10,      # Réduit à 10 articles
-        "crypto_news": 8,      # Réduit à 8 articles
-        "press_releases": 5    # Réduit à 5 articles
+        "general_news": 15,
+        "fmp_articles": 10,
+        "stock_news": 15,
+        "crypto_news": 10,
+        "press_releases": 5
     },
     "output_limits": {
-        "generale": 7,         # 7 actualités générales max
-        "entreprises": 5,      # 5 actualités d'entreprises max
-        "marches": 5,          # 5 actualités de marchés max 
-        "crypto": 3,           # 3 actualités crypto max
-        "us": 7,               # 7 actualités US max
-        "france": 5            # 5 actualités France max
+        "us": 15,
+        "france": 10
     },
-    "days_ahead": 5            # Réduit à 5 jours pour les événements futurs
+    "days_ahead": 7
 }
 
 def read_existing_news():
@@ -84,14 +80,14 @@ def fetch_api_data(endpoint, params=None):
         return []
 
 def get_general_news():
-    """Récupère les actualités économiques générales (priorité la plus élevée)"""
+    """Récupère les actualités économiques générales"""
     params = {
         "limit": CONFIG["news_limits"]["general_news"]
     }
     return fetch_api_data(CONFIG["endpoints"]["general_news"], params)
 
 def get_fmp_articles():
-    """Récupère les articles rédigés par FMP (analyses générales)"""
+    """Récupère les articles rédigés par FMP"""
     params = {
         "limit": CONFIG["news_limits"]["fmp_articles"]
     }
@@ -142,16 +138,13 @@ def get_economic_calendar():
 
 def determine_category(article, source=None):
     """
-    Détermine la catégorie de l'actualité
-    - generale: actualités économiques générales et analyses de marché
-    - crypto: actualités cryptomonnaies
-    - marches: actualités ETF, indices, taux d'intérêt
+    Détermine la catégorie de l'actualité:
+    - economie: actualités macro-économiques
+    - marches: actualités sur les indices, ETF, etc.
     - entreprises: actualités spécifiques aux entreprises
+    - crypto: actualités cryptomonnaies
+    - tech: actualités technologiques
     """
-    # Source prioritaire pour les articles FMP et general_news
-    if source == "fmp_articles" or source == "general_news":
-        return "generale"
-        
     # Vérification du symbole pour la crypto
     if article.get("symbol") and any(ticker in str(article.get("symbol")) for ticker in ["BTC", "ETH", "CRYPTO", "COIN"]):
         return "crypto"
@@ -159,54 +152,64 @@ def determine_category(article, source=None):
     # Analyse du texte pour déterminer la catégorie
     text = (article.get("text", "") + " " + article.get("title", "")).lower()
     
-    # Mots-clés par catégorie
-    generale_keywords = [
-        "economy", "économie", "market overview", "financial markets", "global markets", 
-        "market update", "market outlook", "economic outlook", "bilan", "perspectives", 
-        "weekly summary", "monthly report", "central bank", "banque centrale", "fed",
-        "reserve fédérale", "federal reserve", "bce", "ecb", "government", "politique",
-        "policy", "market news", "markets today", "today in finance"
-    ]
-    
+    # Catégorie crypto (priorité 1)
     crypto_keywords = [
         "crypto", "bitcoin", "ethereum", "blockchain", "token", "defi", "nft", 
         "altcoin", "binance", "coinbase", "mining", "miner", "wallet", "staking",
         "web3", "cryptocurrency"
     ]
     
-    markets_keywords = [
-        "etf", "fund", "fonds", "index", "s&p", "dow", "cac", "nasdaq", "bond", "treasury", 
-        "yield", "matières premières", "commodities", "oil", "gold", "pétrole", "or", 
-        "interest rate", "taux d'intérêt", "rendement", "bourse", "stock market", 
-        "bull market", "bear market", "rally", "correction", "volatility", "vix"
+    if any(word in text for word in crypto_keywords):
+        return "crypto"
+    
+    # Catégorie tech (priorité 2)
+    tech_keywords = [
+        "ai", "artificial intelligence", "machine learning", "data science", 
+        "software", "hardware", "tech", "technology", "startup", "app", 
+        "mobile", "cloud", "computing", "digital", "internet", "online", "web"
     ]
     
-    # Vérifier les catégories par priorité
-    if any(word in text for word in generale_keywords):
-        return "generale"
-    elif any(word in text for word in crypto_keywords):
-        return "crypto"
-    elif any(word in text for word in markets_keywords):
+    if any(word in text for word in tech_keywords):
+        return "tech"
+    
+    # Catégorie économie (priorité 3)
+    economie_keywords = [
+        "economy", "économie", "inflation", "gdp", "pib", "fed", "central bank",
+        "banque centrale", "interest rate", "taux d'intérêt", "economic", "unemployment",
+        "consumer", "spending", "policy", "fiscal", "monetary", "recession"
+    ]
+    
+    if any(word in text for word in economie_keywords):
+        return "economie"
+    
+    # Catégorie marchés (priorité 4)
+    marches_keywords = [
+        "etf", "fund", "fonds", "index", "indice", "s&p", "dow", "cac", "nasdaq", 
+        "bond", "treasury", "yield", "matières premières", "commodities", "oil", 
+        "gold", "pétrole", "or", "market", "stock market", "bull market", 
+        "bear market", "rally", "correction", "volatility", "vix"
+    ]
+    
+    if any(word in text for word in marches_keywords):
         return "marches"
-    else:
-        return "entreprises"
+    
+    # Par défaut: entreprises
+    return "entreprises"
 
 def determine_country(article):
-    """Détermine le pays de l'actualité (fr/us)"""
+    """Détermine le pays de l'actualité (france/us)"""
     # Par défaut aux États-Unis
     country = "us"
     
     # Vérifier si c'est français
     if article.get("symbol") and any(suffix in str(article.get("symbol")) for suffix in [".PA", ".PAR"]):
-        country = "fr"
+        country = "france"
     
     text = (article.get("text", "") + " " + article.get("title", "")).lower()
     french_keywords = [
         "france", "français", "paris", "cac", "bourse de paris", "euronext",
         "amf", "autorité des marchés", "bercy", "matignon", "elysée", "bpifrance",
-        "française", "hexagone", "société générale", "bnp", "crédit agricole",
-        "lvmh", "l'oréal", "air liquide", "safran", "psa", "renault", "orange",
-        "sanofi", "total", "engie", "veolia", "carrefour", "michelin", "schneider"
+        "française", "hexagone"
     ]
     
     european_keywords = [
@@ -215,10 +218,10 @@ def determine_country(article):
     ]
     
     if any(keyword in text for keyword in french_keywords):
-        country = "fr"
-    elif any(keyword in text for keyword in european_keywords) and country != "fr":
+        country = "france"
+    elif any(keyword in text for keyword in european_keywords) and country != "france":
         # Marquer européen comme français si pas déjà identifié comme français
-        country = "fr"
+        country = "france"
         
     return country
 
@@ -334,25 +337,14 @@ def remove_duplicates(news_list):
     return unique_news
 
 def process_news_data(news_sources):
-    """
-    Traite et formate les actualités FMP pour correspondre au format TradePulse
-    
-    news_sources: dictionnaire de listes d'articles par source 
-    (ex: {"general_news": [...], "fmp_articles": [...], ...})
-    """
+    """Traite et formate les actualités FMP pour correspondre au format TradePulse"""
     formatted_data = {
-        "generale": [],     # Nouvelle catégorie principale pour actualités générales
-        "entreprises": [],  # Actualités spécifiques d'entreprises
-        "marches": [],      # Actualités sur les marchés, ETFs, indices
-        "crypto": [],       # Actualités cryptomonnaies
-        "us": [],           # Actualités US (toutes catégories)
-        "france": [],       # Actualités France (toutes catégories)
+        "us": [],
+        "france": [],
         "lastUpdated": datetime.now().isoformat()
     }
     
     # Traiter chaque source d'actualités
-    all_news = []
-    
     for source_type, articles in news_sources.items():
         for article in articles:
             # Normaliser l'article
@@ -379,31 +371,25 @@ def process_news_data(news_sources):
                 "url": normalized.get("url", "")
             }
             
-            # Ajouter à toutes les catégories appropriées
-            all_news.append(news_item)
-            
             # Ajouter à la section par pays
-            if news_item["country"] == "fr":
+            if news_item["country"] == "france":
                 formatted_data["france"].append(news_item)
             else:
                 formatted_data["us"].append(news_item)
-                
-            # Ajouter à la section par catégorie
-            category = news_item["category"]
-            if category in formatted_data:
-                formatted_data[category].append(news_item)
     
     # Trier chaque catégorie par date (plus récent en premier)
-    for category in formatted_data:
-        if category != "lastUpdated":
-            formatted_data[category] = sorted(
-                formatted_data[category], 
-                key=lambda x: (x["date"], x["time"]), 
-                reverse=True
-            )
-            
-            # Supprimer les doublons
-            formatted_data[category] = remove_duplicates(formatted_data[category])
+    for country in ["us", "france"]:
+        formatted_data[country] = sorted(
+            formatted_data[country], 
+            key=lambda x: (x["date"], x["time"]), 
+            reverse=True
+        )
+        
+        # Supprimer les doublons
+        formatted_data[country] = remove_duplicates(formatted_data[country])
+        
+        # Limiter le nombre d'articles
+        formatted_data[country] = formatted_data[country][:CONFIG["output_limits"][country]]
     
     return formatted_data
 
@@ -446,15 +432,9 @@ def process_events_data(earnings, economic):
 def update_news_json_file(news_data, events):
     """Met à jour le fichier news.json avec les données formatées"""
     try:
-        output_limits = CONFIG["output_limits"]
-        
         output_data = {
-            "generale": news_data["generale"][:output_limits["generale"]],
-            "entreprises": news_data["entreprises"][:output_limits["entreprises"]],
-            "marches": news_data["marches"][:output_limits["marches"]],
-            "crypto": news_data["crypto"][:output_limits["crypto"]],
-            "us": news_data["us"][:output_limits["us"]],
-            "france": news_data["france"][:output_limits["france"]],
+            "us": news_data["us"],
+            "france": news_data["france"],
             "events": events,
             "lastUpdated": datetime.now().isoformat()
         }
