@@ -10,6 +10,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="actualites-style.css">
+    <!-- Ajout du script events-loader.js -->
+    <script src="events-loader.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -696,11 +698,11 @@
                     <p class="text-sm text-gray-400" id="currentDate">11 MARS 2025</p>
                 </div>
                 
-                <!-- Section Événements (déplacée en haut) -->
+                <!-- Section Événements (améliorée) -->
                 <div class="mb-10 p-4 glassmorphism rounded-xl" id="events-section">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg font-semibold text-green-400">
-                            ÉVÉNEMENTS À VENIR
+                            <i class="fas fa-calendar-alt mr-2"></i>ÉVÉNEMENTS À VENIR
                         </h2>
                         <div class="flex gap-2">
                             <button id="today-btn" class="text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded filter-active">
@@ -709,13 +711,16 @@
                             <button id="week-btn" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded">
                                 Cette semaine
                             </button>
+                            <button id="essential-btn" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded">
+                                Essentiels
+                            </button>
                         </div>
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="events-container">
-                        <div class="loading-state">
-                            <div class="loading-spinner"></div>
-                            <p>Chargement des événements à venir...</p>
+                        <div class="col-span-3 flex items-center justify-center p-6">
+                            <div class="loading-spinner mr-3"></div>
+                            <p class="text-gray-400">Chargement des événements économiques...</p>
                         </div>
                     </div>
                 </div>
