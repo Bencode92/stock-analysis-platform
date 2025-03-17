@@ -328,6 +328,15 @@ function displayRecentNews(news) {
 
     // Créer les cartes d'actualités régulières
     news.forEach((item, index) => {
+        // Détermine la classe CSS basée sur l'impact
+        const impactClass = item.impact === 'negative' ? 'impact-negative' : 
+                          item.impact === 'positive' ? 'impact-positive' : 
+                          'impact-neutral';
+                          
+        // Texte descriptif de l'impact
+        const impactText = item.impact === 'negative' ? 'Impact négatif' : 
+                         item.impact === 'positive' ? 'Impact positif' : 'Impact neutre';
+
         const newsCard = document.createElement('div');
         newsCard.className = 'news-card';
         newsCard.setAttribute('data-category', item.category || 'general');
@@ -343,6 +352,10 @@ function displayRecentNews(news) {
                         <span class="news-date">${item.date || ''}</span>
                         <span class="news-time">${item.time || ''}</span>
                     </div>
+                </div>
+                <div class="mb-2">
+                    <span class="impact-indicator ${impactClass}">${impactText}</span>
+                    <span class="impact-indicator">${item.category || 'Finance'}</span>
                 </div>
                 <h3>${item.title}</h3>
                 <p>${item.content || ''}</p>
