@@ -15,6 +15,7 @@ import json
 import requests
 import logging
 from datetime import datetime, timedelta
+import re
 
 # Configuration du logger
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -48,6 +49,36 @@ CONFIG = {
     },
     "days_ahead": 7
 }
+
+# Mots-clés pour le score des actualités
+NEWS_KEYWORDS = {
+    "high_impact": [
+        "crash", "collapse", "crise", "recession", "fail", "bankruptcy", "récession", "banque centrale", 
+        "inflation", "hike", "drop", "plunge", "default", "fitch downgrade", "downgrade", "hausse des taux", 
+        "bond yield", "yield curve", "sell-off", "bear market", "effondrement", "chute", "krach",
+        "dégringolade", "catastrophe", "urgence", "alerte", "défaut", "risque", "choc", "contagion",
+        "panique", "défaillance", "correction", "faillite", "taux directeur"
+    ],
+    "medium_impact": [
+        "growth", "expansion", "job report", "fed decision", "quarterly earnings", "acquisition", 
+        "ipo", "merger", "partnership", "profit warning", "bond issuance", "croissance", "emploi", 
+        "rapport", "BCE", "FED", "résultats trimestriels", "fusion", "acquisition", "partenariat",
+        "bénéfices", "émission obligataire", "émission d'obligations", "perspectives", "avertissement",
+        "rachat", "introduction en bourse", "nouveau PDG", "restructuration"
+    ],
+    "low_impact": [
+        "recommendation", "stock buyback", "dividend", "announcement", "management change", "forecast",
+        "recommandation", "rachat d'actions", "dividende", "annonce", "changement de direction", "prévision",
+        "nomination", "produit", "service", "stratégie", "marché", "plan", "mise à jour", "tendance"
+    ]
+}
+
+# Liste des sources importantes
+IMPORTANT_SOURCES = [
+    "Bloomberg", "Reuters", "WSJ", "FT", "CNBC", "Financial Times", "Wall Street Journal", 
+    "Les Échos", "La Tribune", "Le Figaro", "Le Monde", "Le Revenu", "BFM Business", 
+    "L'AGEFI", "Investir", "Capital"
+]
 
 def read_existing_news():
     """Lit le fichier JSON existant comme fallback"""
@@ -336,6 +367,125 @@ def remove_duplicates(news_list):
     
     return unique_news
 
+def calculate_news_score(article):
+    """
+    Calcule un score pour classer l'importance d'une actualité en fonction des mots-clés
+    """
+    # Créer un texte combiné pour l'analyse
+    content = f"{article.get('title', '')} {article.get('content', '')}".lower()
+    
+    score = 0
+    
+    # Ajouter des points selon les occurrences de mots-clés
+    for word in NEWS_KEYWORDS["high_impact"]:
+        if word in content:
+            score += 10
+    
+    for word in NEWS_KEYWORDS["medium_impact"]:
+        if word in content:
+            score += 5
+    
+    for word in NEWS_KEYWORDS["low_impact"]:
+        if word in content:
+            score += 2
+    
+    # Ajustement basé sur la source
+    if any(source in article.get("source", "") for source in IMPORTANT_SOURCES):
+        score += 5
+    
+    # Bonus pour les actualités négatives (souvent plus impactantes)
+    if article.get("impact") == "negative":
+        score += 3
+    
+    # Bonus pour certaines catégories généralement plus importantes
+    if article.get("category") == "economie":
+        score += 3
+    elif article.get("category") == "marches":
+        score += 2
+    
+    return score
+
+def determine_event_impact(event):
+    """Détermine le niveau d'impact d'un événement économique"""
+    # Événements à fort impact
+    high_impact_events = [
+        "Interest Rate Decision", "Fed Interest Rate", "ECB Interest Rate", 
+        "Inflation Rate", "GDP Growth", "GDP Release", "Employment Change",
+        "Unemployment Rate", "Non-Farm Payrolls", "CPI", "Retail Sales",
+        "FOMC", "FED", "BCE", "ECB", "Fed Chair", "Treasury", "Central Bank"
+    ]
+    
+    # Événements à impact moyen
+    medium_impact_events = [
+        "PMI", "Consumer Confidence", "Trade Balance", "Industrial Production",
+        "Manufacturing Production", "Housing Starts", "Building Permits",
+        "Durable Goods Orders", "Factory Orders", "Earnings Report", "Balance Sheet"
+    ]
+    
+    # Vérifier le nom de l'événement
+    event_name = event.get("event", "").lower()
+    
+    if any(keyword.lower() in event_name for keyword in high_impact_events):
+        return "high"
+    
+    if any(keyword.lower() in event_name for keyword in medium_impact_events):
+        return "medium"
+    
+    # Vérifier si l'événement est déjà classé par FMP
+    if event.get("impact") == "High":
+        return "high"
+    elif event.get("impact") == "Medium":
+        return "medium"
+    
+    # Par défaut, impact faible
+    return "low"
+
+def calculate_event_score(event):
+    """Calcule un score pour hiérarchiser l'importance des événements économiques"""
+    score = 0
+    
+    # Impact de l'événement
+    impact = determine_event_impact(event)
+    if impact == "high":
+        score += 10
+    elif impact == "medium":
+        score += 5
+    else:
+        score += 1
+    
+    # Bonus pour les États-Unis (marché influent)
+    if event.get("country") == "US" or event.get("country") == "United States":
+        score += 3
+    
+    # Bonus pour les événements avec écart important vs prévisions
+    if event.get("actual") and event.get("forecast"):
+        try:
+            actual = float(event.get("actual").replace("%", ""))
+            forecast = float(event.get("forecast").replace("%", ""))
+            diff = abs(actual - forecast)
+            
+            if diff > 5:
+                score += 5  # Écart très important
+            elif diff > 2:
+                score += 3  # Écart significatif
+            elif diff > 0.5:
+                score += 1  # Écart notable
+        except (ValueError, AttributeError):
+            # Si on ne peut pas convertir en float, on ignore
+            pass
+    
+    # Ajustement par type d'événement pour les résultats d'entreprises
+    if event.get("type") == "earnings":
+        # Essayer d'extraire le symbole de l'action des résultats
+        title = event.get("title", "")
+        
+        # Bonus pour les entreprises importantes
+        major_companies = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "NVDA", "TSLA", "JPM", "V", "PYPL", "DIS"]
+        if any(company in title for company in major_companies):
+            score += 3
+    
+    return score
+
 def process_news_data(news_sources):
     """Traite et formate les actualités FMP pour correspondre au format TradePulse"""
     formatted_data = {
@@ -377,11 +527,16 @@ def process_news_data(news_sources):
             else:
                 formatted_data["us"].append(news_item)
     
-    # Trier chaque catégorie par date (plus récent en premier)
+    # Ajouter un score à chaque actualité
+    for country in ["us", "france"]:
+        for article in formatted_data[country]:
+            article["score"] = calculate_news_score(article)
+    
+    # Trier chaque catégorie par score (plus élevé en premier), puis par date (plus récent en premier)
     for country in ["us", "france"]:
         formatted_data[country] = sorted(
             formatted_data[country], 
-            key=lambda x: (x["date"], x["time"]), 
+            key=lambda x: (x["score"], x["date"], x["time"]), 
             reverse=True
         )
         
@@ -397,34 +552,48 @@ def process_events_data(earnings, economic):
     """Traite et formate les données d'événements"""
     events = []
     
-    # Traiter le calendrier économique (priorité plus élevée)
+    # Traiter le calendrier économique
     for eco_event in economic:
-        # Ne garder que les événements importants
-        if eco_event.get("impact") in ["High", "Medium"]:
-            event = {
-                "title": eco_event.get("event", ""),
-                "date": format_date(eco_event.get("date", "")),
-                "time": eco_event.get("time", "09:00"),
-                "type": "economic",
-                "importance": "high" if eco_event.get("impact") == "High" else "medium"
-            }
-            events.append(event)
+        # Ajouter l'impact et le score
+        impact = determine_event_impact(eco_event)
+        score = calculate_event_score(eco_event)
+        
+        event = {
+            "title": eco_event.get("event", ""),
+            "date": format_date(eco_event.get("date", "")),
+            "time": eco_event.get("time", "09:00"),
+            "type": "economic",
+            "importance": impact,
+            "score": score
+        }
+        events.append(event)
     
-    # Traiter le calendrier des résultats (uniquement les plus importants)
+    # Traiter le calendrier des résultats
     for earning in earnings:
         # Ne garder que les résultats avec des prévisions
         if earning.get("epsEstimated"):
+            # Créer un faux événement pour le calcul du score
+            temp_event = {
+                "event": f"Earnings {earning.get('symbol')}",
+                "type": "earnings",
+                "title": f"Résultats {earning.get('symbol')} - Prévision: {earning.get('epsEstimated')}$ par action"
+            }
+            
+            impact = "medium"  # Par défaut pour les résultats
+            score = calculate_event_score(temp_event)
+            
             event = {
                 "title": f"Résultats {earning.get('symbol')} - Prévision: {earning.get('epsEstimated')}$ par action",
                 "date": format_date(earning.get("date", "")),
                 "time": "16:30",  # Heure typique pour les annonces de résultats
                 "type": "earnings",
-                "importance": "high"
+                "importance": impact,
+                "score": score
             }
             events.append(event)
     
-    # Trier les événements par date et importance
-    events.sort(key=lambda x: (x['date'], 0 if x['importance'] == 'high' else 1))
+    # Trier les événements par score puis par date
+    events.sort(key=lambda x: (x["score"], x["date"]), reverse=True)
     
     # Limiter à 10 événements maximum
     return events[:10]
