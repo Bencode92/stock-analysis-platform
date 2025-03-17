@@ -10,12 +10,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="actualites-style.css">
-    <!-- Système de hiérarchie des actualités -->
-    <link rel="stylesheet" href="news-hierarchy.css">
-    <script src="news-hierarchy.js" defer></script>
-    <!-- Styles d'événements -->
+    <link rel="stylesheet" href="css/news-hierarchy.css">
+    <!-- Ajout du nouveau fichier CSS dédié aux événements -->
     <link rel="stylesheet" href="events-style.css">
+    <!-- Ajout du script events-loader.js -->
     <script src="events-loader.js"></script>
+    <!-- Ajout du nouveau script de redémarrage pour événements -->
     <script src="event-renderer.js"></script>
     <script>
         tailwind.config = {
@@ -703,19 +703,27 @@
                     <p class="text-sm text-gray-400" id="currentDate">11 MARS 2025</p>
                 </div>
                 
-                <!-- NOUVELLE SECTION: Breaking News (actualités critiques) -->
-                <div id="breaking-news-container" class="mb-8 glassmorphism rounded-xl p-4">
-                    <div class="loading-state">
-                        <div class="loading-spinner"></div>
-                        <p>Hiérarchisation des actualités critiques...</p>
+                <!-- Actualités critiques (Breaking News) -->
+                <div class="mb-8">
+                    <h2 class="text-red-500 font-bold text-xl mb-4">🚨 ACTUALITÉS CRITIQUES</h2>
+                    <div id="critical-news-container" class="grid grid-cols-1 gap-4">
+                        <!-- Spinner de chargement -->
+                        <div class="loading-state">
+                            <div class="loading-spinner"></div>
+                            <p>Hiérarchisation des actualités critiques...</p>
+                        </div>
                     </div>
                 </div>
                 
-                <!-- NOUVELLE SECTION: Actualités importantes -->
-                <div id="important-news-container" class="mb-8 glassmorphism rounded-xl p-4">
-                    <div class="loading-state">
-                        <div class="loading-spinner"></div>
-                        <p>Organisation des actualités importantes...</p>
+                <!-- Actualités importantes -->
+                <div class="mb-8">
+                    <h2 class="text-yellow-500 font-bold text-xl mb-4">🔥 ACTUALITÉS IMPORTANTES</h2>
+                    <div id="important-news-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Spinner de chargement -->
+                        <div class="loading-state">
+                            <div class="loading-spinner"></div>
+                            <p>Organisation des actualités importantes...</p>
+                        </div>
                     </div>
                 </div>
                 
@@ -726,14 +734,13 @@
                             <i class="fas fa-calendar-alt mr-2"></i>ÉVÉNEMENTS À VENIR
                         </h2>
                         <div class="flex gap-2">
-                            <!-- Nouveaux filtres par niveau d'impact -->
-                            <button id="high-impact-btn" class="event-filter-button text-xs text-red-500 px-2 py-1 border border-red-500 border-opacity-30 rounded">
+                            <button id="high-impact-btn" class="text-xs text-red-500 px-2 py-1 border border-red-500 border-opacity-30 rounded filter-button">
                                 Impact élevé
                             </button>
-                            <button id="medium-impact-btn" class="event-filter-button text-xs text-yellow-500 px-2 py-1 border border-yellow-500 border-opacity-30 rounded">
+                            <button id="medium-impact-btn" class="text-xs text-yellow-500 px-2 py-1 border border-yellow-500 border-opacity-30 rounded filter-button">
                                 Impact moyen
                             </button>
-                            <button id="all-impact-btn" class="event-filter-button text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded filter-active">
+                            <button id="all-impact-btn" class="text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded filter-button active">
                                 Tous
                             </button>
                         </div>
@@ -795,14 +802,14 @@
                     </div>
                 </div>
                 
-                <!-- Actualités standard -->
+                <!-- Actualités générales -->
                 <div class="mb-8">
-                    <h2 class="text-lg font-semibold mb-4">ACTUALITÉS GÉNÉRALES</h2>
+                    <h2 class="text-gray-300 font-bold text-xl mb-4">📰 ACTUALITÉS GÉNÉRALES</h2>
                     
                     <div class="news-grid" id="recent-news">
                         <div class="loading-state">
                             <div class="loading-spinner"></div>
-                            <p>Chargement des actualités générales...</p>
+                            <p>Chargement des actualités récentes...</p>
                         </div>
                     </div>
                 </div>
@@ -826,6 +833,7 @@
     </footer>
 
     <script src="actualites.js"></script>
+    <script src="js/news-hierarchy.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -1002,6 +1010,49 @@
             }
             
             updateLastUpdateTime();
+            
+            // Gestionnaire pour les filtres d'événements
+            const highImpactBtn = document.getElementById('high-impact-btn');
+            const mediumImpactBtn = document.getElementById('medium-impact-btn');
+            const allImpactBtn = document.getElementById('all-impact-btn');
+            
+            if (highImpactBtn && mediumImpactBtn && allImpactBtn) {
+                // Filtres pour les événements
+                highImpactBtn.addEventListener('click', function() {
+                    toggleActiveFilter(this);
+                    filterEventsByImpact('high');
+                });
+                
+                mediumImpactBtn.addEventListener('click', function() {
+                    toggleActiveFilter(this);
+                    filterEventsByImpact('medium');
+                });
+                
+                allImpactBtn.addEventListener('click', function() {
+                    toggleActiveFilter(this);
+                    filterEventsByImpact('all');
+                });
+            }
+            
+            function filterEventsByImpact(impactLevel) {
+                const eventElements = document.querySelectorAll('#events-container .event-card');
+                
+                eventElements.forEach(element => {
+                    if (impactLevel === 'all') {
+                        element.style.display = 'flex';
+                    } else {
+                        const impact = element.dataset.impact;
+                        element.style.display = (impact === impactLevel) ? 'flex' : 'none';
+                    }
+                });
+            }
+            
+            function toggleActiveFilter(button) {
+                document.querySelectorAll('.filter-button.active').forEach(el => {
+                    el.classList.remove('active');
+                });
+                button.classList.add('active');
+            }
         });
     </script>
 </body>

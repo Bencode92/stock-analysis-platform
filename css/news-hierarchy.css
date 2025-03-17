@@ -1,0 +1,192 @@
+/* Styles pour la hiérarchie des actualités financières */
+
+/* 1. Styles de base améliorés pour toutes les cartes */
+.news-card {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    border-width: 1px;
+}
+
+.news-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 255, 135, 0.15);
+}
+
+/* 2. Styles spécifiques pour les actualités critiques */
+#critical-news-container .news-card {
+    border-width: 2px;
+    box-shadow: 0 0 15px rgba(0, 255, 135, 0.2);
+    position: relative;
+}
+
+#critical-news-container .news-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: linear-gradient(to bottom, #ff4d4d, #ff1a1a);
+    box-shadow: 0 0 8px rgba(255, 26, 26, 0.6);
+}
+
+/* Badge URGENT pour les actualités critiques */
+.badge.urgent {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: #ff3b3b;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    box-shadow: 0 0 8px rgba(255, 59, 59, 0.6);
+    animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* Effet de bordure pulsante pour les actualités critiques */
+#critical-news-container .news-card {
+    animation: pulse-border 3s infinite;
+}
+
+@keyframes pulse-border {
+    0% { border-color: rgba(255, 59, 59, 0.8); }
+    50% { border-color: rgba(255, 59, 59, 0.4); }
+    100% { border-color: rgba(255, 59, 59, 0.8); }
+}
+
+/* 3. Styles pour les actualités importantes */
+#important-news-container .news-card {
+    border-width: 1px;
+    box-shadow: 0 0 10px rgba(255, 193, 7, 0.15);
+}
+
+#important-news-container .news-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 3px;
+    height: 100%;
+    background: linear-gradient(to bottom, #ffcc00, #ff9900);
+    box-shadow: 0 0 6px rgba(255, 193, 7, 0.4);
+}
+
+/* 4. Indicateurs d'impact pour toutes les actualités */
+.impact-indicator {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-right: 8px;
+    margin-bottom: 6px;
+}
+
+.impact-negative {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.impact-positive {
+    background-color: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.impact-neutral {
+    background-color: rgba(156, 163, 175, 0.2);
+    color: #9ca3af;
+    border: 1px solid rgba(156, 163, 175, 0.3);
+}
+
+/* 5. Amélioration des métadonnées (source, date) */
+.news-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    font-size: 0.8rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.news-meta .source {
+    background-color: rgba(0, 255, 135, 0.1);
+    border: 1px solid rgba(0, 255, 135, 0.2);
+    border-radius: 3px;
+    padding: 2px 6px;
+    color: #00ff87;
+    font-weight: 500;
+}
+
+.news-meta .date-time {
+    display: flex;
+    align-items: center;
+}
+
+/* 6. Effet hover distinct pour chaque niveau */
+#critical-news-container .news-card:hover {
+    background-color: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.6);
+}
+
+#important-news-container .news-card:hover {
+    background-color: rgba(255, 193, 7, 0.08);
+    border-color: rgba(255, 193, 7, 0.6);
+}
+
+.news-card:hover {
+    background-color: rgba(0, 255, 135, 0.05);
+}
+
+/* 7. Lumière d'accentuation pour les cartes d'actualités critiques */
+#critical-news-container .news-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    height: 5px;
+    background-color: rgba(255, 59, 59, 0.8);
+    border-radius: 50%;
+    box-shadow: 0 0 15px 5px rgba(255, 59, 59, 0.5);
+    pointer-events: none;
+}
+
+/* 8. Styles pour les filtres actifs */
+.filter-button {
+    transition: all 0.3s ease;
+    opacity: 0.7;
+}
+
+.filter-button.active {
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(0, 255, 135, 0.3);
+    transform: translateY(-2px);
+}
+
+/* 9. Animation de fade-in pour les nouvelles actualités */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.news-card {
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Ajouter un délai pour chaque carte */
+#critical-news-container .news-card:nth-child(1) { animation-delay: 0.1s; }
+#critical-news-container .news-card:nth-child(2) { animation-delay: 0.2s; }
+#important-news-container .news-card:nth-child(1) { animation-delay: 0.3s; }
+#important-news-container .news-card:nth-child(2) { animation-delay: 0.4s; }
