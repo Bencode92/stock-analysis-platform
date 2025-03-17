@@ -36,13 +36,21 @@ CONFIG = {
         "economic_calendar": "https://financialmodelingprep.com/api/v3/economic_calendar"
     },
     "news_limits": {
-        "general_news": 50,     # Plus d'actualités générales
-        "fmp_articles": 30,     # Articles d'analyse prioritaires
-        "stock_news": 20,       # Actualités spécifiques aux actions
-        "crypto_news": 15,      # Actualités crypto
-        "press_releases": 10    # Communiqués de presse
+        "general_news": 15,    # Réduit à 15 articles récupérés
+        "fmp_articles": 10,    # Réduit à 10 articles
+        "stock_news": 10,      # Réduit à 10 articles
+        "crypto_news": 8,      # Réduit à 8 articles
+        "press_releases": 5    # Réduit à 5 articles
     },
-    "days_ahead": 14   # Nombre de jours à l'avance pour les événements
+    "output_limits": {
+        "generale": 7,         # 7 actualités générales max
+        "entreprises": 5,      # 5 actualités d'entreprises max
+        "marches": 5,          # 5 actualités de marchés max 
+        "crypto": 3,           # 3 actualités crypto max
+        "us": 7,               # 7 actualités US max
+        "france": 5            # 5 actualités France max
+    },
+    "days_ahead": 5            # Réduit à 5 jours pour les événements futurs
 }
 
 def read_existing_news():
@@ -312,6 +320,19 @@ def normalize_article(article, source=None):
         "source_type": source  # Ajout du type de source pour la classification
     }
 
+def remove_duplicates(news_list):
+    """Supprime les articles en double basés sur le titre"""
+    seen_titles = set()
+    unique_news = []
+    
+    for item in news_list:
+        title = item["title"].lower()
+        if title not in seen_titles:
+            seen_titles.add(title)
+            unique_news.append(item)
+    
+    return unique_news
+
 def process_news_data(news_sources):
     """
     Traite et formate les actualités FMP pour correspondre au format TradePulse
@@ -336,6 +357,14 @@ def process_news_data(news_sources):
         for article in articles:
             # Normaliser l'article
             normalized = normalize_article(article, source_type)
+            
+            # Vérifier si le titre est suffisamment long pour être pertinent
+            if len(normalized["title"]) < 10:
+                continue
+                
+            # Vérifier si le contenu est suffisamment détaillé
+            if len(normalized["text"]) < 50:
+                continue
             
             # Données essentielles
             news_item = {
@@ -372,6 +401,9 @@ def process_news_data(news_sources):
                 key=lambda x: (x["date"], x["time"]), 
                 reverse=True
             )
+            
+            # Supprimer les doublons
+            formatted_data[category] = remove_duplicates(formatted_data[category])
     
     return formatted_data
 
@@ -379,18 +411,7 @@ def process_events_data(earnings, economic):
     """Traite et formate les données d'événements"""
     events = []
     
-    # Traiter le calendrier des résultats
-    for earning in earnings:
-        event = {
-            "title": f"Résultats {earning.get('symbol')} - Prévision: {earning.get('epsEstimated')}$ par action",
-            "date": format_date(earning.get("date", "")),
-            "time": "16:30",  # Heure typique pour les annonces de résultats
-            "type": "earnings",
-            "importance": "high" if earning.get("epsEstimated") else "medium"
-        }
-        events.append(event)
-    
-    # Traiter le calendrier économique
+    # Traiter le calendrier économique (priorité plus élevée)
     for eco_event in economic:
         # Ne garder que les événements importants
         if eco_event.get("impact") in ["High", "Medium"]:
@@ -403,21 +424,37 @@ def process_events_data(earnings, economic):
             }
             events.append(event)
     
+    # Traiter le calendrier des résultats (uniquement les plus importants)
+    for earning in earnings:
+        # Ne garder que les résultats avec des prévisions
+        if earning.get("epsEstimated"):
+            event = {
+                "title": f"Résultats {earning.get('symbol')} - Prévision: {earning.get('epsEstimated')}$ par action",
+                "date": format_date(earning.get("date", "")),
+                "time": "16:30",  # Heure typique pour les annonces de résultats
+                "type": "earnings",
+                "importance": "high"
+            }
+            events.append(event)
+    
     # Trier les événements par date et importance
     events.sort(key=lambda x: (x['date'], 0 if x['importance'] == 'high' else 1))
-    # Limiter à 20 événements maximum
-    return events[:20]
+    
+    # Limiter à 10 événements maximum
+    return events[:10]
 
 def update_news_json_file(news_data, events):
     """Met à jour le fichier news.json avec les données formatées"""
     try:
+        output_limits = CONFIG["output_limits"]
+        
         output_data = {
-            "generale": news_data["generale"][:20],    # Actualités générales (priorité)
-            "entreprises": news_data["entreprises"][:10], # Entreprises
-            "marches": news_data["marches"][:10],      # Marchés
-            "crypto": news_data["crypto"][:5],         # Crypto
-            "us": news_data["us"][:15],                # US
-            "france": news_data["france"][:15],        # France
+            "generale": news_data["generale"][:output_limits["generale"]],
+            "entreprises": news_data["entreprises"][:output_limits["entreprises"]],
+            "marches": news_data["marches"][:output_limits["marches"]],
+            "crypto": news_data["crypto"][:output_limits["crypto"]],
+            "us": news_data["us"][:output_limits["us"]],
+            "france": news_data["france"][:output_limits["france"]],
             "events": events,
             "lastUpdated": datetime.now().isoformat()
         }
