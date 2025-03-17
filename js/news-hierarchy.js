@@ -314,9 +314,17 @@ function displayRecentNews(news) {
         return;
     }
 
-    // Créer une grille pour les actualités
-    const newsGrid = document.createElement('div');
-    newsGrid.className = 'news-grid';
+    // CORRECTION: Vérifier si le conteneur est déjà une news-grid ou s'il faut en créer une
+    let newsGrid;
+    if (container.classList.contains('news-grid')) {
+        // Si le conteneur est déjà une news-grid, l'utiliser directement
+        newsGrid = container;
+    } else {
+        // Sinon, créer une grille pour les actualités
+        newsGrid = document.createElement('div');
+        newsGrid.className = 'news-grid';
+        container.appendChild(newsGrid);
+    }
 
     // Créer les cartes d'actualités régulières
     news.forEach((item, index) => {
@@ -343,8 +351,6 @@ function displayRecentNews(news) {
 
         newsGrid.appendChild(newsCard);
     });
-
-    container.appendChild(newsGrid);
 }
 
 /**
@@ -452,7 +458,7 @@ function checkVisibleItems() {
         if (!container) return;
         
         // Pour recent-news, chercher dans la grille
-        const gridContainer = containerId === 'recent-news' 
+        const gridContainer = containerId === 'recent-news' && !container.classList.contains('news-grid')
             ? container.querySelector('.news-grid') 
             : container;
             
