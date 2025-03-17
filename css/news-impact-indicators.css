@@ -1,6 +1,6 @@
 /* 
  * news-impact-indicators.css
- * Styles pour les indicateurs d'impact dans toutes les sections d'actualités
+ * Styles spécifiques pour les indicateurs d'impact dans la section des actualités
  */
 
 /* Styles de base pour tous les indicateurs d'impact */
@@ -10,10 +10,16 @@
     padding: 2px 8px;
     border-radius: 4px;
     font-size: 0.7rem;
-    font-weight: 500;
+    font-weight: 600;
     margin-right: 6px;
     margin-bottom: 6px;
     text-transform: uppercase;
+}
+
+/* Indicateurs dans la section des news-content (actualités générales) */
+.news-content .impact-indicator {
+    margin-top: 5px;
+    margin-bottom: 8px;
 }
 
 /* Couleurs spécifiques selon l'impact */
@@ -35,69 +41,54 @@
     border: 1px solid rgba(234, 179, 8, 0.3);
 }
 
-/* Styles pour les cartes d'actualités générales */
+/* Styles pour les cartes d'actualité dans les actualités générales */
 #recent-news .news-card {
     border-width: 1px;
+    border-style: solid;
     border-radius: 8px;
     overflow: hidden;
-    transition: all 0.3s ease;
-    margin-bottom: 15px;
+    transition: all 0.25s ease;
 }
 
 #recent-news .news-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(0, 255, 135, 0.15);
 }
 
-/* En-tête des cartes d'actualités générales */
+/* Flèche lumineuse pour les actualités générales sur hover */
+#recent-news .news-card::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: linear-gradient(to right, transparent, var(--accent-color), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+#recent-news .news-card:hover::after {
+    opacity: 1;
+}
+
+/* Style des conteneurs d'indicateurs */
+.news-content > div:first-child {
+    display: flex;
+    margin-bottom: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+/* Style de titre pour les actualités générales */
 #recent-news .news-card h3 {
     font-size: 1.1rem;
     font-weight: 600;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
     line-height: 1.4;
 }
 
-/* Contenu des cartes d'actualités générales */
-#recent-news .news-card p {
-    font-size: 0.9rem;
-    line-height: 1.5;
-    margin-bottom: 15px;
-}
-
-/* Styles uniformes pour les métadonnées */
-.news-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 12px;
-    font-size: 0.8rem;
-}
-
-.news-meta .source, .news-meta .news-source {
-    background-color: rgba(0, 255, 135, 0.1);
-    border: 1px solid rgba(0, 255, 135, 0.2);
-    border-radius: 3px;
-    padding: 2px 6px;
-    color: #00ff87;
-    font-weight: 500;
-}
-
-.news-meta .date-time, .news-meta .news-date-time {
-    display: flex;
-    align-items: center;
-}
-
-/* Style uniforme pour toutes les cartes d'actualités */
-.news-card {
-    position: relative;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    border-width: 1px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    animation: fadeIn 0.5s ease-out forwards;
-}
-
-/* Badge URGENT pour les actualités critiques */
+/* URGENT badge for critical news */
 .badge.urgent {
     position: absolute;
     top: 10px;
@@ -110,39 +101,4 @@
     font-weight: bold;
     letter-spacing: 0.5px;
     box-shadow: 0 0 8px rgba(255, 59, 59, 0.6);
-    animation: pulse-badge 2s infinite;
-}
-
-@keyframes pulse-badge {
-    0% { opacity: 1; }
-    50% { opacity: 0.7; }
-    100% { opacity: 1; }
-}
-
-/* Animation de fadeIn */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Styles glassmorphism pour toutes les cartes */
-.glassmorphism {
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(0, 255, 135, 0.2);
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-}
-
-/* Style spécifique pour les actualités critiques (rouge) */
-#critical-news-container .news-card {
-    border-color: rgba(255, 59, 59, 0.5);
-}
-
-/* Style spécifique pour les actualités importantes (jaune/orange) */
-#important-news-container .news-card {
-    border-color: rgba(255, 159, 0, 0.5);
-}
-
-/* Style spécifique pour les actualités générales (bleu/gris) */
-#recent-news .news-card {
-    border-color: rgba(104, 119, 141, 0.3);
 }
