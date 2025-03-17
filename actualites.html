@@ -10,11 +10,12 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="actualites-style.css">
-    <!-- Ajout du nouveau fichier CSS dédié aux événements -->
+    <!-- Système de hiérarchie des actualités -->
+    <link rel="stylesheet" href="news-hierarchy.css">
+    <script src="news-hierarchy.js" defer></script>
+    <!-- Styles d'événements -->
     <link rel="stylesheet" href="events-style.css">
-    <!-- Ajout du script events-loader.js -->
     <script src="events-loader.js"></script>
-    <!-- Ajout du nouveau script de redémarrage pour événements -->
     <script src="event-renderer.js"></script>
     <script>
         tailwind.config = {
@@ -702,6 +703,22 @@
                     <p class="text-sm text-gray-400" id="currentDate">11 MARS 2025</p>
                 </div>
                 
+                <!-- NOUVELLE SECTION: Breaking News (actualités critiques) -->
+                <div id="breaking-news-container" class="mb-8 glassmorphism rounded-xl p-4">
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <p>Hiérarchisation des actualités critiques...</p>
+                    </div>
+                </div>
+                
+                <!-- NOUVELLE SECTION: Actualités importantes -->
+                <div id="important-news-container" class="mb-8 glassmorphism rounded-xl p-4">
+                    <div class="loading-state">
+                        <div class="loading-spinner"></div>
+                        <p>Organisation des actualités importantes...</p>
+                    </div>
+                </div>
+                
                 <!-- Section Événements (améliorée) -->
                 <div class="mb-10 p-4 glassmorphism rounded-xl" id="events-section">
                     <div class="flex justify-between items-center mb-4">
@@ -709,14 +726,15 @@
                             <i class="fas fa-calendar-alt mr-2"></i>ÉVÉNEMENTS À VENIR
                         </h2>
                         <div class="flex gap-2">
-                            <button id="today-btn" class="text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded filter-active">
-                                Aujourd'hui
+                            <!-- Nouveaux filtres par niveau d'impact -->
+                            <button id="high-impact-btn" class="event-filter-button text-xs text-red-500 px-2 py-1 border border-red-500 border-opacity-30 rounded">
+                                Impact élevé
                             </button>
-                            <button id="week-btn" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded">
-                                Cette semaine
+                            <button id="medium-impact-btn" class="event-filter-button text-xs text-yellow-500 px-2 py-1 border border-yellow-500 border-opacity-30 rounded">
+                                Impact moyen
                             </button>
-                            <button id="essential-btn" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded">
-                                Essentiels
+                            <button id="all-impact-btn" class="event-filter-button text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded filter-active">
+                                Tous
                             </button>
                         </div>
                     </div>
@@ -777,26 +795,14 @@
                     </div>
                 </div>
                 
-                <!-- Articles à la une -->
+                <!-- Actualités standard -->
                 <div class="mb-8">
-                    <h2 class="text-lg font-semibold mb-4">À LA UNE</h2>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8" id="featured-news">
-                        <div class="loading-state">
-                            <div class="loading-spinner"></div>
-                            <p>Chargement des actualités à la une...</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Actualités récentes -->
-                <div class="mb-8">
-                    <h2 class="text-lg font-semibold mb-4">ACTUALITÉS RÉCENTES</h2>
+                    <h2 class="text-lg font-semibold mb-4">ACTUALITÉS GÉNÉRALES</h2>
                     
                     <div class="news-grid" id="recent-news">
                         <div class="loading-state">
                             <div class="loading-spinner"></div>
-                            <p>Chargement des actualités récentes...</p>
+                            <p>Chargement des actualités générales...</p>
                         </div>
                     </div>
                 </div>
