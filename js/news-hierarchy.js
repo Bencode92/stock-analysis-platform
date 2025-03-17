@@ -197,8 +197,8 @@ function displayCriticalNews(news) {
                             'bg-yellow-800 bg-opacity-20 border-yellow-700';
                             
         // Texte descriptif de l'impact
-        const impactText = item.impact === 'negative' ? 'Impact négatif' : 
-                           item.impact === 'positive' ? 'Impact positif' : 'Impact neutre';
+        const impactText = item.impact === 'negative' ? 'IMPACT NÉGATIF' : 
+                           item.impact === 'positive' ? 'IMPACT POSITIF' : 'IMPACT NEUTRE';
                            
         // Classe de l'indicateur d'impact
         const impactIndicatorClass = `impact-${item.impact}`;
@@ -215,7 +215,7 @@ function displayCriticalNews(news) {
             <div class="p-4">
                 <div class="mb-2">
                     <span class="impact-indicator ${impactIndicatorClass}">${impactText}</span>
-                    <span class="impact-indicator">${item.category || 'Finance'}</span>
+                    <span class="impact-indicator">${item.category.toUpperCase() || 'GENERAL'}</span>
                 </div>
                 <h3 class="text-lg font-bold">${item.title}</h3>
                 <p class="text-sm mt-2">${item.content}</p>
@@ -277,7 +277,7 @@ function displayImportantNews(news) {
             <div class="p-4">
                 <div class="mb-2">
                     <span class="impact-indicator ${impactIndicatorClass}">${impactText}</span>
-                    <span class="impact-indicator">${item.category.toUpperCase() || 'FINANCE'}</span>
+                    <span class="impact-indicator">${item.category.toUpperCase() || 'GENERAL'}</span>
                 </div>
                 <h3 class="text-md font-semibold">${item.title}</h3>
                 <p class="text-sm mt-2">${item.content}</p>
@@ -326,41 +326,41 @@ function displayRecentNews(news) {
         container.appendChild(newsGrid);
     }
 
-    // Créer les cartes d'actualités régulières - MÊME FORMAT QUE LES AUTRES
+    // Créer les cartes d'actualités régulières
     news.forEach((item, index) => {
         // Détermine la classe CSS basée sur l'impact
-        const impactClass = item.impact === 'negative' ? 'bg-red-700 bg-opacity-5 border-red-600' : 
-                          item.impact === 'positive' ? 'bg-green-700 bg-opacity-5 border-green-600' : 
-                          'bg-yellow-700 bg-opacity-5 border-yellow-600';
-                          
+        const impactClass = item.impact === 'negative' ? 'border-red-600' : 
+                            item.impact === 'positive' ? 'border-green-600' : 
+                            'border-yellow-600';
+                            
         // Texte descriptif de l'impact
         const impactText = item.impact === 'negative' ? 'IMPACT NÉGATIF' : 
-                         item.impact === 'positive' ? 'IMPACT POSITIF' : 
-                         'IMPACT NEUTRE';
-                         
-        // Classe de l'indicateur d'impact
+                           item.impact === 'positive' ? 'IMPACT POSITIF' : 
+                           'IMPACT NEUTRE';
+                           
+        // Classe de l'indicateur d'impact pour les couleurs
         const impactIndicatorClass = `impact-${item.impact}`;
 
         const newsCard = document.createElement('div');
-        newsCard.className = `news-card glassmorphism ${impactClass}`;
-        newsCard.style.animationDelay = `${index * 0.1}s`;
+        newsCard.className = `news-card ${impactClass}`;
         newsCard.setAttribute('data-category', item.category || 'general');
         newsCard.setAttribute('data-impact', item.impact || 'neutral');
         newsCard.setAttribute('data-country', item.country || 'other');
 
         newsCard.innerHTML = `
-            <div class="p-4">
-                <div class="mb-2">
-                    <span class="impact-indicator ${impactIndicatorClass}">${impactText}</span>
-                    <span class="impact-indicator">${item.category.toUpperCase() || 'FINANCE'}</span>
+            <div class="news-content">
+                <div style="display:flex; margin-bottom:10px;">
+                    <span class="impact-indicator ${impactIndicatorClass}" style="text-transform:uppercase;">${impactText}</span>
+                    <span class="impact-indicator" style="text-transform:uppercase; margin-left:5px;">${item.category.toUpperCase() || 'GENERAL'}</span>
                 </div>
-                <h3 class="text-md font-semibold">${item.title}</h3>
-                <p class="text-sm mt-2">${item.content || ''}</p>
+                <h3>${item.title}</h3>
+                <p>${item.content || ''}</p>
                 <div class="news-meta">
-                    <span class="source">${item.source || 'Financial Data'}</span>
-                    <div class="date-time">
-                        <i class="fas fa-clock mr-1"></i>
-                        ${item.date || ''} ${item.time || ''}
+                    <span class="news-source">${item.source || 'Financial Data'}</span>
+                    <div class="news-date-time">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span class="news-date">${item.date || ''}</span>
+                        <span class="news-time">${item.time || ''}</span>
                     </div>
                 </div>
             </div>
