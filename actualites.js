@@ -22,11 +22,35 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 async function initializeNewsData() {
     try {
-        // Essayer d'abord de charger les données depuis news.json généré par l'action GitHub
+        // Essayer d'abord de charger les données locales pour un accès hors connexion
+        const cachedNews = localStorage.getItem('newsData');
+        
+        if (cachedNews) {
+            const cachedData = JSON.parse(cachedNews);
+            const cacheTime = localStorage.getItem('newsDataTimestamp');
+            
+            // Calculer l'âge du cache (en heures)
+            const now = Date.now();
+            const cacheAge = (now - parseInt(cacheTime)) / (1000 * 60 * 60);
+            
+            // Si le cache est récent (moins de 2 heures), l'utiliser
+            if (cacheAge < 2) {
+                console.log(`Utilisation des données en cache (${cacheAge.toFixed(1)} heures)`);
+                processAndDisplayNews(cachedData);
+            }
+        }
+        
+        // De toute façon, essayer de charger les données fraîches
+        console.log('Chargement des données fraîches...');
         const response = await fetch('data/news.json');
         
         if (response.ok) {
             const data = await response.json();
+            
+            // Stocker les données dans le localStorage pour un accès ultérieur
+            localStorage.setItem('newsData', JSON.stringify(data));
+            localStorage.setItem('newsDataTimestamp', Date.now().toString());
+            
             processAndDisplayNews(data);
             return;
         }
@@ -37,10 +61,21 @@ async function initializeNewsData() {
             return;
         }
         
-        // Si ni l'API ni Perplexity ne sont disponibles, afficher des données de secours
-        throw new Error('Aucune source de données disponible');
+        // Si ni l'API ni Perplexity ne sont disponibles, et pas de cache, afficher des données de secours
+        if (!cachedNews) {
+            throw new Error('Aucune source de données disponible');
+        }
     } catch (error) {
         console.warn('Erreur lors du chargement des actualités:', error);
+        
+        // Essayer d'utiliser le cache même s'il est ancien
+        const cachedNews = localStorage.getItem('newsData');
+        if (cachedNews) {
+            console.log('Utilisation du cache de secours');
+            processAndDisplayNews(JSON.parse(cachedNews));
+            return;
+        }
+        
         // Générer et afficher des données de secours
         displayFallbackData();
     }
@@ -51,13 +86,17 @@ async function initializeNewsData() {
  * @param {Object} data - Données d'actualités
  */
 function processAndDisplayNews(data) {
-    if (!data || !data.news || !Array.isArray(data.news) || data.news.length === 0) {
+    // Vérifier si nous avons bien des données d'actualités
+    if (!data || (!data.us && !data.france) || (data.us?.length === 0 && data.france?.length === 0)) {
         displayFallbackData();
         return;
     }
     
+    // Combiner les actualités US et France
+    let allNews = [...(data.us || []), ...(data.france || [])];
+    
     // Traiter les actualités
-    const newsItems = data.news.map(item => {
+    const newsItems = allNews.map(item => {
         // Déterminer la catégorie d'actif si le module est disponible
         let category = item.category || 'general';
         if (window.AssetCategories) {
@@ -68,17 +107,40 @@ function processAndDisplayNews(data) {
             ...item,
             category,
             impact: item.impact || determineImpact(item),
-            country: item.country || extractCountry(item)
+            country: item.country || extractCountry(item),
+            score: item.score || 0,
+            importance_level: item.importance_level || 'normal'
         };
     });
     
-    // Séparer les actualités en "à la une" et "récentes"
-    const featuredNews = newsItems.slice(0, 4);
-    const recentNews = newsItems.slice(4);
+    // Afficher les événements financiers
+    if (data.events && data.events.length > 0) {
+        displayEvents(data.events);
+    }
     
-    // Afficher les actualités
-    displayFeaturedNews(featuredNews);
-    displayRecentNews(recentNews);
+    // ---- AMÉLIORATION: Séparer les actualités en trois catégories d'importance ----
+    
+    // 1. Breaking news - Actualités critiques et très importantes
+    const breakingNews = newsItems.filter(item => 
+        item.importance_level === 'breaking' || item.score >= 30
+    );
+    
+    // 2. Actualités importantes - Actualités intéressantes sans être critiques
+    const importantNews = newsItems.filter(item => 
+        item.importance_level === 'important' || 
+        (item.score >= 15 && item.score < 30)
+    );
+    
+    // 3. Actualités standards - Le reste des actualités
+    const standardNews = newsItems.filter(item => 
+        item.importance_level === 'normal' && 
+        (item.score < 15 || item.score === undefined)
+    );
+    
+    // Afficher chaque catégorie d'actualités dans sa section respective
+    displayBreakingNews(breakingNews);
+    displayImportantNews(importantNews);
+    displayRecentNews(standardNews);
 }
 
 /**
@@ -87,7 +149,7 @@ function processAndDisplayNews(data) {
  * @returns {string} - Impact estimé (positive, negative, neutral)
  */
 function determineImpact(item) {
-    const content = `${item.title} ${item.summary || ''}`.toLowerCase();
+    const content = `${item.title} ${item.content || ''}`.toLowerCase();
     
     // Mots clés positifs
     const positiveKeywords = [
@@ -125,7 +187,7 @@ function determineImpact(item) {
  * @returns {string} - Code du pays (us, eu, fr, other)
  */
 function extractCountry(item) {
-    const content = `${item.title} ${item.summary || ''}`.toLowerCase();
+    const content = `${item.title} ${item.content || ''}`.toLowerCase();
     
     // Pays et régions
     const countries = {
@@ -148,6 +210,182 @@ function extractCountry(item) {
 }
 
 /**
+ * ---- NOUVELLE FONCTION ----
+ * Affiche les breaking news (actualités critiques)
+ * @param {Array} breakingNews - Actualités critiques
+ */
+function displayBreakingNews(breakingNews) {
+    const container = document.getElementById('breaking-news');
+    if (!container) {
+        // Si la section n'existe pas, la créer avant le featured-news
+        const featuredSection = document.getElementById('featured-news');
+        if (featuredSection && featuredSection.parentNode) {
+            const breakingSection = document.createElement('div');
+            breakingSection.id = 'breaking-news';
+            breakingSection.className = 'mb-8';
+            
+            const breakingHeader = document.createElement('h2');
+            breakingHeader.className = 'text-red-500 font-bold text-xl mb-4 flex items-center';
+            breakingHeader.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i> BREAKING NEWS';
+            
+            breakingSection.appendChild(breakingHeader);
+            featuredSection.parentNode.insertBefore(breakingSection, featuredSection);
+            
+            // Mettre à jour la référence du conteneur
+            container = breakingSection;
+        } else {
+            return; // Si on ne trouve pas où insérer la section
+        }
+    } else {
+        // Vider le conteneur existant
+        container.innerHTML = '';
+        
+        // Recréer le header
+        const breakingHeader = document.createElement('h2');
+        breakingHeader.className = 'text-red-500 font-bold text-xl mb-4 flex items-center';
+        breakingHeader.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i> BREAKING NEWS';
+        container.appendChild(breakingHeader);
+    }
+    
+    if (breakingNews.length === 0) {
+        // S'il n'y a pas d'actualités critiques, cacher la section
+        container.style.display = 'none';
+        return;
+    }
+    
+    // Afficher la section
+    container.style.display = 'block';
+    
+    // Créer le conteneur pour les actualités
+    const breakingGrid = document.createElement('div');
+    breakingGrid.className = 'grid grid-cols-1 gap-4';
+    
+    // Afficher les actualités critiques avec un style spécial
+    breakingNews.forEach(item => {
+        const categoryInfo = window.AssetCategories ? 
+            window.AssetCategories.getCategoryInfo(item.category) : 
+            { name: 'Général', icon: 'fa-newspaper', color: '#607D8B' };
+        
+        const card = document.createElement('div');
+        card.className = 'news-item bg-red-800 bg-opacity-60 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition duration-300 border-l-4 border-red-500';
+        card.setAttribute('data-category', item.category);
+        card.setAttribute('data-impact', item.impact);
+        card.setAttribute('data-country', item.country);
+        card.setAttribute('data-date', item.date || new Date().toISOString());
+        card.setAttribute('data-importance', 'breaking');
+        
+        card.innerHTML = `
+            <div class="p-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-bold bg-red-500 text-white px-2 py-1 rounded">BREAKING</span>
+                    <span class="text-xs text-gray-300">${formatDate(item.date)}</span>
+                </div>
+                <h3 class="text-white text-lg font-bold mb-2">${item.title}</h3>
+                <p class="text-gray-300 text-sm mb-3 line-clamp-3">${item.content || ''}</p>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs rounded px-2 py-1 font-medium bg-white bg-opacity-20">
+                        <i class="fas ${categoryInfo.icon || 'fa-newspaper'} mr-1"></i> ${categoryInfo.name}
+                    </span>
+                    <span class="text-xs text-gray-300">Source: ${item.source || 'Financial Data'}</span>
+                </div>
+            </div>
+        `;
+        
+        breakingGrid.appendChild(card);
+    });
+    
+    container.appendChild(breakingGrid);
+}
+
+/**
+ * ---- NOUVELLE FONCTION ----
+ * Affiche les actualités importantes
+ * @param {Array} importantNews - Actualités importantes
+ */
+function displayImportantNews(importantNews) {
+    const container = document.getElementById('important-news');
+    if (!container) {
+        // Si la section n'existe pas, la créer avant le recent-news
+        const recentSection = document.getElementById('recent-news');
+        if (recentSection && recentSection.parentNode) {
+            const importantSection = document.createElement('div');
+            importantSection.id = 'important-news';
+            importantSection.className = 'mb-8';
+            
+            const importantHeader = document.createElement('h2');
+            importantHeader.className = 'text-yellow-500 font-bold text-xl mb-4 flex items-center';
+            importantHeader.innerHTML = '<i class="fas fa-fire mr-2"></i> ACTUALITÉS IMPORTANTES';
+            
+            importantSection.appendChild(importantHeader);
+            recentSection.parentNode.insertBefore(importantSection, recentSection);
+            
+            // Mettre à jour la référence du conteneur
+            container = importantSection;
+        } else {
+            return; // Si on ne trouve pas où insérer la section
+        }
+    } else {
+        // Vider le conteneur existant
+        container.innerHTML = '';
+        
+        // Recréer le header
+        const importantHeader = document.createElement('h2');
+        importantHeader.className = 'text-yellow-500 font-bold text-xl mb-4 flex items-center';
+        importantHeader.innerHTML = '<i class="fas fa-fire mr-2"></i> ACTUALITÉS IMPORTANTES';
+        container.appendChild(importantHeader);
+    }
+    
+    if (importantNews.length === 0) {
+        // S'il n'y a pas d'actualités importantes, cacher la section
+        container.style.display = 'none';
+        return;
+    }
+    
+    // Afficher la section
+    container.style.display = 'block';
+    
+    // Créer le conteneur pour les actualités
+    const importantGrid = document.createElement('div');
+    importantGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+    
+    // Afficher les actualités importantes avec un style distinctif
+    importantNews.forEach(item => {
+        const categoryInfo = window.AssetCategories ? 
+            window.AssetCategories.getCategoryInfo(item.category) : 
+            { name: 'Général', icon: 'fa-newspaper', color: '#607D8B' };
+        
+        const card = document.createElement('div');
+        card.className = 'news-item bg-yellow-800 bg-opacity-30 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition duration-300 border-l-4 border-yellow-500';
+        card.setAttribute('data-category', item.category);
+        card.setAttribute('data-impact', item.impact);
+        card.setAttribute('data-country', item.country);
+        card.setAttribute('data-date', item.date || new Date().toISOString());
+        card.setAttribute('data-importance', 'important');
+        
+        card.innerHTML = `
+            <div class="p-4">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-xs font-medium bg-yellow-500 bg-opacity-80 text-gray-900 px-2 py-1 rounded">IMPORTANT</span>
+                    <span class="text-xs text-gray-400">${formatDate(item.date)}</span>
+                </div>
+                <h3 class="text-white text-base font-semibold mb-2">${item.title}</h3>
+                <p class="text-gray-300 text-sm mb-3 line-clamp-2">${item.content || ''}</p>
+                <div class="flex justify-between items-center">
+                    <span class="text-xs rounded px-2 py-1 font-medium bg-white bg-opacity-10">
+                        <i class="fas ${categoryInfo.icon || 'fa-newspaper'} mr-1"></i> ${categoryInfo.name}
+                    </span>
+                    <span class="text-xs text-gray-400">Source: ${item.source || 'Financial Data'}</span>
+                </div>
+            </div>
+        `;
+        
+        importantGrid.appendChild(card);
+    });
+    
+    container.appendChild(importantGrid);
+}
+
+/**
  * Affiche les actualités à la une
  * @param {Array} featuredNews - Actualités à la une
  */
@@ -158,8 +396,14 @@ function displayFeaturedNews(featuredNews) {
     // Vider le conteneur
     container.innerHTML = '';
     
+    // Réinitialiser le header
+    const featuredHeader = document.createElement('h2');
+    featuredHeader.className = 'text-lg font-semibold mb-4';
+    featuredHeader.textContent = 'À LA UNE';
+    container.appendChild(featuredHeader);
+    
     if (featuredNews.length === 0) {
-        container.innerHTML = `
+        container.innerHTML += `
             <div class="col-span-2 flex flex-col items-center justify-center py-10">
                 <i class="fas fa-newspaper text-gray-700 text-4xl mb-4"></i>
                 <p class="text-gray-500">Aucune actualité à la une disponible</p>
@@ -167,6 +411,11 @@ function displayFeaturedNews(featuredNews) {
         `;
         return;
     }
+    
+    // Créer la grille pour les actualités
+    const featuredGrid = document.createElement('div');
+    featuredGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-6';
+    container.appendChild(featuredGrid);
     
     // Afficher les actualités à la une
     featuredNews.forEach(item => {
@@ -192,7 +441,7 @@ function displayFeaturedNews(featuredNews) {
             </div>
             <div class="p-4">
                 <h3 class="text-white text-lg font-semibold mb-2">${item.title}</h3>
-                <p class="text-gray-300 text-sm mb-3 line-clamp-3">${item.summary || ''}</p>
+                <p class="text-gray-300 text-sm mb-3 line-clamp-3">${item.content || ''}</p>
                 <div class="flex justify-between items-center">
                     <span class="text-xs rounded px-2 py-1 font-medium" style="background-color: ${impactColor}; color: white;">
                         ${item.impact === 'positive' ? 'Positif' : 
@@ -203,7 +452,7 @@ function displayFeaturedNews(featuredNews) {
             </div>
         `;
         
-        container.appendChild(card);
+        featuredGrid.appendChild(card);
     });
 }
 
@@ -218,8 +467,14 @@ function displayRecentNews(recentNews) {
     // Vider le conteneur
     container.innerHTML = '';
     
+    // Réinitialiser le header
+    const recentHeader = document.createElement('h2');
+    recentHeader.className = 'text-lg font-semibold mb-4';
+    recentHeader.textContent = 'ACTUALITÉS RÉCENTES';
+    container.appendChild(recentHeader);
+    
     if (recentNews.length === 0) {
-        container.innerHTML = `
+        container.innerHTML += `
             <div class="flex flex-col items-center justify-center py-10">
                 <i class="fas fa-newspaper text-gray-700 text-4xl mb-4"></i>
                 <p class="text-gray-500">Aucune actualité récente disponible</p>
@@ -231,6 +486,9 @@ function displayRecentNews(recentNews) {
     // Créer la grille d'actualités
     const newsGrid = document.createElement('div');
     newsGrid.className = 'grid grid-cols-1 md:grid-cols-3 gap-4';
+    
+    // Utilisation de documentFragment pour améliorer les performances
+    const fragment = document.createDocumentFragment();
     
     // Afficher les actualités récentes
     recentNews.forEach(item => {
@@ -254,7 +512,7 @@ function displayRecentNews(recentNews) {
             </div>
             <div class="p-3">
                 <h3 class="text-white text-base font-medium mb-2 line-clamp-2">${item.title}</h3>
-                <p class="text-gray-400 text-xs mb-2 line-clamp-3">${item.summary || ''}</p>
+                <p class="text-gray-400 text-xs mb-2 line-clamp-3">${item.content || ''}</p>
                 <div class="flex justify-between items-center">
                     <span class="text-xs rounded px-2 py-0.5 ${
                         item.impact === 'positive' ? 'bg-green-400 bg-opacity-20 text-green-400' : 
@@ -269,10 +527,116 @@ function displayRecentNews(recentNews) {
             </div>
         `;
         
-        newsGrid.appendChild(card);
+        fragment.appendChild(card);
     });
     
+    // Ajouter tous les éléments au DOM en une seule fois
+    newsGrid.appendChild(fragment);
     container.appendChild(newsGrid);
+}
+
+/**
+ * ---- NOUVELLE FONCTION ----
+ * Affiche les événements financiers avec un meilleur formatage
+ * @param {Array} events - Liste des événements économiques et financiers
+ */
+function displayEvents(events) {
+    const eventsContainer = document.getElementById('events-container');
+    if (!eventsContainer) return;
+    
+    // Vider le conteneur
+    eventsContainer.innerHTML = '';
+    
+    if (events.length === 0) {
+        eventsContainer.innerHTML = `
+            <div class="col-span-3 flex flex-col items-center justify-center py-10">
+                <i class="fas fa-calendar-times text-gray-700 text-4xl mb-4"></i>
+                <p class="text-gray-500">Aucun événement disponible</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Récupérer la date d'aujourd'hui pour le filtrage des événements
+    const today = new Date();
+    const todayStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
+    
+    // Séparer les événements par importance
+    const criticalEvents = events.filter(e => e.importance_level === 'critical' || e.importance === 'high');
+    const standardEvents = events.filter(e => e.importance_level !== 'critical' && e.importance !== 'high');
+    
+    // Créer un documentFragment pour optimiser les performances
+    const fragment = document.createDocumentFragment();
+    
+    // Événements critiques en premier
+    criticalEvents.forEach(event => {
+        // Vérifier si c'est aujourd'hui
+        const isToday = event.date === todayStr;
+        
+        const eventCard = document.createElement('div');
+        eventCard.className = `event-card high-importance ${isToday ? 'today' : ''} relative`;
+        eventCard.setAttribute('data-date', event.date);
+        eventCard.setAttribute('data-importance', event.importance);
+        
+        // Badge pour les événements critiques
+        const criticalBadge = document.createElement('div');
+        criticalBadge.className = 'absolute top-0 right-0 bg-red-500 text-white text-xs px-2 py-1 rounded-bl m-1';
+        criticalBadge.textContent = 'CRITIQUE';
+        
+        const eventDate = document.createElement('div');
+        eventDate.className = 'event-date';
+        eventDate.innerHTML = `
+            <div class="event-day">${event.date.split('/')[0]}</div>
+            <div class="event-month">${event.date.split('/')[1]}</div>
+        `;
+        
+        const eventContent = document.createElement('div');
+        eventContent.className = 'event-content';
+        eventContent.innerHTML = `
+            <div class="event-title">${event.title}</div>
+            <div class="event-details">
+                <span class="event-time"><i class="fas fa-clock"></i> ${event.time}</span>
+                <span class="event-type ${event.type}">${event.type}</span>
+                <span class="event-importance ${event.importance}"><i class="fas fa-signal"></i> ${event.importance}</span>
+            </div>
+        `;
+        
+        eventCard.appendChild(criticalBadge);
+        eventCard.appendChild(eventDate);
+        eventCard.appendChild(eventContent);
+        fragment.appendChild(eventCard);
+    });
+    
+    // Événements standards ensuite
+    standardEvents.forEach(event => {
+        // Vérifier si c'est aujourd'hui
+        const isToday = event.date === todayStr;
+        
+        const eventCard = document.createElement('div');
+        eventCard.className = `event-card ${event.importance}-importance ${isToday ? 'today' : ''}`;
+        eventCard.setAttribute('data-date', event.date);
+        eventCard.setAttribute('data-importance', event.importance);
+        
+        eventCard.innerHTML = `
+            <div class="event-date">
+                <div class="event-day">${event.date.split('/')[0]}</div>
+                <div class="event-month">${event.date.split('/')[1]}</div>
+            </div>
+            <div class="event-content">
+                <div class="event-title">${event.title}</div>
+                <div class="event-details">
+                    <span class="event-time"><i class="fas fa-clock"></i> ${event.time}</span>
+                    <span class="event-type ${event.type}">${event.type}</span>
+                    <span class="event-importance ${event.importance}"><i class="fas fa-signal"></i> ${event.importance}</span>
+                </div>
+            </div>
+        `;
+        
+        fragment.appendChild(eventCard);
+    });
+    
+    // Ajout de tous les événements au DOM en une seule opération
+    eventsContainer.appendChild(fragment);
 }
 
 /**
@@ -283,7 +647,7 @@ function displayFallbackData() {
     console.warn('Utilisation des données de secours pour les actualités');
     
     // Afficher des messages d'erreur ou de secours dans les conteneurs d'actualités
-    const containers = ['featured-news', 'recent-news'];
+    const containers = ['breaking-news', 'important-news', 'featured-news', 'recent-news'];
     containers.forEach(id => {
         const container = document.getElementById(id);
         if (!container) return;
@@ -315,10 +679,12 @@ function setupFilters() {
         categoryFilters.forEach(filter => {
             filter.addEventListener('click', function() {
                 // Retirer la classe active de tous les filtres
-                categoryFilters.forEach(f => f.classList.remove('filter-active'));
+                categoryFilters.forEach(f => f.classList.remove('filter-active', 'bg-green-400', 'bg-opacity-10', 'text-green-400', 'border-green-400', 'border-opacity-30'));
+                categoryFilters.forEach(f => f.classList.add('bg-transparent', 'text-gray-400', 'border-gray-700'));
                 
                 // Ajouter la classe active au filtre cliqué
-                this.classList.add('filter-active');
+                this.classList.remove('bg-transparent', 'text-gray-400', 'border-gray-700');
+                this.classList.add('filter-active', 'bg-green-400', 'bg-opacity-10', 'text-green-400', 'border-green-400', 'border-opacity-30');
                 
                 // Appliquer le filtre
                 const category = this.getAttribute('data-category');
@@ -327,9 +693,39 @@ function setupFilters() {
         });
     }
     
+    // ---- AMÉLIORATION: Ajouter un filtre par niveau d'importance ----
+    // Créer le sélecteur d'importance s'il n'existe pas
+    const filtersContainer = document.querySelector('.flex.flex-wrap.gap-2');
+    if (filtersContainer && !document.getElementById('importance-select')) {
+        const importanceSelect = document.createElement('select');
+        importanceSelect.id = 'importance-select';
+        importanceSelect.className = 'text-xs md:text-sm px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700 rounded-full';
+        importanceSelect.innerHTML = `
+            <option value="all">Toutes importances</option>
+            <option value="breaking">Breaking News</option>
+            <option value="important">Importantes</option>
+            <option value="normal">Standards</option>
+        `;
+        
+        filtersContainer.appendChild(importanceSelect);
+        
+        // Ajouter l'événement
+        importanceSelect.addEventListener('change', function() {
+            filterNews('importance', this.value);
+        });
+    }
+    
     // Filtre de tri
     const sortSelect = document.getElementById('sort-select');
     if (sortSelect) {
+        // Ajouter une option de tri par score/importance
+        if (!sortSelect.querySelector('option[value="importance"]')) {
+            const importanceOption = document.createElement('option');
+            importanceOption.value = 'importance';
+            importanceOption.textContent = 'Importance';
+            sortSelect.appendChild(importanceOption);
+        }
+        
         sortSelect.addEventListener('change', function() {
             sortNews(this.value);
         });
@@ -416,6 +812,8 @@ function setupEventButtons() {
             if (window.eventsManager) {
                 window.eventsManager.essentialOnly = !isActive;
                 window.eventsManager.renderEvents();
+            } else {
+                filterEvents(isActive ? 'all' : 'critical');
             }
         });
     }
@@ -435,7 +833,7 @@ function setupLoadMoreButton() {
 
 /**
  * Filtre les actualités en fonction du type et de la valeur du filtre
- * @param {string} filterType - Type de filtre (category, impact, country)
+ * @param {string} filterType - Type de filtre (category, impact, country, importance)
  * @param {string} filterValue - Valeur du filtre
  */
 function filterNews(filterType, filterValue) {
@@ -445,29 +843,37 @@ function filterNews(filterType, filterValue) {
     const activeCategory = document.querySelector('#category-filters .filter-active')?.getAttribute('data-category') || 'all';
     const activeImpact = document.getElementById('impact-select')?.value || 'all';
     const activeCountry = document.getElementById('country-select')?.value || 'all';
+    const activeImportance = document.getElementById('importance-select')?.value || 'all';
     
     // Mettre à jour les filtres actifs en fonction du type actuel
     let currentCategory = activeCategory;
     let currentImpact = activeImpact;
     let currentCountry = activeCountry;
+    let currentImportance = activeImportance;
     
     if (filterType === 'category') currentCategory = filterValue;
     if (filterType === 'impact') currentImpact = filterValue;
     if (filterType === 'country') currentCountry = filterValue;
+    if (filterType === 'importance') currentImportance = filterValue;
+    
+    // Utilisation de documentFragment pour optimiser les performances
+    const fragment = document.createDocumentFragment();
     
     // Appliquer les filtres à chaque élément d'actualité
     newsItems.forEach(item => {
         const itemCategory = item.getAttribute('data-category');
         const itemImpact = item.getAttribute('data-impact');
         const itemCountry = item.getAttribute('data-country');
+        const itemImportance = item.getAttribute('data-importance') || 'normal';
         
         // Vérifier si l'élément correspond à tous les filtres actifs
         const matchesCategory = currentCategory === 'all' || itemCategory === currentCategory;
         const matchesImpact = currentImpact === 'all' || itemImpact === currentImpact;
         const matchesCountry = currentCountry === 'all' || itemCountry === currentCountry;
+        const matchesImportance = currentImportance === 'all' || itemImportance === currentImportance;
         
         // Afficher ou masquer l'élément en fonction des filtres
-        if (matchesCategory && matchesImpact && matchesCountry) {
+        if (matchesCategory && matchesImpact && matchesCountry && matchesImportance) {
             item.classList.remove('hidden-item');
             item.classList.add('fade-in');
         } else {
@@ -482,55 +888,95 @@ function filterNews(filterType, filterValue) {
 
 /**
  * Trie les actualités en fonction du critère spécifié
- * @param {string} sortCriteria - Critère de tri (recent, older, impact-high, impact-low)
+ * @param {string} sortCriteria - Critère de tri (recent, older, impact-high, impact-low, importance)
  */
 function sortNews(sortCriteria) {
-    const recentNewsContainer = document.getElementById('recent-news')?.querySelector('.grid');
-    if (!recentNewsContainer) return;
+    // Sélectionner tous les conteneurs d'actualités
+    const newsContainers = [
+        document.getElementById('breaking-news')?.querySelector('.grid'), 
+        document.getElementById('important-news')?.querySelector('.grid'),
+        document.getElementById('featured-news')?.querySelector('.grid'),
+        document.getElementById('recent-news')?.querySelector('.grid')
+    ].filter(Boolean);
     
-    const newsItems = Array.from(recentNewsContainer.querySelectorAll('.news-item'));
-    
-    // Trier les éléments en fonction du critère
-    newsItems.sort((a, b) => {
-        if (sortCriteria === 'recent' || sortCriteria === 'older') {
-            const dateA = new Date(a.getAttribute('data-date') || 0);
-            const dateB = new Date(b.getAttribute('data-date') || 0);
-            
-            return sortCriteria === 'recent' ? dateB - dateA : dateA - dateB;
-        } else if (sortCriteria === 'impact-high' || sortCriteria === 'impact-low') {
-            const impactMap = { 'positive': 3, 'neutral': 2, 'negative': 1 };
-            
-            const impactA = impactMap[a.getAttribute('data-impact')] || 0;
-            const impactB = impactMap[b.getAttribute('data-impact')] || 0;
-            
-            return sortCriteria === 'impact-high' ? impactB - impactA : impactA - impactB;
-        }
+    newsContainers.forEach(container => {
+        const newsItems = Array.from(container.querySelectorAll('.news-item'));
         
-        return 0;
-    });
-    
-    // Réorganiser les éléments dans le DOM
-    newsItems.forEach(item => {
-        recentNewsContainer.appendChild(item);
+        // Trier les éléments en fonction du critère
+        newsItems.sort((a, b) => {
+            if (sortCriteria === 'recent' || sortCriteria === 'older') {
+                const dateA = new Date(a.getAttribute('data-date') || 0);
+                const dateB = new Date(b.getAttribute('data-date') || 0);
+                
+                return sortCriteria === 'recent' ? dateB - dateA : dateA - dateB;
+            } else if (sortCriteria === 'impact-high' || sortCriteria === 'impact-low') {
+                const impactMap = { 'positive': 3, 'neutral': 2, 'negative': 1 };
+                
+                const impactA = impactMap[a.getAttribute('data-impact')] || 0;
+                const impactB = impactMap[b.getAttribute('data-impact')] || 0;
+                
+                return sortCriteria === 'impact-high' ? impactB - impactA : impactA - impactB;
+            } else if (sortCriteria === 'importance') {
+                // Nouvelle option de tri par importance
+                const importanceMap = { 'breaking': 3, 'important': 2, 'normal': 1 };
+                
+                const importanceA = importanceMap[a.getAttribute('data-importance') || 'normal'];
+                const importanceB = importanceMap[b.getAttribute('data-importance') || 'normal'];
+                
+                return importanceB - importanceA;
+            }
+            
+            return 0;
+        });
+        
+        // Utilisation de documentFragment pour optimiser les performances
+        const fragment = document.createDocumentFragment();
+        newsItems.forEach(item => fragment.appendChild(item));
+        
+        // Réorganiser les éléments dans le DOM
+        container.appendChild(fragment);
     });
 }
 
 /**
  * Filtre les événements en fonction de la période
- * @param {string} period - Période (today, week)
+ * @param {string} period - Période (today, week) ou niveau d'importance (critical)
  */
 function filterEvents(period) {
-    const eventItems = document.querySelectorAll('.event-item');
+    const eventItems = document.querySelectorAll('.event-card');
+    
+    // Récupérer la date d'aujourd'hui pour le filtrage
+    const today = new Date();
+    const todayStr = `${today.getDate().toString().padStart(2, '0')}/${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getFullYear()}`;
     
     eventItems.forEach(item => {
         const itemDate = item.getAttribute('data-date');
+        const itemImportance = item.getAttribute('data-importance');
         
-        if (period === 'all' || itemDate === period) {
+        // Filtrer par période ou importance
+        if (period === 'all') {
             item.classList.remove('hidden-item');
             item.classList.add('fade-in');
-        } else {
-            item.classList.add('hidden-item');
-            item.classList.remove('fade-in');
+        } else if (period === 'today') {
+            if (itemDate === todayStr) {
+                item.classList.remove('hidden-item');
+                item.classList.add('fade-in');
+            } else {
+                item.classList.add('hidden-item');
+                item.classList.remove('fade-in');
+            }
+        } else if (period === 'critical') {
+            if (itemImportance === 'high') {
+                item.classList.remove('hidden-item');
+                item.classList.add('fade-in');
+            } else {
+                item.classList.add('hidden-item');
+                item.classList.remove('fade-in');
+            }
+        } else if (period === 'week') {
+            // Tous les événements sont visibles en mode semaine
+            item.classList.remove('hidden-item');
+            item.classList.add('fade-in');
         }
     });
     
@@ -542,32 +988,40 @@ function filterEvents(period) {
  * Vérifie s'il y a des éléments d'actualité visibles après le filtrage
  */
 function checkVisibleItems() {
-    const recentNewsContainer = document.getElementById('recent-news')?.querySelector('.grid');
-    if (!recentNewsContainer) return;
+    // Vérifier pour chaque conteneur d'actualités
+    const containers = [
+        {id: 'breaking-news', selector: '.grid'},
+        {id: 'important-news', selector: '.grid'},
+        {id: 'recent-news', selector: '.grid'}
+    ];
     
-    const visibleItems = recentNewsContainer.querySelectorAll('.news-item:not(.hidden-item)');
-    
-    // Si aucun élément n'est visible, afficher un message
-    if (visibleItems.length === 0) {
-        if (!document.getElementById('no-news-message')) {
-            const noItemsMessage = document.createElement('div');
-            noItemsMessage.id = 'no-news-message';
-            noItemsMessage.className = 'no-data-message flex flex-col items-center justify-center py-10 col-span-3';
-            noItemsMessage.innerHTML = `
-                <i class="fas fa-filter text-gray-700 text-4xl mb-4"></i>
-                <h3 class="text-white font-medium mb-2">Aucune actualité ne correspond à vos critères</h3>
-                <p class="text-gray-400">Veuillez modifier vos filtres pour voir plus d'actualités.</p>
-            `;
-            
-            recentNewsContainer.appendChild(noItemsMessage);
+    containers.forEach(({id, selector}) => {
+        const container = document.getElementById(id)?.querySelector(selector);
+        if (!container) return;
+        
+        const visibleItems = container.querySelectorAll('.news-item:not(.hidden-item)');
+        
+        // Si aucun élément n'est visible, afficher un message
+        if (visibleItems.length === 0) {
+            if (!container.querySelector('.no-data-message')) {
+                const noItemsMessage = document.createElement('div');
+                noItemsMessage.className = 'no-data-message flex flex-col items-center justify-center py-10 col-span-3';
+                noItemsMessage.innerHTML = `
+                    <i class="fas fa-filter text-gray-700 text-4xl mb-4"></i>
+                    <h3 class="text-white font-medium mb-2">Aucune actualité ne correspond à vos critères</h3>
+                    <p class="text-gray-400">Veuillez modifier vos filtres pour voir plus d'actualités.</p>
+                `;
+                
+                container.appendChild(noItemsMessage);
+            }
+        } else {
+            // Supprimer le message s'il existe
+            const noItemsMessage = container.querySelector('.no-data-message');
+            if (noItemsMessage) {
+                noItemsMessage.remove();
+            }
         }
-    } else {
-        // Supprimer le message s'il existe
-        const noItemsMessage = document.getElementById('no-news-message');
-        if (noItemsMessage) {
-            noItemsMessage.remove();
-        }
-    }
+    });
 }
 
 /**
@@ -577,7 +1031,7 @@ function checkVisibleEvents() {
     const eventsContainer = document.getElementById('events-container');
     if (!eventsContainer) return;
     
-    const visibleEvents = eventsContainer.querySelectorAll('.event-item:not(.hidden-item)');
+    const visibleEvents = eventsContainer.querySelectorAll('.event-card:not(.hidden-item)');
     
     // Si aucun événement n'est visible, afficher un message
     if (visibleEvents.length === 0) {
@@ -651,8 +1105,15 @@ function formatDate(dateStr) {
     try {
         const date = new Date(dateStr);
         
-        // Si la date est invalide, retourner la chaîne originale
-        if (isNaN(date.getTime())) return dateStr;
+        // Si la date est invalide, essayer de parser un format DD/MM/YYYY
+        if (isNaN(date.getTime())) {
+            const parts = dateStr.split('/');
+            if (parts.length === 3) {
+                // Format DD/MM/YYYY
+                return dateStr;
+            }
+            return dateStr;
+        }
         
         // Formater la date: aujourd'hui, hier ou date complète
         const today = new Date();
