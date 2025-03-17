@@ -1,0 +1,57 @@
+name: Update Financial Data
+
+on:
+  # Déclenchement manuel
+  workflow_dispatch:
+  # Mise à jour automatique toutes les 4 heures
+  schedule:
+    - cron: '0 */4 * * *'
+
+# Configuration des permissions
+permissions:
+  contents: write
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Create data directory if needed
+        run: mkdir -p data
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4
+      
+      # Étape 1: Récupération des actualités et événements via FMP
+      - name: Update financial news and events from FMP
+        run: python scripts/fmp_news_updater.py
+        env:
+          FMP_API_KEY: ${{ secrets.FMP_API_KEY }}
+        
+      # Étape 2: Mise à jour des données de marché (conservé de votre workflow actuel)
+      - name: Update market data
+        run: python scripts/scrape_markets.py
+        continue-on-error: true
+      
+      # Étape 3: Backup - générer des portefeuilles si nécessaire
+      # Pour le moment, conservons vos portefeuilles existants générés par Perplexity
+      # Nous pourrons les remplacer ultérieurement par des recommandations FMP
+      
+      - name: Commit and push changes
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: 'data/'
+          message: '📊 Update financial data via FMP API [automated]'
