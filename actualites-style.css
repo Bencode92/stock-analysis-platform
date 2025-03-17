@@ -204,6 +204,88 @@
     font-size: 1.3rem;
 }
 
+/* Styles pour les Breaking News */
+.breaking-news-container {
+    border-left: 4px solid #EF4444;
+    padding-left: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.breaking-news-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 0.5rem;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    background-color: #EF4444;
+    margin-bottom: 1rem;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.breaking-news-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.breaking-news-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        transparent 100%
+    );
+    animation: shine 3s infinite;
+}
+
+.animate-pulse-slow {
+    animation: pulse 3s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+@keyframes shine {
+    to {
+        left: 100%;
+    }
+}
+
+/* Filtre pour la visualisation */
+.hidden-item {
+    display: none !important;
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Pour s'assurer que l'espace est réservé pour la section breaking news */
+#breaking-news:empty {
+    display: none;
+}
+
 /* Responsivité */
 @media (max-width: 768px) {
     .major-news {
@@ -212,5 +294,9 @@
     
     .news-grid {
         grid-template-columns: 1fr;
+    }
+    
+    .breaking-news-container {
+        padding-left: 0.5rem;
     }
 }
