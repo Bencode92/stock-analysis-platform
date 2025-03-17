@@ -38,54 +38,66 @@ class EventsManager {
     // Boutons de filtre temporel (aujourd'hui/semaine)
     const todayBtn = document.getElementById('today-btn');
     const weekBtn = document.getElementById('week-btn');
+    const essentialBtn = document.getElementById('essential-btn');
+    
+    // Classes pour rendre les boutons plus visibles
+    const activeClasses = 'text-green-400 border-green-400 border-opacity-30 bg-green-400 bg-opacity-20';
+    const inactiveClasses = 'text-gray-400 border-gray-700';
     
     if (todayBtn && weekBtn) {
       todayBtn.addEventListener('click', () => {
         this.filterMode = 'today';
-        todayBtn.classList.add('filter-active', 'text-green-400', 'border-green-400', 'border-opacity-30');
-        todayBtn.classList.remove('text-gray-400', 'border-gray-700');
-        
-        weekBtn.classList.remove('filter-active', 'text-green-400', 'border-green-400', 'border-opacity-30');
-        weekBtn.classList.add('text-gray-400', 'border-gray-700');
+        todayBtn.className = `text-xs px-2 py-1 border rounded filter-active ${activeClasses}`;
+        weekBtn.className = `text-xs px-2 py-1 border rounded ${inactiveClasses}`;
         
         this.renderEvents();
       });
       
       weekBtn.addEventListener('click', () => {
         this.filterMode = 'week';
-        weekBtn.classList.add('filter-active', 'text-green-400', 'border-green-400', 'border-opacity-30');
-        weekBtn.classList.remove('text-gray-400', 'border-gray-700');
-        
-        todayBtn.classList.remove('filter-active', 'text-green-400', 'border-green-400', 'border-opacity-30');
-        todayBtn.classList.add('text-gray-400', 'border-gray-700');
+        weekBtn.className = `text-xs px-2 py-1 border rounded filter-active ${activeClasses}`;
+        todayBtn.className = `text-xs px-2 py-1 border rounded ${inactiveClasses}`;
         
         this.renderEvents();
       });
     }
     
-    // Ajout d'un bouton de filtre "Événements essentiels" s'il n'existe pas déjà
-    const filtersContainer = document.querySelector('.flex.gap-2');
-    if (filtersContainer && !document.getElementById('essential-btn')) {
-      const essentialBtn = document.createElement('button');
-      essentialBtn.id = 'essential-btn';
-      essentialBtn.className = 'text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded';
-      essentialBtn.textContent = 'Essentiels';
-      
+    // Amélioration du bouton "Essentiels" s'il existe
+    if (essentialBtn) {
       essentialBtn.addEventListener('click', () => {
         this.essentialOnly = !this.essentialOnly;
         
         if (this.essentialOnly) {
-          essentialBtn.classList.add('filter-active', 'text-green-400', 'border-green-400', 'border-opacity-30');
-          essentialBtn.classList.remove('text-gray-400', 'border-gray-700');
+          essentialBtn.className = `text-xs px-2 py-1 border rounded filter-active ${activeClasses}`;
         } else {
-          essentialBtn.classList.remove('filter-active', 'text-green-400', 'border-green-400', 'border-opacity-30');
-          essentialBtn.classList.add('text-gray-400', 'border-gray-700');
+          essentialBtn.className = `text-xs px-2 py-1 border rounded ${inactiveClasses}`;
         }
         
         this.renderEvents();
       });
-      
-      filtersContainer.appendChild(essentialBtn);
+    } else {
+      // Ajout d'un bouton de filtre "Événements essentiels" s'il n'existe pas déjà
+      const filtersContainer = document.querySelector('.flex.gap-2');
+      if (filtersContainer) {
+        const essentialBtn = document.createElement('button');
+        essentialBtn.id = 'essential-btn';
+        essentialBtn.className = 'text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded';
+        essentialBtn.textContent = 'Essentiels';
+        
+        essentialBtn.addEventListener('click', () => {
+          this.essentialOnly = !this.essentialOnly;
+          
+          if (this.essentialOnly) {
+            essentialBtn.className = `text-xs px-2 py-1 border rounded filter-active ${activeClasses}`;
+          } else {
+            essentialBtn.className = `text-xs px-2 py-1 border rounded ${inactiveClasses}`;
+          }
+          
+          this.renderEvents();
+        });
+        
+        filtersContainer.appendChild(essentialBtn);
+      }
     }
   }
 
@@ -568,7 +580,8 @@ class EventsManager {
     const endOfWeek = new Date(today);
     endOfWeek.setDate(today.getDate() + 7);
     
-    return this.events.filter(event => {
+    // Filtrer les événements
+    const filteredEvents = this.events.filter(event => {
       // Appliquer le filtre temporel
       if (this.filterMode === 'today') {
         // Extraire le jour et le mois de la date de l'événement
@@ -602,6 +615,24 @@ class EventsManager {
       }
       
       return true;
+    });
+    
+    // Trier les événements: essentiels en premier, puis par heure
+    return filteredEvents.sort((a, b) => {
+      // Événements essentiels en premier
+      if (a.isEssential && !b.isEssential) return -1;
+      if (!a.isEssential && b.isEssential) return 1;
+      
+      // Ensuite par importance
+      const importanceOrder = { high: 1, medium: 2, low: 3 };
+      const importanceA = importanceOrder[a.importance] || 4;
+      const importanceB = importanceOrder[b.importance] || 4;
+      if (importanceA !== importanceB) return importanceA - importanceB;
+      
+      // Puis par heure
+      const timeA = a.time || '00:00';
+      const timeB = b.time || '00:00';
+      return timeA.localeCompare(timeB);
     });
   }
 
@@ -674,6 +705,9 @@ class EventsManager {
         position: relative;
         transition: all 0.3s ease;
         overflow: hidden;
+        height: 180px; /* Hauteur fixe pour uniformité */
+        display: flex;
+        flex-direction: column;
       }
       
       .event-card:hover {
@@ -682,13 +716,18 @@ class EventsManager {
         border-color: rgba(0, 255, 135, 0.3);
       }
       
+      /* Espacement entre colonnes */
+      .grid.grid-cols-1.md\\:grid-cols-3.gap-4 {
+        gap: 1.5rem !important;
+      }
+      
       /* Indicateur de niveau d'impact */
       .event-card::before {
         content: '';
         position: absolute;
         top: 0;
         left: 0;
-        width: 3px;
+        width: 4px; /* Légèrement plus large */
         height: 100%;
       }
       
@@ -707,20 +746,21 @@ class EventsManager {
         box-shadow: 0 0 10px rgba(0, 230, 118, 0.6);
       }
       
-      /* Badge pour événements essentiels */
+      /* Badge pour événements essentiels amélioré */
       .essential-badge {
         position: absolute;
         top: 10px;
         right: 10px;
-        background: rgba(0, 255, 135, 0.2);
+        background: rgba(0, 255, 135, 0.3);
         color: #00ff87;
-        padding: 3px 6px;
-        font-size: 0.65rem;
+        padding: 4px 8px;
+        font-size: 0.7rem;
         border-radius: 4px;
         font-weight: 600;
         letter-spacing: 0.5px;
         text-transform: uppercase;
-        box-shadow: 0 0 8px rgba(0, 255, 135, 0.3);
+        box-shadow: 0 0 12px rgba(0, 255, 135, 0.4);
+        animation: pulse 2s infinite;
       }
       
       /* État de chargement */
@@ -753,6 +793,19 @@ class EventsManager {
           opacity: 1;
           transform: translateY(0);
         }
+      }
+      
+      /* Animation de pulsation pour les badges */
+      @keyframes pulse {
+        0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
+        70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
+        100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
+      }
+      
+      /* Amélioration pour les boutons de filtre */
+      #today-btn.filter-active, #week-btn.filter-active, #essential-btn.filter-active {
+        font-weight: 600;
+        transform: translateY(-1px);
       }
     `;
     
