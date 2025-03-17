@@ -1,6 +1,6 @@
 /* 
  * news-impact-indicators.css
- * Styles spécifiques pour les indicateurs d'impact dans la section des actualités générales
+ * Styles pour les indicateurs d'impact dans toutes les sections d'actualités
  */
 
 /* Styles de base pour tous les indicateurs d'impact */
@@ -14,12 +14,6 @@
     margin-right: 6px;
     margin-bottom: 6px;
     text-transform: uppercase;
-}
-
-/* Indicateurs dans le contenu des news-content (section générale) */
-.news-content .impact-indicator {
-    margin-top: 5px;
-    margin-bottom: 10px;
 }
 
 /* Couleurs spécifiques selon l'impact */
@@ -41,17 +35,114 @@
     border: 1px solid rgba(234, 179, 8, 0.3);
 }
 
-/* Espacement entre les métadonnées et les indicateurs */
-.news-content .news-meta + div {
-    margin-top: 10px;
-    margin-bottom: 10px;
+/* Styles pour les cartes d'actualités générales */
+#recent-news .news-card {
+    border-width: 1px;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    margin-bottom: 15px;
 }
 
-/* S'assurer que tous les indicateurs s'affichent bien en ligne */
-.news-content .indicators-container {
+#recent-news .news-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* En-tête des cartes d'actualités générales */
+#recent-news .news-card h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    line-height: 1.4;
+}
+
+/* Contenu des cartes d'actualités générales */
+#recent-news .news-card p {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 15px;
+}
+
+/* Styles uniformes pour les métadonnées */
+.news-meta {
     display: flex;
-    flex-wrap: wrap;
-    gap: 5px;
-    margin-top: 10px;
-    margin-bottom: 12px;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 12px;
+    font-size: 0.8rem;
+}
+
+.news-meta .source, .news-meta .news-source {
+    background-color: rgba(0, 255, 135, 0.1);
+    border: 1px solid rgba(0, 255, 135, 0.2);
+    border-radius: 3px;
+    padding: 2px 6px;
+    color: #00ff87;
+    font-weight: 500;
+}
+
+.news-meta .date-time, .news-meta .news-date-time {
+    display: flex;
+    align-items: center;
+}
+
+/* Style uniforme pour toutes les cartes d'actualités */
+.news-card {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    border-width: 1px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    animation: fadeIn 0.5s ease-out forwards;
+}
+
+/* Badge URGENT pour les actualités critiques */
+.badge.urgent {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: #ff3b3b;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    box-shadow: 0 0 8px rgba(255, 59, 59, 0.6);
+    animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* Animation de fadeIn */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Styles glassmorphism pour toutes les cartes */
+.glassmorphism {
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(0, 255, 135, 0.2);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Style spécifique pour les actualités critiques (rouge) */
+#critical-news-container .news-card {
+    border-color: rgba(255, 59, 59, 0.5);
+}
+
+/* Style spécifique pour les actualités importantes (jaune/orange) */
+#important-news-container .news-card {
+    border-color: rgba(255, 159, 0, 0.5);
+}
+
+/* Style spécifique pour les actualités générales (bleu/gris) */
+#recent-news .news-card {
+    border-color: rgba(104, 119, 141, 0.3);
 }
