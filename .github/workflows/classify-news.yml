@@ -1,0 +1,63 @@
+name: Classify Financial News with ML
+
+on:
+  # Exécution après la mise à jour des actualités
+  workflow_run:
+    workflows: ["Update Financial Data"]
+    types:
+      - completed
+  # Exécution manuelle
+  workflow_dispatch:
+  # Exécution programmée (toutes les 6 heures)
+  schedule:
+    - cron: '0 */6 * * *'
+
+jobs:
+  classify-news:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ml/requirements.txt
+      
+      - name: Check if news.json exists
+        id: check_files
+        run: |
+          if [ -f "data/news.json" ]; then
+            echo "news_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "news_exists=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Run classification
+        if: steps.check_files.outputs.news_exists == 'true'
+        run: |
+          python scripts/run_classification.py --input data/news.json
+      
+      - name: Commit and push if changed
+        if: steps.check_files.outputs.news_exists == 'true'
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          git add data/news.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update news with ML classification" && git push)
+      
+      - name: Upload classification report
+        if: steps.check_files.outputs.news_exists == 'true'
+        uses: actions/upload-artifact@v3
+        with:
+          name: classification-report
+          path: data/news.json
+          retention-days: 1
