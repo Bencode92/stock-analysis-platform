@@ -6,6 +6,8 @@ Script d'extraction des actualités et événements depuis Financial Modeling Pr
 - Stock News API: Pour les actions et ETF
 - Crypto News API: Pour les cryptomonnaies
 - General News API: Pour l'actualité économique générale
+- Press Releases API: Pour les communiqués de presse des entreprises
+- FMP Articles API: Pour les articles rédigés par FMP
 """
 
 import os
@@ -25,9 +27,11 @@ NEWS_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__
 CONFIG = {
     "api_key": os.environ.get("FMP_API_KEY", ""),
     "endpoints": {
-        "stock_news": "https://financialmodelingprep.com/api/v3/stock_news",
-        "crypto_news": "https://financialmodelingprep.com/api/v3/crypto_news", 
-        "general_news": "https://financialmodelingprep.com/api/v4/general_news",
+        "stock_news": "https://financialmodelingprep.com/stable/news/stock-latest",
+        "crypto_news": "https://financialmodelingprep.com/stable/news/crypto-latest", 
+        "general_news": "https://financialmodelingprep.com/stable/news/general-latest",
+        "press_releases": "https://financialmodelingprep.com/stable/news/press-releases-latest",
+        "fmp_articles": "https://financialmodelingprep.com/stable/fmp-articles",
         "earnings_calendar": "https://financialmodelingprep.com/api/v3/earning_calendar",
         "economic_calendar": "https://financialmodelingprep.com/api/v3/economic_calendar"
     },
@@ -86,6 +90,20 @@ def get_general_news():
     }
     return fetch_api_data(CONFIG["endpoints"]["general_news"], params)
 
+def get_press_releases():
+    """Récupère les communiqués de presse"""
+    params = {
+        "limit": CONFIG["news_limit"]
+    }
+    return fetch_api_data(CONFIG["endpoints"]["press_releases"], params)
+
+def get_fmp_articles():
+    """Récupère les articles rédigés par FMP"""
+    params = {
+        "limit": CONFIG["news_limit"]
+    }
+    return fetch_api_data(CONFIG["endpoints"]["fmp_articles"], params)
+
 def get_earnings_calendar():
     """Récupère le calendrier des résultats d'entreprises"""
     today = datetime.now().strftime("%Y-%m-%d")
@@ -119,7 +137,7 @@ def determine_category(article):
         return "crypto"
     elif any(word in text for word in ["fed", "bce", "inflation", "taux", "pib", "interest rate"]):
         return "economie"
-    elif any(word in text for word in ["etf", "fund", "index", "s&p", "dow", "cac", "nasdaq"]):
+    elif any(word in text for word in ["etf", "fund", "index", "s&p", "dow", "cac", "nasdaq", "bond", "treasury", "yield"]):
         return "marches"
     else:
         return "entreprises"
@@ -195,6 +213,38 @@ def format_time(date_str):
         # Fallback en cas d'erreur
         return "00:00"
 
+def normalize_article(article):
+    """Normalise les différents formats d'articles FMP en un format standard"""
+    # Gérer les différents formats selon l'endpoint
+    
+    # Déterminer les champs clés
+    title = article.get("title", "")
+    
+    # Pour FMP Articles API
+    if "date" in article and "content" in article and "tickers" in article:
+        text = article.get("content", "")
+        date = article.get("date", "")
+        symbol = article.get("tickers", "")
+        source = article.get("site", "Financial Modeling Prep")
+        url = article.get("link", "")
+    # Pour les autres endpoints
+    else:
+        text = article.get("text", "")
+        date = article.get("publishedDate", "")
+        symbol = article.get("symbol", "")
+        source = article.get("site", article.get("publisher", ""))
+        url = article.get("url", "")
+    
+    # Retourner un article normalisé
+    return {
+        "title": title,
+        "text": text,
+        "publishedDate": date,
+        "symbol": symbol,
+        "site": source,
+        "url": url
+    }
+
 def process_news_data(all_news):
     """Traite et formate les actualités FMP pour correspondre au format TradePulse"""
     formatted_data = {
@@ -204,16 +254,20 @@ def process_news_data(all_news):
     }
     
     for article in all_news:
+        # Normaliser les champs d'articles
+        normalized = normalize_article(article)
+        
         # Données essentielles
         news_item = {
-            "title": article.get("title", ""),
-            "content": article.get("text", ""),
-            "source": article.get("site", article.get("publisher", "")),
-            "date": format_date(article.get("publishedDate", "")),
-            "time": format_time(article.get("publishedDate", "")),
-            "category": determine_category(article),
-            "impact": determine_impact(article),
-            "country": determine_country(article)
+            "title": normalized["title"],
+            "content": normalized["text"],
+            "source": normalized["site"],
+            "date": format_date(normalized["publishedDate"]),
+            "time": format_time(normalized["publishedDate"]),
+            "category": determine_category(normalized),
+            "impact": determine_impact(normalized),
+            "country": determine_country(normalized),
+            "url": normalized.get("url", "")
         }
         
         # Ajouter à la section appropriée
@@ -289,13 +343,15 @@ def main():
         stock_news = get_stock_news()
         crypto_news = get_crypto_news()
         general_news = get_general_news()
+        press_releases = get_press_releases()
+        fmp_articles = get_fmp_articles()
         
         # 2. Récupérer les événements
         earnings = get_earnings_calendar()
         economic = get_economic_calendar()
         
         # 3. Combiner toutes les actualités
-        all_news = stock_news + crypto_news + general_news
+        all_news = stock_news + crypto_news + general_news + press_releases + fmp_articles
         logger.info(f"Total des actualités récupérées: {len(all_news)}")
         
         # Vérifier si nous avons des données
