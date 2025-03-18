@@ -1,104 +1,101 @@
-/* 
- * news-impact-indicators.css
- * Styles spécifiques pour les indicateurs d'impact dans la section des actualités
- */
+/* Styles pour les indicateurs d'impact des actualités */
 
-/* Styles de base pour tous les indicateurs d'impact */
+/* Base des indicateurs d'impact */
 .impact-indicator {
     display: inline-flex;
     align-items: center;
-    padding: 2px 8px;
+    padding: 3px 6px;
     border-radius: 4px;
-    font-size: 0.7rem;
+    font-size: 0.65rem;
     font-weight: 600;
-    margin-right: 6px;
-    margin-bottom: 6px;
     text-transform: uppercase;
 }
 
-/* Indicateurs dans la section des news-content (actualités générales) */
-.news-content .impact-indicator {
-    margin-top: 5px;
-    margin-bottom: 8px;
+/* Variantes par type d'impact */
+.impact-positive {
+    background-color: rgba(0, 200, 83, 0.2);
+    color: #00C853;
 }
 
-/* Couleurs spécifiques selon l'impact */
-.impact-positive, .impact-indicator.impact-positive {
-    background-color: rgba(16, 185, 129, 0.2);
-    color: #10B981;
-    border: 1px solid rgba(16, 185, 129, 0.3);
+.impact-slightly_positive {
+    background-color: rgba(0, 200, 83, 0.1);
+    color: #00C853;
 }
 
-.impact-negative, .impact-indicator.impact-negative {
-    background-color: rgba(239, 68, 68, 0.2);
-    color: #EF4444;
-    border: 1px solid rgba(239, 68, 68, 0.3);
+.impact-negative {
+    background-color: rgba(255, 77, 77, 0.2);
+    color: #FF4D4D;
 }
 
-.impact-neutral, .impact-indicator.impact-neutral {
-    background-color: rgba(234, 179, 8, 0.2);
-    color: #EAB308;
-    border: 1px solid rgba(234, 179, 8, 0.3);
+.impact-slightly_negative {
+    background-color: rgba(255, 77, 77, 0.1);
+    color: #FF4D4D;
 }
 
-/* Styles pour les cartes d'actualité dans les actualités générales */
-#recent-news .news-card {
-    border-width: 1px;
-    border-style: solid;
-    border-radius: 8px;
-    overflow: hidden;
-    transition: all 0.25s ease;
+.impact-neutral {
+    background-color: rgba(255, 193, 7, 0.2);
+    color: #FFC107;
 }
 
-#recent-news .news-card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 8px 20px rgba(0, 255, 135, 0.15);
-}
-
-/* Flèche lumineuse pour les actualités générales sur hover */
-#recent-news .news-card::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 3px;
-    background: linear-gradient(to right, transparent, var(--accent-color), transparent);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-#recent-news .news-card:hover::after {
-    opacity: 1;
-}
-
-/* Style des conteneurs d'indicateurs */
-.news-content > div:first-child {
-    display: flex;
-    margin-bottom: 12px;
-    align-items: center;
-    flex-wrap: wrap;
-}
-
-/* Style de titre pour les actualités générales */
-#recent-news .news-card h3 {
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 8px;
-    line-height: 1.4;
-}
-
-/* URGENT badge for critical news */
-.badge.urgent {
+/* Styles des badges d'urgence */
+.badge {
     position: absolute;
     top: 10px;
     right: 10px;
-    background-color: #ff3b3b;
-    color: white;
     padding: 3px 8px;
     border-radius: 4px;
     font-size: 0.7rem;
-    font-weight: bold;
-    letter-spacing: 0.5px;
-    box-shadow: 0 0 8px rgba(255, 59, 59, 0.6);
+    font-weight: 600;
+    text-transform: uppercase;
+    z-index: 5;
+}
+
+.badge.urgent {
+    background-color: rgba(255, 77, 77, 0.2);
+    color: #FF4D4D;
+    animation: pulse 2s infinite;
+}
+
+.badge.important {
+    background-color: rgba(255, 193, 7, 0.2);
+    color: #FFC107;
+}
+
+/* Animation de pulsation pour les badges d'urgence */
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 77, 77, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); }
+}
+
+/* Styles pour les cartes d'actualités critiques */
+.news-card.bg-red-800 {
+    border-left: 3px solid #FF4D4D;
+}
+
+.news-card.bg-green-800 {
+    border-left: 3px solid #00C853;
+}
+
+.news-card.bg-yellow-800 {
+    border-left: 3px solid #FFC107;
+}
+
+/* Styles pour les actualités importantes */
+.news-card.bg-red-700 {
+    border-left: 2px solid #FF4D4D;
+}
+
+.news-card.bg-green-700 {
+    border-left: 2px solid #00C853;
+}
+
+.news-card.bg-yellow-700 {
+    border-left: 2px solid #FFC107;
+}
+
+/* Styles pour le survol des cartes d'actualités */
+.news-card:hover {
+    transform: translateY(-2px);
+    transition: transform 0.3s ease;
 }
