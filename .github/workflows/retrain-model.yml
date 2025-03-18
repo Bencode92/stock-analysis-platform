@@ -5,17 +5,20 @@ on:
   workflow_dispatch:
     inputs:
       epochs:
-        description: 'Nombre d\'époques d\'entraînement'
+        description: 'Nombre d''époques d''entraînement'
         default: '3'
         required: true
+        type: string
       batch_size:
         description: 'Taille du batch'
         default: '8'
         required: true
+        type: string
       learning_rate:
-        description: 'Taux d\'apprentissage'
+        description: 'Taux d''apprentissage'
         default: '5e-5'
         required: true
+        type: string
   
   # Déclenchement programmé (une fois par semaine)
   schedule:
