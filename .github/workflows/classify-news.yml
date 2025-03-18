@@ -12,6 +12,10 @@ on:
   schedule:
     - cron: '0 */6 * * *'
 
+# Ajout des permissions nécessaires
+permissions:
+  contents: write
+
 jobs:
   classify-news:
     runs-on: ubuntu-latest
@@ -52,7 +56,9 @@ jobs:
         run: |
           git config --global user.name 'GitHub Actions'
           git config --global user.email 'actions@github.com'
+          
+          # Utilisez le token GITHUB_TOKEN pour l'authentification
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
+          
           git add data/news.json
           git diff --quiet && git diff --staged --quiet || (git commit -m "Update news with ML classification" && git push)
-      
-      # Suppression de l'étape upload-artifact qui causait le problème
