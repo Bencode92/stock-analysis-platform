@@ -7,6 +7,7 @@
 class MLFeedbackSystem {
     constructor() {
         this.feedbackStorageKey = 'ml_feedback_data';
+        this.pendingSyncKey = 'ml_feedback_pending_sync';
         this.pendingFeedback = this.loadPendingFeedback();
         
         console.log('Initialisation du système de feedback ML');
@@ -25,6 +26,16 @@ class MLFeedbackSystem {
             // Attendre un peu que le DOM soit mis à jour
             setTimeout(() => this.init(), 500);
         });
+        
+        // Configurer la synchronisation périodique des feedbacks
+        this.setupPeriodicSync();
+        
+        // Synchroniser avant fermeture de la page
+        window.addEventListener('beforeunload', () => {
+            if (localStorage.getItem(this.pendingSyncKey) === 'true') {
+                this.syncPendingFeedback();
+            }
+        });
     }
 
     /**
@@ -36,6 +47,23 @@ class MLFeedbackSystem {
         this.setupFeedbackModal();
         
         // Ne pas ajouter les boutons ici, c'est maintenant fait par ml-news-integrator.js
+        
+        // Vérifier s'il y a des feedbacks en attente et tenter de les synchroniser
+        if (localStorage.getItem(this.pendingSyncKey) === 'true') {
+            this.syncPendingFeedback();
+        }
+    }
+
+    /**
+     * Configure la synchronisation périodique des feedbacks
+     */
+    setupPeriodicSync() {
+        // Synchroniser toutes les 5 minutes si nécessaire
+        setInterval(() => {
+            if (localStorage.getItem(this.pendingSyncKey) === 'true') {
+                this.syncPendingFeedback();
+            }
+        }, 5 * 60 * 1000);
     }
 
     /**
@@ -51,6 +79,13 @@ class MLFeedbackSystem {
      */
     savePendingFeedback() {
         localStorage.setItem(this.feedbackStorageKey, JSON.stringify(this.pendingFeedback));
+        
+        // Si des feedbacks sont en attente, marquer pour synchronisation
+        if (this.pendingFeedback.length > 0) {
+            localStorage.setItem(this.pendingSyncKey, 'true');
+        } else {
+            localStorage.removeItem(this.pendingSyncKey);
+        }
     }
 
     /**
@@ -157,6 +192,7 @@ class MLFeedbackSystem {
         
         // Stocker l'ID de l'actualité courante
         this.currentNewsId = newsId;
+        this.currentNewsItem = newsItem;
         
         // Récupérer la classification actuelle
         const currentClassification = newsItem.getAttribute('data-sentiment') || 
@@ -175,6 +211,10 @@ class MLFeedbackSystem {
             
             // Réinitialiser le formulaire
             document.querySelectorAll('input[name="correct-classification"]').forEach(radio => {
+                radio.checked = false;
+            });
+            
+            document.querySelectorAll('input[name="correct-hierarchy"]').forEach(radio => {
                 radio.checked = false;
             });
             
@@ -202,53 +242,177 @@ class MLFeedbackSystem {
             modal.classList.remove('active');
         }
         this.currentNewsId = null;
+        this.currentNewsItem = null;
     }
 
     /**
      * Soumet le feedback
      */
     submitFeedback() {
-    // Récupérer la classification correcte sélectionnée
-    const selectedClassification = document.querySelector('input[name="correct-classification"]:checked');
-    const selectedHierarchy = document.querySelector('input[name="correct-hierarchy"]:checked');
-    
-    if (!selectedClassification) {
-        alert('Veuillez sélectionner un sentiment correct.');
-        return;
+        // Récupérer la classification correcte sélectionnée
+        const selectedClassification = document.querySelector('input[name="correct-classification"]:checked');
+        const selectedHierarchy = document.querySelector('input[name="correct-hierarchy"]:checked');
+        
+        if (!selectedClassification) {
+            alert('Veuillez sélectionner un sentiment correct.');
+            return;
+        }
+        
+        if (!selectedHierarchy) {
+            alert('Veuillez sélectionner une hiérarchie correcte.');
+            return;
+        }
+        
+        // Récupérer les données du formulaire
+        const feedback = {
+            newsId: this.currentNewsId,
+            title: document.getElementById('feedback-news-title').textContent,
+            currentClassification: document.getElementById('current-classification').textContent,
+            correctClassification: selectedClassification.value,
+            correctHierarchy: selectedHierarchy.value,  // Nouvelle propriété
+            comment: document.getElementById('feedback-comment').value,
+            timestamp: new Date().toISOString(),
+            userId: localStorage.getItem('user_id') || 'anonymous',
+            newsContent: this.currentNewsItem ? this.getNewsContent(this.currentNewsItem) : '',
+        };
+        
+        console.log('Feedback soumis:', feedback);
+        
+        // Ajouter le feedback à la liste des feedbacks en attente
+        this.pendingFeedback.push(feedback);
+        this.savePendingFeedback();
+        
+        // Mettre à jour l'UI si possible
+        this.updateNewsDisplay(feedback);
+        
+        // Envoyer le feedback au serveur si disponible
+        this.sendFeedbackToServer(feedback);
+        
+        // Fermer le modal
+        this.closeFeedbackModal();
+        
+        // Afficher un message de confirmation
+        this.showConfirmationMessage();
     }
     
-    if (!selectedHierarchy) {
-        alert('Veuillez sélectionner une hiérarchie correcte.');
-        return;
+    /**
+     * Récupère le contenu de l'actualité
+     */
+    getNewsContent(newsItem) {
+        // Essayer de récupérer le contenu de différentes manières
+        const contentElement = newsItem.querySelector('p');
+        if (contentElement) {
+            return contentElement.textContent;
+        }
+        
+        // Si pas trouvé, renvoyer une chaîne vide
+        return '';
     }
     
-    // Récupérer les données du formulaire
-    const feedback = {
-        newsId: this.currentNewsId,
-        title: document.getElementById('feedback-news-title').textContent,
-        currentClassification: document.getElementById('current-classification').textContent,
-        correctClassification: selectedClassification.value,
-        correctHierarchy: selectedHierarchy.value,  // Nouvelle propriété
-        comment: document.getElementById('feedback-comment').value,
-        timestamp: new Date().toISOString(),
-        userId: localStorage.getItem('user_id') || 'anonymous'
-    };
-    
-    console.log('Feedback soumis:', feedback);
-    
-    // Ajouter le feedback à la liste des feedbacks en attente
-    this.pendingFeedback.push(feedback);
-    this.savePendingFeedback();
-    
-    // Envoyer le feedback au serveur si disponible
-    this.sendFeedbackToServer(feedback);
-    
-    // Fermer le modal
-    this.closeFeedbackModal();
-    
-    // Afficher un message de confirmation
-    this.showConfirmationMessage();
-}
+    /**
+     * Met à jour l'affichage de l'actualité après feedback
+     */
+    updateNewsDisplay(feedback) {
+        // Si NewsSystem est disponible, utiliser sa fonction de mise à jour
+        if (window.NewsSystem && window.NewsSystem.updateNewsClassificationUI) {
+            // Créer un objet avec les nouvelles valeurs
+            const newClassification = {
+                sentiment: feedback.correctClassification,
+                hierarchy: feedback.correctHierarchy
+            };
+            
+            // Appeler la fonction de mise à jour
+            window.NewsSystem.updateNewsClassificationUI(feedback.newsId, newClassification);
+        }
+    }
+
+    /**
+     * Envoie le feedback au serveur
+     */
+    async sendFeedback(newsId, feedbackType, feedbackData) {
+        // Stocker dans localStorage pour la persistance
+        const feedbackStorage = localStorage.getItem('ml_feedback') || '{}';
+        let allFeedback = JSON.parse(feedbackStorage);
+        
+        if (!allFeedback[newsId]) {
+            allFeedback[newsId] = {};
+        }
+        
+        allFeedback[newsId][feedbackType] = feedbackData;
+        allFeedback[newsId].timestamp = Date.now();
+        
+        localStorage.setItem('ml_feedback', JSON.stringify(allFeedback));
+        
+        // Mettre un flag pour indiquer que des feedbacks sont en attente de synchronisation
+        localStorage.setItem(this.pendingSyncKey, 'true');
+        
+        // Si l'API est disponible, synchroniser immédiatement
+        this.syncFeedbackWithServer();
+        
+        console.log(`Feedback ML enregistré pour ${newsId}: ${feedbackType}`, feedbackData);
+        
+        return true;
+    }
+
+    /**
+     * Synchronise les feedbacks stockés localement avec le serveur
+     * Tente d'envoyer les feedbacks en attente
+     */
+    syncFeedbackWithServer() {
+        // Vérifier s'il y a des feedbacks en attente
+        if (localStorage.getItem(this.pendingSyncKey) !== 'true') {
+            return;
+        }
+        
+        // Récupérer tous les feedbacks
+        const feedbackStorage = localStorage.getItem('ml_feedback') || '{}';
+        const allFeedback = JSON.parse(feedbackStorage);
+        
+        // Préparer les données pour l'envoi
+        const feedbackItems = [];
+        
+        for (const newsId in allFeedback) {
+            const item = allFeedback[newsId];
+            
+            // Créer un objet de feedback
+            const feedbackItem = {
+                id: newsId,
+                timestamp: item.timestamp || Date.now(),
+                ...item
+            };
+            
+            feedbackItems.push(feedbackItem);
+        }
+        
+        // Si aucun feedback, rien à faire
+        if (feedbackItems.length === 0) {
+            localStorage.removeItem(this.pendingSyncKey);
+            return;
+        }
+        
+        // Tenter d'envoyer au serveur
+        fetch('/api/feedback', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(feedbackItems)
+        })
+        .then(response => {
+            if (response.ok) {
+                // Feedback envoyé avec succès, effacer le flag
+                localStorage.removeItem(this.pendingSyncKey);
+                console.log('✅ Feedback ML synchronisé avec le serveur');
+                return response.json();
+            } else {
+                throw new Error('Erreur lors de l\'envoi du feedback');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erreur de synchronisation du feedback ML:', error);
+            // Ne pas effacer le flag pour réessayer plus tard
+        });
+    }
 
     /**
      * Envoie le feedback au serveur
@@ -272,11 +436,17 @@ class MLFeedbackSystem {
                         item.timestamp !== feedback.timestamp
                     );
                     this.savePendingFeedback();
+                    console.log('✅ Feedback envoyé avec succès au serveur');
                 }
+            } else {
+                // API non disponible, marquer comme en attente de synchronisation
+                localStorage.setItem(this.pendingSyncKey, 'true');
+                console.log('API non disponible, feedback en attente de synchronisation');
             }
         } catch (error) {
             console.error('Erreur lors de l\'envoi du feedback:', error);
             // Le feedback reste dans la liste des feedbacks en attente
+            localStorage.setItem(this.pendingSyncKey, 'true');
         }
     }
 
@@ -313,12 +483,43 @@ class MLFeedbackSystem {
     async syncPendingFeedback() {
         if (this.pendingFeedback.length === 0) return;
         
-        // Copier la liste des feedbacks en attente
-        const pendingFeedbackCopy = [...this.pendingFeedback];
+        console.log(`Tentative de synchronisation de ${this.pendingFeedback.length} feedbacks en attente`);
         
-        // Essayer d'envoyer chaque feedback
-        for (const feedback of pendingFeedbackCopy) {
-            await this.sendFeedbackToServer(feedback);
+        // Préparer les données pour l'API
+        const batchedFeedback = {
+            feedbacks: this.pendingFeedback,
+            timestamp: new Date().toISOString(),
+            source: 'web_client'
+        };
+        
+        try {
+            // Si l'API est disponible
+            if (typeof API_URL !== 'undefined') {
+                const response = await fetch(`${API_URL}/feedback/batch`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(batchedFeedback)
+                });
+                
+                if (response.ok) {
+                    // Tout le lot a été envoyé avec succès
+                    this.pendingFeedback = [];
+                    this.savePendingFeedback();
+                    localStorage.removeItem(this.pendingSyncKey);
+                    console.log('✅ Tous les feedbacks en attente ont été synchronisés avec succès');
+                    return true;
+                } else {
+                    throw new Error(`Erreur serveur: ${response.status}`);
+                }
+            } else {
+                console.log('API non disponible, les feedbacks restent en attente de synchronisation');
+                return false;
+            }
+        } catch (error) {
+            console.error('Erreur lors de la synchronisation des feedbacks:', error);
+            return false;
         }
     }
 }
