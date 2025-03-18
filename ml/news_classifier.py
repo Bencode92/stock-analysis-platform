@@ -114,6 +114,77 @@ class NewsClassifier:
             self.cache[text] = result
         
         return news_item
+        def predict_hierarchy(self, news_item):
+    """Prédit la hiérarchie de l'actualité (critique, importante, normale)"""
+    # Combiner titre et contenu pour l'analyse
+    text = f"{news_item['title']}. {news_item['content']}".lower()
+    
+    # Liste de mots-clés pour chaque catégorie
+    critical_keywords = ["crash", "effondrement", "crise", "urgent", "alerte", "catastrophe", 
+                        "panique", "récession", "faillite", "collapse", "urgence", "critique"]
+    
+    important_keywords = ["hausse significative", "baisse importante", "croissance", 
+                          "résultats", "bénéfices", "pertes", "acquisition", "fusion", 
+                          "restructuration", "earnings", "quarterly", "forecast"]
+    
+    # Compter les occurrences de mots-clés
+    critical_count = sum(1 for word in critical_keywords if word in text)
+    important_count = sum(1 for word in important_keywords if word in text)
+    
+    # Déterminer la hiérarchie
+    if critical_count > 0:
+        hierarchy = "critical"
+    elif important_count > 0:
+        hierarchy = "important"
+    else:
+        hierarchy = "normal"
+    
+    # Ajouter au cache si nécessaire
+    cache_key = f"hierarchy_{news_item['title']}"
+    if self.use_cache:
+        self.cache[cache_key] = hierarchy
+    
+    return hierarchy
+
+def classify_news_item(self, news_item):
+    """Classifie un élément d'actualité et l'enrichit"""
+    # Méthode existante pour le sentiment
+    text = f"{news_item['title']}. {news_item['content']}"
+    
+    # Classification
+    result = self._classify_text(text)
+    
+    # Mapper les labels de FinBERT aux labels attendus
+    label_mapping = {
+        "positive": "positive",
+        "negative": "negative",
+        "neutral": "neutral"
+    }
+    
+    # Enrichir l'élément d'actualité
+    sentiment = result[0]["label"]
+    confidence = float(result[0]["score"])
+    
+    # Mise à jour des champs
+    news_item["sentiment"] = label_mapping.get(sentiment, sentiment)
+    news_item["confidence"] = confidence
+    
+    # Déterminer l'impact basé sur le sentiment et la confiance
+    if news_item["sentiment"] == "positive" and confidence > 0.7:
+        news_item["impact"] = "positive"
+    elif news_item["sentiment"] == "negative" and confidence > 0.7:
+        news_item["impact"] = "negative"
+    else:
+        news_item["impact"] = "neutral"
+    
+    # Ajouter au cache
+    if self.use_cache:
+        self.cache[text] = result
+    
+    # Prédire la hiérarchie
+    news_item["hierarchy"] = self.predict_hierarchy(news_item)
+    
+    return news_item
     
     def classify_news_file(self, input_path, output_path=None):
         """Classifie tous les éléments d'actualité dans un fichier JSON"""
