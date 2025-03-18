@@ -8,7 +8,34 @@ class MLFeedbackSystem {
     constructor() {
         this.feedbackStorageKey = 'ml_feedback_data';
         this.pendingFeedback = this.loadPendingFeedback();
-        this.setupEventListeners();
+        
+        console.log('Initialisation du système de feedback ML');
+        
+        // Initialisation immédiate si le DOM est déjà chargé
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            this.init();
+        } else {
+            // Sinon, attendre le chargement du DOM
+            document.addEventListener('DOMContentLoaded', () => this.init());
+        }
+        
+        // Écouter également l'événement newsDataReady pour s'assurer que les actualités sont chargées
+        document.addEventListener('newsDataReady', () => {
+            console.log('Événement newsDataReady reçu, réinitialisation du feedback ML');
+            // Attendre un peu que le DOM soit mis à jour
+            setTimeout(() => this.init(), 500);
+        });
+    }
+
+    /**
+     * Initialise le système de feedback
+     */
+    init() {
+        console.log('Initialisation du système de feedback ML - DOM chargé');
+        // Configurer le modal de feedback (une seule fois)
+        this.setupFeedbackModal();
+        
+        // Ne pas ajouter les boutons ici, c'est maintenant fait par ml-news-integrator.js
     }
 
     /**
@@ -27,52 +54,16 @@ class MLFeedbackSystem {
     }
 
     /**
-     * Configure les écouteurs d'événements pour les boutons de feedback
-     */
-    setupEventListeners() {
-        document.addEventListener('DOMContentLoaded', () => {
-            // Ajouter des boutons de feedback à chaque actualité
-            this.addFeedbackButtonsToNews();
-            
-            // Configurer le modal de feedback
-            this.setupFeedbackModal();
-        });
-    }
-
-    /**
-     * Ajoute des boutons de feedback à chaque actualité
-     */
-    addFeedbackButtonsToNews() {
-        const newsItems = document.querySelectorAll('.news-item');
-        
-        newsItems.forEach(item => {
-            const newsId = item.getAttribute('data-news-id');
-            const newsTitle = item.querySelector('.news-title').textContent;
-            
-            // Créer le bouton de feedback
-            const feedbackButton = document.createElement('button');
-            feedbackButton.className = 'feedback-button ripple button-press';
-            feedbackButton.innerHTML = '<i class="fas fa-flag"></i>';
-            feedbackButton.setAttribute('title', 'Signaler une classification incorrecte');
-            feedbackButton.setAttribute('aria-label', 'Signaler une classification incorrecte');
-            
-            // Ajouter l'événement click
-            feedbackButton.addEventListener('click', () => {
-                this.openFeedbackModal(newsId, newsTitle, item);
-            });
-            
-            // Ajouter le bouton à l'élément d'actualité
-            const actionsContainer = item.querySelector('.news-actions') || item;
-            actionsContainer.appendChild(feedbackButton);
-        });
-    }
-
-    /**
      * Configure le modal de feedback
      */
     setupFeedbackModal() {
         // Vérifier si le modal existe déjà
-        if (document.getElementById('feedback-modal')) return;
+        if (document.getElementById('feedback-modal')) {
+            console.log('Modal de feedback déjà configuré');
+            return;
+        }
+        
+        console.log('Configuration du modal de feedback');
         
         // Créer le modal
         const modalHTML = `
@@ -129,39 +120,68 @@ class MLFeedbackSystem {
         document.getElementById('close-feedback-modal').addEventListener('click', this.closeFeedbackModal.bind(this));
         document.getElementById('cancel-feedback').addEventListener('click', this.closeFeedbackModal.bind(this));
         document.getElementById('submit-feedback').addEventListener('click', this.submitFeedback.bind(this));
+        
+        console.log('Modal de feedback configuré avec succès');
     }
 
     /**
      * Ouvre le modal de feedback
      */
     openFeedbackModal(newsId, newsTitle, newsItem) {
+        console.log(`Ouverture du modal pour l'actualité ${newsId}: ${newsTitle}`);
+        
+        // Vérifier si le modal existe
+        if (!document.getElementById('feedback-modal')) {
+            console.error('Erreur: Modal de feedback non trouvé!');
+            this.setupFeedbackModal(); // Tenter de recréer le modal
+        }
+        
         // Stocker l'ID de l'actualité courante
         this.currentNewsId = newsId;
         
         // Récupérer la classification actuelle
         const currentClassification = newsItem.getAttribute('data-sentiment') || 
-                                     newsItem.querySelector('.impact').textContent || 
-                                     'inconnu';
+                                     newsItem.querySelector('.impact') ? newsItem.querySelector('.impact').textContent : 
+                                     (newsItem.getAttribute('data-impact') || 'inconnu');
+        
+        console.log(`Classification actuelle: ${currentClassification}`);
         
         // Mettre à jour le contenu du modal
-        document.getElementById('feedback-news-title').textContent = newsTitle;
-        document.getElementById('current-classification').textContent = currentClassification;
+        const titleElement = document.getElementById('feedback-news-title');
+        const classificationElement = document.getElementById('current-classification');
         
-        // Réinitialiser le formulaire
-        document.querySelectorAll('input[name="correct-classification"]').forEach(radio => {
-            radio.checked = false;
-        });
-        document.getElementById('feedback-comment').value = '';
-        
-        // Afficher le modal
-        document.getElementById('feedback-modal').classList.add('active');
+        if (titleElement && classificationElement) {
+            titleElement.textContent = newsTitle;
+            classificationElement.textContent = currentClassification;
+            
+            // Réinitialiser le formulaire
+            document.querySelectorAll('input[name="correct-classification"]').forEach(radio => {
+                radio.checked = false;
+            });
+            
+            const commentElement = document.getElementById('feedback-comment');
+            if (commentElement) {
+                commentElement.value = '';
+            }
+            
+            // Afficher le modal
+            const modal = document.getElementById('feedback-modal');
+            if (modal) {
+                modal.classList.add('active');
+            }
+        } else {
+            console.error('Erreur: Éléments du modal non trouvés!');
+        }
     }
 
     /**
      * Ferme le modal de feedback
      */
     closeFeedbackModal() {
-        document.getElementById('feedback-modal').classList.remove('active');
+        const modal = document.getElementById('feedback-modal');
+        if (modal) {
+            modal.classList.remove('active');
+        }
         this.currentNewsId = null;
     }
 
@@ -186,6 +206,8 @@ class MLFeedbackSystem {
             timestamp: new Date().toISOString(),
             userId: localStorage.getItem('user_id') || 'anonymous'
         };
+        
+        console.log('Feedback soumis:', feedback);
         
         // Ajouter le feedback à la liste des feedbacks en attente
         this.pendingFeedback.push(feedback);
@@ -274,8 +296,9 @@ class MLFeedbackSystem {
     }
 }
 
-// Initialiser le système de feedback
+// Initialiser le système de feedback et l'exposer globalement
 const mlFeedback = new MLFeedbackSystem();
+window.mlFeedback = mlFeedback;
 
 // Exporter pour utilisation dans d'autres modules
 if (typeof module !== 'undefined') {
