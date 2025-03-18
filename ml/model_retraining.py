@@ -17,18 +17,20 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trai
 from sklearn.model_selection import train_test_split
 
 from performance_metrics import PerformanceTracker
+from hierarchy_model import create_or_retrain_hierarchy_model
 
 # Chemins des répertoires
 BASE_DIR = os.path.dirname(__file__)
 MODELS_DIR = os.path.join(BASE_DIR, "models")
 FINBERT_MODEL_DIR = os.path.join(MODELS_DIR, "finbert_model")
 FINBERT_FINETUNED_DIR = os.path.join(MODELS_DIR, "finbert_finetuned")
+HIERARCHY_MODEL_DIR = os.path.join(MODELS_DIR, "hierarchy_model")
 FEEDBACK_DIR = os.path.join(BASE_DIR, "feedback")
 FEEDBACK_FILE = os.path.join(FEEDBACK_DIR, "feedback_data.json")
 TRAINING_LOGS_DIR = os.path.join(BASE_DIR, "logs")
 
 # S'assurer que les répertoires existent
-for directory in [MODELS_DIR, FINBERT_MODEL_DIR, FINBERT_FINETUNED_DIR, FEEDBACK_DIR, TRAINING_LOGS_DIR]:
+for directory in [MODELS_DIR, FINBERT_MODEL_DIR, FINBERT_FINETUNED_DIR, HIERARCHY_MODEL_DIR, FEEDBACK_DIR, TRAINING_LOGS_DIR]:
     os.makedirs(directory, exist_ok=True)
 
 # Configuration de l'entraînement
@@ -126,9 +128,12 @@ class ModelRetrainer:
             print(f"Erreur lors du chargement du modèle: {e}")
             raise
     
-    def _prepare_feedback_data(self):
+    def _prepare_feedback_data(self, type="sentiment"):
         """
         Prépare les données de feedback pour l'entraînement
+        
+        Args:
+            type (str): Type de données à préparer ('sentiment' ou 'hierarchy')
         
         Returns:
             tuple: (textes, étiquettes) ou (None, None) en cas d'échec
@@ -151,7 +156,10 @@ class ModelRetrainer:
             labels = []
             
             for item in feedback_data:
-                if "correctClassification" not in item or "title" not in item:
+                # Vérifier la présence des champs requis selon le type
+                if type == "sentiment" and ("correctClassification" not in item or "title" not in item):
+                    continue
+                elif type == "hierarchy" and ("correctHierarchy" not in item or "title" not in item):
                     continue
                 
                 # Combiner titre et contenu si disponible
@@ -159,25 +167,31 @@ class ModelRetrainer:
                 if "content" in item and item["content"]:
                     text += ". " + item["content"]
                 
-                # Obtenir l'étiquette numérique
-                label_text = item["correctClassification"]
-                if label_text not in self.label_map:
-                    continue
-                
-                label = self.label_map[label_text]
+                # Obtenir l'étiquette numérique selon le type
+                if type == "sentiment":
+                    label_text = item["correctClassification"]
+                    if label_text not in self.label_map:
+                        continue
+                    label = self.label_map[label_text]
+                else:  # type == "hierarchy"
+                    label_text = item["correctHierarchy"]
+                    hierarchy_map = {"critical": 0, "important": 1, "normal": 2}
+                    if label_text not in hierarchy_map:
+                        continue
+                    label = hierarchy_map[label_text]
                 
                 texts.append(text)
                 labels.append(label)
             
             if not texts:
-                print("Aucune donnée valide extraite du feedback")
+                print(f"Aucune donnée valide extraite du feedback pour {type}")
                 return None, None
             
-            print(f"Données préparées: {len(texts)} exemples")
+            print(f"Données préparées pour {type}: {len(texts)} exemples")
             return texts, labels
         
         except Exception as e:
-            print(f"Erreur lors de la préparation des données: {e}")
+            print(f"Erreur lors de la préparation des données de {type}: {e}")
             return None, None
     
     def retrain_model(self):
@@ -187,9 +201,10 @@ class ModelRetrainer:
         Returns:
             bool: Succès de l'opération
         """
-        # Préparer les données
-        texts, labels = self._prepare_feedback_data()
+        # Préparer les données pour le sentiment
+        texts, labels = self._prepare_feedback_data(type="sentiment")
         if texts is None or not texts:
+            print("Pas assez de données pour réentraîner le modèle de sentiment")
             return False
         
         # Diviser en ensembles d'entraînement et de validation
@@ -230,12 +245,12 @@ class ModelRetrainer:
         
         # Entraînement
         try:
-            print("Début de l'entraînement...")
+            print("Début de l'entraînement du modèle de sentiment...")
             trainer.train()
             
             # Évaluer le modèle
             eval_results = trainer.evaluate()
-            print(f"Résultats de l'évaluation: {eval_results}")
+            print(f"Résultats de l'évaluation du modèle de sentiment: {eval_results}")
             
             # Sauvegarder le modèle affiné
             self.model.save_pretrained(FINBERT_FINETUNED_DIR)
@@ -253,11 +268,11 @@ class ModelRetrainer:
             with open(os.path.join(FINBERT_FINETUNED_DIR, "metadata.json"), 'w', encoding='utf-8') as f:
                 json.dump(metadata, f, ensure_ascii=False, indent=2)
             
-            print(f"Modèle réentraîné et sauvegardé dans {FINBERT_FINETUNED_DIR}")
+            print(f"Modèle de sentiment réentraîné et sauvegardé dans {FINBERT_FINETUNED_DIR}")
             return True
             
         except Exception as e:
-            print(f"Erreur lors de l'entraînement: {e}")
+            print(f"Erreur lors de l'entraînement du modèle de sentiment: {e}")
             import traceback
             traceback.print_exc()
             return False
@@ -270,7 +285,7 @@ class ModelRetrainer:
             dict: Résultats de l'évaluation
         """
         # Charger les données de feedback
-        texts, labels = self._prepare_feedback_data()
+        texts, labels = self._prepare_feedback_data(type="sentiment")
         if texts is None or not texts:
             return None
         
@@ -296,50 +311,75 @@ class ModelRetrainer:
         
         return results
 
-# Fonction d'utilité pour exécuter le réentraînement
+# Fonction d'utilité pour exécuter le réentraînement complet (sentiment + hiérarchie)
 def run_retraining(config=None):
     """
-    Exécute le processus de réentraînement complet
+    Exécute le processus de réentraînement complet pour les deux modèles
     
     Args:
         config (dict): Configuration d'entraînement
         
     Returns:
-        bool: Succès de l'opération
+        dict: Résultats des opérations pour les deux modèles
     """
+    results = {
+        "sentiment": {"success": False, "eval_results": None},
+        "hierarchy": {"success": False, "eval_results": None}
+    }
+    
     try:
+        # 1. Réentraîner le modèle de sentiment
+        print("=== RÉENTRAÎNEMENT DU MODÈLE DE SENTIMENT ===")
         retrainer = ModelRetrainer(config)
-        success = retrainer.retrain_model()
+        sentiment_success = retrainer.retrain_model()
         
-        if success:
+        if sentiment_success:
             # Évaluer le modèle réentraîné
             eval_results = retrainer.evaluate_model()
-            print(f"Évaluation du modèle réentraîné: {eval_results}")
+            print(f"Évaluation du modèle de sentiment réentraîné: {eval_results}")
             
-            # Sauvegarder les résultats dans un fichier
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            results_file = os.path.join(TRAINING_LOGS_DIR, f"retraining_results_{timestamp}.json")
-            
-            with open(results_file, 'w', encoding='utf-8') as f:
-                json.dump(eval_results, f, ensure_ascii=False, indent=2)
-            
-            print(f"Résultats sauvegardés dans {results_file}")
+            # Mettre à jour les résultats
+            results["sentiment"]["success"] = True
+            results["sentiment"]["eval_results"] = eval_results
         
-        return success
+        # 2. Réentraîner le modèle de hiérarchie
+        print("\n=== RÉENTRAÎNEMENT DU MODÈLE DE HIÉRARCHIE ===")
+        hierarchy_success = create_or_retrain_hierarchy_model(
+            feedback_file=FEEDBACK_FILE,
+            epochs=config["epochs"] if config else DEFAULT_TRAINING_CONFIG["epochs"],
+            batch_size=config["batch_size"] if config else DEFAULT_TRAINING_CONFIG["batch_size"],
+            learning_rate=config["learning_rate"] if config else DEFAULT_TRAINING_CONFIG["learning_rate"]
+        )
+        
+        # Mettre à jour les résultats
+        results["hierarchy"]["success"] = hierarchy_success
+        
+        # Sauvegarder les résultats dans un fichier
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        results_file = os.path.join(TRAINING_LOGS_DIR, f"retraining_results_{timestamp}.json")
+        
+        with open(results_file, 'w', encoding='utf-8') as f:
+            json.dump(results, f, ensure_ascii=False, indent=2)
+        
+        print(f"Résultats sauvegardés dans {results_file}")
+        
+        return results
     except Exception as e:
         print(f"Erreur lors du réentraînement: {e}")
         import traceback
         traceback.print_exc()
-        return False
+        return results
 
 # Pour un test rapide
 if __name__ == "__main__":
     import argparse
     
-    parser = argparse.ArgumentParser(description="Réentraîne le modèle FinBERT sur les données de feedback")
+    parser = argparse.ArgumentParser(description="Réentraîne les modèles sur les données de feedback")
     parser.add_argument("--epochs", type=int, default=3, help="Nombre d'époques d'entraînement")
     parser.add_argument("--batch-size", type=int, default=8, help="Taille du batch")
     parser.add_argument("--learning-rate", type=float, default=5e-5, help="Taux d'apprentissage")
+    parser.add_argument("--sentiment-only", action="store_true", help="Réentraîner uniquement le modèle de sentiment")
+    parser.add_argument("--hierarchy-only", action="store_true", help="Réentraîner uniquement le modèle de hiérarchie")
     
     args = parser.parse_args()
     
@@ -348,7 +388,22 @@ if __name__ == "__main__":
     config["batch_size"] = args.batch_size
     config["learning_rate"] = args.learning_rate
     
-    success = run_retraining(config)
+    # Réentraîner les modèles selon les options
+    if args.sentiment_only:
+        print("Réentraînement du modèle de sentiment uniquement")
+        retrainer = ModelRetrainer(config)
+        success = retrainer.retrain_model()
+    elif args.hierarchy_only:
+        print("Réentraînement du modèle de hiérarchie uniquement")
+        success = create_or_retrain_hierarchy_model(
+            epochs=config["epochs"],
+            batch_size=config["batch_size"],
+            learning_rate=config["learning_rate"]
+        )
+    else:
+        print("Réentraînement des deux modèles")
+        results = run_retraining(config)
+        success = results["sentiment"]["success"] or results["hierarchy"]["success"]
     
     if success:
         print("Réentraînement terminé avec succès")
