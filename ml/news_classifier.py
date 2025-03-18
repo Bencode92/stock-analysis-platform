@@ -5,8 +5,9 @@ import numpy as np
 from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
 from functools import lru_cache
 
-# Chemin vers le modèle (peut être relatif ou absolu)
+# Chemins vers les modèles (peuvent être relatifs ou absolus)
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "models/finbert_model")
+HIERARCHY_MODEL_DIR = os.path.join(os.path.dirname(__file__), "models/hierarchy_model")
 CACHE_FILE = os.path.join(os.path.dirname(__file__), "models/classification_cache.pkl")
 
 class NewsClassifier:
@@ -23,14 +24,14 @@ class NewsClassifier:
             except Exception as e:
                 print(f"Erreur lors du chargement du cache: {e}")
         
-        # Initialiser le modèle
+        # Initialiser le modèle de sentiment
         try:
             # Option 1: Utiliser un modèle déjà téléchargé localement
             if os.path.exists(MODEL_DIR):
                 self.tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
                 self.model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR)
                 self.classifier = pipeline("sentiment-analysis", model=self.model, tokenizer=self.tokenizer)
-                print("Modèle chargé depuis le stockage local")
+                print("Modèle de sentiment chargé depuis le stockage local")
             # Option 2: Télécharger le modèle depuis HuggingFace
             else:
                 model_name = "ProsusAI/finbert"  # Modèle spécifique à la finance
@@ -42,12 +43,27 @@ class NewsClassifier:
                 os.makedirs(MODEL_DIR, exist_ok=True)
                 self.tokenizer.save_pretrained(MODEL_DIR)
                 self.model.save_pretrained(MODEL_DIR)
-                print(f"Modèle téléchargé et sauvegardé dans {MODEL_DIR}")
+                print(f"Modèle de sentiment téléchargé et sauvegardé dans {MODEL_DIR}")
         except Exception as e:
-            print(f"Erreur lors du chargement du modèle: {e}")
+            print(f"Erreur lors du chargement du modèle de sentiment: {e}")
             # Fallback: classification basique basée sur des mots-clés
             self.classifier = self._keyword_classifier
             print("Utilisation du classificateur par mots-clés de secours")
+        
+        # Initialiser le modèle de hiérarchie s'il existe
+        self.hierarchy_classifier = None
+        self.use_ml_for_hierarchy = False
+        
+        try:
+            if os.path.exists(HIERARCHY_MODEL_DIR) and os.listdir(HIERARCHY_MODEL_DIR):
+                self.hierarchy_tokenizer = AutoTokenizer.from_pretrained(HIERARCHY_MODEL_DIR)
+                self.hierarchy_model = AutoModelForSequenceClassification.from_pretrained(HIERARCHY_MODEL_DIR)
+                self.hierarchy_classifier = pipeline("text-classification", model=self.hierarchy_model, tokenizer=self.hierarchy_tokenizer)
+                self.use_ml_for_hierarchy = True
+                print("Modèle de hiérarchie chargé depuis le stockage local")
+        except Exception as e:
+            print(f"Erreur lors du chargement du modèle de hiérarchie: {e}")
+            print("Utilisation de l'approche par mots-clés pour la hiérarchie")
     
     def _keyword_classifier(self, text):
         """Classificateur de secours basé sur des mots-clés simple"""
@@ -68,22 +84,76 @@ class NewsClassifier:
     @lru_cache(maxsize=500)
     def _classify_text(self, text):
         """Classifie un texte avec mise en cache"""
-        if text in self.cache:
-            return self.cache[text]
+        cache_key = f"sentiment_{text}"
+        if cache_key in self.cache:
+            return self.cache[cache_key]
         
         try:
             result = self.classifier(text)
+            if self.use_cache:
+                self.cache[cache_key] = result
             return result
         except Exception as e:
             print(f"Erreur de classification: {e}")
             return [{"label": "neutral", "score": 0.5}]
     
+    def predict_hierarchy_with_keywords(self, news_item):
+        """Prédit la hiérarchie de l'actualité (critique, importante, normale) avec des mots-clés"""
+        # Combiner titre et contenu pour l'analyse
+        text = f"{news_item['title']}. {news_item['content']}".lower()
+        
+        # Liste de mots-clés pour chaque catégorie
+        critical_keywords = ["crash", "effondrement", "crise", "urgent", "alerte", "catastrophe", 
+                            "panique", "récession", "faillite", "collapse", "urgence", "critique"]
+        
+        important_keywords = ["hausse significative", "baisse importante", "croissance", 
+                              "résultats", "bénéfices", "pertes", "acquisition", "fusion", 
+                              "restructuration", "earnings", "quarterly", "forecast"]
+        
+        # Compter les occurrences de mots-clés
+        critical_count = sum(1 for word in critical_keywords if word in text)
+        important_count = sum(1 for word in important_keywords if word in text)
+        
+        # Déterminer la hiérarchie
+        if critical_count > 0:
+            hierarchy = "critical"
+        elif important_count > 0:
+            hierarchy = "important"
+        else:
+            hierarchy = "normal"
+        
+        return hierarchy
+    
+    def predict_hierarchy_with_ml(self, text):
+        """Prédit la hiérarchie de l'actualité en utilisant le modèle ML"""
+        cache_key = f"hierarchy_{text}"
+        if cache_key in self.cache:
+            return self.cache[cache_key]
+        
+        try:
+            if self.hierarchy_classifier:
+                result = self.hierarchy_classifier(text)
+                prediction = {
+                    "label": result[0]["label"],
+                    "score": float(result[0]["score"])
+                }
+                
+                if self.use_cache:
+                    self.cache[cache_key] = prediction
+                
+                return prediction
+            else:
+                raise ValueError("Modèle de hiérarchie non disponible")
+        except Exception as e:
+            print(f"Erreur lors de la prédiction de hiérarchie: {e}")
+            return {"label": "normal", "score": 0.5}  # Valeur par défaut
+    
     def classify_news_item(self, news_item):
-        """Classifie un élément d'actualité et l'enrichit"""
+        """Classifie un élément d'actualité et l'enrichit (sentiment et hiérarchie)"""
         # Combiner titre et contenu pour l'analyse
         text = f"{news_item['title']}. {news_item['content']}"
         
-        # Classification
+        # Classification du sentiment
         result = self._classify_text(text)
         
         # Mapper les labels de FinBERT aux labels attendus
@@ -93,11 +163,11 @@ class NewsClassifier:
             "neutral": "neutral"
         }
         
-        # Enrichir l'élément d'actualité
+        # Enrichir l'élément d'actualité avec le sentiment
         sentiment = result[0]["label"]
         confidence = float(result[0]["score"])
         
-        # Mise à jour des champs
+        # Mise à jour des champs de sentiment
         news_item["sentiment"] = label_mapping.get(sentiment, sentiment)
         news_item["confidence"] = confidence
         
@@ -109,82 +179,25 @@ class NewsClassifier:
         else:
             news_item["impact"] = "neutral"
         
-        # Ajouter au cache
-        if self.use_cache:
-            self.cache[text] = result
+        # Prédire la hiérarchie avec ML si disponible, sinon utiliser les mots-clés
+        if self.use_ml_for_hierarchy:
+            hierarchy_result = self.predict_hierarchy_with_ml(text)
+            hierarchy_confidence = hierarchy_result["score"]
+            
+            # Si confiance suffisante, utiliser la prédiction ML
+            if hierarchy_confidence > 0.6:
+                news_item["hierarchy"] = hierarchy_result["label"]
+                news_item["hierarchy_confidence"] = hierarchy_confidence
+            else:
+                # Sinon, recourir à l'approche par mots-clés
+                news_item["hierarchy"] = self.predict_hierarchy_with_keywords(news_item)
+                news_item["hierarchy_confidence"] = 0.5  # Confiance moyenne pour les mots-clés
+        else:
+            # Utiliser uniquement l'approche par mots-clés
+            news_item["hierarchy"] = self.predict_hierarchy_with_keywords(news_item)
+            news_item["hierarchy_confidence"] = 0.5  # Confiance moyenne pour les mots-clés
         
         return news_item
-        def predict_hierarchy(self, news_item):
-    """Prédit la hiérarchie de l'actualité (critique, importante, normale)"""
-    # Combiner titre et contenu pour l'analyse
-    text = f"{news_item['title']}. {news_item['content']}".lower()
-    
-    # Liste de mots-clés pour chaque catégorie
-    critical_keywords = ["crash", "effondrement", "crise", "urgent", "alerte", "catastrophe", 
-                        "panique", "récession", "faillite", "collapse", "urgence", "critique"]
-    
-    important_keywords = ["hausse significative", "baisse importante", "croissance", 
-                          "résultats", "bénéfices", "pertes", "acquisition", "fusion", 
-                          "restructuration", "earnings", "quarterly", "forecast"]
-    
-    # Compter les occurrences de mots-clés
-    critical_count = sum(1 for word in critical_keywords if word in text)
-    important_count = sum(1 for word in important_keywords if word in text)
-    
-    # Déterminer la hiérarchie
-    if critical_count > 0:
-        hierarchy = "critical"
-    elif important_count > 0:
-        hierarchy = "important"
-    else:
-        hierarchy = "normal"
-    
-    # Ajouter au cache si nécessaire
-    cache_key = f"hierarchy_{news_item['title']}"
-    if self.use_cache:
-        self.cache[cache_key] = hierarchy
-    
-    return hierarchy
-
-def classify_news_item(self, news_item):
-    """Classifie un élément d'actualité et l'enrichit"""
-    # Méthode existante pour le sentiment
-    text = f"{news_item['title']}. {news_item['content']}"
-    
-    # Classification
-    result = self._classify_text(text)
-    
-    # Mapper les labels de FinBERT aux labels attendus
-    label_mapping = {
-        "positive": "positive",
-        "negative": "negative",
-        "neutral": "neutral"
-    }
-    
-    # Enrichir l'élément d'actualité
-    sentiment = result[0]["label"]
-    confidence = float(result[0]["score"])
-    
-    # Mise à jour des champs
-    news_item["sentiment"] = label_mapping.get(sentiment, sentiment)
-    news_item["confidence"] = confidence
-    
-    # Déterminer l'impact basé sur le sentiment et la confiance
-    if news_item["sentiment"] == "positive" and confidence > 0.7:
-        news_item["impact"] = "positive"
-    elif news_item["sentiment"] == "negative" and confidence > 0.7:
-        news_item["impact"] = "negative"
-    else:
-        news_item["impact"] = "neutral"
-    
-    # Ajouter au cache
-    if self.use_cache:
-        self.cache[text] = result
-    
-    # Prédire la hiérarchie
-    news_item["hierarchy"] = self.predict_hierarchy(news_item)
-    
-    return news_item
     
     def classify_news_file(self, input_path, output_path=None):
         """Classifie tous les éléments d'actualité dans un fichier JSON"""
