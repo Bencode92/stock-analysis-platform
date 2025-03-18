@@ -1,0 +1,122 @@
+name: Retrain ML Model
+
+on:
+  # Déclenchement manuel
+  workflow_dispatch:
+    inputs:
+      epochs:
+        description: 'Nombre d\'époques d\'entraînement'
+        default: '3'
+        required: true
+      batch_size:
+        description: 'Taille du batch'
+        default: '8'
+        required: true
+      learning_rate:
+        description: 'Taux d\'apprentissage'
+        default: '5e-5'
+        required: true
+  
+  # Déclenchement programmé (une fois par semaine)
+  schedule:
+    - cron: '0 0 * * 0'  # Tous les dimanches à minuit
+  
+  # Déclenchement après une mise à jour des données de feedback
+  workflow_run:
+    workflows: ["Process Feedback Data"]
+    types:
+      - completed
+
+# Permissions nécessaires
+permissions:
+  contents: write
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'schedule' || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          lfs: true
+      
+      - name: Setup Git LFS
+        run: |
+          git lfs install
+          git lfs pull
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ml/requirements.txt
+          pip install pandas scikit-learn torch transformers accelerate
+      
+      - name: Prepare directories
+        run: |
+          mkdir -p ml/models
+          mkdir -p ml/feedback
+          mkdir -p ml/logs
+      
+      - name: Copy feedback data
+        run: |
+          if [ -f "data/ml_feedback.json" ]; then
+            cp data/ml_feedback.json ml/feedback/feedback_data.json
+          else
+            echo "Aucun fichier de feedback trouvé. Création d'un fichier vide."
+            echo "[]" > ml/feedback/feedback_data.json
+          fi
+      
+      - name: Check if model exists
+        id: check_model
+        run: |
+          if [ -d "ml/models/finbert_model" ]; then
+            echo "model_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "model_exists=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Run retraining
+        env:
+          EPOCHS: ${{ github.event.inputs.epochs || '3' }}
+          BATCH_SIZE: ${{ github.event.inputs.batch_size || '8' }}
+          LEARNING_RATE: ${{ github.event.inputs.learning_rate || '5e-5' }}
+        run: |
+          python ml/model_retraining.py --epochs $EPOCHS --batch-size $BATCH_SIZE --learning-rate $LEARNING_RATE
+      
+      - name: Check if retraining succeeded
+        id: check_retraining
+        run: |
+          if [ -d "ml/models/finbert_finetuned" ]; then
+            echo "retraining_succeeded=true" >> $GITHUB_OUTPUT
+          else
+            echo "retraining_succeeded=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Generate performance report
+        if: steps.check_retraining.outputs.retraining_succeeded == 'true'
+        run: |
+          python -c "from ml.performance_metrics import generate_performance_report; generate_performance_report('ml/logs/performance_report.json')"
+      
+      - name: Commit and push model
+        if: steps.check_retraining.outputs.retraining_succeeded == 'true'
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          
+          # Utiliser Git LFS pour le modèle
+          git lfs track "ml/models/**/*"
+          
+          # Ajouter et valider les fichiers
+          git add ml/models ml/logs
+          git commit -m "Update ML model after retraining"
+          
+          # Pousser les changements
+          git push
