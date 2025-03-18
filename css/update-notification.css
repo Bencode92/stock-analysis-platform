@@ -1,0 +1,161 @@
+/* Styles pour les notifications de mise à jour en temps réel */
+
+/* Notification de mise à jour */
+.update-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: var(--accent-color);
+    color: #000;
+    padding: 10px 20px;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: transform 0.3s, opacity 0.3s;
+    font-weight: 500;
+    font-size: 14px;
+}
+
+.update-notification.visible {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+/* Animation de mise à jour */
+@keyframes pulse-update {
+    0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
+    50% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
+}
+
+.classification-updated {
+    animation: pulse-update 1.5s;
+}
+
+/* Badges pour le score ML */
+.ml-score-badge {
+    background-color: rgba(0, 255, 135, 0.2);
+    color: #00FF87;
+    padding: 1px 4px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    margin-left: 4px;
+    display: inline-flex;
+    align-items: center;
+}
+
+.ml-score-badge::before {
+    content: 'ML';
+    font-size: 0.6rem;
+    margin-right: 2px;
+    opacity: 0.8;
+}
+
+/* Style pour le bouton de modification de classification */
+.edit-classification-button {
+    position: absolute;
+    top: 10px;
+    right: 45px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background-color: rgba(0, 255, 135, 0.1);
+    border: 1px solid rgba(0, 255, 135, 0.3);
+    color: var(--accent-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.2s ease;
+}
+
+.edit-classification-button:hover {
+    background-color: rgba(0, 255, 135, 0.2);
+    transform: scale(1.1);
+}
+
+/* Modal de modification de classification */
+.classification-editor-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeIn 0.3s;
+}
+
+.classification-editor-content {
+    background-color: var(--background-color);
+    border-radius: 8px;
+    padding: 20px;
+    width: 90%;
+    max-width: 500px;
+    border: 1px solid var(--accent-color);
+    box-shadow: var(--accent-glow);
+}
+
+.classification-editor-content h3 {
+    color: var(--accent-color);
+    margin-bottom: 10px;
+}
+
+.editor-form {
+    margin-top: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-color);
+}
+
+.editor-select {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 4px;
+    background-color: rgba(0, 0, 0, 0.2);
+    color: var(--text-color);
+    border: 1px solid rgba(0, 255, 135, 0.3);
+}
+
+.button-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.editor-btn {
+    padding: 8px 16px;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.editor-btn.cancel {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--text-color);
+}
+
+.editor-btn.save {
+    background-color: var(--accent-color);
+    color: #000;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
