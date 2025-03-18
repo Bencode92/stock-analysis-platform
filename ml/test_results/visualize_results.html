@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Résultats des Tests d'Impact</title>
+    <style>
+        :root {
+            --background-color: #011627;
+            --text-color: #FFFFFF;
+            --accent-color: #00FF87;
+            --accent-glow: 0 0 10px rgba(0, 255, 135, 0.6);
+            --error-color: #ff6b6b;
+            --success-color: #00FF87;
+            --neutral-bg: rgba(255, 255, 255, 0.05);
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent-color);
+            text-shadow: var(--accent-glow);
+        }
+        
+        .summary {
+            background-color: var(--neutral-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .summary-data {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .summary-item {
+            margin-bottom: 0.5rem;
+            font-size: 1.2rem;
+        }
+        
+        .summary-value {
+            font-weight: bold;
+            font-size: 1.5rem;
+            color: var(--accent-color);
+        }
+        
+        .progress-container {
+            width: 250px;
+            height: 250px;
+            position: relative;
+        }
+        
+        .progress-circle {
+            position: relative;
+            width: 250px;
+            height: 250px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .progress-overlay {
+            position: absolute;
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            background-color: var(--background-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+        }
+        
+        .progress-text {
+            font-size: 3rem;
+            font-weight: bold;
+            color: var(--accent-color);
+        }
+        
+        .progress-label {
+            font-size: 1rem;
+            opacity: 0.8;
+        }
+        
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .news-card {
+            background-color: var(--neutral-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: transform 0.3s ease;
+            border-left: 4px solid var(--neutral-bg);
+        }
+        
+        .news-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .news-card.correct {
+            border-left: 4px solid var(--success-color);
+        }
+        
+        .news-card.incorrect {
+            border-left: 4px solid var(--error-color);
+        }
+        
+        .news-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+        
+        .news-metadata {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem 1rem;
+            margin: 1rem 0;
+        }
+        
+        .metadata-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .metadata-label {
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+        
+        .metadata-value {
+            font-weight: 600;
+        }
+        
+        .metadata-value.positive {
+            color: var(--success-color);
+        }
+        
+        .metadata-value.negative {
+            color: var(--error-color);
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            font-weight: bold;
+            margin-top: 0.5rem;
+        }
+        
+        .status-indicator.correct {
+            color: var(--success-color);
+        }
+        
+        .status-indicator.incorrect {
+            color: var(--error-color);
+        }
+        
+        .status-indicator:before {
+            content: '';
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 6px;
+        }
+        
+        .status-indicator.correct:before {
+            background-color: var(--success-color);
+        }
+        
+        .status-indicator.incorrect:before {
+            background-color: var(--error-color);
+        }
+        
+        .file-selector {
+            background-color: var(--neutral-bg);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .file-selector label {
+            font-weight: 600;
+        }
+        
+        select {
+            background-color: var(--background-color);
+            color: var(--text-color);
+            border: 1px solid var(--accent-color);
+            border-radius: 4px;
+            padding: 0.5rem 1rem;
+            font-family: inherit;
+            cursor: pointer;
+        }
+        
+        select:focus {
+            outline: none;
+            box-shadow: var(--accent-glow);
+        }
+        
+        @media (max-width: 768px) {
+            .summary {
+                flex-direction: column;
+                gap: 2rem;
+            }
+            
+            .progress-container {
+                margin: 0 auto;
+            }
+            
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Résultats des Tests d'Impact</h1>
+        <p id="test-date">Test effectué le <span id="date-value">--/--/---- --:--:--</span></p>
+    </header>
+    
+    <div class="file-selector">
+        <label for="result-file">Sélectionner un fichier de résultats:</label>
+        <select id="result-file">
+            <option value="">Chargement des fichiers...</option>
+        </select>
+    </div>
+    
+    <div class="summary">
+        <div class="summary-data">
+            <div class="summary-item">
+                <div>Actualités correctement classifiées</div>
+                <div class="summary-value"><span id="correct-count">0</span>/<span id="total-count">0</span></div>
+            </div>
+            <div class="summary-item">
+                <div>Taux de réussite</div>
+                <div class="summary-value"><span id="success-rate">0%</span></div>
+            </div>
+        </div>
+        
+        <div class="progress-container">
+            <div class="progress-circle" id="progress-circle">
+                <!-- Progress circle SVG will be inserted here -->
+            </div>
+            <div class="progress-overlay">
+                <div class="progress-text" id="progress-text">0%</div>
+                <div class="progress-label">Précision</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="grid-container" id="results-grid">
+        <!-- Results cards will be inserted here -->
+    </div>
+    
+    <script>
+        // Function to load results from a file
+        async function loadResultsFile(filename) {
+            try {
+                const response = await fetch(`${filename}`);
+                if (!response.ok) {
+                    throw new Error(`Failed to load file: ${response.status}`);
+                }
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                console.error('Error loading results:', error);
+                document.getElementById('results-grid').innerHTML = `
+                    <div style="grid-column: 1/-1; text-align: center; padding: 2rem;">
+                        <p style="color: var(--error-color);">Erreur lors du chargement des résultats: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Function to display results
+        function displayResults(data) {
+            // Update summary
+            document.getElementById('correct-count').textContent = data.correct;
+            document.getElementById('total-count').textContent = data.total;
+            
+            const successRate = (data.correct / data.total * 100).toFixed(1);
+            document.getElementById('success-rate').textContent = `${successRate}%`;
+            document.getElementById('progress-text').textContent = `${successRate}%`;
+            
+            // Create progress circle
+            const progressCircle = document.getElementById('progress-circle');
+            const radius = 120;
+            const circumference = 2 * Math.PI * radius;
+            const progress = data.correct / data.total;
+            
+            progressCircle.innerHTML = `
+                <svg width="250" height="250" viewBox="0 0 250 250">
+                    <circle 
+                        cx="125" 
+                        cy="125" 
+                        r="${radius}" 
+                        fill="none" 
+                        stroke="rgba(255, 255, 255, 0.1)" 
+                        stroke-width="10"
+                    />
+                    <circle 
+                        cx="125" 
+                        cy="125" 
+                        r="${radius}" 
+                        fill="none" 
+                        stroke="#00FF87" 
+                        stroke-width="10"
+                        stroke-dasharray="${circumference}"
+                        stroke-dashoffset="${circumference - (progress * circumference)}"
+                        transform="rotate(-90 125 125)"
+                        style="transition: stroke-dashoffset 1s ease;"
+                    />
+                </svg>
+            `;
+            
+            // Generate result cards
+            const resultsGrid = document.getElementById('results-grid');
+            resultsGrid.innerHTML = '';
+            
+            data.details.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = `news-card ${item.correct ? 'correct' : 'incorrect'}`;
+                
+                card.innerHTML = `
+                    <div class="news-title">${item.title}</div>
+                    
+                    <div class="news-metadata">
+                        <div class="metadata-item">
+                            <span class="metadata-label">Impact attendu</span>
+                            <span class="metadata-value">${item.expected_impact}</span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Impact détecté</span>
+                            <span class="metadata-value ${item.expected_impact === item.actual_impact ? 'positive' : 'negative'}">${item.actual_impact}</span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Sentiment</span>
+                            <span class="metadata-value">${item.sentiment} (${item.confidence.toFixed(2)})</span>
+                        </div>
+                        <div class="metadata-item">
+                            <span class="metadata-label">Score d'impact</span>
+                            <span class="metadata-value">${item.impact_score}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="status-indicator ${item.correct ? 'correct' : 'incorrect'}">
+                        ${item.correct ? 'Classification correcte' : 'Classification incorrecte'}
+                    </div>
+                `;
+                
+                resultsGrid.appendChild(card);
+            });
+            
+            // Set date from filename or use current date
+            const dateMatch = window.currentFile?.match(/impact_test_results_(\d{8})_(\d{6})\.json/);
+            if (dateMatch) {
+                const year = dateMatch[1].substring(0, 4);
+                const month = dateMatch[1].substring(4, 6);
+                const day = dateMatch[1].substring(6, 8);
+                const hour = dateMatch[2].substring(0, 2);
+                const min = dateMatch[2].substring(2, 4);
+                const sec = dateMatch[2].substring(4, 6);
+                
+                document.getElementById('date-value').textContent = `${day}/${month}/${year} ${hour}:${min}:${sec}`;
+            } else {
+                const now = new Date();
+                document.getElementById('date-value').textContent = now.toLocaleString();
+            }
+        }
+        
+        // Scan for result files
+        async function scanResultFiles() {
+            const fileSelector = document.getElementById('result-file');
+            
+            try {
+                // This is a placeholder for real file scanning - in a real app you'd list files from server
+                // Here we'll just hardcode a few sample files for demo purposes
+                const files = [
+                    'impact_test_results_latest.json'
+                ];
+                
+                if (files.length === 0) {
+                    fileSelector.innerHTML = '<option value="">Aucun fichier trouvé</option>';
+                    return;
+                }
+                
+                fileSelector.innerHTML = files.map(file => 
+                    `<option value="${file}">${file}</option>`
+                ).join('');
+                
+                // Load the first file by default
+                window.currentFile = files[0];
+                await loadResultsFile(files[0]);
+                
+            } catch (error) {
+                console.error('Error scanning result files:', error);
+                fileSelector.innerHTML = '<option value="">Erreur lors du chargement</option>';
+            }
+        }
+        
+        // Initialize the page
+        window.onload = function() {
+            scanResultFiles();
+            
+            // Add event listener to file selector
+            document.getElementById('result-file').addEventListener('change', function(e) {
+                const selectedFile = e.target.value;
+                if (selectedFile) {
+                    window.currentFile = selectedFile;
+                    loadResultsFile(selectedFile);
+                }
+            });
+        };
+    </script>
+</body>
+</html>
