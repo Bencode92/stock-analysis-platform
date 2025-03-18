@@ -73,36 +73,55 @@ class MLFeedbackSystem {
                         <h3>Signaler une classification incorrecte</h3>
                         <button id="close-feedback-modal" class="close-btn ripple"><i class="fas fa-times"></i></button>
                     </div>
-                    <div class="modal-body">
-                        <p id="feedback-news-title" class="feedback-news-title"></p>
-                        
-                        <div class="feedback-form">
-                            <p>Classification actuelle: <span id="current-classification"></span></p>
-                            
-                            <div class="form-group">
-                                <label>Classification correcte selon vous:</label>
-                                <div class="radio-group">
-                                    <label>
-                                        <input type="radio" name="correct-classification" value="positive">
-                                        <span>Positive</span>
-                                    </label>
-                                    <label>
-                                        <input type="radio" name="correct-classification" value="negative">
-                                        <span>Négative</span>
-                                    </label>
-                                    <label>
-                                        <input type="radio" name="correct-classification" value="neutral">
-                                        <span>Neutre</span>
-                                    </label>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="feedback-comment">Commentaire (optionnel):</label>
-                                <textarea id="feedback-comment" placeholder="Pourquoi pensez-vous que cette classification est incorrecte?"></textarea>
-                            </div>
-                        </div>
-                    </div>
+                   <div class="modal-body">
+    <p id="feedback-news-title" class="feedback-news-title"></p>
+    
+    <div class="feedback-form">
+        <p>Classification actuelle: <span id="current-classification"></span></p>
+        
+        <div class="form-group">
+            <label>Sentiment correct selon vous:</label>
+            <div class="radio-group">
+                <label>
+                    <input type="radio" name="correct-classification" value="positive">
+                    <span>Positif</span>
+                </label>
+                <label>
+                    <input type="radio" name="correct-classification" value="negative">
+                    <span>Négatif</span>
+                </label>
+                <label>
+                    <input type="radio" name="correct-classification" value="neutral">
+                    <span>Neutre</span>
+                </label>
+            </div>
+        </div>
+        
+        <!-- Nouveau champ pour la hiérarchie -->
+        <div class="form-group">
+            <label>Hiérarchie correcte selon vous:</label>
+            <div class="radio-group">
+                <label>
+                    <input type="radio" name="correct-hierarchy" value="critical">
+                    <span>Critique</span>
+                </label>
+                <label>
+                    <input type="radio" name="correct-hierarchy" value="important">
+                    <span>Importante</span>
+                </label>
+                <label>
+                    <input type="radio" name="correct-hierarchy" value="normal">
+                    <span>Normale</span>
+                </label>
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="feedback-comment">Commentaire (optionnel):</label>
+            <textarea id="feedback-comment" placeholder="Pourquoi pensez-vous que cette classification est incorrecte?"></textarea>
+        </div>
+    </div>
+</div>
                     <div class="modal-footer">
                         <button id="submit-feedback" class="primary-btn ripple button-press">Envoyer</button>
                         <button id="cancel-feedback" class="secondary-btn ripple button-press">Annuler</button>
@@ -189,39 +208,47 @@ class MLFeedbackSystem {
      * Soumet le feedback
      */
     submitFeedback() {
-        // Récupérer la classification correcte sélectionnée
-        const selectedClassification = document.querySelector('input[name="correct-classification"]:checked');
-        if (!selectedClassification) {
-            alert('Veuillez sélectionner une classification correcte.');
-            return;
-        }
-        
-        // Récupérer les données du formulaire
-        const feedback = {
-            newsId: this.currentNewsId,
-            title: document.getElementById('feedback-news-title').textContent,
-            currentClassification: document.getElementById('current-classification').textContent,
-            correctClassification: selectedClassification.value,
-            comment: document.getElementById('feedback-comment').value,
-            timestamp: new Date().toISOString(),
-            userId: localStorage.getItem('user_id') || 'anonymous'
-        };
-        
-        console.log('Feedback soumis:', feedback);
-        
-        // Ajouter le feedback à la liste des feedbacks en attente
-        this.pendingFeedback.push(feedback);
-        this.savePendingFeedback();
-        
-        // Envoyer le feedback au serveur si disponible
-        this.sendFeedbackToServer(feedback);
-        
-        // Fermer le modal
-        this.closeFeedbackModal();
-        
-        // Afficher un message de confirmation
-        this.showConfirmationMessage();
+    // Récupérer la classification correcte sélectionnée
+    const selectedClassification = document.querySelector('input[name="correct-classification"]:checked');
+    const selectedHierarchy = document.querySelector('input[name="correct-hierarchy"]:checked');
+    
+    if (!selectedClassification) {
+        alert('Veuillez sélectionner un sentiment correct.');
+        return;
     }
+    
+    if (!selectedHierarchy) {
+        alert('Veuillez sélectionner une hiérarchie correcte.');
+        return;
+    }
+    
+    // Récupérer les données du formulaire
+    const feedback = {
+        newsId: this.currentNewsId,
+        title: document.getElementById('feedback-news-title').textContent,
+        currentClassification: document.getElementById('current-classification').textContent,
+        correctClassification: selectedClassification.value,
+        correctHierarchy: selectedHierarchy.value,  // Nouvelle propriété
+        comment: document.getElementById('feedback-comment').value,
+        timestamp: new Date().toISOString(),
+        userId: localStorage.getItem('user_id') || 'anonymous'
+    };
+    
+    console.log('Feedback soumis:', feedback);
+    
+    // Ajouter le feedback à la liste des feedbacks en attente
+    this.pendingFeedback.push(feedback);
+    this.savePendingFeedback();
+    
+    // Envoyer le feedback au serveur si disponible
+    this.sendFeedbackToServer(feedback);
+    
+    // Fermer le modal
+    this.closeFeedbackModal();
+    
+    // Afficher un message de confirmation
+    this.showConfirmationMessage();
+}
 
     /**
      * Envoie le feedback au serveur
