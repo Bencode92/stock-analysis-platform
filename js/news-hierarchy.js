@@ -59,6 +59,7 @@ async function initializeNewsData() {
         
         // Déclencher l'événement qui indique que les données sont prêtes
         document.dispatchEvent(window.NewsSystem.dataReadyEvent);
+        console.log('Événement newsDataReady déclenché après chargement des données');
     } catch (error) {
         console.error('Erreur lors du chargement des actualités:', error);
         displayFallbackData();
@@ -81,10 +82,21 @@ function distributeNewsByImportance(newsData) {
     // Fusionner les actualités US et France
     const allNews = [...(newsData.us || []), ...(newsData.france || [])];
 
-    // S'assurer que les scores sont présents, sinon calculer
+    // S'assurer que tous les champs nécessaires sont présents
     allNews.forEach(news => {
+        // S'assurer que les scores sont présents, sinon calculer
         if (typeof news.score === 'undefined') {
             news.score = calculateNewsScore(news);
+        }
+        
+        // Utiliser impact comme sentiment par défaut si sentiment n'est pas présent
+        if (!news.sentiment) {
+            news.sentiment = news.impact || 'neutral';
+        }
+        
+        // Ajouter une valeur de confiance par défaut si absente
+        if (typeof news.confidence === 'undefined') {
+            news.confidence = 0.8;
         }
     });
 
@@ -150,7 +162,11 @@ function calculateNewsScore(item) {
     }
 
     // Ajustement basé sur la source
-    const importantSources = ["Bloomberg", "Reuters", "WSJ", "FT", "CNBC", "Financial Times", "Wall Street Journal"];
+    const importantSources = [
+        "Bloomberg", "Reuters", "WSJ", "FT", "CNBC", "Financial Times", 
+        "Wall Street Journal", "seekingalpha.com", "news.bitcoin.com"
+    ];
+    
     if (importantSources.some(source => (item.source || '').includes(source))) {
         score += 5;
     }
@@ -206,9 +222,16 @@ function displayCriticalNews(news) {
         const newsCard = document.createElement('div');
         newsCard.className = `news-card glassmorphism ${impactClass}`;
         newsCard.style.animationDelay = `${index * 0.1}s`;
+        
+        // Ajouter les attributs pour le ML et le filtrage
         newsCard.setAttribute('data-category', item.category || 'general');
         newsCard.setAttribute('data-impact', item.impact || 'neutral');
+        newsCard.setAttribute('data-sentiment', item.sentiment || item.impact || 'neutral');
+        newsCard.setAttribute('data-news-id', `news-critical-${index}`);
         newsCard.setAttribute('data-country', item.country || 'other');
+        if (item.confidence) {
+            newsCard.setAttribute('data-confidence', item.confidence);
+        }
 
         newsCard.innerHTML = `
             <span class="badge urgent">URGENT</span>
@@ -269,9 +292,16 @@ function displayImportantNews(news) {
         const newsCard = document.createElement('div');
         newsCard.className = `news-card glassmorphism ${impactClass}`;
         newsCard.style.animationDelay = `${index * 0.1}s`;
+        
+        // Ajouter les attributs pour le ML et le filtrage
         newsCard.setAttribute('data-category', item.category || 'general');
         newsCard.setAttribute('data-impact', item.impact || 'neutral');
+        newsCard.setAttribute('data-sentiment', item.sentiment || item.impact || 'neutral');
+        newsCard.setAttribute('data-news-id', `news-important-${index}`);
         newsCard.setAttribute('data-country', item.country || 'other');
+        if (item.confidence) {
+            newsCard.setAttribute('data-confidence', item.confidence);
+        }
 
         newsCard.innerHTML = `
             <div class="p-4">
@@ -343,9 +373,16 @@ function displayRecentNews(news) {
 
         const newsCard = document.createElement('div');
         newsCard.className = `news-card ${impactClass}`;
+        
+        // Ajouter les attributs pour le ML et le filtrage
         newsCard.setAttribute('data-category', item.category || 'general');
         newsCard.setAttribute('data-impact', item.impact || 'neutral');
+        newsCard.setAttribute('data-sentiment', item.sentiment || item.impact || 'neutral');
+        newsCard.setAttribute('data-news-id', `news-regular-${index}`);
         newsCard.setAttribute('data-country', item.country || 'other');
+        if (item.confidence) {
+            newsCard.setAttribute('data-confidence', item.confidence);
+        }
 
         newsCard.innerHTML = `
             <div class="news-content">
@@ -423,35 +460,42 @@ window.NewsSystem.filterNews = filterNews;
  * @param {string} filterValue - Valeur du filtre
  */
 function filterNews(filterType, filterValue) {
+    console.log(`Filtrage des actualités par ${filterType}=${filterValue}`);
+    
     const newsItems = document.querySelectorAll('.news-card');
     
     // Obtenir les autres filtres actifs
     const activeCategory = document.querySelector('#category-filters .filter-active')?.getAttribute('data-category') || 'all';
     const activeImpact = document.getElementById('impact-select')?.value || 'all';
+    const activeSentiment = document.getElementById('sentiment-select')?.value || 'all';
     const activeCountry = document.getElementById('country-select')?.value || 'all';
     
     // Mettre à jour les filtres actifs en fonction du type actuel
     let currentCategory = activeCategory;
     let currentImpact = activeImpact;
+    let currentSentiment = activeSentiment;
     let currentCountry = activeCountry;
     
     if (filterType === 'category') currentCategory = filterValue;
     if (filterType === 'impact') currentImpact = filterValue;
+    if (filterType === 'sentiment') currentSentiment = filterValue;
     if (filterType === 'country') currentCountry = filterValue;
     
     // Appliquer les filtres à chaque élément d'actualité
     newsItems.forEach(item => {
         const itemCategory = item.getAttribute('data-category');
         const itemImpact = item.getAttribute('data-impact');
+        const itemSentiment = item.getAttribute('data-sentiment');
         const itemCountry = item.getAttribute('data-country');
         
         // Vérifier si l'élément correspond à tous les filtres actifs
         const matchesCategory = currentCategory === 'all' || itemCategory === currentCategory;
         const matchesImpact = currentImpact === 'all' || itemImpact === currentImpact;
+        const matchesSentiment = currentSentiment === 'all' || itemSentiment === currentSentiment;
         const matchesCountry = currentCountry === 'all' || itemCountry === currentCountry;
         
         // Afficher ou masquer l'élément en fonction des filtres
-        if (matchesCategory && matchesImpact && matchesCountry) {
+        if (matchesCategory && matchesImpact && matchesSentiment && matchesCountry) {
             item.classList.remove('hidden-item');
             item.classList.add('fade-in');
         } else {
