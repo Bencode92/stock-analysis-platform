@@ -5,6 +5,8 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Initialisation de l\'interface actualités...');
+    
     // Pour l'initialisation des données, on utilise NewsSystem si disponible
     if (window.NewsSystem) {
         console.log('Utilisation du système de hiérarchie des actualités existant');
@@ -26,6 +28,19 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Mise à jour de l'heure de marché
     setupMarketTimer();
+    
+    // Intégration ML - Écouter l'événement de chargement des données
+    document.addEventListener('newsDataReady', function() {
+        console.log('Données d\'actualités chargées, initialisation des fonctionnalités ML');
+        
+        // Initialiser le système ML après le chargement des actualités
+        if (window.MLNewsIntegrator) {
+            console.log('Initialisation du feedback ML via l\'événement newsDataReady');
+            window.MLNewsIntegrator.initMLFeedback();
+        } else {
+            console.warn('Module d\'intégration ML non disponible');
+        }
+    });
 });
 
 /**
@@ -48,10 +63,20 @@ function setupFilters() {
         });
     });
     
+    // Filtre de sentiment ML
+    const sentimentSelect = document.getElementById('sentiment-select');
+    if (sentimentSelect) {
+        sentimentSelect.addEventListener('change', function() {
+            console.log(`Filtrage par sentiment: ${this.value}`);
+            window.NewsSystem.filterNews('sentiment', this.value);
+        });
+    }
+    
     // Filtre d'impact
     const impactSelect = document.getElementById('impact-select');
     if (impactSelect) {
         impactSelect.addEventListener('change', function() {
+            console.log(`Filtrage par impact: ${this.value}`);
             window.NewsSystem.filterNews('impact', this.value);
         });
     }
@@ -60,6 +85,7 @@ function setupFilters() {
     const countrySelect = document.getElementById('country-select');
     if (countrySelect) {
         countrySelect.addEventListener('change', function() {
+            console.log(`Filtrage par pays: ${this.value}`);
             window.NewsSystem.filterNews('country', this.value);
         });
     }
@@ -189,6 +215,13 @@ function loadMoreNews() {
         loadMoreBtn.style.opacity = '0.5';
         loadMoreBtn.style.cursor = 'not-allowed';
     }, 1000);
+    
+    // Si le système ML est disponible, initialiser le feedback sur les nouvelles actualités
+    setTimeout(() => {
+        if (window.MLNewsIntegrator) {
+            window.MLNewsIntegrator.initMLFeedback();
+        }
+    }, 1500);
 }
 
 /**
