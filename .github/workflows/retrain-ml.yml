@@ -1,0 +1,98 @@
+name: Retrain ML Model
+
+on:
+  # Exécution programmée (hebdomadaire)
+  schedule:
+    - cron: '0 0 * * 0'  # Tous les dimanches à minuit
+  # Exécution manuelle
+  workflow_dispatch:
+
+# Ajout des permissions nécessaires
+permissions:
+  contents: write
+
+jobs:
+  retrain-model:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ml/requirements.txt
+          pip install scikit-learn  # Pour l'entraînement ML
+          pip install torch transformers  # Pour FinBERT
+      
+      - name: Process feedback and generate training data
+        run: |
+          python scripts/process_feedback.py --generate
+      
+      - name: Check if training data exists
+        id: check_training
+        run: |
+          if [ -f "data/feedback/training_data.json" ]; then
+            echo "training_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "training_exists=false" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Retrain ML model
+        if: steps.check_training.outputs.training_exists == 'true'
+        run: |
+          # Script de réentraînement du modèle
+          echo "Réentraînement du modèle avec les données de feedback..."
+          
+          # Création du dossier pour le modèle hiérarchique s'il n'existe pas
+          mkdir -p ml/models/hierarchy_model
+          
+          # Note: Ce bloc devrait être remplacé par un script réel de réentraînement
+          # Pour l'instant, nous utilisons une commande d'exemple
+          python -c "
+import json
+import os
+from datetime import datetime
+
+# Enregistrer un fichier de métriques
+metrics = {
+  'timestamp': datetime.now().isoformat(),
+  'num_samples': 0,
+  'accuracy': 0,
+  'f1_score': 0,
+  'retrained': True
+}
+
+# Créer le répertoire de métriques s'il n'existe pas
+os.makedirs('data/metrics', exist_ok=True)
+
+# Enregistrer les métriques
+with open('data/metrics/retraining_metrics.json', 'w') as f:
+  json.dump(metrics, f, indent=2)
+
+print('Réentraînement simulé terminé')
+          "
+      
+      - name: Commit and push if changed
+        if: steps.check_training.outputs.training_exists == 'true'
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          
+          # Ajouter les modifications
+          git add ml/models/ data/metrics/ || true
+          
+          # Vérifier s'il y a des changements
+          if git diff --cached --quiet; then
+            echo "Aucune modification à commettre"
+          else
+            git commit -m "Update ML model with feedback data"
+            git push
+          fi
