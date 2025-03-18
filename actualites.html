@@ -17,6 +17,8 @@
     <link rel="stylesheet" href="css/ml-sentiment-indicators.css">
     <!-- Ajout du nouveau fichier CSS dédié aux événements -->
     <link rel="stylesheet" href="events-style.css">
+    <!-- Ajout du CSS pour le système de feedback ML -->
+    <link rel="stylesheet" href="css/ml-feedback.css">
     <!-- Ajout du script events-loader.js -->
     <script src="events-loader.js"></script>
     <!-- Ajout du nouveau script de redémarrage pour événements -->
@@ -841,14 +843,20 @@
         </div>
     </footer>
 
+    <!-- Scripts existants -->
     <script src="actualites.js"></script>
     <script src="js/news-hierarchy.js"></script>
     <script src="js/news-filters.js"></script>
-    <!-- Ajout du nouveau fichier JS pour la partie ML -->
     <script src="js/ml-news-integration.js"></script>
+    
+    <!-- Ajout du script de feedback ML -->
+    <script src="js/ml-feedback.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialiser le système de feedback ML
+            const mlFeedback = new MLFeedbackSystem();
+            
             // Créer un réseau de fond
             const networkBackground = document.getElementById('network-background');
             createNetworkBackground();
@@ -886,7 +894,7 @@
                 const maxConnections = Math.min(numNodes * 1.5, 80);
                 for (let i = 0; i < maxConnections; i++) {
                     const nodeA = nodes[Math.floor(Math.random() * nodes.length)];
-                    const nodeB = nodes[Math.floor(Math.random() * nodes.length)];
+                    const nodeB = nodes[Math.floor(Math.random() * nodes.length)]
                     
                     if (nodeA !== nodeB) {
                         createConnection(nodeA, nodeB);
