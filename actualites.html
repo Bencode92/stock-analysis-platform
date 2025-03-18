@@ -839,6 +839,7 @@
             <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel</p>
             <p><i class="fas fa-robot"></i> Analyses sectorielles et actualités fournies par Perplexity Sonar</p>
             <p><i class="fas fa-brain"></i> Classification automatique par machine learning</p>
+            <p><i class="fas fa-flask"></i> Système de feedback ML pour amélioration continue</p>
             <p><i class="fas fa-clock"></i> Dernière mise à jour: <span class="update-time" id="updateTime">09/03/2025 10:15:53</span></p>
         </div>
     </footer>
@@ -847,16 +848,13 @@
     <script src="actualites.js"></script>
     <script src="js/news-hierarchy.js"></script>
     <script src="js/news-filters.js"></script>
-    <script src="js/ml-news-integration.js"></script>
     
-    <!-- Ajout du script de feedback ML -->
+    <!-- Scripts ML -->
     <script src="js/ml-feedback.js"></script>
+    <script src="js/ml-news-integrator.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialiser le système de feedback ML
-            const mlFeedback = new MLFeedbackSystem();
-            
             // Créer un réseau de fond
             const networkBackground = document.getElementById('network-background');
             createNetworkBackground();
@@ -1080,6 +1078,14 @@
                 sentimentSelect.addEventListener('change', function() {
                     window.NewsSystem.filterNews('sentiment', this.value);
                 });
+            }
+            
+            // Initialiser le système de ML après le chargement des actualités
+            if (window.MLNewsIntegrator) {
+                // Attendre un peu que les actualités soient chargées
+                setTimeout(() => {
+                    window.MLNewsIntegrator.initMLFeedback();
+                }, 1500);
             }
         });
     </script>
