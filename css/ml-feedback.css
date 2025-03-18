@@ -1,0 +1,269 @@
+/* Styles pour le système de feedback des classifications ML */
+
+/* Bouton de feedback */
+.feedback-button {
+    background-color: transparent;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0.3rem 0.5rem;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    opacity: 0.6;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0.5rem;
+}
+
+.feedback-button:hover {
+    background-color: rgba(var(--accent-rgb), 0.2);
+    color: var(--accent);
+    opacity: 1;
+}
+
+.news-item:hover .feedback-button {
+    opacity: 0.8;
+}
+
+/* Modal de feedback */
+#feedback-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+#feedback-modal.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+#feedback-modal .modal-content {
+    background-color: var(--surface);
+    border-radius: 0.5rem;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    width: 90%;
+    max-width: 550px;
+    transform: translateY(20px);
+    transition: transform 0.3s;
+    overflow: hidden;
+    border: 1px solid rgba(var(--accent-rgb), 0.2);
+}
+
+#feedback-modal.active .modal-content {
+    transform: translateY(0);
+}
+
+#feedback-modal .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: linear-gradient(to right, rgba(var(--accent-rgb), 0.1), transparent);
+}
+
+#feedback-modal .modal-header h3 {
+    margin: 0;
+    color: var(--accent);
+    font-weight: 500;
+}
+
+#feedback-modal .close-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-light);
+    cursor: pointer;
+    font-size: 1.2rem;
+    padding: 0.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    width: 2rem;
+    height: 2rem;
+    transition: all 0.2s;
+}
+
+#feedback-modal .close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--accent);
+}
+
+#feedback-modal .modal-body {
+    padding: 1.5rem;
+}
+
+#feedback-modal .feedback-news-title {
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text);
+}
+
+#feedback-modal .feedback-form {
+    margin-top: 1rem;
+}
+
+#feedback-modal .form-group {
+    margin-bottom: 1.5rem;
+}
+
+#feedback-modal label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+}
+
+#feedback-modal .radio-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+#feedback-modal .radio-group label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+    border-radius: 0.3rem;
+    background-color: rgba(255, 255, 255, 0.05);
+    transition: all 0.2s;
+}
+
+#feedback-modal .radio-group label:hover {
+    background-color: rgba(var(--accent-rgb), 0.1);
+}
+
+#feedback-modal .radio-group input[type="radio"] {
+    margin-right: 0.5rem;
+    accent-color: var(--accent);
+}
+
+#feedback-modal .radio-group input[type="radio"]:checked + span {
+    color: var(--accent);
+}
+
+#feedback-modal textarea {
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: var(--text);
+    padding: 0.8rem;
+    border-radius: 0.3rem;
+    min-height: 100px;
+    font-family: inherit;
+    resize: vertical;
+    transition: border-color 0.2s;
+}
+
+#feedback-modal textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    background-color: rgba(var(--accent-rgb), 0.05);
+}
+
+#feedback-modal .modal-footer {
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+#feedback-modal .primary-btn,
+#feedback-modal .secondary-btn {
+    padding: 0.7rem 1.2rem;
+    border-radius: 0.3rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+#feedback-modal .primary-btn {
+    background-color: var(--accent);
+    color: var(--surface);
+}
+
+#feedback-modal .primary-btn:hover {
+    background-color: rgba(var(--accent-rgb), 0.8);
+    box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.5);
+}
+
+#feedback-modal .secondary-btn {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--text);
+}
+
+#feedback-modal .secondary-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Toast de confirmation */
+.toast {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem;
+    background-color: var(--surface);
+    color: var(--text);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    transform: translateY(100px);
+    opacity: 0;
+    transition: transform 0.3s, opacity 0.3s;
+    max-width: 400px;
+    border-left: 4px solid var(--accent);
+}
+
+.toast.show {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+.toast.success {
+    border-left-color: #4caf50;
+}
+
+.toast.error {
+    border-left-color: #f44336;
+}
+
+.toast.warning {
+    border-left-color: #ff9800;
+}
+
+/* Adaptations pour mobile */
+@media (max-width: 600px) {
+    #feedback-modal .modal-content {
+        width: 95%;
+    }
+    
+    #feedback-modal .radio-group {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .toast {
+        left: 1rem;
+        right: 1rem;
+        bottom: 1rem;
+        max-width: none;
+    }
+}
