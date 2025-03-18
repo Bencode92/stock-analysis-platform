@@ -13,6 +13,8 @@
     <link rel="stylesheet" href="css/news-hierarchy.css">
     <!-- Ajout du nouveau fichier CSS pour les indicateurs d'impact -->
     <link rel="stylesheet" href="css/news-impact-indicators.css">
+    <!-- Ajout du fichier CSS pour les indicateurs de sentiment ML -->
+    <link rel="stylesheet" href="css/ml-sentiment-indicators.css">
     <!-- Ajout du nouveau fichier CSS dédié aux événements -->
     <link rel="stylesheet" href="events-style.css">
     <!-- Ajout du script events-loader.js -->
@@ -759,6 +761,7 @@
                 <!-- Filtres Simplifiés -->
                 <div class="mb-8">
                     <div class="flex flex-wrap gap-2 md:gap-4 justify-between items-center">
+                        <!-- Filtres de catégorie -->
                         <div class="flex gap-2 overflow-x-auto pb-2 md:pb-0" id="category-filters">
                             <button class="text-xs md:text-sm px-3 py-1.5 bg-green-400 bg-opacity-10 text-green-400 border border-green-400 border-opacity-30 rounded-full font-medium filter-active" data-category="all">
                                 Tous
@@ -780,8 +783,16 @@
                             </button>
                         </div>
                         
+                        <!-- Filtres avancés (Impact et Pays) -->
                         <div class="flex flex-wrap gap-2">
-                            <!-- Suppression du filtre "Plus récent" -->
+                            <!-- Filtre de sentiment ML -->
+                            <select id="sentiment-select" class="text-xs md:text-sm px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700 rounded-full">
+                                <option value="all">Tous sentiments</option>
+                                <option value="positive">Positif</option>
+                                <option value="negative">Négatif</option>
+                                <option value="neutral">Neutre</option>
+                            </select>
+                            
                             <select id="impact-select" class="text-xs md:text-sm px-3 py-1.5 bg-gray-800 text-gray-300 border border-gray-700 rounded-full">
                                 <option value="all">Tous impacts</option>
                                 <option value="positive">Positif</option>
@@ -825,6 +836,7 @@
         <div class="data-source-info">
             <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel</p>
             <p><i class="fas fa-robot"></i> Analyses sectorielles et actualités fournies par Perplexity Sonar</p>
+            <p><i class="fas fa-brain"></i> Classification automatique par machine learning</p>
             <p><i class="fas fa-clock"></i> Dernière mise à jour: <span class="update-time" id="updateTime">09/03/2025 10:15:53</span></p>
         </div>
     </footer>
@@ -832,6 +844,8 @@
     <script src="actualites.js"></script>
     <script src="js/news-hierarchy.js"></script>
     <script src="js/news-filters.js"></script>
+    <!-- Ajout du nouveau fichier JS pour la partie ML -->
+    <script src="js/ml-news-integration.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -1050,6 +1064,14 @@
                     el.classList.remove('active');
                 });
                 button.classList.add('active');
+            }
+            
+            // Ajout de l'écouteur d'événement pour le filtre de sentiment
+            const sentimentSelect = document.getElementById('sentiment-select');
+            if (sentimentSelect) {
+                sentimentSelect.addEventListener('change', function() {
+                    window.NewsSystem.filterNews('sentiment', this.value);
+                });
             }
         });
     </script>
