@@ -57,6 +57,8 @@ async function initializeNewsData() {
         // Distribuer les actualités selon leur importance
         distributeNewsByImportance(data);
         
+        console.log('Données d\'actualités chargées et distribuées');
+        
         // Déclencher l'événement qui indique que les données sont prêtes
         document.dispatchEvent(window.NewsSystem.dataReadyEvent);
         console.log('Événement newsDataReady déclenché après chargement des données');
@@ -82,13 +84,8 @@ function distributeNewsByImportance(newsData) {
     // Fusionner les actualités US et France
     const allNews = [...(newsData.us || []), ...(newsData.france || [])];
 
-    // S'assurer que tous les champs nécessaires sont présents
+    // S'assurer que tous les champs ML sont présents
     allNews.forEach(news => {
-        // S'assurer que les scores sont présents, sinon calculer
-        if (typeof news.score === 'undefined') {
-            news.score = calculateNewsScore(news);
-        }
-        
         // Utiliser impact comme sentiment par défaut si sentiment n'est pas présent
         if (!news.sentiment) {
             news.sentiment = news.impact || 'neutral';
@@ -97,6 +94,22 @@ function distributeNewsByImportance(newsData) {
         // Ajouter une valeur de confiance par défaut si absente
         if (typeof news.confidence === 'undefined') {
             news.confidence = 0.8;
+        }
+        
+        // Calculer le score si absent
+        if (typeof news.score === 'undefined') {
+            news.score = calculateNewsScore(news);
+        }
+        
+        // Vérifier qu'il y a un impact, même si on a un sentiment
+        if (!news.impact) {
+            if (news.sentiment === 'positive' && news.confidence > 0.7) {
+                news.impact = 'positive';
+            } else if (news.sentiment === 'negative' && news.confidence > 0.7) {
+                news.impact = 'negative';
+            } else {
+                news.impact = 'neutral';
+            }
         }
     });
 
@@ -172,7 +185,7 @@ function calculateNewsScore(item) {
     }
 
     // Bonus pour les actualités négatives
-    if (item.impact === 'negative') {
+    if (item.sentiment === 'negative' || item.impact === 'negative') {
         score += 3;
     }
 
@@ -218,6 +231,17 @@ function displayCriticalNews(news) {
                            
         // Classe de l'indicateur d'impact
         const impactIndicatorClass = `impact-${item.impact}`;
+        
+        // Classification ML
+        const sentimentClass = `sentiment-${item.sentiment || 'neutral'}`;
+        const sentimentText = item.sentiment === 'positive' ? 'SENTIMENT POSITIF' : 
+                             item.sentiment === 'negative' ? 'SENTIMENT NÉGATIF' : 'SENTIMENT NEUTRE';
+        
+        // Badge de confiance
+        const confidenceValue = item.confidence || 0.8;
+        const confidenceClass = confidenceValue > 0.8 ? 'confidence-high' : 
+                               confidenceValue > 0.6 ? 'confidence-medium' : 'confidence-low';
+        const confidencePercent = Math.round(confidenceValue * 100);
 
         const newsCard = document.createElement('div');
         newsCard.className = `news-card glassmorphism ${impactClass}`;
@@ -239,6 +263,11 @@ function displayCriticalNews(news) {
                 <div class="mb-2">
                     <span class="impact-indicator ${impactIndicatorClass}">${impactText}</span>
                     <span class="impact-indicator">${item.category.toUpperCase() || 'GENERAL'}</span>
+                    <span class="sentiment-indicator ${sentimentClass}">
+                        ${sentimentText}
+                        <span class="confidence-badge ${confidenceClass}">${confidencePercent}%</span>
+                        <span class="ml-indicator"><i class="fas fa-robot"></i></span>
+                    </span>
                 </div>
                 <h3 class="text-lg font-bold">${item.title}</h3>
                 <p class="text-sm mt-2">${item.content}</p>
@@ -288,6 +317,17 @@ function displayImportantNews(news) {
                            
         // Classe de l'indicateur d'impact
         const impactIndicatorClass = `impact-${item.impact}`;
+        
+        // Classification ML
+        const sentimentClass = `sentiment-${item.sentiment || 'neutral'}`;
+        const sentimentText = item.sentiment === 'positive' ? 'SENTIMENT POSITIF' : 
+                             item.sentiment === 'negative' ? 'SENTIMENT NÉGATIF' : 'SENTIMENT NEUTRE';
+        
+        // Badge de confiance
+        const confidenceValue = item.confidence || 0.8;
+        const confidenceClass = confidenceValue > 0.8 ? 'confidence-high' : 
+                               confidenceValue > 0.6 ? 'confidence-medium' : 'confidence-low';
+        const confidencePercent = Math.round(confidenceValue * 100);
 
         const newsCard = document.createElement('div');
         newsCard.className = `news-card glassmorphism ${impactClass}`;
@@ -308,6 +348,11 @@ function displayImportantNews(news) {
                 <div class="mb-2">
                     <span class="impact-indicator ${impactIndicatorClass}">${impactText}</span>
                     <span class="impact-indicator">${item.category.toUpperCase() || 'GENERAL'}</span>
+                    <span class="sentiment-indicator ${sentimentClass}">
+                        ${sentimentText}
+                        <span class="confidence-badge ${confidenceClass}">${confidencePercent}%</span>
+                        <span class="ml-indicator"><i class="fas fa-robot"></i></span>
+                    </span>
                 </div>
                 <h3 class="text-md font-semibold">${item.title}</h3>
                 <p class="text-sm mt-2">${item.content}</p>
@@ -370,6 +415,17 @@ function displayRecentNews(news) {
                            
         // Classe de l'indicateur d'impact pour les couleurs
         const impactIndicatorClass = `impact-${item.impact}`;
+        
+        // Classification ML
+        const sentimentClass = `sentiment-${item.sentiment || 'neutral'}`;
+        const sentimentText = item.sentiment === 'positive' ? 'SENTIMENT POSITIF' : 
+                              item.sentiment === 'negative' ? 'SENTIMENT NÉGATIF' : 'SENTIMENT NEUTRE';
+        
+        // Badge de confiance
+        const confidenceValue = item.confidence || 0.8;
+        const confidenceClass = confidenceValue > 0.8 ? 'confidence-high' : 
+                               confidenceValue > 0.6 ? 'confidence-medium' : 'confidence-low';
+        const confidencePercent = Math.round(confidenceValue * 100);
 
         const newsCard = document.createElement('div');
         newsCard.className = `news-card ${impactClass}`;
@@ -386,9 +442,14 @@ function displayRecentNews(news) {
 
         newsCard.innerHTML = `
             <div class="news-content">
-                <div style="display:flex; margin-bottom:10px;">
+                <div style="display:flex; margin-bottom:10px; flex-wrap: wrap;">
                     <span class="impact-indicator ${impactIndicatorClass}" style="text-transform:uppercase;">${impactText}</span>
                     <span class="impact-indicator" style="text-transform:uppercase; margin-left:5px;">${item.category.toUpperCase() || 'GENERAL'}</span>
+                    <span class="sentiment-indicator ${sentimentClass}" style="margin-left:5px;">
+                        ${sentimentText}
+                        <span class="confidence-badge ${confidenceClass}">${confidencePercent}%</span>
+                        <span class="ml-indicator"><i class="fas fa-robot"></i></span>
+                    </span>
                 </div>
                 <h3>${item.title}</h3>
                 <p>${item.content || ''}</p>
