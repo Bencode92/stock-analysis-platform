@@ -1,0 +1,147 @@
+name: Process Feedback Data
+
+on:
+  # Déclenchement manuel
+  workflow_dispatch:
+  
+  # Déclenchement programmé (deux fois par jour)
+  schedule:
+    - cron: '0 */12 * * *'  # Toutes les 12 heures
+
+# Permissions nécessaires
+permissions:
+  contents: write
+
+jobs:
+  process-feedback:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r ml/requirements.txt
+          pip install pandas
+      
+      - name: Create script to process feedback
+        run: |
+          cat > process_feedback.py << 'EOF'
+          #!/usr/bin/env python3
+          import os
+          import json
+          import sys
+          from datetime import datetime
+
+          # Chemins des fichiers
+          FEEDBACK_FILE = "data/ml_feedback.json"
+          FEEDBACK_DIR = "ml/feedback"
+          FEEDBACK_DEST = os.path.join(FEEDBACK_DIR, "feedback_data.json")
+          METRICS_DIR = "ml/metrics"
+          
+          # S'assurer que les répertoires existent
+          os.makedirs(FEEDBACK_DIR, exist_ok=True)
+          os.makedirs(METRICS_DIR, exist_ok=True)
+          
+          # Charger les données de feedback si elles existent
+          if os.path.exists(FEEDBACK_FILE):
+              try:
+                  with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
+                      feedback_data = json.load(f)
+                  print(f"Chargement de {len(feedback_data)} entrées de feedback depuis {FEEDBACK_FILE}")
+              except Exception as e:
+                  print(f"Erreur lors du chargement de {FEEDBACK_FILE}: {e}")
+                  feedback_data = []
+          else:
+              print(f"Fichier {FEEDBACK_FILE} non trouvé, création d'un nouveau fichier")
+              feedback_data = []
+          
+          # Charger les données de feedback existantes dans le répertoire ml
+          if os.path.exists(FEEDBACK_DEST):
+              try:
+                  with open(FEEDBACK_DEST, 'r', encoding='utf-8') as f:
+                      existing_feedback = json.load(f)
+                  print(f"Chargement de {len(existing_feedback)} entrées de feedback existantes depuis {FEEDBACK_DEST}")
+              except Exception as e:
+                  print(f"Erreur lors du chargement de {FEEDBACK_DEST}: {e}")
+                  existing_feedback = []
+          else:
+              print(f"Fichier {FEEDBACK_DEST} non trouvé, création d'un nouveau fichier")
+              existing_feedback = []
+          
+          # Fusionner les données (éviter les doublons)
+          # Utiliser newsId + timestamp comme clé unique
+          existing_keys = {f"{item.get('newsId')}_{item.get('timestamp')}" for item in existing_feedback}
+          new_items = []
+          duplicates = 0
+          
+          for item in feedback_data:
+              key = f"{item.get('newsId')}_{item.get('timestamp')}"
+              if key not in existing_keys:
+                  new_items.append(item)
+                  existing_keys.add(key)
+              else:
+                  duplicates += 1
+          
+          # Ajouter les nouvelles entrées
+          if new_items:
+              combined_feedback = existing_feedback + new_items
+              print(f"Ajout de {len(new_items)} nouvelles entrées de feedback, {duplicates} doublons ignorés")
+              
+              # Sauvegarder les données combinées
+              try:
+                  with open(FEEDBACK_DEST, 'w', encoding='utf-8') as f:
+                      json.dump(combined_feedback, f, ensure_ascii=False, indent=2)
+                  print(f"Sauvegarde de {len(combined_feedback)} entrées dans {FEEDBACK_DEST}")
+                  
+                  # Créer un fichier de métadonnées
+                  metadata = {
+                      "timestamp": datetime.now().isoformat(),
+                      "total_entries": len(combined_feedback),
+                      "new_entries": len(new_items),
+                      "duplicates": duplicates
+                  }
+                  
+                  with open(os.path.join(METRICS_DIR, "feedback_metadata.json"), 'w', encoding='utf-8') as f:
+                      json.dump(metadata, f, ensure_ascii=False, indent=2)
+                  
+                  print("Traitement des données de feedback terminé avec succès")
+                  sys.exit(0)
+              except Exception as e:
+                  print(f"Erreur lors de la sauvegarde des données: {e}")
+                  sys.exit(1)
+          else:
+              print("Aucune nouvelle entrée de feedback à ajouter")
+              sys.exit(0)
+          EOF
+          
+          chmod +x process_feedback.py
+      
+      - name: Run feedback processing
+        run: python process_feedback.py
+      
+      - name: Commit and push processed feedback
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          
+          # Vérifier s'il y a des changements
+          if git diff --quiet ml/feedback ml/metrics; then
+            echo "Aucun changement à valider"
+            exit 0
+          fi
+          
+          # Ajouter et valider les fichiers
+          git add ml/feedback ml/metrics
+          git commit -m "Update ML feedback data and metrics"
+          
+          # Pousser les changements
+          git push
