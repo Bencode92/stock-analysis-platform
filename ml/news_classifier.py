@@ -9,6 +9,7 @@ from functools import lru_cache
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "models/finbert_model")
 HIERARCHY_MODEL_DIR = os.path.join(os.path.dirname(__file__), "models/hierarchy_model")
 CACHE_FILE = os.path.join(os.path.dirname(__file__), "models/classification_cache.pkl")
+CLASSIFIED_NEWS_FILE = os.path.join(os.path.dirname(__file__), "data/classified_news.json")
 
 class NewsClassifier:
     def __init__(self, use_cache=True):
@@ -148,10 +149,40 @@ class NewsClassifier:
             print(f"Erreur lors de la prédiction de hiérarchie: {e}")
             return {"label": "normal", "score": 0.5}  # Valeur par défaut
     
+    def save_classified_news(self, news_item):
+        """Sauvegarde les news classifiées pour un futur entraînement"""
+        classified_news = []
+        
+        if os.path.exists(CLASSIFIED_NEWS_FILE):
+            try:
+                with open(CLASSIFIED_NEWS_FILE, 'r', encoding='utf-8') as f:
+                    classified_news = json.load(f)
+            except Exception as e:
+                print(f"Erreur lors du chargement des news classifiées: {e}")
+        
+        # Ajouter l'horodatage
+        from datetime import datetime
+        news_item["classification_timestamp"] = datetime.now().isoformat()
+        
+        # Ajouter la news aux données existantes
+        classified_news.append(news_item)
+        
+        # S'assurer que le répertoire existe
+        os.makedirs(os.path.dirname(CLASSIFIED_NEWS_FILE), exist_ok=True)
+        
+        # Sauvegarder le fichier
+        try:
+            with open(CLASSIFIED_NEWS_FILE, 'w', encoding='utf-8') as f:
+                json.dump(classified_news, f, ensure_ascii=False, indent=2)
+            print(f"✅ News sauvegardée pour l'entraînement : {news_item['title']}")
+        except Exception as e:
+            print(f"Erreur lors de la sauvegarde des news classifiées: {e}")
+    
     def classify_news_item(self, news_item):
         """Classifie un élément d'actualité et l'enrichit (sentiment et hiérarchie)"""
         # Combiner titre et contenu pour l'analyse
         text = f"{news_item['title']}. {news_item['content']}"
+        text_lower = text.lower()  # Version en minuscules pour les recherches
         
         # Classification du sentiment
         result = self._classify_text(text)
@@ -171,7 +202,6 @@ class NewsClassifier:
         news_item["sentiment"] = label_mapping.get(sentiment, sentiment)
         news_item["confidence"] = confidence
         
-        # AMÉLIORATION: Calcul d'impact amélioré avec analyse de contenu
         # Liste de mots-clés à fort impact
         high_impact_words = [
             "crash", "collapse", "crisis", "emergency", "alert", "catastrophe", 
@@ -182,8 +212,9 @@ class NewsClassifier:
         ]
         
         # Vérifier la présence de mots-clés à fort impact
-        has_high_impact_words = any(word in text.lower() for word in high_impact_words)
+        has_high_impact_words = any(word in text_lower for word in high_impact_words)
         
+        # AMÉLIORATION: Calcul d'impact amélioré avec analyse de contenu indépendante du sentiment
         # Calculer l'impact en fonction du sentiment, de la confiance et des mots-clés
         if news_item["sentiment"] == "positive":
             if confidence > 0.75 or has_high_impact_words:
@@ -200,17 +231,30 @@ class NewsClassifier:
             else:
                 news_item["impact"] = "neutral"
         else:
-            news_item["impact"] = "neutral"
+            # MODIFICATION CRUCIALE: Si le sentiment est neutre mais contient des mots à fort impact
+            news_item["impact"] = "high" if has_high_impact_words else "neutral"
         
-        # Ajout d'un score d'impact
+        # Ajout d'un score d'impact plus sophistiqué
         impact_score = 0
+        
+        # Points pour les mots à fort impact
         if has_high_impact_words:
             impact_score += 10
         
+        # Points pour le sentiment avec confiance élevée
         if news_item["sentiment"] == "negative" and confidence > 0.7:
             impact_score += 8
         elif news_item["sentiment"] == "positive" and confidence > 0.7:
             impact_score += 6
+        
+        # Bonus pour les titres qui contiennent des mots-clés spécifiques
+        title_lower = news_item['title'].lower()
+        
+        finance_keywords = ["stocks", "market", "economy", "recession", "crash", "crisis", "fed", "interest rates"]
+        for keyword in finance_keywords:
+            if keyword in title_lower:
+                impact_score += 2
+                break
         
         # Stocker le score d'impact
         news_item["impact_score"] = impact_score
@@ -232,6 +276,9 @@ class NewsClassifier:
             # Utiliser uniquement l'approche par mots-clés
             news_item["hierarchy"] = self.predict_hierarchy_with_keywords(news_item)
             news_item["hierarchy_confidence"] = 0.5  # Confiance moyenne pour les mots-clés
+        
+        # Sauvegarder la news classifiée pour améliorer le modèle ultérieurement
+        self.save_classified_news(news_item)
         
         return news_item
     
