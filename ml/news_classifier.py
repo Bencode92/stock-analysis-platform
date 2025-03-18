@@ -171,13 +171,49 @@ class NewsClassifier:
         news_item["sentiment"] = label_mapping.get(sentiment, sentiment)
         news_item["confidence"] = confidence
         
-        # Déterminer l'impact basé sur le sentiment et la confiance
-        if news_item["sentiment"] == "positive" and confidence > 0.7:
-            news_item["impact"] = "positive"
-        elif news_item["sentiment"] == "negative" and confidence > 0.7:
-            news_item["impact"] = "negative"
+        # AMÉLIORATION: Calcul d'impact amélioré avec analyse de contenu
+        # Liste de mots-clés à fort impact
+        high_impact_words = [
+            "crash", "collapse", "crisis", "emergency", "alert", "catastrophe", 
+            "panic", "recession", "bankruptcy", "default", "surge", "plummet", 
+            "skyrocket", "nosedive", "breakthrough", "milestone", "record",
+            "crise", "effondrement", "chute", "urgence", "alerte", "récession",
+            "faillite", "défaut", "dégringolade", "envolée", "percée"
+        ]
+        
+        # Vérifier la présence de mots-clés à fort impact
+        has_high_impact_words = any(word in text.lower() for word in high_impact_words)
+        
+        # Calculer l'impact en fonction du sentiment, de la confiance et des mots-clés
+        if news_item["sentiment"] == "positive":
+            if confidence > 0.75 or has_high_impact_words:
+                news_item["impact"] = "positive"
+            elif confidence > 0.6:
+                news_item["impact"] = "slightly_positive"
+            else:
+                news_item["impact"] = "neutral"
+        elif news_item["sentiment"] == "negative":
+            if confidence > 0.75 or has_high_impact_words:
+                news_item["impact"] = "negative"
+            elif confidence > 0.6:
+                news_item["impact"] = "slightly_negative" 
+            else:
+                news_item["impact"] = "neutral"
         else:
             news_item["impact"] = "neutral"
+        
+        # Ajout d'un score d'impact
+        impact_score = 0
+        if has_high_impact_words:
+            impact_score += 10
+        
+        if news_item["sentiment"] == "negative" and confidence > 0.7:
+            impact_score += 8
+        elif news_item["sentiment"] == "positive" and confidence > 0.7:
+            impact_score += 6
+        
+        # Stocker le score d'impact
+        news_item["impact_score"] = impact_score
         
         # Prédire la hiérarchie avec ML si disponible, sinon utiliser les mots-clés
         if self.use_ml_for_hierarchy:
