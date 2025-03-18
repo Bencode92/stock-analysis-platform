@@ -1,0 +1,156 @@
+/* Styles pour les indicateurs de sentiment basés sur ML */
+
+/* Badge de sentiment */
+.sentiment-badge {
+    display: flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-left: 8px;
+    border: 1px solid transparent;
+    transition: all 0.3s ease;
+}
+
+.sentiment-badge i {
+    margin-right: 4px;
+}
+
+.sentiment-badge.positive {
+    background-color: rgba(52, 211, 153, 0.15);
+    border-color: rgba(52, 211, 153, 0.4);
+    color: #34D399;
+}
+
+.sentiment-badge.negative {
+    background-color: rgba(248, 113, 113, 0.15);
+    border-color: rgba(248, 113, 113, 0.4);
+    color: #F87171;
+}
+
+.sentiment-badge.neutral {
+    background-color: rgba(156, 163, 175, 0.15);
+    border-color: rgba(156, 163, 175, 0.4);
+    color: #9CA3AF;
+}
+
+/* Indicateur de confiance */
+.confidence-meter {
+    position: relative;
+    height: 4px;
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+}
+
+.confidence-meter::before {
+    content: '';
+    position: absolute;
+    height: 100%;
+    width: var(--confidence, 0%);
+    background: linear-gradient(90deg, var(--confidence-color, #34D399), var(--confidence-color-end, #34D399));
+    border-radius: 2px;
+    transition: width 0.5s ease;
+}
+
+/* Animations */
+@keyframes pulse-confidence {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.sentiment-highlight {
+    animation: pulse-confidence 2s infinite;
+}
+
+/* Filtres de sentiment */
+.sentiment-filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.sentiment-filter {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid transparent;
+}
+
+.sentiment-filter.positive {
+    background-color: rgba(52, 211, 153, 0.1);
+    border-color: rgba(52, 211, 153, 0.3);
+    color: #34D399;
+}
+
+.sentiment-filter.negative {
+    background-color: rgba(248, 113, 113, 0.1);
+    border-color: rgba(248, 113, 113, 0.3);
+    color: #F87171;
+}
+
+.sentiment-filter.neutral {
+    background-color: rgba(156, 163, 175, 0.1);
+    border-color: rgba(156, 163, 175, 0.3);
+    color: #9CA3AF;
+}
+
+.sentiment-filter:hover {
+    transform: translateY(-2px);
+}
+
+.sentiment-filter.active {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sentiment-filter.positive.active {
+    background-color: rgba(52, 211, 153, 0.2);
+}
+
+.sentiment-filter.negative.active {
+    background-color: rgba(248, 113, 113, 0.2);
+}
+
+.sentiment-filter.neutral.active {
+    background-color: rgba(156, 163, 175, 0.2);
+}
+
+/* Badge de haute confiance */
+.high-confidence {
+    position: relative;
+}
+
+.high-confidence::after {
+    content: "★";
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    font-size: 0.7rem;
+    color: var(--accent-color, #00FF87);
+    filter: drop-shadow(0 0 3px rgba(0, 255, 135, 0.7));
+}
+
+/* Styles responsifs */
+@media (max-width: 640px) {
+    .sentiment-badge {
+        padding: 2px 6px;
+        font-size: 0.65rem;
+    }
+    
+    .sentiment-filters {
+        flex-wrap: wrap;
+    }
+    
+    .sentiment-filter {
+        padding: 4px 10px;
+        font-size: 0.75rem;
+    }
+}
