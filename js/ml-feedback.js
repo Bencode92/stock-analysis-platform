@@ -1,12 +1,15 @@
 /**
- * ml-feedback.js - Système de feedback ML avec téléchargement direct
- * Ce système télécharge immédiatement un fichier JSON pour chaque feedback
- * à déposer directement sur GitHub pour déclencher le réentraînement
+ * ml-feedback.js - Système de feedback ML avec commit direct vers GitHub
+ * Ce système envoie directement les feedbacks vers GitHub via l'API
+ * pour déclencher automatiquement le réentraînement du modèle
  */
 
 class MLFeedbackSystem {
     constructor() {
         this.init();
+        // Configuration GitHub
+        this.GITHUB_REPO = 'Bencode92/stock-analysis-platform';
+        this.GITHUB_API = 'https://stock-analysis-platform-q9tc.onrender.com/api/ml/github-feedback';
     }
     
     init() {
@@ -129,7 +132,7 @@ class MLFeedbackSystem {
         }
     }
     
-    saveFeedback() {
+    async saveFeedback() {
         const modal = document.getElementById('ml-feedback-modal');
         if (!modal) return;
         
@@ -151,11 +154,16 @@ class MLFeedbackSystem {
             return;
         }
         
+        // Modifier visuellement le bouton pour montrer que l'envoi est en cours
+        const saveButton = document.getElementById('ml-feedback-save');
+        saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...';
+        saveButton.disabled = true;
+        
         const title = newsCard.querySelector('h3')?.textContent || '';
         const content = newsCard.querySelector('p')?.textContent || '';
         const source = newsCard.querySelector('.news-source')?.textContent || '';
         
-        // Créer l'objet de feedback avec format compatibilité GitHub Actions
+        // Créer l'objet de feedback
         const feedback = {
             id: `feedback-${Date.now()}`,
             title: title,
@@ -173,62 +181,132 @@ class MLFeedbackSystem {
             url: window.location.href
         };
         
-        // Structure attendue par le script process_feedback.py
-        const feedbackForGitHub = [feedback];
-        
-        // MODIFICATION PRINCIPALE: Télécharger immédiatement le fichier
-        this.downloadFeedbackFile(feedbackForGitHub);
-        
-        // Mettre à jour visuellement
-        newsCard.dataset.importance = newImportance;
-        newsCard.dataset.impact = newImpact;
-        newsCard.classList.add('classification-updated');
-        setTimeout(() => {
-            newsCard.classList.remove('classification-updated');
-        }, 2000);
-        
-        // Afficher confirmation
-        this.showFeedbackSuccess();
-        
-        // Fermer la modal
-        this.closeFeedbackModal();
-    }
-    
-    // Télécharge immédiatement le fichier de feedback
-    downloadFeedbackFile(feedbackData) {
+        // ENVOI DIRECT À GITHUB via le service proxy
         try {
             // Générer un nom de fichier unique pour GitHub
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
             const filename = `ml_feedback_${timestamp}.json`;
             
-            // Créer le blob JSON
-            const blob = new Blob([JSON.stringify(feedbackData, null, 2)], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
+            // Envoi via l'API du service proxy qui commit directement sur GitHub
+            const response = await fetch(this.GITHUB_API, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    repo: this.GITHUB_REPO,
+                    path: `data/${filename}`,
+                    content: JSON.stringify([feedback], null, 2),
+                    message: `Feedback utilisateur sur classification d'actualité: ${title.substring(0, 50)}`
+                })
+            });
             
-            // Créer un lien de téléchargement invisible
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = filename;
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
             
-            // Déclencher le téléchargement
-            document.body.appendChild(a);
-            a.click();
-            
-            // Nettoyer
+            // Mise à jour visuelle
+            newsCard.dataset.importance = newImportance;
+            newsCard.dataset.impact = newImpact;
+            newsCard.classList.add('classification-updated');
             setTimeout(() => {
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }, 100);
+                newsCard.classList.remove('classification-updated');
+            }, 2000);
             
-            console.log(`✅ Fichier de feedback téléchargé: ${filename}`);
-            return true;
+            // Afficher confirmation de succès
+            this.showFeedbackSuccess(true);
+            
+            console.log(`✅ Feedback envoyé directement à GitHub: ${filename}`);
         } catch (error) {
-            console.error('❌ Erreur lors du téléchargement du feedback:', error);
-            return false;
+            console.error('❌ Erreur lors de l\'envoi du feedback:', error);
+            
+            // Stockage en local comme fallback
+            this.storeLocalFeedback(feedback);
+            
+            // Afficher message d'erreur
+            this.showFeedbackSuccess(false);
+        }
+        
+        // Fermer la modal
+        this.closeFeedbackModal();
+    }
+    
+    // Méthode de fallback pour stocker localement si l'API échoue
+    storeLocalFeedback(feedback) {
+        try {
+            let feedbacks = JSON.parse(localStorage.getItem('tradepulse_ml_feedbacks') || '[]');
+            feedbacks.push(feedback);
+            localStorage.setItem('tradepulse_ml_feedbacks', JSON.stringify(feedbacks));
+            console.log('⚠️ Feedback stocké localement (API GitHub échouée)');
+            
+            // Si nous avons au moins 3 feedbacks locaux, afficher notification
+            if (feedbacks.length >= 3) {
+                this.showLocalBackupNotification(feedbacks.length);
+            }
+        } catch (error) {
+            console.error('❌ Erreur lors du stockage local:', error);
         }
     }
     
-    showFeedbackSuccess() {
+    // Affiche une notification pour les feedbacks locaux
+    showLocalBackupNotification(count) {
+        const notification = document.createElement('div');
+        notification.className = 'ml-backup-notification';
+        notification.innerHTML = `
+            <div class="ml-backup-content">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>${count} feedbacks enregistrés localement</span>
+                <button class="ml-backup-button">Exporter</button>
+            </div>
+        `;
+        
+        // Style de la notification
+        notification.style.position = 'fixed';
+        notification.style.bottom = '20px';
+        notification.style.left = '20px';
+        notification.style.zIndex = '1000';
+        notification.style.backgroundColor = 'rgba(0, 22, 39, 0.9)';
+        notification.style.border = '1px solid rgba(255, 193, 7, 0.5)';
+        notification.style.borderRadius = '8px';
+        notification.style.padding = '12px 16px';
+        notification.style.boxShadow = '0 0 20px rgba(255, 193, 7, 0.2)';
+        
+        // Ajouter l'événement au bouton d'export
+        const exportButton = notification.querySelector('.ml-backup-button');
+        exportButton.addEventListener('click', () => {
+            this.exportLocalFeedbacks();
+            notification.remove();
+        });
+        
+        // Ajouter au DOM
+        document.body.appendChild(notification);
+    }
+    
+    // Exporte les feedbacks stockés localement
+    exportLocalFeedbacks() {
+        const feedbacks = JSON.parse(localStorage.getItem('tradepulse_ml_feedbacks') || '[]');
+        if (feedbacks.length === 0) return;
+        
+        // Créer le blob JSON
+        const blob = new Blob([JSON.stringify(feedbacks, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        
+        // Télécharger le fichier
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ml_feedback_backup_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        // Demander si l'utilisateur veut effacer les feedbacks locaux
+        if (confirm('Feedbacks exportés avec succès! Souhaitez-vous les effacer de votre navigateur?')) {
+            localStorage.removeItem('tradepulse_ml_feedbacks');
+        }
+    }
+    
+    showFeedbackSuccess(success) {
         const notification = document.createElement('div');
         notification.className = 'ml-suggestion-badge';
         notification.style.position = 'fixed';
@@ -236,10 +314,22 @@ class MLFeedbackSystem {
         notification.style.right = '20px';
         notification.style.zIndex = '1000';
         notification.style.animation = 'none';
-        notification.innerHTML = `
-            <i class="fas fa-check-circle"></i> 
-            Feedback téléchargé! <span style="font-size:0.85em;">Déposez le fichier sur GitHub</span>
-        `;
+        
+        if (success) {
+            notification.innerHTML = `
+                <i class="fas fa-check-circle"></i> 
+                Feedback enregistré directement sur GitHub!
+            `;
+            notification.style.backgroundColor = 'rgba(0, 255, 135, 0.15)';
+            notification.style.borderColor = 'rgba(0, 255, 135, 0.3)';
+        } else {
+            notification.innerHTML = `
+                <i class="fas fa-info-circle"></i> 
+                Feedback stocké localement (échec connexion GitHub)
+            `;
+            notification.style.backgroundColor = 'rgba(255, 193, 7, 0.15)';
+            notification.style.borderColor = 'rgba(255, 193, 7, 0.3)';
+        }
         
         document.body.appendChild(notification);
         
@@ -249,7 +339,7 @@ class MLFeedbackSystem {
             setTimeout(() => {
                 notification.remove();
             }, 500);
-        }, 5000);
+        }, 4000);
     }
 }
 
