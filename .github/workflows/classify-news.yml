@@ -50,7 +50,7 @@ jobs:
       
       - name: Run classification
         run: |
-          python scripts/run_classification.py --input data/news.json
+          python scripts/run_classification.py --input data/news.json --output data/classified_news.json
       
       - name: Commit and push if changed
         run: |
@@ -60,5 +60,5 @@ jobs:
           # Utilisez le token GITHUB_TOKEN pour l'authentification
           git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git
           
-          git add data/news.json
+          git add data/news.json data/classified_news.json
           git diff --quiet && git diff --staged --quiet || (git commit -m "Update news with ML classification" && git push)
