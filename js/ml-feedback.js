@@ -100,7 +100,7 @@ class MLFeedbackSystem {
         
         console.log('Configuration du modal de feedback');
         
-        // Créer le modal
+        // Créer le modal avec l'interface améliorée
         const modalHTML = `
             <div id="feedback-modal" class="modal">
                 <div class="modal-content">
@@ -108,55 +108,38 @@ class MLFeedbackSystem {
                         <h3>Signaler une classification incorrecte</h3>
                         <button id="close-feedback-modal" class="close-btn ripple"><i class="fas fa-times"></i></button>
                     </div>
-                   <div class="modal-body">
-    <p id="feedback-news-title" class="feedback-news-title"></p>
-    
-    <div class="feedback-form">
-        <p>Classification actuelle: <span id="current-classification"></span></p>
-        
-        <div class="form-group">
-            <label>Sentiment correct selon vous:</label>
-            <div class="radio-group">
-                <label>
-                    <input type="radio" name="correct-classification" value="positive">
-                    <span>Positif</span>
-                </label>
-                <label>
-                    <input type="radio" name="correct-classification" value="negative">
-                    <span>Négatif</span>
-                </label>
-                <label>
-                    <input type="radio" name="correct-classification" value="neutral">
-                    <span>Neutre</span>
-                </label>
-            </div>
-        </div>
-        
-        <!-- Nouveau champ pour la hiérarchie -->
-        <div class="form-group">
-            <label>Hiérarchie correcte selon vous:</label>
-            <div class="radio-group">
-                <label>
-                    <input type="radio" name="correct-hierarchy" value="critical">
-                    <span>Critique</span>
-                </label>
-                <label>
-                    <input type="radio" name="correct-hierarchy" value="important">
-                    <span>Importante</span>
-                </label>
-                <label>
-                    <input type="radio" name="correct-hierarchy" value="normal">
-                    <span>Normale</span>
-                </label>
-            </div>
-        </div>
-        
-        <div class="form-group">
-            <label for="feedback-comment">Commentaire (optionnel):</label>
-            <textarea id="feedback-comment" placeholder="Pourquoi pensez-vous que cette classification est incorrecte?"></textarea>
-        </div>
-    </div>
-</div>
+                    <div class="modal-body">
+                        <p id="feedback-news-title" class="feedback-news-title"></p>
+                        
+                        <div class="feedback-form">
+                            <p>Classification actuelle: <span id="current-classification"></span></p>
+                            
+                            <div class="form-group">
+                                <label>Catégorie de l'actualité:</label>
+                                <select id="feedback-category" class="form-select">
+                                    <option value="">Sélectionnez une catégorie...</option>
+                                    <option value="critical">Critique</option>
+                                    <option value="important">Importante</option>
+                                    <option value="general">Générale</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Impact de l'actualité:</label>
+                                <select id="feedback-impact" class="form-select">
+                                    <option value="">Sélectionnez un impact...</option>
+                                    <option value="positive">Positif</option>
+                                    <option value="neutral">Neutre</option>
+                                    <option value="negative">Négatif</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="feedback-comment">Commentaire (optionnel):</label>
+                                <textarea id="feedback-comment" placeholder="Pourquoi pensez-vous que cette classification est incorrecte?"></textarea>
+                            </div>
+                        </div>
+                    </div>
                     <div class="modal-footer">
                         <button id="submit-feedback" class="primary-btn ripple button-press">Envoyer</button>
                         <button id="cancel-feedback" class="secondary-btn ripple button-press">Annuler</button>
@@ -210,13 +193,8 @@ class MLFeedbackSystem {
             classificationElement.textContent = currentClassification;
             
             // Réinitialiser le formulaire
-            document.querySelectorAll('input[name="correct-classification"]').forEach(radio => {
-                radio.checked = false;
-            });
-            
-            document.querySelectorAll('input[name="correct-hierarchy"]').forEach(radio => {
-                radio.checked = false;
-            });
+            document.getElementById('feedback-category').value = '';
+            document.getElementById('feedback-impact').value = '';
             
             const commentElement = document.getElementById('feedback-comment');
             if (commentElement) {
@@ -249,17 +227,17 @@ class MLFeedbackSystem {
      * Soumet le feedback
      */
     submitFeedback() {
-        // Récupérer la classification correcte sélectionnée
-        const selectedClassification = document.querySelector('input[name="correct-classification"]:checked');
-        const selectedHierarchy = document.querySelector('input[name="correct-hierarchy"]:checked');
+        // Récupérer les valeurs des dropdowns
+        const categorySelect = document.getElementById('feedback-category');
+        const impactSelect = document.getElementById('feedback-impact');
         
-        if (!selectedClassification) {
-            alert('Veuillez sélectionner un sentiment correct.');
+        if (!categorySelect.value) {
+            alert('Veuillez sélectionner une catégorie.');
             return;
         }
         
-        if (!selectedHierarchy) {
-            alert('Veuillez sélectionner une hiérarchie correcte.');
+        if (!impactSelect.value) {
+            alert('Veuillez sélectionner un impact.');
             return;
         }
         
@@ -268,8 +246,8 @@ class MLFeedbackSystem {
             newsId: this.currentNewsId,
             title: document.getElementById('feedback-news-title').textContent,
             currentClassification: document.getElementById('current-classification').textContent,
-            correctClassification: selectedClassification.value,
-            correctHierarchy: selectedHierarchy.value,  // Nouvelle propriété
+            correctClassification: impactSelect.value,
+            correctHierarchy: categorySelect.value,
             comment: document.getElementById('feedback-comment').value,
             timestamp: new Date().toISOString(),
             userId: localStorage.getItem('user_id') || 'anonymous',
