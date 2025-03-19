@@ -135,7 +135,9 @@ function filterEventsByDate(period) {
  */
 function checkVisibleEvents() {
   const eventsContainer = document.getElementById('events-container');
-  const visibleEvents = document.querySelectorAll('.event-card[style="display: none;"]');
+  const visibleEvents = Array.from(document.querySelectorAll('.event-card')).filter(card => 
+    card.style.display !== 'none'
+  );
   
   if (visibleEvents.length === 0 && eventsContainer) {
     // Vérifier s'il existe déjà un message
