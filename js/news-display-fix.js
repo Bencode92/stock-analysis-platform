@@ -1,170 +1,146 @@
 /**
  * news-display-fix.js
- * Correctifs pour l'affichage des actualités financières
- * 
- * Ce script résout deux problèmes principaux:
- * 1. Absence du score et de l'impact dans les actualités générales
- * 2. Duplication des actualités entre les sections critiques/importantes et générales
+ * Ce script s'assure que le format d'affichage des actualités générales
+ * correspond au même format que les actualités critiques et importantes
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Initialisation des correctifs d\'affichage des actualités...');
+    console.log('🔄 Initialisation du correctif d\'affichage des actualités...');
     
-    // Attendre que les données soient chargées
-    document.addEventListener('newsDataReady', function() {
-        console.log('Correctifs appliqués après chargement des données');
-        fixNewsDisplayIssues();
-    });
+    // S'assurer que le système de hiérarchie est complètement chargé
+    const checkNewsSystem = setInterval(function() {
+        if (window.NewsSystem && !window.NewsSystem.isLoading) {
+            clearInterval(checkNewsSystem);
+            applyDisplayFix();
+        }
+    }, 100);
     
-    // Au cas où l'événement a déjà été déclenché
-    setTimeout(fixNewsDisplayIssues, 1000);
+    // Après 3 secondes, essayer d'appliquer quand même le correctif
+    setTimeout(function() {
+        clearInterval(checkNewsSystem);
+        applyDisplayFix();
+    }, 3000);
 });
 
 /**
- * Applique les correctifs pour l'affichage des actualités
+ * Applique le correctif pour uniformiser l'affichage des actualités
  */
-function fixNewsDisplayIssues() {
-    // 1. Assurer que les actualités générales affichent le score et l'impact
-    addScoreAndImpactToGeneralNews();
+function applyDisplayFix() {
+    console.log('🛠️ Application du correctif d\'affichage des actualités...');
     
-    // 2. Éviter la duplication des actualités entre les sections
-    removeNewsRepeatsFromGeneralSection();
-}
-
-/**
- * Ajoute les indications de score et d'impact aux actualités générales
- * dans le même format que les actualités critiques et importantes
- */
-function addScoreAndImpactToGeneralNews() {
-    const regularNewsContainer = document.getElementById('recent-news');
-    if (!regularNewsContainer) {
-        console.warn('Conteneur d\'actualités générales non trouvé');
+    // 1. Identifier le conteneur d'actualités générales
+    const recentNewsContainer = document.getElementById('recent-news');
+    
+    if (!recentNewsContainer) {
+        console.error('❌ Conteneur des actualités générales non trouvé');
         return;
     }
     
-    const newsCards = regularNewsContainer.querySelectorAll('.news-card');
+    // 2. Sauvegarder la référence au conteneur parent pour faciliter l'insertion
+    const parentContainer = recentNewsContainer.parentNode;
     
-    newsCards.forEach(card => {
-        // Récupérer ou créer l'élément de contenu d'actualité
-        let newsContent = card.querySelector('.news-content');
-        if (!newsContent) {
-            console.warn('Structure news-content non trouvée, impossible d\'ajouter les indicateurs');
-            return;
+    // 3. Si le conteneur actuel a déjà des actualités au format non souhaité, le vider
+    if (recentNewsContainer.classList.contains('news-grid') || 
+        recentNewsContainer.querySelector('.news-item') ||
+        recentNewsContainer.querySelector('.loading-state')) {
+        
+        console.log('🧹 Nettoyage du conteneur d\'actualités générales pour permettre un format uniforme');
+        recentNewsContainer.innerHTML = '';
+    }
+    
+    // 4. Vérifier que les données d'actualités sont disponibles
+    if (!window.NewsSystem || !window.NewsSystem.categorizedNews || !window.NewsSystem.categorizedNews.regular) {
+        console.warn('⚠️ Données d\'actualités non disponibles, réchargement des données...');
+        
+        // 4.1 Essayer de forcer le chargement des données
+        if (window.NewsSystem && window.NewsSystem.initializeNewsData) {
+            window.NewsSystem.initializeNewsData();
         }
         
-        // Vérifier si la carte a déjà des indicateurs
-        const hasImpactIndicator = newsContent.querySelector('.impact-indicator') !== null;
+        return;
+    }
+    
+    // 5. Redessiner manuellement les actualités avec le format souhaité
+    const regularNews = window.NewsSystem.categorizedNews.regular;
+    
+    // Si le module news-hierarchy a déjà une fonction pour afficher les actualités, l'utiliser
+    if (window.NewsSystem.displayRecentNews) {
+        console.log('✅ Réaffichage des actualités générales avec le format uniforme');
+        window.NewsSystem.displayRecentNews(regularNews);
+    } else {
+        console.log('⚠️ Fonction d\'affichage non disponible, création d\'une fonction personnalisée');
         
-        if (!hasImpactIndicator) {
-            // Récupérer les données
-            const impact = card.getAttribute('data-impact') || 'neutral';
-            const score = card.getAttribute('data-score') || '0';
-            const sentiment = card.getAttribute('data-sentiment') || 'neutral';
-            const category = card.getAttribute('data-category') || 'general';
-            const confidence = card.getAttribute('data-confidence') || '0.8';
+        // Créer un conteneur pour les actualités
+        const newsGrid = document.createElement('div');
+        newsGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-4';
+        
+        // Créer chaque carte d'actualité
+        regularNews.forEach((item, index) => {
+            // Format similaire à celui des actualités critiques/importantes
+            const impactClass = item.impact === 'negative' ? 'bg-red-700 bg-opacity-10 border-red-600' : 
+                                item.impact === 'positive' ? 'bg-green-700 bg-opacity-10 border-green-600' : 
+                                'bg-yellow-700 bg-opacity-10 border-yellow-600';
             
-            console.log(`Ajout des indicateurs pour l'actualité: Impact=${impact}, Score=${score}, Sentiment=${sentiment}`);
+            const impactText = item.impact === 'negative' ? 'IMPACT NÉGATIF' : 
+                              item.impact === 'positive' ? 'IMPACT POSITIF' : 'IMPACT NEUTRE';
             
-            // Calculer les classes et textes comme dans news-hierarchy.js
-            const impactIndicatorClass = `impact-${impact}`;
-            const impactText = impact === 'negative' ? 'IMPACT NÉGATIF' : 
-                             impact === 'positive' ? 'IMPACT POSITIF' : 'IMPACT NEUTRE';
+            const sentimentIcon = item.sentiment === 'positive' ? '<i class="fas fa-arrow-up"></i>' : 
+                                 item.sentiment === 'negative' ? '<i class="fas fa-arrow-down"></i>' : 
+                                 '<i class="fas fa-minus"></i>';
             
-            const sentimentClass = `sentiment-${sentiment}`;
-            const sentimentText = sentiment === 'positive' ? 'SENTIMENT POSITIF' : 
-                                sentiment === 'negative' ? 'SENTIMENT NÉGATIF' : 'SENTIMENT NEUTRE';
+            const scoreDisplay = `<span class="ml-score-badge">${item.score || 0}</span>`;
             
-            const confidenceValue = parseFloat(confidence);
-            const confidenceClass = confidenceValue > 0.8 ? 'confidence-high' : 
-                                    confidenceValue > 0.6 ? 'confidence-medium' : 'confidence-low';
-            const confidencePercent = Math.round(confidenceValue * 100);
+            const newsCard = document.createElement('div');
+            newsCard.className = `news-card glassmorphism ${impactClass}`;
             
-            // Créer le HTML pour les indicateurs (même format que pour les actualités critiques/importantes)
-            const indicatorsHTML = `
-                <div class="mb-2" style="display:flex; margin-bottom:10px; flex-wrap: wrap;">
-                    <span class="impact-indicator ${impactIndicatorClass}">${impactText}</span>
-                    <span class="impact-indicator">${category.toUpperCase()}</span>
-                    <span class="sentiment-indicator ${sentimentClass}">
-                        ${sentimentText}
-                        <span class="confidence-badge ${confidenceClass}">${confidencePercent}%</span>
-                        <span class="ml-score-badge">${score}</span>
-                        <span class="ml-indicator"><i class="fas fa-robot"></i></span>
-                    </span>
+            // Attributs pour le filtrage
+            newsCard.setAttribute('data-category', item.category || 'general');
+            newsCard.setAttribute('data-impact', item.impact || 'neutral');
+            newsCard.setAttribute('data-sentiment', item.sentiment || 'neutral');
+            newsCard.setAttribute('data-news-id', `news-regular-${index}`);
+            newsCard.setAttribute('data-country', item.country || 'other');
+            
+            // URL cliquable
+            if (item.url) {
+                newsCard.setAttribute('data-url', item.url);
+                newsCard.style.cursor = 'pointer';
+                newsCard.addEventListener('click', function() {
+                    window.open(item.url, '_blank');
+                });
+                newsCard.classList.add('clickable-news');
+            }
+            
+            // Contenu HTML au format souhaité
+            newsCard.innerHTML = `
+                <div class="p-4">
+                    <div class="mb-2">
+                        <span class="impact-indicator impact-${item.impact}">${impactText}</span>
+                        <span class="impact-indicator">${(item.category || 'GENERAL').toUpperCase()}</span>
+                        <span class="sentiment-indicator sentiment-${item.sentiment || 'neutral'}">
+                            ${sentimentIcon}
+                            ${scoreDisplay}
+                        </span>
+                    </div>
+                    <h3 class="text-md font-semibold">${item.title}</h3>
+                    <p class="text-sm mt-2">${item.content || ''}</p>
+                    <div class="news-meta">
+                        <span class="source">${item.source || 'Financial Data'}</span>
+                        <div class="date-time">
+                            <i class="fas fa-clock mr-1"></i>
+                            ${item.date || ''} ${item.time || ''}
+                        </div>
+                        ${item.url ? '<div class="read-more"><i class="fas fa-external-link-alt mr-1"></i> Lire l\'article</div>' : ''}
+                    </div>
                 </div>
             `;
             
-            // Trouver le bon endroit pour insérer les indicateurs
-            // Par défaut, au début du contenu de l'actualité
-            const existingDiv = newsContent.querySelector('div[style*="display:flex"]');
-            if (existingDiv) {
-                // S'il existe déjà un div similaire, le remplacer
-                existingDiv.outerHTML = indicatorsHTML;
-            } else {
-                // Sinon, insérer au début du contenu
-                newsContent.insertAdjacentHTML('afterbegin', indicatorsHTML);
-            }
-        }
-    });
-    
-    console.log('✅ Indicateurs de score et d\'impact ajoutés aux actualités générales');
-}
-
-/**
- * Évite la duplication des actualités entre les sections critiques/importantes et la section générale
- */
-function removeNewsRepeatsFromGeneralSection() {
-    // Vérifier si nous utilisons le système de hiérarchisation
-    if (!window.NewsSystem || !window.NewsSystem.categorizedNews) {
-        console.warn('Système de hiérarchisation non disponible, impossible d\'éviter les doublons');
-        return;
-    }
-    
-    // Récupérer les actualités déjà classées comme critiques ou importantes
-    const criticalTitles = window.NewsSystem.categorizedNews.critical.map(news => news.title);
-    const importantTitles = window.NewsSystem.categorizedNews.important.map(news => news.title);
-    const alreadyClassifiedTitles = [...criticalTitles, ...importantTitles];
-    
-    console.log(`Titres déjà classifiés: ${alreadyClassifiedTitles.length} (${criticalTitles.length} critiques + ${importantTitles.length} importantes)`);
-    
-    // Trouver le conteneur des actualités générales
-    const regularNewsContainer = document.getElementById('recent-news');
-    if (!regularNewsContainer) {
-        console.warn('Conteneur d\'actualités générales non trouvé');
-        return;
-    }
-    
-    // Trouver toutes les cartes d'actualités
-    const newsCards = regularNewsContainer.querySelectorAll('.news-card');
-    let removedCount = 0;
-    
-    // Masquer les actualités qui sont déjà dans les sections critiques ou importantes
-    newsCards.forEach(card => {
-        const titleElement = card.querySelector('h3');
-        if (!titleElement) return;
+            newsGrid.appendChild(newsCard);
+        });
         
-        const title = titleElement.textContent.trim();
-        
-        // Si le titre est déjà dans une autre section, masquer la carte
-        if (alreadyClassifiedTitles.includes(title)) {
-            card.style.display = 'none';
-            card.classList.add('duplicate-news');
-            removedCount++;
-            console.log(`Actualité dupliquée masquée: "${title.substring(0, 30)}..."`);
-        }
-    });
-    
-    console.log(`✅ ${removedCount} actualités dupliquées masquées dans la section générale`);
-    
-    // Afficher un message s'il ne reste plus d'actualités
-    const visibleCards = regularNewsContainer.querySelectorAll('.news-card:not([style*="display: none"])');
-    if (visibleCards.length === 0 && newsCards.length > 0) {
-        const emptyMessage = document.createElement('div');
-        emptyMessage.className = 'no-data-message flex flex-col items-center justify-center py-8';
-        emptyMessage.innerHTML = `
-            <i class="fas fa-check-circle text-green-400 text-3xl mb-3"></i>
-            <h3 class="text-white font-medium mb-2">Toutes les actualités sont déjà classées</h3>
-            <p class="text-gray-400">Consultez les sections Critiques et Importantes pour voir toutes les actualités disponibles.</p>
-        `;
-        regularNewsContainer.appendChild(emptyMessage);
+        // Vider et remplir le conteneur
+        recentNewsContainer.innerHTML = '';
+        recentNewsContainer.appendChild(newsGrid);
     }
+    
+    console.log('✅ Correctif d\'affichage des actualités appliqué avec succès');
 }
