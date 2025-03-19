@@ -1,7 +1,7 @@
 /**
  * events-loader.js
  * Gestionnaire d'événements économiques et financiers amélioré
- * S'intègre avec le fichier news.json généré par GitHub Action
+ * S'intègre avec le fichier classified_news.json généré par GitHub Action
  */
 
 class EventsManager {
@@ -35,81 +35,69 @@ class EventsManager {
    * Configure les boutons de filtre pour les événements
    */
   setupFilters() {
-    // Boutons de filtre temporel (aujourd'hui/semaine)
-    const todayBtn = document.getElementById('today-btn');
-    const weekBtn = document.getElementById('week-btn');
-    const essentialBtn = document.getElementById('essential-btn');
+    // Boutons de filtre d'impact (élevé/moyen/tous)
+    const highImpactBtn = document.getElementById('high-impact-btn');
+    const mediumImpactBtn = document.getElementById('medium-impact-btn');
+    const allImpactBtn = document.getElementById('all-impact-btn');
     
-    if (todayBtn && weekBtn) {
-      todayBtn.addEventListener('click', () => {
-        this.filterMode = 'today';
-        todayBtn.classList.add('filter-active', 'text-green-400', 'border-green-400', 'border-opacity-30');
-        todayBtn.classList.remove('text-gray-400', 'border-gray-700');
-        
-        weekBtn.classList.remove('filter-active', 'text-green-400', 'border-green-400', 'border-opacity-30');
-        weekBtn.classList.add('text-gray-400', 'border-gray-700');
-        
+    if (highImpactBtn && mediumImpactBtn && allImpactBtn) {
+      highImpactBtn.addEventListener('click', () => {
+        this.impactFilter = 'high';
+        this.toggleActiveImpactFilter(highImpactBtn);
         this.renderEvents();
       });
       
-      weekBtn.addEventListener('click', () => {
-        this.filterMode = 'week';
-        weekBtn.classList.add('filter-active', 'text-green-400', 'border-green-400', 'border-opacity-30');
-        weekBtn.classList.remove('text-gray-400', 'border-gray-700');
-        
-        todayBtn.classList.remove('filter-active', 'text-green-400', 'border-green-400', 'border-opacity-30');
-        todayBtn.classList.add('text-gray-400', 'border-gray-700');
-        
+      mediumImpactBtn.addEventListener('click', () => {
+        this.impactFilter = 'medium';
+        this.toggleActiveImpactFilter(mediumImpactBtn);
         this.renderEvents();
       });
+      
+      allImpactBtn.addEventListener('click', () => {
+        this.impactFilter = 'all';
+        this.toggleActiveImpactFilter(allImpactBtn);
+        this.renderEvents();
+      });
+      
+      // Par défaut, le filtre "Tous" est actif
+      this.impactFilter = 'all';
+      allImpactBtn.classList.add('active');
     }
+  }
+  
+  /**
+   * Active le bouton de filtre sélectionné et désactive les autres
+   */
+  toggleActiveImpactFilter(activeButton) {
+    const impactButtons = [
+      document.getElementById('high-impact-btn'),
+      document.getElementById('medium-impact-btn'),
+      document.getElementById('all-impact-btn')
+    ];
     
-    // Configurer le bouton Essentiels s'il existe
-    if (essentialBtn) {
-      essentialBtn.addEventListener('click', () => {
-        this.essentialOnly = !this.essentialOnly;
-        
-        if (this.essentialOnly) {
-          essentialBtn.classList.add('filter-active', 'text-green-400', 'border-green-400', 'border-opacity-30');
-          essentialBtn.classList.remove('text-gray-400', 'border-gray-700');
-        } else {
-          essentialBtn.classList.remove('filter-active', 'text-green-400', 'border-green-400', 'border-opacity-30');
-          essentialBtn.classList.add('text-gray-400', 'border-gray-700');
-        }
-        
-        this.renderEvents();
-      });
-    }
+    impactButtons.forEach(btn => {
+      if (btn === activeButton) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
   }
 
   /**
-   * Charge les événements depuis news.json et ajoute des événements économiques
+   * Charge les événements depuis classified_news.json
    */
   async loadEvents() {
     try {
-      // Utiliser le fichier news.json existant (mis à jour par votre GitHub Action)
-      const response = await fetch('data/news.json');
+      // Utiliser le fichier classified_news.json existant
+      const response = await fetch('data/classified_news.json');
       if (!response.ok) throw new Error('Erreur lors du chargement des événements');
       
       const data = await response.json();
       
       if (data && data.events && Array.isArray(data.events)) {
         // Traiter et enrichir les données d'événements existants
-        const baseEvents = this.processEvents(data.events);
-        
-        // Si nous n'avons que des résultats financiers, ajoutons des événements économiques
-        const hasEconomicEvents = baseEvents.some(event => 
-          event.type === 'economic' || 
-          (event.title && !event.title.toLowerCase().includes('résultats'))
-        );
-        
-        if (!hasEconomicEvents) {
-          // Ajouter des événements économiques importants
-          const economicEvents = this.generateEconomicEvents();
-          this.events = [...baseEvents, ...economicEvents];
-        } else {
-          this.events = baseEvents;
-        }
+        this.events = this.processEvents(data.events);
         
         // Fin du chargement
         this.isLoading = false;
@@ -316,6 +304,9 @@ class EventsManager {
       // Analyser le titre pour déterminer le type et extraire des infos
       const eventInfo = this.parseEventTitle(event.title);
       
+      // Déterminer si l'événement est essentiel
+      const isEssential = this.isEssentialEvent(event);
+      
       return {
         ...event,
         type: event.type || 'economic', // utiliser la valeur existante ou par défaut
@@ -323,7 +314,7 @@ class EventsManager {
         forecast: eventInfo.forecast,
         country: eventInfo.country || this.extractCountryFromTitle(event.title),
         category: eventInfo.category || this.getCategoryFromEvent(event),
-        isEssential: this.isEssentialEvent(event),
+        isEssential: isEssential,
         description: this.generateDescription(event)
       };
     });
@@ -447,6 +438,11 @@ class EventsManager {
   isEssentialEvent(event) {
     if (!event) return false;
     
+    // Les événements avec score élevé sont considérés comme essentiels
+    if (event.score && event.score >= 12) {
+      return true;
+    }
+    
     // Obtenir des informations utiles
     const title = (event.title || '').toLowerCase();
     const importance = event.importance || 'medium';
@@ -503,6 +499,11 @@ class EventsManager {
   generateDescription(event) {
     if (!event) return '';
     
+    // Si une description existe déjà, on la conserve
+    if (event.description) {
+      return event.description;
+    }
+    
     const title = event.title || '';
     const type = event.type || '';
     
@@ -553,46 +554,13 @@ class EventsManager {
   filterEvents() {
     if (!this.events || !Array.isArray(this.events)) return [];
     
-    // Obtenir la date d'aujourd'hui au format JJ/MM/YYYY
-    const today = new Date();
-    const todayStr = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
-    
-    // Calculer la date de fin de semaine
-    const endOfWeek = new Date(today);
-    endOfWeek.setDate(today.getDate() + 7);
-    
     // Filtrer les événements
     const filteredEvents = this.events.filter(event => {
-      // Appliquer le filtre temporel
-      if (this.filterMode === 'today') {
-        // Extraire le jour et le mois de la date de l'événement
-        const eventDateParts = (event.date || '').split('/');
-        const todayParts = todayStr.split('/');
-        
-        // Comparer uniquement le jour et le mois (pas l'année)
-        if (eventDateParts.length >= 2 && todayParts.length >= 2) {
-          const sameDay = eventDateParts[0] === todayParts[0];
-          const sameMonth = eventDateParts[1] === todayParts[1];
-          
-          if (!sameDay || !sameMonth) return false;
-        } else {
-          // Si format de date non reconnu, utiliser une correspondance directe
-          if (event.date !== todayStr) return false;
+      // Appliquer le filtre d'impact si défini
+      if (this.impactFilter && this.impactFilter !== 'all') {
+        if (event.importance !== this.impactFilter) {
+          return false;
         }
-      } else if (this.filterMode === 'week') {
-        // Vérifier si la date de l'événement est dans la semaine à venir
-        if (event.date) {
-          const dateParts = event.date.split('/');
-          if (dateParts.length >= 3) {
-            const eventDate = new Date(dateParts[2], dateParts[1] - 1, dateParts[0]);
-            if (eventDate < today || eventDate > endOfWeek) return false;
-          }
-        }
-      }
-      
-      // Appliquer le filtre d'événements essentiels
-      if (this.essentialOnly && !event.isEssential) {
-        return false;
       }
       
       return true;
@@ -647,9 +615,7 @@ class EventsManager {
       <div class="col-span-3 flex flex-col items-center justify-center p-6 text-center">
         <i class="fas fa-calendar-times text-gray-600 text-3xl mb-3"></i>
         <p class="text-gray-400">
-          ${this.filterMode === 'today' 
-            ? 'Aucun événement économique prévu pour aujourd\'hui' 
-            : 'Aucun événement économique prévu pour cette semaine'}
+          Aucun événement économique prévu pour aujourd'hui
         </p>
       </div>
     `;
