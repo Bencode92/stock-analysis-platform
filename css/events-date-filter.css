@@ -1,6 +1,6 @@
 /* 
  * events-date-filter.css
- * Styles pour supprimer les étiquettes ESSENTIEL et ajouter le filtre par date
+ * Styles pour supprimer les étiquettes ESSENTIEL et utiliser la date de connexion comme référence
  */
 
 /* Supprimer complètement les badges ESSENTIEL */
@@ -30,11 +30,10 @@
   box-shadow: 0 2px 8px rgba(0, 255, 135, 0.2) !important;
 }
 
-/* Style pour la date d'aujourd'hui (mise en évidence) */
-.event-card .date-today {
-  background-color: rgba(0, 255, 135, 0.3) !important;
-  color: #ffffff !important;
-  font-weight: 600 !important;
+/* Style pour les événements de la date de connexion */
+.connection-date-event {
+  border-left: 3px solid var(--accent-color) !important;
+  background-color: rgba(0, 255, 135, 0.05) !important;
 }
 
 /* Message quand aucun événement n'est visible */
@@ -62,15 +61,17 @@
   gap: 10px !important;
 }
 
-/* Amélioration des couleurs d'impact */
-.event-card.high-impact::before {
-  background: linear-gradient(to bottom, #ff3d00, #ff7043) !important;
-  width: 4px !important;
+/* Surcharge pour masquer les filtres d'impact */
+#high-impact-btn, #medium-impact-btn, #all-impact-btn {
+  display: none !important;
 }
 
-.event-card.medium-impact::before {
-  background: linear-gradient(to bottom, #ff9100, #ffb74d) !important;
-  width: 4px !important;
+/* Style amélioré pour une meilleure visibilité des filtres de date */
+#today-filter, #week-filter {
+  padding: 6px 14px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease;
 }
 
 /* Style pour les nouveaux filtres de date */
@@ -79,5 +80,52 @@
 }
 
 .filter-button.active {
+  background-color: rgba(0, 255, 135, 0.15) !important;
+  box-shadow: 0 0 10px rgba(0, 255, 135, 0.3) !important;
+}
+
+/* Style pour le bouton de réinitialisation de la date */
+#reset-connection-date {
+  background-color: rgba(0, 255, 135, 0.1);
+  color: var(--accent-color);
+  border: 1px solid var(--accent-color);
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#reset-connection-date:hover {
   background-color: rgba(0, 255, 135, 0.2);
+  transform: translateY(-1px);
+}
+
+/* Message toast de confirmation pour la réinitialisation de date */
+.confirmation-toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%) translateY(100px);
+  background-color: var(--accent-color);
+  color: #011627;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 9999;
+  opacity: 0;
+  transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease;
+}
+
+.confirmation-toast.show {
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
+}
+
+.confirmation-toast i {
+  font-size: 18px;
 }
