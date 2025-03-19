@@ -10,6 +10,7 @@ MODEL_DIR = os.path.join(os.path.dirname(__file__), "models/finbert_model")
 HIERARCHY_MODEL_DIR = os.path.join(os.path.dirname(__file__), "models/hierarchy_model")
 CACHE_FILE = os.path.join(os.path.dirname(__file__), "models/classification_cache.pkl")
 CLASSIFIED_NEWS_FILE = os.path.join(os.path.dirname(__file__), "data/classified_news.json")
+FEEDBACK_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/user_feedback.json")
 
 class NewsClassifier:
     def __init__(self, use_cache=True):
@@ -149,6 +150,63 @@ class NewsClassifier:
             print(f"Erreur lors de la prédiction de hiérarchie: {e}")
             return {"label": "normal", "score": 0.5}  # Valeur par défaut
     
+    def adjust_impact_with_feedback(self, news_item):
+        """Ajuste l'impact d'une actualité en fonction des retours utilisateurs"""
+        if not os.path.exists(FEEDBACK_FILE):
+            return news_item
+
+        try:
+            with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
+                feedback_data = json.load(f)
+        except (json.JSONDecodeError, FileNotFoundError) as e:
+            print(f"Erreur lors du chargement des feedbacks: {e}")
+            return news_item
+
+        # Filtrer les retours pertinents pour cette actualité
+        relevant_feedbacks = [f for f in feedback_data if f.get("title") == news_item.get("title")]
+        
+        if not relevant_feedbacks:
+            return news_item  # Pas de feedback, on garde l'impact actuel
+
+        print(f"✅ {len(relevant_feedbacks)} feedbacks trouvés pour l'actualité: {news_item.get('title', '')[:30]}...")
+        
+        # Compter les votes positifs, négatifs et neutres
+        positive = sum(1 for f in relevant_feedbacks if f.get("feedback") == "positive")
+        negative = sum(1 for f in relevant_feedbacks if f.get("feedback") == "negative")
+        neutral = sum(1 for f in relevant_feedbacks if f.get("feedback") == "neutral")
+
+        # Ajuster l'impact en fonction des retours majoritaires
+        if positive > negative and positive > neutral:
+            news_item["impact"] = "positive"
+            news_item["feedback_confidence"] = positive / len(relevant_feedbacks)
+        elif negative > positive and negative > neutral:
+            news_item["impact"] = "negative"
+            news_item["feedback_confidence"] = negative / len(relevant_feedbacks)
+        else:
+            news_item["impact"] = "neutral"
+            news_item["feedback_confidence"] = neutral / len(relevant_feedbacks)
+
+        # Ajuster également la hiérarchie si les feedbacks contiennent cette information
+        hierarchy_votes = {}
+        for f in relevant_feedbacks:
+            if "correctHierarchy" in f:
+                hierarchy = f["correctHierarchy"]
+                hierarchy_votes[hierarchy] = hierarchy_votes.get(hierarchy, 0) + 1
+        
+        if hierarchy_votes:
+            # Trouver la hiérarchie avec le plus de votes
+            max_hierarchy = max(hierarchy_votes.items(), key=lambda x: x[1])
+            news_item["hierarchy"] = max_hierarchy[0]
+            news_item["hierarchy_confidence"] = max_hierarchy[1] / len([f for f in relevant_feedbacks if "correctHierarchy" in f])
+            
+        # Ajouter des méta-données sur le feedback
+        news_item["feedback_count"] = len(relevant_feedbacks)
+        news_item["feedback_adjusted"] = True
+        
+        print(f"✅ Impact ajusté pour l'actualité: {news_item.get('title', '')[:30]}... -> {news_item['impact']}")
+        
+        return news_item
+    
     def save_classified_news(self, news_item):
         """Sauvegarde les news classifiées pour un futur entraînement"""
         classified_news = []
@@ -276,6 +334,9 @@ class NewsClassifier:
             # Utiliser uniquement l'approche par mots-clés
             news_item["hierarchy"] = self.predict_hierarchy_with_keywords(news_item)
             news_item["hierarchy_confidence"] = 0.5  # Confiance moyenne pour les mots-clés
+        
+        # Ajuster l'impact en fonction des retours utilisateurs
+        news_item = self.adjust_impact_with_feedback(news_item)
         
         # Sauvegarder la news classifiée pour améliorer le modèle ultérieurement
         self.save_classified_news(news_item)
