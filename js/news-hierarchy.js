@@ -44,17 +44,41 @@ async function initializeNewsData() {
         showLoadingState('important-news-container');
         showLoadingState('recent-news');
         
-        // Charger les données depuis l'API ou le fichier local
-        const response = await fetch('data/news.json');
+        let data;
         
-        if (!response.ok) {
-            throw new Error('Impossible de charger les données');
+        // Essayer de charger classified_news.json d'abord
+        try {
+            const classifiedResponse = await fetch('data/classified_news.json');
+            if (classifiedResponse.ok) {
+                data = await classifiedResponse.json();
+                console.log('✅ Données ML classifiées chargées avec succès');
+            } else {
+                // Si pas de réponse positive, essayer news.json
+                console.log('⚠️ classified_news.json non disponible, chargement de news.json');
+                const response = await fetch('data/news.json');
+                
+                if (!response.ok) {
+                    throw new Error('Impossible de charger les données');
+                }
+                
+                data = await response.json();
+                console.log('✅ Données brutes chargées avec succès');
+            }
+        } catch (error) {
+            // Si erreur, essayer news.json
+            console.log('⚠️ Erreur avec classified_news.json, essai avec news.json');
+            const response = await fetch('data/news.json');
+            
+            if (!response.ok) {
+                throw new Error('Impossible de charger les données');
+            }
+            
+            data = await response.json();
         }
         
-        const data = await response.json();
         window.NewsSystem.data = data;
         
-        // Distribuer les actualités selon leur importance
+        // Distribuer les actualités selon leur importance/hiérarchie
         distributeNewsByImportance(data);
         
         console.log('Données d\'actualités chargées et distribuées');
@@ -86,22 +110,19 @@ function distributeNewsByImportance(newsData) {
 
     // S'assurer que tous les champs ML sont présents
     allNews.forEach(news => {
-        // Utiliser impact comme sentiment par défaut si sentiment n'est pas présent
+        // Utiliser les attributs existants ou les calculer si non présents
         if (!news.sentiment) {
             news.sentiment = news.impact || 'neutral';
         }
         
-        // Ajouter une valeur de confiance par défaut si absente
         if (typeof news.confidence === 'undefined') {
-            news.confidence = 0.8;
+            news.confidence = news.feedback_confidence || 0.8;
         }
         
-        // Calculer le score si absent
         if (typeof news.score === 'undefined') {
             news.score = calculateNewsScore(news);
         }
         
-        // Vérifier qu'il y a un impact, même si on a un sentiment
         if (!news.impact) {
             if (news.sentiment === 'positive' && news.confidence > 0.7) {
                 news.impact = 'positive';
@@ -111,12 +132,31 @@ function distributeNewsByImportance(newsData) {
                 news.impact = 'neutral';
             }
         }
+        
+        // Utiliser hierarchy si présent, sinon dériver du score
+        if (!news.hierarchy) {
+            if (news.score >= 15) {
+                news.hierarchy = 'critical';
+            } else if (news.score >= 8) {
+                news.hierarchy = 'important';
+            } else {
+                news.hierarchy = 'normal';
+            }
+        }
     });
 
-    // Filtrer les actualités par score
-    const criticalNews = allNews.filter(news => news.score >= 15);
-    const importantNews = allNews.filter(news => news.score >= 8 && news.score < 15);
-    const regularNews = allNews.filter(news => news.score < 8);
+    // Filtrer les actualités par hiérarchie (préférer hierarchy sur score si disponible)
+    const criticalNews = allNews.filter(news => 
+        news.hierarchy === 'critical' || (!news.hierarchy && news.score >= 15)
+    );
+    
+    const importantNews = allNews.filter(news => 
+        news.hierarchy === 'important' || (!news.hierarchy && news.score >= 8 && news.score < 15)
+    );
+    
+    const regularNews = allNews.filter(news => 
+        news.hierarchy === 'normal' || (!news.hierarchy && news.score < 8)
+    );
     
     // AMÉLIORATION: Tri par score ML décroissant à l'intérieur de chaque catégorie
     criticalNews.sort((a, b) => {
