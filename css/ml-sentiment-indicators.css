@@ -1,100 +1,163 @@
-/* Styles pour les indicateurs de sentiment ML */
+/* 
+ * ml-sentiment-indicators.css
+ * Styles pour les indicateurs de sentiment basés sur le Machine Learning
+ */
 
-/* Conteneur d'indicateur de sentiment */
-.sentiment-indicator {
+/* Indicateurs de sentiment */
+.ml-sentiment-indicator {
     display: inline-flex;
     align-items: center;
-    padding: 3px 6px;
-    border-radius: 4px;
-    font-size: 0.65rem;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
     font-weight: 600;
-    margin-left: 5px;
-    text-transform: uppercase;
+    margin-left: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    opacity: 0.9;
+    transition: all 0.3s ease;
 }
 
-/* Variantes par type de sentiment */
-.sentiment-positive {
-    background-color: rgba(0, 200, 83, 0.2);
-    color: #00C853;
+.ml-sentiment-indicator:hover {
+    opacity: 1;
+    transform: translateY(-2px);
 }
 
-.sentiment-negative {
-    background-color: rgba(255, 77, 77, 0.2);
-    color: #FF4D4D;
+.ml-sentiment-indicator i {
+    margin-right: 4px;
+    font-size: 10px;
 }
 
-.sentiment-neutral {
-    background-color: rgba(255, 193, 7, 0.2);
-    color: #FFC107;
+/* Styles spécifiques pour chaque sentiment */
+.ml-sentiment-indicator.positive {
+    background-color: rgba(76, 175, 80, 0.15);
+    color: #4CAF50;
+    border: 1px solid rgba(76, 175, 80, 0.3);
 }
 
-/* Badge de confiance */
-.confidence-badge {
-    background-color: rgba(0, 0, 0, 0.3);
-    color: rgba(255, 255, 255, 0.9);
-    padding: 1px 4px;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    margin-left: 4px;
+.ml-sentiment-indicator.negative {
+    background-color: rgba(244, 67, 54, 0.15);
+    color: #F44336;
+    border: 1px solid rgba(244, 67, 54, 0.3);
 }
 
-.confidence-high {
-    background-color: rgba(46, 204, 113, 0.3);
+.ml-sentiment-indicator.neutral {
+    background-color: rgba(33, 150, 243, 0.15);
+    color: #2196F3;
+    border: 1px solid rgba(33, 150, 243, 0.3);
 }
 
-.confidence-medium {
-    background-color: rgba(243, 156, 18, 0.3);
+/* Effets visuels pour les cartes selon le sentiment */
+.news-card.positive-sentiment {
+    border-left: 3px solid #4CAF50;
 }
 
-.confidence-low {
-    background-color: rgba(231, 76, 60, 0.3);
+.news-card.negative-sentiment {
+    border-left: 3px solid #F44336;
 }
 
-/* Badge de score ML */
-.ml-score-badge {
-    background-color: rgba(0, 255, 135, 0.2);
+.news-card.neutral-sentiment {
+    border-left: 3px solid #2196F3;
+}
+
+/* Badges de suggestion */
+.ml-suggestion-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+    margin-left: 8px;
+    background-color: rgba(0, 255, 135, 0.15);
     color: #00FF87;
-    padding: 1px 4px;
-    border-radius: 4px;
-    font-size: 0.7rem;
-    margin-left: 4px;
+    border: 1px solid rgba(0, 255, 135, 0.3);
+    box-shadow: 0 0 8px rgba(0, 255, 135, 0.25);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    animation: badge-pulse 2s infinite;
 }
 
-/* Indicateur d'origine ML */
-.ml-indicator {
-    font-size: 0.7rem;
-    margin-left: 4px;
-    color: rgba(255, 255, 255, 0.7);
-}
-
-/* Animation pour les mises à jour de classification */
-@keyframes pulse-update {
-    0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
-    50% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
+@keyframes badge-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.4); }
+    70% { box-shadow: 0 0 0 8px rgba(0, 255, 135, 0); }
     100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
 }
 
-.classification-updated {
-    animation: pulse-update 1.5s;
+.ml-suggestion-badge:hover {
+    background-color: rgba(0, 255, 135, 0.25);
+    transform: translateY(-2px);
 }
 
-/* Notification de mise à jour */
-.update-notification {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background-color: var(--accent-color);
-    color: #000;
-    padding: 10px 20px;
-    border-radius: 4px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-    z-index: 1000;
-    transform: translateY(100px);
-    opacity: 0;
-    transition: transform 0.3s, opacity 0.3s;
+.ml-suggestion-badge:active {
+    transform: translateY(1px);
 }
 
-.update-notification.visible {
-    transform: translateY(0);
-    opacity: 1;
+.ml-suggestion-badge i {
+    margin-right: 4px;
+    font-size: 10px;
+}
+
+/* Animation pour les mises à jour */
+.ml-updated {
+    animation: update-highlight 2s ease;
+}
+
+@keyframes update-highlight {
+    0% { box-shadow: none; }
+    25% { box-shadow: 0 0 20px rgba(0, 255, 135, 0.6); }
+    100% { box-shadow: none; }
+}
+
+/* Styles d'impact pour les cartes d'actualités (pour le filtrage) */
+.news-card.high-impact {
+    position: relative;
+}
+
+.news-card.high-impact::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 30px 30px 0;
+    border-color: transparent #F44336 transparent transparent;
+    opacity: 0.7;
+}
+
+.news-card.medium-impact {
+    position: relative;
+}
+
+.news-card.medium-impact::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 25px 25px 0;
+    border-color: transparent #FFC107 transparent transparent;
+    opacity: 0.7;
+}
+
+/* Styles responsifs */
+@media (max-width: 768px) {
+    .ml-sentiment-indicator {
+        padding: 2px 6px;
+        font-size: 10px;
+    }
+    
+    .ml-suggestion-badge {
+        padding: 2px 6px;
+        font-size: 10px;
+    }
+    
+    .news-card.high-impact::after,
+    .news-card.medium-impact::after {
+        border-width: 0 20px 20px 0;
+    }
 }
