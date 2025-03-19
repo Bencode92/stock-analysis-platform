@@ -1,0 +1,83 @@
+/* 
+ * events-date-filter.css
+ * Styles pour supprimer les étiquettes ESSENTIEL et ajouter le filtre par date
+ */
+
+/* Supprimer complètement les badges ESSENTIEL */
+.essential-badge {
+  display: none !important;
+}
+
+/* Masquer les étiquettes "high" et "ESSENTIEL" */
+.event-card::after {
+  display: none !important;
+}
+
+/* Styles pour les boutons de filtre temporel */
+#today-filter.active,
+#week-filter.active {
+  background-color: rgba(0, 255, 135, 0.2) !important;
+  color: #00ff87 !important;
+  border-color: #00ff87 !important;
+  transform: translateY(-1px) !important;
+  font-weight: 600 !important;
+  box-shadow: 0 0 8px rgba(0, 255, 135, 0.3) !important;
+}
+
+#today-filter:hover,
+#week-filter:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 2px 8px rgba(0, 255, 135, 0.2) !important;
+}
+
+/* Style pour la date d'aujourd'hui (mise en évidence) */
+.event-card .date-today {
+  background-color: rgba(0, 255, 135, 0.3) !important;
+  color: #ffffff !important;
+  font-weight: 600 !important;
+}
+
+/* Message quand aucun événement n'est visible */
+.no-events-message {
+  margin-top: 20px;
+  padding: 30px;
+  background-color: rgba(1, 22, 39, 0.7);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.no-events-message i {
+  font-size: 30px;
+  color: rgba(255, 255, 255, 0.3);
+  margin-bottom: 10px;
+}
+
+/* Meilleures transitions pour le filtrage */
+.event-card {
+  transition: all 0.3s ease-out !important;
+}
+
+/* Espace entre les filtres */
+.flex.gap-2 {
+  gap: 10px !important;
+}
+
+/* Amélioration des couleurs d'impact */
+.event-card.high-impact::before {
+  background: linear-gradient(to bottom, #ff3d00, #ff7043) !important;
+  width: 4px !important;
+}
+
+.event-card.medium-impact::before {
+  background: linear-gradient(to bottom, #ff9100, #ffb74d) !important;
+  width: 4px !important;
+}
+
+/* Style pour les nouveaux filtres de date */
+.filter-button {
+  transition: all 0.3s ease;
+}
+
+.filter-button.active {
+  background-color: rgba(0, 255, 135, 0.2);
+}
