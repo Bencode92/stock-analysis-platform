@@ -104,10 +104,12 @@ function distributeNewsByImportance(newsData) {
             news.score = calculateNewsScore(news);
         }
         
-        if (!news.impact) {
-            if (news.sentiment === 'positive' && news.confidence > 0.7) {
+        // CORRECTION: S'assurer que impact est toujours défini correctement
+        if (!news.impact || news.impact === 'general') {
+            // Si pas d'impact ou si 'general', utiliser le sentiment comme base
+            if (news.sentiment === 'positive') {
                 news.impact = 'positive';
-            } else if (news.sentiment === 'negative' && news.confidence > 0.7) {
+            } else if (news.sentiment === 'negative') {
                 news.impact = 'negative';
             } else {
                 news.impact = 'neutral';
@@ -270,10 +272,12 @@ function displayCriticalNews(news) {
         // Classe de l'indicateur d'impact
         const impactIndicatorClass = `impact-${item.impact}`;
         
-        // Classification ML
+        // Classification ML - SIMPLIFIER L'AFFICHAGE
         const sentimentClass = `sentiment-${item.sentiment || 'neutral'}`;
-        const sentimentText = item.sentiment === 'positive' ? 'SENTIMENT POSITIF' : 
-                             item.sentiment === 'negative' ? 'SENTIMENT NÉGATIF' : 'SENTIMENT NEUTRE';
+        // Remplacer le texte long par une simple icône
+        const sentimentIcon = item.sentiment === 'positive' ? '<i class="fas fa-arrow-up"></i>' : 
+                             item.sentiment === 'negative' ? '<i class="fas fa-arrow-down"></i>' : 
+                             '<i class="fas fa-minus"></i>';
         
         // Badge de confiance
         const confidenceValue = item.confidence || 0.8;
@@ -308,10 +312,8 @@ function displayCriticalNews(news) {
                     <span class="impact-indicator ${impactIndicatorClass}">${impactText}</span>
                     <span class="impact-indicator">${item.category.toUpperCase() || 'GENERAL'}</span>
                     <span class="sentiment-indicator ${sentimentClass}">
-                        ${sentimentText}
-                        <span class="confidence-badge ${confidenceClass}">${confidencePercent}%</span>
+                        ${sentimentIcon}
                         ${scoreDisplay}
-                        <span class="ml-indicator"><i class="fas fa-robot"></i></span>
                     </span>
                 </div>
                 <h3 class="text-lg font-bold">${item.title}</h3>
@@ -363,10 +365,12 @@ function displayImportantNews(news) {
         // Classe de l'indicateur d'impact
         const impactIndicatorClass = `impact-${item.impact}`;
         
-        // Classification ML
+        // Classification ML - SIMPLIFIER L'AFFICHAGE
         const sentimentClass = `sentiment-${item.sentiment || 'neutral'}`;
-        const sentimentText = item.sentiment === 'positive' ? 'SENTIMENT POSITIF' : 
-                             item.sentiment === 'negative' ? 'SENTIMENT NÉGATIF' : 'SENTIMENT NEUTRE';
+        // Remplacer le texte long par une simple icône
+        const sentimentIcon = item.sentiment === 'positive' ? '<i class="fas fa-arrow-up"></i>' : 
+                             item.sentiment === 'negative' ? '<i class="fas fa-arrow-down"></i>' : 
+                             '<i class="fas fa-minus"></i>';
         
         // Badge de confiance
         const confidenceValue = item.confidence || 0.8;
@@ -400,10 +404,8 @@ function displayImportantNews(news) {
                     <span class="impact-indicator ${impactIndicatorClass}">${impactText}</span>
                     <span class="impact-indicator">${item.category.toUpperCase() || 'GENERAL'}</span>
                     <span class="sentiment-indicator ${sentimentClass}">
-                        ${sentimentText}
-                        <span class="confidence-badge ${confidenceClass}">${confidencePercent}%</span>
+                        ${sentimentIcon}
                         ${scoreDisplay}
-                        <span class="ml-indicator"><i class="fas fa-robot"></i></span>
                     </span>
                 </div>
                 <h3 class="text-md font-semibold">${item.title}</h3>
@@ -468,10 +470,12 @@ function displayRecentNews(news) {
         // Classe de l'indicateur d'impact pour les couleurs
         const impactIndicatorClass = `impact-${item.impact}`;
         
-        // Classification ML
+        // Classification ML - SIMPLIFIER L'AFFICHAGE
         const sentimentClass = `sentiment-${item.sentiment || 'neutral'}`;
-        const sentimentText = item.sentiment === 'positive' ? 'SENTIMENT POSITIF' : 
-                              item.sentiment === 'negative' ? 'SENTIMENT NÉGATIF' : 'SENTIMENT NEUTRE';
+        // Remplacer le texte long par une simple icône
+        const sentimentIcon = item.sentiment === 'positive' ? '<i class="fas fa-arrow-up"></i>' : 
+                             item.sentiment === 'negative' ? '<i class="fas fa-arrow-down"></i>' : 
+                             '<i class="fas fa-minus"></i>';
         
         // Badge de confiance
         const confidenceValue = item.confidence || 0.8;
@@ -504,10 +508,8 @@ function displayRecentNews(news) {
                     <span class="impact-indicator ${impactIndicatorClass}" style="text-transform:uppercase;">${impactText}</span>
                     <span class="impact-indicator" style="text-transform:uppercase; margin-left:5px;">${item.category.toUpperCase() || 'GENERAL'}</span>
                     <span class="sentiment-indicator ${sentimentClass}" style="margin-left:5px;">
-                        ${sentimentText}
-                        <span class="confidence-badge ${confidenceClass}">${confidencePercent}%</span>
+                        ${sentimentIcon}
                         ${scoreDisplay}
-                        <span class="ml-indicator"><i class="fas fa-robot"></i></span>
                     </span>
                 </div>
                 <h3>${item.title}</h3>
@@ -623,19 +625,18 @@ function updateNewsClassificationUI(newsId, newClassification) {
             const sentimentEl = card.querySelector('.sentiment-indicator');
             if (sentimentEl) {
                 // Conserver les éléments existants
-                const confidenceBadge = sentimentEl.querySelector('.confidence-badge');
                 const scoreDisplay = sentimentEl.querySelector('.ml-score-badge');
-                const mlIndicator = sentimentEl.querySelector('.ml-indicator');
                 
-                // Mettre à jour le texte et la classe
-                const sentimentText = getSentimentText(newClassification.sentiment);
-                sentimentEl.textContent = sentimentText + ' ';
+                // Mettre à jour l'icône et la classe
+                const sentimentIcon = newClassification.sentiment === 'positive' ? '<i class="fas fa-arrow-up"></i>' : 
+                                      newClassification.sentiment === 'negative' ? '<i class="fas fa-arrow-down"></i>' : 
+                                      '<i class="fas fa-minus"></i>';
+                
+                sentimentEl.innerHTML = sentimentIcon;
                 sentimentEl.className = `sentiment-indicator sentiment-${newClassification.sentiment}`;
                 
-                // Réinsérer les éléments
-                if (confidenceBadge) sentimentEl.appendChild(confidenceBadge);
+                // Réinsérer le score
                 if (scoreDisplay) sentimentEl.appendChild(scoreDisplay);
-                if (mlIndicator) sentimentEl.appendChild(mlIndicator);
             }
         }
         
