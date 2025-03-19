@@ -69,8 +69,22 @@ class NewsClassifier:
     
     def _keyword_classifier(self, text):
         """Classificateur de secours basé sur des mots-clés simple"""
-        pos_words = ["hausse", "augmentation", "croissance", "positif", "succès", "profit"]
-        neg_words = ["baisse", "chute", "déclin", "négatif", "échec", "perte"]
+        # Mots-clés en français ET en anglais
+        pos_words = [
+            # Français
+            "hausse", "augmentation", "croissance", "positif", "succès", "profit",
+            # Anglais
+            "rise", "increase", "growth", "positive", "success", "profit", 
+            "gains", "upward", "rally", "bullish", "surging", "climbing"
+        ]
+        
+        neg_words = [
+            # Français
+            "baisse", "chute", "déclin", "négatif", "échec", "perte",
+            # Anglais
+            "fall", "decrease", "decline", "negative", "failure", "loss",
+            "losses", "downward", "bearish", "plunge", "dropping", "plummeting"
+        ]
         
         text = text.lower()
         pos_count = sum(1 for word in pos_words if word in text)
@@ -104,13 +118,28 @@ class NewsClassifier:
         # Combiner titre et contenu pour l'analyse
         text = f"{news_item['title']}. {news_item['content']}".lower()
         
-        # Liste de mots-clés pour chaque catégorie
-        critical_keywords = ["crash", "effondrement", "crise", "urgent", "alerte", "catastrophe", 
-                            "panique", "récession", "faillite", "collapse", "urgence", "critique"]
+        # Liste de mots-clés pour chaque catégorie (français ET anglais)
+        critical_keywords = [
+            # Français
+            "crash", "effondrement", "crise", "urgent", "alerte", "catastrophe", 
+            "panique", "récession", "faillite", "collapse", "urgence", "critique",
+            # Anglais
+            "crash", "collapse", "crisis", "urgent", "alert", "catastrophe",
+            "panic", "recession", "bankruptcy", "collapse", "emergency", "critical",
+            "breaking", "flash", "severe", "disaster", "plummet", "plunge"
+        ]
         
-        important_keywords = ["hausse significative", "baisse importante", "croissance", 
-                              "résultats", "bénéfices", "pertes", "acquisition", "fusion", 
-                              "restructuration", "earnings", "quarterly", "forecast"]
+        important_keywords = [
+            # Français
+            "hausse significative", "baisse importante", "croissance", 
+            "résultats", "bénéfices", "pertes", "acquisition", "fusion", 
+            "restructuration", "earnings", "quarterly", "forecast",
+            # Anglais
+            "significant increase", "major decline", "growth", 
+            "results", "profits", "losses", "acquisition", "merger",
+            "restructuring", "earnings", "quarterly", "forecast",
+            "significant", "important", "notable", "key", "major", "substantial"
+        ]
         
         # Compter les occurrences de mots-clés
         critical_count = sum(1 for word in critical_keywords if word in text)
@@ -280,13 +309,21 @@ class NewsClassifier:
         news_item["sentiment"] = label_mapping.get(sentiment, sentiment)
         news_item["confidence"] = confidence
         
-        # Liste de mots-clés à fort impact
+        # Liste de mots-clés à fort impact (français ET anglais)
         high_impact_words = [
+            # Français
+            "crash", "effondrement", "crise", "urgence", "alerte", "catastrophe", 
+            "panique", "récession", "faillite", "défaut", "flamber", "dégringoler", 
+            "s'envoler", "plonger", "percée", "jalon", "record",
+            "crise", "effondrement", "chute", "urgence", "alerte", "récession",
+            "faillite", "défaut", "dégringolade", "envolée", "percée",
+            
+            # Anglais
             "crash", "collapse", "crisis", "emergency", "alert", "catastrophe", 
             "panic", "recession", "bankruptcy", "default", "surge", "plummet", 
             "skyrocket", "nosedive", "breakthrough", "milestone", "record",
-            "crise", "effondrement", "chute", "urgence", "alerte", "récession",
-            "faillite", "défaut", "dégringolade", "envolée", "percée"
+            "plunge", "tumble", "soar", "spike", "dive", "bust", "boom",
+            "rally", "slump", "downturn", "upswing", "selloff", "meltdown"
         ]
         
         # Vérifier la présence de mots-clés à fort impact
@@ -328,7 +365,14 @@ class NewsClassifier:
         # Bonus pour les titres qui contiennent des mots-clés spécifiques
         title_lower = news_item['title'].lower()
         
-        finance_keywords = ["stocks", "market", "economy", "recession", "crash", "crisis", "fed", "interest rates"]
+        # Liste étendue de mots-clés financiers en anglais
+        finance_keywords = [
+            "stocks", "market", "economy", "recession", "crash", "crisis", "fed", "interest rates",
+            "inflation", "index", "dow", "nasdaq", "s&p", "rally", "bull", "bear", "treasury", 
+            "yield", "dividend", "earnings", "quarterly", "fiscal", "profit", "shares", "trading",
+            "investors", "portfolio", "etf", "fund", "stock market", "wall street", "financial", "bank"
+        ]
+        
         for keyword in finance_keywords:
             if keyword in title_lower:
                 impact_score += 2
