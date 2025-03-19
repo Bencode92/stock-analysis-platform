@@ -146,8 +146,7 @@ function initMLFeedback() {
 function openClassificationEditor(newsId, card) {
     // Récupérer les valeurs actuelles
     const currentCategory = card.getAttribute('data-category') || 'general';
-    const currentImpact = card.getAttribute('data-impact') || 'neutral';
-    const currentSentiment = card.getAttribute('data-sentiment') || 'neutral';
+    const currentSentiment = card.getAttribute('data-sentiment') || card.getAttribute('data-impact') || 'neutral';
     
     // Créer le modal de modification
     const modal = document.createElement('div');
@@ -168,18 +167,7 @@ function openClassificationEditor(newsId, card) {
                 </div>
                 
                 <div class="form-group">
-                    <label>Impact:</label>
-                    <select id="edit-impact" class="editor-select">
-                        <option value="positive" ${currentImpact === 'positive' ? 'selected' : ''}>Positif</option>
-                        <option value="slightly_positive" ${currentImpact === 'slightly_positive' ? 'selected' : ''}>Légèrement positif</option>
-                        <option value="neutral" ${currentImpact === 'neutral' ? 'selected' : ''}>Neutre</option>
-                        <option value="slightly_negative" ${currentImpact === 'slightly_negative' ? 'selected' : ''}>Légèrement négatif</option>
-                        <option value="negative" ${currentImpact === 'negative' ? 'selected' : ''}>Négatif</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Sentiment ML:</label>
+                    <label>Sentiment:</label>
                     <select id="edit-sentiment" class="editor-select">
                         <option value="positive" ${currentSentiment === 'positive' ? 'selected' : ''}>Positif</option>
                         <option value="neutral" ${currentSentiment === 'neutral' ? 'selected' : ''}>Neutre</option>
@@ -206,30 +194,28 @@ function openClassificationEditor(newsId, card) {
     document.getElementById('save-edit').addEventListener('click', () => {
         // Récupérer les nouvelles valeurs
         const newCategory = document.getElementById('edit-category').value;
-        const newImpact = document.getElementById('edit-impact').value;
         const newSentiment = document.getElementById('edit-sentiment').value;
         
         // Mettre à jour les attributs de la carte
         card.setAttribute('data-category', newCategory);
-        card.setAttribute('data-impact', newImpact);
         card.setAttribute('data-sentiment', newSentiment);
+        card.setAttribute('data-impact', newSentiment); // Pour compatibilité avec le code existant
         
         // Mettre à jour l'affichage
         if (window.NewsSystem && window.NewsSystem.updateNewsClassificationUI) {
             window.NewsSystem.updateNewsClassificationUI(newsId, {
                 category: newCategory,
-                impact: newImpact,
-                sentiment: newSentiment
+                sentiment: newSentiment,
+                impact: newSentiment // Pour compatibilité
             });
         } else {
             // Fallback si la fonction de mise à jour n'est pas disponible
-            updateCardClassification(card, newCategory, newImpact, newSentiment);
+            updateCardClassification(card, newCategory, newSentiment);
         }
         
         // Sauvegarder le feedback
         saveClassificationFeedback(newsId, {
             category: newCategory,
-            impact: newImpact,
             sentiment: newSentiment
         });
         
@@ -242,24 +228,24 @@ function openClassificationEditor(newsId, card) {
  * Met à jour l'affichage d'une carte après modification de sa classification
  * (Fallback si window.NewsSystem.updateNewsClassificationUI n'est pas disponible)
  */
-function updateCardClassification(card, category, impact, sentiment) {
+function updateCardClassification(card, category, sentiment) {
     // Mettre à jour l'indicateur de catégorie
     const categoryEl = card.querySelector('.impact-indicator:nth-child(2)');
     if (categoryEl) {
         categoryEl.textContent = category.toUpperCase();
     }
     
-    // Mettre à jour l'indicateur d'impact
+    // Mettre à jour l'indicateur de sentiment
     const impactEl = card.querySelector('.impact-indicator:first-child');
     if (impactEl) {
-        const impactText = getImpactText(impact);
-        impactEl.textContent = impactText;
+        const sentimentText = getSentimentText(sentiment);
+        impactEl.textContent = sentimentText;
         
         // Mettre à jour la classe d'impact
-        impactEl.className = `impact-indicator impact-${impact}`;
+        impactEl.className = `impact-indicator impact-${sentiment}`;
     }
     
-    // Mettre à jour l'indicateur de sentiment
+    // Mettre à jour l'indicateur de sentiment ML
     const sentimentEl = card.querySelector('.sentiment-indicator');
     if (sentimentEl) {
         const sentimentText = getSentimentText(sentiment);
@@ -312,14 +298,6 @@ function saveClassificationFeedback(newsId, classification) {
 /**
  * Fonctions utilitaires pour les textes
  */
-function getImpactText(impact) {
-    return impact === 'negative' ? 'IMPACT NÉGATIF' : 
-          impact === 'slightly_negative' ? 'IMPACT LÉGÈREMENT NÉGATIF' :
-          impact === 'positive' ? 'IMPACT POSITIF' : 
-          impact === 'slightly_positive' ? 'IMPACT LÉGÈREMENT POSITIF' :
-          'IMPACT NEUTRE';
-}
-
 function getSentimentText(sentiment) {
     return sentiment === 'positive' ? 'SENTIMENT POSITIF' : 
            sentiment === 'negative' ? 'SENTIMENT NÉGATIF' : 
