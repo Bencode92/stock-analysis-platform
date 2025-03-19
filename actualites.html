@@ -31,12 +31,93 @@
     <script src="event-renderer.js"></script>
     <!-- Ajout du script de filtre par date pour les événements -->
     <script src="events-date-filter.js"></script>
-    <!-- IMPORTANT: Charger d'abord le système central de hiérarchie des actualités -->
-    <script src="js/news-hierarchy.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        green: {
+                            400: '#00FF87'
+                        }
+                    }
+                },
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif']
+                }
+            }
+        }
+    </script>
 </head>
 <body class="dark">
-    <!-- Autres éléments restent inchangés... -->
-    
+    <!-- Réseau de fond animé -->
+    <div class="network-background" id="network-background"></div>
+
+    <!-- Cercle de date central -->
+    <div class="date-circle">
+        <div class="date-text" id="formatted-date">11.03.2025</div>
+    </div>
+
+    <!-- Bouton du sélecteur de thème -->
+    <div class="theme-toggle">
+        <button id="theme-toggle-btn" class="theme-toggle-btn">
+            <i class="fas fa-moon" id="dark-icon"></i>
+            <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar de navigation verticale -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">TP</div>
+        <nav class="sidebar-nav">
+            <a href="actualites.html" class="nav-item active" title="Actualités">
+                <i class="fas fa-newspaper"></i>
+            </a>
+            <a href="portefeuille.html" class="nav-item" title="Portefeuilles">
+                <i class="fas fa-chart-pie"></i>
+            </a>
+            <a href="dashboard.html" class="nav-item" title="Tableau de bord">
+                <i class="fas fa-tachometer-alt"></i>
+            </a>
+            <a href="marches.html" class="nav-item" title="Marchés">
+                <i class="fas fa-chart-line"></i>
+            </a>
+            <a href="email-preview.html" class="nav-item" title="Alertes">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge"></span>
+            </a>
+            <a href="parametres.html" class="nav-item" title="Paramètres">
+                <i class="fas fa-cog"></i>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Header principal -->
+    <header class="main-header">
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="pulse-dot"></div>
+                <a href="index.html">TRADEPULSE</a>
+            </div>
+            <nav class="main-nav">
+                <a href="actualites.html" class="active">Actualités</a>
+                <a href="portefeuille.html?type=modere">Portefeuilles</a>
+                <a href="dashboard.html">Tableau de bord</a>
+            </nav>
+        </div>
+        <div class="header-right">
+            <div class="market-status">
+                <div class="market-indicator green"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time" id="marketTime">09:45:22</span>
+            </div>
+            <a href="recherche.html" class="search-button ripple">
+                <i class="fas fa-search"></i>
+                <span>Ma question</span>
+            </a>
+        </div>
+    </header>
+
     <!-- Container principal -->
     <main class="main-container">
         <!-- Nouvelle interface minimaliste -->
@@ -152,16 +233,14 @@
                     </div>
                 </div>
                 
-                <!-- Actualités générales - MODIFIÉ POUR UN FORMAT UNIFORME -->
+                <!-- Actualités générales - MODIFIÉ POUR ÉLIMINER L'AFFICHAGE INDÉSIRABLE -->
                 <div class="mb-8">
                     <h2 class="text-gray-300 font-bold text-xl mb-4">📰 ACTUALITÉS GÉNÉRALES</h2>
-                    <!-- IMPORTANT: Structure simplifiée sans éléments préexistants -->
+                    
+                    <!-- Simplification du conteneur pour éviter l'affichage non souhaité -->
                     <div id="recent-news">
-                        <!-- Contenu généré par news-hierarchy.js -->
-                        <div class="loading-state">
-                            <div class="loading-spinner"></div>
-                            <p>Chargement des actualités générales...</p>
-                        </div>
+                        <!-- Le contenu sera rempli dynamiquement par news-hierarchy.js -->
+                        <!-- Le spinner sera ajouté par le script news-display-fix.js -->
                     </div>
                 </div>
                 
@@ -185,7 +264,8 @@
         </div>
     </footer>
 
-    <!-- Scripts existants - IMPORTANT: Charger news-display-fix.js en DERNIER -->
+    <!-- Scripts existants -->
+    <script src="js/news-hierarchy.js"></script>  <!-- Placé en premier pour s'assurer qu'il est disponible avant les autres scripts -->
     <script src="actualites.js"></script>
     <script src="js/news-filters.js"></script>
     
@@ -197,7 +277,244 @@
     <!-- Script de mise à jour en temps réel des classifications -->
     <script src="js/news-updates.js"></script>
     
-    <!-- IMPORTANT: Le correctif d'affichage doit être chargé en dernier pour annuler les autres formatages -->
+    <!-- Nouveau script pour corriger les problèmes d'affichage des actualités -->
     <script src="js/news-display-fix.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Créer un réseau de fond
+            const networkBackground = document.getElementById('network-background');
+            createNetworkBackground();
+            
+            function createNetworkBackground() {
+                // Effacer le contenu existant
+                networkBackground.innerHTML = '';
+                
+                // Calculer le nombre de nœuds en fonction de la taille de l'écran
+                const numNodes = Math.min(Math.floor(window.innerWidth * window.innerHeight / 15000), 80);
+                
+                // Créer les nœuds
+                const nodes = [];
+                for (let i = 0; i < numNodes; i++) {
+                    const node = document.createElement('div');
+                    node.className = 'node';
+                    
+                    // Position aléatoire
+                    const x = Math.random() * 100;
+                    const y = Math.random() * 100;
+                    
+                    node.style.left = x + '%';
+                    node.style.top = y + '%';
+                    
+                    // Certains nœuds pulsent
+                    if (Math.random() < 0.3) {
+                        node.classList.add('pulse');
+                    }
+                    
+                    networkBackground.appendChild(node);
+                    nodes.push({ element: node, x, y });
+                }
+                
+                // Créer des connexions entre certains nœuds
+                const maxConnections = Math.min(numNodes * 1.5, 80);
+                for (let i = 0; i < maxConnections; i++) {
+                    const nodeA = nodes[Math.floor(Math.random() * nodes.length)];
+                    const nodeB = nodes[Math.floor(Math.random() * nodes.length)]
+                    
+                    if (nodeA !== nodeB) {
+                        createConnection(nodeA, nodeB);
+                    }
+                }
+                
+                // Animer les nœuds périodiquement
+                setInterval(() => {
+                    nodes.forEach(node => {
+                        if (Math.random() < 0.1) {
+                            const newX = node.x + (Math.random() * 10 - 5);
+                            const newY = node.y + (Math.random() * 10 - 5);
+                            
+                            node.x = Math.max(0, Math.min(100, newX));
+                            node.y = Math.max(0, Math.min(100, newY));
+                            
+                            node.element.style.transition = 'all 5s ease';
+                            node.element.style.left = node.x + '%';
+                            node.element.style.top = node.y + '%';
+                        }
+                    });
+                }, 3000);
+            }
+            
+            function createConnection(nodeA, nodeB) {
+                const connection = document.createElement('div');
+                connection.className = 'connection';
+                
+                // Calculer l'angle et la distance entre les deux nœuds
+                const dx = nodeB.x - nodeA.x;
+                const dy = nodeB.y - nodeA.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+                
+                // Positionner et dimensionner la connexion
+                connection.style.width = distance + '%';
+                connection.style.left = nodeA.x + '%';
+                connection.style.top = nodeA.y + '%';
+                connection.style.transform = `rotate(${angle}deg)`;
+                
+                networkBackground.appendChild(connection);
+            }
+            
+            // Redimensionner le réseau lors du redimensionnement de la fenêtre
+            window.addEventListener('resize', () => {
+                createNetworkBackground();
+            });
+            
+            // Mettre à jour la date du jour
+            const now = new Date();
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            const formattedDate = `${day}.${month}.${year}`;
+            
+            document.getElementById('formatted-date').textContent = formattedDate;
+            
+            const options = { day: 'numeric', month: 'long', year: 'numeric' };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('fr-FR', options).toUpperCase();
+            
+            // Initialisation du thème
+            initTheme();
+            
+            // Gestion du mode sombre/clair
+            const themeToggleBtn = document.getElementById('theme-toggle-btn');
+            const darkIcon = document.getElementById('dark-icon');
+            const lightIcon = document.getElementById('light-icon');
+            
+            themeToggleBtn.addEventListener('click', function() {
+                document.body.classList.toggle('dark');
+                document.body.classList.toggle('light');
+                document.documentElement.classList.toggle('dark');
+                
+                // Mettre à jour l'apparence du bouton
+                if (document.body.classList.contains('dark')) {
+                    darkIcon.style.display = 'block';
+                    lightIcon.style.display = 'none';
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    darkIcon.style.display = 'none';
+                    lightIcon.style.display = 'block';
+                    localStorage.setItem('theme', 'light');
+                }
+            });
+            
+            function initTheme() {
+                const savedTheme = localStorage.getItem('theme');
+                if (savedTheme === 'light') {
+                    document.body.classList.remove('dark');
+                    document.body.classList.add('light');
+                    document.documentElement.classList.remove('dark');
+                    darkIcon.style.display = 'none';
+                    lightIcon.style.display = 'block';
+                } else {
+                    document.body.classList.add('dark');
+                    document.body.classList.remove('light');
+                    document.documentElement.classList.add('dark');
+                    darkIcon.style.display = 'block';
+                    lightIcon.style.display = 'none';
+                }
+            }
+            
+            // Update market time
+            function updateMarketTime() {
+                const now = new Date();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                const seconds = now.getSeconds().toString().padStart(2, '0');
+                const timeStr = `${hours}:${minutes}:${seconds}`;
+                
+                const marketTimeElement = document.getElementById('marketTime');
+                if (marketTimeElement) {
+                    marketTimeElement.textContent = timeStr;
+                }
+            }
+            
+            updateMarketTime();
+            setInterval(updateMarketTime, 1000);
+            
+            // Mettre à jour l'heure de dernière mise à jour
+            function updateLastUpdateTime() {
+                const updateTimeElement = document.getElementById('updateTime');
+                if (updateTimeElement) {
+                    const now = new Date();
+                    const dateStr = now.toLocaleDateString('fr-FR');
+                    const timeStr = now.toLocaleTimeString('fr-FR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                    updateTimeElement.textContent = `${dateStr} ${timeStr}`;
+                }
+            }
+            
+            updateLastUpdateTime();
+            
+            // Gestionnaire pour les filtres d'événements
+            const highImpactBtn = document.getElementById('high-impact-btn');
+            const mediumImpactBtn = document.getElementById('medium-impact-btn');
+            const allImpactBtn = document.getElementById('all-impact-btn');
+            
+            if (highImpactBtn && mediumImpactBtn && allImpactBtn) {
+                // Filtres pour les événements
+                highImpactBtn.addEventListener('click', function() {
+                    toggleActiveFilter(this);
+                    filterEventsByImpact('high');
+                });
+                
+                mediumImpactBtn.addEventListener('click', function() {
+                    toggleActiveFilter(this);
+                    filterEventsByImpact('medium');
+                });
+                
+                allImpactBtn.addEventListener('click', function() {
+                    toggleActiveFilter(this);
+                    filterEventsByImpact('all');
+                });
+            }
+            
+            function filterEventsByImpact(impactLevel) {
+                const eventElements = document.querySelectorAll('#events-container .event-card');
+                
+                eventElements.forEach(element => {
+                    if (impactLevel === 'all') {
+                        element.style.display = 'flex';
+                    } else {
+                        const impact = element.dataset.impact;
+                        element.style.display = (impact === impactLevel) ? 'flex' : 'none';
+                    }
+                });
+            }
+            
+            function toggleActiveFilter(button) {
+                document.querySelectorAll('.filter-button.active').forEach(el => {
+                    el.classList.remove('active');
+                });
+                button.classList.add('active');
+            }
+            
+            // Ajout de l'écouteur d'événement pour le filtre de sentiment
+            const sentimentSelect = document.getElementById('sentiment-select');
+            if (sentimentSelect) {
+                sentimentSelect.addEventListener('change', function() {
+                    window.NewsSystem.filterNews('sentiment', this.value);
+                });
+            }
+            
+            // Initialiser le système de ML après le chargement des actualités
+            if (window.MLNewsIntegrator) {
+                // Attendre un peu que les actualités soient chargées
+                setTimeout(() => {
+                    window.MLNewsIntegrator.initMLFeedback();
+                }, 1500);
+            }
+        });
+    </script>
 </body>
 </html>
