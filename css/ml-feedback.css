@@ -17,28 +17,43 @@
 
 /* Bouton de feedback sur les cartes d'actualités */
 .ml-feedback-btn {
-    background-color: rgba(0, 255, 135, 0.15);
-    border: 1px solid var(--ml-border);
-    border-radius: 4px;
-    color: var(--ml-accent);
-    padding: 3px 8px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    margin-left: 10px;
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
+    position: absolute !important;
+    top: 10px !important;
+    right: 10px !important;
+    background-color: rgba(0, 255, 135, 0.25) !important;
+    border: 1px solid rgba(0, 255, 135, 0.5) !important;
+    border-radius: 4px !important;
+    color: white !important;
+    padding: 5px 10px !important;
+    font-size: 12px !important;
+    cursor: pointer !important;
+    z-index: 100 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    transition: all 0.3s ease !important;
+    opacity: 0.9 !important;
 }
 
 .ml-feedback-btn:hover {
-    background-color: rgba(0, 255, 135, 0.25);
-    transform: translateY(-2px);
-    box-shadow: var(--ml-shadow);
+    background-color: rgba(0, 255, 135, 0.4) !important;
+    transform: translateY(-2px) !important;
+    opacity: 1 !important;
 }
 
 .ml-feedback-btn i {
-    font-size: 14px;
+    font-size: 14px !important;
+}
+
+/* Masquer les lignes de sentiment redondantes */
+[class*="sentiment"],
+[class*="SENTIMENT"] {
+    display: none !important;
+}
+
+/* Styles pour l'indicateur d'impact uniquement */
+[class*="IMPACT"] {
+    display: inline-block !important;
 }
 
 /* Modal de feedback */
@@ -237,28 +252,15 @@
     font-size: 16px;
 }
 
-/* Effets visuels pour les cartes mises à jour */
-.news-card.ml-updated {
+/* Animation de mise à jour */
+.ml-updated {
     position: relative;
     animation: ml-card-highlight 2s ease;
 }
 
 @keyframes ml-card-highlight {
-    0%, 100% { box-shadow: var(--card-shadow); }
+    0%, 100% { box-shadow: none; }
     50% { box-shadow: 0 0 25px rgba(0, 255, 135, 0.4); }
-}
-
-/* Indicateurs de sentiment sur les cartes */
-.news-card.positive-sentiment {
-    border-left: 3px solid var(--ml-positive);
-}
-
-.news-card.neutral-sentiment {
-    border-left: 3px solid var(--ml-neutral);
-}
-
-.news-card.negative-sentiment {
-    border-left: 3px solid var(--ml-negative);
 }
 
 /* Responsive */
