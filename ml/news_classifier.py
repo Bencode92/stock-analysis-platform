@@ -292,25 +292,25 @@ class NewsClassifier:
         # Vérifier la présence de mots-clés à fort impact
         has_high_impact_words = any(word in text_lower for word in high_impact_words)
         
-        # AMÉLIORATION: Calcul d'impact amélioré avec analyse de contenu indépendante du sentiment
+        # MODIFICATION: Calcul d'impact amélioré avec seuils réduits pour plus de variété
         # Calculer l'impact en fonction du sentiment, de la confiance et des mots-clés
         if news_item["sentiment"] == "positive":
-            if confidence > 0.75 or has_high_impact_words:
+            if confidence > 0.6 or has_high_impact_words:  # Seuil réduit de 0.75 à 0.6
                 news_item["impact"] = "positive"
-            elif confidence > 0.6:
-                news_item["impact"] = "slightly_positive"
+            elif confidence > 0.5:  # Seuil réduit de 0.6 à 0.5
+                news_item["impact"] = "positive"  # Utiliser "positive" au lieu de "slightly_positive"
             else:
                 news_item["impact"] = "neutral"
         elif news_item["sentiment"] == "negative":
-            if confidence > 0.75 or has_high_impact_words:
+            if confidence > 0.6 or has_high_impact_words:  # Seuil réduit de 0.75 à 0.6
                 news_item["impact"] = "negative"
-            elif confidence > 0.6:
-                news_item["impact"] = "slightly_negative" 
+            elif confidence > 0.5:  # Seuil réduit de 0.6 à 0.5
+                news_item["impact"] = "negative"  # Utiliser "negative" au lieu de "slightly_negative" 
             else:
                 news_item["impact"] = "neutral"
         else:
-            # MODIFICATION CRUCIALE: Si le sentiment est neutre mais contient des mots à fort impact
-            news_item["impact"] = "high" if has_high_impact_words else "neutral"
+            # MODIFICATION: Convertir "high" en "positive" pour standardiser les valeurs d'impact
+            news_item["impact"] = "positive" if has_high_impact_words else "neutral"
         
         # Ajout d'un score d'impact plus sophistiqué
         impact_score = 0
@@ -363,6 +363,21 @@ class NewsClassifier:
         
         return news_item
     
+    def standardize_impact(self, news_item):
+        """Standardise les valeurs d'impact pour assurer la compatibilité avec l'interface"""
+        # Convertir les valeurs non standard en valeurs standard
+        impact_mapping = {
+            "high": "positive",
+            "slightly_positive": "positive",
+            "slightly_negative": "negative",
+            "neutral": "neutral"
+        }
+        
+        if "impact" in news_item and news_item["impact"] in impact_mapping:
+            news_item["impact"] = impact_mapping[news_item["impact"]]
+        
+        return news_item
+    
     def classify_news_file(self, input_path, output_path=None):
         """Classifie tous les éléments d'actualité dans un fichier JSON"""
         if output_path is None:
@@ -378,7 +393,11 @@ class NewsClassifier:
                 if section != "events" and section != "lastUpdated":
                     # Classifier chaque élément d'actualité dans la section
                     news_data[section] = [
-                        self.adjust_impact_with_feedback(self.classify_news_item(item))
+                        self.standardize_impact(  # Ajouter cette fonction
+                            self.adjust_impact_with_feedback(
+                                self.classify_news_item(item)
+                            )
+                        )
                         for item in news_data[section]
                     ]
             
