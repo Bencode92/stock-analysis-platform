@@ -1,0 +1,40 @@
+name: Process ML Feedback Requests
+
+on:
+  # Exécuté à chaque création de fichier dans le dossier feedback_requests
+  push:
+    paths:
+      - 'data/feedback_requests/*.json'
+  
+  # Exécuté toutes les 15 minutes pour vérifier les feedbacks en attente
+  schedule:
+    - cron: '*/15 * * * *'
+
+jobs:
+  process-feedback:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+          
+      - name: Create directories if needed
+        run: |
+          mkdir -p data/feedback_requests
+          mkdir -p scripts
+          
+      - name: Process feedback requests
+        run: node scripts/process-feedback-requests.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.ML_GITHUB_TOKEN }}
+      
+      - name: Commit changes if any files were modified
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+          git add data/ml_feedback.json
+          git commit -m "Update ML feedback data [automated]" || echo "No changes to commit"
+          git push origin main || echo "No changes to push"
