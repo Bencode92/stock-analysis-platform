@@ -161,12 +161,9 @@ function openClassificationEditor(newsId, card) {
                 <div class="form-group">
                     <label>Catégorie:</label>
                     <select id="edit-category" class="editor-select">
-                        <option value="marches" ${currentCategory === 'marches' ? 'selected' : ''}>Marchés</option>
-                        <option value="economie" ${currentCategory === 'economie' ? 'selected' : ''}>Économie</option>
-                        <option value="entreprises" ${currentCategory === 'entreprises' ? 'selected' : ''}>Entreprises</option>
-                        <option value="tech" ${currentCategory === 'tech' ? 'selected' : ''}>Tech</option>
-                        <option value="crypto" ${currentCategory === 'crypto' ? 'selected' : ''}>Crypto</option>
-                        <option value="general" ${currentCategory === 'general' ? 'selected' : ''}>Général</option>
+                        <option value="critical" ${currentCategory === 'critical' ? 'selected' : ''}>Critique</option>
+                        <option value="important" ${currentCategory === 'important' ? 'selected' : ''}>Importante</option>
+                        <option value="general" ${currentCategory === 'general' ? 'selected' : ''}>Générale</option>
                     </select>
                 </div>
                 
