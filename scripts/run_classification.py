@@ -10,11 +10,11 @@ from ml.news_classifier import run_classification
 def main():
     parser = argparse.ArgumentParser(description='Classifie les actualités financières')
     parser.add_argument('--input', '-i', required=True, help='Chemin vers le fichier JSON d\'entrée')
-    parser.add_argument('--output', '-o', help='Chemin vers le fichier JSON de sortie (par défaut: même que l\'entrée)')
+    parser.add_argument('--output', '-o', required=True, help='Chemin vers le fichier JSON de sortie')
     
     args = parser.parse_args()
     
-    print(f"Classification des actualités du fichier {args.input}")
+    print(f"Classification des actualités du fichier {args.input} vers {args.output}")
     success = run_classification(args.input, args.output)
     
     if success:
