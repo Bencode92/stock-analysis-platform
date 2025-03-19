@@ -9,7 +9,8 @@ class MLFeedbackSystem {
         this.init();
         // Configuration GitHub
         this.GITHUB_REPO = 'Bencode92/stock-analysis-platform';
-        this.GITHUB_API = 'https://stock-analysis-platform-q9tc.onrender.com/api/ml/github-feedback';
+        this.GITHUB_TOKEN = 'YOUR_GITHUB_TOKEN'; // REMPLACEZ CECI par votre token
+        this.GITHUB_API = 'https://api.github.com';
     }
     
     init() {
@@ -190,28 +191,52 @@ class MLFeedbackSystem {
             url: window.location.href
         };
         
-        // ENVOI DIRECT À GITHUB via le service proxy
+        // ENVOI DIRECT À GITHUB via l'API officielle
         try {
-            // Générer un nom de fichier unique pour GitHub
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const filename = `ml_feedback_${timestamp}.json`;
+            // 1. Récupérer le fichier ml_feedback.json actuel
+            const fileUrl = `${this.GITHUB_API}/repos/${this.GITHUB_REPO}/contents/data/ml_feedback.json`;
             
-            // Envoi via l'API du service proxy qui commit directement sur GitHub
-            const response = await fetch(this.GITHUB_API, {
-                method: 'POST',
+            // Récupérer le fichier et son SHA
+            const fileResponse = await fetch(fileUrl, {
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Authorization': `token ${this.GITHUB_TOKEN}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            if (!fileResponse.ok) {
+                throw new Error(`Erreur GitHub: ${fileResponse.status} ${fileResponse.statusText}`);
+            }
+            
+            const fileData = await fileResponse.json();
+            const sha = fileData.sha;
+            
+            // Décoder le contenu du fichier
+            const content = atob(fileData.content);
+            const feedbackData = JSON.parse(content);
+            
+            // 2. Ajouter le nouveau feedback
+            feedbackData[0].feedbacks.push(feedback);
+            feedbackData[0].meta.feedbackCount = feedbackData[0].feedbacks.length;
+            feedbackData[0].meta.lastUpdated = new Date().toISOString();
+            
+            // 3. Mettre à jour le fichier sur GitHub
+            const updateResponse = await fetch(fileUrl, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${this.GITHUB_TOKEN}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/vnd.github.v3+json'
                 },
                 body: JSON.stringify({
-                    repo: this.GITHUB_REPO,
-                    path: `data/${filename}`,
-                    content: JSON.stringify([feedback], null, 2),
-                    message: `Feedback utilisateur sur classification d'actualité: ${title.substring(0, 50)}`
+                    message: `Ajout d'un feedback utilisateur: ${title.substring(0, 50)}`,
+                    content: btoa(JSON.stringify(feedbackData, null, 2)),
+                    sha: sha
                 })
             });
             
-            if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
+            if (!updateResponse.ok) {
+                throw new Error(`Erreur de mise à jour GitHub: ${updateResponse.status}`);
             }
             
             // Mise à jour visuelle
@@ -225,7 +250,7 @@ class MLFeedbackSystem {
             // Afficher confirmation de succès
             this.showFeedbackSuccess(true);
             
-            console.log(`✅ Feedback envoyé directement à GitHub: ${filename}`);
+            console.log(`✅ Feedback envoyé directement à GitHub`);
         } catch (error) {
             console.error('❌ Erreur lors de l\'envoi du feedback:', error);
             
@@ -263,49 +288,74 @@ class MLFeedbackSystem {
         
         console.log(`🔄 Tentative d'envoi de ${pendingFeedbacks.length} feedbacks en attente`);
         
-        // On essaie d'envoyer chaque feedback
-        for (let i = 0; i < pendingFeedbacks.length; i++) {
-            try {
-                const feedback = pendingFeedbacks[i];
-                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-                const filename = `ml_feedback_${timestamp}.json`;
-                
-                const response = await fetch(this.GITHUB_API, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        repo: this.GITHUB_REPO,
-                        path: `data/${filename}`,
-                        content: JSON.stringify([feedback], null, 2),
-                        message: `Feedback utilisateur synchronisé: ${feedback.title.substring(0, 50)}`
-                    })
-                });
-                
-                if (response.ok) {
-                    // Succès, on retire ce feedback de la file d'attente
-                    pendingFeedbacks.splice(i, 1);
-                    i--; // Ajuster l'index car on a retiré un élément
-                    console.log('✅ Feedback synchronisé avec succès');
-                } else {
-                    throw new Error(`Erreur HTTP: ${response.status}`);
+        try {
+            // 1. Récupérer d'abord le fichier ml_feedback.json actuel
+            const fileUrl = `${this.GITHUB_API}/repos/${this.GITHUB_REPO}/contents/data/ml_feedback.json`;
+            
+            // Récupérer le fichier et son SHA
+            const fileResponse = await fetch(fileUrl, {
+                headers: {
+                    'Authorization': `token ${this.GITHUB_TOKEN}`,
+                    'Accept': 'application/vnd.github.v3+json'
                 }
-            } catch (error) {
-                console.warn(`⚠️ Échec de synchronisation du feedback #${i+1}:`, error);
-                // On continue avec les autres feedbacks
+            });
+            
+            if (!fileResponse.ok) {
+                throw new Error(`Erreur GitHub: ${fileResponse.status}`);
             }
-        }
-        
-        // Mettre à jour la file d'attente
-        localStorage.setItem('tradepulse_pending_feedbacks', JSON.stringify(pendingFeedbacks));
-        
-        // Si des feedbacks sont toujours en attente, programmer une nouvelle tentative
-        if (pendingFeedbacks.length > 0) {
-            console.log(`⏳ ${pendingFeedbacks.length} feedbacks toujours en attente, nouvelle tentative dans 5 minutes`);
-            setTimeout(() => this.retryPendingFeedbacks(), 5 * 60 * 1000);
+            
+            const fileData = await fileResponse.json();
+            let sha = fileData.sha;
+            
+            // Décoder le contenu du fichier
+            let content = atob(fileData.content);
+            let feedbackData = JSON.parse(content);
+            
+            // 2. Ajouter chaque feedback en attente
+            for (const feedback of pendingFeedbacks) {
+                feedbackData[0].feedbacks.push(feedback);
+            }
+            
+            // Mettre à jour les métadonnées
+            feedbackData[0].meta.feedbackCount = feedbackData[0].feedbacks.length;
+            feedbackData[0].meta.lastUpdated = new Date().toISOString();
+            
+            // 3. Mettre à jour le fichier sur GitHub
+            const updateResponse = await fetch(fileUrl, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${this.GITHUB_TOKEN}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                body: JSON.stringify({
+                    message: `Ajout de ${pendingFeedbacks.length} feedbacks utilisateurs en attente`,
+                    content: btoa(JSON.stringify(feedbackData, null, 2)),
+                    sha: sha
+                })
+            });
+            
+            if (updateResponse.ok) {
+                // Succès, vider la file d'attente locale
+                localStorage.removeItem('tradepulse_pending_feedbacks');
+                console.log('✅ Tous les feedbacks en attente ont été synchronisés avec succès');
+                
+                // Montrer une notification de confirmation
+                this.showFeedbackSuccess(true, false, pendingFeedbacks.length);
+                return true;
+            } else {
+                throw new Error(`Erreur de mise à jour GitHub: ${updateResponse.status}`);
+            }
+        } catch (error) {
+            console.error('❌ Erreur lors de la synchronisation des feedbacks en attente:', error);
+            
+            // Programmer une nouvelle tentative si échec
+            setTimeout(() => this.retryPendingFeedbacks(), 5 * 60 * 1000); // Réessayer dans 5 minutes
+            return false;
         }
     }
     
-    showFeedbackSuccess(success, pending = false) {
+    showFeedbackSuccess(success, pending = false, count = 1) {
         const notification = document.createElement('div');
         notification.className = 'ml-feedback-notification';
         notification.style.position = 'fixed';
@@ -317,7 +367,9 @@ class MLFeedbackSystem {
         notification.style.animation = 'fadeIn 0.3s ease forwards';
         
         if (success) {
-            notification.innerHTML = `<i class="fas fa-check-circle"></i> Feedback enregistré`;
+            notification.innerHTML = count > 1 
+                ? `<i class="fas fa-check-circle"></i> ${count} feedbacks enregistrés` 
+                : `<i class="fas fa-check-circle"></i> Feedback enregistré`;
             notification.style.backgroundColor = 'rgba(0, 255, 135, 0.15)';
             notification.style.border = '1px solid rgba(0, 255, 135, 0.3)';
         } else if (pending) {
