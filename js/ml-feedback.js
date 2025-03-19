@@ -1,18 +1,44 @@
 /**
- * ml-feedback.js - Système de feedback ML sécurisé
- * Ce système envoie les feedbacks à une API qui les stocke dans GitHub
- * sans exposer de tokens sensibles dans le code côté client
+ * ml-feedback.js - Système de feedback ML avec communication directe vers GitHub
+ * Ce système utilise un token GitHub passé via URL pour une utilisation privée
  */
 
 class MLFeedbackSystem {
     constructor() {
+        // Configuration GitHub
+        this.GITHUB_REPO = 'Bencode92/stock-analysis-platform';
+        this.GITHUB_API = 'https://api.github.com';
+        
+        // Initialisation
         this.init();
-        // Configuration de l'API
-        this.API_ENDPOINT = 'https://stock-analysis-platform-q9tc.onrender.com/api/ml-feedback';
     }
     
     init() {
         console.log('🤖 Initialisation du système de feedback ML...');
+        
+        // Vérifier si un token est disponible dans l'URL ou le localStorage
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('ghtoken');
+        
+        // Si token trouvé dans l'URL, le stocker dans le localStorage
+        if (token) {
+            localStorage.setItem('tradepulse_gh_token', token);
+            console.log('✅ Token GitHub trouvé dans l\'URL et sauvegardé');
+            
+            // Retirer le token de l'URL pour plus de sécurité
+            const newUrl = window.location.pathname + window.location.hash;
+            window.history.replaceState({}, document.title, newUrl);
+        }
+        
+        // Vérifier si un token est disponible
+        const savedToken = localStorage.getItem('tradepulse_gh_token');
+        if (savedToken) {
+            console.log('✅ Token GitHub disponible, système de feedback activé');
+            this.hasToken = true;
+        } else {
+            console.log('⚠️ Aucun token GitHub trouvé, système de feedback en mode limité');
+            this.hasToken = false;
+        }
         
         setTimeout(() => this.addFeedbackButtons(), 1500);
         
@@ -72,8 +98,16 @@ class MLFeedbackSystem {
                 
                 const btn = document.createElement('button');
                 btn.className = 'ml-feedback-btn';
+                
+                // Si aucun token n'est disponible, désactiver le bouton ou ajouter une info-bulle
+                if (!this.hasToken) {
+                    btn.className += ' disabled';
+                    btn.title = 'Authentification requise. Utilisez ?ghtoken=VOTRE_TOKEN pour activer cette fonctionnalité.';
+                } else {
+                    btn.title = 'Contribuer à la reclassification de cette actualité';
+                }
+                
                 btn.innerHTML = '<i class="fas fa-robot"></i> Reclasser';
-                btn.title = 'Contribuer à la reclassification de cette actualité';
                 
                 const computedStyle = window.getComputedStyle(card);
                 if (computedStyle.position === 'static') {
@@ -86,6 +120,12 @@ class MLFeedbackSystem {
     }
     
     openFeedbackModal(newsCard) {
+        // Vérifier si l'utilisateur a un token
+        if (!this.hasToken) {
+            this.showTokenRequiredMessage();
+            return;
+        }
+        
         const newsId = newsCard.dataset.newsId;
         const title = newsCard.querySelector('h3')?.textContent || 'Article sans titre';
         const currentImportance = newsCard.dataset.importance || 'general';
@@ -140,6 +180,37 @@ class MLFeedbackSystem {
         }
     }
     
+    showTokenRequiredMessage() {
+        const notification = document.createElement('div');
+        notification.className = 'ml-feedback-notification';
+        notification.style.position = 'fixed';
+        notification.style.bottom = '20px';
+        notification.style.right = '20px';
+        notification.style.zIndex = '1000';
+        notification.style.padding = '12px 16px';
+        notification.style.borderRadius = '4px';
+        notification.style.backgroundColor = 'rgba(255, 87, 87, 0.15)';
+        notification.style.border = '1px solid rgba(255, 87, 87, 0.3)';
+        notification.style.animation = 'fadeIn 0.3s ease forwards';
+        
+        notification.innerHTML = `
+            <i class="fas fa-lock"></i> 
+            Token GitHub requis pour cette fonctionnalité.
+            <br>
+            <small>Utilisez l'URL avec ?ghtoken=VOTRE_TOKEN pour activer.</small>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.style.opacity = '0';
+            notification.style.transition = 'opacity 0.5s ease';
+            setTimeout(() => {
+                notification.remove();
+            }, 500);
+        }, 5000);
+    }
+    
     async saveFeedback() {
         const modal = document.getElementById('ml-feedback-modal');
         if (!modal) return;
@@ -158,6 +229,13 @@ class MLFeedbackSystem {
         
         const newsCard = document.querySelector(`[data-news-id="${newsId}"]`);
         if (!newsCard) {
+            this.closeFeedbackModal();
+            return;
+        }
+        
+        // Vérifier à nouveau si l'utilisateur a un token
+        if (!this.hasToken) {
+            this.showTokenRequiredMessage();
             this.closeFeedbackModal();
             return;
         }
@@ -189,22 +267,63 @@ class MLFeedbackSystem {
             url: window.location.href
         };
         
-        // Envoi à l'API de feedback
+        // ENVOI DIRECT À GITHUB via l'API GitHub
         try {
-            // 1. Essayer d'envoyer le feedback à l'API
-            const response = await fetch(this.API_ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(feedback)
-            });
-            
-            if (!response.ok) {
-                throw new Error(`Erreur API: ${response.status}`);
+            // Récupérer le token depuis localStorage
+            const token = localStorage.getItem('tradepulse_gh_token');
+            if (!token) {
+                throw new Error('Token GitHub non disponible');
             }
             
-            // 2. Mise à jour visuelle
+            // 1. Récupérer le fichier ml_feedback.json actuel
+            const fileUrl = `${this.GITHUB_API}/repos/${this.GITHUB_REPO}/contents/data/ml_feedback.json`;
+            
+            // Récupérer le fichier et son SHA
+            const fileResponse = await fetch(fileUrl, {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            if (!fileResponse.ok) {
+                throw new Error(`Erreur GitHub: ${fileResponse.status} ${fileResponse.statusText}`);
+            }
+            
+            const fileData = await fileResponse.json();
+            const sha = fileData.sha;
+            
+            // Décoder le contenu du fichier
+            const content = atob(fileData.content);
+            const feedbackData = JSON.parse(content);
+            
+            // 2. Ajouter le nouveau feedback
+            feedbackData[0].feedbacks.push(feedback);
+            
+            // Mettre à jour les métadonnées
+            feedbackData[0].meta.feedbackCount = feedbackData[0].feedbacks.length;
+            feedbackData[0].meta.lastUpdated = new Date().toISOString();
+            
+            // 3. Mettre à jour le fichier sur GitHub
+            const updateResponse = await fetch(fileUrl, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                body: JSON.stringify({
+                    message: `Ajout d'un feedback utilisateur: ${title.substring(0, 50)}`,
+                    content: btoa(JSON.stringify(feedbackData, null, 2)),
+                    sha: sha
+                })
+            });
+            
+            if (!updateResponse.ok) {
+                throw new Error(`Erreur de mise à jour GitHub: ${updateResponse.status}`);
+            }
+            
+            // Mise à jour visuelle
             newsCard.dataset.importance = newImportance;
             newsCard.dataset.impact = newImpact;
             newsCard.classList.add('classification-updated');
@@ -212,10 +331,10 @@ class MLFeedbackSystem {
                 newsCard.classList.remove('classification-updated');
             }, 2000);
             
-            // 3. Afficher confirmation de succès
+            // Afficher confirmation de succès
             this.showFeedbackSuccess(true);
             
-            console.log(`✅ Feedback envoyé avec succès à l'API`);
+            console.log(`✅ Feedback envoyé directement à GitHub`);
         } catch (error) {
             console.error('❌ Erreur lors de l\'envoi du feedback:', error);
             
@@ -227,7 +346,7 @@ class MLFeedbackSystem {
         this.closeFeedbackModal();
     }
     
-    // Fonction: stocke temporairement les feedbacks si l'API est indisponible
+    // Nouvelle fonction : stocker les feedbacks en attente et réessayer
     storeLocalFeedback(feedback) {
         try {
             // Récupérer la file d'attente existante ou créer une nouvelle
@@ -246,54 +365,88 @@ class MLFeedbackSystem {
         }
     }
 
-    // Fonction: tente d'envoyer les feedbacks en attente
+    // Fonction : tente d'envoyer les feedbacks en attente
     async retryPendingFeedbacks() {
+        // Si pas de token, on ne peut pas synchroniser
+        if (!this.hasToken) {
+            return;
+        }
+        
         const pendingFeedbacks = JSON.parse(localStorage.getItem('tradepulse_pending_feedbacks') || '[]');
         if (pendingFeedbacks.length === 0) return;
         
         console.log(`🔄 Tentative d'envoi de ${pendingFeedbacks.length} feedbacks en attente`);
         
-        // Copie des feedbacks pour traitement
-        const feedbacksToProcess = [...pendingFeedbacks];
-        let successCount = 0;
-        
-        // On essaie d'envoyer chaque feedback
-        for (let i = 0; i < feedbacksToProcess.length; i++) {
-            try {
-                const feedback = feedbacksToProcess[i];
-                
-                const response = await fetch(this.API_ENDPOINT, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(feedback)
-                });
-                
-                if (response.ok) {
-                    // Succès, on retire ce feedback de la file d'attente
-                    pendingFeedbacks.splice(pendingFeedbacks.findIndex(f => f.id === feedback.id), 1);
-                    successCount++;
-                    console.log('✅ Feedback synchronisé avec succès');
-                } else {
-                    throw new Error(`Erreur HTTP: ${response.status}`);
-                }
-            } catch (error) {
-                console.warn(`⚠️ Échec de synchronisation du feedback #${i+1}:`, error);
-                // On continue avec les autres feedbacks
+        try {
+            // Récupérer le token
+            const token = localStorage.getItem('tradepulse_gh_token');
+            if (!token) {
+                throw new Error('Token GitHub non disponible');
             }
-        }
-        
-        // Mettre à jour la file d'attente
-        localStorage.setItem('tradepulse_pending_feedbacks', JSON.stringify(pendingFeedbacks));
-        
-        // Si des feedbacks ont été synchronisés avec succès
-        if (successCount > 0) {
-            this.showFeedbackSuccess(true, false, successCount);
-        }
-        
-        // Si des feedbacks sont toujours en attente, programmer une nouvelle tentative
-        if (pendingFeedbacks.length > 0) {
-            console.log(`⏳ ${pendingFeedbacks.length} feedbacks toujours en attente, nouvelle tentative dans 5 minutes`);
-            setTimeout(() => this.retryPendingFeedbacks(), 5 * 60 * 1000);
+            
+            // 1. Récupérer d'abord le fichier ml_feedback.json actuel
+            const fileUrl = `${this.GITHUB_API}/repos/${this.GITHUB_REPO}/contents/data/ml_feedback.json`;
+            
+            // Récupérer le fichier et son SHA
+            const fileResponse = await fetch(fileUrl, {
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            if (!fileResponse.ok) {
+                throw new Error(`Erreur GitHub: ${fileResponse.status}`);
+            }
+            
+            const fileData = await fileResponse.json();
+            let sha = fileData.sha;
+            
+            // Décoder le contenu du fichier
+            let content = atob(fileData.content);
+            let feedbackData = JSON.parse(content);
+            
+            // 2. Ajouter chaque feedback en attente
+            for (const feedback of pendingFeedbacks) {
+                feedbackData[0].feedbacks.push(feedback);
+            }
+            
+            // Mettre à jour les métadonnées
+            feedbackData[0].meta.feedbackCount = feedbackData[0].feedbacks.length;
+            feedbackData[0].meta.lastUpdated = new Date().toISOString();
+            
+            // 3. Mettre à jour le fichier sur GitHub
+            const updateResponse = await fetch(fileUrl, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                body: JSON.stringify({
+                    message: `Ajout de ${pendingFeedbacks.length} feedbacks utilisateurs en attente`,
+                    content: btoa(JSON.stringify(feedbackData, null, 2)),
+                    sha: sha
+                })
+            });
+            
+            if (updateResponse.ok) {
+                // Succès, vider la file d'attente locale
+                localStorage.removeItem('tradepulse_pending_feedbacks');
+                console.log('✅ Tous les feedbacks en attente ont été synchronisés avec succès');
+                
+                // Montrer une notification de confirmation
+                this.showFeedbackSuccess(true, false, pendingFeedbacks.length);
+                return true;
+            } else {
+                throw new Error(`Erreur de mise à jour GitHub: ${updateResponse.status}`);
+            }
+        } catch (error) {
+            console.error('❌ Erreur lors de la synchronisation des feedbacks en attente:', error);
+            
+            // Programmer une nouvelle tentative si échec
+            setTimeout(() => this.retryPendingFeedbacks(), 5 * 60 * 1000); // Réessayer dans 5 minutes
+            return false;
         }
     }
     
