@@ -1,38 +1,48 @@
 /**
  * events-date-filter.js
- * Ajoute un filtre temporel pour les événements (aujourd'hui/cette semaine)
- * et supprime les badges "ESSENTIEL"
+ * Ajoute un filtre temporel pour les événements basé sur la date de connexion
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+  // Stocker la date de connexion dans le localStorage
+  if (!localStorage.getItem('userConnectionDate')) {
+    localStorage.setItem('userConnectionDate', new Date().toISOString());
+  }
+  
   // Attendre que la page soit chargée
   setTimeout(() => {
-    // 1. Ajouter les nouveaux boutons de filtre temporel
-    addDateFilterButtons();
+    // 1. Remplacer les filtres existants par date et supprimer les filtres d'impact
+    replaceFiltersWithDateOnly();
     
     // 2. Supprimer les badges "ESSENTIEL" des événements
     removeEssentialBadges();
     
     // 3. Surcharger la méthode de rendu des événements pour appliquer les modifications
     overrideEventRendering();
+    
+    // 4. Appliquer le filtre par défaut (aujourd'hui)
+    filterEventsByDate('today');
   }, 1000);
 });
 
 /**
- * Ajoute les boutons de filtre pour aujourd'hui/cette semaine
+ * Remplace les filtres existants par seulement Aujourd'hui/Cette semaine
  */
-function addDateFilterButtons() {
+function replaceFiltersWithDateOnly() {
   // Trouver le conteneur des filtres existants
-  const filterContainer = document.querySelector('#events-section .flex.gap-2');
+  const filterContainer = document.querySelector('#events-section .flex.justify-between.items-center');
   
   if (!filterContainer) {
     console.error("Conteneur de filtres non trouvé");
     return;
   }
   
-  // Créer les nouveaux boutons avant les boutons existants
-  const dateFiltersHTML = `
-    <div class="flex gap-2 mr-3">
+  // Reconstruire la barre de filtres complètement
+  filterContainer.innerHTML = `
+    <h2 class="text-lg font-semibold text-green-400">
+      <i class="fas fa-calendar-alt mr-2"></i>ÉVÉNEMENTS À VENIR
+    </h2>
+    <div class="flex gap-2">
       <button id="today-filter" class="text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded filter-button active">
         Aujourd'hui
       </button>
@@ -41,9 +51,6 @@ function addDateFilterButtons() {
       </button>
     </div>
   `;
-  
-  // Insérer les boutons au début du conteneur
-  filterContainer.insertAdjacentHTML('afterbegin', dateFiltersHTML);
   
   // Ajouter les écouteurs d'événements
   const todayBtn = document.getElementById('today-filter');
@@ -85,7 +92,7 @@ function setActiveFilter(activeButton) {
 }
 
 /**
- * Filtre les événements par date (aujourd'hui ou cette semaine)
+ * Filtre les événements par date en utilisant la date de connexion
  */
 function filterEventsByDate(period) {
   const eventCards = document.querySelectorAll('.event-card');
@@ -95,33 +102,51 @@ function filterEventsByDate(period) {
     return;
   }
   
-  // Date d'aujourd'hui en format JJ/MM/YYYY
-  const today = new Date();
-  const todayFormatted = formatDate(today);
+  // Utiliser la date de connexion stockée comme référence pour "aujourd'hui"
+  const connectionDate = new Date(localStorage.getItem('userConnectionDate') || new Date().toISOString());
+  const connectionDay = connectionDate.getDate();
+  const connectionMonth = connectionDate.getMonth();
+  const connectionYear = connectionDate.getFullYear();
   
-  // Calculer les limites de la semaine
-  const endOfWeek = new Date(today);
-  endOfWeek.setDate(today.getDate() + 7);
+  // Création d'une date de référence à minuit pour la date de connexion
+  const referenceDate = new Date(connectionYear, connectionMonth, connectionDay);
+  const referenceFormatted = formatDate(referenceDate);
+  
+  // Calculer les limites de la semaine à partir de la date de connexion
+  const endOfWeek = new Date(referenceDate);
+  endOfWeek.setDate(referenceDate.getDate() + 7);
+  
+  console.log("Date de connexion (référence): " + referenceFormatted);
+  console.log("Fin de semaine: " + formatDate(endOfWeek));
   
   eventCards.forEach(card => {
     const dateText = card.querySelector('.text-xs.text-white').textContent.trim();
     
     if (period === 'today') {
-      // Afficher uniquement les événements d'aujourd'hui
-      if (dateText === todayFormatted) {
+      // Afficher uniquement les événements du jour de connexion
+      if (dateText === referenceFormatted) {
         card.style.display = '';
+        card.classList.add('connection-date-event');
       } else {
         card.style.display = 'none';
+        card.classList.remove('connection-date-event');
       }
     } else if (period === 'week') {
       // Convertir la date de l'événement en objet Date
       const eventDate = parseDate(dateText);
       
-      // Vérifier si la date est dans la semaine à venir
-      if (eventDate >= today && eventDate <= endOfWeek) {
+      // Vérifier si la date est dans la semaine à venir depuis la date de connexion
+      if (eventDate >= referenceDate && eventDate <= endOfWeek) {
         card.style.display = '';
+        // Marquer spécifiquement les événements du jour de connexion
+        if (dateText === referenceFormatted) {
+          card.classList.add('connection-date-event');
+        } else {
+          card.classList.remove('connection-date-event');
+        }
       } else {
         card.style.display = 'none';
+        card.classList.remove('connection-date-event');
       }
     }
   });
@@ -229,3 +254,20 @@ function parseDate(dateStr) {
   }
   return new Date(); // Retourner la date actuelle en cas d'erreur
 }
+
+/**
+ * Fonction pour réinitialiser la date de connexion
+ * Cette fonction peut être appelée de l'extérieur
+ */
+window.resetConnectionDate = function() {
+  const newDate = new Date();
+  localStorage.setItem('userConnectionDate', newDate.toISOString());
+  console.log("Date de connexion réinitialisée: " + newDate.toLocaleString());
+  
+  // Appliquer à nouveau le filtre actif
+  if (document.getElementById('today-filter').classList.contains('active')) {
+    filterEventsByDate('today');
+  } else if (document.getElementById('week-filter').classList.contains('active')) {
+    filterEventsByDate('week');
+  }
+};
