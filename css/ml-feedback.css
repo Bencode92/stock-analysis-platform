@@ -34,7 +34,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
+    background-color: rgba(0, 0, 0, 0.8);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -51,14 +51,26 @@
 
 #feedback-modal .modal-content {
     background-color: var(--surface);
-    border-radius: 0.5rem;
+    border-radius: 10px;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
     width: 90%;
-    max-width: 550px;
+    max-width: 500px;
     transform: translateY(20px);
     transition: transform 0.3s;
     overflow: hidden;
-    border: 1px solid rgba(var(--accent-rgb), 0.2);
+    border: 1px solid rgba(var(--accent-rgb), 0.3);
+    animation: modal-appear 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+@keyframes modal-appear {
+    from { 
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    to { 
+        opacity: 1;
+        transform: scale(1);
+    }
 }
 
 #feedback-modal.active .modal-content {
@@ -77,7 +89,8 @@
 #feedback-modal .modal-header h3 {
     margin: 0;
     color: var(--accent);
-    font-weight: 500;
+    font-weight: 600;
+    font-size: 1.25rem;
 }
 
 #feedback-modal .close-btn {
@@ -123,56 +136,63 @@
 
 #feedback-modal label {
     display: block;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.8rem;
     color: var(--text);
+    font-weight: 500;
 }
 
-#feedback-modal .radio-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    margin-top: 0.5rem;
-}
-
-#feedback-modal .radio-group label {
-    display: flex;
-    align-items: center;
+/* Styles améliorés pour les sélecteurs */
+#feedback-modal .form-select {
+    width: 100%;
+    padding: 12px 15px;
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: var(--text);
+    font-size: 1rem;
+    font-family: inherit;
+    transition: all 0.3s ease;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
     cursor: pointer;
-    padding: 0.5rem 1rem;
-    border-radius: 0.3rem;
-    background-color: rgba(255, 255, 255, 0.05);
-    transition: all 0.2s;
+    outline: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300ff87' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    background-size: 16px;
 }
 
-#feedback-modal .radio-group label:hover {
-    background-color: rgba(var(--accent-rgb), 0.1);
+#feedback-modal .form-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.2);
+    background-color: rgba(var(--accent-rgb), 0.05);
 }
 
-#feedback-modal .radio-group input[type="radio"] {
-    margin-right: 0.5rem;
-    accent-color: var(--accent);
-}
-
-#feedback-modal .radio-group input[type="radio"]:checked + span {
-    color: var(--accent);
+#feedback-modal .form-select option {
+    background-color: var(--surface);
+    color: var(--text);
+    padding: 10px;
 }
 
 #feedback-modal textarea {
     width: 100%;
-    background-color: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background-color: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
     color: var(--text);
-    padding: 0.8rem;
-    border-radius: 0.3rem;
+    padding: 12px 15px;
+    border-radius: 8px;
     min-height: 100px;
     font-family: inherit;
+    font-size: 1rem;
     resize: vertical;
-    transition: border-color 0.2s;
+    transition: all 0.3s ease;
 }
 
 #feedback-modal textarea:focus {
     outline: none;
     border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.2);
     background-color: rgba(var(--accent-rgb), 0.05);
 }
 
@@ -187,12 +207,16 @@
 
 #feedback-modal .primary-btn,
 #feedback-modal .secondary-btn {
-    padding: 0.7rem 1.2rem;
-    border-radius: 0.3rem;
-    font-weight: 500;
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.3s ease;
     border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #feedback-modal .primary-btn {
@@ -203,6 +227,7 @@
 #feedback-modal .primary-btn:hover {
     background-color: rgba(var(--accent-rgb), 0.8);
     box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.5);
+    transform: translateY(-2px);
 }
 
 #feedback-modal .secondary-btn {
@@ -212,6 +237,7 @@
 
 #feedback-modal .secondary-btn:hover {
     background-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
 }
 
 /* Toast de confirmation */
@@ -220,16 +246,17 @@
     bottom: 2rem;
     right: 2rem;
     padding: 1rem 1.5rem;
-    border-radius: 0.5rem;
+    border-radius: 8px;
     background-color: var(--surface);
     color: var(--text);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
     z-index: 1000;
     transform: translateY(100px);
     opacity: 0;
     transition: transform 0.3s, opacity 0.3s;
     max-width: 400px;
     border-left: 4px solid var(--accent);
+    font-weight: 500;
 }
 
 .toast.show {
@@ -249,15 +276,33 @@
     border-left-color: #ff9800;
 }
 
+/* Indicateurs visuels d'état pour les champs de formulaire */
+#feedback-modal .form-select:not(:placeholder-shown):valid {
+    border-color: rgba(76, 175, 80, 0.5);
+    background-color: rgba(76, 175, 80, 0.05);
+}
+
+#feedback-modal .form-select:not(:placeholder-shown):invalid {
+    border-color: rgba(244, 67, 54, 0.5);
+    background-color: rgba(244, 67, 54, 0.05);
+}
+
+/* Animation de focus */
+#feedback-modal .form-select:focus,
+#feedback-modal textarea:focus {
+    animation: focusPulse 1s;
+}
+
+@keyframes focusPulse {
+    0% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(var(--accent-rgb), 0); }
+    100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0); }
+}
+
 /* Adaptations pour mobile */
 @media (max-width: 600px) {
     #feedback-modal .modal-content {
         width: 95%;
-    }
-    
-    #feedback-modal .radio-group {
-        flex-direction: column;
-        gap: 0.5rem;
     }
     
     .toast {
@@ -265,5 +310,14 @@
         right: 1rem;
         bottom: 1rem;
         max-width: none;
+    }
+    
+    #feedback-modal .modal-footer {
+        flex-direction: column-reverse;
+    }
+    
+    #feedback-modal .primary-btn,
+    #feedback-modal .secondary-btn {
+        width: 100%;
     }
 }
