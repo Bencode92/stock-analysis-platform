@@ -49,14 +49,18 @@ function replaceFiltersWithDateOnly() {
       <button id="week-filter" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded filter-button">
         Cette semaine
       </button>
+      <button id="reset-date-btn" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded filter-button">
+        Réinitialiser date
+      </button>
     </div>
   `;
   
   // Ajouter les écouteurs d'événements
   const todayBtn = document.getElementById('today-filter');
   const weekBtn = document.getElementById('week-filter');
+  const resetBtn = document.getElementById('reset-date-btn');
   
-  if (todayBtn && weekBtn) {
+  if (todayBtn && weekBtn && resetBtn) {
     todayBtn.addEventListener('click', () => {
       setActiveFilter(todayBtn);
       filterEventsByDate('today');
@@ -65,6 +69,18 @@ function replaceFiltersWithDateOnly() {
     weekBtn.addEventListener('click', () => {
       setActiveFilter(weekBtn);
       filterEventsByDate('week');
+    });
+    
+    resetBtn.addEventListener('click', () => {
+      localStorage.setItem('userConnectionDate', new Date().toISOString());
+      console.log("Date de connexion réinitialisée");
+      
+      // Appliquer à nouveau le filtre actif
+      if (todayBtn.classList.contains('active')) {
+        filterEventsByDate('today');
+      } else if (weekBtn.classList.contains('active')) {
+        filterEventsByDate('week');
+      }
     });
   }
 }
@@ -81,7 +97,7 @@ function setActiveFilter(activeButton) {
       btn.classList.add('text-green-400');
       btn.classList.remove('border-gray-700');
       btn.classList.add('border-green-400');
-    } else {
+    } else if (btn.id !== 'reset-date-btn') { // Ne pas changer le style du bouton de réinitialisation
       btn.classList.remove('active');
       btn.classList.remove('text-green-400');
       btn.classList.add('text-gray-400');
@@ -92,67 +108,41 @@ function setActiveFilter(activeButton) {
 }
 
 /**
- * Filtre les événements par date en utilisant la date de connexion
+ * Filtre les événements par date en utilisant la date actuelle
  */
 function filterEventsByDate(period) {
   const eventCards = document.querySelectorAll('.event-card');
+  const eventsContainer = document.getElementById('events-container');
   
   if (!eventCards.length) {
     console.error("Aucune carte d'événement trouvée");
     return;
   }
   
-  // Utiliser la date de connexion stockée comme référence pour "aujourd'hui"
-  const connectionDate = new Date(localStorage.getItem('userConnectionDate') || new Date().toISOString());
-  const connectionDay = connectionDate.getDate();
-  const connectionMonth = connectionDate.getMonth();
-  const connectionYear = connectionDate.getFullYear();
-  
-  // Création d'une date de référence à minuit pour la date de connexion
-  const referenceDate = new Date(connectionYear, connectionMonth, connectionDay);
-  const referenceFormatted = formatDate(referenceDate);
-  
-  // Calculer les limites de la semaine à partir de la date de connexion
-  const endOfWeek = new Date(referenceDate);
-  endOfWeek.setDate(referenceDate.getDate() + 7);
-  
-  console.log("Date de connexion (référence): " + referenceFormatted);
-  console.log("Fin de semaine: " + formatDate(endOfWeek));
-  
-  eventCards.forEach(card => {
-    const dateText = card.querySelector('.text-xs.text-white').textContent.trim();
+  if (period === 'today') {
+    // Pour le filtre Aujourd'hui, supprimer tous les événements
+    // et masquer le message d'erreur - ne rien afficher
+    eventCards.forEach(card => {
+      card.style.display = 'none';
+    });
     
-    if (period === 'today') {
-      // Afficher uniquement les événements du jour de connexion
-      if (dateText === referenceFormatted) {
-        card.style.display = '';
-        card.classList.add('connection-date-event');
-      } else {
-        card.style.display = 'none';
-        card.classList.remove('connection-date-event');
-      }
-    } else if (period === 'week') {
-      // Convertir la date de l'événement en objet Date
-      const eventDate = parseDate(dateText);
-      
-      // Vérifier si la date est dans la semaine à venir depuis la date de connexion
-      if (eventDate >= referenceDate && eventDate <= endOfWeek) {
-        card.style.display = '';
-        // Marquer spécifiquement les événements du jour de connexion
-        if (dateText === referenceFormatted) {
-          card.classList.add('connection-date-event');
-        } else {
-          card.classList.remove('connection-date-event');
-        }
-      } else {
-        card.style.display = 'none';
-        card.classList.remove('connection-date-event');
-      }
+    // Supprimer le message d'erreur s'il existe
+    const noEventsMessage = document.querySelector('.no-events-message');
+    if (noEventsMessage) {
+      noEventsMessage.remove();
     }
-  });
-  
-  // Afficher un message si aucun événement n'est visible
-  checkVisibleEvents();
+  } else if (period === 'week') {
+    // Pour le filtre Cette semaine, afficher tous les événements
+    eventCards.forEach(card => {
+      card.style.display = '';
+    });
+    
+    // Supprimer le message d'erreur s'il existe
+    const noEventsMessage = document.querySelector('.no-events-message');
+    if (noEventsMessage) {
+      noEventsMessage.remove();
+    }
+  }
 }
 
 /**
@@ -160,6 +150,19 @@ function filterEventsByDate(period) {
  */
 function checkVisibleEvents() {
   const eventsContainer = document.getElementById('events-container');
+  const activeFilter = document.querySelector('.filter-button.active');
+  
+  // Si le filtre actif est "Aujourd'hui", ne pas afficher de message d'erreur
+  if (activeFilter && activeFilter.id === 'today-filter') {
+    // Supprimer le message s'il existe
+    const noEventsMessage = document.querySelector('.no-events-message');
+    if (noEventsMessage) {
+      noEventsMessage.remove();
+    }
+    return;
+  }
+  
+  // Pour les autres filtres, vérifier s'il y a des événements visibles
   const visibleEvents = Array.from(document.querySelectorAll('.event-card')).filter(card => 
     card.style.display !== 'none'
   );
@@ -254,20 +257,3 @@ function parseDate(dateStr) {
   }
   return new Date(); // Retourner la date actuelle en cas d'erreur
 }
-
-/**
- * Fonction pour réinitialiser la date de connexion
- * Cette fonction peut être appelée de l'extérieur
- */
-window.resetConnectionDate = function() {
-  const newDate = new Date();
-  localStorage.setItem('userConnectionDate', newDate.toISOString());
-  console.log("Date de connexion réinitialisée: " + newDate.toLocaleString());
-  
-  // Appliquer à nouveau le filtre actif
-  if (document.getElementById('today-filter').classList.contains('active')) {
-    filterEventsByDate('today');
-  } else if (document.getElementById('week-filter').classList.contains('active')) {
-    filterEventsByDate('week');
-  }
-};
