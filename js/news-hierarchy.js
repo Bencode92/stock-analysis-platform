@@ -46,35 +46,16 @@ async function initializeNewsData() {
         
         let data;
         
-        // Essayer de charger classified_news.json d'abord
-        try {
-            const classifiedResponse = await fetch('data/classified_news.json');
-            if (classifiedResponse.ok) {
-                data = await classifiedResponse.json();
-                console.log('✅ Données ML classifiées chargées avec succès');
-            } else {
-                // Si pas de réponse positive, essayer news.json
-                console.log('⚠️ classified_news.json non disponible, chargement de news.json');
-                const response = await fetch('data/news.json');
-                
-                if (!response.ok) {
-                    throw new Error('Impossible de charger les données');
-                }
-                
-                data = await response.json();
-                console.log('✅ Données brutes chargées avec succès');
-            }
-        } catch (error) {
-            // Si erreur, essayer news.json
-            console.log('⚠️ Erreur avec classified_news.json, essai avec news.json');
-            const response = await fetch('data/news.json');
-            
-            if (!response.ok) {
-                throw new Error('Impossible de charger les données');
-            }
-            
-            data = await response.json();
+        // MODIFICATION: Charger directement news.json au lieu de classified_news.json
+        console.log('📊 Chargement direct des données brutes news.json');
+        const response = await fetch('data/news.json');
+        
+        if (!response.ok) {
+            throw new Error('Impossible de charger les données');
         }
+        
+        data = await response.json();
+        console.log('✅ Données brutes chargées avec succès');
         
         window.NewsSystem.data = data;
         
