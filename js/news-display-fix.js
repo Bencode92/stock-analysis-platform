@@ -33,6 +33,7 @@ function fixNewsDisplayIssues() {
 
 /**
  * Ajoute les indications de score et d'impact aux actualités générales
+ * dans le même format que les actualités critiques et importantes
  */
 function addScoreAndImpactToGeneralNews() {
     const regularNewsContainer = document.getElementById('recent-news');
@@ -44,70 +45,63 @@ function addScoreAndImpactToGeneralNews() {
     const newsCards = regularNewsContainer.querySelectorAll('.news-card');
     
     newsCards.forEach(card => {
-        // Vérifier si la carte a déjà des indicateurs d'impact et de score
-        const hasImpactIndicator = card.querySelector('.news-impact') !== null;
-        const hasScoreIndicator = card.querySelector('.news-score') !== null;
+        // Récupérer ou créer l'élément de contenu d'actualité
+        let newsContent = card.querySelector('.news-content');
+        if (!newsContent) {
+            console.warn('Structure news-content non trouvée, impossible d\'ajouter les indicateurs');
+            return;
+        }
         
-        if (!hasImpactIndicator || !hasScoreIndicator) {
+        // Vérifier si la carte a déjà des indicateurs
+        const hasImpactIndicator = newsContent.querySelector('.impact-indicator') !== null;
+        
+        if (!hasImpactIndicator) {
             // Récupérer les données
-            const impact = card.getAttribute('data-impact') || 'N/A';
-            const score = card.getAttribute('data-score') || 'N/A';
-            const sentiment = card.getAttribute('data-sentiment') || 'N/A';
+            const impact = card.getAttribute('data-impact') || 'neutral';
+            const score = card.getAttribute('data-score') || '0';
+            const sentiment = card.getAttribute('data-sentiment') || 'neutral';
+            const category = card.getAttribute('data-category') || 'general';
+            const confidence = card.getAttribute('data-confidence') || '0.8';
             
             console.log(`Ajout des indicateurs pour l'actualité: Impact=${impact}, Score=${score}, Sentiment=${sentiment}`);
             
-            // Créer un conteneur pour les indicateurs s'il n'existe pas
-            let indicatorsContainer = card.querySelector('.news-indicators');
-            if (!indicatorsContainer) {
-                indicatorsContainer = document.createElement('div');
-                indicatorsContainer.className = 'news-indicators flex flex-wrap gap-2 mb-2';
-                
-                // Insérer le conteneur au début de la carte ou après l'en-tête
-                const newsContent = card.querySelector('.news-content');
-                if (newsContent) {
-                    // Insérer après les indicateurs existants s'ils sont présents
-                    const existingIndicators = newsContent.querySelector('div[style*="display:flex"]');
-                    if (existingIndicators) {
-                        existingIndicators.insertAdjacentElement('afterend', indicatorsContainer);
-                    } else {
-                        newsContent.insertBefore(indicatorsContainer, newsContent.firstChild);
-                    }
-                } else {
-                    card.insertBefore(indicatorsContainer, card.firstChild);
-                }
-            }
+            // Calculer les classes et textes comme dans news-hierarchy.js
+            const impactIndicatorClass = `impact-${impact}`;
+            const impactText = impact === 'negative' ? 'IMPACT NÉGATIF' : 
+                             impact === 'positive' ? 'IMPACT POSITIF' : 'IMPACT NEUTRE';
             
-            // Ajouter l'indicateur de score s'il n'existe pas
-            if (!hasScoreIndicator) {
-                const scoreIndicator = document.createElement('div');
-                scoreIndicator.className = 'news-score text-xs px-2 py-1 rounded bg-blue-800 bg-opacity-20 text-blue-400 border border-blue-800 border-opacity-30';
-                scoreIndicator.innerHTML = `<i class="fas fa-chart-bar mr-1"></i> Score: ${score}`;
-                indicatorsContainer.appendChild(scoreIndicator);
-            }
+            const sentimentClass = `sentiment-${sentiment}`;
+            const sentimentText = sentiment === 'positive' ? 'SENTIMENT POSITIF' : 
+                                sentiment === 'negative' ? 'SENTIMENT NÉGATIF' : 'SENTIMENT NEUTRE';
             
-            // Ajouter l'indicateur d'impact s'il n'existe pas déjà
-            if (!hasImpactIndicator && !card.querySelector('.impact-indicator')) {
-                const impactIndicator = document.createElement('div');
-                
-                // Déterminer la classe en fonction de l'impact
-                let impactClass = '';
-                if (impact === 'positive') {
-                    impactClass = 'bg-green-800 bg-opacity-20 text-green-400 border-green-800';
-                } else if (impact === 'negative') {
-                    impactClass = 'bg-red-800 bg-opacity-20 text-red-400 border-red-800';
-                } else {
-                    impactClass = 'bg-yellow-800 bg-opacity-20 text-yellow-400 border-yellow-800';
-                }
-                
-                impactIndicator.className = `news-impact text-xs px-2 py-1 rounded ${impactClass} border border-opacity-30`;
-                
-                // Texte de l'impact
-                const impactText = impact === 'positive' ? 'IMPACT POSITIF' : 
-                                   impact === 'negative' ? 'IMPACT NÉGATIF' : 
-                                   'IMPACT NEUTRE';
-                
-                impactIndicator.innerHTML = `<i class="fas fa-bolt mr-1"></i> ${impactText}`;
-                indicatorsContainer.appendChild(impactIndicator);
+            const confidenceValue = parseFloat(confidence);
+            const confidenceClass = confidenceValue > 0.8 ? 'confidence-high' : 
+                                    confidenceValue > 0.6 ? 'confidence-medium' : 'confidence-low';
+            const confidencePercent = Math.round(confidenceValue * 100);
+            
+            // Créer le HTML pour les indicateurs (même format que pour les actualités critiques/importantes)
+            const indicatorsHTML = `
+                <div class="mb-2" style="display:flex; margin-bottom:10px; flex-wrap: wrap;">
+                    <span class="impact-indicator ${impactIndicatorClass}">${impactText}</span>
+                    <span class="impact-indicator">${category.toUpperCase()}</span>
+                    <span class="sentiment-indicator ${sentimentClass}">
+                        ${sentimentText}
+                        <span class="confidence-badge ${confidenceClass}">${confidencePercent}%</span>
+                        <span class="ml-score-badge">${score}</span>
+                        <span class="ml-indicator"><i class="fas fa-robot"></i></span>
+                    </span>
+                </div>
+            `;
+            
+            // Trouver le bon endroit pour insérer les indicateurs
+            // Par défaut, au début du contenu de l'actualité
+            const existingDiv = newsContent.querySelector('div[style*="display:flex"]');
+            if (existingDiv) {
+                // S'il existe déjà un div similaire, le remplacer
+                existingDiv.outerHTML = indicatorsHTML;
+            } else {
+                // Sinon, insérer au début du contenu
+                newsContent.insertAdjacentHTML('afterbegin', indicatorsHTML);
             }
         }
     });
