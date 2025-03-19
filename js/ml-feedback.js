@@ -24,7 +24,7 @@ class MLFeedbackSystem {
         document.addEventListener('click', (event) => {
             // Bouton pour ouvrir le modal de feedback
             if (event.target.closest('.ml-feedback-btn')) {
-                const newsCard = event.target.closest('.news-card');
+                const newsCard = event.target.closest('article, .card, [class*="news-card"]');
                 if (newsCard) {
                     this.openFeedbackModal(newsCard);
                 }
@@ -40,13 +40,60 @@ class MLFeedbackSystem {
                 this.saveFeedback();
             }
         });
+        
+        // Cacher l'affichage du sentiment neutre et du score
+        this.hideRedundantLabels();
+        
+        // Observer les changements DOM pour appliquer les modifications aux nouveaux éléments
+        this.observeDOMChanges();
+    }
+
+    /**
+     * Cache les labels de sentiment et score redundants
+     */
+    hideRedundantLabels() {
+        // Sélectionner tous les éléments contenant "SENTIMENT NEUTRE" et les scores
+        document.querySelectorAll('*').forEach(el => {
+            if (el.textContent && el.textContent.includes('SENTIMENT NEUTRE') && el.textContent.includes('%')) {
+                console.log('⚠️ Masquer l\'élément de sentiment redundant:', el);
+                el.style.display = 'none';
+            }
+        });
+    }
+
+    /**
+     * Observer les changements du DOM pour appliquer les modifications aux nouveaux éléments
+     */
+    observeDOMChanges() {
+        const observer = new MutationObserver((mutations) => {
+            let needsUpdate = false;
+            
+            mutations.forEach(mutation => {
+                if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                    needsUpdate = true;
+                }
+            });
+            
+            if (needsUpdate) {
+                // Attendre un peu que le DOM se stabilise
+                setTimeout(() => {
+                    this.addFeedbackButtonsToNews();
+                    this.hideRedundantLabels();
+                }, 300);
+            }
+        });
+        
+        // Observer tout le body pour les changements
+        observer.observe(document.body, { childList: true, subtree: true });
     }
 
     /**
      * Ajoute des boutons de feedback à chaque carte d'actualité
      */
     addFeedbackButtonsToNews() {
-        const newsCards = document.querySelectorAll('.news-card');
+        // Cibler précisément les cartes d'actualités en fonction de votre structure
+        const newsCards = document.querySelectorAll('article, article > a > div, .card:not(.event-card)');
+        
         if (newsCards.length === 0) {
             console.log('⚠️ Aucune carte d\'actualité trouvée sur cette page');
             return;
@@ -60,32 +107,43 @@ class MLFeedbackSystem {
                 card.dataset.newsId = `news-${Date.now()}-${index}`;
             }
             
-            // Extraire les classifications actuelles
-            const category = card.dataset.category || 'general';
-            const sentiment = card.dataset.sentiment || 'neutral';
-            const impact = card.dataset.impact || 'low';
-            
-            // Stocker les classifications originales pour référence
-            card.dataset.originalCategory = category;
-            card.dataset.originalSentiment = sentiment;
-            card.dataset.originalImpact = impact;
+            // Extraire le titre pour l'identifiant unique
+            const title = card.querySelector('h1, h2, h3')?.textContent;
+            if (title) {
+                // Créer un identifiant basé sur le titre pour le suivi
+                const titleId = this.createTitleId(title);
+                card.dataset.titleId = titleId;
+            }
             
             // Ajouter le bouton de feedback s'il n'existe pas déjà
             if (!card.querySelector('.ml-feedback-btn')) {
-                const metaContainer = card.querySelector('.news-meta') || card.querySelector('.news-content');
+                // Créer le bouton
+                const feedbackBtn = document.createElement('button');
+                feedbackBtn.className = 'ml-feedback-btn';
+                feedbackBtn.innerHTML = '<i class="fas fa-robot"></i> Améliorer IA';
+                feedbackBtn.title = 'Aider à améliorer la classification de cette actualité';
                 
-                if (metaContainer) {
-                    const feedbackBtn = document.createElement('button');
-                    feedbackBtn.className = 'ml-feedback-btn';
-                    feedbackBtn.innerHTML = '<i class="fas fa-robot"></i> Améliorer IA';
-                    feedbackBtn.title = 'Aider à améliorer la classification de cette actualité';
-                    
-                    metaContainer.appendChild(feedbackBtn);
-                }
+                // Assurer que la carte a une position relative pour le positionnement absolu du bouton
+                card.style.position = 'relative';
+                
+                // Ajouter le bouton à la carte
+                card.appendChild(feedbackBtn);
+                
+                console.log(`✅ Bouton de feedback ajouté à la carte: ${title || 'sans titre'}`);
             }
         });
-        
-        console.log('✅ Boutons de feedback ajoutés aux actualités');
+    }
+
+    /**
+     * Crée un identifiant basé sur le titre (pour la persistance)
+     */
+    createTitleId(title) {
+        // Nettoyer et hacher le titre pour en faire un ID unique
+        return title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)/g, '')
+            .substring(0, 50);
     }
 
     /**
@@ -93,9 +151,14 @@ class MLFeedbackSystem {
      */
     openFeedbackModal(newsCard) {
         const newsId = newsCard.dataset.newsId;
-        const title = newsCard.querySelector('h3')?.textContent || 'Article sans titre';
-        const originalCategory = newsCard.dataset.originalCategory || 'general';
-        const originalSentiment = newsCard.dataset.originalSentiment || 'neutral';
+        const title = newsCard.querySelector('h1, h2, h3')?.textContent || 'Article sans titre';
+        
+        // Déterminer les valeurs actuelles de la catégorie et du sentiment
+        const categoryEl = newsCard.querySelector('[class*="GENERAL"], [class*="TECH"]');
+        const sentimentEl = newsCard.querySelector('[class*="IMPACT"]');
+        
+        const originalCategory = categoryEl ? this.getCategoryFromText(categoryEl.textContent) : 'general';
+        const originalSentiment = sentimentEl ? this.getSentimentFromText(sentimentEl.textContent) : 'neutral';
         
         // Vérifier si une modal existe déjà, sinon la créer
         let modal = document.getElementById('ml-feedback-modal');
@@ -123,11 +186,12 @@ class MLFeedbackSystem {
                             <option value="companies" ${originalCategory === 'companies' ? 'selected' : ''}>Entreprises</option>
                             <option value="technology" ${originalCategory === 'technology' ? 'selected' : ''}>Technologie</option>
                             <option value="finance" ${originalCategory === 'finance' ? 'selected' : ''}>Finance</option>
+                            <option value="crypto" ${originalCategory === 'crypto' ? 'selected' : ''}>Crypto</option>
                         </select>
                     </div>
                     
                     <div class="ml-feedback-field">
-                        <label for="ml-sentiment-select">Sentiment:</label>
+                        <label for="ml-sentiment-select">Impact:</label>
                         <select id="ml-sentiment-select" class="ml-select">
                             <option value="positive" ${originalSentiment === 'positive' ? 'selected' : ''}>Positif</option>
                             <option value="neutral" ${originalSentiment === 'neutral' ? 'selected' : ''}>Neutre</option>
@@ -150,6 +214,30 @@ class MLFeedbackSystem {
         
         // Afficher la modal
         modal.style.display = 'flex';
+    }
+    
+    /**
+     * Extrait la catégorie à partir du texte
+     */
+    getCategoryFromText(text) {
+        text = text.toLowerCase();
+        if (text.includes('tech')) return 'technology';
+        if (text.includes('econ')) return 'economy';
+        if (text.includes('marche')) return 'markets';
+        if (text.includes('entreprise')) return 'companies';
+        if (text.includes('crypto')) return 'crypto';
+        if (text.includes('finance')) return 'finance';
+        return 'general';
+    }
+    
+    /**
+     * Extrait le sentiment à partir du texte
+     */
+    getSentimentFromText(text) {
+        text = text.toLowerCase();
+        if (text.includes('positif') || text.includes('positive')) return 'positive';
+        if (text.includes('négatif') || text.includes('negative')) return 'negative';
+        return 'neutral';
     }
 
     /**
@@ -183,10 +271,24 @@ class MLFeedbackSystem {
             return;
         }
         
+        // Trouver la carte d'actualité correspondante
+        const newsCard = document.querySelector(`[data-news-id="${newsId}"]`);
+        if (!newsCard) {
+            console.error('❌ Carte d\'actualité non trouvée:', newsId);
+            this.closeFeedbackModal();
+            return;
+        }
+        
+        // Extraire les informations de la carte
+        const title = newsCard.querySelector('h1, h2, h3')?.textContent || '';
+        const content = newsCard.querySelector('p')?.textContent || '';
+        
         // Créer l'objet de feedback
         const feedback = {
             id: `feedback-${Date.now()}`,
             newsId: newsId,
+            title: title,
+            content: content.substring(0, 200), // Limiter la taille du contenu
             original: {
                 category: originalCategory,
                 sentiment: originalSentiment
@@ -208,13 +310,28 @@ class MLFeedbackSystem {
         this.syncFeedbackData();
         
         // Mettre à jour visuellement la classification sur la carte
-        this.updateNewsCardClassification(newsId, newCategory, newSentiment);
+        this.updateNewsCardClassification(newsCard, newCategory, newSentiment);
         
         // Afficher une confirmation
         this.showFeedbackSuccess();
         
         // Fermer la modal
         this.closeFeedbackModal();
+    }
+
+    /**
+     * Met à jour visuellement la classification sur la carte d'actualité
+     */
+    updateNewsCardClassification(card, category, sentiment) {
+        // Ajouter une classe pour effet visuel de mise à jour
+        card.classList.add('ml-updated');
+        
+        // Supprimer la classe après l'animation
+        setTimeout(() => {
+            card.classList.remove('ml-updated');
+        }, 2000);
+        
+        console.log(`✅ Classification mise à jour pour la carte: ${card.querySelector('h1, h2, h3')?.textContent || 'sans titre'}`);
     }
 
     /**
@@ -240,47 +357,21 @@ class MLFeedbackSystem {
     }
 
     /**
-     * Synchronise les feedbacks avec le serveur ou génère un fichier à télécharger
+     * Synchronise les données de feedback avec le serveur
      */
     async syncFeedbackData() {
-        try {
-            // Récupérer les feedbacks stockés localement
-            const feedbacksStr = localStorage.getItem('tradepulse_ml_feedback');
-            if (!feedbacksStr || feedbacksStr === '[]') {
-                console.log('ℹ️ Aucun feedback à synchroniser');
-                return;
-            }
-            
-            const feedbacks = JSON.parse(feedbacksStr);
-            console.log(`🔄 Tentative de synchronisation de ${feedbacks.length} feedbacks...`);
-            
-            // VERSION GITHUB PAGES - EXPORT DE FICHIER
-            // Pour un site statique sans backend, on propose le téléchargement
-            if (window.location.hostname.includes('github.io') || true) {
-                // Si plus de 3 feedbacks sont disponibles, proposer le téléchargement
-                if (feedbacks.length >= 3) {
-                    this.offerFeedbackDownload(feedbacks);
-                }
-                return;
-            }
-            
-            // SI VOUS AJOUTEZ UNE API PLUS TARD, UTILISEZ CE CODE:
-            // const response = await fetch('/api/ml/feedback', {
-            //     method: 'POST',
-            //     headers: {
-            //         'Content-Type': 'application/json'
-            //     },
-            //     body: feedbacksStr
-            // });
-            //
-            // if (response.ok) {
-            //     console.log('✅ Feedbacks synchronisés avec succès!');
-            //     localStorage.removeItem('tradepulse_ml_feedback');
-            // } else {
-            //     console.error('❌ Erreur lors de la synchronisation:', response.status);
-            // }
-        } catch (error) {
-            console.error('❌ Erreur lors de la synchronisation des feedbacks:', error);
+        // Si nous n'avons pas de données à synchroniser, sortir
+        const feedbacksStr = localStorage.getItem('tradepulse_ml_feedback');
+        if (!feedbacksStr || feedbacksStr === '[]') {
+            return;
+        }
+        
+        const feedbacks = JSON.parse(feedbacksStr);
+        console.log(`🔄 Gestion de ${feedbacks.length} feedbacks...`);
+        
+        // Si plus de 3 feedbacks sont disponibles, proposer le téléchargement
+        if (feedbacks.length >= 3) {
+            this.offerFeedbackDownload(feedbacks);
         }
     }
 
@@ -288,7 +379,7 @@ class MLFeedbackSystem {
      * Propose le téléchargement des feedbacks
      */
     offerFeedbackDownload(feedbacks) {
-        // Créer un bouton flottant pour télécharger les feedbacks
+        // Afficher un bouton flottant pour télécharger les feedbacks
         let downloadBtn = document.getElementById('ml-feedback-download-btn');
         
         if (!downloadBtn) {
@@ -343,28 +434,6 @@ class MLFeedbackSystem {
                 downloadBtn.remove();
             }
         }
-    }
-
-    /**
-     * Met à jour visuellement la classification sur la carte d'actualité
-     */
-    updateNewsCardClassification(newsId, category, sentiment) {
-        const newsCard = document.querySelector(`.news-card[data-news-id="${newsId}"]`);
-        if (!newsCard) return;
-        
-        // Mettre à jour les attributs de données
-        newsCard.dataset.category = category;
-        newsCard.dataset.sentiment = sentiment;
-        
-        // Mettre à jour visuellement si nécessaire (classes CSS, étiquettes, etc.)
-        // Par exemple, ajouter/supprimer des classes basées sur le sentiment
-        newsCard.classList.remove('positive-sentiment', 'neutral-sentiment', 'negative-sentiment');
-        newsCard.classList.add(`${sentiment}-sentiment`);
-        
-        // Ajouter une indication visuelle que la carte a été mise à jour
-        newsCard.classList.add('ml-updated');
-        
-        console.log(`✅ Classification mise à jour visuellement pour ${newsId}`);
     }
 
     /**
