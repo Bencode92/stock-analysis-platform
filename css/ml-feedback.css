@@ -1,524 +1,300 @@
-/* Styles pour le système de feedback des classifications ML */
- 
- /* Bouton de feedback */
- .feedback-button {
-     background-color: transparent;
-     border: none;
-     color: var(--text-light);
- /* 
-  * ml-feedback.css - Styles pour l'interface de feedback ML
-  * Adapté au thème futuriste de TradePulse
-  */
- 
- :root {
-     --ml-accent: #00FF87;
-     --ml-accent-hover: #00d672;
-     --ml-bg-dark: rgba(1, 22, 39, 0.95);
-     --ml-text: #ffffff;
-     --ml-border: rgba(0, 255, 135, 0.3);
-     --ml-shadow: 0 0 20px rgba(0, 255, 135, 0.2);
-     --ml-positive: #4CAF50;
-     --ml-neutral: #64B5F6;
-     --ml-negative: #FF5252;
- }
- 
- /* Bouton de feedback sur les cartes d'actualités */
- .ml-feedback-btn {
-     background-color: rgba(0, 255, 135, 0.15);
-     border: 1px solid var(--ml-border);
-     border-radius: 4px;
-     color: var(--ml-accent);
-     padding: 3px 8px;
-     font-size: 12px;
-     cursor: pointer;
-     font-size: 0.9rem;
-     padding: 0.3rem 0.5rem;
-     border-radius: 50%;
-     transition: all 0.2s ease;
-     opacity: 0.6;
-     transition: all 0.3s ease;
-     margin-left: 10px;
-     display: inline-flex;
-     align-items: center;
-     justify-content: center;
-     margin-left: 0.5rem;
-     gap: 5px;
- }
- 
- .feedback-button:hover {
-     background-color: rgba(var(--accent-rgb), 0.2);
-     color: var(--accent);
-     opacity: 1;
- .ml-feedback-btn:hover {
-     background-color: rgba(0, 255, 135, 0.25);
-     transform: translateY(-2px);
-     box-shadow: var(--ml-shadow);
- }
- 
- .news-item:hover .feedback-button {
-     opacity: 0.8;
- .ml-feedback-btn i {
-     font-size: 14px;
- }
- 
- /* Modal de feedback */
- #feedback-modal {
- .ml-feedback-modal {
-     position: fixed;
-     top: 0;
-     left: 0;
-     width: 100%;
-     height: 100%;
-     background-color: rgba(0, 0, 0, 0.8);
-     display: flex;
-     align-items: center;
-     background-color: rgba(0, 0, 0, 0.7);
-     backdrop-filter: blur(5px);
-     display: none;
-     justify-content: center;
-     z-index: 1000;
-     align-items: center;
-     z-index: 9999;
-     opacity: 0;
-     visibility: hidden;
-     transition: opacity 0.3s, visibility 0.3s;
-     animation: ml-modal-fade-in 0.3s ease forwards;
- }
- 
- #feedback-modal.active {
-     opacity: 1;
-     visibility: visible;
- @keyframes ml-modal-fade-in {
-     from { opacity: 0; }
-     to { opacity: 1; }
- }
- 
- #feedback-modal .modal-content {
-     background-color: var(--surface);
-     border-radius: 10px;
-     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
- .ml-feedback-content {
-     background-color: var(--ml-bg-dark);
-     border: 2px solid var(--ml-border);
-     border-radius: 12px;
-     padding: 25px;
-     width: 90%;
-     max-width: 500px;
-     transform: translateY(20px);
-     transition: transform 0.3s;
-     overflow: hidden;
-     border: 1px solid rgba(var(--accent-rgb), 0.3);
-     animation: modal-appear 0.4s cubic-bezier(0.19, 1, 0.22, 1);
- }
- 
- @keyframes modal-appear {
-     from { 
-         opacity: 0;
-         transform: scale(0.9);
-     }
-     to { 
-         opacity: 1;
-         transform: scale(1);
-     }
-     max-width: 480px;
-     box-shadow: var(--ml-shadow);
-     color: var(--ml-text);
-     animation: ml-modal-slide-up 0.4s cubic-bezier(0.19, 1, 0.22, 1);
- }
- 
- #feedback-modal.active .modal-content {
-     transform: translateY(0);
- @keyframes ml-modal-slide-up {
-     from { transform: translateY(20px); opacity: 0; }
-     to { transform: translateY(0); opacity: 1; }
- }
- 
- #feedback-modal .modal-header {
-     display: flex;
-     justify-content: space-between;
-     align-items: center;
-     padding: 1rem 1.5rem;
-     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-     background: linear-gradient(to right, rgba(var(--accent-rgb), 0.1), transparent);
- .ml-feedback-content h2 {
-     color: var(--ml-accent);
-     font-size: 24px;
-     margin-bottom: 15px;
-     text-align: center;
-     font-weight: 700;
- }
- 
- #feedback-modal .modal-header h3 {
-     margin: 0;
-     color: var(--accent);
-     font-weight: 600;
-     font-size: 1.25rem;
- }
- 
- #feedback-modal .close-btn {
-     background: transparent;
-     border: none;
-     color: var(--text-light);
-     cursor: pointer;
-     font-size: 1.2rem;
-     padding: 0.3rem;
-     display: flex;
-     align-items: center;
-     justify-content: center;
-     border-radius: 50%;
-     width: 2rem;
-     height: 2rem;
-     transition: all 0.2s;
- }
- 
- #feedback-modal .close-btn:hover {
-     background-color: rgba(255, 255, 255, 0.1);
-     color: var(--accent);
- }
- 
- #feedback-modal .modal-body {
-     padding: 1.5rem;
- }
- 
- #feedback-modal .feedback-news-title {
-     font-weight: 500;
-     margin-bottom: 1.5rem;
-     padding-bottom: 0.8rem;
- .ml-feedback-article-title {
-     font-size: 16px;
-     margin-bottom: 20px;
-     padding-bottom: 15px;
-     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-     color: var(--text);
-     text-align: center;
-     font-style: italic;
- }
- 
- #feedback-modal .feedback-form {
-     margin-top: 1rem;
- .ml-feedback-form {
-     margin-bottom: 25px;
- }
- 
- #feedback-modal .form-group {
-     margin-bottom: 1.5rem;
- .ml-feedback-field {
-     margin-bottom: 15px;
- }
- 
- #feedback-modal label {
- .ml-feedback-field label {
-     display: block;
-     margin-bottom: 0.8rem;
-     color: var(--text);
-     margin-bottom: 8px;
-     font-weight: 500;
-     color: rgba(255, 255, 255, 0.8);
- }
- 
- /* Styles améliorés pour les sélecteurs */
- #feedback-modal .form-select {
- .ml-select {
-     width: 100%;
-     padding: 12px 15px;
-     border-radius: 8px;
-     background-color: rgba(255, 255, 255, 0.08);
-     border: 1px solid rgba(255, 255, 255, 0.15);
-     color: var(--text);
-     font-size: 1rem;
-     font-family: inherit;
-     transition: all 0.3s ease;
-     -webkit-appearance: none;
-     -moz-appearance: none;
-     padding: 12px;
-     background-color: rgba(255, 255, 255, 0.05);
-     border: 1px solid rgba(0, 255, 135, 0.2);
-     border-radius: 6px;
-     color: white;
-     appearance: none;
-     cursor: pointer;
-     outline: none;
-     background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300ff87' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-     font-size: 16px;
-     transition: all 0.3s ease;
-     background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2300FF87' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-     background-repeat: no-repeat;
-     background-position: right 15px center;
-     background-position: right 12px center;
-     background-size: 16px;
- }
- 
- #feedback-modal .form-select:focus {
-     border-color: var(--accent);
-     box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.2);
-     background-color: rgba(var(--accent-rgb), 0.05);
- }
- 
- #feedback-modal .form-select option {
-     background-color: var(--surface);
-     color: var(--text);
-     padding: 10px;
- }
- 
- #feedback-modal textarea {
-     width: 100%;
-     background-color: rgba(255, 255, 255, 0.08);
-     border: 1px solid rgba(255, 255, 255, 0.15);
-     color: var(--text);
-     padding: 12px 15px;
-     border-radius: 8px;
-     min-height: 100px;
-     font-family: inherit;
-     font-size: 1rem;
-     resize: vertical;
-     transition: all 0.3s ease;
- .ml-select:hover, .ml-select:focus {
-     border-color: var(--ml-accent);
-     box-shadow: 0 0 0 3px rgba(0, 255, 135, 0.1);
-     outline: none;
- }
- 
- #feedback-modal textarea:focus {
-     outline: none;
-     border-color: var(--accent);
-     box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.2);
-     background-color: rgba(var(--accent-rgb), 0.05);
- .ml-select option {
-     background-color: #011627;
-     color: white;
- }
- 
- #feedback-modal .modal-footer {
-     padding: 1rem 1.5rem;
- .ml-feedback-actions {
-     display: flex;
-     justify-content: flex-end;
-     gap: 1rem;
-     border-top: 1px solid rgba(255, 255, 255, 0.1);
-     background-color: rgba(0, 0, 0, 0.2);
-     gap: 15px;
- }
- 
- #feedback-modal .primary-btn,
- #feedback-modal .secondary-btn {
-     padding: 0.8rem 1.5rem;
-     border-radius: 8px;
- .ml-button {
-     padding: 10px 20px;
-     border-radius: 6px;
-     font-size: 16px;
-     font-weight: 600;
-     font-size: 0.95rem;
-     cursor: pointer;
-     transition: all 0.3s ease;
-     border: none;
-     display: flex;
-     align-items: center;
-     justify-content: center;
- }
- 
- #feedback-modal .primary-btn {
-     background-color: var(--accent);
-     color: var(--surface);
- .ml-button-cancel {
-     background-color: rgba(255, 255, 255, 0.1);
-     color: rgba(255, 255, 255, 0.8);
- }
- 
- #feedback-modal .primary-btn:hover {
-     background-color: rgba(var(--accent-rgb), 0.8);
-     box-shadow: 0 0 15px rgba(var(--accent-rgb), 0.5);
-     transform: translateY(-2px);
- .ml-button-cancel:hover {
-     background-color: rgba(255, 255, 255, 0.15);
- }
- 
- #feedback-modal .secondary-btn {
-     background-color: rgba(255, 255, 255, 0.1);
-     color: var(--text);
- .ml-button-save {
-     background-color: var(--ml-accent);
-     color: #011627;
- }
- 
- #feedback-modal .secondary-btn:hover {
-     background-color: rgba(255, 255, 255, 0.2);
- .ml-button-save:hover {
-     background-color: var(--ml-accent-hover);
-     box-shadow: 0 0 15px rgba(0, 255, 135, 0.4);
-     transform: translateY(-2px);
- }
- 
- /* Toast de confirmation */
- .toast {
- /* Notification de succès */
- .ml-feedback-notification {
-     position: fixed;
-     bottom: 2rem;
-     right: 2rem;
-     padding: 1rem 1.5rem;
-     border-radius: 8px;
-     background-color: var(--surface);
-     color: var(--text);
-     box-shadow: 0 5px 20px rgba(0, 0, 0, 0.3);
-     z-index: 1000;
-     transform: translateY(100px);
-     opacity: 0;
-     transition: transform 0.3s, opacity 0.3s;
-     max-width: 400px;
-     border-left: 4px solid var(--accent);
-     font-weight: 500;
-     bottom: 20px;
-     right: 20px;
-     background-color: var(--ml-bg-dark);
-     border-left: 4px solid var(--ml-accent);
-     border-radius: 6px;
-     padding: 15px 20px;
-     color: white;
-     box-shadow: var(--ml-shadow);
-     z-index: 9999;
-     transform: translateX(120%);
-     transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
- }
- 
- .toast.show {
-     transform: translateY(0);
-     opacity: 1;
- .ml-feedback-notification.visible {
-     transform: translateX(0);
- }
- 
- .toast.success {
-     border-left-color: #4caf50;
- .ml-feedback-notification-content {
-     display: flex;
-     align-items: center;
-     gap: 12px;
- }
- 
- .toast.error {
-     border-left-color: #f44336;
- .ml-feedback-notification-content i {
-     color: var(--ml-accent);
-     font-size: 20px;
- }
- 
- .toast.warning {
-     border-left-color: #ff9800;
- /* Bouton de téléchargement des feedbacks */
- .ml-feedback-download-btn {
-     position: fixed;
-     bottom: 20px;
-     left: 20px;
-     background-color: var(--ml-bg-dark);
-     border: 1px solid var(--ml-border);
-     border-radius: 8px;
-     color: var(--ml-accent);
-     padding: 12px 16px;
-     font-size: 14px;
-     cursor: pointer;
-     z-index: 999;
-     box-shadow: var(--ml-shadow);
-     transition: all 0.3s ease;
-     display: flex;
-     align-items: center;
-     gap: 8px;
- }
- 
- .ml-feedback-download-btn:hover {
-     background-color: rgba(0, 255, 135, 0.1);
-     transform: translateY(-3px);
-     box-shadow: 0 0 20px rgba(0, 255, 135, 0.3);
- }
- 
- .ml-feedback-download-btn i {
-     font-size: 16px;
- }
- 
- /* Effets visuels pour les cartes mises à jour */
- .news-card.ml-updated {
-     position: relative;
-     animation: ml-card-highlight 2s ease;
- }
- 
- /* Indicateurs visuels d'état pour les champs de formulaire */
- #feedback-modal .form-select:not(:placeholder-shown):valid {
-     border-color: rgba(76, 175, 80, 0.5);
-     background-color: rgba(76, 175, 80, 0.05);
- @keyframes ml-card-highlight {
-     0%, 100% { box-shadow: var(--card-shadow); }
-     50% { box-shadow: 0 0 25px rgba(0, 255, 135, 0.4); }
- }
- 
- #feedback-modal .form-select:not(:placeholder-shown):invalid {
-     border-color: rgba(244, 67, 54, 0.5);
-     background-color: rgba(244, 67, 54, 0.05);
- /* Indicateurs de sentiment sur les cartes */
- .news-card.positive-sentiment {
-     border-left: 3px solid var(--ml-positive);
- }
- 
- /* Animation de focus */
- #feedback-modal .form-select:focus,
- #feedback-modal textarea:focus {
-     animation: focusPulse 1s;
- .news-card.neutral-sentiment {
-     border-left: 3px solid var(--ml-neutral);
- }
- 
- @keyframes focusPulse {
-     0% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0.4); }
-     70% { box-shadow: 0 0 0 10px rgba(var(--accent-rgb), 0); }
-     100% { box-shadow: 0 0 0 0 rgba(var(--accent-rgb), 0); }
- .news-card.negative-sentiment {
-     border-left: 3px solid var(--ml-negative);
- }
- 
- /* Adaptations pour mobile */
- @media (max-width: 600px) {
-     #feedback-modal .modal-content {
- /* Responsive */
- @media (max-width: 768px) {
-     .ml-feedback-content {
-         padding: 20px;
-         width: 95%;
-     }
- 
-     .toast {
-         left: 1rem;
-         right: 1rem;
-         bottom: 1rem;
-         max-width: none;
-     .ml-feedback-actions {
-         flex-direction: column;
-         gap: 10px;
-     }
- 
-     #feedback-modal .modal-footer {
-         flex-direction: column-reverse;
-     .ml-button {
-         width: 100%;
-     }
- 
-     #feedback-modal .primary-btn,
-     #feedback-modal .secondary-btn {
-         width: 100%;
-     .ml-feedback-notification {
-         left: 20px;
-         right: 20px;
-         bottom: 20px;
-         transform: translateY(120%);
-     }
-     
-     .ml-feedback-notification.visible {
-         transform: translateY(0);
-     }
-     
-     .ml-feedback-download-btn {
-         left: 50%;
-         transform: translateX(-50%);
-         bottom: 20px;
-     }
-     
-     .ml-feedback-download-btn:hover {
-         transform: translateX(-50%) translateY(-3px);
+/* 
+ * ml-feedback.css - Styles pour l'interface de feedback ML
+ * Adapté au thème futuriste de TradePulse
+ */
+
+:root {
+    --ml-accent: #00FF87;
+    --ml-accent-hover: #00d672;
+    --ml-bg-dark: rgba(1, 22, 39, 0.95);
+    --ml-text: #ffffff;
+    --ml-border: rgba(0, 255, 135, 0.3);
+    --ml-shadow: 0 0 20px rgba(0, 255, 135, 0.2);
+    --ml-positive: #4CAF50;
+    --ml-neutral: #64B5F6;
+    --ml-negative: #FF5252;
+}
+
+/* Bouton de feedback sur les cartes d'actualités */
+.ml-feedback-btn {
+    background-color: rgba(0, 255, 135, 0.15);
+    border: 1px solid var(--ml-border);
+    border-radius: 4px;
+    color: var(--ml-accent);
+    padding: 3px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-left: 10px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.ml-feedback-btn:hover {
+    background-color: rgba(0, 255, 135, 0.25);
+    transform: translateY(-2px);
+    box-shadow: var(--ml-shadow);
+}
+
+.ml-feedback-btn i {
+    font-size: 14px;
+}
+
+/* Modal de feedback */
+.ml-feedback-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    opacity: 0;
+    animation: ml-modal-fade-in 0.3s ease forwards;
+}
+
+@keyframes ml-modal-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.ml-feedback-content {
+    background-color: var(--ml-bg-dark);
+    border: 2px solid var(--ml-border);
+    border-radius: 12px;
+    padding: 25px;
+    width: 90%;
+    max-width: 480px;
+    box-shadow: var(--ml-shadow);
+    color: var(--ml-text);
+    animation: ml-modal-slide-up 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+@keyframes ml-modal-slide-up {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.ml-feedback-content h2 {
+    color: var(--ml-accent);
+    font-size: 24px;
+    margin-bottom: 15px;
+    text-align: center;
+    font-weight: 700;
+}
+
+.ml-feedback-article-title {
+    font-size: 16px;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+    font-style: italic;
+}
+
+.ml-feedback-form {
+    margin-bottom: 25px;
+}
+
+.ml-feedback-field {
+    margin-bottom: 15px;
+}
+
+.ml-feedback-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.ml-select {
+    width: 100%;
+    padding: 12px;
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(0, 255, 135, 0.2);
+    border-radius: 6px;
+    color: white;
+    appearance: none;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.3s ease;
+    background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2300FF87' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+}
+
+.ml-select:hover, .ml-select:focus {
+    border-color: var(--ml-accent);
+    box-shadow: 0 0 0 3px rgba(0, 255, 135, 0.1);
+    outline: none;
+}
+
+.ml-select option {
+    background-color: #011627;
+    color: white;
+}
+
+.ml-feedback-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+}
+
+.ml-button {
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.ml-button-cancel {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.ml-button-cancel:hover {
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+.ml-button-save {
+    background-color: var(--ml-accent);
+    color: #011627;
+}
+
+.ml-button-save:hover {
+    background-color: var(--ml-accent-hover);
+    box-shadow: 0 0 15px rgba(0, 255, 135, 0.4);
+    transform: translateY(-2px);
+}
+
+/* Notification de succès */
+.ml-feedback-notification {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background-color: var(--ml-bg-dark);
+    border-left: 4px solid var(--ml-accent);
+    border-radius: 6px;
+    padding: 15px 20px;
+    color: white;
+    box-shadow: var(--ml-shadow);
+    z-index: 9999;
+    transform: translateX(120%);
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.ml-feedback-notification.visible {
+    transform: translateX(0);
+}
+
+.ml-feedback-notification-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ml-feedback-notification-content i {
+    color: var(--ml-accent);
+    font-size: 20px;
+}
+
+/* Bouton de téléchargement des feedbacks */
+.ml-feedback-download-btn {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background-color: var(--ml-bg-dark);
+    border: 1px solid var(--ml-border);
+    border-radius: 8px;
+    color: var(--ml-accent);
+    padding: 12px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    z-index: 999;
+    box-shadow: var(--ml-shadow);
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.ml-feedback-download-btn:hover {
+    background-color: rgba(0, 255, 135, 0.1);
+    transform: translateY(-3px);
+    box-shadow: 0 0 20px rgba(0, 255, 135, 0.3);
+}
+
+.ml-feedback-download-btn i {
+    font-size: 16px;
+}
+
+/* Effets visuels pour les cartes mises à jour */
+.news-card.ml-updated {
+    position: relative;
+    animation: ml-card-highlight 2s ease;
+}
+
+@keyframes ml-card-highlight {
+    0%, 100% { box-shadow: var(--card-shadow); }
+    50% { box-shadow: 0 0 25px rgba(0, 255, 135, 0.4); }
+}
+
+/* Indicateurs de sentiment sur les cartes */
+.news-card.positive-sentiment {
+    border-left: 3px solid var(--ml-positive);
+}
+
+.news-card.neutral-sentiment {
+    border-left: 3px solid var(--ml-neutral);
+}
+
+.news-card.negative-sentiment {
+    border-left: 3px solid var(--ml-negative);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .ml-feedback-content {
+        padding: 20px;
+        width: 95%;
+    }
+    
+    .ml-feedback-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .ml-button {
+        width: 100%;
+    }
+    
+    .ml-feedback-notification {
+        left: 20px;
+        right: 20px;
+        bottom: 20px;
+        transform: translateY(120%);
+    }
+    
+    .ml-feedback-notification.visible {
+        transform: translateY(0);
+    }
+    
+    .ml-feedback-download-btn {
+        left: 50%;
+        transform: translateX(-50%);
+        bottom: 20px;
+    }
+    
+    .ml-feedback-download-btn:hover {
+        transform: translateX(-50%) translateY(-3px);
+    }
+}
