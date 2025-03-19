@@ -46,16 +46,16 @@ async function initializeNewsData() {
         
         let data;
         
-        // MODIFICATION: Charger directement news.json au lieu de classified_news.json
-        console.log('📊 Chargement direct des données brutes news.json');
-        const response = await fetch('data/news.json');
+        // CORRECTION: Revenir à classified_news.json pour les données hiérarchisées
+        console.log('📊 Chargement des données classifiées depuis classified_news.json');
+        const response = await fetch('data/classified_news.json');
         
         if (!response.ok) {
             throw new Error('Impossible de charger les données');
         }
         
         data = await response.json();
-        console.log('✅ Données brutes chargées avec succès');
+        console.log('✅ Données classifiées chargées avec succès');
         
         window.NewsSystem.data = data;
         
@@ -164,6 +164,17 @@ function distributeNewsByImportance(newsData) {
         important: importantNews,
         regular: regularNews
     };
+
+    // NOUVEAU: Logs de débogage pour vérifier les nombres d'actualités par catégorie
+    console.log(`Actualités critiques: ${criticalNews.length}`);
+    console.log(`Actualités importantes: ${importantNews.length}`);
+    console.log(`Actualités générales: ${regularNews.length}`);
+
+    // NOUVEAU: Logs de débogage pour vérifier la répartition des sentiments
+    const positiveCount = allNews.filter(n => n.sentiment === 'positive').length;
+    const negativeCount = allNews.filter(n => n.sentiment === 'negative').length;
+    const neutralCount = allNews.filter(n => n.sentiment === 'neutral' || !n.sentiment).length;
+    console.log(`Sentiments: ${positiveCount} positifs, ${negativeCount} négatifs, ${neutralCount} neutres`);
 
     // Afficher dans les sections correspondantes
     displayCriticalNews(criticalNews);
