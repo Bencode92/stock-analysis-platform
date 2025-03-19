@@ -31,6 +31,8 @@
     <script src="event-renderer.js"></script>
     <!-- Ajout du script de filtre par date pour les événements -->
     <script src="events-date-filter.js"></script>
+    <!-- Ajout du gestionnaire de date de connexion -->
+    <script src="js/connection-date-manager.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -754,16 +756,9 @@
                         <h2 class="text-lg font-semibold text-green-400">
                             <i class="fas fa-calendar-alt mr-2"></i>ÉVÉNEMENTS À VENIR
                         </h2>
+                        <!-- Cette div sera remplacée par le script events-date-filter.js -->
                         <div class="flex gap-2">
-                            <button id="high-impact-btn" class="text-xs text-red-500 px-2 py-1 border border-red-500 border-opacity-30 rounded filter-button">
-                                Impact élevé
-                            </button>
-                            <button id="medium-impact-btn" class="text-xs text-yellow-500 px-2 py-1 border border-yellow-500 border-opacity-30 rounded filter-button">
-                                Impact moyen
-                            </button>
-                            <button id="all-impact-btn" class="text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded filter-button active">
-                                Tous
-                            </button>
+                            <!-- Ces boutons seront remplacés par Aujourd'hui/Cette semaine -->
                         </div>
                     </div>
                     
@@ -879,6 +874,13 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Stocker la date de connexion au chargement de la page
+            if (!localStorage.getItem('userConnectionDate')) {
+                const connectionDate = new Date();
+                localStorage.setItem('userConnectionDate', connectionDate.toISOString());
+                console.log("Date de connexion enregistrée: " + connectionDate.toLocaleString());
+            }
+            
             // Créer un réseau de fond
             const networkBackground = document.getElementById('network-background');
             createNetworkBackground();
@@ -1052,49 +1054,6 @@
             }
             
             updateLastUpdateTime();
-            
-            // Gestionnaire pour les filtres d'événements
-            const highImpactBtn = document.getElementById('high-impact-btn');
-            const mediumImpactBtn = document.getElementById('medium-impact-btn');
-            const allImpactBtn = document.getElementById('all-impact-btn');
-            
-            if (highImpactBtn && mediumImpactBtn && allImpactBtn) {
-                // Filtres pour les événements
-                highImpactBtn.addEventListener('click', function() {
-                    toggleActiveFilter(this);
-                    filterEventsByImpact('high');
-                });
-                
-                mediumImpactBtn.addEventListener('click', function() {
-                    toggleActiveFilter(this);
-                    filterEventsByImpact('medium');
-                });
-                
-                allImpactBtn.addEventListener('click', function() {
-                    toggleActiveFilter(this);
-                    filterEventsByImpact('all');
-                });
-            }
-            
-            function filterEventsByImpact(impactLevel) {
-                const eventElements = document.querySelectorAll('#events-container .event-card');
-                
-                eventElements.forEach(element => {
-                    if (impactLevel === 'all') {
-                        element.style.display = 'flex';
-                    } else {
-                        const impact = element.dataset.impact;
-                        element.style.display = (impact === impactLevel) ? 'flex' : 'none';
-                    }
-                });
-            }
-            
-            function toggleActiveFilter(button) {
-                document.querySelectorAll('.filter-button.active').forEach(el => {
-                    el.classList.remove('active');
-                });
-                button.classList.add('active');
-            }
             
             // Ajout de l'écouteur d'événement pour le filtre de sentiment
             const sentimentSelect = document.getElementById('sentiment-select');
