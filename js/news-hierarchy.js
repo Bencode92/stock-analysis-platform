@@ -315,6 +315,23 @@ function displayCriticalNews(news) {
         if (item.score) {
             newsCard.setAttribute('data-score', item.score);
         }
+        
+        // NOUVEAU: Ajouter l'URL de l'article comme attribut
+        if (item.url) {
+            newsCard.setAttribute('data-url', item.url);
+            newsCard.style.cursor = 'pointer';
+            
+            // Ajouter un événement click pour ouvrir l'URL
+            newsCard.addEventListener('click', function() {
+                const url = this.getAttribute('data-url');
+                if (url) {
+                    window.open(url, '_blank');
+                }
+            });
+            
+            // Ajouter une indication visuelle pour montrer que c'est cliquable
+            newsCard.classList.add('clickable-news');
+        }
 
         newsCard.innerHTML = `
             <span class="badge urgent">URGENT</span>
@@ -335,6 +352,7 @@ function displayCriticalNews(news) {
                         <i class="fas fa-clock mr-1"></i>
                         ${item.date} ${item.time}
                     </div>
+                    ${item.url ? '<div class="read-more"><i class="fas fa-external-link-alt mr-1"></i> Lire l\'article</div>' : ''}
                 </div>
             </div>
         `;
@@ -408,6 +426,23 @@ function displayImportantNews(news) {
         if (item.score) {
             newsCard.setAttribute('data-score', item.score);
         }
+        
+        // NOUVEAU: Ajouter l'URL de l'article comme attribut
+        if (item.url) {
+            newsCard.setAttribute('data-url', item.url);
+            newsCard.style.cursor = 'pointer';
+            
+            // Ajouter un événement click pour ouvrir l'URL
+            newsCard.addEventListener('click', function() {
+                const url = this.getAttribute('data-url');
+                if (url) {
+                    window.open(url, '_blank');
+                }
+            });
+            
+            // Ajouter une indication visuelle pour montrer que c'est cliquable
+            newsCard.classList.add('clickable-news');
+        }
 
         newsCard.innerHTML = `
             <div class="p-4">
@@ -427,6 +462,7 @@ function displayImportantNews(news) {
                         <i class="fas fa-clock mr-1"></i>
                         ${item.date} ${item.time}
                     </div>
+                    ${item.url ? '<div class="read-more"><i class="fas fa-external-link-alt mr-1"></i> Lire l\'article</div>' : ''}
                 </div>
             </div>
         `;
@@ -512,6 +548,23 @@ function displayRecentNews(news) {
         if (item.score) {
             newsCard.setAttribute('data-score', item.score);
         }
+        
+        // NOUVEAU: Ajouter l'URL de l'article comme attribut
+        if (item.url) {
+            newsCard.setAttribute('data-url', item.url);
+            newsCard.style.cursor = 'pointer';
+            
+            // Ajouter un événement click pour ouvrir l'URL
+            newsCard.addEventListener('click', function() {
+                const url = this.getAttribute('data-url');
+                if (url) {
+                    window.open(url, '_blank');
+                }
+            });
+            
+            // Ajouter une indication visuelle pour montrer que c'est cliquable
+            newsCard.classList.add('clickable-news');
+        }
 
         newsCard.innerHTML = `
             <div class="news-content">
@@ -532,6 +585,7 @@ function displayRecentNews(news) {
                         <span class="news-date">${item.date || ''}</span>
                         <span class="news-time">${item.time || ''}</span>
                     </div>
+                    ${item.url ? '<div class="read-more"><i class="fas fa-external-link-alt mr-1"></i> Lire l\'article</div>' : ''}
                 </div>
             </div>
         `;
