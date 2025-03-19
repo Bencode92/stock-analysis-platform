@@ -472,7 +472,7 @@ function displayImportantNews(news) {
 }
 
 /**
- * Fonction pour afficher les actualités régulières
+ * Fonction pour afficher les actualités régulières (MODIFIÉE POUR HARMONISER LE FORMAT)
  * @param {Array} news - Actualités régulières
  */
 function displayRecentNews(news) {
@@ -502,19 +502,18 @@ function displayRecentNews(news) {
         container.appendChild(newsGrid);
     }
 
-    // Créer les cartes d'actualités régulières
+    // Créer les cartes d'actualités régulières avec le même format que les actualités importantes
     news.forEach((item, index) => {
-        // Détermine la classe CSS basée sur l'impact
-        const impactClass = item.impact === 'negative' ? 'border-red-600' : 
-                            item.impact === 'positive' ? 'border-green-600' : 
-                            'border-yellow-600';
+        // Détermine la classe CSS basée sur l'impact (même style que les actualités importantes)
+        const impactClass = item.impact === 'negative' ? 'bg-red-700 bg-opacity-10 border-red-600' : 
+                            item.impact === 'positive' ? 'bg-green-700 bg-opacity-10 border-green-600' : 
+                            'bg-yellow-700 bg-opacity-10 border-yellow-600';
                             
         // Texte descriptif de l'impact
         const impactText = item.impact === 'negative' ? 'IMPACT NÉGATIF' : 
-                           item.impact === 'positive' ? 'IMPACT POSITIF' : 
-                           'IMPACT NEUTRE';
+                           item.impact === 'positive' ? 'IMPACT POSITIF' : 'IMPACT NEUTRE';
                            
-        // Classe de l'indicateur d'impact pour les couleurs
+        // Classe de l'indicateur d'impact
         const impactIndicatorClass = `impact-${item.impact}`;
         
         // Classification ML - SIMPLIFIER L'AFFICHAGE
@@ -534,7 +533,7 @@ function displayRecentNews(news) {
         const scoreDisplay = `<span class="ml-score-badge">${item.score || 0}</span>`;
 
         const newsCard = document.createElement('div');
-        newsCard.className = `news-card ${impactClass}`;
+        newsCard.className = `news-card glassmorphism ${impactClass}`; // Ajout de glassmorphism pour uniformiser
         
         // Ajouter les attributs pour le ML et le filtrage
         newsCard.setAttribute('data-category', item.category || 'general');
@@ -566,24 +565,24 @@ function displayRecentNews(news) {
             newsCard.classList.add('clickable-news');
         }
 
+        // MODIFICATION: Utiliser le même format HTML que pour les actualités importantes
         newsCard.innerHTML = `
-            <div class="news-content">
-                <div style="display:flex; margin-bottom:10px; flex-wrap: wrap;">
-                    <span class="impact-indicator ${impactIndicatorClass}" style="text-transform:uppercase;">${impactText}</span>
-                    <span class="impact-indicator" style="text-transform:uppercase; margin-left:5px;">${item.category.toUpperCase() || 'GENERAL'}</span>
-                    <span class="sentiment-indicator ${sentimentClass}" style="margin-left:5px;">
+            <div class="p-4">
+                <div class="mb-2">
+                    <span class="impact-indicator ${impactIndicatorClass}">${impactText}</span>
+                    <span class="impact-indicator">${item.category.toUpperCase() || 'GENERAL'}</span>
+                    <span class="sentiment-indicator ${sentimentClass}">
                         ${sentimentIcon}
                         ${scoreDisplay}
                     </span>
                 </div>
-                <h3>${item.title}</h3>
-                <p>${item.content || ''}</p>
+                <h3 class="text-md font-semibold">${item.title}</h3>
+                <p class="text-sm mt-2">${item.content || ''}</p>
                 <div class="news-meta">
-                    <span class="news-source">${item.source || 'Financial Data'}</span>
-                    <div class="news-date-time">
-                        <i class="fas fa-calendar-alt"></i>
-                        <span class="news-date">${item.date || ''}</span>
-                        <span class="news-time">${item.time || ''}</span>
+                    <span class="source">${item.source || 'Financial Data'}</span>
+                    <div class="date-time">
+                        <i class="fas fa-clock mr-1"></i>
+                        ${item.date || ''} ${item.time || ''}
                     </div>
                     ${item.url ? '<div class="read-more"><i class="fas fa-external-link-alt mr-1"></i> Lire l\'article</div>' : ''}
                 </div>
