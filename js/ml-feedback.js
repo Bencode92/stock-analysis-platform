@@ -1,15 +1,12 @@
 /**
- * ml-feedback.js - Système de feedback ML avec intégration directe GitHub
- * Ce système envoie les feedbacks directement au dépôt GitHub pour
- * déclencher les GitHub Actions de réentraînement du modèle
+ * ml-feedback.js - Système de feedback ML avec téléchargement direct
+ * Ce système télécharge immédiatement un fichier JSON pour chaque feedback
+ * à déposer directement sur GitHub pour déclencher le réentraînement
  */
 
 class MLFeedbackSystem {
     constructor() {
         this.init();
-        this.GITHUB_REPO = 'Bencode92/stock-analysis-platform';
-        this.GITHUB_API = 'https://api.github.com/repos/Bencode92/stock-analysis-platform/contents/data/ml_feedback.json';
-        this.GITHUB_TOKEN = ''; // Laissez vide pour utiliser le token GitHub Pages
     }
     
     init() {
@@ -132,7 +129,7 @@ class MLFeedbackSystem {
         }
     }
     
-    async saveFeedback() {
+    saveFeedback() {
         const modal = document.getElementById('ml-feedback-modal');
         if (!modal) return;
         
@@ -158,7 +155,7 @@ class MLFeedbackSystem {
         const content = newsCard.querySelector('p')?.textContent || '';
         const source = newsCard.querySelector('.news-source')?.textContent || '';
         
-        // Créer l'objet de feedback
+        // Créer l'objet de feedback avec format compatibilité GitHub Actions
         const feedback = {
             id: `feedback-${Date.now()}`,
             title: title,
@@ -176,8 +173,11 @@ class MLFeedbackSystem {
             url: window.location.href
         };
         
-        // Stocker en local en attendant la synchronisation GitHub
-        this.storeLocalFeedback(feedback);
+        // Structure attendue par le script process_feedback.py
+        const feedbackForGitHub = [feedback];
+        
+        // MODIFICATION PRINCIPALE: Télécharger immédiatement le fichier
+        this.downloadFeedbackFile(feedbackForGitHub);
         
         // Mettre à jour visuellement
         newsCard.dataset.importance = newImportance;
@@ -187,9 +187,6 @@ class MLFeedbackSystem {
             newsCard.classList.remove('classification-updated');
         }, 2000);
         
-        // Dès que nous atteignons 5 feedbacks, créer un fichier dans GitHub
-        this.synchronizeWithGitHub();
-        
         // Afficher confirmation
         this.showFeedbackSuccess();
         
@@ -197,102 +194,38 @@ class MLFeedbackSystem {
         this.closeFeedbackModal();
     }
     
-    // Méthode pour stocker le feedback localement
-    storeLocalFeedback(feedback) {
+    // Télécharge immédiatement le fichier de feedback
+    downloadFeedbackFile(feedbackData) {
         try {
-            let feedbacks = JSON.parse(localStorage.getItem('tradepulse_ml_feedbacks') || '[]');
-            feedbacks.push(feedback);
-            localStorage.setItem('tradepulse_ml_feedbacks', JSON.stringify(feedbacks));
-            console.log(`✅ Feedback stocké (${feedbacks.length} au total)`);
+            // Générer un nom de fichier unique pour GitHub
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = `ml_feedback_${timestamp}.json`;
             
-            // Si nous avons au moins 5 feedbacks, afficher l'option de synchronisation
-            if (feedbacks.length >= 5) {
-                this.showSyncButton(feedbacks.length);
-            }
-            
-            return true;
-        } catch (error) {
-            console.error('❌ Erreur lors du stockage du feedback:', error);
-            return false;
-        }
-    }
-    
-    // Méthode pour synchroniser avec GitHub
-    synchronizeWithGitHub() {
-        const feedbacks = JSON.parse(localStorage.getItem('tradepulse_ml_feedbacks') || '[]');
-        
-        // Créer un lien pour télécharger le fichier
-        if (feedbacks.length >= 5) {
-            const blob = new Blob([JSON.stringify(feedbacks, null, 2)], {type: 'application/json'});
+            // Créer le blob JSON
+            const blob = new Blob([JSON.stringify(feedbackData, null, 2)], {type: 'application/json'});
             const url = URL.createObjectURL(blob);
             
-            const notification = document.createElement('div');
-            notification.className = 'ml-sync-notification';
-            notification.innerHTML = `
-                <div class="ml-sync-content">
-                    <i class="fas fa-cloud-upload-alt"></i>
-                    <span>${feedbacks.length} feedbacks collectés</span>
-                    <a href="${url}" download="ml_feedback_${new Date().toISOString().slice(0, 10)}.json" class="ml-sync-button">
-                        Télécharger pour GitHub
-                    </a>
-                </div>
-            `;
+            // Créer un lien de téléchargement invisible
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
             
-            // Positionner la notification
-            notification.style.position = 'fixed';
-            notification.style.bottom = '20px';
-            notification.style.left = '20px';
-            notification.style.zIndex = '1000';
-            notification.style.backgroundColor = 'rgba(0, 22, 39, 0.9)';
-            notification.style.border = '1px solid rgba(0, 255, 135, 0.3)';
-            notification.style.borderRadius = '8px';
-            notification.style.padding = '12px 16px';
-            notification.style.boxShadow = '0 0 20px rgba(0, 255, 135, 0.2)';
+            // Déclencher le téléchargement
+            document.body.appendChild(a);
+            a.click();
             
-            // Ajouter la notification
-            document.body.appendChild(notification);
-            
-            // Supprimer après un délai
+            // Nettoyer
             setTimeout(() => {
-                notification.remove();
-            }, 30000); // 30 secondes
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }, 100);
+            
+            console.log(`✅ Fichier de feedback téléchargé: ${filename}`);
+            return true;
+        } catch (error) {
+            console.error('❌ Erreur lors du téléchargement du feedback:', error);
+            return false;
         }
-    }
-    
-    // Affiche un bouton pour synchroniser avec GitHub
-    showSyncButton(count) {
-        // Supprimer le bouton existant s'il y en a un
-        const existingButton = document.getElementById('ml-sync-button');
-        if (existingButton) {
-            existingButton.remove();
-        }
-        
-        // Créer le bouton
-        const syncButton = document.createElement('button');
-        syncButton.id = 'ml-sync-button';
-        syncButton.className = 'ml-sync-button';
-        syncButton.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> Synchroniser les feedbacks (${count})`;
-        
-        // Style du bouton
-        syncButton.style.position = 'fixed';
-        syncButton.style.bottom = '20px';
-        syncButton.style.left = '20px';
-        syncButton.style.zIndex = '1000';
-        syncButton.style.backgroundColor = 'rgba(0, 22, 39, 0.9)';
-        syncButton.style.color = '#00FF87';
-        syncButton.style.border = '1px solid rgba(0, 255, 135, 0.4)';
-        syncButton.style.borderRadius = '4px';
-        syncButton.style.padding = '10px 15px';
-        syncButton.style.cursor = 'pointer';
-        syncButton.style.boxShadow = '0 0 15px rgba(0, 255, 135, 0.2)';
-        
-        // Ajouter l'événement
-        syncButton.addEventListener('click', () => {
-            this.synchronizeWithGitHub();
-        });
-        
-        // Ajouter au DOM
-        document.body.appendChild(syncButton);
     }
     
     showFeedbackSuccess() {
@@ -303,7 +236,10 @@ class MLFeedbackSystem {
         notification.style.right = '20px';
         notification.style.zIndex = '1000';
         notification.style.animation = 'none';
-        notification.innerHTML = '<i class="fas fa-check-circle"></i> Feedback enregistré avec succès!';
+        notification.innerHTML = `
+            <i class="fas fa-check-circle"></i> 
+            Feedback téléchargé! <span style="font-size:0.85em;">Déposez le fichier sur GitHub</span>
+        `;
         
         document.body.appendChild(notification);
         
@@ -313,7 +249,7 @@ class MLFeedbackSystem {
             setTimeout(() => {
                 notification.remove();
             }, 500);
-        }, 3000);
+        }, 5000);
     }
 }
 
