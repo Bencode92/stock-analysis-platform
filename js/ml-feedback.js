@@ -1,11 +1,15 @@
 /**
- * ml-feedback.js - Système de feedback ML avec intégration immédiate
+ * ml-feedback.js - Système de feedback ML avec intégration directe GitHub
+ * Ce système envoie les feedbacks directement au dépôt GitHub pour
+ * déclencher les GitHub Actions de réentraînement du modèle
  */
 
 class MLFeedbackSystem {
     constructor() {
         this.init();
-        this.API_ENDPOINT = 'https://stock-analysis-platform-q9tc.onrender.com/api/ml/feedback';
+        this.GITHUB_REPO = 'Bencode92/stock-analysis-platform';
+        this.GITHUB_API = 'https://api.github.com/repos/Bencode92/stock-analysis-platform/contents/data/ml_feedback.json';
+        this.GITHUB_TOKEN = ''; // Laissez vide pour utiliser le token GitHub Pages
     }
     
     init() {
@@ -172,64 +176,126 @@ class MLFeedbackSystem {
             url: window.location.href
         };
         
-        // MODIFICATION PRINCIPALE: Envoi immédiat au serveur
-        try {
-            // Affichage d'un indicateur de chargement
-            const saveButton = document.getElementById('ml-feedback-save');
-            saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Envoi...';
-            saveButton.disabled = true;
-            
-            // Envoi direct au serveur
-            const response = await fetch(this.API_ENDPOINT, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify([feedback]) // Format attendu par l'API
-            });
-            
-            if (!response.ok) {
-                throw new Error(`Erreur HTTP: ${response.status}`);
-            }
-            
-            console.log('✅ Feedback envoyé et intégré immédiatement');
-            
-            // Mise à jour visuelle
-            newsCard.dataset.importance = newImportance;
-            newsCard.dataset.impact = newImpact;
-            newsCard.classList.add('classification-updated');
-            setTimeout(() => {
-                newsCard.classList.remove('classification-updated');
-            }, 2000);
-            
-            // Afficher confirmation
-            this.showFeedbackSuccess(true);
-            
-        } catch (error) {
-            console.error('❌ Erreur lors de l\'envoi du feedback:', error);
-            
-            // Stockage en local comme fallback
-            this.storeLocalFeedback(feedback);
-            this.showFeedbackSuccess(false);
-        }
+        // Stocker en local en attendant la synchronisation GitHub
+        this.storeLocalFeedback(feedback);
+        
+        // Mettre à jour visuellement
+        newsCard.dataset.importance = newImportance;
+        newsCard.dataset.impact = newImpact;
+        newsCard.classList.add('classification-updated');
+        setTimeout(() => {
+            newsCard.classList.remove('classification-updated');
+        }, 2000);
+        
+        // Dès que nous atteignons 5 feedbacks, créer un fichier dans GitHub
+        this.synchronizeWithGitHub();
+        
+        // Afficher confirmation
+        this.showFeedbackSuccess();
         
         // Fermer la modal
         this.closeFeedbackModal();
     }
     
-    // Méthode de fallback pour stocker localement si l'API échoue
+    // Méthode pour stocker le feedback localement
     storeLocalFeedback(feedback) {
         try {
             let feedbacks = JSON.parse(localStorage.getItem('tradepulse_ml_feedbacks') || '[]');
             feedbacks.push(feedback);
             localStorage.setItem('tradepulse_ml_feedbacks', JSON.stringify(feedbacks));
-            console.log('⚠️ Feedback stocké localement (l\'API a échoué)');
+            console.log(`✅ Feedback stocké (${feedbacks.length} au total)`);
+            
+            // Si nous avons au moins 5 feedbacks, afficher l'option de synchronisation
+            if (feedbacks.length >= 5) {
+                this.showSyncButton(feedbacks.length);
+            }
+            
+            return true;
         } catch (error) {
-            console.error('❌ Erreur lors du stockage local:', error);
+            console.error('❌ Erreur lors du stockage du feedback:', error);
+            return false;
         }
     }
     
-    showFeedbackSuccess(immediate) {
+    // Méthode pour synchroniser avec GitHub
+    synchronizeWithGitHub() {
+        const feedbacks = JSON.parse(localStorage.getItem('tradepulse_ml_feedbacks') || '[]');
+        
+        // Créer un lien pour télécharger le fichier
+        if (feedbacks.length >= 5) {
+            const blob = new Blob([JSON.stringify(feedbacks, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            
+            const notification = document.createElement('div');
+            notification.className = 'ml-sync-notification';
+            notification.innerHTML = `
+                <div class="ml-sync-content">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <span>${feedbacks.length} feedbacks collectés</span>
+                    <a href="${url}" download="ml_feedback_${new Date().toISOString().slice(0, 10)}.json" class="ml-sync-button">
+                        Télécharger pour GitHub
+                    </a>
+                </div>
+            `;
+            
+            // Positionner la notification
+            notification.style.position = 'fixed';
+            notification.style.bottom = '20px';
+            notification.style.left = '20px';
+            notification.style.zIndex = '1000';
+            notification.style.backgroundColor = 'rgba(0, 22, 39, 0.9)';
+            notification.style.border = '1px solid rgba(0, 255, 135, 0.3)';
+            notification.style.borderRadius = '8px';
+            notification.style.padding = '12px 16px';
+            notification.style.boxShadow = '0 0 20px rgba(0, 255, 135, 0.2)';
+            
+            // Ajouter la notification
+            document.body.appendChild(notification);
+            
+            // Supprimer après un délai
+            setTimeout(() => {
+                notification.remove();
+            }, 30000); // 30 secondes
+        }
+    }
+    
+    // Affiche un bouton pour synchroniser avec GitHub
+    showSyncButton(count) {
+        // Supprimer le bouton existant s'il y en a un
+        const existingButton = document.getElementById('ml-sync-button');
+        if (existingButton) {
+            existingButton.remove();
+        }
+        
+        // Créer le bouton
+        const syncButton = document.createElement('button');
+        syncButton.id = 'ml-sync-button';
+        syncButton.className = 'ml-sync-button';
+        syncButton.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> Synchroniser les feedbacks (${count})`;
+        
+        // Style du bouton
+        syncButton.style.position = 'fixed';
+        syncButton.style.bottom = '20px';
+        syncButton.style.left = '20px';
+        syncButton.style.zIndex = '1000';
+        syncButton.style.backgroundColor = 'rgba(0, 22, 39, 0.9)';
+        syncButton.style.color = '#00FF87';
+        syncButton.style.border = '1px solid rgba(0, 255, 135, 0.4)';
+        syncButton.style.borderRadius = '4px';
+        syncButton.style.padding = '10px 15px';
+        syncButton.style.cursor = 'pointer';
+        syncButton.style.boxShadow = '0 0 15px rgba(0, 255, 135, 0.2)';
+        
+        // Ajouter l'événement
+        syncButton.addEventListener('click', () => {
+            this.synchronizeWithGitHub();
+        });
+        
+        // Ajouter au DOM
+        document.body.appendChild(syncButton);
+    }
+    
+    showFeedbackSuccess() {
         const notification = document.createElement('div');
         notification.className = 'ml-suggestion-badge';
         notification.style.position = 'fixed';
@@ -237,12 +303,7 @@ class MLFeedbackSystem {
         notification.style.right = '20px';
         notification.style.zIndex = '1000';
         notification.style.animation = 'none';
-        
-        if (immediate) {
-            notification.innerHTML = '<i class="fas fa-check-circle"></i> Feedback intégré immédiatement!';
-        } else {
-            notification.innerHTML = '<i class="fas fa-info-circle"></i> Feedback stocké localement';
-        }
+        notification.innerHTML = '<i class="fas fa-check-circle"></i> Feedback enregistré avec succès!';
         
         document.body.appendChild(notification);
         
