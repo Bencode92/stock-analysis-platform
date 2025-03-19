@@ -17,6 +17,15 @@ class MLFeedbackSystem {
         
         setTimeout(() => this.addFeedbackButtons(), 1500);
         
+        // Tenter de synchroniser les feedbacks en attente au chargement
+        this.retryPendingFeedbacks();
+        
+        // Synchroniser lorsque la connexion est rétablie
+        window.addEventListener('online', () => {
+            console.log('🌐 Connexion internet rétablie, synchronisation des feedbacks');
+            this.retryPendingFeedbacks();
+        });
+        
         document.addEventListener('click', (event) => {
             if (event.target.closest('.ml-feedback-btn')) {
                 const newsCard = event.target.closest('.news-card');
@@ -220,115 +229,105 @@ class MLFeedbackSystem {
         } catch (error) {
             console.error('❌ Erreur lors de l\'envoi du feedback:', error);
             
-            // Stockage en local comme fallback
+            // Stockage en file d'attente comme fallback
             this.storeLocalFeedback(feedback);
-            
-            // Afficher message d'erreur
-            this.showFeedbackSuccess(false);
         }
         
         // Fermer la modal
         this.closeFeedbackModal();
     }
     
-    // Méthode de fallback pour stocker localement si l'API échoue
+    // Nouvelle fonction : stocker les feedbacks en attente et réessayer
     storeLocalFeedback(feedback) {
         try {
-            let feedbacks = JSON.parse(localStorage.getItem('tradepulse_ml_feedbacks') || '[]');
-            feedbacks.push(feedback);
-            localStorage.setItem('tradepulse_ml_feedbacks', JSON.stringify(feedbacks));
-            console.log('⚠️ Feedback stocké localement (API GitHub échouée)');
+            // Récupérer la file d'attente existante ou créer une nouvelle
+            let pendingFeedbacks = JSON.parse(localStorage.getItem('tradepulse_pending_feedbacks') || '[]');
+            pendingFeedbacks.push(feedback);
+            localStorage.setItem('tradepulse_pending_feedbacks', JSON.stringify(pendingFeedbacks));
+            console.log(`⏳ Feedback mis en file d'attente (${pendingFeedbacks.length} en attente)`);
             
-            // Si nous avons au moins 3 feedbacks locaux, afficher notification
-            if (feedbacks.length >= 3) {
-                this.showLocalBackupNotification(feedbacks.length);
-            }
+            // Afficher un message discret à l'utilisateur
+            this.showFeedbackSuccess(false, true);
+            
+            // Programmer une tentative de synchronisation
+            setTimeout(() => this.retryPendingFeedbacks(), 30000); // Réessayer dans 30 secondes
         } catch (error) {
-            console.error('❌ Erreur lors du stockage local:', error);
+            console.error('❌ Erreur lors du stockage en file d\'attente:', error);
+        }
+    }
+
+    // Nouvelle fonction : tente d'envoyer les feedbacks en attente
+    async retryPendingFeedbacks() {
+        const pendingFeedbacks = JSON.parse(localStorage.getItem('tradepulse_pending_feedbacks') || '[]');
+        if (pendingFeedbacks.length === 0) return;
+        
+        console.log(`🔄 Tentative d'envoi de ${pendingFeedbacks.length} feedbacks en attente`);
+        
+        // On essaie d'envoyer chaque feedback
+        for (let i = 0; i < pendingFeedbacks.length; i++) {
+            try {
+                const feedback = pendingFeedbacks[i];
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const filename = `ml_feedback_${timestamp}.json`;
+                
+                const response = await fetch(this.GITHUB_API, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        repo: this.GITHUB_REPO,
+                        path: `data/${filename}`,
+                        content: JSON.stringify([feedback], null, 2),
+                        message: `Feedback utilisateur synchronisé: ${feedback.title.substring(0, 50)}`
+                    })
+                });
+                
+                if (response.ok) {
+                    // Succès, on retire ce feedback de la file d'attente
+                    pendingFeedbacks.splice(i, 1);
+                    i--; // Ajuster l'index car on a retiré un élément
+                    console.log('✅ Feedback synchronisé avec succès');
+                } else {
+                    throw new Error(`Erreur HTTP: ${response.status}`);
+                }
+            } catch (error) {
+                console.warn(`⚠️ Échec de synchronisation du feedback #${i+1}:`, error);
+                // On continue avec les autres feedbacks
+            }
+        }
+        
+        // Mettre à jour la file d'attente
+        localStorage.setItem('tradepulse_pending_feedbacks', JSON.stringify(pendingFeedbacks));
+        
+        // Si des feedbacks sont toujours en attente, programmer une nouvelle tentative
+        if (pendingFeedbacks.length > 0) {
+            console.log(`⏳ ${pendingFeedbacks.length} feedbacks toujours en attente, nouvelle tentative dans 5 minutes`);
+            setTimeout(() => this.retryPendingFeedbacks(), 5 * 60 * 1000);
         }
     }
     
-    // Affiche une notification pour les feedbacks locaux
-    showLocalBackupNotification(count) {
+    showFeedbackSuccess(success, pending = false) {
         const notification = document.createElement('div');
-        notification.className = 'ml-backup-notification';
-        notification.innerHTML = `
-            <div class="ml-backup-content">
-                <i class="fas fa-exclamation-triangle"></i>
-                <span>${count} feedbacks enregistrés localement</span>
-                <button class="ml-backup-button">Exporter</button>
-            </div>
-        `;
-        
-        // Style de la notification
-        notification.style.position = 'fixed';
-        notification.style.bottom = '20px';
-        notification.style.left = '20px';
-        notification.style.zIndex = '1000';
-        notification.style.backgroundColor = 'rgba(0, 22, 39, 0.9)';
-        notification.style.border = '1px solid rgba(255, 193, 7, 0.5)';
-        notification.style.borderRadius = '8px';
-        notification.style.padding = '12px 16px';
-        notification.style.boxShadow = '0 0 20px rgba(255, 193, 7, 0.2)';
-        
-        // Ajouter l'événement au bouton d'export
-        const exportButton = notification.querySelector('.ml-backup-button');
-        exportButton.addEventListener('click', () => {
-            this.exportLocalFeedbacks();
-            notification.remove();
-        });
-        
-        // Ajouter au DOM
-        document.body.appendChild(notification);
-    }
-    
-    // Exporte les feedbacks stockés localement
-    exportLocalFeedbacks() {
-        const feedbacks = JSON.parse(localStorage.getItem('tradepulse_ml_feedbacks') || '[]');
-        if (feedbacks.length === 0) return;
-        
-        // Créer le blob JSON
-        const blob = new Blob([JSON.stringify(feedbacks, null, 2)], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
-        
-        // Télécharger le fichier
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `ml_feedback_backup_${new Date().toISOString().slice(0, 10)}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        
-        // Demander si l'utilisateur veut effacer les feedbacks locaux
-        if (confirm('Feedbacks exportés avec succès! Souhaitez-vous les effacer de votre navigateur?')) {
-            localStorage.removeItem('tradepulse_ml_feedbacks');
-        }
-    }
-    
-    showFeedbackSuccess(success) {
-        const notification = document.createElement('div');
-        notification.className = 'ml-suggestion-badge';
+        notification.className = 'ml-feedback-notification';
         notification.style.position = 'fixed';
         notification.style.bottom = '20px';
         notification.style.right = '20px';
         notification.style.zIndex = '1000';
-        notification.style.animation = 'none';
+        notification.style.padding = '12px 16px';
+        notification.style.borderRadius = '4px';
+        notification.style.animation = 'fadeIn 0.3s ease forwards';
         
         if (success) {
-            notification.innerHTML = `
-                <i class="fas fa-check-circle"></i> 
-                Feedback enregistré directement sur GitHub!
-            `;
+            notification.innerHTML = `<i class="fas fa-check-circle"></i> Feedback enregistré`;
             notification.style.backgroundColor = 'rgba(0, 255, 135, 0.15)';
-            notification.style.borderColor = 'rgba(0, 255, 135, 0.3)';
-        } else {
-            notification.innerHTML = `
-                <i class="fas fa-info-circle"></i> 
-                Feedback stocké localement (échec connexion GitHub)
-            `;
+            notification.style.border = '1px solid rgba(0, 255, 135, 0.3)';
+        } else if (pending) {
+            notification.innerHTML = `<i class="fas fa-clock"></i> Feedback enregistré, sera synchronisé automatiquement`;
             notification.style.backgroundColor = 'rgba(255, 193, 7, 0.15)';
-            notification.style.borderColor = 'rgba(255, 193, 7, 0.3)';
+            notification.style.border = '1px solid rgba(255, 193, 7, 0.3)';
+        } else {
+            notification.innerHTML = `<i class="fas fa-info-circle"></i> Feedback enregistré`;
+            notification.style.backgroundColor = 'rgba(255, 193, 7, 0.15)';
+            notification.style.border = '1px solid rgba(255, 193, 7, 0.3)';
         }
         
         document.body.appendChild(notification);
@@ -339,7 +338,7 @@ class MLFeedbackSystem {
             setTimeout(() => {
                 notification.remove();
             }, 500);
-        }, 4000);
+        }, 3000);
     }
 }
 
