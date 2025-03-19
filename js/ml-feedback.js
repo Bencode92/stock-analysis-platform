@@ -1,512 +1,406 @@
 /**
- * Système de feedback pour les classifications de nouvelles par machine learning
- * Ce module permet aux utilisateurs de signaler des classifications incorrectes
- * et stocke ces retours pour une amélioration future du modèle.
+ * ml-feedback.js - Système de feedback pour le Machine Learning
+ * Ce module gère la collecte, le stockage et la synchronisation des retours
+ * utilisateurs sur les classifications d'actualités.
  */
 
 class MLFeedbackSystem {
     constructor() {
-        this.feedbackStorageKey = 'ml_feedback_data';
-        this.pendingSyncKey = 'ml_feedback_pending_sync';
-        this.pendingFeedback = this.loadPendingFeedback();
-        
-        console.log('Initialisation du système de feedback ML');
-        
-        // Initialisation immédiate si le DOM est déjà chargé
-        if (document.readyState === 'complete' || document.readyState === 'interactive') {
-            this.init();
-        } else {
-            // Sinon, attendre le chargement du DOM
-            document.addEventListener('DOMContentLoaded', () => this.init());
-        }
-        
-        // Écouter également l'événement newsDataReady pour s'assurer que les actualités sont chargées
-        document.addEventListener('newsDataReady', () => {
-            console.log('Événement newsDataReady reçu, réinitialisation du feedback ML');
-            // Attendre un peu que le DOM soit mis à jour
-            setTimeout(() => this.init(), 500);
-        });
-        
-        // Configurer la synchronisation périodique des feedbacks
-        this.setupPeriodicSync();
-        
-        // Synchroniser avant fermeture de la page
-        window.addEventListener('beforeunload', () => {
-            if (localStorage.getItem(this.pendingSyncKey) === 'true') {
-                this.syncPendingFeedback();
-            }
-        });
+        this.init();
+        // Tenter de synchroniser les feedbacks au chargement
+        this.syncFeedbackData();
     }
 
     /**
      * Initialise le système de feedback
      */
     init() {
-        console.log('Initialisation du système de feedback ML - DOM chargé');
-        // Configurer le modal de feedback (une seule fois)
-        this.setupFeedbackModal();
+        console.log('🤖 Initialisation du système de feedback ML...');
         
-        // Ne pas ajouter les boutons ici, c'est maintenant fait par ml-news-integrator.js
+        // Ajouter des boutons de feedback à chaque carte d'actualité
+        this.addFeedbackButtonsToNews();
         
-        // Vérifier s'il y a des feedbacks en attente et tenter de les synchroniser
-        if (localStorage.getItem(this.pendingSyncKey) === 'true') {
-            this.syncPendingFeedback();
-        }
-    }
-
-    /**
-     * Configure la synchronisation périodique des feedbacks
-     */
-    setupPeriodicSync() {
-        // Synchroniser toutes les 5 minutes si nécessaire
-        setInterval(() => {
-            if (localStorage.getItem(this.pendingSyncKey) === 'true') {
-                this.syncPendingFeedback();
-            }
-        }, 5 * 60 * 1000);
-    }
-
-    /**
-     * Charge les retours en attente depuis le stockage local
-     */
-    loadPendingFeedback() {
-        const storedFeedback = localStorage.getItem(this.feedbackStorageKey);
-        return storedFeedback ? JSON.parse(storedFeedback) : [];
-    }
-
-    /**
-     * Sauvegarde les retours en attente
-     */
-    savePendingFeedback() {
-        localStorage.setItem(this.feedbackStorageKey, JSON.stringify(this.pendingFeedback));
-        
-        // Si des feedbacks sont en attente, marquer pour synchronisation
-        if (this.pendingFeedback.length > 0) {
-            localStorage.setItem(this.pendingSyncKey, 'true');
-        } else {
-            localStorage.removeItem(this.pendingSyncKey);
-        }
-    }
-
-    /**
-     * Configure le modal de feedback
-     */
-    setupFeedbackModal() {
-        // Vérifier si le modal existe déjà
-        if (document.getElementById('feedback-modal')) {
-            console.log('Modal de feedback déjà configuré');
-            return;
-        }
-        
-        console.log('Configuration du modal de feedback');
-        
-        // Créer le modal avec l'interface améliorée
-        const modalHTML = `
-            <div id="feedback-modal" class="modal">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h3>Signaler une classification incorrecte</h3>
-                        <button id="close-feedback-modal" class="close-btn ripple"><i class="fas fa-times"></i></button>
-                    </div>
-                    <div class="modal-body">
-                        <p id="feedback-news-title" class="feedback-news-title"></p>
-                        
-                        <div class="feedback-form">
-                            <p>Classification actuelle: <span id="current-classification"></span></p>
-                            
-                            <div class="form-group">
-                                <label>Catégorie de l'actualité:</label>
-                                <select id="feedback-category" class="form-select">
-                                    <option value="">Sélectionnez une catégorie...</option>
-                                    <option value="critical">Critique</option>
-                                    <option value="important">Importante</option>
-                                    <option value="general">Générale</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label>Impact de l'actualité:</label>
-                                <select id="feedback-impact" class="form-select">
-                                    <option value="">Sélectionnez un impact...</option>
-                                    <option value="positive">Positif</option>
-                                    <option value="neutral">Neutre</option>
-                                    <option value="negative">Négatif</option>
-                                </select>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="feedback-comment">Commentaire (optionnel):</label>
-                                <textarea id="feedback-comment" placeholder="Pourquoi pensez-vous que cette classification est incorrecte?"></textarea>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button id="submit-feedback" class="primary-btn ripple button-press">Envoyer</button>
-                        <button id="cancel-feedback" class="secondary-btn ripple button-press">Annuler</button>
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Ajouter le modal au body
-        const modalContainer = document.createElement('div');
-        modalContainer.innerHTML = modalHTML;
-        document.body.appendChild(modalContainer.firstElementChild);
-        
-        // Configurer les événements du modal
-        document.getElementById('close-feedback-modal').addEventListener('click', this.closeFeedbackModal.bind(this));
-        document.getElementById('cancel-feedback').addEventListener('click', this.closeFeedbackModal.bind(this));
-        document.getElementById('submit-feedback').addEventListener('click', this.submitFeedback.bind(this));
-        
-        console.log('Modal de feedback configuré avec succès');
-    }
-
-    /**
-     * Ouvre le modal de feedback
-     */
-    openFeedbackModal(newsId, newsTitle, newsItem) {
-        console.log(`Ouverture du modal pour l'actualité ${newsId}: ${newsTitle}`);
-        
-        // Vérifier si le modal existe
-        if (!document.getElementById('feedback-modal')) {
-            console.error('Erreur: Modal de feedback non trouvé!');
-            this.setupFeedbackModal(); // Tenter de recréer le modal
-        }
-        
-        // Stocker l'ID de l'actualité courante
-        this.currentNewsId = newsId;
-        this.currentNewsItem = newsItem;
-        
-        // Récupérer la classification actuelle
-        const currentClassification = newsItem.getAttribute('data-sentiment') || 
-                                     newsItem.querySelector('.impact') ? newsItem.querySelector('.impact').textContent : 
-                                     (newsItem.getAttribute('data-impact') || 'inconnu');
-        
-        console.log(`Classification actuelle: ${currentClassification}`);
-        
-        // Mettre à jour le contenu du modal
-        const titleElement = document.getElementById('feedback-news-title');
-        const classificationElement = document.getElementById('current-classification');
-        
-        if (titleElement && classificationElement) {
-            titleElement.textContent = newsTitle;
-            classificationElement.textContent = currentClassification;
-            
-            // Réinitialiser le formulaire
-            document.getElementById('feedback-category').value = '';
-            document.getElementById('feedback-impact').value = '';
-            
-            const commentElement = document.getElementById('feedback-comment');
-            if (commentElement) {
-                commentElement.value = '';
+        // Attacher les gestionnaires d'événements aux boutons de feedback
+        document.addEventListener('click', (event) => {
+            // Bouton pour ouvrir le modal de feedback
+            if (event.target.closest('.ml-feedback-btn')) {
+                const newsCard = event.target.closest('.news-card');
+                if (newsCard) {
+                    this.openFeedbackModal(newsCard);
+                }
             }
             
-            // Afficher le modal
-            const modal = document.getElementById('feedback-modal');
-            if (modal) {
-                modal.classList.add('active');
+            // Bouton pour annuler le feedback
+            if (event.target.closest('#ml-feedback-cancel')) {
+                this.closeFeedbackModal();
             }
-        } else {
-            console.error('Erreur: Éléments du modal non trouvés!');
-        }
-    }
-
-    /**
-     * Ferme le modal de feedback
-     */
-    closeFeedbackModal() {
-        const modal = document.getElementById('feedback-modal');
-        if (modal) {
-            modal.classList.remove('active');
-        }
-        this.currentNewsId = null;
-        this.currentNewsItem = null;
-    }
-
-    /**
-     * Soumet le feedback
-     */
-    submitFeedback() {
-        // Récupérer les valeurs des dropdowns
-        const categorySelect = document.getElementById('feedback-category');
-        const impactSelect = document.getElementById('feedback-impact');
-        
-        if (!categorySelect.value) {
-            alert('Veuillez sélectionner une catégorie.');
-            return;
-        }
-        
-        if (!impactSelect.value) {
-            alert('Veuillez sélectionner un impact.');
-            return;
-        }
-        
-        // Récupérer les données du formulaire
-        const feedback = {
-            newsId: this.currentNewsId,
-            title: document.getElementById('feedback-news-title').textContent,
-            currentClassification: document.getElementById('current-classification').textContent,
-            correctClassification: impactSelect.value,
-            correctHierarchy: categorySelect.value,
-            comment: document.getElementById('feedback-comment').value,
-            timestamp: new Date().toISOString(),
-            userId: localStorage.getItem('user_id') || 'anonymous',
-            newsContent: this.currentNewsItem ? this.getNewsContent(this.currentNewsItem) : '',
-        };
-        
-        console.log('Feedback soumis:', feedback);
-        
-        // Ajouter le feedback à la liste des feedbacks en attente
-        this.pendingFeedback.push(feedback);
-        this.savePendingFeedback();
-        
-        // Mettre à jour l'UI si possible
-        this.updateNewsDisplay(feedback);
-        
-        // Envoyer le feedback au serveur si disponible
-        this.sendFeedbackToServer(feedback);
-        
-        // Fermer le modal
-        this.closeFeedbackModal();
-        
-        // Afficher un message de confirmation
-        this.showConfirmationMessage();
-    }
-    
-    /**
-     * Récupère le contenu de l'actualité
-     */
-    getNewsContent(newsItem) {
-        // Essayer de récupérer le contenu de différentes manières
-        const contentElement = newsItem.querySelector('p');
-        if (contentElement) {
-            return contentElement.textContent;
-        }
-        
-        // Si pas trouvé, renvoyer une chaîne vide
-        return '';
-    }
-    
-    /**
-     * Met à jour l'affichage de l'actualité après feedback
-     */
-    updateNewsDisplay(feedback) {
-        // Si NewsSystem est disponible, utiliser sa fonction de mise à jour
-        if (window.NewsSystem && window.NewsSystem.updateNewsClassificationUI) {
-            // Créer un objet avec les nouvelles valeurs
-            const newClassification = {
-                sentiment: feedback.correctClassification,
-                hierarchy: feedback.correctHierarchy
-            };
             
-            // Appeler la fonction de mise à jour
-            window.NewsSystem.updateNewsClassificationUI(feedback.newsId, newClassification);
-        }
-    }
-
-    /**
-     * Envoie le feedback au serveur
-     */
-    async sendFeedback(newsId, feedbackType, feedbackData) {
-        // Stocker dans localStorage pour la persistance
-        const feedbackStorage = localStorage.getItem('ml_feedback') || '{}';
-        let allFeedback = JSON.parse(feedbackStorage);
-        
-        if (!allFeedback[newsId]) {
-            allFeedback[newsId] = {};
-        }
-        
-        allFeedback[newsId][feedbackType] = feedbackData;
-        allFeedback[newsId].timestamp = Date.now();
-        
-        localStorage.setItem('ml_feedback', JSON.stringify(allFeedback));
-        
-        // Mettre un flag pour indiquer que des feedbacks sont en attente de synchronisation
-        localStorage.setItem(this.pendingSyncKey, 'true');
-        
-        // Si l'API est disponible, synchroniser immédiatement
-        this.syncFeedbackWithServer();
-        
-        console.log(`Feedback ML enregistré pour ${newsId}: ${feedbackType}`, feedbackData);
-        
-        return true;
-    }
-
-    /**
-     * Synchronise les feedbacks stockés localement avec le serveur
-     * Tente d'envoyer les feedbacks en attente
-     */
-    syncFeedbackWithServer() {
-        // Vérifier s'il y a des feedbacks en attente
-        if (localStorage.getItem(this.pendingSyncKey) !== 'true') {
-            return;
-        }
-        
-        // Récupérer tous les feedbacks
-        const feedbackStorage = localStorage.getItem('ml_feedback') || '{}';
-        const allFeedback = JSON.parse(feedbackStorage);
-        
-        // Préparer les données pour l'envoi
-        const feedbackItems = [];
-        
-        for (const newsId in allFeedback) {
-            const item = allFeedback[newsId];
-            
-            // Créer un objet de feedback
-            const feedbackItem = {
-                id: newsId,
-                timestamp: item.timestamp || Date.now(),
-                ...item
-            };
-            
-            feedbackItems.push(feedbackItem);
-        }
-        
-        // Si aucun feedback, rien à faire
-        if (feedbackItems.length === 0) {
-            localStorage.removeItem(this.pendingSyncKey);
-            return;
-        }
-        
-        // Tenter d'envoyer au serveur
-        fetch('/api/feedback', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(feedbackItems)
-        })
-        .then(response => {
-            if (response.ok) {
-                // Feedback envoyé avec succès, effacer le flag
-                localStorage.removeItem(this.pendingSyncKey);
-                console.log('✅ Feedback ML synchronisé avec le serveur');
-                return response.json();
-            } else {
-                throw new Error('Erreur lors de l\'envoi du feedback');
+            // Bouton pour enregistrer le feedback
+            if (event.target.closest('#ml-feedback-save')) {
+                this.saveFeedback();
             }
-        })
-        .catch(error => {
-            console.error('❌ Erreur de synchronisation du feedback ML:', error);
-            // Ne pas effacer le flag pour réessayer plus tard
         });
     }
 
     /**
-     * Envoie le feedback au serveur
+     * Ajoute des boutons de feedback à chaque carte d'actualité
      */
-    async sendFeedbackToServer(feedback) {
-        try {
-            // Si l'API est disponible
-            if (typeof API_URL !== 'undefined') {
-                const response = await fetch(`${API_URL}/feedback`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(feedback)
-                });
-                
-                if (response.ok) {
-                    // Retirer le feedback de la liste des feedbacks en attente
-                    this.pendingFeedback = this.pendingFeedback.filter(item => 
-                        item.newsId !== feedback.newsId || 
-                        item.timestamp !== feedback.timestamp
-                    );
-                    this.savePendingFeedback();
-                    console.log('✅ Feedback envoyé avec succès au serveur');
-                }
-            } else {
-                // API non disponible, marquer comme en attente de synchronisation
-                localStorage.setItem(this.pendingSyncKey, 'true');
-                console.log('API non disponible, feedback en attente de synchronisation');
+    addFeedbackButtonsToNews() {
+        const newsCards = document.querySelectorAll('.news-card');
+        if (newsCards.length === 0) {
+            console.log('⚠️ Aucune carte d\'actualité trouvée sur cette page');
+            return;
+        }
+        
+        console.log(`🔍 ${newsCards.length} cartes d'actualités trouvées`);
+        
+        newsCards.forEach((card, index) => {
+            // Assigner un ID unique si nécessaire
+            if (!card.dataset.newsId) {
+                card.dataset.newsId = `news-${Date.now()}-${index}`;
             }
-        } catch (error) {
-            console.error('Erreur lors de l\'envoi du feedback:', error);
-            // Le feedback reste dans la liste des feedbacks en attente
-            localStorage.setItem(this.pendingSyncKey, 'true');
+            
+            // Extraire les classifications actuelles
+            const category = card.dataset.category || 'general';
+            const sentiment = card.dataset.sentiment || 'neutral';
+            const impact = card.dataset.impact || 'low';
+            
+            // Stocker les classifications originales pour référence
+            card.dataset.originalCategory = category;
+            card.dataset.originalSentiment = sentiment;
+            card.dataset.originalImpact = impact;
+            
+            // Ajouter le bouton de feedback s'il n'existe pas déjà
+            if (!card.querySelector('.ml-feedback-btn')) {
+                const metaContainer = card.querySelector('.news-meta') || card.querySelector('.news-content');
+                
+                if (metaContainer) {
+                    const feedbackBtn = document.createElement('button');
+                    feedbackBtn.className = 'ml-feedback-btn';
+                    feedbackBtn.innerHTML = '<i class="fas fa-robot"></i> Améliorer IA';
+                    feedbackBtn.title = 'Aider à améliorer la classification de cette actualité';
+                    
+                    metaContainer.appendChild(feedbackBtn);
+                }
+            }
+        });
+        
+        console.log('✅ Boutons de feedback ajoutés aux actualités');
+    }
+
+    /**
+     * Ouvre la modal de feedback pour une carte d'actualité
+     */
+    openFeedbackModal(newsCard) {
+        const newsId = newsCard.dataset.newsId;
+        const title = newsCard.querySelector('h3')?.textContent || 'Article sans titre';
+        const originalCategory = newsCard.dataset.originalCategory || 'general';
+        const originalSentiment = newsCard.dataset.originalSentiment || 'neutral';
+        
+        // Vérifier si une modal existe déjà, sinon la créer
+        let modal = document.getElementById('ml-feedback-modal');
+        
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'ml-feedback-modal';
+            modal.className = 'ml-feedback-modal';
+            document.body.appendChild(modal);
+        }
+        
+        // Mettre à jour le contenu de la modal
+        modal.innerHTML = `
+            <div class="ml-feedback-content">
+                <h2>Modifier la classification</h2>
+                <p class="ml-feedback-article-title">Article: "${title}"</p>
+                
+                <div class="ml-feedback-form">
+                    <div class="ml-feedback-field">
+                        <label for="ml-category-select">Catégorie:</label>
+                        <select id="ml-category-select" class="ml-select">
+                            <option value="general" ${originalCategory === 'general' ? 'selected' : ''}>Générale</option>
+                            <option value="economy" ${originalCategory === 'economy' ? 'selected' : ''}>Économie</option>
+                            <option value="markets" ${originalCategory === 'markets' ? 'selected' : ''}>Marchés</option>
+                            <option value="companies" ${originalCategory === 'companies' ? 'selected' : ''}>Entreprises</option>
+                            <option value="technology" ${originalCategory === 'technology' ? 'selected' : ''}>Technologie</option>
+                            <option value="finance" ${originalCategory === 'finance' ? 'selected' : ''}>Finance</option>
+                        </select>
+                    </div>
+                    
+                    <div class="ml-feedback-field">
+                        <label for="ml-sentiment-select">Sentiment:</label>
+                        <select id="ml-sentiment-select" class="ml-select">
+                            <option value="positive" ${originalSentiment === 'positive' ? 'selected' : ''}>Positif</option>
+                            <option value="neutral" ${originalSentiment === 'neutral' ? 'selected' : ''}>Neutre</option>
+                            <option value="negative" ${originalSentiment === 'negative' ? 'selected' : ''}>Négatif</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="ml-feedback-actions">
+                    <button id="ml-feedback-cancel" class="ml-button ml-button-cancel">Annuler</button>
+                    <button id="ml-feedback-save" class="ml-button ml-button-save">Enregistrer</button>
+                </div>
+            </div>
+        `;
+        
+        // Stocker les référence pour utilisation ultérieure
+        modal.dataset.newsId = newsId;
+        modal.dataset.originalCategory = originalCategory;
+        modal.dataset.originalSentiment = originalSentiment;
+        
+        // Afficher la modal
+        modal.style.display = 'flex';
+    }
+
+    /**
+     * Ferme la modal de feedback
+     */
+    closeFeedbackModal() {
+        const modal = document.getElementById('ml-feedback-modal');
+        if (modal) {
+            modal.style.display = 'none';
         }
     }
 
     /**
-     * Affiche un message de confirmation
+     * Enregistre le feedback de l'utilisateur
      */
-    showConfirmationMessage() {
-        // Créer le toast
-        const toast = document.createElement('div');
-        toast.className = 'toast success';
-        toast.textContent = 'Merci pour votre feedback! Vos commentaires nous aident à améliorer notre système.';
+    saveFeedback() {
+        const modal = document.getElementById('ml-feedback-modal');
+        if (!modal) return;
         
-        // Ajouter le toast au body
-        document.body.appendChild(toast);
+        const newsId = modal.dataset.newsId;
+        const originalCategory = modal.dataset.originalCategory;
+        const originalSentiment = modal.dataset.originalSentiment;
         
-        // Afficher le toast
-        setTimeout(() => {
-            toast.classList.add('show');
-        }, 100);
+        const newCategory = document.getElementById('ml-category-select').value;
+        const newSentiment = document.getElementById('ml-sentiment-select').value;
         
-        // Supprimer le toast après 5 secondes
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => {
-                document.body.removeChild(toast);
-            }, 300);
-        }, 5000);
+        // Ne pas enregistrer si rien n'a changé
+        if (originalCategory === newCategory && originalSentiment === newSentiment) {
+            console.log('⚠️ Aucune modification détectée, feedback ignoré');
+            this.closeFeedbackModal();
+            return;
+        }
+        
+        // Créer l'objet de feedback
+        const feedback = {
+            id: `feedback-${Date.now()}`,
+            newsId: newsId,
+            original: {
+                category: originalCategory,
+                sentiment: originalSentiment
+            },
+            corrected: {
+                category: newCategory,
+                sentiment: newSentiment
+            },
+            timestamp: new Date().toISOString(),
+            userAgent: navigator.userAgent
+        };
+        
+        console.log('📝 Nouveau feedback:', feedback);
+        
+        // Stocker le feedback localement
+        this.storeFeedbackLocally(feedback);
+        
+        // Essayer de synchroniser immédiatement
+        this.syncFeedbackData();
+        
+        // Mettre à jour visuellement la classification sur la carte
+        this.updateNewsCardClassification(newsId, newCategory, newSentiment);
+        
+        // Afficher une confirmation
+        this.showFeedbackSuccess();
+        
+        // Fermer la modal
+        this.closeFeedbackModal();
     }
 
     /**
-     * Synchronise les feedbacks en attente
-     * Cette méthode peut être appelée périodiquement pour réessayer d'envoyer les feedbacks en attente
+     * Stocke le feedback dans le stockage local
      */
-    async syncPendingFeedback() {
-        if (this.pendingFeedback.length === 0) return;
-        
-        console.log(`Tentative de synchronisation de ${this.pendingFeedback.length} feedbacks en attente`);
-        
-        // Préparer les données pour l'API
-        const batchedFeedback = {
-            feedbacks: this.pendingFeedback,
-            timestamp: new Date().toISOString(),
-            source: 'web_client'
-        };
-        
+    storeFeedbackLocally(feedback) {
         try {
-            // Si l'API est disponible
-            if (typeof API_URL !== 'undefined') {
-                const response = await fetch(`${API_URL}/feedback/batch`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(batchedFeedback)
-                });
-                
-                if (response.ok) {
-                    // Tout le lot a été envoyé avec succès
-                    this.pendingFeedback = [];
-                    this.savePendingFeedback();
-                    localStorage.removeItem(this.pendingSyncKey);
-                    console.log('✅ Tous les feedbacks en attente ont été synchronisés avec succès');
-                    return true;
-                } else {
-                    throw new Error(`Erreur serveur: ${response.status}`);
-                }
-            } else {
-                console.log('API non disponible, les feedbacks restent en attente de synchronisation');
-                return false;
-            }
+            // Récupérer les feedbacks existants
+            let feedbacks = JSON.parse(localStorage.getItem('tradepulse_ml_feedback') || '[]');
+            
+            // Ajouter le nouveau feedback
+            feedbacks.push(feedback);
+            
+            // Enregistrer le tableau mis à jour
+            localStorage.setItem('tradepulse_ml_feedback', JSON.stringify(feedbacks));
+            
+            console.log(`✅ Feedback stocké localement (${feedbacks.length} total)`);
+            return true;
         } catch (error) {
-            console.error('Erreur lors de la synchronisation des feedbacks:', error);
+            console.error('❌ Erreur lors du stockage local du feedback:', error);
             return false;
         }
     }
+
+    /**
+     * Synchronise les feedbacks avec le serveur ou génère un fichier à télécharger
+     */
+    async syncFeedbackData() {
+        try {
+            // Récupérer les feedbacks stockés localement
+            const feedbacksStr = localStorage.getItem('tradepulse_ml_feedback');
+            if (!feedbacksStr || feedbacksStr === '[]') {
+                console.log('ℹ️ Aucun feedback à synchroniser');
+                return;
+            }
+            
+            const feedbacks = JSON.parse(feedbacksStr);
+            console.log(`🔄 Tentative de synchronisation de ${feedbacks.length} feedbacks...`);
+            
+            // VERSION GITHUB PAGES - EXPORT DE FICHIER
+            // Pour un site statique sans backend, on propose le téléchargement
+            if (window.location.hostname.includes('github.io') || true) {
+                // Si plus de 3 feedbacks sont disponibles, proposer le téléchargement
+                if (feedbacks.length >= 3) {
+                    this.offerFeedbackDownload(feedbacks);
+                }
+                return;
+            }
+            
+            // SI VOUS AJOUTEZ UNE API PLUS TARD, UTILISEZ CE CODE:
+            // const response = await fetch('/api/ml/feedback', {
+            //     method: 'POST',
+            //     headers: {
+            //         'Content-Type': 'application/json'
+            //     },
+            //     body: feedbacksStr
+            // });
+            //
+            // if (response.ok) {
+            //     console.log('✅ Feedbacks synchronisés avec succès!');
+            //     localStorage.removeItem('tradepulse_ml_feedback');
+            // } else {
+            //     console.error('❌ Erreur lors de la synchronisation:', response.status);
+            // }
+        } catch (error) {
+            console.error('❌ Erreur lors de la synchronisation des feedbacks:', error);
+        }
+    }
+
+    /**
+     * Propose le téléchargement des feedbacks
+     */
+    offerFeedbackDownload(feedbacks) {
+        // Créer un bouton flottant pour télécharger les feedbacks
+        let downloadBtn = document.getElementById('ml-feedback-download-btn');
+        
+        if (!downloadBtn) {
+            downloadBtn = document.createElement('button');
+            downloadBtn.id = 'ml-feedback-download-btn';
+            downloadBtn.className = 'ml-feedback-download-btn';
+            downloadBtn.innerHTML = `<i class="fas fa-download"></i> Exporter les feedbacks (${feedbacks.length})`;
+            downloadBtn.title = 'Télécharger les feedbacks pour améliorer notre modèle';
+            
+            downloadBtn.addEventListener('click', () => {
+                this.downloadFeedbackData();
+            });
+            
+            document.body.appendChild(downloadBtn);
+        } else {
+            downloadBtn.innerHTML = `<i class="fas fa-download"></i> Exporter les feedbacks (${feedbacks.length})`;
+        }
+    }
+
+    /**
+     * Télécharge les données de feedback sous forme de fichier JSON
+     */
+    downloadFeedbackData() {
+        const feedbacksStr = localStorage.getItem('tradepulse_ml_feedback');
+        if (!feedbacksStr || feedbacksStr === '[]') {
+            alert('Aucun feedback à télécharger.');
+            return;
+        }
+        
+        // Créer un blob avec les données
+        const blob = new Blob([feedbacksStr], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        
+        // Créer un lien de téléchargement invisible
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `tradepulse_ml_feedback_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(a);
+        
+        // Déclencher le téléchargement
+        a.click();
+        
+        // Nettoyer
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        // Demander si l'utilisateur veut effacer les feedbacks locaux après téléchargement
+        if (confirm('Feedbacks téléchargés avec succès! Souhaitez-vous effacer les feedbacks de votre navigateur?')) {
+            localStorage.removeItem('tradepulse_ml_feedback');
+            const downloadBtn = document.getElementById('ml-feedback-download-btn');
+            if (downloadBtn) {
+                downloadBtn.remove();
+            }
+        }
+    }
+
+    /**
+     * Met à jour visuellement la classification sur la carte d'actualité
+     */
+    updateNewsCardClassification(newsId, category, sentiment) {
+        const newsCard = document.querySelector(`.news-card[data-news-id="${newsId}"]`);
+        if (!newsCard) return;
+        
+        // Mettre à jour les attributs de données
+        newsCard.dataset.category = category;
+        newsCard.dataset.sentiment = sentiment;
+        
+        // Mettre à jour visuellement si nécessaire (classes CSS, étiquettes, etc.)
+        // Par exemple, ajouter/supprimer des classes basées sur le sentiment
+        newsCard.classList.remove('positive-sentiment', 'neutral-sentiment', 'negative-sentiment');
+        newsCard.classList.add(`${sentiment}-sentiment`);
+        
+        // Ajouter une indication visuelle que la carte a été mise à jour
+        newsCard.classList.add('ml-updated');
+        
+        console.log(`✅ Classification mise à jour visuellement pour ${newsId}`);
+    }
+
+    /**
+     * Affiche une notification de succès après l'enregistrement du feedback
+     */
+    showFeedbackSuccess() {
+        // Créer l'élément de notification s'il n'existe pas
+        let notification = document.getElementById('ml-feedback-notification');
+        
+        if (!notification) {
+            notification = document.createElement('div');
+            notification.id = 'ml-feedback-notification';
+            notification.className = 'ml-feedback-notification';
+            document.body.appendChild(notification);
+        }
+        
+        // Mettre à jour le contenu
+        notification.innerHTML = `
+            <div class="ml-feedback-notification-content">
+                <i class="fas fa-check-circle"></i>
+                <span>Merci pour votre feedback! Il aidera à améliorer notre IA.</span>
+            </div>
+        `;
+        
+        // Afficher la notification
+        notification.classList.add('visible');
+        
+        // Masquer après quelques secondes
+        setTimeout(() => {
+            notification.classList.remove('visible');
+        }, 3000);
+    }
 }
 
-// Initialiser le système de feedback et l'exposer globalement
-const mlFeedback = new MLFeedbackSystem();
-window.mlFeedback = mlFeedback;
-
-// Exporter pour utilisation dans d'autres modules
-if (typeof module !== 'undefined') {
-    module.exports = { MLFeedbackSystem };
-}
+// Initialiser le système de feedback lorsque le DOM est chargé
+document.addEventListener('DOMContentLoaded', () => {
+    // Créer une instance globale du système de feedback
+    window.mlFeedbackSystem = new MLFeedbackSystem();
+});
