@@ -1,6 +1,6 @@
 /**
  * secteurs-script.js - Scripts pour la page des secteurs boursiers
- * Basé sur la structure de marches-script.js mais adapté pour les données sectorielles
+ * Organisé par région (Europe/US) plutôt que par catégorie de secteur
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -27,48 +27,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
     
-    // Mapping des catégories pour les onglets d'affichage
-    const categoryMapping = {
-        "energy": "energy",
-        "materials": "materials",
-        "industrials": "industrials",
-        "consumer-discretionary": "consumer", 
-        "consumer-staples": "consumer",
-        "healthcare": "healthcare",
-        "financials": "financials",
-        "information-technology": "technology",
-        "communication-services": "technology",
-        "utilities": "utilities",
-        "real-estate": "real-estate"
-    };
-    
-    // Mapping des libellés des catégories
-    const categoryLabels = {
-        "energy": "Énergie",
-        "materials": "Matériaux",
-        "industrials": "Industrie",
-        "consumer-discretionary": "Consommation Discrétionnaire",
-        "consumer-staples": "Consommation de Base",
-        "healthcare": "Santé",
-        "financials": "Finance",
-        "information-technology": "Technologie",
-        "communication-services": "Communication",
-        "utilities": "Services Publics",
-        "real-estate": "Immobilier"
-    };
-    
-    // Mapping des régions pour l'affichage
-    const regionLabels = {
-        "Europe": "STOXX Europe 600",
-        "US": "S&P 500 Sectors"
-    };
-    
     // État du scraper
     let isLoading = false;
     let lastUpdate = null;
     
-    // Initialiser les onglets de secteurs
-    initSectorTabs();
+    // Initialiser les onglets de région
+    initRegionTabs();
     
     // Mettre à jour l'horloge du marché
     updateMarketTime();
@@ -122,10 +86,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * Initialise les onglets de secteurs
+     * Initialise les onglets de région
      */
-    function initSectorTabs() {
-        const tabs = document.querySelectorAll('.sector-tab');
+    function initRegionTabs() {
+        const tabs = document.querySelectorAll('.region-tab');
         
         tabs.forEach(tab => {
             tab.addEventListener('click', function() {
@@ -134,14 +98,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.classList.add('active');
                 
                 // Afficher le contenu correspondant
-                const category = this.getAttribute('data-category');
-                const contents = document.querySelectorAll('.sector-content');
+                const region = this.getAttribute('data-region');
+                const contents = document.querySelectorAll('.region-content');
                 
                 contents.forEach(content => {
                     content.classList.add('hidden');
                 });
                 
-                document.getElementById(`${category}-sectors`)?.classList.remove('hidden');
+                document.getElementById(`${region}-sectors`)?.classList.remove('hidden');
             });
         });
     }
@@ -223,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * Affiche les données de secteurs dans l'interface
+     * Affiche les données de secteurs dans l'interface, organisées par région
      */
     function renderSectorsData() {
         try {
@@ -249,35 +213,27 @@ document.addEventListener('DOMContentLoaded', function() {
             
             document.getElementById('last-update-time').textContent = formattedDate;
             
-            // Créer un mapping pour regrouper les secteurs par onglet d'affichage
-            const displayCategories = {
-                "energy": [],
-                "financials": [],
-                "technology": [],
-                "healthcare": [],
-                "consumer": [],
-                "industrials": [],
-                "materials": [],
-                "utilities": [],
-                "real-estate": []
+            // Préparer les données par région
+            const regionData = {
+                "europe": [],
+                "us": []
             };
             
-            // Regrouper les secteurs par catégorie d'affichage
+            // Regrouper tous les secteurs par région
             for (const [category, sectors] of Object.entries(sectorsData.sectors)) {
-                const displayCategory = categoryMapping[category] || "other";
-                if (displayCategories[displayCategory]) {
-                    sectors.forEach(sector => {
-                        // Ajouter la catégorie d'origine comme information supplémentaire
-                        sector.originalCategory = category;
-                        sector.categoryLabel = categoryLabels[category] || category;
-                        displayCategories[displayCategory].push(sector);
-                    });
-                }
+                sectors.forEach(sector => {
+                    // Déterminer la région
+                    if (sector.region === "Europe" || sector.source === "Les Echos") {
+                        regionData.europe.push({...sector, category});
+                    } else if (sector.region === "US" || sector.source === "Boursorama") {
+                        regionData.us.push({...sector, category});
+                    }
+                });
             }
             
-            // Générer le HTML pour chaque catégorie d'affichage
-            for (const [displayCategory, sectors] of Object.entries(displayCategories)) {
-                const tableBody = document.getElementById(`${displayCategory}-sectors-body`);
+            // Générer le HTML pour chaque région
+            for (const [region, sectors] of Object.entries(regionData)) {
+                const tableBody = document.getElementById(`${region}-sectors-body`);
                 
                 if (tableBody) {
                     // Vider le corps du tableau
@@ -287,21 +243,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (sectors.length === 0) {
                         const emptyRow = document.createElement('tr');
                         emptyRow.innerHTML = `
-                            <td colspan="6" class="text-center py-4 text-gray-400">
+                            <td colspan="5" class="text-center py-4 text-gray-400">
                                 <i class="fas fa-info-circle mr-2"></i>
-                                Aucune donnée disponible pour cette catégorie
+                                Aucune donnée disponible pour cette région
                             </td>
                         `;
                         tableBody.appendChild(emptyRow);
                     } else {
-                        // Trier les secteurs par région puis par nom
+                        // Trier les secteurs par nom
                         const sortedSectors = [...sectors].sort((a, b) => {
-                            // D'abord trier par région
-                            if (a.region !== b.region) {
-                                return (a.region || "").localeCompare(b.region || "");
-                            }
-                            
-                            // Ensuite par nom de secteur
                             return (a.name || "").localeCompare(b.name || "");
                         });
                         
@@ -313,13 +263,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             const changeClass = sector.changePercent && sector.changePercent.includes('-') ? 'negative' : 'positive';
                             const ytdClass = sector.ytdChange && sector.ytdChange.includes('-') ? 'negative' : 'positive';
                             
-                            // Obtenir le libellé de la région
-                            const regionLabel = regionLabels[sector.region] || sector.region;
-                            
                             // Création de la ligne avec la structure correcte
                             row.innerHTML = `
-                                <td class="font-medium">${regionLabel || '-'}</td>
-                                <td>${sector.categoryLabel || sector.name || '-'}</td>
+                                <td>${sector.name || '-'}</td>
                                 <td>${sector.value || '-'}</td>
                                 <td class="${changeClass}">${sector.changePercent || '-'}</td>
                                 <td class="${ytdClass}">${sector.ytdChange || '-'}</td>
@@ -335,10 +281,10 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Mettre à jour l'aperçu des secteurs
-            updateSectorOverview();
+            updateSectorOverview(regionData);
             
             // Calculer et afficher les top performers
-            updateTopPerformers();
+            updateTopPerformers(regionData);
             
             // Masquer le loader et afficher les données
             hideElement('sectors-loading');
@@ -355,7 +301,7 @@ document.addEventListener('DOMContentLoaded', function() {
     /**
      * Met à jour l'aperçu des secteurs
      */
-    function updateSectorOverview() {
+    function updateSectorOverview(regionData) {
         try {
             console.log('Mise à jour de l\'aperçu des secteurs...');
             
@@ -365,15 +311,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 { name: 'Finance', category: 'financials', selector: '.sector-col[data-sector="financials"]' },
                 { name: 'Technologie', category: 'information-technology', selector: '.sector-col[data-sector="technology"]' },
                 { name: 'Santé', category: 'healthcare', selector: '.sector-col[data-sector="healthcare"]' }
-            ]);
+            ], regionData.europe);
             
-            // USA - S&P 500 Sectors
+            // USA - NASDAQ US
             updateSectorOverviewRegion('us', [
                 { name: 'Énergie', category: 'energy', selector: '.sector-col[data-sector="energy-us"]' },
                 { name: 'Finance', category: 'financials', selector: '.sector-col[data-sector="financials-us"]' },
                 { name: 'Technologie', category: 'information-technology', selector: '.sector-col[data-sector="technology-us"]' },
                 { name: 'Santé', category: 'healthcare', selector: '.sector-col[data-sector="healthcare-us"]' }
-            ]);
+            ], regionData.us);
             
             console.log('Mise à jour de l\'aperçu des secteurs terminée');
         } catch (error) {
@@ -384,7 +330,7 @@ document.addEventListener('DOMContentLoaded', function() {
     /**
      * Met à jour une région spécifique de l'aperçu des secteurs
      */
-    function updateSectorOverviewRegion(region, sectorsInfo) {
+    function updateSectorOverviewRegion(regionName, sectorsInfo, sectorsList) {
         sectorsInfo.forEach(sectorInfo => {
             try {
                 // Trouver l'élément dans le DOM
@@ -395,9 +341,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 // Trouver le secteur correspondant dans les données
-                const sector = findSectorByNameAndRegion(sectorInfo.category, region);
+                const sector = sectorsList.find(s => s.category === sectorInfo.category);
                 if (!sector) {
-                    console.warn(`Secteur non trouvé: ${sectorInfo.name} dans la région ${region}`);
+                    console.warn(`Secteur non trouvé: ${sectorInfo.name} dans la région ${regionName}`);
                     return;
                 }
                 
@@ -426,100 +372,58 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * Trouve un secteur par son nom de catégorie et sa région
-     */
-    function findSectorByNameAndRegion(category, displayRegion) {
-        const regionMapping = {
-            'europe': 'Europe',
-            'us': 'US'
-        };
-        
-        const targetRegion = regionMapping[displayRegion] || displayRegion;
-        
-        // Chercher dans la catégorie spécifiée
-        if (sectorsData.sectors[category]) {
-            const sector = sectorsData.sectors[category].find(s => 
-                s.region && s.region.includes(targetRegion)
-            );
-            
-            if (sector) return sector;
-        }
-        
-        // Si non trouvé, chercher dans toutes les catégories (fallback)
-        for (const [cat, sectors] of Object.entries(sectorsData.sectors)) {
-            if (cat !== category) {
-                const sector = sectors.find(s => 
-                    s.region && s.region.includes(targetRegion)
-                );
-                
-                if (sector) return sector;
-            }
-        }
-        
-        return null;
-    }
-    
-    /**
      * Calcule et affiche les top performers
      */
-    function updateTopPerformers() {
-        // Collecter tous les secteurs dans une liste plate
-        const allSectors = [];
-        
-        for (const [category, sectors] of Object.entries(sectorsData.sectors)) {
-            if (sectors && sectors.length) {
-                sectors.forEach(sector => {
-                    // Ajouter la catégorie comme information
-                    sector.category = category;
-                    sector.categoryLabel = categoryLabels[category] || category;
-                    allSectors.push(sector);
-                });
+    function updateTopPerformers(regionData) {
+        try {
+            // Collecter tous les secteurs dans une liste plate
+            const allSectors = [...regionData.europe, ...regionData.us];
+            
+            // Si pas assez de secteurs, ne rien faire
+            if (allSectors.length < 3) {
+                return;
             }
-        }
-        
-        // Si pas assez de secteurs, ne rien faire
-        if (allSectors.length < 3) {
-            return;
-        }
-        
-        // Préparer les secteurs avec des valeurs numériques pour les classements
-        const preparedSectors = allSectors.map(sector => {
+            
             // Fonction pour extraire la valeur numérique d'un pourcentage
             function extractPercentageValue(percentStr) {
                 if (!percentStr) return 0;
-                // Enlever le symbole % et autres caractères, conserver seulement les chiffres, le point et le signe -
-                const value = percentStr.replace(/[^0-9\\\\\-\\\\\\\\.]/g, '').replace(',', '.');
+                const value = percentStr.replace(/[^0-9\-\.,]/g, '').replace(',', '.');
                 return parseFloat(value) || 0;
             }
             
-            const changePercentValue = extractPercentageValue(sector.changePercent);
-            const ytdChangeValue = extractPercentageValue(sector.ytdChange);
+            // Préparer les secteurs avec des valeurs numériques pour les classements
+            const preparedSectors = allSectors.map(sector => {
+                const changePercentValue = extractPercentageValue(sector.changePercent);
+                const ytdChangeValue = extractPercentageValue(sector.ytdChange);
+                
+                return {
+                    ...sector,
+                    changePercentValue,
+                    ytdChangeValue
+                };
+            });
             
-            return {
-                ...sector,
-                changePercentValue,
-                ytdChangeValue
-            };
-        });
-        
-        // Filtrer les secteurs sans données numériques valides
-        const filteredSectors = preparedSectors.filter(
-            sector => !isNaN(sector.changePercentValue) && !isNaN(sector.ytdChangeValue)
-        );
-        
-        // Obtenir les tops et flops pour var%
-        const topDaily = [...filteredSectors].sort((a, b) => b.changePercentValue - a.changePercentValue).slice(0, 3);
-        const bottomDaily = [...filteredSectors].sort((a, b) => a.changePercentValue - b.changePercentValue).slice(0, 3);
-        
-        // Obtenir les tops et flops pour YTD
-        const topYTD = [...filteredSectors].sort((a, b) => b.ytdChangeValue - a.ytdChangeValue).slice(0, 3);
-        const bottomYTD = [...filteredSectors].sort((a, b) => a.ytdChangeValue - b.ytdChangeValue).slice(0, 3);
-        
-        // Mettre à jour le HTML
-        updateTopPerformersHTML('daily-top', topDaily);
-        updateTopPerformersHTML('daily-bottom', bottomDaily);
-        updateTopPerformersHTML('ytd-top', topYTD);
-        updateTopPerformersHTML('ytd-bottom', bottomYTD);
+            // Filtrer les secteurs sans données numériques valides
+            const validSectors = preparedSectors.filter(
+                sector => !isNaN(sector.changePercentValue) && !isNaN(sector.ytdChangeValue)
+            );
+            
+            // Obtenir les tops et flops pour var%
+            const topDaily = [...validSectors].sort((a, b) => b.changePercentValue - a.changePercentValue).slice(0, 3);
+            const bottomDaily = [...validSectors].sort((a, b) => a.changePercentValue - b.changePercentValue).slice(0, 3);
+            
+            // Obtenir les tops et flops pour YTD
+            const topYTD = [...validSectors].sort((a, b) => b.ytdChangeValue - a.ytdChangeValue).slice(0, 3);
+            const bottomYTD = [...validSectors].sort((a, b) => a.ytdChangeValue - b.ytdChangeValue).slice(0, 3);
+            
+            // Mettre à jour le HTML
+            updateTopPerformersHTML('daily-top', topDaily);
+            updateTopPerformersHTML('daily-bottom', bottomDaily);
+            updateTopPerformersHTML('ytd-top', topYTD);
+            updateTopPerformersHTML('ytd-bottom', bottomYTD);
+        } catch (error) {
+            console.error('❌ Erreur lors de la mise à jour des top performers:', error);
+        }
     }
     
     /**
@@ -540,13 +444,15 @@ document.addEventListener('DOMContentLoaded', function() {
             const valueField = containerId.includes('ytd') ? 'ytdChange' : 'changePercent';
             const valueClass = (sector[valueField] || "").includes('-') ? 'negative' : 'positive';
             
-            // Obtenir le libellé de la région
-            const regionLabel = regionLabels[sector.region] || sector.region;
+            // Obtenir la région au format d'affichage
+            const regionDisplay = sector.region === "Europe" ? "STOXX Europe 600" : 
+                                 sector.region === "US" ? "NASDAQ US" : 
+                                 sector.source === "Les Echos" ? "STOXX Europe 600" : "NASDAQ US";
             
             row.innerHTML = `
                 <div class="performer-info">
-                    <div class="performer-index">${sector.categoryLabel || sector.name || ""}</div>
-                    <div class="performer-region">${regionLabel || ""}</div>
+                    <div class="performer-index">${sector.name}</div>
+                    <div class="performer-region">${regionDisplay}</div>
                 </div>
                 <div class="performer-value ${valueClass}">
                     ${sector[valueField] || "-"}
