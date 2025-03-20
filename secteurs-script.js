@@ -4,6 +4,9 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Ajouter un indicateur de debug dans la console
+    console.log('🔍 Initialisation de la page des secteurs boursiers');
+    
     // Variables globales pour stocker les données
     let sectorsData = {
         sectors: {
@@ -60,6 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function addDataLabels() {
         // Sélectionner toutes les cellules de secteurs
         const sectorCols = document.querySelectorAll('.sector-col');
+        console.log('🔍 Nombre de secteurs trouvés:', sectorCols.length);
         
         sectorCols.forEach(col => {
             const dataContainer = col.querySelector('.sector-data');
@@ -90,6 +94,7 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     function initRegionTabs() {
         const tabs = document.querySelectorAll('.region-tab');
+        console.log('🔍 Onglets de région trouvés:', tabs.length);
         
         tabs.forEach(tab => {
             tab.addEventListener('click', function() {
@@ -99,13 +104,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Afficher le contenu correspondant
                 const region = this.getAttribute('data-region');
+                console.log('🔍 Région sélectionnée:', region);
+                
                 const contents = document.querySelectorAll('.region-content');
                 
                 contents.forEach(content => {
                     content.classList.add('hidden');
                 });
                 
-                document.getElementById(`${region}-sectors`)?.classList.remove('hidden');
+                const selectedContent = document.getElementById(`${region}-sectors`);
+                if (selectedContent) {
+                    selectedContent.classList.remove('hidden');
+                } else {
+                    console.error(`❌ Contenu pour la région ${region} non trouvé!`);
+                }
             });
         });
     }
@@ -121,6 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         isLoading = true;
+        console.log('🔍 Début du chargement des données sectorielles');
         
         // Afficher le loader
         showElement('sectors-loading');
@@ -137,8 +150,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 throw new Error(`Erreur de chargement: ${response.status}`);
             }
             
+            console.log('✅ Données JSON récupérées avec succès');
+            
             // Charger les données
             const rawData = await response.json();
+            
+            // Log pour déboguer
+            console.log('🔍 Données brutes reçues:', {
+                nbSectors: Object.values(rawData.sectors).reduce((acc, curr) => acc + curr.length, 0),
+                timestamp: rawData.meta.timestamp
+            });
             
             // S'assurer que toutes les catégories existent dans les données
             sectorsData = {
@@ -157,6 +178,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 meta: rawData.meta
             };
+            
+            // Log du nombre de secteurs par catégorie
+            for (const [category, sectors] of Object.entries(sectorsData.sectors)) {
+                console.log(`🔍 Catégorie ${category}: ${sectors.length} secteurs`);
+            }
             
             // Vérifier la fraîcheur des données
             const dataTimestamp = new Date(sectorsData.meta.timestamp);
@@ -191,6 +217,8 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     function renderSectorsData() {
         try {
+            console.log('🔍 Début du rendu des données sectorielles');
+            
             // Mettre à jour l'horodatage
             const timestamp = new Date(sectorsData.meta.timestamp);
             
@@ -223,32 +251,32 @@ document.addEventListener('DOMContentLoaded', function() {
             for (const [category, sectors] of Object.entries(sectorsData.sectors)) {
                 sectors.forEach(sector => {
                     // Log pour déboguer
-                    console.log(`Traitement de secteur: ${sector.name}, Source: ${sector.source}, Région: ${sector.region}`);
+                    console.log(`🔍 Traitement de secteur: ${sector.name}, Source: ${sector.source}, Région: ${sector.region}`);
                     
                     // Classer précisément par le nom de l'indice
-                    if (sector.name && sector.name.includes("Stoxx Europe 600")) {
+                    if (sector.name && (sector.name.includes("Stoxx Europe 600") || sector.name.includes("STOXX Europe 600"))) {
                         regionData.europe.push({...sector, category});
-                        console.log(`Classé dans EUROPE: ${sector.name}`);
+                        console.log(`✅ Classé dans EUROPE: ${sector.name}`);
                     } 
                     else if (sector.name && sector.name.includes("NASDAQ US")) {
                         regionData.us.push({...sector, category});
-                        console.log(`Classé dans US: ${sector.name}`);
+                        console.log(`✅ Classé dans US: ${sector.name}`);
                     }
                     // Classement de fallback par source ou région explicite
                     else if (sector.region === "Europe" || sector.source === "Les Echos") {
                         regionData.europe.push({...sector, category});
-                        console.log(`Classé dans EUROPE (fallback): ${sector.name}`);
+                        console.log(`✅ Classé dans EUROPE (fallback): ${sector.name}`);
                     } 
                     else if (sector.region === "US" || sector.source === "Boursorama") {
                         regionData.us.push({...sector, category});
-                        console.log(`Classé dans US (fallback): ${sector.name}`);
+                        console.log(`✅ Classé dans US (fallback): ${sector.name}`);
                     }
                 });
             }
             
             // Ajoutez un log pour vérifier la répartition finale
-            console.log(`Nombre de secteurs pour l'Europe: ${regionData.europe.length}`);
-            console.log(`Nombre de secteurs pour les US: ${regionData.us.length}`);
+            console.log(`📊 Nombre de secteurs pour l'Europe: ${regionData.europe.length}`);
+            console.log(`📊 Nombre de secteurs pour les US: ${regionData.us.length}`);
             
             // Générer le HTML pour chaque région
             for (const [region, sectors] of Object.entries(regionData)) {
@@ -268,6 +296,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </td>
                         `;
                         tableBody.appendChild(emptyRow);
+                        console.warn(`⚠️ Aucun secteur trouvé pour la région ${region}`);
                     } else {
                         // Trier les secteurs par nom
                         const sortedSectors = [...sectors].sort((a, b) => {
@@ -295,7 +324,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             
                             tableBody.appendChild(row);
                         });
+                        
+                        console.log(`✅ Tableau ${region} rempli avec ${sortedSectors.length} secteurs`);
                     }
+                } else {
+                    console.error(`❌ Tableau body non trouvé pour la région ${region}`);
                 }
             }
             
@@ -310,6 +343,8 @@ document.addEventListener('DOMContentLoaded', function() {
             hideElement('sectors-error');
             showElement('sectors-container');
             
+            console.log('✅ Rendu des données terminé avec succès');
+            
         } catch (error) {
             console.error('❌ Erreur lors de l\'affichage des données:', error);
             hideElement('sectors-loading');
@@ -322,25 +357,25 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     function updateSectorOverview(regionData) {
         try {
-            console.log('Mise à jour de l\'aperçu des secteurs...');
+            console.log('🔍 Mise à jour de l\'aperçu des secteurs...');
             
             // Europe - STOXX 600
             updateSectorOverviewRegion('europe', [
-                { name: 'Énergie', category: 'energy', selector: '.sector-col[data-sector="energy"]' },
-                { name: 'Finance', category: 'financials', selector: '.sector-col[data-sector="financials"]' },
-                { name: 'Technologie', category: 'information-technology', selector: '.sector-col[data-sector="technology"]' },
-                { name: 'Santé', category: 'healthcare', selector: '.sector-col[data-sector="healthcare"]' }
+                { name: 'Énergie', category: 'energy', selector: '.sector-col[data-sector="energy"], [data-sector="energy"]' },
+                { name: 'Finance', category: 'financials', selector: '.sector-col[data-sector="financials"], [data-sector="financials"]' },
+                { name: 'Technologie', category: 'information-technology', selector: '.sector-col[data-sector="technology"], [data-sector="technology"]' },
+                { name: 'Santé', category: 'healthcare', selector: '.sector-col[data-sector="healthcare"], [data-sector="healthcare"]' }
             ], regionData.europe);
             
             // USA - NASDAQ US
             updateSectorOverviewRegion('us', [
-                { name: 'Énergie', category: 'energy', selector: '.sector-col[data-sector="energy-us"]' },
-                { name: 'Finance', category: 'financials', selector: '.sector-col[data-sector="financials-us"]' },
-                { name: 'Technologie', category: 'information-technology', selector: '.sector-col[data-sector="technology-us"]' },
-                { name: 'Santé', category: 'healthcare', selector: '.sector-col[data-sector="healthcare-us"]' }
+                { name: 'Énergie', category: 'energy', selector: '.sector-col[data-sector="energy-us"], [data-sector="energy-us"]' },
+                { name: 'Finance', category: 'financials', selector: '.sector-col[data-sector="financials-us"], [data-sector="financials-us"]' },
+                { name: 'Technologie', category: 'information-technology', selector: '.sector-col[data-sector="technology-us"], [data-sector="technology-us"]' },
+                { name: 'Santé', category: 'healthcare', selector: '.sector-col[data-sector="healthcare-us"], [data-sector="healthcare-us"]' }
             ], regionData.us);
             
-            console.log('Mise à jour de l\'aperçu des secteurs terminée');
+            console.log('✅ Mise à jour de l\'aperçu des secteurs terminée');
         } catch (error) {
             console.error('❌ Erreur lors de la mise à jour de l\'aperçu des secteurs:', error);
         }
@@ -352,62 +387,81 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateSectorOverviewRegion(regionName, sectorsInfo, sectorsList) {
         sectorsInfo.forEach(sectorInfo => {
             try {
+                console.log(`🔍 Recherche de l'élément pour ${sectorInfo.name} (${regionName}) avec sélecteur: ${sectorInfo.selector}`);
+                
                 // Trouver l'élément dans le DOM
                 const container = document.querySelector(sectorInfo.selector);
                 if (!container) {
-                    console.warn(`Élément non trouvé pour le sélecteur: ${sectorInfo.selector}`);
-                    return;
-                }
-                
-                // Filtrer tous les secteurs de la catégorie
-                const sectorsInCategory = sectorsList.filter(s => s.category === sectorInfo.category);
-                
-                // Si on n'a pas trouvé de secteurs dans cette catégorie
-                if (sectorsInCategory.length === 0) {
-                    console.warn(`Secteurs non trouvés: ${sectorInfo.name} dans la région ${regionName}`);
-                    
-                    // Afficher un message dans l'interface
-                    const nameElement = container.querySelector('.sector-name');
-                    const valueElement = container.querySelector('.sector-value');
-                    const ytdElement = container.querySelector('.sector-ytd');
-                    
-                    if (nameElement) nameElement.textContent = sectorInfo.name;
-                    if (valueElement) {
-                        valueElement.textContent = 'N/A';
-                        valueElement.className = 'sector-value';
-                    }
-                    if (ytdElement) {
-                        ytdElement.textContent = 'N/A';
-                        ytdElement.className = 'sector-ytd';
+                    console.warn(`⚠️ Élément non trouvé pour le sélecteur: ${sectorInfo.selector}`);
+                    // Essayer un sélecteur plus simple
+                    const simpleSelector = `[data-sector="${sectorInfo.category}"]`;
+                    const containerAlternative = document.querySelector(simpleSelector);
+                    if (containerAlternative) {
+                        console.log(`✅ Élément trouvé avec le sélecteur alternatif: ${simpleSelector}`);
+                        updateSectorElement(containerAlternative, sectorInfo, sectorsList, regionName);
                     }
                     return;
                 }
                 
-                // Prendre le premier secteur pour l'affichage (ou faire une moyenne)
-                const sector = sectorsInCategory[0];
+                updateSectorElement(container, sectorInfo, sectorsList, regionName);
                 
-                // Mettre à jour les valeurs
-                const nameElement = container.querySelector('.sector-name');
-                const valueElement = container.querySelector('.sector-value');
-                const ytdElement = container.querySelector('.sector-ytd');
-                
-                if (nameElement) {
-                    nameElement.textContent = sectorInfo.name;
-                }
-                
-                if (valueElement) {
-                    valueElement.textContent = sector.changePercent || '0,00 %';
-                    valueElement.className = 'sector-value ' + (sector.changePercent && sector.changePercent.includes('-') ? 'negative' : 'positive');
-                }
-                
-                if (ytdElement) {
-                    ytdElement.textContent = sector.ytdChange || '0,00 %';
-                    ytdElement.className = 'sector-ytd ' + (sector.ytdChange && sector.ytdChange.includes('-') ? 'negative' : 'positive');
-                }
             } catch (error) {
-                console.error(`Erreur lors de la mise à jour de ${sectorInfo.name}:`, error);
+                console.error(`❌ Erreur lors de la mise à jour de ${sectorInfo.name}:`, error);
             }
         });
+    }
+    
+    /**
+     * Met à jour un élément de secteur avec les bonnes données
+     */
+    function updateSectorElement(container, sectorInfo, sectorsList, regionName) {
+        // Filtrer tous les secteurs de la catégorie
+        const sectorsInCategory = sectorsList.filter(s => s.category === sectorInfo.category);
+        console.log(`🔍 Secteurs trouvés pour ${sectorInfo.name} (${regionName}): ${sectorsInCategory.length}`);
+        
+        // Si on n'a pas trouvé de secteurs dans cette catégorie
+        if (sectorsInCategory.length === 0) {
+            console.warn(`⚠️ Aucun secteur trouvé pour: ${sectorInfo.name} dans la région ${regionName}`);
+            
+            // Afficher un message dans l'interface
+            const nameElement = container.querySelector('.sector-name');
+            const valueElement = container.querySelector('.sector-value');
+            const ytdElement = container.querySelector('.sector-ytd');
+            
+            if (nameElement) nameElement.textContent = sectorInfo.name;
+            if (valueElement) {
+                valueElement.textContent = 'N/A';
+                valueElement.className = 'sector-value';
+            }
+            if (ytdElement) {
+                ytdElement.textContent = 'N/A';
+                ytdElement.className = 'sector-ytd';
+            }
+            return;
+        }
+        
+        // Prendre le premier secteur pour l'affichage (ou faire une moyenne)
+        const sector = sectorsInCategory[0];
+        console.log(`✅ Utilisation du secteur ${sector.name} pour l'affichage`);
+        
+        // Mettre à jour les valeurs
+        const nameElement = container.querySelector('.sector-name');
+        const valueElement = container.querySelector('.sector-value');
+        const ytdElement = container.querySelector('.sector-ytd');
+        
+        if (nameElement) {
+            nameElement.textContent = sectorInfo.name;
+        }
+        
+        if (valueElement) {
+            valueElement.textContent = sector.changePercent || '0,00 %';
+            valueElement.className = 'sector-value ' + (sector.changePercent && sector.changePercent.includes('-') ? 'negative' : 'positive');
+        }
+        
+        if (ytdElement) {
+            ytdElement.textContent = sector.ytdChange || '0,00 %';
+            ytdElement.className = 'sector-ytd ' + (sector.ytdChange && sector.ytdChange.includes('-') ? 'negative' : 'positive');
+        }
     }
     
     /**
@@ -420,6 +474,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Si pas assez de secteurs, ne rien faire
             if (allSectors.length < 3) {
+                console.warn('⚠️ Pas assez de secteurs pour calculer les top performers');
                 return;
             }
             
@@ -447,6 +502,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 sector => !isNaN(sector.changePercentValue) && !isNaN(sector.ytdChangeValue)
             );
             
+            console.log(`🔍 Secteurs valides pour le top performers: ${validSectors.length}`);
+            
             // Obtenir les tops et flops pour var%
             const topDaily = [...validSectors].sort((a, b) => b.changePercentValue - a.changePercentValue).slice(0, 3);
             const bottomDaily = [...validSectors].sort((a, b) => a.changePercentValue - b.changePercentValue).slice(0, 3);
@@ -460,6 +517,8 @@ document.addEventListener('DOMContentLoaded', function() {
             updateTopPerformersHTML('daily-bottom', bottomDaily);
             updateTopPerformersHTML('ytd-top', topYTD);
             updateTopPerformersHTML('ytd-bottom', bottomYTD);
+            
+            console.log('✅ Top performers mis à jour');
         } catch (error) {
             console.error('❌ Erreur lors de la mise à jour des top performers:', error);
         }
@@ -509,6 +568,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const element = document.getElementById(id);
         if (element) {
             element.classList.remove('hidden');
+        } else {
+            console.warn(`⚠️ Élément avec id '${id}' non trouvé`);
         }
     }
     
@@ -516,6 +577,8 @@ document.addEventListener('DOMContentLoaded', function() {
         const element = document.getElementById(id);
         if (element) {
             element.classList.add('hidden');
+        } else {
+            console.warn(`⚠️ Élément avec id '${id}' non trouvé`);
         }
     }
     
@@ -627,4 +690,27 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // Ajouter un bouton de débogage pour forcer le rechargement des données
+    const debugButton = document.createElement('button');
+    debugButton.id = 'force-refresh';
+    debugButton.style.position = 'fixed';
+    debugButton.style.top = '10px';
+    debugButton.style.right = '100px';
+    debugButton.style.zIndex = '1000';
+    debugButton.style.padding = '5px 10px';
+    debugButton.style.background = '#00ff87';
+    debugButton.style.color = '#000';
+    debugButton.style.border = 'none';
+    debugButton.style.borderRadius = '4px';
+    debugButton.textContent = 'Forcer refresh';
+    document.body.appendChild(debugButton);
+    
+    debugButton.addEventListener('click', function() {
+        console.log('🔄 Forçage du rechargement des données...');
+        // Vider le cache local
+        localStorage.removeItem('lastSectorsUpdate');
+        // Forcer le rechargement avec logs détaillés
+        loadSectorsData(true);
+    });
 });
