@@ -4,13 +4,13 @@
     background-color: var(--background-color);
     border-radius: 12px;
     box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2), 0 0 20px rgba(0, 255, 135, 0.1);
-    padding: 1.5rem;
-    margin-bottom: 2rem;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
     position: relative;
     overflow: hidden;
     border: 1px solid rgba(0, 255, 135, 0.2);
     width: 100%;
-    max-width: 1600px; /* Augmenter la largeur maximale */
+    max-width: 1600px;
     margin-left: auto;
     margin-right: auto;
 }
@@ -39,10 +39,10 @@
 .portfolio-update-info {
     display: flex;
     align-items: center;
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.7);
-    margin-bottom: 1.5rem;
-    padding-bottom: 0.75rem;
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -54,8 +54,8 @@
 /* Onglets de portefeuille */
 .portfolio-tabs {
     display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 0.5rem;
     position: relative;
@@ -65,33 +65,34 @@
 }
 
 .portfolio-tabs::-webkit-scrollbar {
-    height: 4px;
+    height: 3px;
 }
 
 .portfolio-tabs::-webkit-scrollbar-track {
     background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
+    border-radius: 3px;
 }
 
 .portfolio-tabs::-webkit-scrollbar-thumb {
     background-color: var(--accent-color);
-    border-radius: 4px;
+    border-radius: 3px;
 }
 
 .portfolio-tab {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.75rem 1.25rem;
+    padding: 0.5rem 1rem;
     background-color: rgba(255, 255, 255, 0.05);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    border-radius: 6px;
     color: rgba(255, 255, 255, 0.8);
     cursor: pointer;
     transition: all 0.25s ease;
     font-weight: 500;
     white-space: nowrap;
     flex-shrink: 0;
+    font-size: 0.85rem;
 }
 
 .portfolio-tab:hover {
@@ -109,14 +110,14 @@
 }
 
 .tab-icon {
-    font-size: 1.1rem;
+    font-size: 0.9rem;
     display: flex;
     align-items: center;
     justify-content: center;
 }
 
 .tab-text {
-    font-size: 0.95rem;
+    font-size: 0.85rem;
 }
 
 /* Personnalisation des onglets */
@@ -124,12 +125,12 @@
     padding: 0;
     border-bottom: none;
     justify-content: center;
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
 }
 
 .portfolio-toggles .portfolio-tab {
-    padding: 0.75rem 1.5rem;
-    font-size: 0.9rem;
+    padding: 0.6rem 1.2rem;
+    font-size: 0.8rem;
     letter-spacing: 1px;
     text-transform: uppercase;
     font-weight: 600;
@@ -138,7 +139,7 @@
 /* Panneaux de contenu des portefeuilles */
 .portfolio-content {
     position: relative;
-    min-height: 400px;
+    min-height: 200px;
 }
 
 .portfolio-panel {
@@ -198,11 +199,11 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
 }
 
 .portfolio-header h2 {
-    font-size: 1.75rem;
+    font-size: 1.4rem;
     font-weight: 700;
     color: var(--text-color);
     margin: 0;
@@ -213,7 +214,7 @@
 .portfolio-meta {
     display: flex;
     gap: 1rem;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: rgba(255, 255, 255, 0.7);
 }
 
@@ -229,44 +230,44 @@
 
 /* Description du portefeuille */
 .portfolio-description {
-    margin-bottom: 2rem;
-    line-height: 1.6;
+    margin-bottom: 1.25rem;
+    line-height: 1.4;
     color: rgba(255, 255, 255, 0.8);
-    font-size: 0.95rem;
-    max-width: 100%; /* Modifier pour utiliser toute la largeur */
+    font-size: 0.85rem;
+    max-width: 100%;
     padding-left: 0.5rem;
     border-left: 3px solid var(--accent-color);
     background-color: rgba(0, 255, 135, 0.05);
-    padding: 1rem;
-    border-radius: 0 8px 8px 0;
+    padding: 0.75rem;
+    border-radius: 0 6px 6px 0;
 }
 
 /* Vue d'ensemble du portefeuille */
 .portfolio-overview {
     display: grid;
-    grid-template-columns: minmax(400px, 1fr) minmax(400px, 1fr);
-    gap: 2.5rem;
-    margin-bottom: 2rem;
+    grid-template-columns: minmax(260px, 1fr) minmax(280px, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
 }
 
 .portfolio-chart-container {
     position: relative;
-    height: 400px; /* Augmenter la hauteur */
+    height: 280px;
     background-color: rgba(255, 255, 255, 0.02);
-    border-radius: 12px;
-    padding: 1.5rem;
-    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+    border-radius: 10px;
+    padding: 1rem;
+    box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.1);
 }
 
 .portfolio-allocation {
-    padding: 1rem;
+    padding: 0.75rem;
     background-color: rgba(255, 255, 255, 0.02);
     border-radius: 8px;
 }
 
 .portfolio-allocation h3 {
-    font-size: 1.1rem;
-    margin-bottom: 1rem;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
     color: var(--text-color);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 0.5rem;
@@ -281,8 +282,8 @@
 .category-allocation li {
     display: flex;
     align-items: center;
-    margin-bottom: 0.75rem;
-    font-size: 0.9rem;
+    margin-bottom: 0.6rem;
+    font-size: 0.8rem;
 }
 
 .category-name {
@@ -293,16 +294,16 @@
 
 .allocation-bar {
     flex-grow: 1;
-    height: 8px;
+    height: 6px;
     background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-    margin: 0 1rem;
+    border-radius: 3px;
+    margin: 0 0.75rem;
     overflow: hidden;
 }
 
 .allocation-fill {
     height: 100%;
-    border-radius: 4px;
+    border-radius: 3px;
     transition: width 1s ease;
 }
 
@@ -315,22 +316,22 @@
 
 /* Détails du portefeuille */
 .portfolio-details {
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
 }
 
 .portfolio-category {
     background-color: rgba(255, 255, 255, 0.02);
     border-radius: 8px;
-    padding: 1rem;
+    padding: 0.75rem;
     overflow: hidden;
 }
 
 .portfolio-category h3 {
-    font-size: 1.1rem;
-    margin-bottom: 1rem;
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
     color: var(--text-color);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 0.5rem;
@@ -345,16 +346,16 @@
 
 .assets-table th {
     text-align: left;
-    padding: 0.5rem;
-    font-size: 0.85rem;
+    padding: 0.4rem;
+    font-size: 0.75rem;
     font-weight: 500;
     color: rgba(255, 255, 255, 0.6);
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .assets-table td {
-    padding: 0.5rem;
-    font-size: 0.9rem;
+    padding: 0.4rem;
+    font-size: 0.8rem;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -371,15 +372,15 @@
 .portfolio-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 1rem;
-    margin-top: 2rem;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
 }
 
 .portfolio-actions button {
-    padding: 0.75rem 1.25rem;
-    border-radius: 8px;
+    padding: 0.6rem 1rem;
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 500;
     display: flex;
     align-items: center;
@@ -462,8 +463,8 @@
 
 .portfolio-loading::after {
     content: '';
-    width: 50px;
-    height: 50px;
+    width: 40px;
+    height: 40px;
     border: 3px solid rgba(0, 255, 135, 0.3);
     border-radius: 50%;
     border-top-color: var(--accent-color);
@@ -474,6 +475,7 @@
     content: 'Chargement des portefeuilles...';
     margin-bottom: 1rem;
     color: var(--accent-color);
+    font-size: 0.9rem;
 }
 
 @keyframes spin {
@@ -482,26 +484,27 @@
 
 /* Message d'erreur */
 .portfolio-error {
-    padding: 1rem;
-    border-radius: 8px;
+    padding: 0.75rem;
+    border-radius: 6px;
     background-color: rgba(255, 59, 48, 0.1);
     border-left: 3px solid rgba(255, 59, 48, 0.8);
     color: rgba(255, 59, 48, 0.9);
-    margin: 1rem 0;
+    margin: 0.75rem 0;
     display: none;
+    font-size: 0.85rem;
 }
 
 /* Notifications */
 .tradepulse-notification {
     position: fixed;
-    bottom: 30px;
+    bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
-    padding: 1rem 2rem;
+    padding: 0.75rem 1.5rem;
     background-color: rgba(0, 0, 0, 0.8);
     color: white;
-    border-radius: 8px;
-    font-size: 0.9rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
     z-index: 1000;
     opacity: 0;
     transition: opacity 0.3s ease;
@@ -510,11 +513,11 @@
 }
 
 .tradepulse-notification.success {
-    border-left: 4px solid var(--accent-color);
+    border-left: 3px solid var(--accent-color);
 }
 
 .tradepulse-notification.error {
-    border-left: 4px solid #ff3b30;
+    border-left: 3px solid #ff3b30;
 }
 
 /* Animation */
@@ -530,7 +533,7 @@
     }
     
     .portfolio-chart-container {
-        height: 300px;
+        height: 250px;
     }
     
     .portfolio-actions {
@@ -550,22 +553,22 @@
     }
     
     .portfolio-details {
-        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     }
 }
 
 /* Styles pour la section portefeuille */
 .portefeuille-section {
-    margin-bottom: 3rem;
+    margin-bottom: 2rem;
 }
 
 .section-header {
-    margin-bottom: 2rem;
+    margin-bottom: 1.5rem;
     text-align: center;
 }
 
 .section-header h2 {
-    font-size: 2rem;
+    font-size: 1.6rem;
     margin-bottom: 0.5rem;
     color: var(--text-color);
 }
@@ -574,16 +577,17 @@
     color: rgba(255, 255, 255, 0.7);
     max-width: 800px;
     margin: 0 auto;
+    font-size: 0.85rem;
 }
 
 .portfolio-explanation {
-    margin-top: 3rem;
-    margin-bottom: 2rem;
+    margin-top: 2rem;
+    margin-bottom: 1.5rem;
 }
 
 .portfolio-explanation h3 {
-    font-size: 1.5rem;
-    margin-bottom: 1.5rem;
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
     color: var(--text-color);
     text-align: center;
 }
@@ -591,94 +595,95 @@
 .explanation-card {
     display: flex;
     background-color: rgba(255, 255, 255, 0.03);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin-bottom: 1rem;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .explanation-card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-3px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
     background-color: rgba(0, 255, 135, 0.05);
     border-color: rgba(0, 255, 135, 0.2);
 }
 
 .explanation-icon {
-    width: 60px;
-    height: 60px;
-    min-width: 60px;
+    width: 45px;
+    height: 45px;
+    min-width: 45px;
     display: flex;
     align-items: center;
     justify-content: center;
     background-color: rgba(0, 255, 135, 0.1);
     border-radius: 50%;
-    margin-right: 1.5rem;
+    margin-right: 1rem;
     color: var(--accent-color);
-    font-size: 1.5rem;
-    box-shadow: 0 0 15px rgba(0, 255, 135, 0.2);
+    font-size: 1.2rem;
+    box-shadow: 0 0 10px rgba(0, 255, 135, 0.2);
 }
 
 .explanation-content h4 {
-    font-size: 1.2rem;
-    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+    margin-bottom: 0.4rem;
     color: var(--text-color);
 }
 
 .explanation-content p {
     color: rgba(255, 255, 255, 0.8);
-    line-height: 1.6;
+    line-height: 1.5;
+    font-size: 0.85rem;
 }
 
 .disclaimer-box {
     background-color: rgba(255, 193, 7, 0.1);
     border-left: 3px solid rgba(255, 193, 7, 0.8);
-    padding: 1.5rem;
-    border-radius: 0 8px 8px 0;
+    padding: 1rem;
+    border-radius: 0 6px 6px 0;
     display: flex;
     align-items: flex-start;
-    margin-top: 2rem;
+    margin-top: 1.5rem;
 }
 
 .disclaimer-box i {
     color: rgba(255, 193, 7, 0.9);
-    font-size: 1.5rem;
-    margin-right: 1rem;
-    margin-top: 0.2rem;
+    font-size: 1.2rem;
+    margin-right: 0.75rem;
+    margin-top: 0.1rem;
 }
 
 .disclaimer-box h4 {
     color: rgba(255, 193, 7, 0.9);
-    margin-bottom: 0.5rem;
-    font-size: 1.1rem;
+    margin-bottom: 0.4rem;
+    font-size: 1rem;
 }
 
 .disclaimer-box p {
     color: rgba(255, 255, 255, 0.8);
-    font-size: 0.9rem;
-    line-height: 1.6;
+    font-size: 0.85rem;
+    line-height: 1.5;
 }
 
 /* Styles pour l'historique */
 .portfolio-history-section {
-    margin-top: 3rem;
-    margin-bottom: 3rem;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
 }
 
 .history-features {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 1.5rem;
-    margin-top: 2rem;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
 }
 
 .feature-card {
     display: flex;
     background-color: rgba(255, 255, 255, 0.03);
-    border-radius: 12px;
-    padding: 1.5rem;
+    border-radius: 10px;
+    padding: 1rem;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     transition: transform 0.3s ease, box-shadow 0.3s ease;
     border: 1px solid rgba(255, 255, 255, 0.05);
@@ -686,37 +691,37 @@
 }
 
 .feature-card:hover {
-    transform: translateY(-5px);
+    transform: translateY(-3px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
     background-color: rgba(0, 255, 135, 0.05);
     border-color: rgba(0, 255, 135, 0.2);
 }
 
 .feature-icon {
-    width: 50px;
-    height: 50px;
-    min-width: 50px;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
     background-color: rgba(0, 255, 135, 0.1);
     border-radius: 50%;
-    margin-right: 1.25rem;
+    margin-right: 0.75rem;
     color: var(--accent-color);
-    font-size: 1.25rem;
-    box-shadow: 0 0 15px rgba(0, 255, 135, 0.2);
+    font-size: 1rem;
+    box-shadow: 0 0 10px rgba(0, 255, 135, 0.2);
 }
 
 .feature-content h4 {
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+    margin-bottom: 0.3rem;
     color: var(--text-color);
 }
 
 .feature-content p {
     color: rgba(255, 255, 255, 0.8);
-    line-height: 1.6;
-    font-size: 0.9rem;
+    line-height: 1.4;
+    font-size: 0.8rem;
 }
 
 @media (max-width: 768px) {
@@ -730,7 +735,7 @@
     
     .explanation-icon {
         margin-right: 0;
-        margin-bottom: 1rem;
+        margin-bottom: 0.75rem;
     }
 }
 
@@ -739,5 +744,27 @@
     max-width: 1800px;
     width: 95%;
     margin: 0 auto; 
-    padding: 0 20px;
+    padding: 0 15px;
+}
+
+/* Styles spécifiques pour les onglets de portfolio dans le mode non-zoomé */
+.page-portefeuille .portfolio-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin: 0 auto 1.5rem;
+}
+
+.page-portefeuille .portfolio-tab {
+    font-size: 0.8rem;
+    padding: 0.6rem 1.25rem;
+    margin: 0;
+    min-width: 100px;
+    text-align: center;
+    justify-content: center;
+}
+
+/* Ajustements pour le graphique */
+.page-portefeuille .portfolio-chart-container {
+    max-height: 230px;
 }
