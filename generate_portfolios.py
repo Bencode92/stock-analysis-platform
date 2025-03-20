@@ -27,11 +27,11 @@ def extract_content_from_html(html_file):
                     if title:
                         title_text = title.get_text(strip=True)
                         if title_text:
-                            content.append(f"• {title_text}")
+                            content.append("• {}".format(title_text))
                             if summary:
                                 summary_text = summary.get_text(strip=True)
                                 if summary_text:
-                                    content.append(f"  {summary_text[:150]}...")  # Limiter la longueur
+                                    content.append("  {}...".format(summary_text[:150]))  # Limiter la longueur
             
             elif html_file.endswith('marche.html'):
                 # Pour les marchés, on cherche les données de tendance
@@ -49,20 +49,20 @@ def extract_content_from_html(html_file):
                     if name:
                         name_text = name.get_text(strip=True)
                         if name_text:
-                            data_line = f"• {name_text}"
+                            data_line = "• {}".format(name_text)
                             if value:
                                 value_text = value.get_text(strip=True)
-                                data_line += f": {value_text}"
+                                data_line += ": {}".format(value_text)
                             if change:
                                 change_text = change.get_text(strip=True)
-                                data_line += f" ({change_text})"
+                                data_line += " ({})".format(change_text)
                             content.append(data_line)
             
             return "\n".join(content)
     except Exception as e:
-        print(f"Erreur lors de l'extraction du contenu de {html_file}: {str(e)}")
+        print("Erreur lors de l'extraction du contenu de {}: {}".format(html_file, str(e)))
         # En cas d'erreur, retourner un placeholder pour ne pas bloquer l'exécution
-        return f"[Contenu non disponible pour {html_file}]"
+        return "[Contenu non disponible pour {}]".format(html_file)
 
 def generate_portfolios(actualites, marche):
     """Générer les portefeuilles en utilisant l'API OpenAI."""
@@ -70,13 +70,13 @@ def generate_portfolios(actualites, marche):
     if not api_key:
         raise ValueError("La clé API OpenAI (API_CHAT) n'est pas définie dans les variables d'environnement.")
     
-    prompt = f"""Tu es un expert en finance et en gestion de portefeuille.
+    prompt = """Tu es un expert en finance et en gestion de portefeuille.
 
 Les dernières actualités financières :
-{actualites}
+{}
 
 Les tendances actuelles du marché :
-{marche}
+{}
 
 En fonction des tendances du marché et des actualités, génère trois portefeuilles optimisés :
 1️⃣ **Agressif** : Composé de **10 à 20 actifs** à forte volatilité. Inclure des actions de croissance (ex: tech), des cryptos et des ETF risqués.
@@ -85,28 +85,28 @@ En fonction des tendances du marché et des actualités, génère trois portefeu
 
 💡 **Format attendu** :  
 Retourne un JSON avec la structure suivante :
-{
-    "Agressif": {
-        "Actions": {
+{{
+    "Agressif": {{
+        "Actions": {{
             "Nom de l'action 1": "X%",
             "Nom de l'action 2": "X%"
-        },
-        "Crypto": {
+        }},
+        "Crypto": {{
             "Nom de la crypto 1": "X%",
             "Nom de la crypto 2": "X%"
-        },
-        "ETF": {
+        }},
+        "ETF": {{
             "Nom de l'ETF 1": "X%",
             "Nom de l'ETF 2": "X%"
-        },
-        "Obligations": {
+        }},
+        "Obligations": {{
             "Nom de l'obligation 1": "X%",
             "Nom de l'obligation 2": "X%"
-        }
-    },
-    "Modéré": { ... },
-    "Stable": { ... }
-}
+        }}
+    }},
+    "Modéré": {{ ... }},
+    "Stable": {{ ... }}
+}}
 
 🚀 **Critères de sélection** :
 - Vérifie que chaque portefeuille contient **entre 10 et 20 actifs**.
@@ -114,11 +114,11 @@ Retourne un JSON avec la structure suivante :
 - Ajuste la volatilité et le risque selon le type de portefeuille (ex: plus de crypto/actions volatiles pour l'agressif, plus de valeurs refuges pour le stable).
 
 Ne réponds qu'avec le JSON, sans autres explications.
-"""
+""".format(actualites, marche)
     
     try:
         headers = {
-            "Authorization": f"Bearer {api_key}",
+            "Authorization": "Bearer {}".format(api_key),
             "Content-Type": "application/json"
         }
         
@@ -144,7 +144,7 @@ Ne réponds qu'avec le JSON, sans autres explications.
         return portfolios
     
     except Exception as e:
-        print(f"Erreur lors de la génération des portefeuilles: {str(e)}")
+        print("Erreur lors de la génération des portefeuilles: {}".format(str(e)))
         # En cas d'erreur, retourner un portfolio par défaut
         return {
             "Agressif": {
@@ -179,7 +179,7 @@ def save_portfolios(portfolios):
             json.dump(portfolios, file, ensure_ascii=False, indent=4)
         
         # Sauvegarder dans l'historique avec l'horodatage
-        history_file = f"{history_dir}/portefeuilles_{timestamp}.json"
+        history_file = "{}/portefeuilles_{}.json".format(history_dir, timestamp)
         with open(history_file, 'w', encoding='utf-8') as file:
             # Ajouter les métadonnées de date pour faciliter la recherche ultérieure
             portfolios_with_metadata = {
@@ -192,9 +192,9 @@ def save_portfolios(portfolios):
         # Mettre à jour le fichier d'index d'historique
         update_history_index(history_file, portfolios_with_metadata)
         
-        print(f"✅ Portefeuilles sauvegardés avec succès dans portefeuilles.json et {history_file}")
+        print("✅ Portefeuilles sauvegardés avec succès dans portefeuilles.json et {}".format(history_file))
     except Exception as e:
-        print(f"❌ Erreur lors de la sauvegarde des portefeuilles: {str(e)}")
+        print("❌ Erreur lors de la sauvegarde des portefeuilles: {}".format(str(e)))
 
 def update_history_index(history_file, portfolio_data):
     """Mettre à jour l'index des portefeuilles historiques."""
@@ -217,14 +217,15 @@ def update_history_index(history_file, portfolio_data):
             "timestamp": portfolio_data["timestamp"],
             "date": portfolio_data["date"],
             # Ajouter un résumé des allocations pour référence rapide
-            "summary": {
-                type: {
-                    category: str(len(assets)) + " actifs" 
-                    for category, assets in portfolio.items()
-                }
-                for type, portfolio in portfolio_data["portfolios"].items()
-            }
+            "summary": {}
         }
+
+        # Ajouter le résumé pour chaque type de portefeuille
+        for portfolio_type, portfolio in portfolio_data["portfolios"].items():
+            entry["summary"][portfolio_type] = {}
+            for category, assets in portfolio.items():
+                count = len(assets)
+                entry["summary"][portfolio_type][category] = "{} actifs".format(count)
         
         # Ajouter la nouvelle entrée au début de la liste (plus récente en premier)
         index_data.insert(0, entry)
@@ -238,7 +239,7 @@ def update_history_index(history_file, portfolio_data):
             json.dump(index_data, file, ensure_ascii=False, indent=4)
             
     except Exception as e:
-        print(f"⚠️ Avertissement: Erreur lors de la mise à jour de l'index: {str(e)}")
+        print("⚠️ Avertissement: Erreur lors de la mise à jour de l'index: {}".format(str(e)))
 
 def main():
     print("🔍 Extraction des données financières...")
