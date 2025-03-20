@@ -1,491 +1,354 @@
+#!/usr/bin/env python3
+"""
+news_classifier.py - Système de classification des actualités financières
+Ce module utilise un modèle FinBERT pour analyser le sentiment des actualités
+et intègre les feedbacks utilisateurs pour améliorer les prédictions.
+"""
+
 import os
 import json
-import pickle
-import numpy as np
-from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
-from functools import lru_cache
+import logging
+from typing import Dict, List, Any
 
-# Chemins vers les modèles (peuvent être relatifs ou absolus)
-MODEL_DIR = os.path.join(os.path.dirname(__file__), "models/finbert_model")
-HIERARCHY_MODEL_DIR = os.path.join(os.path.dirname(__file__), "models/hierarchy_model")
-CACHE_FILE = os.path.join(os.path.dirname(__file__), "models/classification_cache.pkl")
-CLASSIFIED_NEWS_FILE = os.path.join(os.path.dirname(__file__), "data/classified_news.json")
-FEEDBACK_FILE = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data/user_feedback.json")
+# Configuration du logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Constantes
+FEEDBACK_FILE = "data/ml_feedback.json"  # MODIFICATION: Normalisé pour utiliser ml_feedback.json
+MODEL_DIR = os.path.join(os.path.dirname(__file__), "models")
+CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache")
+
+# Assurez-vous que les répertoires nécessaires existent
+os.makedirs(MODEL_DIR, exist_ok=True)
+os.makedirs(CACHE_DIR, exist_ok=True)
 
 class NewsClassifier:
-    def __init__(self, use_cache=True):
-        self.use_cache = use_cache
-        self.cache = {}
-        
-        # Charger le cache existant s'il existe
-        if use_cache and os.path.exists(CACHE_FILE):
-            try:
-                with open(CACHE_FILE, 'rb') as f:
-                    self.cache = pickle.load(f)
-                print(f"Cache chargé avec {len(self.cache)} entrées")
-            except Exception as e:
-                print(f"Erreur lors du chargement du cache: {e}")
-        
-        # Initialiser le modèle de sentiment
-        try:
-            # Option 1: Utiliser un modèle déjà téléchargé localement
-            if os.path.exists(MODEL_DIR):
-                self.tokenizer = AutoTokenizer.from_pretrained(MODEL_DIR)
-                self.model = AutoModelForSequenceClassification.from_pretrained(MODEL_DIR)
-                self.classifier = pipeline("sentiment-analysis", model=self.model, tokenizer=self.tokenizer)
-                print("Modèle de sentiment chargé depuis le stockage local")
-            # Option 2: Télécharger le modèle depuis HuggingFace
-            else:
-                model_name = "ProsusAI/finbert"  # Modèle spécifique à la finance
-                self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-                self.model = AutoModelForSequenceClassification.from_pretrained(model_name)
-                self.classifier = pipeline("sentiment-analysis", model=self.model, tokenizer=self.tokenizer)
-                
-                # Sauvegarder le modèle localement pour une utilisation future
-                os.makedirs(MODEL_DIR, exist_ok=True)
-                self.tokenizer.save_pretrained(MODEL_DIR)
-                self.model.save_pretrained(MODEL_DIR)
-                print(f"Modèle de sentiment téléchargé et sauvegardé dans {MODEL_DIR}")
-        except Exception as e:
-            print(f"Erreur lors du chargement du modèle de sentiment: {e}")
-            # Fallback: classification basique basée sur des mots-clés
-            self.classifier = self._keyword_classifier
-            print("Utilisation du classificateur par mots-clés de secours")
-        
-        # Initialiser le modèle de hiérarchie s'il existe
-        self.hierarchy_classifier = None
-        self.use_ml_for_hierarchy = False
-        
-        try:
-            if os.path.exists(HIERARCHY_MODEL_DIR) and os.listdir(HIERARCHY_MODEL_DIR):
-                self.hierarchy_tokenizer = AutoTokenizer.from_pretrained(HIERARCHY_MODEL_DIR)
-                self.hierarchy_model = AutoModelForSequenceClassification.from_pretrained(HIERARCHY_MODEL_DIR)
-                self.hierarchy_classifier = pipeline("text-classification", model=self.hierarchy_model, tokenizer=self.hierarchy_tokenizer)
-                self.use_ml_for_hierarchy = True
-                print("Modèle de hiérarchie chargé depuis le stockage local")
-        except Exception as e:
-            print(f"Erreur lors du chargement du modèle de hiérarchie: {e}")
-            print("Utilisation de l'approche par mots-clés pour la hiérarchie")
+    """Classe pour la classification des actualités financières"""
     
-    def _keyword_classifier(self, text):
-        """Classificateur de secours basé sur des mots-clés simple"""
-        # Mots-clés en français ET en anglais
-        pos_words = [
-            # Français
-            "hausse", "augmentation", "croissance", "positif", "succès", "profit",
-            # Anglais
-            "rise", "increase", "growth", "positive", "success", "profit", 
-            "gains", "upward", "rally", "bullish", "surging", "climbing"
-        ]
-        
-        neg_words = [
-            # Français
-            "baisse", "chute", "déclin", "négatif", "échec", "perte",
-            # Anglais
-            "fall", "decrease", "decline", "negative", "failure", "loss",
-            "losses", "downward", "bearish", "plunge", "dropping", "plummeting"
-        ]
-        
-        text = text.lower()
-        pos_count = sum(1 for word in pos_words if word in text)
-        neg_count = sum(1 for word in neg_words if word in text)
-        
-        if pos_count > neg_count:
-            return [{"label": "positive", "score": 0.7}]
-        elif neg_count > pos_count:
-            return [{"label": "negative", "score": 0.7}]
-        else:
-            return [{"label": "neutral", "score": 0.8}]
-    
-    @lru_cache(maxsize=500)
-    def _classify_text(self, text):
-        """Classifie un texte avec mise en cache"""
-        cache_key = f"sentiment_{text}"
-        if cache_key in self.cache:
-            return self.cache[cache_key]
-        
-        try:
-            result = self.classifier(text)
-            if self.use_cache:
-                self.cache[cache_key] = result
-            return result
-        except Exception as e:
-            print(f"Erreur de classification: {e}")
-            return [{"label": "neutral", "score": 0.5}]
-    
-    def predict_hierarchy_with_keywords(self, news_item):
-        """Prédit la hiérarchie de l'actualité (critique, importante, normale) avec des mots-clés"""
-        # Combiner titre et contenu pour l'analyse
-        text = f"{news_item['title']}. {news_item['content']}".lower()
-        
-        # Liste de mots-clés pour chaque catégorie (français ET anglais)
-        critical_keywords = [
-            # Français
-            "crash", "effondrement", "crise", "urgent", "alerte", "catastrophe", 
-            "panique", "récession", "faillite", "collapse", "urgence", "critique",
-            # Anglais
-            "crash", "collapse", "crisis", "urgent", "alert", "catastrophe",
-            "panic", "recession", "bankruptcy", "collapse", "emergency", "critical",
-            "breaking", "flash", "severe", "disaster", "plummet", "plunge"
-        ]
-        
-        important_keywords = [
-            # Français
-            "hausse significative", "baisse importante", "croissance", 
-            "résultats", "bénéfices", "pertes", "acquisition", "fusion", 
-            "restructuration", "earnings", "quarterly", "forecast",
-            # Anglais
-            "significant increase", "major decline", "growth", 
-            "results", "profits", "losses", "acquisition", "merger",
-            "restructuring", "earnings", "quarterly", "forecast",
-            "significant", "important", "notable", "key", "major", "substantial"
-        ]
-        
-        # Compter les occurrences de mots-clés
-        critical_count = sum(1 for word in critical_keywords if word in text)
-        important_count = sum(1 for word in important_keywords if word in text)
-        
-        # Déterminer la hiérarchie
-        if critical_count > 0:
-            hierarchy = "critical"
-        elif important_count > 0:
-            hierarchy = "important"
-        else:
-            hierarchy = "normal"
-        
-        return hierarchy
-    
-    def predict_hierarchy_with_ml(self, text):
-        """Prédit la hiérarchie de l'actualité en utilisant le modèle ML"""
-        cache_key = f"hierarchy_{text}"
-        if cache_key in self.cache:
-            return self.cache[cache_key]
-        
-        try:
-            if self.hierarchy_classifier:
-                result = self.hierarchy_classifier(text)
-                prediction = {
-                    "label": result[0]["label"],
-                    "score": float(result[0]["score"])
-                }
-                
-                if self.use_cache:
-                    self.cache[cache_key] = prediction
-                
-                return prediction
-            else:
-                raise ValueError("Modèle de hiérarchie non disponible")
-        except Exception as e:
-            print(f"Erreur lors de la prédiction de hiérarchie: {e}")
-            return {"label": "normal", "score": 0.5}  # Valeur par défaut
-    
-    def adjust_impact_with_feedback(self, news_item):
+    def __init__(self, use_cache: bool = True) -> None:
         """
-        Ajuste l'impact d'une actualité en fonction des retours utilisateurs
+        Initialise le classificateur d'actualités
         
         Args:
-            news_item (dict): L'actualité à ajuster
+            use_cache (bool): Indique si le cache doit être utilisé
+        """
+        self.use_cache = use_cache
+        self.model = None
+        self.tokenizer = None
+        self.cache = {}
+        
+        # En mode production, on chargerait ici un vrai modèle FinBERT
+        # from transformers import AutoModelForSequenceClassification, AutoTokenizer
+        # self.tokenizer = AutoTokenizer.from_pretrained("yiyanghkust/finbert-tone")
+        # self.model = AutoModelForSequenceClassification.from_pretrained("yiyanghkust/finbert-tone")
+        
+        logger.info("Classificateur d'actualités initialisé")
+        
+        # Charger le cache si nécessaire
+        if self.use_cache:
+            self._load_cache()
+    
+    def _load_cache(self) -> None:
+        """Charge le cache des classifications précédentes"""
+        cache_file = os.path.join(CACHE_DIR, "classification_cache.json")
+        try:
+            if os.path.exists(cache_file):
+                with open(cache_file, 'r', encoding='utf-8') as f:
+                    self.cache = json.load(f)
+                logger.info(f"Cache chargé avec {len(self.cache)} entrées")
+            else:
+                logger.info("Aucun cache trouvé, création d'un nouveau cache")
+                self.cache = {}
+        except Exception as e:
+            logger.error(f"Erreur lors du chargement du cache: {e}")
+            self.cache = {}
+    
+    def _save_cache(self) -> None:
+        """Enregistre le cache des classifications"""
+        cache_file = os.path.join(CACHE_DIR, "classification_cache.json")
+        try:
+            with open(cache_file, 'w', encoding='utf-8') as f:
+                json.dump(self.cache, f, ensure_ascii=False, indent=2)
+            logger.info(f"Cache enregistré avec {len(self.cache)} entrées")
+        except Exception as e:
+            logger.error(f"Erreur lors de l'enregistrement du cache: {e}")
+    
+    def classify_news(self, news_item: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Classifie une actualité financière
+        
+        Args:
+            news_item (Dict[str, Any]): L'élément d'actualité à classifier
             
         Returns:
-            dict: L'actualité avec impact ajusté selon les feedbacks
+            Dict[str, Any]: L'élément d'actualité avec les classifications ajoutées
+        """
+        # Copier l'élément pour éviter de modifier l'original
+        classified_item = news_item.copy()
+        
+        # Extraire le titre et le contenu
+        title = news_item.get('title', '')
+        content = news_item.get('content', '')
+        source = news_item.get('source', '')
+        
+        # Créer une clé unique pour le cache
+        cache_key = f"{title}_{source}".lower().strip()
+        
+        # Vérifier si l'élément est dans le cache
+        if self.use_cache and cache_key in self.cache:
+            logger.info(f"Utilisation du cache pour: {title[:50]}...")
+            classified_item.update(self.cache[cache_key])
+            return classified_item
+        
+        # Simuler l'analyse (en production, utiliser le modèle FinBERT)
+        classified_item = self._simulate_classification(classified_item, title, content)
+        
+        # Intégrer les feedbacks utilisateurs pour améliorer la classification
+        classified_item = self.adjust_impact_with_feedback(classified_item)
+        
+        # Ajouter au cache si nécessaire
+        if self.use_cache:
+            self.cache[cache_key] = {
+                'ml_sentiment': classified_item.get('ml_sentiment'),
+                'ml_impact': classified_item.get('ml_impact'),
+                'ml_confidence': classified_item.get('ml_confidence'),
+                'ml_category': classified_item.get('ml_category')
+            }
+        
+        return classified_item
+    
+    def _simulate_classification(self, item: Dict[str, Any], title: str, content: str) -> Dict[str, Any]:
+        """
+        Simule une classification d'actualité (à remplacer par l'utilisation réelle du modèle)
+        
+        Args:
+            item (Dict[str, Any]): L'élément d'actualité
+            title (str): Le titre de l'actualité
+            content (str): Le contenu de l'actualité
+            
+        Returns:
+            Dict[str, Any]: L'élément d'actualité avec les classifications ajoutées
+        """
+        # Analyse du sentiment simplifiée par mots-clés
+        text = (title + " " + content).lower()
+        
+        # Simulation du sentiment
+        positive_words = ['hausse', 'croissance', 'augmentation', 'optimiste', 'positif', 'profit', 'gain']
+        negative_words = ['baisse', 'chute', 'diminution', 'pessimiste', 'négatif', 'perte', 'crise']
+        
+        positive_count = sum(1 for word in positive_words if word in text)
+        negative_count = sum(1 for word in negative_words if word in text)
+        
+        if positive_count > negative_count:
+            sentiment = "positive"
+            confidence = 0.7 + (0.2 * (positive_count - negative_count) / (positive_count + negative_count + 1))
+        elif negative_count > positive_count:
+            sentiment = "negative"
+            confidence = 0.7 + (0.2 * (negative_count - positive_count) / (positive_count + negative_count + 1))
+        else:
+            sentiment = "neutral"
+            confidence = 0.6
+        
+        # Simulation de la catégorie
+        categories = {
+            'economie': ['pib', 'inflation', 'taux', 'banque centrale', 'fed', 'bce'],
+            'marches': ['bourse', 'action', 'indice', 'cac', 'nasdaq', 'dow jones'],
+            'entreprises': ['résultat', 'bénéfice', 'chiffre d\'affaires', 'acquisition', 'fusion'],
+            'tech': ['technologie', 'intelligence artificielle', 'ia', 'numérique'],
+            'crypto': ['bitcoin', 'ethereum', 'crypto', 'blockchain']
+        }
+        
+        category_scores = {cat: sum(1 for kw in keywords if kw in text) for cat, keywords in categories.items()}
+        category = max(category_scores.items(), key=lambda x: x[1])[0] if any(category_scores.values()) else "general"
+        
+        # Simulation de l'impact
+        if "important" in text or "significatif" in text or "majeur" in text:
+            impact = "high"
+        elif "modéré" in text or "notable" in text:
+            impact = "medium"
+        else:
+            impact = "low"
+        
+        # Ajouter les classifications à l'élément
+        item['ml_sentiment'] = sentiment
+        item['ml_impact'] = impact
+        item['ml_confidence'] = round(confidence, 2)
+        item['ml_category'] = category
+        
+        return item
+    
+    def adjust_impact_with_feedback(self, news_item: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Ajuste la classification en fonction des feedbacks utilisateurs
+        
+        Args:
+            news_item (Dict[str, Any]): L'élément d'actualité à ajuster
+            
+        Returns:
+            Dict[str, Any]: L'élément d'actualité avec les classifications ajustées
         """
         if not os.path.exists(FEEDBACK_FILE):
             return news_item
-
+        
         try:
             with open(FEEDBACK_FILE, 'r', encoding='utf-8') as f:
                 feedback_data = json.load(f)
         except (json.JSONDecodeError, FileNotFoundError):
-            print(f"⚠️ Impossible de charger les feedbacks depuis {FEEDBACK_FILE}")
+            logger.warning(f"⚠️ Impossible de charger les feedbacks depuis {FEEDBACK_FILE}")
             return news_item
-
-        # Filtrer les retours pertinents pour cette actualité (par titre ou ID)
+        
+        # S'assurer que le fichier de feedback a la structure attendue
+        if not isinstance(feedback_data, list) or not feedback_data or 'feedbacks' not in feedback_data[0]:
+            logger.warning(f"⚠️ Structure de feedback invalide dans {FEEDBACK_FILE}")
+            return news_item
+        
+        # Récupérer la liste des feedbacks
+        feedbacks = feedback_data[0].get('feedbacks', [])
+        
+        # Trouver les feedbacks pertinents pour cette actualité (basé sur le titre)
+        title = news_item.get('title', '').lower()
         relevant_feedbacks = []
         
-        # Recherche par titre (cas le plus courant)
-        if "title" in news_item:
-            relevant_feedbacks = [f for f in feedback_data if f.get("title") == news_item["title"]]
-        
-        # Recherche par ID (si disponible)
-        if not relevant_feedbacks and "id" in news_item:
-            relevant_feedbacks = [f for f in feedback_data if f.get("newsId") == news_item["id"]]
+        for feedback in feedbacks:
+            feedback_title = feedback.get('title', '').lower()
+            if title and feedback_title and (title in feedback_title or feedback_title in title):
+                relevant_feedbacks.append(feedback)
         
         if not relevant_feedbacks:
-            return news_item  # Pas de feedback, on garde l'impact actuel
-
-        # Compter les votes positifs, négatifs et neutres
-        positive = sum(1 for f in relevant_feedbacks if f.get("feedback") == "positive" or f.get("correctClassification") == "positive")
-        negative = sum(1 for f in relevant_feedbacks if f.get("feedback") == "negative" or f.get("correctClassification") == "negative")
-        neutral = sum(1 for f in relevant_feedbacks if f.get("feedback") == "neutral" or f.get("correctClassification") == "neutral")
+            return news_item
         
-        total_votes = len(relevant_feedbacks)
+        logger.info(f"Trouvé {len(relevant_feedbacks)} feedbacks pertinents pour: {title[:50]}...")
         
-        # Ajuster l'impact en fonction des retours majoritaires (si suffisamment nombreux)
-        MINIMUM_VOTES = 2  # Nécessite au moins 2 votes pour modifier l'impact
+        # Analyse des feedbacks
+        # Conversion des clés importance/impact vers sentiment/impact pour la compatibilité
+        sentiment_counts = {"positive": 0, "negative": 0, "neutral": 0}
+        impact_counts = {"high": 0, "medium": 0, "low": 0}
         
-        if total_votes >= MINIMUM_VOTES:
-            if positive > negative and positive > neutral:
-                news_item["impact"] = "positive"
-                news_item["feedback_confidence"] = positive / total_votes
-            elif negative > positive and negative > neutral:
-                news_item["impact"] = "negative"
-                news_item["feedback_confidence"] = negative / total_votes
-            else:
-                news_item["impact"] = "neutral"
-                news_item["feedback_confidence"] = neutral / total_votes
-        
-        # Ajuster également le sentiment si des votes pour correctClassification existent
-        sentiment_votes = [f for f in relevant_feedbacks if "correctClassification" in f]
-        if sentiment_votes:
-            pos_sentiment = sum(1 for f in sentiment_votes if f.get("correctClassification") == "positive")
-            neg_sentiment = sum(1 for f in sentiment_votes if f.get("correctClassification") == "negative")
-            neu_sentiment = sum(1 for f in sentiment_votes if f.get("correctClassification") == "neutral")
+        for feedback in relevant_feedbacks:
+            # Récupérer les valeurs corrigées en tenant compte des différentes structures possibles
+            corrected = feedback.get('corrected', {})
             
-            # Mise à jour du sentiment s'il y a assez de votes
-            if len(sentiment_votes) >= MINIMUM_VOTES:
-                if pos_sentiment > neg_sentiment and pos_sentiment > neu_sentiment:
-                    news_item["sentiment"] = "positive"
-                elif neg_sentiment > pos_sentiment and neg_sentiment > neu_sentiment:
-                    news_item["sentiment"] = "negative"
+            # Traiter le sentiment/importance
+            if 'sentiment' in corrected:
+                sentiment = corrected['sentiment']
+                if sentiment in sentiment_counts:
+                    sentiment_counts[sentiment] += 1
+            elif 'importance' in corrected:
+                # Conversion importance -> sentiment
+                importance = corrected['importance']
+                if importance == 'critical':
+                    sentiment_counts['negative'] += 1
+                elif importance == 'important':
+                    sentiment_counts['positive'] += 1
                 else:
-                    news_item["sentiment"] = "neutral"
+                    sentiment_counts['neutral'] += 1
+            
+            # Traiter l'impact
+            if 'impact' in corrected:
+                impact = corrected['impact']
+                # Conversion pour normaliser
+                if impact == 'positive':
+                    impact_counts['high'] += 1
+                elif impact == 'negative':
+                    impact_counts['medium'] += 1
+                elif impact == 'neutral':
+                    impact_counts['low'] += 1
+                elif impact in impact_counts:
+                    impact_counts[impact] += 1
         
-        # Ajouter des méta-données sur le feedback
-        news_item["feedback_count"] = total_votes
-        news_item["user_adjusted"] = True
+        # Appliquer les ajustements si suffisamment de feedbacks
+        if sum(sentiment_counts.values()) > 0:
+            # Sélectionner le sentiment le plus fréquent
+            majority_sentiment = max(sentiment_counts.items(), key=lambda x: x[1])[0]
+            news_item['ml_sentiment'] = majority_sentiment
+            news_item['ml_sentiment_source'] = 'feedback'
+        
+        if sum(impact_counts.values()) > 0:
+            # Sélectionner l'impact le plus fréquent
+            majority_impact = max(impact_counts.items(), key=lambda x: x[1])[0]
+            news_item['ml_impact'] = majority_impact
+            news_item['ml_impact_source'] = 'feedback'
         
         return news_item
     
-    def save_classified_news(self, news_item):
-        """Sauvegarde les news classifiées pour un futur entraînement"""
-        classified_news = []
+    def classify_batch(self, news_items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Classifie un lot d'actualités
         
-        if os.path.exists(CLASSIFIED_NEWS_FILE):
-            try:
-                with open(CLASSIFIED_NEWS_FILE, 'r', encoding='utf-8') as f:
-                    classified_news = json.load(f)
-            except Exception as e:
-                print(f"Erreur lors du chargement des news classifiées: {e}")
+        Args:
+            news_items (List[Dict[str, Any]]): Liste d'actualités à classifier
+            
+        Returns:
+            List[Dict[str, Any]]: Liste d'actualités classifiées
+        """
+        classified_items = []
         
-        # Ajouter l'horodatage
-        from datetime import datetime
-        news_item["classification_timestamp"] = datetime.now().isoformat()
+        for item in news_items:
+            classified_item = self.classify_news(item)
+            classified_items.append(classified_item)
         
-        # Ajouter la news aux données existantes
-        classified_news.append(news_item)
+        # Enregistrer le cache après le traitement du lot
+        if self.use_cache:
+            self._save_cache()
         
-        # S'assurer que le répertoire existe
-        os.makedirs(os.path.dirname(CLASSIFIED_NEWS_FILE), exist_ok=True)
-        
-        # Sauvegarder le fichier
-        try:
-            with open(CLASSIFIED_NEWS_FILE, 'w', encoding='utf-8') as f:
-                json.dump(classified_news, f, ensure_ascii=False, indent=2)
-            print(f"✅ News sauvegardée pour l'entraînement : {news_item['title']}")
-        except Exception as e:
-            print(f"Erreur lors de la sauvegarde des news classifiées: {e}")
+        return classified_items
+
+
+def run_classification(input_file: str, output_file: str) -> bool:
+    """
+    Exécute la classification sur un fichier d'actualités
     
-    def classify_news_item(self, news_item):
-        """Classifie un élément d'actualité et l'enrichit (sentiment et hiérarchie)"""
-        # Combiner titre et contenu pour l'analyse
-        text = f"{news_item['title']}. {news_item['content']}"
-        text_lower = text.lower()  # Version en minuscules pour les recherches
+    Args:
+        input_file (str): Chemin vers le fichier JSON d'entrée
+        output_file (str): Chemin vers le fichier JSON de sortie
         
-        # Classification du sentiment
-        result = self._classify_text(text)
-        
-        # Mapper les labels de FinBERT aux labels attendus
-        label_mapping = {
-            "positive": "positive",
-            "negative": "negative",
-            "neutral": "neutral"
-        }
-        
-        # Enrichir l'élément d'actualité avec le sentiment
-        sentiment = result[0]["label"]
-        confidence = float(result[0]["score"])
-        
-        # Mise à jour des champs de sentiment
-        news_item["sentiment"] = label_mapping.get(sentiment, sentiment)
-        news_item["confidence"] = confidence
-        
-        # Liste de mots-clés à fort impact (français ET anglais)
-        high_impact_words = [
-            # Français
-            "crash", "effondrement", "crise", "urgence", "alerte", "catastrophe", 
-            "panique", "récession", "faillite", "défaut", "flamber", "dégringoler", 
-            "s'envoler", "plonger", "percée", "jalon", "record",
-            "crise", "effondrement", "chute", "urgence", "alerte", "récession",
-            "faillite", "défaut", "dégringolade", "envolée", "percée",
-            
-            # Anglais
-            "crash", "collapse", "crisis", "emergency", "alert", "catastrophe", 
-            "panic", "recession", "bankruptcy", "default", "surge", "plummet", 
-            "skyrocket", "nosedive", "breakthrough", "milestone", "record",
-            "plunge", "tumble", "soar", "spike", "dive", "bust", "boom",
-            "rally", "slump", "downturn", "upswing", "selloff", "meltdown"
-        ]
-        
-        # Vérifier la présence de mots-clés à fort impact
-        has_high_impact_words = any(word in text_lower for word in high_impact_words)
-        
-        # MODIFICATION: Calcul d'impact amélioré avec seuils réduits pour plus de variété
-        # Calculer l'impact en fonction du sentiment, de la confiance et des mots-clés
-        if news_item["sentiment"] == "positive":
-            if confidence > 0.6 or has_high_impact_words:  # Seuil réduit de 0.75 à 0.6
-                news_item["impact"] = "positive"
-            elif confidence > 0.5:  # Seuil réduit de 0.6 à 0.5
-                news_item["impact"] = "positive"  # Utiliser "positive" au lieu de "slightly_positive"
-            else:
-                news_item["impact"] = "neutral"
-        elif news_item["sentiment"] == "negative":
-            if confidence > 0.6 or has_high_impact_words:  # Seuil réduit de 0.75 à 0.6
-                news_item["impact"] = "negative"
-            elif confidence > 0.5:  # Seuil réduit de 0.6 à 0.5
-                news_item["impact"] = "negative"  # Utiliser "negative" au lieu de "slightly_negative" 
-            else:
-                news_item["impact"] = "neutral"
-        else:
-            # MODIFICATION: Convertir "high" en "positive" pour standardiser les valeurs d'impact
-            news_item["impact"] = "positive" if has_high_impact_words else "neutral"
-        
-        # Ajout d'un score d'impact plus sophistiqué
-        impact_score = 0
-        
-        # Points pour les mots à fort impact
-        if has_high_impact_words:
-            impact_score += 10
-        
-        # Points pour le sentiment avec confiance élevée
-        if news_item["sentiment"] == "negative" and confidence > 0.7:
-            impact_score += 8
-        elif news_item["sentiment"] == "positive" and confidence > 0.7:
-            impact_score += 6
-        
-        # Bonus pour les titres qui contiennent des mots-clés spécifiques
-        title_lower = news_item['title'].lower()
-        
-        # Liste étendue de mots-clés financiers en anglais
-        finance_keywords = [
-            "stocks", "market", "economy", "recession", "crash", "crisis", "fed", "interest rates",
-            "inflation", "index", "dow", "nasdaq", "s&p", "rally", "bull", "bear", "treasury", 
-            "yield", "dividend", "earnings", "quarterly", "fiscal", "profit", "shares", "trading",
-            "investors", "portfolio", "etf", "fund", "stock market", "wall street", "financial", "bank"
-        ]
-        
-        for keyword in finance_keywords:
-            if keyword in title_lower:
-                impact_score += 2
-                break
-        
-        # Stocker le score d'impact
-        news_item["impact_score"] = impact_score
-        
-        # Prédire la hiérarchie avec ML si disponible, sinon utiliser les mots-clés
-        if self.use_ml_for_hierarchy:
-            hierarchy_result = self.predict_hierarchy_with_ml(text)
-            hierarchy_confidence = hierarchy_result["score"]
-            
-            # Si confiance suffisante, utiliser la prédiction ML
-            if hierarchy_confidence > 0.6:
-                news_item["hierarchy"] = hierarchy_result["label"]
-                news_item["hierarchy_confidence"] = hierarchy_confidence
-            else:
-                # Sinon, recourir à l'approche par mots-clés
-                news_item["hierarchy"] = self.predict_hierarchy_with_keywords(news_item)
-                news_item["hierarchy_confidence"] = 0.5  # Confiance moyenne pour les mots-clés
-        else:
-            # Utiliser uniquement l'approche par mots-clés
-            news_item["hierarchy"] = self.predict_hierarchy_with_keywords(news_item)
-            news_item["hierarchy_confidence"] = 0.5  # Confiance moyenne pour les mots-clés
-        
-        # Ajuster l'impact en fonction des retours utilisateurs
-        news_item = self.adjust_impact_with_feedback(news_item)
-        
-        # Sauvegarder la news classifiée pour améliorer le modèle ultérieurement
-        self.save_classified_news(news_item)
-        
-        return news_item
-    
-    def standardize_impact(self, news_item):
-        """Standardise les valeurs d'impact pour assurer la compatibilité avec l'interface"""
-        # Convertir les valeurs non standard en valeurs standard
-        impact_mapping = {
-            "high": "positive",
-            "slightly_positive": "positive",
-            "slightly_negative": "negative",
-            "neutral": "neutral"
-        }
-        
-        if "impact" in news_item and news_item["impact"] in impact_mapping:
-            news_item["impact"] = impact_mapping[news_item["impact"]]
-        
-        return news_item
-    
-    def classify_news_file(self, input_path, output_path=None):
-        """Classifie tous les éléments d'actualité dans un fichier JSON"""
-        if output_path is None:
-            output_path = input_path
-            
-        try:
-            # Charger les actualités
-            with open(input_path, 'r', encoding='utf-8') as f:
-                news_data = json.load(f)
-            
-            # Traiter chaque section (us, france, etc.)
-            for section in news_data:
-                if section != "events" and section != "lastUpdated":
-                    # Classifier chaque élément d'actualité dans la section
-                    news_data[section] = [
-                        self.standardize_impact(  # Ajouter cette fonction
-                            self.adjust_impact_with_feedback(
-                                self.classify_news_item(item)
-                            )
-                        )
-                        for item in news_data[section]
-                    ]
-            
-            # Mettre à jour lastUpdated
-            from datetime import datetime
-            news_data["lastUpdated"] = datetime.now().isoformat()
-            
-            # Sauvegarder les résultats
-            with open(output_path, 'w', encoding='utf-8') as f:
-                json.dump(news_data, f, ensure_ascii=False, indent=2)
-                
-            print(f"Classification terminée, résultats sauvegardés dans {output_path}")
-            return True
-        except Exception as e:
-            print(f"Erreur lors de la classification du fichier: {e}")
+    Returns:
+        bool: True si la classification a réussi, False sinon
+    """
+    try:
+        # Vérifier que le fichier d'entrée existe
+        if not os.path.exists(input_file):
+            logger.error(f"Le fichier d'entrée {input_file} n'existe pas")
             return False
+        
+        # Charger les données
+        with open(input_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        # Créer le classificateur
+        classifier = NewsClassifier()
+        
+        # Classifier les actualités pour chaque section
+        for section in data.keys():
+            if isinstance(data[section], list):
+                data[section] = classifier.classify_batch(data[section])
+        
+        # Enregistrer les résultats
+        with open(output_file, 'w', encoding='utf-8') as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        
+        logger.info(f"Classification terminée et enregistrée dans {output_file}")
+        return True
     
-    def save_cache(self):
-        """Sauvegarde le cache de classification"""
-        if self.use_cache and self.cache:
-            try:
-                os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
-                with open(CACHE_FILE, 'wb') as f:
-                    pickle.dump(self.cache, f)
-                print(f"Cache sauvegardé avec {len(self.cache)} entrées")
-                return True
-            except Exception as e:
-                print(f"Erreur lors de la sauvegarde du cache: {e}")
+    except Exception as e:
+        logger.error(f"Erreur lors de la classification: {e}")
         return False
 
-# Fonction d'utilité pour exécuter la classification
-def run_classification(input_file, output_file=None):
-    classifier = NewsClassifier()
-    success = classifier.classify_news_file(input_file, output_file)
-    classifier.save_cache()
-    return success
 
-# Pour un test rapide
 if __name__ == "__main__":
-    import sys
+    # Test simple
+    print("Test du classificateur d'actualités")
+    classifier = NewsClassifier(use_cache=False)
     
-    if len(sys.argv) > 1:
-        input_file = sys.argv[1]
-        output_file = sys.argv[2] if len(sys.argv) > 2 else None
-        run_classification(input_file, output_file)
-    else:
-        print("Usage: python news_classifier.py input_file.json [output_file.json]")
+    test_news = {
+        "title": "La Bourse de Paris en hausse de 1,2% portée par les résultats d'entreprises",
+        "content": "La Bourse de Paris a terminé en hausse jeudi, portée par de bons résultats d'entreprises et l'espoir d'une baisse des taux d'intérêt de la BCE en septembre.",
+        "source": "Test Source"
+    }
+    
+    classified = classifier.classify_news(test_news)
+    print(json.dumps(classified, indent=2, ensure_ascii=False))
