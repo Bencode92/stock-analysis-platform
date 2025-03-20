@@ -21,7 +21,14 @@ document.addEventListener('DOMContentLoaded', function() {
     overrideEventRendering();
     
     // 4. Appliquer le filtre par défaut (aujourd'hui)
-    filterEventsByDate('today');
+    const todayButton = document.getElementById('today-filter');
+    if (todayButton) {
+      // Simuler un clic sur "Aujourd'hui"
+      todayButton.click();
+    } else {
+      // Appliquer directement le filtre si le bouton n'existe pas encore
+      forceHideAllEvents();
+    }
   }, 1000);
 });
 
@@ -63,12 +70,12 @@ function replaceFiltersWithDateOnly() {
   if (todayBtn && weekBtn && resetBtn) {
     todayBtn.addEventListener('click', () => {
       setActiveFilter(todayBtn);
-      filterEventsByDate('today');
+      forceHideAllEvents();
     });
     
     weekBtn.addEventListener('click', () => {
       setActiveFilter(weekBtn);
-      filterEventsByDate('week');
+      forceShowAllEvents();
     });
     
     resetBtn.addEventListener('click', () => {
@@ -77,12 +84,63 @@ function replaceFiltersWithDateOnly() {
       
       // Appliquer à nouveau le filtre actif
       if (todayBtn.classList.contains('active')) {
-        filterEventsByDate('today');
+        forceHideAllEvents();
       } else if (weekBtn.classList.contains('active')) {
-        filterEventsByDate('week');
+        forceShowAllEvents();
       }
     });
   }
+}
+
+/**
+ * Force la disparition de tous les événements (pour le filtre Aujourd'hui)
+ * Approche directe et robuste
+ */
+function forceHideAllEvents() {
+  // Sélection de toutes les cartes d'événements
+  const eventCards = document.querySelectorAll('.event-card');
+  
+  // Masquer tous les événements sans exception
+  eventCards.forEach(card => {
+    card.style.display = 'none';
+  });
+  
+  // Masquer également le message "Aucun événement ne correspond à votre sélection"
+  const noEventsMessage = document.querySelector('.no-events-message');
+  if (noEventsMessage) {
+    noEventsMessage.remove();
+  }
+  
+  // Ajouter une classe spécifique au corps pour identifier le mode "Aujourd'hui"
+  document.body.classList.add('today-filter-active');
+  document.body.classList.remove('week-filter-active');
+  
+  console.log("Tous les événements ont été masqués (filtre Aujourd'hui)");
+}
+
+/**
+ * Force l'affichage de tous les événements (pour le filtre Cette semaine)
+ */
+function forceShowAllEvents() {
+  // Sélection de toutes les cartes d'événements
+  const eventCards = document.querySelectorAll('.event-card');
+  
+  // Afficher tous les événements sans exception
+  eventCards.forEach(card => {
+    card.style.display = '';
+  });
+  
+  // Masquer le message "Aucun événement" s'il existe
+  const noEventsMessage = document.querySelector('.no-events-message');
+  if (noEventsMessage) {
+    noEventsMessage.remove();
+  }
+  
+  // Ajouter une classe spécifique au corps pour identifier le mode "Cette semaine"
+  document.body.classList.remove('today-filter-active');
+  document.body.classList.add('week-filter-active');
+  
+  console.log("Tous les événements ont été affichés (filtre Cette semaine)");
 }
 
 /**
@@ -108,85 +166,6 @@ function setActiveFilter(activeButton) {
 }
 
 /**
- * Filtre les événements par date en utilisant la date actuelle
- */
-function filterEventsByDate(period) {
-  const eventCards = document.querySelectorAll('.event-card');
-  const eventsContainer = document.getElementById('events-container');
-  
-  if (!eventCards.length) {
-    console.error("Aucune carte d'événement trouvée");
-    return;
-  }
-  
-  if (period === 'today') {
-    // Pour le filtre Aujourd'hui, supprimer tous les événements
-    // et masquer le message d'erreur - ne rien afficher
-    eventCards.forEach(card => {
-      card.style.display = 'none';
-    });
-    
-    // Supprimer le message d'erreur s'il existe
-    const noEventsMessage = document.querySelector('.no-events-message');
-    if (noEventsMessage) {
-      noEventsMessage.remove();
-    }
-  } else if (period === 'week') {
-    // Pour le filtre Cette semaine, afficher tous les événements
-    eventCards.forEach(card => {
-      card.style.display = '';
-    });
-    
-    // Supprimer le message d'erreur s'il existe
-    const noEventsMessage = document.querySelector('.no-events-message');
-    if (noEventsMessage) {
-      noEventsMessage.remove();
-    }
-  }
-}
-
-/**
- * Vérifie s'il y a des événements visibles et affiche un message si nécessaire
- */
-function checkVisibleEvents() {
-  const eventsContainer = document.getElementById('events-container');
-  const activeFilter = document.querySelector('.filter-button.active');
-  
-  // Si le filtre actif est "Aujourd'hui", ne pas afficher de message d'erreur
-  if (activeFilter && activeFilter.id === 'today-filter') {
-    // Supprimer le message s'il existe
-    const noEventsMessage = document.querySelector('.no-events-message');
-    if (noEventsMessage) {
-      noEventsMessage.remove();
-    }
-    return;
-  }
-  
-  // Pour les autres filtres, vérifier s'il y a des événements visibles
-  const visibleEvents = Array.from(document.querySelectorAll('.event-card')).filter(card => 
-    card.style.display !== 'none'
-  );
-  
-  if (visibleEvents.length === 0 && eventsContainer) {
-    // Vérifier s'il existe déjà un message
-    if (!document.querySelector('.no-events-message')) {
-      eventsContainer.insertAdjacentHTML('beforeend', `
-        <div class="col-span-3 flex flex-col items-center justify-center p-6 text-center no-events-message">
-          <i class="fas fa-calendar-times text-gray-600 text-3xl mb-3"></i>
-          <p class="text-gray-400">Aucun événement ne correspond à votre sélection</p>
-        </div>
-      `);
-    }
-  } else {
-    // Supprimer le message s'il existe
-    const noEventsMessage = document.querySelector('.no-events-message');
-    if (noEventsMessage) {
-      noEventsMessage.remove();
-    }
-  }
-}
-
-/**
  * Supprime les badges "ESSENTIEL" des événements
  */
 function removeEssentialBadges() {
@@ -204,6 +183,11 @@ function removeEssentialBadges() {
     .event-card::after {
       content: '';
       background: none !important;
+    }
+    
+    /* Masquer automatiquement tous les événements quand le filtre "Aujourd'hui" est actif */
+    body.today-filter-active .event-card {
+      display: none !important;
     }
   `;
   document.head.appendChild(style);
@@ -229,31 +213,42 @@ function overrideEventRendering() {
         const activeFilter = document.querySelector('.filter-button.active');
         if (activeFilter) {
           if (activeFilter.id === 'today-filter') {
-            filterEventsByDate('today');
+            forceHideAllEvents();
           } else if (activeFilter.id === 'week-filter') {
-            filterEventsByDate('week');
+            forceShowAllEvents();
           }
+        } else {
+          // Par défaut, masquer tous les événements
+          forceHideAllEvents();
         }
       }, 100);
     };
   }
 }
 
-/**
- * Formate une date en JJ/MM/YYYY
- */
-function formatDate(date) {
-  return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
-}
-
-/**
- * Parse une date du format JJ/MM/YYYY en objet Date
- */
-function parseDate(dateStr) {
-  const parts = dateStr.split('/');
-  if (parts.length === 3) {
-    // Les mois en JavaScript vont de 0 à 11, donc on soustrait 1
-    return new Date(parts[2], parts[1] - 1, parts[0]);
+// Ajouter un écouteur global pour intercepter tout clic sur le document
+document.addEventListener('click', function(event) {
+  // Si le filtre "Aujourd'hui" est actif, masquer tous les événements qui pourraient être ajoutés dynamiquement
+  if (document.body.classList.contains('today-filter-active')) {
+    setTimeout(() => {
+      forceHideAllEvents();
+    }, 100);
   }
-  return new Date(); // Retourner la date actuelle en cas d'erreur
+}, true);
+
+// Observer les changements dans le DOM pour appliquer le filtre en continu
+if (window.MutationObserver) {
+  const observer = new MutationObserver(function() {
+    if (document.body.classList.contains('today-filter-active')) {
+      setTimeout(() => {
+        forceHideAllEvents();
+      }, 50);
+    }
+  });
+  
+  // Observer les changements dans le conteneur des événements
+  const eventsContainer = document.getElementById('events-container');
+  if (eventsContainer) {
+    observer.observe(eventsContainer, { childList: true, subtree: true });
+  }
 }
