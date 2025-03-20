@@ -38,7 +38,7 @@
             --panel-glow: var(--aggressive-glow);
         }
 
-        .portfolio-panel[id="portfolio-modéré"] {
+        .portfolio-panel[id="portfolio-modere"] {
             --panel-color: var(--moderate-color);
             --panel-glow: var(--moderate-glow);
         }
@@ -224,15 +224,15 @@
                 
                 <!-- Onglets de portefeuille -->
                 <div class="portfolio-toggles portfolio-tabs">
-                    <button class="portfolio-tab portfolio-toggle active" data-target="portfolio-agressif">
+                    <button class="portfolio-tab portfolio-toggle active" data-target="portfolio-agressif" data-original-type="Agressif">
                         <span class="tab-icon"><i class="fas fa-rocket"></i></span>
                         <span class="tab-text">Agressif</span>
                     </button>
-                    <button class="portfolio-tab portfolio-toggle" data-target="portfolio-modere">
+                    <button class="portfolio-tab portfolio-toggle" data-target="portfolio-modere" data-original-type="Modéré">
                         <span class="tab-icon"><i class="fas fa-balance-scale"></i></span>
                         <span class="tab-text">Modéré</span>
                     </button>
-                    <button class="portfolio-tab portfolio-toggle" data-target="portfolio-stable">
+                    <button class="portfolio-tab portfolio-toggle" data-target="portfolio-stable" data-original-type="Stable">
                         <span class="tab-icon"><i class="fas fa-shield-alt"></i></span>
                         <span class="tab-text">Stable</span>
                     </button>
@@ -323,8 +323,12 @@
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // Log pour débogage
+            console.log('Page portefeuille chargée');
+            
             // Get portfolio type from URL parameter (default to 'agressif')
             const portfolioType = getUrlParameter('type') || 'agressif';
+            console.log('Type de portefeuille demandé:', portfolioType);
             
             // Update page based on selected portfolio type
             updatePortfolioView(portfolioType);
@@ -338,9 +342,13 @@
             
             // Add transition on portfolio tabs
             document.querySelectorAll('.portfolio-tab').forEach(tab => {
+                console.log('Onglet trouvé:', tab.dataset.target, 'Type original:', tab.dataset.originalType);
+                
                 tab.addEventListener('click', function() {
+                    console.log('Clic sur onglet:', this.dataset.target);
+                    
                     // Update the URL without reloading the page
-                    const newType = this.getAttribute('data-target').replace('portfolio-', '');
+                    const newType = this.dataset.target.replace('portfolio-', '');
                     const newUrl = updateQueryStringParameter(window.location.href, 'type', newType);
                     history.pushState({ type: newType }, '', newUrl);
                     
@@ -386,24 +394,37 @@
             }
         }
         
+        // Fonction pour normaliser les types de portefeuille (enlever les accents)
+        function normalizePortfolioType(type) {
+            // Normaliser en retirant les accents et en minuscules
+            return type.toLowerCase()
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "");
+        }
+        
         function updatePortfolioView(type) {
+            console.log('Mise à jour de la vue pour le type:', type);
+            
+            // Normaliser le type pour la comparaison
+            const normalizedType = normalizePortfolioType(type);
+            
             // Update page title
             const titleElement = document.getElementById('portfolioTitle');
             
             // Update title based on portfolio type
-            if (type === 'agressif') {
+            if (normalizedType === 'agressif') {
                 titleElement.textContent = 'PORTEFEUILLE AGRESSIF';
                 
                 // Mettre à jour les couleurs des toggles
                 document.documentElement.style.setProperty('--accent-color', 'var(--aggressive-color)');
                 document.documentElement.style.setProperty('--accent-glow', 'var(--aggressive-glow)');
-            } else if (type === 'modere') {
+            } else if (normalizedType === 'modere') {
                 titleElement.textContent = 'PORTEFEUILLE MODÉRÉ';
                 
                 // Mettre à jour les couleurs des toggles
                 document.documentElement.style.setProperty('--accent-color', 'var(--moderate-color)');
                 document.documentElement.style.setProperty('--accent-glow', 'var(--moderate-glow)');
-            } else if (type === 'stable') {
+            } else if (normalizedType === 'stable') {
                 titleElement.textContent = 'PORTEFEUILLE STABLE';
                 
                 // Mettre à jour les couleurs des toggles
@@ -416,6 +437,16 @@
             if (container) {
                 container.style.borderColor = `var(--accent-color)`;
             }
+            
+            // Mettre à jour l'onglet actif
+            document.querySelectorAll('.portfolio-tab').forEach(tab => {
+                const tabType = tab.dataset.target.replace('portfolio-', '');
+                if (normalizePortfolioType(tabType) === normalizedType) {
+                    tab.classList.add('active');
+                } else {
+                    tab.classList.remove('active');
+                }
+            });
         }
         
         // Update market time
