@@ -1,0 +1,51 @@
+name: Update Sectors Data
+
+on:
+  schedule:
+    - cron: '0 */4 * * *'  # Toutes les 4 heures
+  workflow_dispatch:  # Permet le déclenchement manuel
+
+jobs:
+  update-sectors:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4
+          
+      - name: Debug directory structure
+        run: |
+          pwd
+          ls -la
+          mkdir -p data
+          
+      - name: Run sectors scraper
+        run: |
+          python scripts/scrape_sectors.py
+          
+      - name: Check generated data
+        run: |
+          ls -la data/
+          if [ -f "data/sectors.json" ]; then
+            echo "✅ Le fichier de données des secteurs a été généré avec succès"
+            cat data/sectors.json | head -n 20  # Affiche les 20 premières lignes pour vérification
+          else
+            echo "⚠️ Le fichier de données des secteurs n'a pas été généré"
+            exit 1
+          fi
+          
+      - name: Commit and push if changed
+        run: |
+          git config --global user.name 'GitHub Actions'
+          git config --global user.email 'actions@github.com'
+          git add data/sectors.json
+          git diff --staged --quiet || (git commit -m "Mise à jour automatique des données des secteurs" && git push)
