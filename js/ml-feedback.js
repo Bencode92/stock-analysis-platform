@@ -52,12 +52,15 @@ class MLFeedbackSystem {
         });
         
         document.addEventListener('click', (event) => {
-            if (event.target.closest('.ml-feedback-btn')) {
-                const newsCard = event.target.closest('.news-card');
-                if (newsCard) {
-                    this.openFeedbackModal(newsCard);
-                }
-            }
+    if (event.target.closest('.ml-feedback-btn')) {
+        event.preventDefault();
+        event.stopPropagation(); // Empêche la propagation à la carte d'actualité parent
+        
+        const newsCard = event.target.closest('.news-card');
+        if (newsCard) {
+            this.openFeedbackModal(newsCard);
+        }
+    }
             
             if (event.target.id === 'ml-feedback-cancel') {
                 this.closeFeedbackModal();
