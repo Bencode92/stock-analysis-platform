@@ -58,13 +58,52 @@ def extract_content_from_html(html_file):
                                 data_line += " ({})".format(change_text)
                             content.append(data_line)
             
+            elif html_file.endswith('secteurs.html'):
+                # Pour les secteurs, on cherche les performances sectorielles
+                sector_data = soup.select('.sector-card, .sector-item, .performance-card')
+                if not sector_data:
+                    # Fallback
+                    sector_data = soup.select('.card, .sector, .industry-card, .industry-item')
+                
+                content = []
+                content.append("📊 PERFORMANCES SECTORIELLES:")
+                
+                for item in sector_data:
+                    name = item.select_one('h3, h4, .sector-name, .name, .title')
+                    performance = item.select_one('.performance, .change, .variation')
+                    trend = item.select_one('.trend, .direction, .recommendation')
+                    
+                    if name:
+                        name_text = name.get_text(strip=True)
+                        if name_text:
+                            data_line = "• {}".format(name_text)
+                            if performance:
+                                perf_text = performance.get_text(strip=True)
+                                data_line += ": {}".format(perf_text)
+                            if trend:
+                                trend_text = trend.get_text(strip=True)
+                                data_line += " - {}".format(trend_text)
+                            content.append(data_line)
+                
+                # Si aucun secteur n'a été trouvé, essayer d'extraire des tableaux
+                if len(content) <= 1:
+                    tables = soup.select('table')
+                    for table in tables:
+                        rows = table.select('tr')
+                        for row in rows[1:6]:  # Skip header, limit to 5 rows
+                            cols = row.select('td')
+                            if len(cols) >= 2:
+                                sector_name = cols[0].get_text(strip=True)
+                                sector_perf = cols[1].get_text(strip=True) if len(cols) > 1 else ""
+                                content.append("• {}: {}".format(sector_name, sector_perf))
+            
             return "\n".join(content)
     except Exception as e:
         print("Erreur lors de l'extraction du contenu de {}: {}".format(html_file, str(e)))
         # En cas d'erreur, retourner un placeholder pour ne pas bloquer l'exécution
         return "[Contenu non disponible pour {}]".format(html_file)
 
-def generate_portfolios(actualites, marche):
+def generate_portfolios(actualites, marche, secteurs):
     """Générer les portefeuilles en utilisant l'API OpenAI."""
     api_key = os.environ.get('API_CHAT')
     if not api_key:
@@ -78,7 +117,10 @@ Les dernières actualités financières :
 Les tendances actuelles du marché :
 {}
 
-En fonction des tendances du marché et des actualités, génère trois portefeuilles optimisés :
+Analyse sectorielle actuelle :
+{}
+
+En fonction des tendances du marché, des secteurs performants et des actualités, génère trois portefeuilles optimisés :
 1️⃣ **Agressif** : Composé de **10 à 20 actifs** à forte volatilité. Inclure des actions de croissance (ex: tech), des cryptos et des ETF risqués.
 2️⃣ **Modéré** : Composé de **10 à 20 actifs** équilibrés entre actions solides (blue chips), obligations d'entreprises et ETF diversifiés.
 3️⃣ **Stable** : Composé de **10 à 20 actifs** défensifs, avec des obligations souveraines, des valeurs refuges et des ETF stables.
@@ -111,10 +153,11 @@ Retourne un JSON avec la structure suivante :
 🚀 **Critères de sélection** :
 - Vérifie que chaque portefeuille contient **entre 10 et 20 actifs**.
 - Adapte les allocations en fonction des **tendances actuelles du marché** et des **actualités récentes**.
+- Privilégie les secteurs performants identifiés dans l'analyse sectorielle.
 - Ajuste la volatilité et le risque selon le type de portefeuille (ex: plus de crypto/actions volatiles pour l'agressif, plus de valeurs refuges pour le stable).
 
 Ne réponds qu'avec le JSON, sans autres explications.
-""".format(actualites, marche)
+""".format(actualites, marche, secteurs)
     
     try:
         headers = {
@@ -245,9 +288,10 @@ def main():
     print("🔍 Extraction des données financières...")
     actualites = extract_content_from_html('actualites.html')
     marche = extract_content_from_html('marche.html')
+    secteurs = extract_content_from_html('secteurs.html')
     
     print("🧠 Génération des portefeuilles optimisés...")
-    portfolios = generate_portfolios(actualites, marche)
+    portfolios = generate_portfolios(actualites, marche, secteurs)
     
     print("💾 Sauvegarde des portefeuilles...")
     save_portfolios(portfolios)
