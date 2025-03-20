@@ -91,7 +91,8 @@ function applyDisplayFix() {
             const scoreDisplay = `<span class="ml-score-badge">${item.score || 0}</span>`;
             
             const newsCard = document.createElement('div');
-            newsCard.className = `news-card glassmorphism ${impactClass}`;
+            // MODIFICATION: Ajout de la classe news-item pour compatibilité avec le système de feedback ML
+            newsCard.className = `news-card news-item glassmorphism ${impactClass}`;
             
             // Attributs pour le filtrage
             newsCard.setAttribute('data-category', item.category || 'general');
@@ -104,8 +105,11 @@ function applyDisplayFix() {
             if (item.url) {
                 newsCard.setAttribute('data-url', item.url);
                 newsCard.style.cursor = 'pointer';
-                newsCard.addEventListener('click', function() {
-                    window.open(item.url, '_blank');
+                newsCard.addEventListener('click', function(e) {
+                    // Ne pas ouvrir le lien si l'utilisateur a cliqué sur le bouton de feedback
+                    if (!e.target.closest('.ml-feedback-btn')) {
+                        window.open(item.url, '_blank');
+                    }
                 });
                 newsCard.classList.add('clickable-news');
             }
@@ -143,4 +147,13 @@ function applyDisplayFix() {
     }
     
     console.log('✅ Correctif d\'affichage des actualités appliqué avec succès');
+    
+    // MODIFICATION: Ajouter un appel à MLNewsIntegrator.initMLFeedback() après avoir réaffiché les actualités
+    // pour que les boutons de reclassification soient ajoutés aux nouvelles cartes d'actualités
+    setTimeout(() => {
+        if (window.MLNewsIntegrator && window.MLNewsIntegrator.initMLFeedback) {
+            console.log('🤖 Réinitialisation du système de feedback ML pour les actualités générales');
+            window.MLNewsIntegrator.initMLFeedback();
+        }
+    }, 500);
 }
