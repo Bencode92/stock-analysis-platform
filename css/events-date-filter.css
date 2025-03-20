@@ -97,3 +97,13 @@
 #reset-date-btn:hover {
   background-color: rgba(0, 255, 135, 0.15);
 }
+
+/* RÈGLE CRITIQUE : Masquer tous les événements lorsque le filtre "Aujourd'hui" est actif */
+body.today-filter-active .event-card {
+  display: none !important;
+}
+
+/* Lorsque le filtre "Cette semaine" est actif, s'assurer que tous les événements sont visibles */
+body.week-filter-active .event-card {
+  display: flex !important;
+}
