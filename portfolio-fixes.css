@@ -1,0 +1,121 @@
+/* Correctifs pour TradePulse - Problèmes d'interface
+ * Créé le 20/03/2025
+ */
+
+/* Correction pour le logo "TRADEPULSE" (masquage du 'T') */
+.logo-container .logo {
+    letter-spacing: 1px;
+    margin-left: 5px; /* Ajoute de l'espace à gauche pour éviter que le 'T' soit coupé */
+    display: block;
+    position: relative;
+    z-index: 10; /* Garantit que le texte est au-dessus des autres éléments */
+}
+
+.logo-container {
+    min-width: 200px; /* Assure que le conteneur est assez large */
+    padding-left: 10px; /* Crée de l'espace supplémentaire à gauche */
+    margin-right: 20px; /* Ajoute de l'espace entre le logo et la navigation */
+}
+
+/* Correction pour le titre de portefeuille mal positionné */
+.page-title-section {
+    margin-top: 40px; /* Ajoute de l'espace au-dessus du titre */
+    padding-top: 20px;
+    margin-bottom: 30px;
+    position: relative;
+    clear: both;
+}
+
+.page-title {
+    font-size: 2.5rem;
+    letter-spacing: 2px;
+    margin-bottom: 15px;
+    position: relative;
+    z-index: 2;
+}
+
+.page-subtitle {
+    margin-bottom: 30px;
+}
+
+/* Améliorations pour la navigation des types de portefeuille */
+.portfolio-toggles.portfolio-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 15px; /* Augmente l'espace entre les boutons */
+    margin: 20px 0 40px; /* Augmente les marges autour des onglets */
+}
+
+.portfolio-tab {
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.portfolio-tab.active {
+    border-color: var(--accent-color);
+    background-color: rgba(var(--accent-color-rgb), 0.1);
+    box-shadow: 0 0 15px var(--accent-glow);
+}
+
+/* Assurez-vous que le contenu principal a suffisamment d'espace */
+.page-content {
+    padding-left: 100px; /* Ajuster en fonction de la largeur de la sidebar */
+    padding-top: 80px; /* Ajuster en fonction de la hauteur du header */
+    padding-right: 20px;
+    padding-bottom: 40px;
+    min-height: calc(100vh - 80px);
+}
+
+/* Amélioration pour la sidebar afin de ne pas cacher le contenu */
+.sidebar {
+    z-index: 1000; /* S'assure que la sidebar est au-dessus du contenu */
+}
+
+/* Correction spécifique pour le texte "PORTEFEUILLE STABLE" */
+#portfolioTitle {
+    display: block;
+    width: 100%; 
+    text-align: center;
+    clear: both;
+    margin-bottom: 20px;
+    font-size: 2.2rem; /* Légèrement plus petit que l'original si nécessaire */
+}
+
+/* Conversion des couleurs pour les variables RGB nécessaires aux backgrounds avec opacité */
+:root {
+    --aggressive-color-rgb: 255, 123, 0;  /* Orange néon */
+    --moderate-color-rgb: 0, 255, 135;    /* Vert néon */
+    --stable-color-rgb: 0, 178, 255;      /* Bleu néon */
+}
+
+/* Amélioration de la visibilité des tags actifs */
+.portfolio-tab.active {
+    transform: translateY(-3px);
+    font-weight: 700;
+}
+
+/* Hover effects pour les onglets */
+.portfolio-tab:not(.active):hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+/* Amélioration de la visibilité du contenu principal des portefeuilles */
+.portfolio-panel {
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    opacity: 0;
+    transform: translateY(10px);
+    display: none;
+}
+
+.portfolio-panel.active {
+    opacity: 1;
+    transform: translateY(0);
+    display: block;
+}
