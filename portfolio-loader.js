@@ -41,6 +41,16 @@ class PortfolioManager {
     }
 
     /**
+     * Fonction utilitaire pour normaliser les types de portefeuille (enlever les accents)
+     */
+    normalizePortfolioType(type) {
+        // Normaliser en retirant les accents et en minuscules
+        return type.toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
+    }
+
+    /**
      * Charge les données des portefeuilles depuis le fichier JSON
      */
     async loadPortfolios() {
@@ -194,7 +204,12 @@ class PortfolioManager {
                 // Créer l'onglet
                 const tab = document.createElement('button');
                 tab.className = `portfolio-tab ${index === 0 ? 'active' : ''}`;
-                tab.dataset.target = `portfolio-${portfolioType.toLowerCase()}`;
+                
+                // Standardiser les ID pour éviter les problèmes d'accent
+                const normalizedType = this.normalizePortfolioType(portfolioType);
+                tab.dataset.target = `portfolio-${normalizedType}`;
+                tab.dataset.originalType = portfolioType; // Garder le type original
+                
                 tab.innerHTML = `
                     <span class="tab-icon">
                         ${this.getPortfolioIcon(portfolioType)}
@@ -213,7 +228,12 @@ class PortfolioManager {
                 Object.keys(this.portfolios).forEach((portfolioType, index) => {
                     const tab = document.createElement('button');
                     tab.className = `portfolio-tab ${index === 0 ? 'active' : ''}`;
-                    tab.dataset.target = `portfolio-${portfolioType.toLowerCase()}`;
+                    
+                    // Standardiser les ID pour éviter les problèmes d'accent
+                    const normalizedType = this.normalizePortfolioType(portfolioType);
+                    tab.dataset.target = `portfolio-${normalizedType}`;
+                    tab.dataset.originalType = portfolioType; // Garder le type original
+                    
                     tab.innerHTML = `
                         <span class="tab-icon">
                             ${this.getPortfolioIcon(portfolioType)}
@@ -221,6 +241,12 @@ class PortfolioManager {
                         <span class="tab-text">${portfolioType}</span>
                     `;
                     tabsContainer.appendChild(tab);
+                });
+            } else {
+                // Mettre à jour les onglets existants avec les data-original-type
+                existingTabs.forEach(tab => {
+                    const targetType = tab.dataset.target.replace('portfolio-', '');
+                    tab.dataset.originalType = this.getOriginalType(targetType);
                 });
             }
         }
@@ -230,7 +256,10 @@ class PortfolioManager {
             // Créer le contenu du portefeuille
             const content = document.createElement('div');
             content.className = `portfolio-panel ${index === 0 ? 'active' : ''}`;
-            content.id = `portfolio-${portfolioType.toLowerCase()}`;
+            
+            // Standardiser les ID pour éviter les problèmes d'accent
+            const normalizedType = this.normalizePortfolioType(portfolioType);
+            content.id = `portfolio-${normalizedType}`;
             
             // Générer les graphiques et tableaux pour ce portefeuille
             content.innerHTML = this.generatePortfolioContent(portfolioType, this.portfolios[portfolioType]);
@@ -252,13 +281,27 @@ class PortfolioManager {
     }
 
     /**
+     * Récupère le type original à partir du type normalisé
+     */
+    getOriginalType(normalizedType) {
+        // Correspondance entre les types normalisés et originaux
+        const typeMap = {
+            'agressif': 'Agressif',
+            'modere': 'Modéré',
+            'stable': 'Stable'
+        };
+        
+        return typeMap[normalizedType] || normalizedType;
+    }
+
+    /**
      * Génère l'icône correspondant au type de portefeuille
      */
     getPortfolioIcon(portfolioType) {
-        switch(portfolioType.toLowerCase()) {
+        switch(this.normalizePortfolioType(portfolioType)) {
             case 'agressif':
                 return '<i class="fas fa-rocket"></i>';
-            case 'modéré':
+            case 'modere':
                 return '<i class="fas fa-balance-scale"></i>';
             case 'stable':
                 return '<i class="fas fa-shield-alt"></i>';
@@ -273,11 +316,12 @@ class PortfolioManager {
     generatePortfolioContent(portfolioType, portfolio) {
         // Déterminer les couleurs et styles basés sur le type
         let typeColor, typeClass;
+        const normalizedType = this.normalizePortfolioType(portfolioType);
         
-        if (portfolioType.toLowerCase() === 'agressif') {
+        if (normalizedType === 'agressif') {
             typeColor = '#FF7B00';
             typeClass = 'agressif';
-        } else if (portfolioType.toLowerCase() === 'modéré') {
+        } else if (normalizedType === 'modere') {
             typeColor = '#00FF87';
             typeClass = 'modere';
         } else {
@@ -299,7 +343,7 @@ class PortfolioManager {
         // Génération du graphique coloré selon le type
         const chartHTML = `
             <div class="portfolio-chart-container">
-                <canvas id="chart-${portfolioType.toLowerCase()}" width="300" height="300"></canvas>
+                <canvas id="chart-${normalizedType}" width="300" height="300"></canvas>
             </div>
         `;
         
@@ -465,10 +509,12 @@ class PortfolioManager {
      * Retourne une description pour chaque type de portefeuille
      */
     getPortfolioDescription(portfolioType) {
-        switch(portfolioType.toLowerCase()) {
+        const normalizedType = this.normalizePortfolioType(portfolioType);
+        
+        switch(normalizedType) {
             case 'agressif':
                 return 'Ce portefeuille vise une croissance maximale en privilégiant des actifs à forte volatilité et à haut potentiel. Idéal pour les investisseurs avec une tolérance élevée au risque et un horizon de placement long.';
-            case 'modéré':
+            case 'modere':
                 return 'Ce portefeuille équilibré combine croissance et protection du capital. Il s\'adresse aux investisseurs qui recherchent une appréciation de leur capital à moyen terme tout en limitant la volatilité.';
             case 'stable':
                 return 'Ce portefeuille défensif privilégie la préservation du capital et les revenus réguliers. Il convient aux investisseurs prudents ou proches de la retraite, cherchant à minimiser les fluctuations de leur portefeuille.';
@@ -488,20 +534,24 @@ class PortfolioManager {
         
         Object.keys(this.portfolios).forEach(portfolioType => {
             const portfolio = this.portfolios[portfolioType];
-            const ctx = document.getElementById(`chart-${portfolioType.toLowerCase()}`);
+            const normalizedType = this.normalizePortfolioType(portfolioType);
+            const ctx = document.getElementById(`chart-${normalizedType}`);
             
-            if (!ctx) return;
+            if (!ctx) {
+                console.warn(`Élément canvas non trouvé pour ${normalizedType}`);
+                return;
+            }
             
             // Définir les palettes de couleurs selon le type de portefeuille
             let colorPalette;
-            switch(portfolioType.toLowerCase()) {
+            switch(normalizedType) {
                 case 'agressif':
                     colorPalette = [
                         '#FF7B00', '#FF8F29', '#FFA352', '#FFB77A',
                         '#FFCBA3', '#FFE0CC', '#CC6300', '#994A00'
                     ];
                     break;
-                case 'modéré':
+                case 'modere':
                     colorPalette = [
                         '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
                         '#B3FFC7', '#CCFFD6', '#00CC6A', '#00994F'
@@ -563,9 +613,9 @@ class PortfolioManager {
                             labels: {
                                 color: function(context) {
                                     // Utiliser la couleur correspondante du type de portefeuille
-                                    if (portfolioType.toLowerCase() === 'agressif') {
+                                    if (normalizedType === 'agressif') {
                                         return '#FF7B00';
-                                    } else if (portfolioType.toLowerCase() === 'modéré') {
+                                    } else if (normalizedType === 'modere') {
                                         return '#00FF87';
                                     } else {
                                         return '#00B2FF';
@@ -602,9 +652,15 @@ class PortfolioManager {
      * Configure les interactions utilisateur
      */
     setupInteractions() {
+        console.log('Configuration des interactions des onglets de portefeuille');
+        
         // Gérer les clics sur les onglets
         document.querySelectorAll('.portfolio-tab').forEach(tab => {
+            console.log('Onglet trouvé:', tab.dataset.target);
+            
             tab.addEventListener('click', () => {
+                console.log('Clic sur onglet:', tab.dataset.target);
+                
                 // Désactiver tous les onglets et panneaux
                 document.querySelectorAll('.portfolio-tab, .portfolio-panel').forEach(el => {
                     el.classList.remove('active');
@@ -616,7 +672,10 @@ class PortfolioManager {
                 // Activer le panneau correspondant
                 const targetPanel = document.getElementById(tab.dataset.target);
                 if (targetPanel) {
+                    console.log('Panneau cible trouvé:', tab.dataset.target);
                     targetPanel.classList.add('active');
+                } else {
+                    console.error('Panneau cible non trouvé:', tab.dataset.target);
                 }
                 
                 // Mettre à jour les couleurs selon le type de portefeuille
@@ -639,7 +698,9 @@ class PortfolioManager {
                 // Mettre à jour le titre de la page
                 const titleElement = document.getElementById('portfolioTitle');
                 if (titleElement) {
-                    titleElement.textContent = `PORTEFEUILLE ${portfolioType.toUpperCase()}`;
+                    // Utiliser le type original (avec accents) s'il est disponible
+                    const originalType = tab.dataset.originalType || portfolioType;
+                    titleElement.textContent = `PORTEFEUILLE ${originalType.toUpperCase()}`;
                 }
             });
         });
@@ -665,14 +726,17 @@ class PortfolioManager {
      * Met à jour les couleurs de l'interface selon le type de portefeuille
      */
     updatePortfolioColors(type) {
+        console.log('Mise à jour des couleurs pour le type:', type);
         // Mettre à jour les variables CSS selon le type
-        if (type === 'agressif') {
+        const normalizedType = this.normalizePortfolioType(type);
+        
+        if (normalizedType === 'agressif') {
             document.documentElement.style.setProperty('--accent-color', 'var(--aggressive-color)');
             document.documentElement.style.setProperty('--accent-glow', 'var(--aggressive-glow)');
-        } else if (type === 'modere') {
+        } else if (normalizedType === 'modere') {
             document.documentElement.style.setProperty('--accent-color', 'var(--moderate-color)');
             document.documentElement.style.setProperty('--accent-glow', 'var(--moderate-glow)');
-        } else if (type === 'stable') {
+        } else if (normalizedType === 'stable') {
             document.documentElement.style.setProperty('--accent-color', 'var(--stable-color)');
             document.documentElement.style.setProperty('--accent-glow', 'var(--stable-glow)');
         }
@@ -711,7 +775,7 @@ class PortfolioManager {
         
         const a = document.createElement('a');
         a.href = url;
-        a.download = `tradepulse-portfolio-${portfolioType.toLowerCase()}.json`;
+        a.download = `tradepulse-portfolio-${this.normalizePortfolioType(portfolioType)}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -833,6 +897,7 @@ class PortfolioManager {
 
 // Initialiser le gestionnaire de portefeuilles quand le DOM est chargé
 document.addEventListener('DOMContentLoaded', () => {
+    console.log('Initialisation du gestionnaire de portefeuilles');
     const portfolioManager = new PortfolioManager();
     window.portfolioManager = portfolioManager; // Rendre accessible globalement
     portfolioManager.init();
