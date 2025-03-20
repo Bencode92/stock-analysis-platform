@@ -622,6 +622,25 @@ class PortfolioManager {
                 // Mettre à jour les couleurs selon le type de portefeuille
                 const portfolioType = tab.dataset.target.replace('portfolio-', '');
                 this.updatePortfolioColors(portfolioType);
+                
+                // Effet de transition sur le conteneur
+                const container = document.querySelector('.portfolio-container');
+                if (container) {
+                    container.classList.add('transitioning');
+                    setTimeout(() => {
+                        container.classList.remove('transitioning');
+                    }, 500);
+                }
+                
+                // Mettre à jour l'URL sans recharger la page
+                const newUrl = this.updateQueryStringParameter(window.location.href, 'type', portfolioType);
+                history.pushState({ type: portfolioType }, '', newUrl);
+                
+                // Mettre à jour le titre de la page
+                const titleElement = document.getElementById('portfolioTitle');
+                if (titleElement) {
+                    titleElement.textContent = `PORTEFEUILLE ${portfolioType.toUpperCase()}`;
+                }
             });
         });
         
@@ -662,6 +681,20 @@ class PortfolioManager {
         const container = document.querySelector('.portfolio-container');
         if (container) {
             container.style.borderColor = `var(--accent-color)`;
+        }
+    }
+    
+    /**
+     * Modifie les paramètres de l'URL
+     */
+    updateQueryStringParameter(uri, key, value) {
+        const re = new RegExp("([?&])" + key + "=.*?(&|$)", "i");
+        const separator = uri.indexOf('?') !== -1 ? "&" : "?";
+        
+        if (uri.match(re)) {
+            return uri.replace(re, '$1' + key + "=" + value + '$2');
+        } else {
+            return uri + separator + key + "=" + value;
         }
     }
 
@@ -803,4 +836,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const portfolioManager = new PortfolioManager();
     window.portfolioManager = portfolioManager; // Rendre accessible globalement
     portfolioManager.init();
+
+    // S'assurer que les styles mis à jour sont chargés
+    if (!document.querySelector('link[href="portfolio-styles-updated.css"]')) {
+        const styleLink = document.createElement('link');
+        styleLink.rel = 'stylesheet';
+        styleLink.href = 'portfolio-styles-updated.css';
+        document.head.appendChild(styleLink);
+    }
 });
