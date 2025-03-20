@@ -222,14 +222,33 @@ document.addEventListener('DOMContentLoaded', function() {
             // Regrouper tous les secteurs par région
             for (const [category, sectors] of Object.entries(sectorsData.sectors)) {
                 sectors.forEach(sector => {
-                    // Déterminer la région
-                    if (sector.region === "Europe" || sector.source === "Les Echos") {
+                    // Log pour déboguer
+                    console.log(`Traitement de secteur: ${sector.name}, Source: ${sector.source}, Région: ${sector.region}`);
+                    
+                    // Classer précisément par le nom de l'indice
+                    if (sector.name && sector.name.includes("Stoxx Europe 600")) {
                         regionData.europe.push({...sector, category});
-                    } else if (sector.region === "US" || sector.source === "Boursorama") {
+                        console.log(`Classé dans EUROPE: ${sector.name}`);
+                    } 
+                    else if (sector.name && sector.name.includes("NASDAQ US")) {
                         regionData.us.push({...sector, category});
+                        console.log(`Classé dans US: ${sector.name}`);
+                    }
+                    // Classement de fallback par source ou région explicite
+                    else if (sector.region === "Europe" || sector.source === "Les Echos") {
+                        regionData.europe.push({...sector, category});
+                        console.log(`Classé dans EUROPE (fallback): ${sector.name}`);
+                    } 
+                    else if (sector.region === "US" || sector.source === "Boursorama") {
+                        regionData.us.push({...sector, category});
+                        console.log(`Classé dans US (fallback): ${sector.name}`);
                     }
                 });
             }
+            
+            // Ajoutez un log pour vérifier la répartition finale
+            console.log(`Nombre de secteurs pour l'Europe: ${regionData.europe.length}`);
+            console.log(`Nombre de secteurs pour les US: ${regionData.us.length}`);
             
             // Générer le HTML pour chaque région
             for (const [region, sectors] of Object.entries(regionData)) {
@@ -340,12 +359,32 @@ document.addEventListener('DOMContentLoaded', function() {
                     return;
                 }
                 
-                // Trouver le secteur correspondant dans les données
-                const sector = sectorsList.find(s => s.category === sectorInfo.category);
-                if (!sector) {
-                    console.warn(`Secteur non trouvé: ${sectorInfo.name} dans la région ${regionName}`);
+                // Filtrer tous les secteurs de la catégorie
+                const sectorsInCategory = sectorsList.filter(s => s.category === sectorInfo.category);
+                
+                // Si on n'a pas trouvé de secteurs dans cette catégorie
+                if (sectorsInCategory.length === 0) {
+                    console.warn(`Secteurs non trouvés: ${sectorInfo.name} dans la région ${regionName}`);
+                    
+                    // Afficher un message dans l'interface
+                    const nameElement = container.querySelector('.sector-name');
+                    const valueElement = container.querySelector('.sector-value');
+                    const ytdElement = container.querySelector('.sector-ytd');
+                    
+                    if (nameElement) nameElement.textContent = sectorInfo.name;
+                    if (valueElement) {
+                        valueElement.textContent = 'N/A';
+                        valueElement.className = 'sector-value';
+                    }
+                    if (ytdElement) {
+                        ytdElement.textContent = 'N/A';
+                        ytdElement.className = 'sector-ytd';
+                    }
                     return;
                 }
+                
+                // Prendre le premier secteur pour l'affichage (ou faire une moyenne)
+                const sector = sectorsInCategory[0];
                 
                 // Mettre à jour les valeurs
                 const nameElement = container.querySelector('.sector-name');
