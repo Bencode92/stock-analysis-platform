@@ -707,8 +707,8 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Sector Tabs */
-        .sector-tabs {
+        /* Region Tabs */
+        .region-tabs {
             display: flex;
             border-bottom: 1px solid var(--card-border);
             margin-bottom: 24px;
@@ -717,7 +717,7 @@
             overflow: hidden;
         }
         
-        .sector-tab {
+        .region-tab {
             padding: 14px 24px;
             cursor: pointer;
             position: relative;
@@ -727,18 +727,18 @@
             letter-spacing: 0.02em;
         }
         
-        .sector-tab:hover {
+        .region-tab:hover {
             background-color: var(--accent-subtle);
             opacity: 0.9;
         }
         
-        .sector-tab.active {
+        .region-tab.active {
             opacity: 1;
             color: var(--accent-color);
             background-color: var(--accent-subtle);
         }
         
-        .sector-tab::after {
+        .region-tab::after {
             content: '';
             position: absolute;
             bottom: 0;
@@ -750,7 +750,7 @@
             box-shadow: 0 0 8px var(--accent-color);
         }
         
-        .sector-tab.active::after {
+        .region-tab.active::after {
             width: 100%;
         }
 
@@ -816,7 +816,7 @@
                 display: none;
             }
             
-            .sector-tabs {
+            .region-tabs {
                 overflow-x: auto;
                 white-space: nowrap;
             }
@@ -966,7 +966,7 @@
                         
                         <!-- USA -->
                         <div class="sector-group-header">
-                            <span>États-Unis (S&P 500 Sectors)</span>
+                            <span>États-Unis (NASDAQ)</span>
                             <span id="us-trend" class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
                         </div>
                         
@@ -1143,19 +1143,12 @@
                     </div>
                 </div>
                 
-                <!-- Onglets des secteurs -->
+                <!-- Onglets des régions -->
                 <div class="mb-8">
-                    <h2 class="section-title mb-6">Indices par secteur</h2>
-                    <div class="sector-tabs mb-6">
-                        <div class="sector-tab active" data-category="energy">Énergie</div>
-                        <div class="sector-tab" data-category="financials">Finance</div>
-                        <div class="sector-tab" data-category="technology">Technologie</div>
-                        <div class="sector-tab" data-category="healthcare">Santé</div>
-                        <div class="sector-tab" data-category="consumer">Consommation</div>
-                        <div class="sector-tab" data-category="industrials">Industrie</div>
-                        <div class="sector-tab" data-category="materials">Matériaux</div>
-                        <div class="sector-tab" data-category="utilities">Services Publics</div>
-                        <div class="sector-tab" data-category="real-estate">Immobilier</div>
+                    <h2 class="section-title mb-6">Secteurs par région</h2>
+                    <div class="region-tabs mb-6">
+                        <div class="region-tab active" data-region="europe">Europe (STOXX 600)</div>
+                        <div class="region-tab" data-region="us">États-Unis (NASDAQ)</div>
                     </div>
                     
                     <!-- Conteneur pour le tableau des secteurs -->
@@ -1174,100 +1167,38 @@
                         </div>
                         
                         <div id="sectors-container" class="hidden">
-                            <div id="energy-sectors" class="sector-content">
+                            <div id="europe-sectors" class="region-content">
                                 <div class="overflow-x-auto">
                                     <table class="data-table">
                                         <thead>
                                             <tr>
-                                                <th>RÉGION</th>
                                                 <th>SECTEUR</th>
-                                                <th>DERNIER</th>
+                                                <th>COURS</th>
                                                 <th>VAR. %</th>
                                                 <th>VAR/1JANV</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="energy-sectors-body">
+                                        <tbody id="europe-sectors-body">
                                             <!-- Les données seront injectées ici -->
                                         </tbody>
                                     </table>
                                 </div>
                             </div>
                             
-                            <div id="financials-sectors" class="sector-content hidden">
+                            <div id="us-sectors" class="region-content hidden">
                                 <div class="overflow-x-auto">
                                     <table class="data-table">
                                         <thead>
                                             <tr>
-                                                <th>RÉGION</th>
                                                 <th>SECTEUR</th>
-                                                <th>DERNIER</th>
+                                                <th>COURS</th>
                                                 <th>VAR. %</th>
                                                 <th>VAR/1JANV</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="financials-sectors-body">
-                                            <!-- Les données seront injectées ici -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            
-                            <div id="technology-sectors" class="sector-content hidden">
-                                <div class="overflow-x-auto">
-                                    <table class="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>RÉGION</th>
-                                                <th>SECTEUR</th>
-                                                <th>DERNIER</th>
-                                                <th>VAR. %</th>
-                                                <th>VAR/1JANV</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="technology-sectors-body">
-                                            <!-- Les données seront injectées ici -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            
-                            <div id="healthcare-sectors" class="sector-content hidden">
-                                <div class="overflow-x-auto">
-                                    <table class="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>RÉGION</th>
-                                                <th>SECTEUR</th>
-                                                <th>DERNIER</th>
-                                                <th>VAR. %</th>
-                                                <th>VAR/1JANV</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="healthcare-sectors-body">
-                                            <!-- Les données seront injectées ici -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            
-                            <div id="consumer-sectors" class="sector-content hidden">
-                                <div class="overflow-x-auto">
-                                    <table class="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>RÉGION</th>
-                                                <th>SECTEUR</th>
-                                                <th>DERNIER</th>
-                                                <th>VAR. %</th>
-                                                <th>VAR/1JANV</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="consumer-sectors-body">
+                                        <tbody id="us-sectors-body">
                                             <!-- Les données seront injectées ici -->
                                         </tbody>
                                     </table>
