@@ -121,7 +121,7 @@ ALL_SECTORS = []
 def get_headers():
     """Crée des en-têtes HTTP aléatoires pour éviter la détection de bot"""
     return {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
         "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
         "Cache-Control": "no-cache",
@@ -187,16 +187,17 @@ def extract_lesechos_data(html):
     sectors = []
     soup = BeautifulSoup(html, 'html.parser')
     
-    # Recherche du tableau des indices sectoriels
-    tables = soup.find_all('table', class_='c-table')
+    # Recherche du tableau des indices sectoriels - on cherche tous les tableaux sans filtre de classe
+    tables = soup.find_all('table')
     
     # Pour déboguer: ajouter un log de tous les tableaux trouvés
     logger.info(f"Nombre de tableaux trouvés: {len(tables)}")
     
-    # Si aucun tableau trouvé avec la classe c-table, cherchons toutes les tables
-    if not tables:
-        tables = soup.find_all('table')
-        logger.info(f"Aucun tableau avec classe c-table trouvé. Tableaux génériques trouvés: {len(tables)}")
+    # Générer un fichier HTML de débogage si nécessaire
+    debug_file_path = os.path.join(os.path.dirname(CONFIG["output_path"]), "debug_lesechos.html")
+    with open(debug_file_path, 'w', encoding='utf-8') as f:
+        f.write(html)
+    logger.info(f"HTML sauvegardé pour débogage dans {debug_file_path}")
     
     # Liste pour suivre les indices STOXX trouvés
     target_stoxx_indices_found = []
@@ -210,12 +211,14 @@ def extract_lesechos_data(html):
         header_texts = [h.get_text(strip=True) for h in headers]
         logger.info(f"En-têtes trouvés: {header_texts}")
         
-        # Vérifier si cela ressemble à notre tableau d'indices
-        if not any("Libellé" in h for h in header_texts) and not any("Var" in h for h in header_texts):
+        # Vérifier si cela ressemble à notre tableau d'indices (recherche flexible)
+        # On accepte le tableau si on trouve soit "Libellé", soit "Var." dans les en-têtes
+        if not any(h.lower().startswith("libellé") or h.lower().startswith("libelle") for h in header_texts) and \
+           not any(h.lower() == "var." for h in header_texts):
             logger.info(f"Le tableau #{i+1} ne semble pas être le tableau d'indices")
             continue
         
-        # Localisation des indices des colonnes importantes
+        # Localisation des indices des colonnes importantes (recherche flexible)
         header_indices = {
             "libelle": -1,
             "cours": -1,
@@ -224,12 +227,12 @@ def extract_lesechos_data(html):
         }
         
         for j, header_text in enumerate(header_texts):
-            header_text_lower = header_text.lower()
+            header_text_lower = header_text.lower().strip()
             if "libellé" in header_text_lower or "libelle" in header_text_lower:
                 header_indices["libelle"] = j
-            elif "cours" in header_text_lower:
+            elif header_text_lower == "cours":
                 header_indices["cours"] = j
-            elif "var." in header_text_lower and "janv" not in header_text_lower:
+            elif header_text_lower == "var." or header_text_lower == "var":
                 header_indices["var"] = j
             elif "var. 1er" in header_text_lower or "var/1janv" in header_text_lower or "var. janv" in header_text_lower:
                 header_indices["var_1er_janv"] = j
@@ -263,7 +266,7 @@ def extract_lesechos_data(html):
                 logger.info(f"Traitement de la ligne: {name}")
                 
                 # Vérifier si c'est un indice STOXX Europe 600
-                if "Stoxx Europe 600" not in name:
+                if not name.lower().startswith("stoxx europe 600"):
                     logger.info(f"Ignoré car pas un indice STOXX Europe 600: {name}")
                     continue
                 
@@ -432,7 +435,7 @@ def extract_boursorama_data(html):
                         break
                 
                 # Si c'est un indice NASDAQ sectoriel US qui nous intéresse
-                if is_target_index or ("NASDAQ US" in name_text and any(keyword in name_text.lower() for keyword in ["health", "financial", "matls", "oil", "tech", "auto", "telecom"])):
+                if is_target_index or (("NASDAQ US" in name_text or "Nasdaq US" in name_text) and any(keyword in name_text.lower() for keyword in ["health", "financial", "matls", "oil", "tech", "auto", "telecom"])):
                     # Nettoyer le nom (supprimer "Cours" s'il est présent)
                     clean_name = name_text.replace("Cours ", "")
                     
@@ -505,7 +508,9 @@ def parse_percentage(percent_str):
         return 0.0
     
     # Supprimer les caractères non numériques sauf le point décimal et le signe moins
-    clean_str = re.sub(r'[^0-9\\.\\-]', '', percent_str.replace(',', '.'))
+    # Pour le format français: remplacer la virgule par un point et supprimer l'espace avant %
+    clean_str = percent_str.replace(',', '.').replace(' %', '%').replace('%', '')
+    clean_str = re.sub(r'[^0-9\.\-]', '', clean_str)
     
     try:
         return float(clean_str)
