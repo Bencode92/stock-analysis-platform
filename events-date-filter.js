@@ -1,6 +1,7 @@
 /**
  * events-date-filter.js
  * Ajoute un filtre temporel pour les événements basé sur la date de connexion
+ * Version optimisée - suppression du bouton "Réinitialiser date"
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -11,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
   
   // Attendre que la page soit chargée
   setTimeout(() => {
-    // 1. Remplacer les filtres existants par date et supprimer les filtres d'impact
+    // 1. Remplacer les filtres existants par date uniquement (Aujourd'hui/Cette semaine)
     replaceFiltersWithDateOnly();
     
     // 2. Supprimer les badges "ESSENTIEL" des événements
@@ -44,7 +45,7 @@ function replaceFiltersWithDateOnly() {
     return;
   }
   
-  // Reconstruire la barre de filtres complètement
+  // Reconstruire la barre de filtres uniquement avec Aujourd'hui et Cette semaine
   filterContainer.innerHTML = `
     <h2 class="text-lg font-semibold text-green-400">
       <i class="fas fa-calendar-alt mr-2"></i>ÉVÉNEMENTS À VENIR
@@ -56,18 +57,14 @@ function replaceFiltersWithDateOnly() {
       <button id="week-filter" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded filter-button">
         Cette semaine
       </button>
-      <button id="reset-date-btn" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded filter-button">
-        Réinitialiser date
-      </button>
     </div>
   `;
   
   // Ajouter les écouteurs d'événements
   const todayBtn = document.getElementById('today-filter');
   const weekBtn = document.getElementById('week-filter');
-  const resetBtn = document.getElementById('reset-date-btn');
   
-  if (todayBtn && weekBtn && resetBtn) {
+  if (todayBtn && weekBtn) {
     todayBtn.addEventListener('click', () => {
       setActiveFilter(todayBtn);
       forceHideAllEvents();
@@ -76,18 +73,6 @@ function replaceFiltersWithDateOnly() {
     weekBtn.addEventListener('click', () => {
       setActiveFilter(weekBtn);
       forceShowAllEvents();
-    });
-    
-    resetBtn.addEventListener('click', () => {
-      localStorage.setItem('userConnectionDate', new Date().toISOString());
-      console.log("Date de connexion réinitialisée");
-      
-      // Appliquer à nouveau le filtre actif
-      if (todayBtn.classList.contains('active')) {
-        forceHideAllEvents();
-      } else if (weekBtn.classList.contains('active')) {
-        forceShowAllEvents();
-      }
     });
   }
 }
@@ -155,12 +140,18 @@ function setActiveFilter(activeButton) {
       btn.classList.add('text-green-400');
       btn.classList.remove('border-gray-700');
       btn.classList.add('border-green-400');
-    } else if (btn.id !== 'reset-date-btn') { // Ne pas changer le style du bouton de réinitialisation
+      btn.classList.add('border-opacity-30');
+      btn.classList.add('bg-green-400');
+      btn.classList.add('bg-opacity-10');
+    } else {
       btn.classList.remove('active');
       btn.classList.remove('text-green-400');
       btn.classList.add('text-gray-400');
       btn.classList.remove('border-green-400');
       btn.classList.add('border-gray-700');
+      btn.classList.remove('border-opacity-30');
+      btn.classList.remove('bg-green-400');
+      btn.classList.remove('bg-opacity-10');
     }
   });
 }
