@@ -11,6 +11,8 @@
     <link rel="stylesheet" href="enhanced-ui.css">
     <link rel="stylesheet" href="portfolio-styles.css">
     <link rel="stylesheet" href="portfolio-history.css">
+    <!-- Ajout du fichier de correctifs CSS -->
+    <link rel="stylesheet" href="portfolio-fixes.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -24,6 +26,11 @@
             --moderate-glow: 0 0 10px rgba(0, 255, 135, 0.6);
             --stable-color: #00B2FF; /* Bleu néon */
             --stable-glow: 0 0 10px rgba(0, 178, 255, 0.6);
+            
+            /* Variables RGB pour les backgrounds avec opacité */
+            --aggressive-color-rgb: 255, 123, 0;
+            --moderate-color-rgb: 0, 255, 135;
+            --stable-color-rgb: 0, 178, 255;
         }
         
         /* Styles pour les différentes variantes de portefeuilles */
@@ -320,6 +327,8 @@
     <script src="ui-enhancements.js"></script>
     <script src="portfolio-loader.js"></script>
     <script src="portfolio-history.js"></script>
+    <!-- Ajout du fichier de correctifs JavaScript -->
+    <script src="portfolio-fixes.js"></script>
     
     <script>
         document.addEventListener('DOMContentLoaded', function() {
