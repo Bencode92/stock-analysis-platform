@@ -772,7 +772,7 @@ class PortfolioManager {
     }
 
     /**
-     * Génère et télécharge un PDF du portefeuille au lieu d'un JSON
+     * Génère et télécharge un PDF du portefeuille
      */
     downloadPortfolio(portfolioType) {
         if (!this.portfolios || !this.portfolios[portfolioType]) return;
@@ -835,17 +835,18 @@ class PortfolioManager {
                     Généré le ${formattedDate}
                 </p>
             </div>
-
-            <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                <thead>
-                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.2);">
-                        <th style="padding: 12px 15px; text-align: left; color: ${accentColor}; font-size: 16px;">INSTRUMENT</th>
-                        <th style="padding: 12px 15px; text-align: left; color: ${accentColor}; font-size: 16px;">SYMBOLE</th>
-                        <th style="padding: 12px 15px; text-align: left; color: ${accentColor}; font-size: 16px;">TYPE</th>
-                        <th style="padding: 12px 15px; text-align: right; color: ${accentColor}; font-size: 16px;">ALLOCATION</th>
-                    </tr>
-                </thead>
-                <tbody>
+        `;
+        
+        // Créer un tableau de style moderne avec les colonnes alignées exactement comme dans l'image
+        tempElement.innerHTML += `
+            <div style="width: 100%; overflow: hidden; margin-bottom: 40px;">
+                <!-- En-têtes de colonne avec le style exact de l'image -->
+                <div style="display: flex; border-bottom: 1px solid rgba(255,255,255,0.2); padding-bottom: 10px; margin-bottom: 10px;">
+                    <div style="flex: 3; text-align: left; color: ${accentColor}; font-size: 16px; font-weight: bold;">INSTRUMENT</div>
+                    <div style="flex: 1; text-align: left; color: ${accentColor}; font-size: 16px; font-weight: bold;">SYMBOLE</div>
+                    <div style="flex: 1; text-align: left; color: ${accentColor}; font-size: 16px; font-weight: bold;">TYPE</div>
+                    <div style="flex: 1; text-align: right; color: ${accentColor}; font-size: 16px; font-weight: bold;">ALLOCATION</div>
+                </div>
         `;
         
         // Parcourir toutes les catégories et actifs pour les ajouter au tableau
@@ -855,7 +856,7 @@ class PortfolioManager {
         Object.keys(portfolioData).forEach(category => {
             const categoryAssets = portfolioData[category];
             Object.keys(categoryAssets).forEach(asset => {
-                // Déterminer le symbole (exemple fictif - à personnaliser selon vos données)
+                // Déterminer le symbole
                 let symbol = this.getAssetSymbol(asset, category);
                 
                 assets.push({
@@ -874,7 +875,7 @@ class PortfolioManager {
             return allocationB - allocationA;
         });
         
-        // Ajouter chaque actif au tableau
+        // Ajouter chaque actif au tableau avec l'alignement exact
         assets.forEach(asset => {
             const allocation = asset.allocation;
             const allocValue = parseFloat(allocation.replace('%', ''));
@@ -890,19 +891,18 @@ class PortfolioManager {
             }
             
             tempElement.innerHTML += `
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <td style="padding: 12px 15px; text-align: left; color: white; font-size: 14px;">${asset.name}</td>
-                    <td style="padding: 12px 15px; text-align: left; color: rgba(255,255,255,0.8); font-size: 14px;">${asset.symbol}</td>
-                    <td style="padding: 12px 15px; text-align: left; color: rgba(255,255,255,0.8); font-size: 14px;">${asset.type}</td>
-                    <td style="padding: 12px 15px; text-align: right; color: ${allocColor}; font-weight: bold; font-size: 14px;">${allocation}</td>
-                </tr>
+                <div style="display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); padding: 12px 0;">
+                    <div style="flex: 3; text-align: left; color: white; font-size: 14px;">${asset.name}</div>
+                    <div style="flex: 1; text-align: left; color: rgba(255,255,255,0.8); font-size: 14px;">${asset.symbol}</div>
+                    <div style="flex: 1; text-align: left; color: rgba(255,255,255,0.8); font-size: 14px;">${asset.type}</div>
+                    <div style="flex: 1; text-align: right; color: ${allocColor}; font-weight: bold; font-size: 14px;">${allocation}</div>
+                </div>
             `;
         });
         
-        // Fermer le tableau
+        // Fermer la div du tableau
         tempElement.innerHTML += `
-                </tbody>
-            </table>
+            </div>
             
             <div style="margin-top: 40px; text-align: center; font-size: 12px; color: rgba(255,255,255,0.5);">
                 <p>Ce document est généré à titre informatif uniquement. Ne constitue pas un conseil en investissement.</p>
@@ -993,6 +993,7 @@ class PortfolioManager {
             'Microsoft': 'MSFT',
             'Amazon.com': 'AMZN',
             'NVIDIA Corporation': 'NVDA',
+            'Nvidia': 'NVDA',
             'Tesla': 'TSLA',
             'Alphabet': 'GOOGL',
             'Meta Platforms': 'META',
@@ -1008,7 +1009,13 @@ class PortfolioManager {
             'iShares Core MSCI EAFE ETF': 'IEFA',
             'Vanguard High Dividend Yield ETF': 'VYM',
             'SPDR Gold Shares': 'GLD',
-            'Shopify': 'SHOP'
+            'Shopify': 'SHOP',
+            'Apple Inc.': 'AAPL',
+            'Tesla, Inc.': 'TSLA',
+            'Amazon.com, Inc.': 'AMZN',
+            'ARK Innovation ETF': 'ARKK',
+            'Bitcoin ETF': 'BTCQ',
+            'Shopify Inc.': 'SHOP'
         };
         
         // Extraire le nom de l'entreprise des noms d'actifs contenant "Inc." ou d'autres suffixes
