@@ -5,6 +5,7 @@
 Script d'extraction des données d'indices sectoriels depuis:
 - https://investir.lesechos.fr/cours/indices/sectoriels-stoxx-europe-600
 - https://www.boursorama.com/bourse/indices/internationaux
+Spécifiquement ciblé sur les indices NASDAQ US sectoriels
 """
 
 import os
@@ -41,18 +42,28 @@ CONFIG = {
     "output_path": os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "sectors.json"),
     # Structure des catégories sectorielles
     "categories": {
-        "energy": ["énergie", "energy", "oil", "gaz", "pétrole"],
-        "materials": ["matériaux", "materials", "basic materials", "basic", "chimie"],
+        "energy": ["énergie", "energy", "oil", "gaz", "pétrole", "oil & gas"],
+        "materials": ["matériaux", "materials", "basic", "basic matls", "chimie"],
         "industrials": ["industrials", "industrie", "industrial goods", "aerospace"],
-        "consumer-discretionary": ["consommation discrétionnaire", "consumer discretionary", "luxury", "retail", "auto"],
+        "consumer-discretionary": ["consommation discrétionnaire", "consumer discretionary", "luxury", "retail", "auto", "auto & parts"],
         "consumer-staples": ["consommation de base", "consumer staples", "food", "beverage"],
         "healthcare": ["santé", "health", "healthcare", "pharma", "medical"],
-        "financials": ["finance", "financial", "banks", "insurance", "banques", "assurance"],
-        "information-technology": ["technologie", "technology", "it", "software", "hardware"],
+        "financials": ["finance", "financial", "banks", "insurance", "banques", "assurance", "financial svcs"],
+        "information-technology": ["technologie", "technology", "it", "software", "hardware", "tech"],
         "communication-services": ["communication", "telecom", "media"],
         "utilities": ["services publics", "utilities", "électricité", "eau", "gas"],
         "real-estate": ["immobilier", "real estate", "reits"]
-    }
+    },
+    # Indices NASDAQ US spécifiques à scraper
+    "target_indices": [
+        "NASDAQ US Health Care Large Mid Cap NTR Index",
+        "NASDAQ US Financial Svcs Large Mid Cap NTR Index",
+        "NASDAQ US Basic Matls Large Mid Cap NTR Index",
+        "NASDAQ US Oil & Gas Producers Large Mid Cap Index",
+        "NASDAQ US Tech Large Mid Cap Index",
+        "NASDAQ US Auto & Parts Large Mid Cap Index",
+        "NASDAQ US Telecom Large Mid Cap Index"
+    ]
 }
 
 # Structure pour les données
@@ -106,6 +117,23 @@ def determine_category(sector_name):
     """Détermine la catégorie d'un secteur en fonction de son nom"""
     sector_name_lower = sector_name.lower()
     
+    # Mappings spécifiques pour les indices NASDAQ US ciblés
+    specific_mappings = {
+        "health care": "healthcare",
+        "financial": "financials",
+        "basic matls": "materials",
+        "oil & gas": "energy",
+        "tech": "information-technology",
+        "auto & parts": "consumer-discretionary",
+        "telecom": "communication-services"
+    }
+    
+    # Vérifier d'abord les mappings spécifiques
+    for keyword, category in specific_mappings.items():
+        if keyword.lower() in sector_name_lower:
+            return category
+    
+    # Sinon, vérifier les catégories générales
     for category, keywords in CONFIG["categories"].items():
         for keyword in keywords:
             if keyword.lower() in sector_name_lower:
@@ -180,15 +208,18 @@ def extract_lesechos_data(html):
     return sectors
 
 def extract_boursorama_data(html):
-    """Extraire les données de Boursorama pour les secteurs US (DOW JONES)"""
+    """Extraire les données de Boursorama pour les indices NASDAQ US sectoriels spécifiques"""
     sectors = []
     soup = BeautifulSoup(html, 'html.parser')
     
-    # Rechercher des tableaux contenant des indices sectoriels
+    # Rechercher des tableaux contenant des indices
     tables = soup.find_all('table')
     
+    # Liste pour suivre les indices cibles trouvés
+    target_indices_found = []
+    
     for table in tables:
-        # Chercher si le tableau contient des indices sectoriels DOW JONES US
+        # Parcourir toutes les lignes de tous les tableaux
         rows = table.find_all('tr')
         for row in rows:
             cells = row.find_all('td')
@@ -196,14 +227,25 @@ def extract_boursorama_data(html):
                 continue
                 
             try:
-                # Vérifier si c'est un indice sectoriel US
+                # Extraire le nom de l'indice
                 name_cell = cells[0]
                 name_text = name_cell.text.strip()
                 
-                # Filtrer pour ne garder que les indices sectoriels DOW JONES US
-                if "DOW JONES US" in name_text and any(keyword in name_text.lower() for keyword in ["sector", "industry", "secteur"]):
-                    # Extraire le nom du secteur
-                    name = name_text
+                # Vérifier si c'est l'un des indices NASDAQ US ciblés
+                is_target_index = False
+                for target in CONFIG["target_indices"]:
+                    # Vérifier si l'indice cible est présent dans le nom (en ignorant "Cours" qui peut être ajouté)
+                    clean_name = name_text.replace("Cours ", "")
+                    if target.lower() in clean_name.lower():
+                        is_target_index = True
+                        target_indices_found.append(target)
+                        logger.info(f"Indice cible trouvé: {clean_name}")
+                        break
+                
+                # Si c'est un indice NASDAQ sectoriel US qui nous intéresse
+                if is_target_index or "NASDAQ US" in name_text and any(keyword in name_text.lower() for keyword in ["health", "financial", "matls", "oil", "tech", "auto", "telecom"]):
+                    # Nettoyer le nom (supprimer "Cours" s'il est présent)
+                    clean_name = name_text.replace("Cours ", "")
                     
                     # Extraire la valeur, variations, etc.
                     value = cells[1].text.strip() if len(cells) > 1 else ""
@@ -214,11 +256,11 @@ def extract_boursorama_data(html):
                     trend = "down" if '-' in change_percent else "up"
                     
                     # Déterminer la catégorie
-                    category = determine_category(name)
+                    category = determine_category(clean_name)
                     
                     # Créer l'objet secteur
                     sector = {
-                        "name": name,
+                        "name": clean_name,
                         "value": value,
                         "change": change_percent,
                         "changePercent": change_percent,
@@ -231,11 +273,17 @@ def extract_boursorama_data(html):
                     
                     sectors.append(sector)
                     ALL_SECTORS.append(sector)
+                    logger.info(f"Indice sectoriel ajouté: {clean_name} (Catégorie: {category})")
             
             except Exception as e:
                 logger.warning(f"Erreur lors du traitement d'une ligne Boursorama: {str(e)}")
     
-    logger.info(f"Nombre de secteurs extraits de Boursorama: {len(sectors)}")
+    # Vérifier si tous les indices cibles ont été trouvés
+    missing_indices = set(CONFIG["target_indices"]) - set(target_indices_found)
+    if missing_indices:
+        logger.warning(f"Indices cibles non trouvés: {missing_indices}")
+    
+    logger.info(f"Nombre d'indices sectoriels extraits de Boursorama: {len(sectors)}")
     return sectors
 
 def classify_sectors(sectors):
@@ -405,6 +453,9 @@ def main():
     """Point d'entrée principal du script"""
     try:
         logger.info("🚀 Démarrage du script de scraping des données sectorielles")
+        logger.info(f"Ciblant spécifiquement les indices NASDAQ US sectoriels suivants:")
+        for idx in CONFIG["target_indices"]:
+            logger.info(f"  - {idx}")
         
         # Vérifier si les données existent déjà
         has_existing_data = check_existing_data()
