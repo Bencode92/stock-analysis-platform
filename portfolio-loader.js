@@ -772,26 +772,285 @@ class PortfolioManager {
     }
 
     /**
-     * Télécharge un portefeuille au format JSON
+     * Génère et télécharge un PDF du portefeuille au lieu d'un JSON
      */
     downloadPortfolio(portfolioType) {
         if (!this.portfolios || !this.portfolios[portfolioType]) return;
         
+        // Vérifier que jsPDF est disponible
+        if (!window.jspdf || !window.html2canvas) {
+            console.error('Les bibliothèques jsPDF ou html2canvas ne sont pas chargées');
+            this.showNotification('Erreur lors de la génération du PDF', 'error');
+            return;
+        }
+        
+        // Créer un élément temporaire pour générer le PDF
+        const tempElement = document.createElement('div');
+        tempElement.className = 'pdf-container';
+        tempElement.style.width = '210mm'; // Format A4
+        tempElement.style.padding = '15mm';
+        tempElement.style.backgroundColor = '#071629'; // Fond bleu foncé
+        tempElement.style.color = 'white';
+        tempElement.style.fontFamily = "'Inter', sans-serif";
+        tempElement.style.position = 'absolute';
+        tempElement.style.left = '-9999px'; // Hors de la vue
+        tempElement.style.top = '0';
+        
+        // Récupérer les données du portefeuille
         const portfolioData = this.portfolios[portfolioType];
-        const jsonString = JSON.stringify(portfolioData, null, 2);
-        const blob = new Blob([jsonString], {type: 'application/json'});
-        const url = URL.createObjectURL(blob);
+        const normalizedType = this.normalizePortfolioType(portfolioType);
         
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `tradepulse-portfolio-${this.normalizePortfolioType(portfolioType)}.json`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        // Déterminer la couleur d'accentuation selon le type de portefeuille
+        let accentColor;
+        if (normalizedType === 'agressif') {
+            accentColor = '#FF7B00'; // Orange
+        } else if (normalizedType === 'modere') {
+            accentColor = '#00FF87'; // Vert
+        } else {
+            accentColor = '#00B2FF'; // Bleu
+        }
         
-        // Afficher une notification de succès
-        this.showNotification(`Portefeuille ${portfolioType} téléchargé avec succès`);
+        // Préparer la description du portefeuille
+        const description = this.getPortfolioDescription(portfolioType);
+        
+        // Préparer la date actuelle
+        const now = new Date();
+        const formattedDate = now.toLocaleDateString('fr-FR') + ' à ' + 
+                          now.toLocaleTimeString('fr-FR', {hour: '2-digit', minute: '2-digit', second: '2-digit'});
+        
+        // Générer le contenu HTML du PDF
+        tempElement.innerHTML = `
+            <div style="text-align: center; margin-bottom: 30px;">
+                <div style="width: 40px; height: 40px; background-color: ${accentColor}; border-radius: 50%; margin: 0 auto 15px;"></div>
+                <h1 style="font-size: 28px; font-weight: 900; margin: 0; letter-spacing: 1px; color: white;">TRADEPULSE</h1>
+                <p style="font-size: 14px; color: rgba(255,255,255,0.7); margin: 5px 0 30px;">POWERED BY PERPLEXITY AI</p>
+                
+                <h2 style="font-size: 24px; color: ${accentColor}; margin: 30px 0; text-transform: uppercase;">PORTEFEUILLE ${portfolioType.toUpperCase()}</h2>
+                
+                <p style="font-size: 16px; line-height: 1.5; color: rgba(255,255,255,0.9); margin: 0 auto 30px; max-width: 650px; text-align: center;">
+                    ${description}
+                </p>
+                
+                <p style="font-size: 14px; color: rgba(255,255,255,0.6); margin: 20px 0 40px;">
+                    Généré le ${formattedDate}
+                </p>
+            </div>
+
+            <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                <thead>
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.2);">
+                        <th style="padding: 12px 15px; text-align: left; color: ${accentColor}; font-size: 16px;">INSTRUMENT</th>
+                        <th style="padding: 12px 15px; text-align: left; color: ${accentColor}; font-size: 16px;">SYMBOLE</th>
+                        <th style="padding: 12px 15px; text-align: left; color: ${accentColor}; font-size: 16px;">TYPE</th>
+                        <th style="padding: 12px 15px; text-align: right; color: ${accentColor}; font-size: 16px;">ALLOCATION</th>
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+        
+        // Parcourir toutes les catégories et actifs pour les ajouter au tableau
+        let assets = [];
+        
+        // Transformer les données de portefeuille en un tableau d'actifs
+        Object.keys(portfolioData).forEach(category => {
+            const categoryAssets = portfolioData[category];
+            Object.keys(categoryAssets).forEach(asset => {
+                // Déterminer le symbole (exemple fictif - à personnaliser selon vos données)
+                let symbol = this.getAssetSymbol(asset, category);
+                
+                assets.push({
+                    name: asset,
+                    symbol: symbol,
+                    type: category,
+                    allocation: categoryAssets[asset]
+                });
+            });
+        });
+        
+        // Trier les actifs par allocation (du plus grand au plus petit)
+        assets.sort((a, b) => {
+            const allocationA = parseFloat(a.allocation.replace('%', ''));
+            const allocationB = parseFloat(b.allocation.replace('%', ''));
+            return allocationB - allocationA;
+        });
+        
+        // Ajouter chaque actif au tableau
+        assets.forEach(asset => {
+            const allocation = asset.allocation;
+            const allocValue = parseFloat(allocation.replace('%', ''));
+            
+            // Déterminer la couleur de l'allocation selon sa valeur
+            let allocColor;
+            if (allocValue >= 15) {
+                allocColor = accentColor;
+            } else if (allocValue >= 10) {
+                allocColor = accentColor + 'CC'; // 80% d'opacité
+            } else {
+                allocColor = accentColor + '99'; // 60% d'opacité
+            }
+            
+            tempElement.innerHTML += `
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                    <td style="padding: 12px 15px; text-align: left; color: white; font-size: 14px;">${asset.name}</td>
+                    <td style="padding: 12px 15px; text-align: left; color: rgba(255,255,255,0.8); font-size: 14px;">${asset.symbol}</td>
+                    <td style="padding: 12px 15px; text-align: left; color: rgba(255,255,255,0.8); font-size: 14px;">${asset.type}</td>
+                    <td style="padding: 12px 15px; text-align: right; color: ${allocColor}; font-weight: bold; font-size: 14px;">${allocation}</td>
+                </tr>
+            `;
+        });
+        
+        // Fermer le tableau
+        tempElement.innerHTML += `
+                </tbody>
+            </table>
+            
+            <div style="margin-top: 40px; text-align: center; font-size: 12px; color: rgba(255,255,255,0.5);">
+                <p>Ce document est généré à titre informatif uniquement. Ne constitue pas un conseil en investissement.</p>
+                <p>TradePulse © ${new Date().getFullYear()} | Données fournies par Perplexity AI</p>
+            </div>
+        `;
+        
+        // Ajouter l'élément temporaire au document
+        document.body.appendChild(tempElement);
+        
+        // Afficher une notification de chargement
+        this.showNotification('Génération du PDF en cours...', 'info');
+        
+        // Utiliser html2canvas pour convertir l'élément en image
+        html2canvas(tempElement, {
+            scale: 2, // Meilleure qualité
+            useCORS: true,
+            backgroundColor: '#071629'
+        }).then(canvas => {
+            // Créer un PDF avec jsPDF
+            const pdf = new jspdf.jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+            
+            // Dimensions de la page A4 en mm
+            const pageWidth = 210;
+            const pageHeight = 297;
+            
+            // Obtenir les dimensions du canvas
+            const imgWidth = canvas.width;
+            const imgHeight = canvas.height;
+            const ratio = imgWidth / imgHeight;
+            
+            // Calculer les dimensions pour le PDF
+            let pdfWidth = pageWidth;
+            let pdfHeight = pdfWidth / ratio;
+            
+            // Si l'image est plus grande que la page, créer plusieurs pages
+            let position = 0;
+            
+            if (pdfHeight <= pageHeight) {
+                // Si l'image tient sur une seule page
+                pdf.addImage(canvas.toDataURL('image/jpeg', 1.0), 'JPEG', 0, 0, pdfWidth, pdfHeight);
+            } else {
+                // Si l'image est plus grande que la page, la diviser en plusieurs pages
+                while (position < imgHeight) {
+                    pdf.addImage(
+                        canvas.toDataURL('image/jpeg', 1.0),
+                        'JPEG',
+                        0,
+                        -position,
+                        pdfWidth,
+                        pdfHeight
+                    );
+                    position += pageHeight;
+                    
+                    if (position < imgHeight) {
+                        pdf.addPage();
+                    }
+                }
+            }
+            
+            // Télécharger le PDF
+            pdf.save(`tradepulse-portfolio-${normalizedType}.pdf`);
+            
+            // Afficher une notification de succès
+            this.showNotification(`Portefeuille ${portfolioType} téléchargé avec succès`, 'success');
+            
+            // Supprimer l'élément temporaire
+            document.body.removeChild(tempElement);
+        }).catch(error => {
+            console.error('Erreur lors de la génération du PDF:', error);
+            this.showNotification('Erreur lors de la génération du PDF', 'error');
+            document.body.removeChild(tempElement);
+        });
+    }
+
+    /**
+     * Fonction utilitaire pour obtenir un symbole boursier pour un actif
+     * À personnaliser selon vos données réelles
+     */
+    getAssetSymbol(assetName, category) {
+        // Mapping des noms d'actifs vers leurs symboles
+        const symbolMap = {
+            'Apple': 'AAPL',
+            'Microsoft': 'MSFT',
+            'Amazon.com': 'AMZN',
+            'NVIDIA Corporation': 'NVDA',
+            'Tesla': 'TSLA',
+            'Alphabet': 'GOOGL',
+            'Meta Platforms': 'META',
+            'Johnson & Johnson': 'JNJ',
+            'Procter & Gamble': 'PG',
+            'Coca-Cola': 'KO',
+            'McDonald\'s': 'MCD',
+            'Bitcoin ETF': 'BTCQ',
+            'Ethereum ETF': 'ETHQ',
+            'ARK Innovation ETF': 'ARKK',
+            'SPDR S&P 500 ETF': 'SPY',
+            'Vanguard Total Stock Market ETF': 'VTI',
+            'iShares Core MSCI EAFE ETF': 'IEFA',
+            'Vanguard High Dividend Yield ETF': 'VYM',
+            'SPDR Gold Shares': 'GLD',
+            'Shopify': 'SHOP'
+        };
+        
+        // Extraire le nom de l'entreprise des noms d'actifs contenant "Inc." ou d'autres suffixes
+        const simpleName = assetName.split(' Inc.')[0].split(' Corporation')[0].trim();
+        
+        // Vérifier si le nom de l'actif existe dans notre mapping
+        if (symbolMap[simpleName]) {
+            return symbolMap[simpleName];
+        }
+        
+        if (symbolMap[assetName]) {
+            return symbolMap[assetName];
+        }
+        
+        // Si non trouvé, créer un symbole générique basé sur le nom
+        // Par exemple, pour "US Treasury 10Y", retourner "UST10Y"
+        if (category === 'Obligations') {
+            if (assetName.includes('Treasury')) {
+                return 'UST' + assetName.match(/\d+Y/)?.[0] || '10Y';
+            } else if (assetName.includes('Corporate')) {
+                return 'CORP' + assetName.match(/[A-Z]{3}/)?.[0] || 'AAA';
+            } else if (assetName.includes('Municipal')) {
+                return 'MUNI' + assetName.match(/[A-Z]{3}/)?.[0] || 'AAA';
+            }
+        }
+        
+        // Pour les cryptos sans ETF dans le nom
+        if (category === 'Crypto' && !assetName.includes('ETF')) {
+            if (assetName === 'Bitcoin') return 'BTC';
+            if (assetName === 'Ethereum') return 'ETH';
+        }
+        
+        // Par défaut, prendre les premières lettres du nom
+        // Par exemple "Apple Inc." deviendrait "APPL"
+        const words = simpleName.split(' ');
+        if (words.length === 1) {
+            // Un seul mot, prendre les 4 premières lettres
+            return words[0].substring(0, 4).toUpperCase();
+        } else {
+            // Plusieurs mots, prendre la première lettre de chaque mot (max 4 lettres)
+            return words.slice(0, 4).map(word => word[0]).join('').toUpperCase();
+        }
     }
 
     /**
