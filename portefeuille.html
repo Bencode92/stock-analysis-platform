@@ -20,14 +20,52 @@
         :root {
             --aggressive-color: #FF7B00; /* Orange néon */
             --aggressive-glow: 0 0 10px rgba(255, 123, 0, 0.6);
+            --aggressive-color-rgb: 255, 123, 0;
             --moderate-color: #00FF87; /* Vert néon (couleur d'origine) */
             --moderate-glow: 0 0 10px rgba(0, 255, 135, 0.6);
+            --moderate-color-rgb: 0, 255, 135;
             --stable-color: #00B2FF; /* Bleu néon */
             --stable-glow: 0 0 10px rgba(0, 178, 255, 0.6);
+            --stable-color-rgb: 0, 178, 255;
+        }
+        
+        /* Styles pour les différentes variantes de portefeuilles */
+        .portfolio-container.colored-container {
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+            border-width: 2px;
+        }
+        
+        /* Styles spécifiques par type de portefeuille */
+        .portfolio-panel[id="portfolio-agressif"] {
+            --panel-color: var(--aggressive-color);
+            --panel-glow: var(--aggressive-glow);
+        }
+        
+        .portfolio-panel[id="portfolio-modere"] {
+            --panel-color: var(--moderate-color);
+            --panel-glow: var(--moderate-glow);
+        }
+        
+        .portfolio-panel[id="portfolio-stable"] {
+            --panel-color: var(--stable-color);
+            --panel-glow: var(--stable-glow);
+        }
+        
+        /* Appliquer les couleurs spécifiques aux éléments */
+        .portfolio-panel[id^="portfolio-"] .portfolio-header h2,
+        .portfolio-panel[id^="portfolio-"] .category-name,
+        .portfolio-panel[id^="portfolio-"] .allocation-value,
+        .portfolio-panel[id^="portfolio-"] .asset-allocation {
+            color: var(--panel-color);
+        }
+        
+        .portfolio-panel[id^="portfolio-"] .portfolio-description {
+            border-left-color: var(--panel-color);
+            background-color: rgba(var(--panel-color-rgb), 0.05);
         }
         
         /* Style de base pour tous les boutons de téléchargement */
-        .download-pdf-btn {
+        .download-pdf-btn, .btn-download {
             display: inline-flex;
             align-items: center;
             padding: 0.75rem 1.5rem;
@@ -44,49 +82,38 @@
             border: 2px solid var(--moderate-color);
         }
         
-        /* Styles spécifiques pour chaque type de portefeuille */
-        .portfolio-agressif .download-pdf-btn {
-            color: var(--aggressive-color);
+        /* Styles pour chaque type de bouton de téléchargement */
+        .btn-download.agressif {
             border-color: var(--aggressive-color);
+            color: var(--aggressive-color);
         }
         
-        .portfolio-agressif .download-pdf-btn:hover {
+        .btn-download.agressif:hover {
             background-color: var(--aggressive-color);
             color: var(--background-color);
-            box-shadow: 0 0 15px rgba(255, 123, 0, 0.4);
+            box-shadow: var(--aggressive-glow);
         }
         
-        .portfolio-modere .download-pdf-btn {
-            color: var(--moderate-color);
+        .btn-download.modere {
             border-color: var(--moderate-color);
+            color: var(--moderate-color);
         }
         
-        .portfolio-modere .download-pdf-btn:hover {
+        .btn-download.modere:hover {
             background-color: var(--moderate-color);
             color: var(--background-color);
-            box-shadow: 0 0 15px rgba(0, 255, 135, 0.4);
+            box-shadow: var(--moderate-glow);
         }
         
-        .portfolio-stable .download-pdf-btn {
-            color: var(--stable-color);
+        .btn-download.stable {
             border-color: var(--stable-color);
+            color: var(--stable-color);
         }
         
-        .portfolio-stable .download-pdf-btn:hover {
+        .btn-download.stable:hover {
             background-color: var(--stable-color);
             color: var(--background-color);
-            box-shadow: 0 0 15px rgba(0, 178, 255, 0.4);
-        }
-        
-        .download-pdf-btn i {
-            margin-right: 8px;
-        }
-        
-        .download-container {
-            display: flex;
-            justify-content: center;
-            width: 100%;
-            margin-top: 1rem;
+            box-shadow: var(--stable-glow);
         }
         
         /* Améliorations de l'expérience utilisateur */
@@ -105,7 +132,7 @@
         }
         
         /* Animation pour le changement de portefeuille */
-        .portfolio-details {
+        .portfolio-panel, .portfolio-details {
             opacity: 0;
             animation: portfolio-appear 0.6s ease forwards;
         }
@@ -242,6 +269,32 @@
         .nav-item i {
             font-size: 1.2rem;
         }
+        
+        /* Personnalisation des onglets */
+        .portfolio-toggles.portfolio-tabs {
+            padding: 0;
+            border-bottom: none;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+        
+        .portfolio-toggles .portfolio-tab {
+            padding: 0.75rem 1.5rem;
+            font-size: 0.9rem;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        
+        /* Amélioration du graphique */
+        .portfolio-chart-container {
+            background-color: rgba(255, 255, 255, 0.02);
+            border-radius: 12px;
+            padding: 1.5rem;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+            height: 300px;
+            margin-bottom: 1.5rem;
+        }
     </style>
 </head>
 <body class="page-portefeuille fade-in">
@@ -309,16 +362,45 @@
             </div>
         </section>
 
-        <!-- Portfolio Chart Section -->
+        <!-- Portfolio Chart Section avec les nouveaux portefeuilles générés -->
         <section class="portfolio-chart-section">
-            <div class="chart-container">
-                <canvas id="portfolioChart"></canvas>
+            <div class="portfolio-container colored-container">
+                <!-- Information de dernière mise à jour -->
+                <div class="portfolio-update-info">
+                    <i class="fas fa-sync-alt"></i>
+                    <span>Dernière mise à jour: <span id="portfolioUpdateTime">20/03/2025 11:42</span></span>
+                </div>
+                
+                <!-- Onglets de portefeuille avec le même style que dans le haut de page -->
+                <div class="portfolio-toggles portfolio-tabs">
+                    <button class="portfolio-tab active" data-target="portfolio-agressif">
+                        <span class="tab-icon"><i class="fas fa-rocket"></i></span>
+                        <span class="tab-text">Agressif</span>
+                    </button>
+                    <button class="portfolio-tab" data-target="portfolio-modere">
+                        <span class="tab-icon"><i class="fas fa-balance-scale"></i></span>
+                        <span class="tab-text">Modéré</span>
+                    </button>
+                    <button class="portfolio-tab" data-target="portfolio-stable">
+                        <span class="tab-icon"><i class="fas fa-shield-alt"></i></span>
+                        <span class="tab-text">Stable</span>
+                    </button>
+                </div>
+                
+                <!-- Contenu des portefeuilles injecté par portfolio-loader.js -->
+                <div class="portfolio-content">
+                    <!-- Indicateur de chargement -->
+                    <div class="portfolio-loading"></div>
+                    
+                    <!-- Message d'erreur (caché par défaut) -->
+                    <div class="portfolio-error"></div>
+                </div>
             </div>
             
             <div class="portfolio-info" id="portfolioInfo">
                 <div class="info-card">
                     <h3>GÉNÉRÉ PAR INTELLIGENCE ARTIFICIELLE</h3>
-                    <p>Ce portefeuille est généré par Perplexity AI en fonction des actualités financières et des tendances du marché actuelles.</p>
+                    <p>Ce portefeuille est généré par Intelligence Artificielle en fonction des actualités financières et des tendances du marché actuelles.</p>
                 </div>
                 
                 <div class="info-card">
@@ -328,168 +410,12 @@
                 
                 <div class="info-card">
                     <h3>DERNIÈRE MISE À JOUR</h3>
-                    <p id="updateTimestamp">07/03/2025 à 10:15:53</p>
+                    <p id="updateTimestamp">20/03/2025 à 11:42:00</p>
                 </div>
             </div>
         </section>
 
-        <!-- Portfolio Details -->
-        <section class="portfolio-details-section">
-            <h2 class="section-title">COMPOSITION DU PORTEFEUILLE</h2>
-            
-            <!-- Aggressive Portfolio Details -->
-            <div id="aggressiveDetails" class="portfolio-details portfolio-agressif">
-                <div class="portfolio-table">
-                    <div class="table-header">
-                        <div class="header-cell">INSTRUMENT</div>
-                        <div class="header-cell">SYMBOLE</div>
-                        <div class="header-cell">TYPE</div>
-                        <div class="header-cell">ALLOCATION</div>
-                    </div>
-                    
-                    <!-- Le contenu sera généré dynamiquement par aiintegration.js -->
-                    <div class="table-row loading-row">
-                        <div class="loading-indicator">
-                            <div class="pulse-dot"></div>
-                            <p>Génération du portefeuille optimisé via Perplexity AI...</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Téléchargement PDF pour portefeuille Agressif -->
-                <div class="download-container">
-                    <button class="download-pdf-btn button-press ripple" id="downloadAgressifPdf">
-                        <i class="fas fa-file-pdf"></i> TÉLÉCHARGER LE PORTEFEUILLE AGRESSIF (PDF)
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Moderate Portfolio Details (hidden by default) -->
-            <div id="moderateDetails" class="portfolio-details portfolio-modere" style="display: none;">
-                <div class="portfolio-table">
-                    <div class="table-header">
-                        <div class="header-cell">INSTRUMENT</div>
-                        <div class="header-cell">SYMBOLE</div>
-                        <div class="header-cell">TYPE</div>
-                        <div class="header-cell">ALLOCATION</div>
-                    </div>
-                    
-                    <!-- Le contenu sera généré dynamiquement par aiintegration.js -->
-                    <div class="table-row loading-row">
-                        <div class="loading-indicator">
-                            <div class="pulse-dot"></div>
-                            <p>Génération du portefeuille optimisé via Perplexity AI...</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Téléchargement PDF pour portefeuille Modéré -->
-                <div class="download-container">
-                    <button class="download-pdf-btn button-press ripple" id="downloadModerePdf">
-                        <i class="fas fa-file-pdf"></i> TÉLÉCHARGER LE PORTEFEUILLE MODÉRÉ (PDF)
-                    </button>
-                </div>
-            </div>
-            
-            <!-- Stable Portfolio Details (hidden by default) -->
-            <div id="stableDetails" class="portfolio-details portfolio-stable" style="display: none;">
-                <div class="portfolio-table">
-                    <div class="table-header">
-                        <div class="header-cell">INSTRUMENT</div>
-                        <div class="header-cell">SYMBOLE</div>
-                        <div class="header-cell">TYPE</div>
-                        <div class="header-cell">ALLOCATION</div>
-                    </div>
-                    
-                    <!-- Le contenu sera généré dynamiquement par aiintegration.js -->
-                    <div class="table-row loading-row">
-                        <div class="loading-indicator">
-                            <div class="pulse-dot"></div>
-                            <p>Génération du portefeuille optimisé via Perplexity AI...</p>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Téléchargement PDF pour portefeuille Stable -->
-                <div class="download-container">
-                    <button class="download-pdf-btn button-press ripple" id="downloadStablePdf">
-                        <i class="fas fa-file-pdf"></i> TÉLÉCHARGER LE PORTEFEUILLE STABLE (PDF)
-                    </button>
-                </div>
-            </div>
-        </section>
-
-        <!-- Section des portefeuilles générés automatiquement -->
-        <section class="portefeuille-section">
-            <div class="section-header">
-                <h2>Portefeuilles Optimisés</h2>
-                <p class="section-description">Portefeuilles générés automatiquement en fonction des tendances du marché et des actualités financières récentes.</p>
-            </div>
-
-            <!-- Conteneur des portefeuilles générés -->
-            <div class="portfolio-container">
-                <!-- Indicateur de chargement -->
-                <div class="portfolio-loading"></div>
-                
-                <!-- Message d'erreur (caché par défaut) -->
-                <div class="portfolio-error"></div>
-                
-                <!-- Le contenu sera injecté dynamiquement par portfolio-loader.js -->
-            </div>
-
-            <div class="portfolio-explanation">
-                <h3>Comment sont générés ces portefeuilles ?</h3>
-                <div class="explanation-card">
-                    <div class="explanation-icon">
-                        <i class="fas fa-robot"></i>
-                    </div>
-                    <div class="explanation-content">
-                        <h4>Intelligence Artificielle</h4>
-                        <p>Nos portefeuilles sont générés par une IA avancée qui analyse les tendances du marché et les actualités financières en temps réel pour identifier les meilleures opportunités d'investissement.</p>
-                    </div>
-                </div>
-                
-                <div class="explanation-card">
-                    <div class="explanation-icon">
-                        <i class="fas fa-newspaper"></i>
-                    </div>
-                    <div class="explanation-content">
-                        <h4>Analyse des Actualités</h4>
-                        <p>L'IA examine les dernières actualités financières pour comprendre les facteurs qui pourraient affecter les marchés et adapter les allocations en conséquence.</p>
-                    </div>
-                </div>
-                
-                <div class="explanation-card">
-                    <div class="explanation-icon">
-                        <i class="fas fa-chart-line"></i>
-                    </div>
-                    <div class="explanation-content">
-                        <h4>Suivi des Tendances</h4>
-                        <p>Les portefeuilles sont constamment mis à jour pour refléter les tendances actuelles du marché, les mouvements sectoriels et les opportunités émergentes.</p>
-                    </div>
-                </div>
-                
-                <div class="explanation-card">
-                    <div class="explanation-icon">
-                        <i class="fas fa-user-shield"></i>
-                    </div>
-                    <div class="explanation-content">
-                        <h4>Adaptation au Profil de Risque</h4>
-                        <p>Trois portefeuilles optimisés sont disponibles pour différents profils de risque : Agressif, Modéré et Stable, permettant à chaque investisseur de trouver une allocation adaptée à ses objectifs.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="disclaimer-box">
-                <i class="fas fa-exclamation-triangle"></i>
-                <div>
-                    <h4>Avertissement</h4>
-                    <p>Les portefeuilles générés sont fournis à titre informatif uniquement et ne constituent pas des conseils en investissement. Les performances passées ne préjugent pas des performances futures. Nous vous recommandons de consulter un conseiller financier avant de prendre des décisions d'investissement.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- Section d'historique des portefeuilles -->
+        <!-- Section d'historique des portefeuilles (conservée telle quelle) -->
         <section class="portfolio-history-section">
             <div class="section-header">
                 <h2>Historique des Portefeuilles</h2>
@@ -551,8 +477,8 @@
     <footer class="page-footer">
         <div class="data-source-info">
             <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel</p>
-            <p><i class="fas fa-robot"></i> Analyses sectorielles et portefeuille optimisé fournis par Perplexity AI</p>
-            <p><i class="fas fa-clock"></i> Dernière mise à jour: <span class="update-time" id="updateTime">07/03/2025 10:15:53</span></p>
+            <p><i class="fas fa-robot"></i> Analyses sectorielles et portefeuille optimisé fournis par Intelligence Artificielle</p>
+            <p><i class="fas fa-clock"></i> Dernière mise à jour: <span class="update-time" id="updateTime">20/03/2025 11:42:00</span></p>
         </div>
     </footer>
 
@@ -623,72 +549,69 @@
                 }
             });
             
-            // Ajouter les gestionnaires d'événements pour les boutons de téléchargement PDF
-            document.getElementById('downloadAgressifPdf').addEventListener('click', function() {
-                // Ajouter une animation de chargement
-                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GÉNÉRATION DU PDF...';
-                this.classList.add('updating');
-                
-                // Générer le PDF
-                generatePDF('agressif');
-                
-                // Restaurer le bouton après un délai
-                setTimeout(() => {
-                    this.innerHTML = '<i class="fas fa-file-pdf"></i> TÉLÉCHARGER LE PORTEFEUILLE AGRESSIF (PDF)';
-                    this.classList.remove('updating');
+            // Synchroniser les onglets entre les deux systèmes
+            const portfolioTabs = document.querySelectorAll('.portfolio-tab');
+            portfolioTabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // Désactiver tous les onglets
+                    portfolioTabs.forEach(t => t.classList.remove('active'));
+                    // Activer l'onglet cliqué
+                    tab.classList.add('active');
                     
-                    // Ajouter un effet de succès
-                    if (window.uiEnhancer) {
-                        window.uiEnhancer.showSuccessAnimation(this);
-                    }
-                }, 2000);
-            });
-            
-            document.getElementById('downloadModerePdf').addEventListener('click', function() {
-                // Ajouter une animation de chargement
-                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GÉNÉRATION DU PDF...';
-                this.classList.add('updating');
-                
-                // Générer le PDF
-                generatePDF('modere');
-                
-                // Restaurer le bouton après un délai
-                setTimeout(() => {
-                    this.innerHTML = '<i class="fas fa-file-pdf"></i> TÉLÉCHARGER LE PORTEFEUILLE MODÉRÉ (PDF)';
-                    this.classList.remove('updating');
+                    // Récupérer le type de portefeuille
+                    const targetId = tab.dataset.target;
+                    const type = targetId.replace('portfolio-', '');
                     
-                    // Ajouter un effet de succès
-                    if (window.uiEnhancer) {
-                        window.uiEnhancer.showSuccessAnimation(this);
-                    }
-                }, 2000);
-            });
-            
-            document.getElementById('downloadStablePdf').addEventListener('click', function() {
-                // Ajouter une animation de chargement
-                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> GÉNÉRATION DU PDF...';
-                this.classList.add('updating');
-                
-                // Générer le PDF
-                generatePDF('stable');
-                
-                // Restaurer le bouton après un délai
-                setTimeout(() => {
-                    this.innerHTML = '<i class="fas fa-file-pdf"></i> TÉLÉCHARGER LE PORTEFEUILLE STABLE (PDF)';
-                    this.classList.remove('updating');
+                    // Mettre à jour les titres et descriptions
+                    updatePortfolioDescription(type);
                     
-                    // Ajouter un effet de succès
-                    if (window.uiEnhancer) {
-                        window.uiEnhancer.showSuccessAnimation(this);
-                    }
-                }, 2000);
+                    // Changer les couleurs
+                    updatePortfolioColors(type);
+                });
             });
         });
         
-        function updatePortfolioView(type) {
-            // Update page title
-            const titleElement = document.getElementById('portfolioTitle');
+        // Fonction pour mettre à jour le titre et la description du portefeuille
+        function updatePortfolioDescription(type) {
             const profileDescElement = document.getElementById('profileDescription');
+            const titleElement = document.getElementById('portfolioTitle');
+            
+            if (type === 'agressif') {
+                titleElement.textContent = 'PORTEFEUILLE AGRESSIF';
+                profileDescElement.textContent = 'Ce portefeuille vise une croissance maximale, avec une forte exposition aux secteurs en croissance et aux actifs à haut risque.';
+            } else if (type === 'modere') {
+                titleElement.textContent = 'PORTEFEUILLE MODÉRÉ';
+                profileDescElement.textContent = 'Ce portefeuille offre un équilibre entre croissance et stabilité, avec une diversification entre différentes classes d\'actifs.';
+            } else if (type === 'stable') {
+                titleElement.textContent = 'PORTEFEUILLE STABLE';
+                profileDescElement.textContent = 'Ce portefeuille privilégie la préservation du capital et les dividendes, avec une faible exposition aux actifs risqués.';
+            }
+        }
+        
+        // Fonction pour mettre à jour les couleurs selon le type de portefeuille
+        function updatePortfolioColors(type) {
+            // Mettre à jour les variables CSS selon le type
+            if (type === 'agressif') {
+                document.documentElement.style.setProperty('--accent-color', 'var(--aggressive-color)');
+                document.documentElement.style.setProperty('--accent-glow', 'var(--aggressive-glow)');
+            } else if (type === 'modere') {
+                document.documentElement.style.setProperty('--accent-color', 'var(--moderate-color)');
+                document.documentElement.style.setProperty('--accent-glow', 'var(--moderate-glow)');
+            } else if (type === 'stable') {
+                document.documentElement.style.setProperty('--accent-color', 'var(--stable-color)');
+                document.documentElement.style.setProperty('--accent-glow', 'var(--stable-glow)');
+            }
+            
+            // Mettre à jour la bordure du conteneur
+            const container = document.querySelector('.portfolio-container');
+            if (container) {
+                container.style.borderColor = `var(--accent-color)`;
+            }
+        }
+        
+        function updatePortfolioView(type) {
+            // Update page title and description
+            updatePortfolioDescription(type);
             currentPortfolioType = type;
             
             // Update portfolio toggles with a state change animation
@@ -701,369 +624,8 @@
             });
             document.getElementById(`toggle${type.charAt(0).toUpperCase() + type.slice(1)}`).classList.add('active');
             
-            // Show appropriate portfolio details and hide others with animation
-            document.getElementById('aggressiveDetails').style.display = type === 'agressif' ? 'block' : 'none';
-            document.getElementById('moderateDetails').style.display = type === 'modere' ? 'block' : 'none';
-            document.getElementById('stableDetails').style.display = type === 'stable' ? 'block' : 'none';
-            
-            // Update title and description based on portfolio type
-            if (type === 'agressif') {
-                titleElement.textContent = 'PORTEFEUILLE AGRESSIF';
-                profileDescElement.textContent = 'Ce portefeuille vise une croissance maximale, avec une forte exposition aux secteurs en croissance et aux actifs à haut risque.';
-                
-                // Mettre à jour les couleurs des toggles
-                document.documentElement.style.setProperty('--accent-color', 'var(--aggressive-color)');
-                document.documentElement.style.setProperty('--accent-glow', 'var(--aggressive-glow)');
-                
-                initAggressiveChart();
-            } else if (type === 'modere') {
-                titleElement.textContent = 'PORTEFEUILLE MODÉRÉ';
-                profileDescElement.textContent = 'Ce portefeuille offre un équilibre entre croissance et stabilité, avec une diversification entre différentes classes d\'actifs.';
-                
-                // Mettre à jour les couleurs des toggles
-                document.documentElement.style.setProperty('--accent-color', 'var(--moderate-color)');
-                document.documentElement.style.setProperty('--accent-glow', 'var(--moderate-glow)');
-                
-                initModerateChart();
-            } else if (type === 'stable') {
-                titleElement.textContent = 'PORTEFEUILLE STABLE';
-                profileDescElement.textContent = 'Ce portefeuille privilégie la préservation du capital et les dividendes, avec une faible exposition aux actifs risqués.';
-                
-                // Mettre à jour les couleurs des toggles
-                document.documentElement.style.setProperty('--accent-color', 'var(--stable-color)');
-                document.documentElement.style.setProperty('--accent-glow', 'var(--stable-glow)');
-                
-                initStableChart();
-            }
-            
-            // Ajouter une animation d'apparition au changement de portfolio
-            const portfolioDetails = document.querySelector(`.portfolio-details[style*="display: block"]`);
-            if (portfolioDetails) {
-                portfolioDetails.style.animation = 'none';
-                portfolioDetails.offsetHeight; // Force reflow
-                portfolioDetails.style.animation = 'portfolio-appear 0.6s ease forwards';
-            }
-        }
-        
-        function initAggressiveChart() {
-            const ctx = document.getElementById('portfolioChart').getContext('2d');
-            
-            // Define orange color palette
-            const orangeColorPalette = [
-                '#FF7B00', '#FF8F29', '#FFA352', '#FFB77A',
-                '#FFCBA3', '#FFE0CC', '#CC6300', '#994A00',
-                '#663200', '#4C2500', '#331900', '#190C00'
-            ];
-            
-            // Destroy existing chart if it exists
-            if (portfolioChart) {
-                portfolioChart.destroy();
-            }
-            
-            // Ajouter une animation de chargement
-            const chartContainer = document.querySelector('.chart-container');
-            if (chartContainer) {
-                chartContainer.style.animation = 'none';
-                chartContainer.offsetHeight; // Force reflow
-                chartContainer.style.animation = 'chart-appear 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards 0.3s';
-            }
-            
-            // Attendre que les données de portefeuille soient chargées
-            if (window.perplexityIntegration && window.perplexityIntegration.portfolios && window.perplexityIntegration.portfolios.agressif) {
-                const portfolioData = window.perplexityIntegration.portfolios.agressif;
-                
-                // Créer des tableaux pour les labels et les données
-                const labels = portfolioData.map(asset => asset.symbol);
-                const data = portfolioData.map(asset => asset.allocation);
-                
-                // Create new chart for aggressive portfolio with real data
-                portfolioChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: data,
-                            backgroundColor: orangeColorPalette.slice(0, data.length),
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        cutout: '70%',
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'right',
-                                labels: {
-                                    color: '#FF7B00',
-                                    font: {
-                                        size: 14,
-                                        family: "'Inter', sans-serif"
-                                    }
-                                }
-                            }
-                        },
-                        animation: {
-                            animateScale: true,
-                            animateRotate: true,
-                            duration: 2000,
-                            easing: 'easeOutQuart'
-                        }
-                    }
-                });
-            } else {
-                // Utiliser des données par défaut si les données réelles ne sont pas encore disponibles
-                portfolioChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['NVDA', 'TSLA', 'AMZN', 'QQQ', 'ICLN', 'BTC', 'ETH'],
-                        datasets: [{
-                            data: [25, 22, 18, 10, 8, 12, 5],
-                            backgroundColor: orangeColorPalette.slice(0, 7),
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        cutout: '70%',
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'right',
-                                labels: {
-                                    color: '#FF7B00',
-                                    font: {
-                                        size: 14,
-                                        family: "'Inter', sans-serif"
-                                    }
-                                }
-                            }
-                        },
-                        animation: {
-                            animateScale: true,
-                            animateRotate: true,
-                            duration: 2000,
-                            easing: 'easeOutQuart'
-                        }
-                    }
-                });
-            }
-        }
-        
-        function initModerateChart() {
-            const ctx = document.getElementById('portfolioChart').getContext('2d');
-            
-            // Define green color palette
-            const greenColorPalette = [
-                '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
-                '#B3FFC7', '#CCFFD6', '#00CC6A', '#00994F',
-                '#007A3D', '#005C2E', '#003F1F', '#002110'
-            ];
-            
-            // Destroy existing chart if it exists
-            if (portfolioChart) {
-                portfolioChart.destroy();
-            }
-            
-            // Ajouter une animation de chargement
-            const chartContainer = document.querySelector('.chart-container');
-            if (chartContainer) {
-                chartContainer.style.animation = 'none';
-                chartContainer.offsetHeight; // Force reflow
-                chartContainer.style.animation = 'chart-appear 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards 0.3s';
-            }
-            
-            // Attendre que les données de portefeuille soient chargées
-            if (window.perplexityIntegration && window.perplexityIntegration.portfolios && window.perplexityIntegration.portfolios.modere) {
-                const portfolioData = window.perplexityIntegration.portfolios.modere;
-                
-                // Créer des tableaux pour les labels et les données
-                const labels = portfolioData.map(asset => asset.symbol);
-                const data = portfolioData.map(asset => asset.allocation);
-                
-                // Create new chart with real data
-                portfolioChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: data,
-                            backgroundColor: greenColorPalette.slice(0, data.length),
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        cutout: '70%',
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'right',
-                                labels: {
-                                    color: '#00FF87',
-                                    font: {
-                                        size: 14,
-                                        family: "'Inter', sans-serif"
-                                    }
-                                }
-                            }
-                        },
-                        animation: {
-                            animateScale: true,
-                            animateRotate: true,
-                            duration: 2000,
-                            easing: 'easeOutQuart'
-                        }
-                    }
-                });
-            } else {
-                // Utiliser des données par défaut si les données réelles ne sont pas encore disponibles
-                portfolioChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['MSFT', 'AMZN', 'SPY', 'QQQ', 'TLT', 'NVDA', 'LQD', 'BTC'],
-                        datasets: [{
-                            data: [15, 12, 20, 15, 15, 10, 8, 5],
-                            backgroundColor: greenColorPalette.slice(0, 8),
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        cutout: '70%',
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'right',
-                                labels: {
-                                    color: '#00FF87',
-                                    font: {
-                                        size: 14,
-                                        family: "'Inter', sans-serif"
-                                    }
-                                }
-                            }
-                        },
-                        animation: {
-                            animateScale: true,
-                            animateRotate: true,
-                            duration: 2000,
-                            easing: 'easeOutQuart'
-                        }
-                    }
-                });
-            }
-        }
-        
-        function initStableChart() {
-            const ctx = document.getElementById('portfolioChart').getContext('2d');
-            
-            // Define blue color palette
-            const blueColorPalette = [
-                '#00B2FF', '#33C0FF', '#66CDFF', '#99DBFF',
-                '#B3E3FF', '#CCE7FF', '#008FCC', '#006C99',
-                '#00476C', '#003752', '#002738', '#00141C'
-            ];
-            
-            // Destroy existing chart if it exists
-            if (portfolioChart) {
-                portfolioChart.destroy();
-            }
-            
-            // Ajouter une animation de chargement
-            const chartContainer = document.querySelector('.chart-container');
-            if (chartContainer) {
-                chartContainer.style.animation = 'none';
-                chartContainer.offsetHeight; // Force reflow
-                chartContainer.style.animation = 'chart-appear 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards 0.3s';
-            }
-            
-            // Attendre que les données de portefeuille soient chargées
-            if (window.perplexityIntegration && window.perplexityIntegration.portfolios && window.perplexityIntegration.portfolios.stable) {
-                const portfolioData = window.perplexityIntegration.portfolios.stable;
-                
-                // Créer des tableaux pour les labels et les données
-                const labels = portfolioData.map(asset => asset.symbol);
-                const data = portfolioData.map(asset => asset.allocation);
-                
-                // Create new chart with real data
-                portfolioChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: labels,
-                        datasets: [{
-                            data: data,
-                            backgroundColor: blueColorPalette.slice(0, data.length),
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        cutout: '70%',
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'right',
-                                labels: {
-                                    color: '#00B2FF',
-                                    font: {
-                                        size: 14,
-                                        family: "'Inter', sans-serif"
-                                    }
-                                }
-                            }
-                        },
-                        animation: {
-                            animateScale: true,
-                            animateRotate: true,
-                            duration: 2000,
-                            easing: 'easeOutQuart'
-                        }
-                    }
-                });
-            } else {
-                // Utiliser des données par défaut si les données réelles ne sont pas encore disponibles
-                portfolioChart = new Chart(ctx, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['BND', 'JNJ', 'MSFT', 'SPY', 'TLT', 'LQD'],
-                        datasets: [{
-                            data: [25, 15, 10, 15, 20, 15],
-                            backgroundColor: blueColorPalette.slice(0, 6),
-                            borderWidth: 0
-                        }]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        cutout: '70%',
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'right',
-                                labels: {
-                                    color: '#00B2FF',
-                                    font: {
-                                        size: 14,
-                                        family: "'Inter', sans-serif"
-                                    }
-                                }
-                            }
-                        },
-                        animation: {
-                            animateScale: true,
-                            animateRotate: true,
-                            duration: 2000,
-                            easing: 'easeOutQuart'
-                        }
-                    }
-                });
-            }
+            // Mettre à jour les couleurs des toggles
+            updatePortfolioColors(type);
         }
         
         // Update market time
@@ -1101,142 +663,31 @@
             }
         }
         
-        // Function to generate PDF for a specific portfolio type
+        // Fonction pour générer un PDF du portefeuille
         function generatePDF(portfolioType) {
-            // Make sure jsPDF is loaded
+            // Cette fonction sera appelée par le gestionnaire d'événements dans portfolio-loader.js
             if (typeof window.jspdf === 'undefined') {
                 window.jspdf = window.jsPDF;
             }
             
-            // Get portfolio title based on type
-            let portfolioTitle = '';
-            let portfolioDesc = '';
-            let themeColor = '#00FF87'; // Default green
+            // Définir les couleurs et titres selon le type
+            let themeColor, portfolioTitle, portfolioDesc;
             
             if (portfolioType === 'agressif') {
+                themeColor = '#FF7B00';
                 portfolioTitle = 'PORTEFEUILLE AGRESSIF';
                 portfolioDesc = 'Ce portefeuille vise une croissance maximale, avec une forte exposition aux secteurs en croissance et aux actifs à haut risque.';
-                themeColor = '#FF7B00'; // Orange
             } else if (portfolioType === 'modere') {
+                themeColor = '#00FF87';
                 portfolioTitle = 'PORTEFEUILLE MODÉRÉ';
                 portfolioDesc = 'Ce portefeuille offre un équilibre entre croissance et stabilité, avec une diversification entre différentes classes d\'actifs.';
-                themeColor = '#00FF87'; // Green
             } else if (portfolioType === 'stable') {
+                themeColor = '#00B2FF';
                 portfolioTitle = 'PORTEFEUILLE STABLE';
                 portfolioDesc = 'Ce portefeuille privilégie la préservation du capital et les dividendes, avec une faible exposition aux actifs risqués.';
-                themeColor = '#00B2FF'; // Blue
             }
             
-            // Get portfolio data
-            let portfolioData = [];
-            if (window.perplexityIntegration && window.perplexityIntegration.portfolios && window.perplexityIntegration.portfolios[portfolioType]) {
-                portfolioData = window.perplexityIntegration.portfolios[portfolioType];
-            } else {
-                // Utiliser des données par défaut si les données réelles ne sont pas disponibles
-                if (portfolioType === 'agressif') {
-                    portfolioData = [
-                        { name: 'NVIDIA', symbol: 'NVDA', type: 'Action', allocation: 25 },
-                        { name: 'Tesla', symbol: 'TSLA', type: 'Action', allocation: 22 },
-                        { name: 'Amazon', symbol: 'AMZN', type: 'Action', allocation: 18 },
-                        { name: 'Nasdaq 100 ETF', symbol: 'QQQ', type: 'ETF', allocation: 10 },
-                        { name: 'Clean Energy ETF', symbol: 'ICLN', type: 'ETF', allocation: 8 },
-                        { name: 'Bitcoin', symbol: 'BTC', type: 'Crypto', allocation: 12 },
-                        { name: 'Ethereum', symbol: 'ETH', type: 'Crypto', allocation: 5 }
-                    ];
-                } else if (portfolioType === 'modere') {
-                    portfolioData = [
-                        { name: 'Microsoft', symbol: 'MSFT', type: 'Action', allocation: 15 },
-                        { name: 'Amazon', symbol: 'AMZN', type: 'Action', allocation: 12 },
-                        { name: 'S&P 500 ETF', symbol: 'SPY', type: 'ETF', allocation: 20 },
-                        { name: 'Nasdaq 100 ETF', symbol: 'QQQ', type: 'ETF', allocation: 15 },
-                        { name: 'Treasury ETF', symbol: 'TLT', type: 'ETF', allocation: 15 },
-                        { name: 'NVIDIA', symbol: 'NVDA', type: 'Action', allocation: 10 },
-                        { name: 'Corporate Bond ETF', symbol: 'LQD', type: 'ETF', allocation: 8 },
-                        { name: 'Bitcoin', symbol: 'BTC', type: 'Crypto', allocation: 5 }
-                    ];
-                } else {
-                    portfolioData = [
-                        { name: 'Total Bond ETF', symbol: 'BND', type: 'ETF', allocation: 25 },
-                        { name: 'Johnson & Johnson', symbol: 'JNJ', type: 'Action', allocation: 15 },
-                        { name: 'Microsoft', symbol: 'MSFT', type: 'Action', allocation: 10 },
-                        { name: 'S&P 500 ETF', symbol: 'SPY', type: 'ETF', allocation: 15 },
-                        { name: 'Treasury ETF', symbol: 'TLT', type: 'ETF', allocation: 20 },
-                        { name: 'Corporate Bond ETF', symbol: 'LQD', type: 'ETF', allocation: 15 }
-                    ];
-                }
-            }
-            
-            // Create a new offscreen div to capture
-            const captureDiv = document.createElement('div');
-            captureDiv.style.width = '595px'; // A4 width in pixels at 72 DPI
-            captureDiv.style.padding = '40px';
-            captureDiv.style.backgroundColor = '#011627';
-            captureDiv.style.color = '#FFFFFF';
-            captureDiv.style.fontFamily = 'Inter, sans-serif';
-            captureDiv.style.position = 'absolute';
-            captureDiv.style.left = '-9999px';
-            document.body.appendChild(captureDiv);
-            
-            // Add content to the div
-            captureDiv.innerHTML = `
-                <div style="text-align: center; margin-bottom: 30px;">
-                    <div style="display: inline-block; width: 16px; height: 16px; background-color: ${themeColor}; border-radius: 50%; margin-bottom: 10px;"></div>
-                    <h1 style="font-size: 28px; font-weight: 900; margin: 0; color: #FFFFFF; letter-spacing: 1px;">TRADEPULSE</h1>
-                    <p style="font-size: 12px; opacity: 0.8; margin-top: 5px;">POWERED BY PERPLEXITY AI</p>
-                </div>
-                
-                <h2 style="font-size: 24px; text-align: center; margin-bottom: 20px; color: ${themeColor};">${portfolioTitle}</h2>
-                <p style="margin-bottom: 30px; text-align: center; font-size: 14px;">${portfolioDesc}</p>
-                
-                <p style="margin-bottom: 30px; text-align: center; font-size: 12px;">
-                    Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}
-                </p>
-                
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
-                    <tr style="border-bottom: 1px solid ${themeColor}; color: ${themeColor};">
-                        <th style="padding: 10px; text-align: left; font-size: 14px;">INSTRUMENT</th>
-                        <th style="padding: 10px; text-align: left; font-size: 14px;">SYMBOLE</th>
-                        <th style="padding: 10px; text-align: left; font-size: 14px;">TYPE</th>
-                        <th style="padding: 10px; text-align: right; font-size: 14px;">ALLOCATION</th>
-                    </tr>
-                    ${portfolioData.map(asset => `
-                        <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
-                            <td style="padding: 10px; text-align: left; font-size: 14px;">${asset.name}</td>
-                            <td style="padding: 10px; text-align: left; font-size: 14px;">${asset.symbol}</td>
-                            <td style="padding: 10px; text-align: left; font-size: 14px;">${asset.type}</td>
-                            <td style="padding: 10px; text-align: right; font-size: 14px; color: ${themeColor};">${asset.allocation}%</td>
-                        </tr>
-                    `).join('')}
-                </table>
-                
-                <div style="text-align: center; font-size: 12px; opacity: 0.7; margin-top: 40px;">
-                    <p>© 2025 TradePulse | Finance Intelligence Platform</p>
-                    <p style="margin-top: 5px;">Ce document est généré par une intelligence artificielle et ne constitue pas un conseil financier.</p>
-                </div>
-            `;
-            
-            // Capture the div as an image
-            html2canvas(captureDiv, {
-                scale: 2,
-                backgroundColor: '#011627',
-                logging: false
-            }).then(canvas => {
-                // Create PDF
-                const pdf = new jspdf.jsPDF('p', 'pt', 'a4');
-                
-                // Get canvas data and add to PDF
-                const imgData = canvas.toDataURL('image/png');
-                const imgProps = pdf.getImageProperties(imgData);
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-                pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-                
-                // Save the PDF
-                pdf.save(`TradePulse_${portfolioTitle.replace(/\s+/g, '_')}.pdf`);
-                
-                // Remove the temporary div
-                document.body.removeChild(captureDiv);
-            });
+            // La fonction de génération de PDF sera complétée par portfolio-loader.js
         }
     </script>
 </body>
