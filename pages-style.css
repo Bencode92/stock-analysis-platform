@@ -27,6 +27,9 @@ body {
     color: var(--text-color);
     min-height: 100vh;
     transition: opacity var(--transition-time) ease;
+    font-size: 16px; /* Base font size */
+    line-height: 1.5;
+    overflow-x: hidden; /* Prevent horizontal scrolling */
 }
 
 body.fade-in {
@@ -43,6 +46,7 @@ body.fade-out {
     margin: 0 auto;
     padding: 2rem;
     padding-top: calc(var(--header-height) + 2rem);
+    width: 100%; /* Ensure full width */
 }
 
 /* Header styling */
@@ -567,9 +571,10 @@ body.fade-out {
 
 /* Portfolio Details */
 .portfolio-chart-section {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2rem;
+    /* Correction du problème de zoom: changé de grid à flex */
+    display: flex;
+    flex-direction: column;
+    width: 100%;
     margin-bottom: var(--section-spacing);
     opacity: 0;
     animation: fadeIn 1s ease forwards 0.3s;
@@ -815,7 +820,7 @@ body.fade-out {
 /* Responsive adjustments */
 @media (max-width: 1200px) {
     .portfolio-chart-section {
-        grid-template-columns: 1fr;
+        flex-direction: column;
     }
     
     .chart-container {
