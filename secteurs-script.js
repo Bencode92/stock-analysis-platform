@@ -690,27 +690,4 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
-    
-    // Ajouter un bouton de débogage pour forcer le rechargement des données
-    const debugButton = document.createElement('button');
-    debugButton.id = 'force-refresh';
-    debugButton.style.position = 'fixed';
-    debugButton.style.top = '10px';
-    debugButton.style.right = '100px';
-    debugButton.style.zIndex = '1000';
-    debugButton.style.padding = '5px 10px';
-    debugButton.style.background = '#00ff87';
-    debugButton.style.color = '#000';
-    debugButton.style.border = 'none';
-    debugButton.style.borderRadius = '4px';
-    debugButton.textContent = 'Forcer refresh';
-    document.body.appendChild(debugButton);
-    
-    debugButton.addEventListener('click', function() {
-        console.log('🔄 Forçage du rechargement des données...');
-        // Vider le cache local
-        localStorage.removeItem('lastSectorsUpdate');
-        // Forcer le rechargement avec logs détaillés
-        loadSectorsData(true);
-    });
 });
