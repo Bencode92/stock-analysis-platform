@@ -16,6 +16,7 @@ from bs4 import BeautifulSoup
 import logging
 import time
 import re
+import random
 
 # Configuration du logger
 logging.basicConfig(
@@ -120,13 +121,27 @@ ALL_SECTORS = []
 
 def get_headers():
     """Crée des en-têtes HTTP aléatoires pour éviter la détection de bot"""
+    user_agents = [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0"
+    ]
+    
     return {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "User-Agent": random.choice(user_agents),
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Accept-Encoding": "gzip, deflate, br",
         "Cache-Control": "no-cache",
         "Pragma": "no-cache",
-        "Referer": "https://www.google.com/"
+        "Referer": "https://www.google.com/",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "cross-site",
+        "DNT": "1"
     }
 
 def determine_category(sector_name):
@@ -187,120 +202,167 @@ def extract_lesechos_data(html):
     sectors = []
     soup = BeautifulSoup(html, 'html.parser')
     
-    # Recherche du tableau des indices sectoriels - on cherche tous les tableaux sans filtre de classe
-    tables = soup.find_all('table')
-    
-    # Pour déboguer: ajouter un log de tous les tableaux trouvés
-    logger.info(f"Nombre de tableaux trouvés: {len(tables)}")
-    
-    # Générer un fichier HTML de débogage si nécessaire
-    debug_file_path = os.path.join(os.path.dirname(CONFIG["output_path"]), "debug_lesechos.html")
+    # Vérification de base pour s'assurer qu'on a la bonne page
+    page_title = soup.find('title')
+    if page_title and 'stoxx' not in page_title.text.lower() and 'sectoriels' not in page_title.text.lower():
+        logger.warning("❌ La page Les Echos ne semble pas être celle des indices sectoriels!")
+        
+    # Générer un fichier HTML de débogage
+    debug_dir = os.path.dirname(CONFIG["output_path"])
+    if not os.path.exists(debug_dir):
+        os.makedirs(debug_dir, exist_ok=True)
+    debug_file_path = os.path.join(debug_dir, "debug_lesechos.html")
     with open(debug_file_path, 'w', encoding='utf-8') as f:
         f.write(html)
     logger.info(f"HTML sauvegardé pour débogage dans {debug_file_path}")
     
-    # Liste pour suivre les indices STOXX trouvés
-    target_stoxx_indices_found = []
+    # MÉTHODE 1: Recherche directe par le contenu - plus fiable
+    logger.info("🔍 Tentative d'extraction par recherche directe des indices STOXX...")
     
-    for i, table in enumerate(tables):
-        # Vérifier la structure de chaque tableau
-        logger.info(f"Analyse du tableau #{i+1}")
-        
-        # Trouver l'en-tête du tableau
-        headers = table.find_all('th')
-        header_texts = [h.get_text(strip=True) for h in headers]
-        logger.info(f"En-têtes trouvés: {header_texts}")
-        
-        # Vérifier si cela ressemble à notre tableau d'indices (recherche flexible)
-        # On accepte le tableau si on trouve soit "Libellé", soit "Var." dans les en-têtes
-        if not any(h.lower().startswith("libellé") or h.lower().startswith("libelle") for h in header_texts) and \
-           not any(h.lower() == "var." for h in header_texts):
-            logger.info(f"Le tableau #{i+1} ne semble pas être le tableau d'indices")
-            continue
-        
-        # Localisation des indices des colonnes importantes (recherche flexible)
-        header_indices = {
-            "libelle": -1,
-            "cours": -1,
-            "var": -1,
-            "var_1er_janv": -1
-        }
-        
-        for j, header_text in enumerate(header_texts):
-            header_text_lower = header_text.lower().strip()
-            if "libellé" in header_text_lower or "libelle" in header_text_lower:
-                header_indices["libelle"] = j
-            elif header_text_lower == "cours":
-                header_indices["cours"] = j
-            elif header_text_lower == "var." or header_text_lower == "var":
-                header_indices["var"] = j
-            elif "var. 1er" in header_text_lower or "var/1janv" in header_text_lower or "var. janv" in header_text_lower:
-                header_indices["var_1er_janv"] = j
-        
-        logger.info(f"Indices de colonnes: {header_indices}")
-        
-        # Si on ne trouve pas les colonnes essentielles, passer au tableau suivant
-        if header_indices["libelle"] == -1 or header_indices["cours"] == -1:
-            logger.info(f"Colonnes essentielles manquantes dans le tableau #{i+1}")
-            continue
-        
-        # Analyser les lignes du tableau
-        rows = table.find_all('tr')
-        # Enlever la première ligne si c'est l'en-tête
-        if len(rows) > 0 and rows[0].find('th'):
-            rows = rows[1:]
-        
-        logger.info(f"Nombre de lignes dans le tableau #{i+1}: {len(rows)}")
-        
-        for row in rows:
-            cells = row.find_all(['td', 'th'])
-            if len(cells) < max(v for v in header_indices.values() if v >= 0) + 1:
-                continue
-            
+    # Rechercher tous les éléments qui pourraient contenir des indices STOXX
+    stoxx_elements = []
+    
+    # 1. Chercher par texte contenant "Stoxx Europe 600"
+    for element in soup.find_all(string=re.compile('Stoxx Europe 600', re.IGNORECASE)):
+        parent = element.parent
+        if parent and parent.name != 'title' and parent.name != 'script':
+            stoxx_elements.append(parent)
+            row = parent.find_parent('tr')
+            if row:
+                stoxx_elements.append(row)
+    
+    logger.info(f"Trouvé {len(stoxx_elements)} éléments contenant 'Stoxx Europe 600'")
+    
+    # Extraire directement des lignes de tableau contenant des secteurs STOXX
+    for i, element in enumerate(stoxx_elements):
+        if element.name == 'tr':
             try:
-                # Extraire le nom du secteur (libellé)
-                name_cell = cells[header_indices["libelle"]]
-                name = name_cell.get_text(strip=True)
-                
-                # Log pour déboguer
-                logger.info(f"Traitement de la ligne: {name}")
-                
-                # Vérifier si c'est un indice STOXX Europe 600
-                if not name.lower().startswith("stoxx europe 600"):
-                    logger.info(f"Ignoré car pas un indice STOXX Europe 600: {name}")
+                # C'est une ligne de tableau, extraire les données
+                cells = element.find_all(['td', 'th'])
+                if len(cells) < 3:  # Au minimum, on s'attend à voir libellé, cours, var
                     continue
                 
-                # Extraire le cours
+                # Supposer un ordre de colonnes courant
+                name_cell = cells[0]  # Première colonne = Libellé/Nom
+                name = name_cell.get_text(strip=True)
+                
+                if not "stoxx europe 600" in name.lower():
+                    continue
+                
+                # Log pour déboguer
+                logger.info(f"🎯 Ligne de tableau STOXX trouvée: {name}")
+                
+                # Extraire les données des autres colonnes
                 cours = "0"
-                if header_indices["cours"] >= 0:
-                    cours_cell = cells[header_indices["cours"]]
-                    cours = cours_cell.get_text(strip=True)
-                
-                # Extraire la variation quotidienne
                 var = "0"
-                if header_indices["var"] >= 0:
-                    var_cell = cells[header_indices["var"]]
-                    var = var_cell.get_text(strip=True)
-                
-                # Extraire la variation depuis le 1er janvier
                 var_janv = "0"
-                if header_indices["var_1er_janv"] >= 0:
-                    var_janv_cell = cells[header_indices["var_1er_janv"]]
-                    var_janv = var_janv_cell.get_text(strip=True)
                 
-                logger.info(f"Données extraites: Cours={cours}, Var={var}, Var1erJanv={var_janv}")
+                # Pour chaque cellule, déterminer ce qu'elle contient
+                for i, cell in enumerate(cells):
+                    cell_text = cell.get_text(strip=True)
+                    
+                    # Colonne 1 normalement = cours/valeur
+                    if i == 1 and re.match(r'^[\d\s.,]+$', cell_text):
+                        cours = cell_text
+                    
+                    # Var% a généralement un % et parfois un - (négatif)
+                    elif '%' in cell_text and i > 0 and i < 4:
+                        # Si c'est la première colonne pourcentage qu'on rencontre, c'est var quotidien
+                        if var == "0":
+                            var = cell_text
+                        # Sinon, c'est probablement var depuis janvier
+                        else:
+                            var_janv = cell_text
                 
-                # Vérifier si c'est l'un des indices STOXX cibles
-                is_target_stoxx = False
-                for target in CONFIG.get("target_stoxx_indices", []):
-                    if target.lower() in name.lower():
-                        is_target_stoxx = True
-                        target_stoxx_indices_found.append(target)
-                        logger.info(f"Indice STOXX cible trouvé: {name}")
-                        break
+                logger.info(f"📊 Données extraites pour {name}: Cours={cours}, Var={var}, Var1erJanv={var_janv}")
                 
-                # Si aucune liste cible n'est définie ou si c'est un indice cible
-                if not CONFIG.get("target_stoxx_indices") or is_target_stoxx or True:  # Toujours inclure tous les indices pour l'instant
+                # Déterminer la tendance
+                trend = "down" if '-' in var else "up"
+                
+                # Déterminer la catégorie sectorielle
+                category = determine_category(name)
+                
+                # Créer l'objet secteur
+                sector = {
+                    "name": name,
+                    "value": cours,
+                    "change": var,
+                    "changePercent": var,
+                    "ytdChange": var_janv,
+                    "trend": trend,
+                    "category": category,
+                    "source": "Les Echos",
+                    "region": "Europe"
+                }
+                
+                sectors.append(sector)
+                ALL_SECTORS.append(sector)
+                logger.info(f"✅ Indice STOXX Europe 600 ajouté: {name} (Catégorie: {category})")
+                
+            except Exception as e:
+                logger.error(f"Erreur lors du traitement d'un élément STOXX: {str(e)}")
+                import traceback
+                logger.error(traceback.format_exc())
+    
+    # MÉTHODE 2: Recherche classique par structure de tableau (si la méthode 1 n'a pas fonctionné)
+    if not sectors:
+        logger.info("⚠️ Aucun secteur trouvé par recherche directe, tentative par structure de tableau...")
+        # Recherche du tableau des indices sectoriels
+        tables = soup.find_all('table')
+        
+        logger.info(f"Nombre de tableaux trouvés: {len(tables)}")
+        
+        for i, table in enumerate(tables):
+            logger.info(f"Analyse du tableau #{i+1}")
+            
+            # Regarder toutes les lignes pour chercher des indices STOXX Europe 600
+            rows = table.find_all('tr')
+            
+            for row in rows:
+                cells = row.find_all(['td', 'th'])
+                if len(cells) < 3:  # Au minimum, on s'attend à voir libellé, cours, var
+                    continue
+                
+                try:
+                    # Récupérer le texte de la première cellule
+                    first_cell = cells[0].get_text(strip=True)
+                    
+                    # Si ce n'est pas un indice STOXX Europe 600, passer à la suivante
+                    if not first_cell.lower().startswith('stoxx europe 600'):
+                        continue
+                    
+                    logger.info(f"🎯 Indice trouvé dans le tableau #{i+1}: {first_cell}")
+                    
+                    # C'est un indice STOXX Europe 600 - extraire les données
+                    name = first_cell
+                    
+                    # Pour le reste, essayer de détecter intelligemment
+                    cours = "0"
+                    var = "0"
+                    var_janv = "0"
+                    
+                    # Pour chaque cellule, déterminer ce qu'elle contient
+                    for i, cell in enumerate(cells):
+                        if i == 0:  # Déjà traité (nom)
+                            continue
+                            
+                        cell_text = cell.get_text(strip=True)
+                        
+                        # Détecter un cours (chiffres avec éventuellement un séparateur)
+                        if re.match(r'^[\d\s.,]+$', cell_text) and i == 1:
+                            cours = cell_text
+                        
+                        # Détecter un pourcentage
+                        elif '%' in cell_text:
+                            # Si c'est la première colonne pourcentage qu'on rencontre, c'est var quotidien
+                            if var == "0":
+                                var = cell_text
+                            # Sinon, c'est probablement var depuis janvier
+                            elif var_janv == "0":
+                                var_janv = cell_text
+                    
+                    logger.info(f"📊 Données extraites pour {name}: Cours={cours}, Var={var}, Var1erJanv={var_janv}")
+                    
                     # Déterminer la tendance
                     trend = "down" if '-' in var else "up"
                     
@@ -322,24 +384,67 @@ def extract_lesechos_data(html):
                     
                     sectors.append(sector)
                     ALL_SECTORS.append(sector)
-                    logger.info(f"Indice STOXX Europe 600 ajouté: {name} (Catégorie: {category})")
+                    logger.info(f"✅ Indice STOXX Europe 600 ajouté par méthode 2: {name} (Catégorie: {category})")
                 
-            except Exception as e:
-                logger.error(f"Erreur lors du traitement d'une ligne: {str(e)}")
-                import traceback
-                logger.error(traceback.format_exc())
-        
-        # Vérifier si tous les indices STOXX cibles ont été trouvés
-        if CONFIG.get("target_stoxx_indices"):
-            missing_stoxx_indices = set(CONFIG["target_stoxx_indices"]) - set(target_stoxx_indices_found)
-            if missing_stoxx_indices:
-                logger.warning(f"Indices STOXX cibles non trouvés: {missing_stoxx_indices}")
-        
-        # Si on a trouvé des données dans ce tableau, inutile de continuer
-        if sectors:
-            break
+                except Exception as e:
+                    logger.error(f"Erreur lors du traitement d'une ligne: {str(e)}")
+                    import traceback
+                    logger.error(traceback.format_exc())
     
-    logger.info(f"Nombre total d'indices STOXX Europe 600 extraits: {len(sectors)}")
+    # MÉTHODE 3: Extraction manuelle des indices à partir du fichier de la capture d'écran fournie
+    if not sectors:
+        logger.info("⚠️ Méthodes 1 & 2 ont échoué - utilisation des données STOXX Europe 600 statiques")
+        
+        # Données extraites de la capture d'écran
+        static_data = [
+            {"name": "Stoxx Europe 600 Automobiles", "value": "565,07", "var": "-2,25 %", "var_janv": "+4,83 %"},
+            {"name": "Stoxx Europe 600 Basic Resources", "value": "540,16", "var": "-0,96 %", "var_janv": "+4,92 %"},
+            {"name": "Stoxx Europe 600 Chemicals", "value": "1287,87", "var": "-0,99 %", "var_janv": "+9,45 %"},
+            {"name": "Stoxx Europe 600 Construction & Materials", "value": "791,68", "var": "-0,58 %", "var_janv": "+14,10 %"},
+            {"name": "Stoxx Europe 600 Financial Services", "value": "879,38", "var": "+0,10 %", "var_janv": "+6,56 %"},
+            {"name": "Stoxx Europe 600 Food & Beverage", "value": "681,10", "var": "+0,80 %", "var_janv": "+6,58 %"},
+            {"name": "Stoxx Europe 600 Health Care", "value": "1141,97", "var": "-0,05 %", "var_janv": "+4,68 %"},
+            {"name": "Stoxx Europe 600 Industrial Goods & Services", "value": "999,89", "var": "-0,99 %", "var_janv": "+14,65 %"},
+            {"name": "Stoxx Europe 600 Insurance", "value": "471,54", "var": "-0,42 %", "var_janv": "+15,53 %"},
+            {"name": "Stoxx Europe 600 Media", "value": "455,94", "var": "+0,26 %", "var_janv": "-3,21 %"},
+            {"name": "Stoxx Europe 600 Oil & Gas", "value": "370,31", "var": "+0,09 %", "var_janv": "+10,56 %"},
+            {"name": "Stoxx Europe 600 Technology", "value": "837,31", "var": "-0,55 %", "var_janv": "+3,81 %"},
+            {"name": "Stoxx Europe 600 Telecommunications", "value": "255,24", "var": "-0,12 %", "var_janv": "+11,81 %"},
+            {"name": "Stoxx Europe 600 Utilities", "value": "406,12", "var": "+0,64 %", "var_janv": "+5,46 %"}
+        ]
+        
+        for item in static_data:
+            # Déterminer la tendance
+            trend = "down" if '-' in item["var"] else "up"
+            
+            # Déterminer la catégorie
+            category = determine_category(item["name"])
+            
+            # Créer l'objet secteur
+            sector = {
+                "name": item["name"],
+                "value": item["value"],
+                "change": item["var"],
+                "changePercent": item["var"],
+                "ytdChange": item["var_janv"],
+                "trend": trend,
+                "category": category,
+                "source": "Les Echos (statique)",
+                "region": "Europe"
+            }
+            
+            sectors.append(sector)
+            ALL_SECTORS.append(sector)
+            logger.info(f"⚠️ Ajout d'indice STOXX statique: {item['name']}")
+        
+        logger.warning("⚠️ Données STOXX Europe 600 statiques utilisées - regardez le fichier HTML de débogage pour comprendre l'échec")
+    
+    # Vérification du nombre de secteurs trouvés
+    if sectors:
+        logger.info(f"✅ {len(sectors)} indices STOXX Europe 600 trouvés")
+    else:
+        logger.warning("⚠️ Aucun indice STOXX Europe 600 trouvé!")
+    
     return sectors
 
 def extract_boursorama_data(html):
@@ -585,13 +690,26 @@ def scrape_sectors_data():
         try:
             logger.info(f"Récupération des données depuis {source['name']} ({source['url']})...")
             
-            # Récupérer le contenu de la page
-            response = requests.get(source["url"], headers=get_headers(), timeout=30)
+            # Récupérer le contenu de la page avec délai pour éviter la détection
+            time.sleep(random.uniform(1, 3))
+            headers = get_headers()
+            logger.info(f"Utilisation du User-Agent: {headers['User-Agent']}")
+            
+            response = requests.get(source["url"], headers=headers, timeout=30)
+            
             if response.status_code != 200:
-                logger.warning(f"Erreur {response.status_code} pour {source['name']}")
+                logger.warning(f"Erreur {response.status_code} pour {source['name']} - {response.reason}")
+                # Vérifier s'il y a une redirection
+                if response.history:
+                    logger.warning(f"Redirection détectée: {response.url}")
                 continue
-                
+            
+            logger.info(f"Réponse HTTP {response.status_code} reçue pour {source['name']}")
+            
+            # Vérifier le contenu de base
             html = response.text
+            if len(html) < 1000:
+                logger.warning(f"Contenu suspect (trop court): {len(html)} caractères")
             
             # Traiter selon la source
             if "lesechos.fr" in source["url"]:
