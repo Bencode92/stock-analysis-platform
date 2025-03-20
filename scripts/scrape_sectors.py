@@ -269,17 +269,74 @@ def extract_boursorama_data(html):
     # Liste pour suivre les indices cibles trouvés
     target_indices_found = []
     
+    # Trouver les onglets de catégories
+    sector_tab = None
+    tabs = soup.find_all('a', class_='c-tab')
+    for tab in tabs:
+        if tab.text.strip().lower() == 'secteurs':
+            sector_tab = tab
+            break
+    
+    logger.info(f"Tab secteur trouvé: {sector_tab is not None}")
+    
+    # Si l'onglet Secteurs est trouvé, chercher son contenu
+    if sector_tab and sector_tab.get('id'):
+        tab_id = sector_tab.get('id')
+        tab_content_id = tab_id.replace('-tab', '-content')
+        sector_content = soup.find('div', id=tab_content_id)
+        
+        if sector_content:
+            tables = sector_content.find_all('table')
+            logger.info(f"Nombre de tableaux trouvés dans l'onglet Secteurs: {len(tables)}")
+    
+    # Parcourir tous les tableaux pour trouver les indices NASDAQ
     for table in tables:
-        # Parcourir toutes les lignes de tous les tableaux
-        rows = table.find_all('tr')
+        # Analyser les en-têtes pour comprendre la structure du tableau
+        header = table.find('thead')
+        if not header:
+            continue
+            
+        # Trouver les index des colonnes importantes
+        header_cells = header.find_all('th')
+        header_texts = [cell.text.strip().lower() for cell in header_cells]
+        
+        logger.info(f"En-têtes trouvés: {header_texts}")
+        
+        # Trouver les indices des colonnes
+        libelle_idx = -1
+        dernier_idx = -1
+        var_idx = -1
+        veille_idx = -1
+        var_janv_idx = -1
+        
+        for i, text in enumerate(header_texts):
+            if 'libellé' in text or 'nom' in text:
+                libelle_idx = i
+            elif 'dernier' in text or 'cours' in text:
+                dernier_idx = i
+            elif 'var.' in text and not 'janv' in text and not 'veille' in text:
+                var_idx = i
+            elif 'veille' in text:
+                veille_idx = i
+            elif 'var/1janv' in text or '1er' in text or 'janv' in text:
+                var_janv_idx = i
+        
+        logger.info(f"Indices de colonnes: libellé={libelle_idx}, dernier={dernier_idx}, var={var_idx}, veille={veille_idx}, var_janv={var_janv_idx}")
+        
+        # Si on ne trouve pas les colonnes essentielles, passer au tableau suivant
+        if libelle_idx == -1 or dernier_idx == -1 or var_idx == -1:
+            continue
+            
+        # Parcourir les lignes du tableau
+        rows = table.find('tbody').find_all('tr')
         for row in rows:
             cells = row.find_all('td')
-            if len(cells) < 4:
+            if len(cells) < max(libelle_idx, dernier_idx, var_idx, var_janv_idx) + 1:
                 continue
                 
             try:
                 # Extraire le nom de l'indice
-                name_cell = cells[0]
+                name_cell = cells[libelle_idx]
                 name_text = name_cell.text.strip()
                 
                 # Vérifier si c'est l'un des indices NASDAQ US ciblés
@@ -298,10 +355,16 @@ def extract_boursorama_data(html):
                     # Nettoyer le nom (supprimer "Cours" s'il est présent)
                     clean_name = name_text.replace("Cours ", "")
                     
-                    # Extraire la valeur, variations, etc.
-                    value = cells[1].text.strip() if len(cells) > 1 else ""
-                    change_percent = cells[2].text.strip() if len(cells) > 2 else ""
-                    ytd_change = cells[3].text.strip() if len(cells) > 3 else ""
+                    # Extraire les valeurs des différentes colonnes
+                    value = cells[dernier_idx].text.strip() if dernier_idx >= 0 and dernier_idx < len(cells) else ""
+                    change_percent = cells[var_idx].text.strip() if var_idx >= 0 and var_idx < len(cells) else ""
+                    
+                    # Extraire la variation depuis le 1er janvier (si disponible)
+                    ytd_change = ""
+                    if var_janv_idx >= 0 and var_janv_idx < len(cells):
+                        ytd_change = cells[var_janv_idx].text.strip()
+                    else:
+                        logger.warning(f"Colonne VAR/1JANV introuvable pour {clean_name}. Utilisation d'une valeur vide.")
                     
                     # Déterminer la tendance
                     trend = "down" if '-' in change_percent else "up"
@@ -324,7 +387,7 @@ def extract_boursorama_data(html):
                     
                     sectors.append(sector)
                     ALL_SECTORS.append(sector)
-                    logger.info(f"Indice sectoriel US ajouté: {clean_name} (Catégorie: {category})")
+                    logger.info(f"Indice sectoriel US ajouté: {clean_name} - Cours: {value}, VAR: {change_percent}, YTD: {ytd_change} (Catégorie: {category})")
             
             except Exception as e:
                 logger.warning(f"Erreur lors du traitement d'une ligne Boursorama: {str(e)}")
