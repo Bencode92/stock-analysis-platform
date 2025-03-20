@@ -9,6 +9,10 @@
     position: relative;
     overflow: hidden;
     border: 1px solid rgba(0, 255, 135, 0.2);
+    width: 100%;
+    max-width: 1600px; /* Augmenter la largeur maximale */
+    margin-left: auto;
+    margin-right: auto;
 }
 
 /* Effet de lueur subtil sur les bords */
@@ -150,16 +154,19 @@
 .portfolio-panel[id="portfolio-agressif"] {
     --panel-color: var(--aggressive-color);
     --panel-glow: var(--aggressive-glow);
+    --panel-color-rgb: 255, 123, 0;
 }
 
 .portfolio-panel[id="portfolio-modere"] {
     --panel-color: var(--moderate-color);
     --panel-glow: var(--moderate-glow);
+    --panel-color-rgb: 0, 255, 135;
 }
 
 .portfolio-panel[id="portfolio-stable"] {
     --panel-color: var(--stable-color);
     --panel-glow: var(--stable-glow);
+    --panel-color-rgb: 0, 178, 255;
 }
 
 /* Appliquer les couleurs spécifiques aux éléments */
@@ -226,7 +233,7 @@
     line-height: 1.6;
     color: rgba(255, 255, 255, 0.8);
     font-size: 0.95rem;
-    max-width: 800px;
+    max-width: 100%; /* Modifier pour utiliser toute la largeur */
     padding-left: 0.5rem;
     border-left: 3px solid var(--accent-color);
     background-color: rgba(0, 255, 135, 0.05);
@@ -237,14 +244,14 @@
 /* Vue d'ensemble du portefeuille */
 .portfolio-overview {
     display: grid;
-    grid-template-columns: minmax(300px, 1fr) minmax(300px, 1fr);
-    gap: 2rem;
+    grid-template-columns: minmax(400px, 1fr) minmax(400px, 1fr);
+    gap: 2.5rem;
     margin-bottom: 2rem;
 }
 
 .portfolio-chart-container {
     position: relative;
-    height: 300px;
+    height: 400px; /* Augmenter la hauteur */
     background-color: rgba(255, 255, 255, 0.02);
     border-radius: 12px;
     padding: 1.5rem;
@@ -310,7 +317,7 @@
 .portfolio-details {
     margin-bottom: 2rem;
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
     gap: 1.5rem;
 }
 
@@ -523,7 +530,7 @@
     }
     
     .portfolio-chart-container {
-        height: 250px;
+        height: 300px;
     }
     
     .portfolio-actions {
@@ -533,6 +540,17 @@
     .portfolio-actions button {
         width: 100%;
         justify-content: center;
+    }
+}
+
+/* Pour écrans très larges */
+@media (min-width: 1800px) {
+    .portfolio-container {
+        max-width: 1800px;
+    }
+    
+    .portfolio-details {
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
     }
 }
 
@@ -714,4 +732,12 @@
         margin-right: 0;
         margin-bottom: 1rem;
     }
+}
+
+/* Améliorer l'apparence de la page générale */
+.page-content {
+    max-width: 1800px;
+    width: 95%;
+    margin: 0 auto; 
+    padding: 0 20px;
 }
