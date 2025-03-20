@@ -1,6 +1,8 @@
-# Module ML pour TradePulse
-# Ce module fournit les fonctionnalités de classification des actualités financières
+"""
+Module de machine learning pour la classification des actualités financières.
+Ce module fournit des fonctionnalités pour analyser les sentiments et l'impact
+des actualités financières, ainsi que pour améliorer les modèles grâce aux
+feedbacks des utilisateurs.
+"""
 
-from .news_classifier import NewsClassifier, run_classification
-
-__all__ = ['NewsClassifier', 'run_classification']
+__version__ = '1.0.0'
