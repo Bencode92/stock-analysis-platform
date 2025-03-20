@@ -3,9 +3,8 @@
 
 """
 Script d'extraction des données d'indices sectoriels depuis:
-- https://investir.lesechos.fr/cours/indices/sectoriels-stoxx-europe-600
-- https://www.boursorama.com/bourse/indices/internationaux
-Spécifiquement ciblé sur les indices NASDAQ US sectoriels
+- https://investir.lesechos.fr/cours/indices/sectoriels-stoxx-europe-600 (TOUS les indices STOXX Europe 600)
+- https://www.boursorama.com/bourse/indices/internationaux (indices NASDAQ US sectoriels spécifiques)
 """
 
 import os
@@ -43,14 +42,14 @@ CONFIG = {
     # Structure des catégories sectorielles
     "categories": {
         "energy": ["énergie", "energy", "oil", "gaz", "pétrole", "oil & gas"],
-        "materials": ["matériaux", "materials", "basic", "basic matls", "chimie"],
-        "industrials": ["industrials", "industrie", "industrial goods", "aerospace"],
-        "consumer-discretionary": ["consommation discrétionnaire", "consumer discretionary", "luxury", "retail", "auto", "auto & parts"],
-        "consumer-staples": ["consommation de base", "consumer staples", "food", "beverage"],
-        "healthcare": ["santé", "health", "healthcare", "pharma", "medical"],
-        "financials": ["finance", "financial", "banks", "insurance", "banques", "assurance", "financial svcs"],
+        "materials": ["matériaux", "materials", "basic", "basic resources", "basic matls", "chimie", "chemicals", "construction & materials"],
+        "industrials": ["industrials", "industrie", "industrial goods", "industrial goods & services", "aerospace"],
+        "consumer-discretionary": ["consommation discrétionnaire", "consumer discretionary", "luxury", "retail", "auto", "automobiles", "auto & parts"],
+        "consumer-staples": ["consommation de base", "consumer staples", "food", "beverage", "food & beverage"],
+        "healthcare": ["santé", "health", "health care", "healthcare", "pharma", "medical"],
+        "financials": ["finance", "financial", "banks", "insurance", "banques", "assurance", "financial services", "financial svcs"],
         "information-technology": ["technologie", "technology", "it", "software", "hardware", "tech"],
-        "communication-services": ["communication", "telecom", "media"],
+        "communication-services": ["communication", "telecom", "telecommunications", "media"],
         "utilities": ["services publics", "utilities", "électricité", "eau", "gas"],
         "real-estate": ["immobilier", "real estate", "reits"]
     },
@@ -117,8 +116,32 @@ def determine_category(sector_name):
     """Détermine la catégorie d'un secteur en fonction de son nom"""
     sector_name_lower = sector_name.lower()
     
+    # Mappings directs pour les secteurs STOXX Europe 600
+    stoxx_mappings = {
+        "automobiles": "consumer-discretionary",
+        "basic resources": "materials",
+        "chemicals": "materials",
+        "construction & materials": "materials",
+        "financial services": "financials",
+        "food & beverage": "consumer-staples",
+        "health care": "healthcare",
+        "industrial goods & services": "industrials",
+        "insurance": "financials",
+        "media": "communication-services",
+        "oil & gas": "energy",
+        "technology": "information-technology",
+        "telecommunications": "communication-services",
+        "utilities": "utilities"
+    }
+    
+    # Si c'est un indice STOXX Europe 600, extraire le secteur et vérifier le mapping direct
+    if "stoxx europe 600" in sector_name_lower:
+        for sector, category in stoxx_mappings.items():
+            if sector.lower() in sector_name_lower:
+                return category
+    
     # Mappings spécifiques pour les indices NASDAQ US ciblés
-    specific_mappings = {
+    nasdaq_mappings = {
         "health care": "healthcare",
         "financial": "financials",
         "basic matls": "materials",
@@ -128,8 +151,8 @@ def determine_category(sector_name):
         "telecom": "communication-services"
     }
     
-    # Vérifier d'abord les mappings spécifiques
-    for keyword, category in specific_mappings.items():
+    # Vérifier les mappings NASDAQ
+    for keyword, category in nasdaq_mappings.items():
         if keyword.lower() in sector_name_lower:
             return category
     
@@ -143,44 +166,71 @@ def determine_category(sector_name):
     return "other"
 
 def extract_lesechos_data(html):
-    """Extraire les données de Les Echos pour les secteurs STOXX Europe 600"""
+    """Extraire tous les indices sectoriels STOXX Europe 600 de Les Echos"""
     sectors = []
     soup = BeautifulSoup(html, 'html.parser')
     
     # Recherche du tableau des indices sectoriels
     tables = soup.find_all('table', class_='c-table')
     
+    # Localisation des indices des colonnes importantes
+    header_indices = {
+        "libelle": 0,
+        "cours": 1,
+        "var": 2,
+        "var_1er_janv": -1  # Sera défini plus tard
+    }
+    
     for table in tables:
         # Vérifier si c'est bien le tableau des secteurs
         header = table.find('thead')
-        if not header or not any('Secteur' in th.text for th in header.find_all('th')):
+        if not header:
+            continue
+        
+        # Trouver l'index de la colonne Var. 1er janv.
+        th_elements = header.find_all('th')
+        for i, th in enumerate(th_elements):
+            th_text = th.text.strip().lower()
+            if 'var. 1er' in th_text or 'var/1janv' in th_text or 'var. janv' in th_text:
+                header_indices["var_1er_janv"] = i
+                break
+        
+        if header_indices["var_1er_janv"] == -1:
+            logger.warning("Colonne 'Var. 1er janv.' non trouvée dans le tableau")
             continue
         
         # Analyser les lignes du tableau
-        for row in table.find('tbody').find_all('tr'):
+        rows = table.find('tbody').find_all('tr')
+        logger.info(f"Nombre de lignes STOXX Europe 600 trouvées: {len(rows)}")
+        
+        for row in rows:
             cells = row.find_all('td')
-            if len(cells) < 5:
+            if len(cells) < 4:
                 continue
             
             try:
-                # Extraire le nom du secteur
-                name_cell = cells[0]
+                # Extraire le nom du secteur (libellé)
+                name_cell = cells[header_indices["libelle"]]
                 name = name_cell.text.strip()
                 
-                # Extraire la valeur (cours)
-                value_cell = cells[1]
-                value = value_cell.text.strip()
+                # Vérifier si c'est un indice STOXX Europe 600
+                if not "Stoxx Europe 600" in name:
+                    continue
+                
+                # Extraire le cours
+                cours_cell = cells[header_indices["cours"]]
+                cours = cours_cell.text.strip()
                 
                 # Extraire la variation quotidienne
-                daily_change_cell = cells[2]
-                daily_change = daily_change_cell.text.strip()
+                var_cell = cells[header_indices["var"]]
+                var = var_cell.text.strip()
                 
-                # Extraire la variation annuelle (YTD)
-                ytd_cell = cells[3]
-                ytd_change = ytd_cell.text.strip()
+                # Extraire la variation depuis le 1er janvier
+                var_janv_cell = cells[header_indices["var_1er_janv"]]
+                var_janv = var_janv_cell.text.strip()
                 
                 # Déterminer la tendance
-                trend = "down" if '-' in daily_change else "up"
+                trend = "down" if '-' in var else "up"
                 
                 # Déterminer la catégorie sectorielle
                 category = determine_category(name)
@@ -188,10 +238,10 @@ def extract_lesechos_data(html):
                 # Créer l'objet secteur
                 sector = {
                     "name": name,
-                    "value": value,
-                    "change": daily_change,
-                    "changePercent": daily_change,
-                    "ytdChange": ytd_change,
+                    "value": cours,
+                    "change": var,
+                    "changePercent": var,
+                    "ytdChange": var_janv,
                     "trend": trend,
                     "category": category,
                     "source": "Les Echos",
@@ -200,11 +250,12 @@ def extract_lesechos_data(html):
                 
                 sectors.append(sector)
                 ALL_SECTORS.append(sector)
+                logger.info(f"Indice STOXX Europe 600 trouvé: {name} (Catégorie: {category})")
                 
             except Exception as e:
                 logger.warning(f"Erreur lors du traitement d'une ligne Les Echos: {str(e)}")
                 
-    logger.info(f"Nombre de secteurs extraits de Les Echos: {len(sectors)}")
+    logger.info(f"Nombre total d'indices STOXX Europe 600 extraits: {len(sectors)}")
     return sectors
 
 def extract_boursorama_data(html):
@@ -273,7 +324,7 @@ def extract_boursorama_data(html):
                     
                     sectors.append(sector)
                     ALL_SECTORS.append(sector)
-                    logger.info(f"Indice sectoriel ajouté: {clean_name} (Catégorie: {category})")
+                    logger.info(f"Indice sectoriel US ajouté: {clean_name} (Catégorie: {category})")
             
             except Exception as e:
                 logger.warning(f"Erreur lors du traitement d'une ligne Boursorama: {str(e)}")
@@ -283,7 +334,7 @@ def extract_boursorama_data(html):
     if missing_indices:
         logger.warning(f"Indices cibles non trouvés: {missing_indices}")
     
-    logger.info(f"Nombre d'indices sectoriels extraits de Boursorama: {len(sectors)}")
+    logger.info(f"Nombre d'indices sectoriels US extraits de Boursorama: {len(sectors)}")
     return sectors
 
 def classify_sectors(sectors):
@@ -453,7 +504,7 @@ def main():
     """Point d'entrée principal du script"""
     try:
         logger.info("🚀 Démarrage du script de scraping des données sectorielles")
-        logger.info(f"Ciblant spécifiquement les indices NASDAQ US sectoriels suivants:")
+        logger.info(f"Ciblant les indices sectoriels STOXX Europe 600 et ces indices NASDAQ US spécifiques:")
         for idx in CONFIG["target_indices"]:
             logger.info(f"  - {idx}")
         
