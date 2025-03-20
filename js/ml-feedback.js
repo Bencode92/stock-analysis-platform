@@ -52,20 +52,20 @@ class MLFeedbackSystem {
         });
         
         document.addEventListener('click', (event) => {
-    if (event.target.closest('.ml-feedback-btn')) {
-        event.preventDefault();
-        event.stopPropagation(); // Empêche la propagation à la carte d'actualité parent
-        
-        const newsCard = event.target.closest('.news-card');
-        if (newsCard) {
-            this.openFeedbackModal(newsCard);
-        }
-    }
-            
+            if (event.target.closest('.ml-feedback-btn')) {
+                event.preventDefault();
+                event.stopPropagation(); // Empêche la propagation à la carte d'actualité parent
+                
+                const newsCard = event.target.closest('.news-card');
+                if (newsCard) {
+                    this.openFeedbackModal(newsCard);
+                }
+            }
+                
             if (event.target.id === 'ml-feedback-cancel') {
                 this.closeFeedbackModal();
             }
-            
+                
             if (event.target.id === 'ml-feedback-save') {
                 this.saveFeedback();
             }
@@ -102,10 +102,9 @@ class MLFeedbackSystem {
                 const btn = document.createElement('button');
                 btn.className = 'ml-feedback-btn';
                 
-                // Si aucun token n'est disponible, désactiver le bouton ou ajouter une info-bulle
+                // Si aucun token n'est disponible, on ajoute quand même le bouton mais avec une info-bulle
                 if (!this.hasToken) {
-                    btn.className += ' disabled';
-                    btn.title = 'Authentification requise. Utilisez ?ghtoken=VOTRE_TOKEN pour activer cette fonctionnalité.';
+                    btn.title = 'Mode démo - Les modifications ne seront pas sauvegardées en ligne';
                 } else {
                     btn.title = 'Contribuer à la reclassification de cette actualité';
                 }
@@ -123,11 +122,12 @@ class MLFeedbackSystem {
     }
     
     openFeedbackModal(newsCard) {
-        // Vérifier si l'utilisateur a un token
-        if (!this.hasToken) {
+        // MODIFICATION: Désactivation de la vérification de token pour permettre l'ouverture du modal
+        // pour tous les utilisateurs, même sans token GitHub
+        /*if (!this.hasToken) {
             this.showTokenRequiredMessage();
             return;
-        }
+        }*/
         
         const newsId = newsCard.dataset.newsId;
         const title = newsCard.querySelector('h3')?.textContent || 'Article sans titre';
@@ -236,12 +236,12 @@ class MLFeedbackSystem {
             return;
         }
         
-        // Vérifier à nouveau si l'utilisateur a un token
-        if (!this.hasToken) {
+        // MODIFICATION: Permettre de sauvegarder localement même sans token
+        /*if (!this.hasToken) {
             this.showTokenRequiredMessage();
             this.closeFeedbackModal();
             return;
-        }
+        }*/
         
         // Modifier visuellement le bouton pour montrer que l'envoi est en cours
         const saveButton = document.getElementById('ml-feedback-save');
@@ -270,61 +270,85 @@ class MLFeedbackSystem {
             url: window.location.href
         };
         
-        // ENVOI DIRECT À GITHUB via l'API GitHub
-        try {
-            // Récupérer le token depuis localStorage
-            const token = localStorage.getItem('tradepulse_gh_token');
-            if (!token) {
-                throw new Error('Token GitHub non disponible');
-            }
-            
-            // 1. Récupérer le fichier ml_feedback.json actuel
-            const fileUrl = `${this.GITHUB_API}/repos/${this.GITHUB_REPO}/contents/data/ml_feedback.json`;
-            
-            // Récupérer le fichier et son SHA
-            const fileResponse = await fetch(fileUrl, {
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Accept': 'application/vnd.github.v3+json'
+        // MODIFICATION: Vérifier si nous avons un token pour l'envoi GitHub
+        if (this.hasToken) {
+            // ENVOI DIRECT À GITHUB via l'API GitHub
+            try {
+                // Récupérer le token depuis localStorage
+                const token = localStorage.getItem('tradepulse_gh_token');
+                if (!token) {
+                    throw new Error('Token GitHub non disponible');
                 }
-            });
-            
-            if (!fileResponse.ok) {
-                throw new Error(`Erreur GitHub: ${fileResponse.status} ${fileResponse.statusText}`);
+                
+                // 1. Récupérer le fichier ml_feedback.json actuel
+                const fileUrl = `${this.GITHUB_API}/repos/${this.GITHUB_REPO}/contents/data/ml_feedback.json`;
+                
+                // Récupérer le fichier et son SHA
+                const fileResponse = await fetch(fileUrl, {
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    }
+                });
+                
+                if (!fileResponse.ok) {
+                    throw new Error(`Erreur GitHub: ${fileResponse.status} ${fileResponse.statusText}`);
+                }
+                
+                const fileData = await fileResponse.json();
+                const sha = fileData.sha;
+                
+                // Décoder le contenu du fichier
+                const content = atob(fileData.content);
+                const feedbackData = JSON.parse(content);
+                
+                // 2. Ajouter le nouveau feedback
+                feedbackData[0].feedbacks.push(feedback);
+                
+                // Mettre à jour les métadonnées
+                feedbackData[0].meta.feedbackCount = feedbackData[0].feedbacks.length;
+                feedbackData[0].meta.lastUpdated = new Date().toISOString();
+                
+                // 3. Mettre à jour le fichier sur GitHub
+                const updateResponse = await fetch(fileUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    body: JSON.stringify({
+                        message: `Ajout d'un feedback utilisateur: ${title.substring(0, 50)}`,
+                        content: btoa(JSON.stringify(feedbackData, null, 2)),
+                        sha: sha
+                    })
+                });
+                
+                if (!updateResponse.ok) {
+                    throw new Error(`Erreur de mise à jour GitHub: ${updateResponse.status}`);
+                }
+                
+                // Mise à jour visuelle
+                newsCard.dataset.importance = newImportance;
+                newsCard.dataset.impact = newImpact;
+                newsCard.classList.add('classification-updated');
+                setTimeout(() => {
+                    newsCard.classList.remove('classification-updated');
+                }, 2000);
+                
+                // Afficher confirmation de succès
+                this.showFeedbackSuccess(true);
+                
+                console.log(`✅ Feedback envoyé directement à GitHub`);
+            } catch (error) {
+                console.error('❌ Erreur lors de l\'envoi du feedback:', error);
+                
+                // Stockage en file d'attente comme fallback
+                this.storeLocalFeedback(feedback);
             }
-            
-            const fileData = await fileResponse.json();
-            const sha = fileData.sha;
-            
-            // Décoder le contenu du fichier
-            const content = atob(fileData.content);
-            const feedbackData = JSON.parse(content);
-            
-            // 2. Ajouter le nouveau feedback
-            feedbackData[0].feedbacks.push(feedback);
-            
-            // Mettre à jour les métadonnées
-            feedbackData[0].meta.feedbackCount = feedbackData[0].feedbacks.length;
-            feedbackData[0].meta.lastUpdated = new Date().toISOString();
-            
-            // 3. Mettre à jour le fichier sur GitHub
-            const updateResponse = await fetch(fileUrl, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/vnd.github.v3+json'
-                },
-                body: JSON.stringify({
-                    message: `Ajout d'un feedback utilisateur: ${title.substring(0, 50)}`,
-                    content: btoa(JSON.stringify(feedbackData, null, 2)),
-                    sha: sha
-                })
-            });
-            
-            if (!updateResponse.ok) {
-                throw new Error(`Erreur de mise à jour GitHub: ${updateResponse.status}`);
-            }
+        } else {
+            // MODIFICATION: Mode démo - Stockage local uniquement
+            console.log('Mode démo: stockage local uniquement');
             
             // Mise à jour visuelle
             newsCard.dataset.importance = newImportance;
@@ -334,15 +358,11 @@ class MLFeedbackSystem {
                 newsCard.classList.remove('classification-updated');
             }, 2000);
             
+            // Stockage local du feedback
+            this.storeLocalFeedback(feedback);
+            
             // Afficher confirmation de succès
             this.showFeedbackSuccess(true);
-            
-            console.log(`✅ Feedback envoyé directement à GitHub`);
-        } catch (error) {
-            console.error('❌ Erreur lors de l\'envoi du feedback:', error);
-            
-            // Stockage en file d'attente comme fallback
-            this.storeLocalFeedback(feedback);
         }
         
         // Fermer la modal
