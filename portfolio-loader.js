@@ -622,9 +622,10 @@ class PortfolioManager {
                                     }
                                 },
                                 font: {
-                                    size: 12,
+                                    size: 11, // Réduire la taille de police des légendes
                                     family: "'Inter', sans-serif"
-                                }
+                                },
+                                padding: 8 // Réduire le padding des étiquettes
                             }
                         },
                         tooltip: {
@@ -642,6 +643,14 @@ class PortfolioManager {
                         animateRotate: true,
                         duration: 2000,
                         easing: 'easeOutQuart'
+                    },
+                    layout: {
+                        padding: {
+                            left: 0,
+                            right: 0,
+                            top: 0,
+                            bottom: 0
+                        }
                     }
                 }
             });
