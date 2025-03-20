@@ -300,7 +300,20 @@ class MLFeedbackSystem {
                 
                 // Décoder le contenu du fichier
                 const content = atob(fileData.content);
-                const feedbackData = JSON.parse(content);
+                let feedbackData = JSON.parse(content);
+                
+                // AJOUT: Vérifier et créer la structure si nécessaire
+                if (!feedbackData || !Array.isArray(feedbackData) || !feedbackData[0]?.feedbacks) {
+                    feedbackData = [{
+                        meta: { 
+                            version: "1.0.0",
+                            feedbackCount: 0, 
+                            lastUpdated: new Date().toISOString(),
+                            model: "finbert-v1"
+                        },
+                        feedbacks: []
+                    }];
+                }
                 
                 // 2. Ajouter le nouveau feedback
                 feedbackData[0].feedbacks.push(feedback);
@@ -428,6 +441,19 @@ class MLFeedbackSystem {
             // Décoder le contenu du fichier
             let content = atob(fileData.content);
             let feedbackData = JSON.parse(content);
+            
+            // AJOUT: Vérifier et créer la structure si nécessaire
+            if (!feedbackData || !Array.isArray(feedbackData) || !feedbackData[0]?.feedbacks) {
+                feedbackData = [{
+                    meta: { 
+                        version: "1.0.0",
+                        feedbackCount: 0, 
+                        lastUpdated: new Date().toISOString(),
+                        model: "finbert-v1"
+                    },
+                    feedbacks: []
+                }];
+            }
             
             // 2. Ajouter chaque feedback en attente
             for (const feedback of pendingFeedbacks) {
