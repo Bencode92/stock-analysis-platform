@@ -59,6 +59,12 @@ class PortfolioManager {
             localStorage.setItem('tradepulse_portfolios', JSON.stringify(this.portfolios));
             localStorage.setItem('tradepulse_portfolios_update', this.lastUpdate.toISOString());
             
+            // Mettre à jour l'affichage de la dernière mise à jour dans l'interface
+            const updateTimeElement = document.getElementById('portfolioUpdateTime');
+            if (updateTimeElement) {
+                updateTimeElement.textContent = this.formatDate(this.lastUpdate);
+            }
+            
             return this.portfolios;
         } catch (error) {
             console.warn('⚠️ Impossible de charger portefeuilles.json, tentative de récupération depuis le localStorage...');
@@ -163,39 +169,64 @@ class PortfolioManager {
         const container = document.querySelector(this.containerSelector);
         if (!container || !this.portfolios) return;
         
-        // Vider le conteneur
-        container.innerHTML = '';
-        
-        // Créer les onglets pour chaque type de portefeuille
-        const tabsContainer = document.createElement('div');
-        tabsContainer.className = 'portfolio-tabs';
-        
+        // Vérifier si les tabs existent déjà (s'ils ont été définis dans le HTML)
+        let tabsContainer = container.querySelector('.portfolio-tabs');
         const contentContainer = document.createElement('div');
         contentContainer.className = 'portfolio-content';
         
-        // Ajouter la date de mise à jour
-        const updateInfo = document.createElement('div');
-        updateInfo.className = 'portfolio-update-info';
-        updateInfo.innerHTML = `
-            <i class="fas fa-sync-alt"></i>
-            <span>Dernière mise à jour: ${this.formatDate(this.lastUpdate)}</span>
-        `;
-        container.appendChild(updateInfo);
-        
-        // Créer les onglets et le contenu pour chaque portefeuille
-        Object.keys(this.portfolios).forEach((portfolioType, index) => {
-            // Créer l'onglet
-            const tab = document.createElement('button');
-            tab.className = `portfolio-tab ${index === 0 ? 'active' : ''}`;
-            tab.dataset.target = `portfolio-${portfolioType.toLowerCase()}`;
-            tab.innerHTML = `
-                <span class="tab-icon">
-                    ${this.getPortfolioIcon(portfolioType)}
-                </span>
-                <span class="tab-text">${portfolioType}</span>
-            `;
-            tabsContainer.appendChild(tab);
+        // Si les tabs n'existent pas, créer le conteneur
+        if (!tabsContainer) {
+            // Créer les onglets pour chaque type de portefeuille
+            tabsContainer = document.createElement('div');
+            tabsContainer.className = 'portfolio-tabs';
             
+            // Ajouter la date de mise à jour
+            const updateInfo = document.createElement('div');
+            updateInfo.className = 'portfolio-update-info';
+            updateInfo.innerHTML = `
+                <i class="fas fa-sync-alt"></i>
+                <span>Dernière mise à jour: ${this.formatDate(this.lastUpdate)}</span>
+            `;
+            container.appendChild(updateInfo);
+            
+            // Créer les onglets pour chaque type de portefeuille
+            Object.keys(this.portfolios).forEach((portfolioType, index) => {
+                // Créer l'onglet
+                const tab = document.createElement('button');
+                tab.className = `portfolio-tab ${index === 0 ? 'active' : ''}`;
+                tab.dataset.target = `portfolio-${portfolioType.toLowerCase()}`;
+                tab.innerHTML = `
+                    <span class="tab-icon">
+                        ${this.getPortfolioIcon(portfolioType)}
+                    </span>
+                    <span class="tab-text">${portfolioType}</span>
+                `;
+                tabsContainer.appendChild(tab);
+            });
+            
+            container.appendChild(tabsContainer);
+        } else {
+            // Si les tabs existent déjà, les utiliser tels quels
+            const existingTabs = tabsContainer.querySelectorAll('.portfolio-tab');
+            if (existingTabs.length === 0) {
+                // Aucun onglet trouvé, créer les onglets
+                Object.keys(this.portfolios).forEach((portfolioType, index) => {
+                    const tab = document.createElement('button');
+                    tab.className = `portfolio-tab ${index === 0 ? 'active' : ''}`;
+                    tab.dataset.target = `portfolio-${portfolioType.toLowerCase()}`;
+                    tab.innerHTML = `
+                        <span class="tab-icon">
+                            ${this.getPortfolioIcon(portfolioType)}
+                        </span>
+                        <span class="tab-text">${portfolioType}</span>
+                    `;
+                    tabsContainer.appendChild(tab);
+                });
+            }
+        }
+        
+        // Créer le contenu pour chaque portefeuille
+        Object.keys(this.portfolios).forEach((portfolioType, index) => {
             // Créer le contenu du portefeuille
             const content = document.createElement('div');
             content.className = `portfolio-panel ${index === 0 ? 'active' : ''}`;
@@ -207,8 +238,13 @@ class PortfolioManager {
             contentContainer.appendChild(content);
         });
         
-        // Ajouter les éléments au conteneur principal
-        container.appendChild(tabsContainer);
+        // Vider le conteneur de contenu existant
+        const existingContent = container.querySelector('.portfolio-content');
+        if (existingContent) {
+            container.removeChild(existingContent);
+        }
+        
+        // Ajouter le nouveau conteneur de contenu
         container.appendChild(contentContainer);
         
         // Initialiser les graphiques
@@ -219,12 +255,12 @@ class PortfolioManager {
      * Génère l'icône correspondant au type de portefeuille
      */
     getPortfolioIcon(portfolioType) {
-        switch(portfolioType) {
-            case 'Agressif':
+        switch(portfolioType.toLowerCase()) {
+            case 'agressif':
                 return '<i class="fas fa-rocket"></i>';
-            case 'Modéré':
+            case 'modéré':
                 return '<i class="fas fa-balance-scale"></i>';
-            case 'Stable':
+            case 'stable':
                 return '<i class="fas fa-shield-alt"></i>';
             default:
                 return '<i class="fas fa-chart-pie"></i>';
@@ -235,6 +271,20 @@ class PortfolioManager {
      * Génère le contenu HTML pour un portefeuille spécifique
      */
     generatePortfolioContent(portfolioType, portfolio) {
+        // Déterminer les couleurs et styles basés sur le type
+        let typeColor, typeClass;
+        
+        if (portfolioType.toLowerCase() === 'agressif') {
+            typeColor = '#FF7B00';
+            typeClass = 'agressif';
+        } else if (portfolioType.toLowerCase() === 'modéré') {
+            typeColor = '#00FF87';
+            typeClass = 'modere';
+        } else {
+            typeColor = '#00B2FF';
+            typeClass = 'stable';
+        }
+        
         // Calculer les répartitions par catégorie
         const categoryAllocation = this.calculateCategoryAllocation(portfolio);
         
@@ -245,6 +295,13 @@ class PortfolioManager {
         const totalAssets = Object.values(portfolio).reduce((sum, category) => {
             return sum + Object.keys(category).length;
         }, 0);
+        
+        // Génération du graphique coloré selon le type
+        const chartHTML = `
+            <div class="portfolio-chart-container">
+                <canvas id="chart-${portfolioType.toLowerCase()}" width="300" height="300"></canvas>
+            </div>
+        `;
         
         let html = `
             <div class="portfolio-header">
@@ -259,9 +316,7 @@ class PortfolioManager {
                 <p>${description}</p>
             </div>
             <div class="portfolio-overview">
-                <div class="portfolio-chart-container">
-                    <canvas id="chart-${portfolioType.toLowerCase()}" width="300" height="300"></canvas>
-                </div>
+                ${chartHTML}
                 <div class="portfolio-allocation">
                     <h3>Répartition par catégorie</h3>
                     <ul class="category-allocation">
@@ -274,7 +329,7 @@ class PortfolioManager {
                 <li>
                     <span class="category-name">${category}</span>
                     <div class="allocation-bar">
-                        <div class="allocation-fill" style="width: ${percentage}; background-color: ${this.getCategoryColor(category)}"></div>
+                        <div class="allocation-fill" style="width: ${percentage}; background-color: ${this.getCategoryColor(category, typeClass)}"></div>
                     </div>
                     <span class="allocation-value">${percentage}</span>
                 </li>
@@ -327,10 +382,10 @@ class PortfolioManager {
         
         html += '</div>';
         
-        // Ajouter des boutons d'action
+        // Ajouter des boutons d'action avec la classe de type appropriée
         html += `
             <div class="portfolio-actions">
-                <button class="btn-download" data-portfolio="${portfolioType}">
+                <button class="btn-download ${typeClass}" data-portfolio="${portfolioType}">
                     <i class="fas fa-download"></i> Télécharger
                 </button>
                 <button class="btn-share" data-portfolio="${portfolioType}">
@@ -363,9 +418,10 @@ class PortfolioManager {
     }
 
     /**
-     * Retourne une couleur pour une catégorie d'actifs
+     * Retourne une couleur pour une catégorie d'actifs, adaptée au type de portefeuille
      */
-    getCategoryColor(category) {
+    getCategoryColor(category, typeClass) {
+        // Couleurs de base
         const colors = {
             'Actions': '#4e79a7',
             'Obligations': '#f28e2c',
@@ -377,6 +433,31 @@ class PortfolioManager {
             'Cash': '#ff9da7'
         };
         
+        // Si un type de portefeuille est spécifié, personnaliser les couleurs
+        if (typeClass) {
+            const typeColors = {
+                'agressif': {
+                    'Actions': '#ff7b00',
+                    'Crypto': '#ff9e44',
+                    'ETF': '#ffb266'
+                },
+                'modere': {
+                    'Actions': '#00ff87',
+                    'Obligations': '#4dffa8',
+                    'ETF': '#80ffbf'
+                },
+                'stable': {
+                    'Actions': '#00b2ff',
+                    'Obligations': '#66cfff',
+                    'ETF': '#99e0ff'
+                }
+            };
+            
+            if (typeColors[typeClass] && typeColors[typeClass][category]) {
+                return typeColors[typeClass][category];
+            }
+        }
+        
         return colors[category] || '#9c755f';
     }
 
@@ -384,12 +465,12 @@ class PortfolioManager {
      * Retourne une description pour chaque type de portefeuille
      */
     getPortfolioDescription(portfolioType) {
-        switch(portfolioType) {
-            case 'Agressif':
+        switch(portfolioType.toLowerCase()) {
+            case 'agressif':
                 return 'Ce portefeuille vise une croissance maximale en privilégiant des actifs à forte volatilité et à haut potentiel. Idéal pour les investisseurs avec une tolérance élevée au risque et un horizon de placement long.';
-            case 'Modéré':
+            case 'modéré':
                 return 'Ce portefeuille équilibré combine croissance et protection du capital. Il s\'adresse aux investisseurs qui recherchent une appréciation de leur capital à moyen terme tout en limitant la volatilité.';
-            case 'Stable':
+            case 'stable':
                 return 'Ce portefeuille défensif privilégie la préservation du capital et les revenus réguliers. Il convient aux investisseurs prudents ou proches de la retraite, cherchant à minimiser les fluctuations de leur portefeuille.';
             default:
                 return 'Ce portefeuille est généré automatiquement en fonction des conditions de marché actuelles et des dernières actualités financières.';
@@ -411,13 +492,41 @@ class PortfolioManager {
             
             if (!ctx) return;
             
+            // Définir les palettes de couleurs selon le type de portefeuille
+            let colorPalette;
+            switch(portfolioType.toLowerCase()) {
+                case 'agressif':
+                    colorPalette = [
+                        '#FF7B00', '#FF8F29', '#FFA352', '#FFB77A',
+                        '#FFCBA3', '#FFE0CC', '#CC6300', '#994A00'
+                    ];
+                    break;
+                case 'modéré':
+                    colorPalette = [
+                        '#00FF87', '#33FF9C', '#66FFAA', '#99FFB8',
+                        '#B3FFC7', '#CCFFD6', '#00CC6A', '#00994F'
+                    ];
+                    break;
+                case 'stable':
+                    colorPalette = [
+                        '#00B2FF', '#33C0FF', '#66CDFF', '#99DBFF',
+                        '#B3E3FF', '#CCE7FF', '#008FCC', '#006C99'
+                    ];
+                    break;
+                default:
+                    colorPalette = [
+                        '#4e79a7', '#f28e2c', '#e15759', '#76b7b2',
+                        '#59a14f', '#edc949', '#af7aa1', '#ff9da7'
+                    ];
+            }
+            
             // Préparer les données pour le graphique
             const categories = Object.keys(portfolio);
             const data = [];
             const labels = [];
             const colors = [];
             
-            categories.forEach(category => {
+            categories.forEach((category, index) => {
                 const assets = portfolio[category];
                 const categoryTotal = Object.values(assets).reduce((sum, value) => {
                     const numValue = parseFloat(value.replace('%', ''));
@@ -427,7 +536,7 @@ class PortfolioManager {
                 if (categoryTotal > 0) {
                     data.push(categoryTotal);
                     labels.push(category);
-                    colors.push(this.getCategoryColor(category));
+                    colors.push(colorPalette[index % colorPalette.length]);
                 }
             });
             
@@ -439,25 +548,50 @@ class PortfolioManager {
                     datasets: [{
                         data: data,
                         backgroundColor: colors,
-                        borderColor: 'rgba(255, 255, 255, 0.5)',
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
                         borderWidth: 1
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: false,
-                    legend: {
-                        display: false
-                    },
-                    tooltips: {
-                        callbacks: {
-                            label: function(tooltipItem, data) {
-                                const dataset = data.datasets[tooltipItem.datasetIndex];
-                                const value = dataset.data[tooltipItem.index];
-                                const label = data.labels[tooltipItem.index];
-                                return `${label}: ${value}%`;
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'right',
+                            labels: {
+                                color: function(context) {
+                                    // Utiliser la couleur correspondante du type de portefeuille
+                                    if (portfolioType.toLowerCase() === 'agressif') {
+                                        return '#FF7B00';
+                                    } else if (portfolioType.toLowerCase() === 'modéré') {
+                                        return '#00FF87';
+                                    } else {
+                                        return '#00B2FF';
+                                    }
+                                },
+                                font: {
+                                    size: 12,
+                                    family: "'Inter', sans-serif"
+                                }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(tooltipItem) {
+                                    const value = tooltipItem.raw;
+                                    const label = tooltipItem.label;
+                                    return `${label}: ${value}%`;
+                                }
                             }
                         }
+                    },
+                    animation: {
+                        animateScale: true,
+                        animateRotate: true,
+                        duration: 2000,
+                        easing: 'easeOutQuart'
                     }
                 }
             });
@@ -484,6 +618,10 @@ class PortfolioManager {
                 if (targetPanel) {
                     targetPanel.classList.add('active');
                 }
+                
+                // Mettre à jour les couleurs selon le type de portefeuille
+                const portfolioType = tab.dataset.target.replace('portfolio-', '');
+                this.updatePortfolioColors(portfolioType);
             });
         });
         
@@ -502,6 +640,29 @@ class PortfolioManager {
                 this.sharePortfolio(portfolioType);
             });
         });
+    }
+    
+    /**
+     * Met à jour les couleurs de l'interface selon le type de portefeuille
+     */
+    updatePortfolioColors(type) {
+        // Mettre à jour les variables CSS selon le type
+        if (type === 'agressif') {
+            document.documentElement.style.setProperty('--accent-color', 'var(--aggressive-color)');
+            document.documentElement.style.setProperty('--accent-glow', 'var(--aggressive-glow)');
+        } else if (type === 'modere') {
+            document.documentElement.style.setProperty('--accent-color', 'var(--moderate-color)');
+            document.documentElement.style.setProperty('--accent-glow', 'var(--moderate-glow)');
+        } else if (type === 'stable') {
+            document.documentElement.style.setProperty('--accent-color', 'var(--stable-color)');
+            document.documentElement.style.setProperty('--accent-glow', 'var(--stable-glow)');
+        }
+        
+        // Mettre à jour la bordure du conteneur
+        const container = document.querySelector('.portfolio-container');
+        if (container) {
+            container.style.borderColor = `var(--accent-color)`;
+        }
     }
 
     /**
@@ -522,6 +683,9 @@ class PortfolioManager {
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
+        
+        // Afficher une notification de succès
+        this.showNotification(`Portefeuille ${portfolioType} téléchargé avec succès`);
     }
 
     /**
