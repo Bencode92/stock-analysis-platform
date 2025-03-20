@@ -25,6 +25,12 @@
     z-index: 1;
 }
 
+/* Styles pour les différentes variantes de portefeuilles */
+.portfolio-container.colored-container {
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.2);
+    border-width: 2px;
+}
+
 /* Information de mise à jour */
 .portfolio-update-info {
     display: flex;
@@ -109,6 +115,22 @@
     font-size: 0.95rem;
 }
 
+/* Personnalisation des onglets */
+.portfolio-toggles.portfolio-tabs {
+    padding: 0;
+    border-bottom: none;
+    justify-content: center;
+    margin-bottom: 2rem;
+}
+
+.portfolio-toggles .portfolio-tab {
+    padding: 0.75rem 1.5rem;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
 /* Panneaux de contenu des portefeuilles */
 .portfolio-content {
     position: relative;
@@ -122,6 +144,46 @@
 
 .portfolio-panel.active {
     display: block;
+}
+
+/* Styles spécifiques par type de portefeuille */
+.portfolio-panel[id="portfolio-agressif"] {
+    --panel-color: var(--aggressive-color);
+    --panel-glow: var(--aggressive-glow);
+}
+
+.portfolio-panel[id="portfolio-modere"] {
+    --panel-color: var(--moderate-color);
+    --panel-glow: var(--moderate-glow);
+}
+
+.portfolio-panel[id="portfolio-stable"] {
+    --panel-color: var(--stable-color);
+    --panel-glow: var(--stable-glow);
+}
+
+/* Appliquer les couleurs spécifiques aux éléments */
+.portfolio-panel[id^="portfolio-"] .portfolio-header h2,
+.portfolio-panel[id^="portfolio-"] .category-name,
+.portfolio-panel[id^="portfolio-"] .allocation-value,
+.portfolio-panel[id^="portfolio-"] .asset-allocation {
+    color: var(--panel-color);
+}
+
+.portfolio-panel[id^="portfolio-"] .portfolio-description {
+    border-left-color: var(--panel-color);
+    background-color: rgba(var(--panel-color-rgb), 0.05);
+}
+
+.portfolio-panel[id^="portfolio-"] .btn-download {
+    border-color: var(--panel-color);
+    color: var(--panel-color);
+}
+
+.portfolio-panel[id^="portfolio-"] .btn-download:hover {
+    background-color: var(--panel-color);
+    color: var(--background-color);
+    box-shadow: var(--panel-glow);
 }
 
 /* En-tête de portefeuille */
@@ -184,8 +246,8 @@
     position: relative;
     height: 300px;
     background-color: rgba(255, 255, 255, 0.02);
-    border-radius: 8px;
-    padding: 1rem;
+    border-radius: 12px;
+    padding: 1.5rem;
     box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
@@ -322,6 +384,39 @@
 .btn-download {
     border: 1px solid var(--accent-color);
     color: var(--accent-color);
+}
+
+.btn-download.agressif {
+    border-color: var(--aggressive-color);
+    color: var(--aggressive-color);
+}
+
+.btn-download.agressif:hover {
+    background-color: var(--aggressive-color);
+    color: var(--background-color);
+    box-shadow: var(--aggressive-glow);
+}
+
+.btn-download.modere {
+    border-color: var(--moderate-color);
+    color: var(--moderate-color);
+}
+
+.btn-download.modere:hover {
+    background-color: var(--moderate-color);
+    color: var(--background-color);
+    box-shadow: var(--moderate-glow);
+}
+
+.btn-download.stable {
+    border-color: var(--stable-color);
+    color: var(--stable-color);
+}
+
+.btn-download.stable:hover {
+    background-color: var(--stable-color);
+    color: var(--background-color);
+    box-shadow: var(--stable-glow);
 }
 
 .btn-share {
