@@ -763,6 +763,80 @@
              margin: 0 16px;
              font-weight: 500;
          }
+         
+         /* Styles pour la barre de recherche */
+         .search-container {
+             max-width: 100%;
+             margin-bottom: 24px;
+         }
+         
+         .search-wrapper {
+             max-width: 100%;
+             position: relative;
+         }
+         
+         .dark #stock-search {
+             background-color: rgba(255, 255, 255, 0.07);
+             border-color: var(--card-border);
+             color: var(--text-color);
+         }
+         
+         .light #stock-search {
+             background-color: rgba(0, 0, 0, 0.05);
+             border-color: rgba(0, 0, 0, 0.1);
+             color: var(--light-text-color);
+         }
+         
+         #stock-search:focus {
+             border-color: var(--accent-color);
+             box-shadow: var(--accent-glow);
+         }
+         
+         .dark .search-wrapper i {
+             color: rgba(255, 255, 255, 0.5);
+         }
+         
+         .light .search-wrapper i {
+             color: rgba(0, 0, 0, 0.5);
+         }
+         
+         .clear-btn {
+             cursor: pointer;
+             padding: 5px;
+             font-size: 14px;
+         }
+         
+         .clear-btn:hover {
+             color: var(--accent-color);
+         }
+         
+         /* Styles pour les résultats de recherche */
+         .search-highlight {
+             background-color: var(--accent-subtle);
+             animation: highlight-pulse 2s infinite;
+         }
+         
+         @keyframes highlight-pulse {
+             0% { background-color: var(--accent-subtle); }
+             50% { background-color: var(--accent-medium); }
+             100% { background-color: var(--accent-subtle); }
+         }
+         
+         .no-results {
+             text-align: center;
+             padding: 20px;
+             font-style: italic;
+             color: var(--text-secondary);
+         }
+         
+         /* État actif pour la lettre "Tous" */
+         .region-tab.all-results {
+             font-weight: 600;
+         }
+         
+         .region-tab.all-results.active {
+             color: var(--accent-color);
+         }
 
          /* Responsive */
          @media (max-width: 768px) {
@@ -1010,6 +1084,21 @@
                  <!-- Onglets alphabétiques -->
                  <div class="mb-8">
                      <h2 class="section-title mb-6">Actions par lettre</h2>
+                     
+                     <!-- Barre de recherche -->
+                     <div class="search-container mb-4">
+                         <div class="search-wrapper relative">
+                             <input type="text" id="stock-search" placeholder="Rechercher une action..." class="w-full py-3 px-12 bg-opacity-10 rounded-lg border border-opacity-30 text-white focus:outline-none focus:border-accent" autocomplete="off">
+                             <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-opacity-70"></i>
+                             <button id="clear-search" class="clear-btn absolute right-4 top-1/2 transform -translate-y-1/2 opacity-0 transition-opacity duration-200">
+                                 <i class="fas fa-times"></i>
+                             </button>
+                         </div>
+                         <div id="search-info" class="mt-2 text-sm opacity-70 hidden">
+                             <span id="search-count">0</span> résultats trouvés
+                         </div>
+                     </div>
+                     
                      <div class="region-tabs mb-6">
                          <div class="region-tab active" data-region="a">A</div>
                          <div class="region-tab" data-region="b">B</div>
