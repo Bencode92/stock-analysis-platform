@@ -308,6 +308,31 @@ def scrape_top_short_term_etfs():
                 print(f"Page {page}: Aucun tableau trouvé, vérifiez la structure HTML")
                 continue
             
+            # Analyser les en-têtes du tableau pour trouver les colonnes "1 MOIS" et "6 MOIS"
+            headers = [header.get_text(strip=True).lower() for header in table.select('thead th')]
+            print(f"En-têtes trouvés dans le tableau ETF court terme: {headers}")
+            
+            # Déterminer les indices des colonnes d'intérêt
+            one_month_index = None
+            six_month_index = None
+            
+            for i, header in enumerate(headers):
+                if "1 mois" in header.lower() or "1m" in header.lower():
+                    one_month_index = i
+                    print(f"Colonne '1 MOIS' trouvée à l'indice {i}")
+                if "6 mois" in header.lower() or "6m" in header.lower():
+                    six_month_index = i
+                    print(f"Colonne '6 MOIS' trouvée à l'indice {i}")
+            
+            # Si les indices n'ont pas été trouvés, utiliser des valeurs par défaut basées sur l'image
+            # D'après l'image, la colonne "1 MOIS" est à l'indice 1 et "6 MOIS" est à l'indice 4
+            if one_month_index is None:
+                one_month_index = 1  # Position supposée de "1 MOIS"
+                print(f"Utilisation de l'indice par défaut pour '1 MOIS': {one_month_index}")
+            if six_month_index is None:
+                six_month_index = 4  # Position supposée de "6 MOIS"
+                print(f"Utilisation de l'indice par défaut pour '6 MOIS': {six_month_index}")
+            
             # Extraire les lignes du tableau
             rows = table.select('tbody tr')
             print(f"Page {page}: {len(rows)} lignes d'ETF court terme trouvées")
@@ -316,26 +341,25 @@ def scrape_top_short_term_etfs():
             for row_idx, row in enumerate(rows):
                 try:
                     cells = row.select('td')
-                    if len(cells) >= 4:  # Vérifier qu'il y a au moins 4 cellules
+                    if len(cells) >= max(one_month_index, six_month_index) + 1:  # S'assurer qu'il y a assez de cellules
                         # Extraire le nom de l'ETF (première colonne)
                         name_cell = cells[0]
                         name_link = name_cell.select_one('a')
                         name = name_link.get_text(strip=True) if name_link else name_cell.get_text(strip=True)
                         
-                        # Extraire les performances (YTD, 1 mois, 1 an)
-                        # Selon la structure observée dans l'image, l'ordre des colonnes semble être:
-                        # [0]=Nom, [1]=YTD, [2]=1 mois, [3]=1 an
-                        ytd_text = cells[1].get_text(strip=True) if len(cells) > 1 else "0,00%"
-                        one_month_text = cells[2].get_text(strip=True) if len(cells) > 2 else "0,00%"
-                        one_year_text = cells[3].get_text(strip=True) if len(cells) > 3 else "0,00%"
+                        # Extraire les performances 1 mois et 6 mois
+                        one_month_text = cells[one_month_index].get_text(strip=True)
+                        six_month_text = cells[six_month_index].get_text(strip=True)
+                        
+                        # Pour le débogage, affichons les valeurs brutes extraites
+                        print(f"Nom: {name}, 1M: {one_month_text}, 6M: {six_month_text}")
                         
                         # Normaliser les valeurs (remplacer les virgules par des points pour conversion en nombre)
-                        ytd = ytd_text.replace('%', '').replace(',', '.')
                         one_month = one_month_text.replace('%', '').replace(',', '.')
-                        one_year = one_year_text.replace('%', '').replace(',', '.')
+                        six_month = six_month_text.replace('%', '').replace(',', '.')
                         
                         # Détecter la catégorie (par défaut ou à partir du nom)
-                        category = "Actions"  # Catégorie par défaut
+                        category = "Divers"  # Catégorie par défaut
                         if any(kw in name.lower() for kw in ["bond", "oblig", "treasury", "bund"]):
                             category = "Obligations"
                         elif any(kw in name.lower() for kw in ["gold", "or", "silver", "argent", "commodit"]):
@@ -344,15 +368,14 @@ def scrape_top_short_term_etfs():
                         # Créer l'objet ETF avec les données extraites
                         etf = {
                             "name": name,
-                            "ytd": ytd,
                             "oneMonth": one_month,
-                            "oneYear": one_year,
+                            "sixMonth": six_month,  # Nouvelle propriété pour stocker la performance à 6 mois
                             "category": category
                         }
                         
                         # Ajouter l'ETF à la liste
                         page_etfs.append(etf)
-                        print(f"ETF extrait: {name}, YTD: {ytd}%, 1M: {one_month}%, 1A: {one_year}%")
+                        print(f"ETF extrait: {name}, 1M: {one_month}%, 6M: {six_month}%")
                     else:
                         print(f"Page {page}, Ligne {row_idx+1}: Pas assez de cellules ({len(cells)}), ignorée")
                 
