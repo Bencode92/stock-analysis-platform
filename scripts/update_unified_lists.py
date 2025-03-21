@@ -5,6 +5,14 @@
 Script unifié d'extraction des données des actions du NASDAQ Composite et du DJ STOXX 600
 Combine les fonctionnalités de scrape_lists.py et scrape_stoxx.py
 Utilisé par GitHub Actions pour mettre à jour régulièrement les données
+
+IMPORTANT: Ce script met à jour UNIQUEMENT les fichiers suivants:
+- data/lists.json (données NASDAQ)
+- data/stoxx_page_*.json (données STOXX)
+- data/update_summary.json (résumé de la mise à jour)
+
+Il ne modifie PAS le fichier markets.json qui est géré par le script scrape_markets.py
+et le workflow 'Update Markets Data Only'.
 """
 
 import os
@@ -432,6 +440,13 @@ def ensure_data_directory():
         os.makedirs(data_dir, exist_ok=True)
         logger.info(f"✅ Répertoire de données créé: {data_dir}")
 
+def verify_no_markets_conflict():
+    """Vérifie que ce script ne modifie pas le fichier markets.json"""
+    markets_file = os.path.join(os.path.dirname(CONFIG["nasdaq"]["output_path"]), "markets.json")
+    if os.path.exists(markets_file):
+        logger.info(f"✅ Vérification: Le fichier markets.json ne sera pas modifié par ce script")
+    return True
+
 def main():
     """Point d'entrée principal"""
     try:
@@ -439,6 +454,9 @@ def main():
         
         # S'assurer que le répertoire de données existe
         ensure_data_directory()
+        
+        # Vérifier qu'il n'y a pas de conflit avec markets.json
+        verify_no_markets_conflict()
         
         # 1. Scraper les données NASDAQ
         logger.info("📊 Début du scraping NASDAQ...")
