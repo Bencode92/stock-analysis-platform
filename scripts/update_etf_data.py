@@ -28,7 +28,8 @@ HEADERS = {
 
 # URLs
 BOURSORAMA_ETF_URL = "https://www.boursorama.com/bourse/trackers/"
-BOURSORAMA_ETF_SHORT_TERM_URL = "https://www.boursorama.com/bourse/trackers/recherche/autres/?etfSearch%5Bcurrent%5D=shortTerm&etfSearch%5BisEtf%5D=1"
+BOURSORAMA_ETF_SHORT_TERM_BASE_URL = "https://www.boursorama.com/bourse/trackers/recherche/autres"
+BOURSORAMA_ETF_SHORT_TERM_PARAMS = "?etfSearch%5Bcurrent%5D=shortTerm&etfSearch%5BisEtf%5D=1"
 JUSTETF_TOP50_URL = "https://www.justetf.com/fr/market-overview/the-best-etfs.html"
 JUSTETF_TOP_BONDS_URL = "https://www.justetf.com/fr/market-overview/the-best-bond-etfs.html"
 
@@ -229,31 +230,32 @@ def scrape_boursorama_etfs():
     return all_etfs
 
 def scrape_top_short_term_etfs():
-    """Extrait les données des ETF avec performances court terme depuis Boursorama avec pagination complète"""
+    """Extrait les données des ETF avec performances court terme depuis Boursorama avec pagination correcte"""
     print("Récupération des ETF court terme depuis Boursorama...")
     
     # Liste pour stocker tous les ETF court terme
     all_short_term_etfs = []
     
     # Récupérer la première page pour déterminer le nombre total de pages
+    first_page_url = f"{BOURSORAMA_ETF_SHORT_TERM_BASE_URL}{BOURSORAMA_ETF_SHORT_TERM_PARAMS}"
     try:
-        html = fetch_page(BOURSORAMA_ETF_SHORT_TERM_URL)
+        html = fetch_page(first_page_url)
         soup = BeautifulSoup(html, 'lxml')
         
         # Extraire explicitement le nombre total de pages
-        last_page_links = soup.select('.c-pagination a:not(.c-pagination__next)')
+        pagination_links = soup.select('.c-pagination__page')
         detected_pages = 1
-        if last_page_links:
+        if pagination_links:
             try:
                 # Prendre le dernier élément de la pagination qui devrait être le numéro de la dernière page
-                detected_pages = int(last_page_links[-1].text.strip())
+                detected_pages = int(pagination_links[-1].text.strip())
                 print(f"Nombre de pages d'ETF court terme détecté via les liens: {detected_pages}")
             except (ValueError, IndexError) as e:
                 print(f"Erreur lors de l'extraction du nombre de pages via les liens: {e}")
                 detected_pages = 40  # Valeur par défaut
         else:
-            print("Aucun lien de pagination trouvé, on utilise la méthode alternative")
-            detected_pages = get_total_pages(soup)
+            print("Aucun lien de pagination trouvé, on utilise la valeur par défaut")
+            detected_pages = 40  # Valeur par défaut
             
         max_pages = min(detected_pages, 40)  # Limiter à 40 pages maximum comme demandé
         print(f"Nombre total de pages d'ETF court terme final: {max_pages}")
@@ -261,20 +263,21 @@ def scrape_top_short_term_etfs():
         print(f"Erreur lors de la détermination du nombre de pages d'ETF court terme: {e}")
         max_pages = 40  # Valeur par défaut maximum
     
-    # Parcourir chaque page
+    # Parcourir chaque page en utilisant le bon format d'URL
     for page in range(1, max_pages + 1):
         try:
-            # Construire l'URL avec le paramètre de page
+            # Construction de l'URL avec le format correct
             if page == 1:
-                page_url = BOURSORAMA_ETF_SHORT_TERM_URL
+                page_url = first_page_url
             else:
-                page_url = f"{BOURSORAMA_ETF_SHORT_TERM_URL}&page={page}"
+                # Format correct pour les pages >1: /page-X suivi des paramètres
+                page_url = f"{BOURSORAMA_ETF_SHORT_TERM_BASE_URL}/page-{page}{BOURSORAMA_ETF_SHORT_TERM_PARAMS}"
             
             print(f"Récupération des ETF court terme - Page {page}/{max_pages}: {page_url}")
             
             # Ajout d'un délai entre les requêtes pour éviter d'être bloqué
             if page > 1:
-                time.sleep(3)  # Augmentation du délai pour éviter le blocage
+                time.sleep(3)  # Délai plus long pour éviter les blocages
             
             # Pour la première page, réutiliser le soup déjà chargé
             if page == 1 and 'soup' in locals() and 'html' in locals():
@@ -283,104 +286,89 @@ def scrape_top_short_term_etfs():
                 html = fetch_page(page_url)
                 soup = BeautifulSoup(html, 'lxml')
             
+            # Debug: Enregistrer la page HTML pour l'inspection
+            if page <= 3:  # Sauvegarde des 3 premières pages pour diagnostic
+                debug_path = os.path.join(OUTPUT_DIR, f"debug_etf_shortterm_page_{page}.html")
+                with open(debug_path, "w", encoding="utf-8") as f:
+                    f.write(html)
+                print(f"Page HTML de debug enregistrée: {debug_path}")
+            
             # Vérifier si la page contient des données
             if "Aucun résultat" in soup.text:
                 print(f"Page {page}: Aucun résultat trouvé, arrêt de la pagination")
                 break
             
-            # Trouver tous les tableaux de la page
-            tables = soup.select('table.c-table--list')
-            if not tables:
-                print(f"Page {page}: Aucun tableau d'ETF court terme trouvé avec le sélecteur c-table--list")
-                # Tentative alternative
-                tables = soup.select('table')
-                if not tables:
-                    print(f"Page {page}: Aucun tableau d'ETF court terme trouvé même avec sélecteur générique")
-                    # Vérifier si on a atteint la dernière page
-                    pagination = soup.select('.c-pagination__page')
-                    if not pagination or len(pagination) < page:
-                        print("Dernière page atteinte, fin de la pagination")
-                        break
-                    continue
+            # Recherche du tableau principal contenant les ETF
+            table = soup.select_one('table.c-table--list')
+            if not table:
+                print(f"Page {page}: Tableau c-table--list non trouvé, tentative avec sélecteur générique")
+                table = soup.select_one('table')
             
-            # Debug pour voir la page HTML
-            if len(tables) == 0:
-                print(f"Page {page}: Contenu HTML trouvé mais pas de tableaux. Enregistrement de diagnostic.")
-                with open(f"debug_page_{page}.html", "w", encoding="utf-8") as f:
-                    f.write(html)
+            if not table:
+                print(f"Page {page}: Aucun tableau trouvé, vérifiez la structure HTML")
+                continue
+            
+            # Extraire les lignes du tableau
+            rows = table.select('tbody tr')
+            print(f"Page {page}: {len(rows)} lignes d'ETF court terme trouvées")
             
             page_etfs = []
-            
-            # Parcourir tous les tableaux (normalement il n'y en a qu'un)
-            for table_idx, table in enumerate(tables):
-                print(f"Analyse du tableau {table_idx+1}/{len(tables)}")
-                
-                # Extraire les lignes du tableau
-                rows = table.select('tbody tr')
-                print(f"Page {page}, Tableau {table_idx+1}: {len(rows)} lignes trouvées")
-                
-                for row_idx, row in enumerate(rows):
-                    try:
-                        cells = row.select('td')
+            for row_idx, row in enumerate(rows):
+                try:
+                    cells = row.select('td')
+                    if len(cells) >= 4:  # Vérifier qu'il y a au moins 4 cellules
+                        # Extraire le nom de l'ETF (première colonne)
+                        name_cell = cells[0]
+                        name_link = name_cell.select_one('a')
+                        name = name_link.get_text(strip=True) if name_link else name_cell.get_text(strip=True)
                         
-                        # Vérifier qu'il y a suffisamment de cellules
-                        if len(cells) < 5:
-                            print(f"Page {page}, Ligne {row_idx+1}: Seulement {len(cells)} cellules trouvées, ignorée")
-                            continue
+                        # Extraire les performances (YTD, 1 mois, 1 an)
+                        # Selon la structure observée dans l'image, l'ordre des colonnes semble être:
+                        # [0]=Nom, [1]=YTD, [2]=1 mois, [3]=1 an
+                        ytd_text = cells[1].get_text(strip=True) if len(cells) > 1 else "0,00%"
+                        one_month_text = cells[2].get_text(strip=True) if len(cells) > 2 else "0,00%"
+                        one_year_text = cells[3].get_text(strip=True) if len(cells) > 3 else "0,00%"
                         
-                        # Extraire l'indice (nom de l'ETF)
-                        index_cell = cells[0]
-                        index_name = index_cell.get_text(strip=True)
+                        # Normaliser les valeurs (remplacer les virgules par des points pour conversion en nombre)
+                        ytd = ytd_text.replace('%', '').replace(',', '.')
+                        one_month = one_month_text.replace('%', '').replace(',', '.')
+                        one_year = one_year_text.replace('%', '').replace(',', '.')
                         
-                        # Extraire les performances YTD, 1M, 1AN
-                        ytd_cell = cells[1] if len(cells) > 1 else None
-                        one_month_cell = cells[2] if len(cells) > 2 else None
-                        one_year_cell = cells[3] if len(cells) > 3 else None
+                        # Détecter la catégorie (par défaut ou à partir du nom)
+                        category = "Actions"  # Catégorie par défaut
+                        if any(kw in name.lower() for kw in ["bond", "oblig", "treasury", "bund"]):
+                            category = "Obligations"
+                        elif any(kw in name.lower() for kw in ["gold", "or", "silver", "argent", "commodit"]):
+                            category = "Matières premières"
                         
-                        # Extraire les valeurs textuelles
-                        ytd = ytd_cell.get_text(strip=True) if ytd_cell else "0,00%"
-                        one_month = one_month_cell.get_text(strip=True) if one_month_cell else "0,00%"
-                        one_year = one_year_cell.get_text(strip=True) if one_year_cell else "0,00%"
-                        
-                        # Normaliser les valeurs (remplacer les virgules par des points)
-                        ytd = ytd.replace(',', '.')
-                        one_month = one_month.replace(',', '.')
-                        one_year = one_year.replace(',', '.')
-                        
-                        # Créer l'objet ETF
+                        # Créer l'objet ETF avec les données extraites
                         etf = {
-                            "name": index_name,
+                            "name": name,
                             "ytd": ytd,
                             "oneMonth": one_month,
-                            "oneYear": one_year
+                            "oneYear": one_year,
+                            "category": category
                         }
                         
-                        # Extraire la catégorie depuis le nom ou un autre champ si disponible
-                        # Catégorie basée sur le nom
-                        if "actions" in index_name.lower() or "equity" in index_name.lower():
-                            etf["category"] = "Actions"
-                        elif "oblig" in index_name.lower() or "bond" in index_name.lower() or "treasury" in index_name.lower():
-                            etf["category"] = "Obligations"
-                        elif "or" in index_name.lower() or "gold" in index_name.lower() or "argent" in index_name.lower() or "silver" in index_name.lower():
-                            etf["category"] = "Matières premières"
-                        else:
-                            etf["category"] = "Divers"  # Catégorie par défaut
-                        
+                        # Ajouter l'ETF à la liste
                         page_etfs.append(etf)
-                        print(f"Extrait ETF court terme: {index_name}")
-                    except Exception as e:
-                        print(f"Erreur lors de l'extraction d'un ETF court terme ligne {row_idx+1}: {e}")
+                        print(f"ETF extrait: {name}, YTD: {ytd}%, 1M: {one_month}%, 1A: {one_year}%")
+                    else:
+                        print(f"Page {page}, Ligne {row_idx+1}: Pas assez de cellules ({len(cells)}), ignorée")
+                
+                except Exception as e:
+                    print(f"Erreur lors de l'extraction d'un ETF court terme (ligne {row_idx+1}): {e}")
             
             # Ajouter les ETF de cette page à la liste complète
             all_short_term_etfs.extend(page_etfs)
             print(f"Page {page}: {len(page_etfs)} ETF court terme extraits avec succès")
             
-            # Vérifier s'il y a une page suivante
-            next_button = soup.select_one('a.c-pagination__next')
-            if next_button and 'c-pagination__next--disabled' in next_button.get('class', []):
+            # Vérifier s'il y a une page suivante via les liens de pagination
+            next_page_link = soup.select_one('a.c-pagination__next')
+            if next_page_link and 'c-pagination__next--disabled' in next_page_link.get('class', []):
                 print(f"Dernière page atteinte ({page}), fin de la pagination")
                 break
-                
+            
         except Exception as e:
             print(f"Erreur lors de la récupération des ETF court terme page {page}: {e}")
             # Continuer avec la page suivante même en cas d'erreur
