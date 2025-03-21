@@ -28,7 +28,7 @@ jobs:
 
       - name: Scrape ETF data
         run: |
-          python scripts/scrape_etf_data.py
+          python scripts/update_etf_data.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
@@ -36,6 +36,6 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add data/etfs_*.json
+          git add data/etf.json
           git diff --quiet && git diff --staged --quiet || git commit -m "Auto-update ETF data $(date +'%Y-%m-%d')"
           git push
