@@ -104,64 +104,56 @@ def extract_content_from_html(html_file):
         return "[Contenu non disponible pour {}]".format(html_file)
 
 def generate_portfolios(actualites, marche, secteurs):
-    """Générer les portefeuilles en utilisant l'API OpenAI."""
+    """Génère trois portefeuilles optimisés en combinant les données fournies et le contexte actuel du marché."""
     api_key = os.environ.get('API_CHAT')
     if not api_key:
-        raise ValueError("La clé API OpenAI (API_CHAT) n'est pas définie dans les variables d'environnement.")
+        raise ValueError("La clé API OpenAI (API_CHAT) n'est pas définie.")
     
-    prompt = """Tu es un expert en finance et en gestion de portefeuille.
+    prompt = f"""
+Tu es un expert en finance et en gestion de portefeuille.
+Utilise :
+- Les **données suivantes** :  
+  📰 Actualités financières : {actualites}  
+  📈 Tendances du marché : {marche}  
+  🏭 Analyse sectorielle : {secteurs}  
+- Et **ton propre contexte actuel du marché** (connaissances à jour, tendances macroéconomiques, comportements des investisseurs, mouvements des classes d'actifs).
 
-Les dernières actualités financières :
-{}
+🎯 Ton objectif : Générer trois portefeuilles optimisés en fonction de toutes ces informations.
+1️⃣ **Agressif** : 10 à 20 actifs très volatils (actions de croissance, crypto, ETF spéculatifs).  
+2️⃣ **Modéré** : 10 à 20 actifs équilibrés (blue chips, ETF diversifiés, obligations d'entreprises).  
+3️⃣ **Stable** : 10 à 20 actifs défensifs (obligations souveraines, valeurs refuges, ETF stables).
 
-Les tendances actuelles du marché :
-{}
-
-Analyse sectorielle actuelle :
-{}
-
-En fonction des tendances du marché, des secteurs performants et des actualités, génère trois portefeuilles optimisés :
-1️⃣ **Agressif** : Composé de **10 à 20 actifs** à forte volatilité. Inclure des actions de croissance (ex: tech), des cryptos et des ETF risqués.
-2️⃣ **Modéré** : Composé de **10 à 20 actifs** équilibrés entre actions solides (blue chips), obligations d'entreprises et ETF diversifiés.
-3️⃣ **Stable** : Composé de **10 à 20 actifs** défensifs, avec des obligations souveraines, des valeurs refuges et des ETF stables.
-
-💡 **Format attendu** :  
-Retourne un JSON avec la structure suivante :
+📊 **Format attendu : JSON uniquement**
 {{
-    "Agressif": {{
-        "Actions": {{
-            "Nom de l'action 1": "X%",
-            "Nom de l'action 2": "X%"
-        }},
-        "Crypto": {{
-            "Nom de la crypto 1": "X%",
-            "Nom de la crypto 2": "X%"
-        }},
-        "ETF": {{
-            "Nom de l'ETF 1": "X%",
-            "Nom de l'ETF 2": "X%"
-        }},
-        "Obligations": {{
-            "Nom de l'obligation 1": "X%",
-            "Nom de l'obligation 2": "X%"
-        }}
+  "Agressif": {{
+    "Actions": {{
+      "Nom": "X%",
+      ...
     }},
-    "Modéré": {{ ... }},
-    "Stable": {{ ... }}
+    "Crypto": {{
+      ...
+    }},
+    "ETF": {{
+      ...
+    }},
+    "Obligations": {{
+      ...
+    }}
+  }},
+  "Modéré": {{ ... }},
+  "Stable": {{ ... }}
 }}
 
-🚀 **Critères de sélection** :
-- Vérifie que chaque portefeuille contient **entre 10 et 20 actifs**.
-- Adapte les allocations en fonction des **tendances actuelles du marché** et des **actualités récentes**.
-- Privilégie les secteurs performants identifiés dans l'analyse sectorielle.
-- Ajuste la volatilité et le risque selon le type de portefeuille (ex: plus de crypto/actions volatiles pour l'agressif, plus de valeurs refuges pour le stable).
-
-Ne réponds qu'avec le JSON, sans autres explications.
-""".format(actualites, marche, secteurs)
+✅ **Contraintes** :
+- Chaque portefeuille contient **entre 10 et 20 actifs**.
+- La somme des pourcentages fait **100%** par portefeuille.
+- L'allocation reflète à la fois les données fournies **et** les tendances actuelles du marché.
+- Ne réponds **qu'avec le JSON**, sans commentaire ni explication.
+"""
     
     try:
         headers = {
-            "Authorization": "Bearer {}".format(api_key),
+            "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
         }
         
@@ -187,7 +179,7 @@ Ne réponds qu'avec le JSON, sans autres explications.
         return portfolios
     
     except Exception as e:
-        print("Erreur lors de la génération des portefeuilles: {}".format(str(e)))
+        print(f"Erreur lors de la génération des portefeuilles: {str(e)}")
         # En cas d'erreur, retourner un portfolio par défaut
         return {
             "Agressif": {
