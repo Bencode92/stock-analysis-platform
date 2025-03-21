@@ -29,6 +29,8 @@ BOURSORAMA_ETF_URL = "https://www.boursorama.com/bourse/trackers/"
 JUSTETF_WORLD_URL = "https://www.justetf.com/en/etf-screener.html"
 JUSTETF_US_URL = "https://www.justetf.com/us/etf-screener.html"
 JUSTETF_EU_URL = "https://www.justetf.com/en/etf-screener.html?groupField=index&sortField=fundSize&sortOrder=desc&distributionPolicy=distributionPolicy-accumulating&distributionPolicy=distributionPolicy-distributing&baseIndex=extended--region--Europe"
+JUSTETF_TOP50_URL = "https://www.justetf.com/fr/market-overview/the-best-etfs.html"
+JUSTETF_TOP_BONDS_URL = "https://www.justetf.com/fr/market-overview/the-best-bond-etfs.html"
 
 def fetch_page(url, params=None, retries=3):
     """Récupère une page web avec gestion des erreurs et des tentatives"""
@@ -65,6 +67,8 @@ def init_data_structure():
                 "worst": []
             }
         },
+        "top50_etfs": [],
+        "top_bond_etfs": [],
         "meta": {
             "count": 0,
             "timestamp": get_current_time(),
@@ -222,6 +226,146 @@ def scrape_justetf_etfs(url, market="world"):
         print(f"Erreur lors de la récupération des ETF JustETF ({market}): {e}")
         return []
 
+def scrape_top50_etfs():
+    """Extrait les données des TOP 50 ETF depuis JustETF"""
+    print("Récupération des TOP 50 ETF depuis JustETF...")
+    
+    try:
+        html = fetch_page(JUSTETF_TOP50_URL)
+        soup = BeautifulSoup(html, 'lxml')
+        
+        # Extraction du tableau des TOP 50 ETF
+        etf_table = soup.select_one('.etf-rank-table')
+        if not etf_table:
+            return []
+            
+        top_etfs = []
+        rows = etf_table.select('tbody tr')
+        for row in rows:
+            try:
+                cells = row.select('td')
+                if len(cells) >= 8:
+                    # Extraire le focus sur l'investissement/indice
+                    focus_elem = cells[0] if len(cells) > 0 else None
+                    focus_text = focus_elem.get_text(strip=True) if focus_elem else ""
+                    
+                    # Extraire le nom de l'ETF
+                    name_elem = focus_elem.select_one('a') if focus_elem else None
+                    name = name_elem.get_text(strip=True) if name_elem else "ETF Inconnu"
+                    
+                    # Extraire la variation en 2025 (YTD)
+                    ytd_elem = cells[4] if len(cells) > 4 else None
+                    ytd = ytd_elem.get_text(strip=True) if ytd_elem else "0,00%"
+                    
+                    # Extraire la variation sur 1 mois
+                    one_month_elem = cells[5] if len(cells) > 5 else None
+                    one_month = one_month_elem.get_text(strip=True) if one_month_elem else "0,00%"
+                    
+                    # Extraire la variation sur 3 mois
+                    three_month_elem = cells[6] if len(cells) > 6 else None
+                    three_month = three_month_elem.get_text(strip=True) if three_month_elem else "0,00%"
+                    
+                    # Extraire la variation sur 1 an
+                    one_year_elem = cells[7] if len(cells) > 7 else None
+                    one_year = one_year_elem.get_text(strip=True) if one_year_elem else "0,00%"
+                    
+                    # Extraire la variation sur 3 ans
+                    three_year_elem = cells[8] if len(cells) > 8 else None
+                    three_year = three_year_elem.get_text(strip=True) if three_year_elem else "0,00%"
+                    
+                    # Extraire le nombre d'ETF associés
+                    num_etfs_elem = cells[9] if len(cells) > 9 else None
+                    num_etfs = num_etfs_elem.get_text(strip=True) if num_etfs_elem else "1"
+                    
+                    top_etf = {
+                        "name": name,
+                        "focus": focus_text,
+                        "ytd": ytd,
+                        "one_month": one_month,
+                        "three_month": three_month,
+                        "one_year": one_year,
+                        "three_year": three_year,
+                        "num_etfs": num_etfs
+                    }
+                    top_etfs.append(top_etf)
+            except (ValueError, IndexError) as e:
+                print(f"Erreur lors de l'extraction d'un TOP ETF: {e}")
+        
+        return top_etfs
+    except Exception as e:
+        print(f"Erreur lors de la récupération des TOP 50 ETF: {e}")
+        return []
+
+def scrape_top_bond_etfs():
+    """Extrait les données des meilleurs ETF d'obligations depuis JustETF"""
+    print("Récupération des meilleurs ETF d'obligations depuis JustETF...")
+    
+    try:
+        html = fetch_page(JUSTETF_TOP_BONDS_URL)
+        soup = BeautifulSoup(html, 'lxml')
+        
+        # Extraction du tableau des meilleurs ETF d'obligations
+        etf_table = soup.select_one('.etf-rank-table')
+        if not etf_table:
+            return []
+            
+        top_bond_etfs = []
+        rows = etf_table.select('tbody tr')
+        for row in rows:
+            try:
+                cells = row.select('td')
+                if len(cells) >= 8:
+                    # Extraire le focus sur l'investissement/indice
+                    focus_elem = cells[0] if len(cells) > 0 else None
+                    focus_text = focus_elem.get_text(strip=True) if focus_elem else ""
+                    
+                    # Extraire le nom de l'ETF
+                    name_elem = focus_elem.select_one('a') if focus_elem else None
+                    name = name_elem.get_text(strip=True) if name_elem else "ETF Obligations Inconnu"
+                    
+                    # Extraire la variation en 2025 (YTD)
+                    ytd_elem = cells[4] if len(cells) > 4 else None
+                    ytd = ytd_elem.get_text(strip=True) if ytd_elem else "0,00%"
+                    
+                    # Extraire la variation sur 1 mois
+                    one_month_elem = cells[5] if len(cells) > 5 else None
+                    one_month = one_month_elem.get_text(strip=True) if one_month_elem else "0,00%"
+                    
+                    # Extraire la variation sur 3 mois
+                    three_month_elem = cells[6] if len(cells) > 6 else None
+                    three_month = three_month_elem.get_text(strip=True) if three_month_elem else "0,00%"
+                    
+                    # Extraire la variation sur 1 an
+                    one_year_elem = cells[7] if len(cells) > 7 else None
+                    one_year = one_year_elem.get_text(strip=True) if one_year_elem else "0,00%"
+                    
+                    # Extraire la variation sur 3 ans
+                    three_year_elem = cells[8] if len(cells) > 8 else None
+                    three_year = three_year_elem.get_text(strip=True) if three_year_elem else "0,00%"
+                    
+                    # Extraire le nombre d'ETF associés
+                    num_etfs_elem = cells[9] if len(cells) > 9 else None
+                    num_etfs = num_etfs_elem.get_text(strip=True) if num_etfs_elem else "1"
+                    
+                    top_bond_etf = {
+                        "name": name,
+                        "focus": focus_text,
+                        "ytd": ytd,
+                        "one_month": one_month,
+                        "three_month": three_month,
+                        "one_year": one_year,
+                        "three_year": three_year,
+                        "num_etfs": num_etfs
+                    }
+                    top_bond_etfs.append(top_bond_etf)
+            except (ValueError, IndexError) as e:
+                print(f"Erreur lors de l'extraction d'un TOP ETF d'obligations: {e}")
+        
+        return top_bond_etfs
+    except Exception as e:
+        print(f"Erreur lors de la récupération des meilleurs ETF d'obligations: {e}")
+        return []
+
 def merge_etf_data(boursorama_etfs, justetf_etfs):
     """Fusionne et déduplique les données d'ETF de différentes sources"""
     etf_by_name = {}
@@ -333,6 +477,13 @@ def main():
         # Créer le répertoire de sortie s'il n'existe pas
         os.makedirs(OUTPUT_DIR, exist_ok=True)
         
+        # Récupérer les données des TOP ETF
+        top50_etfs = scrape_top50_etfs()
+        top_bond_etfs = scrape_top_bond_etfs()
+        
+        print(f"Total TOP 50 ETF récupérés: {len(top50_etfs)}")
+        print(f"Total meilleurs ETF Obligations récupérés: {len(top_bond_etfs)}")
+        
         # Récupérer les données d'ETF de Boursorama
         boursorama_etfs = scrape_boursorama_etfs()
         print(f"Total ETF récupérés depuis Boursorama: {len(boursorama_etfs)}")
@@ -355,16 +506,22 @@ def main():
         world_data = init_data_structure()
         world_data["indices"] = organize_by_letter(world_etfs)
         world_data["top_performers"] = get_top_performers(world_etfs)
+        world_data["top50_etfs"] = top50_etfs
+        world_data["top_bond_etfs"] = top_bond_etfs
         world_data["meta"]["count"] = len(world_etfs)
         
         us_data = init_data_structure()
         us_data["indices"] = organize_by_letter(us_etfs)
         us_data["top_performers"] = get_top_performers(us_etfs)
+        us_data["top50_etfs"] = top50_etfs  # Ajout des TOP 50 à tous les marchés
+        us_data["top_bond_etfs"] = top_bond_etfs  # Ajout des TOP Obligations à tous les marchés
         us_data["meta"]["count"] = len(us_etfs)
         
         eu_data = init_data_structure()
         eu_data["indices"] = organize_by_letter(eu_etfs)
         eu_data["top_performers"] = get_top_performers(eu_etfs)
+        eu_data["top50_etfs"] = top50_etfs  # Ajout des TOP 50 à tous les marchés
+        eu_data["top_bond_etfs"] = top_bond_etfs  # Ajout des TOP Obligations à tous les marchés
         eu_data["meta"]["count"] = len(eu_etfs)
         
         # Enregistrer les données
