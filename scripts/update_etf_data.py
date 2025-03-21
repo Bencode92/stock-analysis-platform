@@ -392,6 +392,34 @@ def scrape_top50_etfs():
             if not etf_table:
                 return []
         
+        # Analyser les en-têtes du tableau pour identifier correctement les colonnes
+        headers = [header.get_text(strip=True) for header in etf_table.select('thead th')]
+        print(f"En-têtes de table détectés: {headers}")
+        
+        # Trouver les indices des colonnes qui nous intéressent
+        ytd_index = None
+        one_month_index = None
+        one_year_index = None
+        
+        for i, header in enumerate(headers):
+            header_lower = header.lower()
+            if "ytd" in header_lower or "début" in header_lower:
+                ytd_index = i
+            elif "1m" in header_lower or "1 mois" in header_lower:
+                one_month_index = i
+            elif "1a" in header_lower or "1 an" in header_lower:
+                one_year_index = i
+        
+        print(f"Indices détectés - YTD: {ytd_index}, 1 Mois: {one_month_index}, 1 An: {one_year_index}")
+        
+        # Utiliser les indices par défaut si les indices n'ont pas été trouvés
+        if ytd_index is None:
+            ytd_index = 4  # valeur par défaut
+        if one_month_index is None:
+            one_month_index = 6  # valeur par défaut pour 1 mois (ajusté)
+        if one_year_index is None:
+            one_year_index = 8  # valeur par défaut pour 1 an (ajusté)
+        
         top_etfs = []
         rows = etf_table.select('tbody tr')
         print(f"Nombre de lignes trouvées dans la table TOP 50 ETF: {len(rows)}")
@@ -399,7 +427,7 @@ def scrape_top50_etfs():
         for row in rows:
             try:
                 cells = row.select('td')
-                if len(cells) >= 7:  # Vérifions qu'il y a assez de cellules
+                if len(cells) >= max(ytd_index, one_month_index, one_year_index) + 1:
                     # Extraction des données avec gestion d'erreur plus robuste
                     focus_text = cells[0].get_text(strip=True) if len(cells) > 0 else ""
                     
@@ -407,15 +435,10 @@ def scrape_top50_etfs():
                     name_elem = cells[0].select_one('a')
                     name = name_elem.get_text(strip=True) if name_elem else "ETF Inconnu"
                     
-                    # Extraire les performances avec vérification
-                    ytd_elem = cells[4] if len(cells) > 4 else None
-                    ytd = ytd_elem.get_text(strip=True) if ytd_elem else "0,00%"
-                    
-                    one_month_elem = cells[5] if len(cells) > 5 else None
-                    one_month = one_month_elem.get_text(strip=True) if one_month_elem else "0,00%"
-                    
-                    one_year_elem = cells[7] if len(cells) > 7 else None
-                    one_year = one_year_elem.get_text(strip=True) if one_year_elem else "0,00%"
+                    # Extraire les performances avec les indices corrects
+                    ytd = cells[ytd_index].get_text(strip=True) if ytd_index < len(cells) else "0,00%"
+                    one_month = cells[one_month_index].get_text(strip=True) if one_month_index < len(cells) else "0,00%"
+                    one_year = cells[one_year_index].get_text(strip=True) if one_year_index < len(cells) else "0,00%"
                     
                     # Exporter toutes les données pertinentes
                     top_etf = {
@@ -429,7 +452,7 @@ def scrape_top50_etfs():
                     top_etfs.append(top_etf)
                     
                     # Debug
-                    print(f"Extrait ETF TOP: {name}, YTD: {ytd}, 1 mois: {one_month}")
+                    print(f"Extrait ETF TOP: {name}, YTD: {ytd}, 1 mois: {one_month}, 1 an: {one_year}")
             except Exception as e:
                 print(f"Erreur lors de l'extraction d'un TOP ETF: {e}")
         
@@ -454,6 +477,34 @@ def scrape_top_bond_etfs():
             if not etf_table:
                 return []
         
+        # Analyser les en-têtes du tableau pour identifier correctement les colonnes
+        headers = [header.get_text(strip=True) for header in etf_table.select('thead th')]
+        print(f"En-têtes de table détectés: {headers}")
+        
+        # Trouver les indices des colonnes qui nous intéressent
+        ytd_index = None
+        one_month_index = None
+        one_year_index = None
+        
+        for i, header in enumerate(headers):
+            header_lower = header.lower()
+            if "ytd" in header_lower or "début" in header_lower:
+                ytd_index = i
+            elif "1m" in header_lower or "1 mois" in header_lower:
+                one_month_index = i
+            elif "1a" in header_lower or "1 an" in header_lower:
+                one_year_index = i
+        
+        print(f"Indices détectés - YTD: {ytd_index}, 1 Mois: {one_month_index}, 1 An: {one_year_index}")
+        
+        # Utiliser les indices par défaut si les indices n'ont pas été trouvés
+        if ytd_index is None:
+            ytd_index = 4  # valeur par défaut
+        if one_month_index is None:
+            one_month_index = 6  # valeur par défaut pour 1 mois (ajusté)
+        if one_year_index is None:
+            one_year_index = 8  # valeur par défaut pour 1 an (ajusté)
+        
         top_bond_etfs = []
         rows = etf_table.select('tbody tr')
         print(f"Nombre de lignes trouvées dans la table TOP BOND ETF: {len(rows)}")
@@ -461,7 +512,7 @@ def scrape_top_bond_etfs():
         for row in rows:
             try:
                 cells = row.select('td')
-                if len(cells) >= 7:  # Vérifions qu'il y a assez de cellules
+                if len(cells) >= max(ytd_index, one_month_index, one_year_index) + 1:
                     # Extraction des données avec gestion d'erreur plus robuste
                     focus_text = cells[0].get_text(strip=True) if len(cells) > 0 else ""
                     
@@ -469,15 +520,10 @@ def scrape_top_bond_etfs():
                     name_elem = cells[0].select_one('a')
                     name = name_elem.get_text(strip=True) if name_elem else "ETF Obligations Inconnu"
                     
-                    # Extraire les performances avec vérification
-                    ytd_elem = cells[4] if len(cells) > 4 else None
-                    ytd = ytd_elem.get_text(strip=True) if ytd_elem else "0,00%"
-                    
-                    one_month_elem = cells[5] if len(cells) > 5 else None
-                    one_month = one_month_elem.get_text(strip=True) if one_month_elem else "0,00%"
-                    
-                    one_year_elem = cells[7] if len(cells) > 7 else None
-                    one_year = one_year_elem.get_text(strip=True) if one_year_elem else "0,00%"
+                    # Extraire les performances avec les indices corrects
+                    ytd = cells[ytd_index].get_text(strip=True) if ytd_index < len(cells) else "0,00%"
+                    one_month = cells[one_month_index].get_text(strip=True) if one_month_index < len(cells) else "0,00%"
+                    one_year = cells[one_year_index].get_text(strip=True) if one_year_index < len(cells) else "0,00%"
                     
                     # Exporter toutes les données pertinentes
                     top_bond_etf = {
@@ -491,7 +537,7 @@ def scrape_top_bond_etfs():
                     top_bond_etfs.append(top_bond_etf)
                     
                     # Debug
-                    print(f"Extrait ETF BOND: {name}, YTD: {ytd}, 1 mois: {one_month}")
+                    print(f"Extrait ETF BOND: {name}, YTD: {ytd}, 1 mois: {one_month}, 1 an: {one_year}")
             except Exception as e:
                 print(f"Erreur lors de l'extraction d'un TOP ETF d'obligations: {e}")
         
