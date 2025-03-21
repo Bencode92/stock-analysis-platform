@@ -4,6 +4,7 @@
 """
 Script de récupération des données ETF depuis Boursorama et JustETF
 Ce script génère un fichier JSON unique pour la page ETF de TradePulse
+Amélioré avec gestion de pagination pour Boursorama (jusqu'à 40 pages)
 """
 
 import os
@@ -31,18 +32,21 @@ BOURSORAMA_ETF_SHORT_TERM_URL = "https://www.boursorama.com/bourse/trackers/rech
 JUSTETF_TOP50_URL = "https://www.justetf.com/fr/market-overview/the-best-etfs.html"
 JUSTETF_TOP_BONDS_URL = "https://www.justetf.com/fr/market-overview/the-best-bond-etfs.html"
 
-def fetch_page(url, params=None, retries=3):
+def fetch_page(url, params=None, retries=3, delay=5):
     """Récupère une page web avec gestion des erreurs et des tentatives"""
     for attempt in range(retries):
         try:
+            print(f"Téléchargement de {url}" + (f" (tentative {attempt+1}/{retries})" if attempt > 0 else ""))
             response = requests.get(url, headers=HEADERS, params=params, timeout=30)
             response.raise_for_status()
             return response.text
         except requests.RequestException as e:
             print(f"Tentative {attempt+1}/{retries} échouée: {e}")
             if attempt == retries - 1:
+                print(f"Échec après {retries} tentatives pour {url}")
                 raise
-            time.sleep(5)
+            print(f"Nouvelle tentative dans {delay} secondes...")
+            time.sleep(delay)
 
 def get_current_time():
     """Renvoie l'horodatage actuel au format ISO avec fuseau horaire Europe/Paris"""
@@ -76,79 +80,153 @@ def init_data_structure():
         }
     }
 
+def get_total_pages(soup):
+    """Détermine le nombre total de pages à partir de la pagination"""
+    try:
+        # Rechercher les éléments de pagination
+        pagination = soup.select('.c-pagination__page')
+        if not pagination:
+            return 1
+        
+        # Extraire le numéro de la dernière page
+        last_page_elem = pagination[-1]
+        last_page = int(last_page_elem.get_text(strip=True))
+        return last_page
+    except Exception as e:
+        print(f"Erreur lors de la détermination du nombre de pages: {e}")
+        return 40  # Valeur par défaut maximum
+
 def scrape_boursorama_etfs():
-    """Extrait les données ETF depuis Boursorama"""
+    """Extrait les données ETF depuis Boursorama avec gestion de la pagination"""
     print("Récupération des données ETF depuis Boursorama...")
     
+    # Liste pour stocker tous les ETF
+    all_etfs = []
+    
+    # Récupérer la première page pour déterminer le nombre total de pages
     try:
         html = fetch_page(BOURSORAMA_ETF_URL)
         soup = BeautifulSoup(html, 'lxml')
-        
-        # Extraction des tableaux d'ETF
-        etf_tables = soup.select('.c-table')
-        
-        etfs = []
-        for table in etf_tables:
-            rows = table.select('tbody tr')
-            for row in rows:
-                cells = row.select('td')
-                if len(cells) >= 6:
-                    try:
-                        name = cells[0].get_text(strip=True)
-                        last_price = cells[1].get_text(strip=True)
-                        change = cells[2].get_text(strip=True)
-                        if change and not change.startswith('+') and not change.startswith('-'):
-                            change = f"+{change}" if float(change.replace(',', '.').replace('%', '')) > 0 else change
-                        
-                        # Identifier la catégorie (approximative) basée sur le nom
-                        category = "Actions"
-                        if any(kw in name.lower() for kw in ["bond", "oblig", "govies", "treasury", "gilt", "bund"]):
-                            category = "Obligations"
-                        elif any(kw in name.lower() for kw in ["gold", "silver", "metal", "commodit", "oil", "gas", "energy"]):
-                            category = "Matières premières"
-                        elif any(kw in name.lower() for kw in ["multi", "divers", "alloc"]):
-                            category = "Multi-actifs"
-                        
-                        # Identifier l'émetteur
-                        provider = "Autres"
-                        known_providers = {
-                            "ishares": "iShares",
-                            "lyxor": "Lyxor",
-                            "amundi": "Amundi",
-                            "bnp": "BNP Paribas",
-                            "vanguard": "Vanguard",
-                            "spdr": "SPDR",
-                            "invesco": "Invesco",
-                            "wisdomtree": "WisdomTree",
-                            "xtrackers": "Xtrackers",
-                            "ossiam": "Ossiam",
-                            "vaneck": "VanEck"
-                        }
-                        
-                        for key, value in known_providers.items():
-                            if key in name.lower():
-                                provider = value
-                                break
-                        
-                        etf = {
-                            "name": name,
-                            "last": last_price,
-                            "change": change,
-                            "category": category,
-                            "provider": provider,
-                            # Valeurs par défaut pour les autres champs
-                            "ytd": "n/a",
-                            "assets": "n/a",
-                            "ratio": "n/a"
-                        }
-                        etfs.append(etf)
-                    except (ValueError, IndexError) as e:
-                        print(f"Erreur lors de l'extraction d'un ETF: {e}")
-        
-        return etfs
+        detected_pages = get_total_pages(soup)
+        max_pages = min(detected_pages, 40)  # Limiter à 40 pages maximum comme demandé
+        print(f"Nombre total de pages détecté: {detected_pages}, pages à parcourir: {max_pages}")
     except Exception as e:
-        print(f"Erreur lors de la récupération des ETF Boursorama: {e}")
-        return []
+        print(f"Erreur lors de la détermination du nombre de pages: {e}")
+        max_pages = 40  # Valeur par défaut maximum
+    
+    # Parcourir chaque page
+    for page in range(1, max_pages + 1):
+        try:
+            # Construire l'URL avec le paramètre de page
+            page_url = f"{BOURSORAMA_ETF_URL}?page={page}"
+            print(f"Récupération des ETF - Page {page}/{max_pages}: {page_url}")
+            
+            # Ajout d'un délai entre les requêtes pour éviter d'être bloqué
+            if page > 1:
+                time.sleep(2)
+            
+            # Pour la première page, réutiliser le soup déjà chargé
+            if page == 1 and 'soup' in locals():
+                pass
+            else:
+                html = fetch_page(page_url)
+                soup = BeautifulSoup(html, 'lxml')
+            
+            # Vérifier si la page contient des données
+            if "Aucun résultat" in soup.text:
+                print(f"Page {page}: Aucun résultat trouvé, arrêt de la pagination")
+                break
+            
+            # Extraction des tableaux d'ETF
+            etf_tables = soup.select('.c-table')
+            
+            if not etf_tables:
+                print(f"Page {page}: Aucun tableau d'ETF trouvé")
+                # Vérifier si on a atteint la dernière page
+                pagination = soup.select('.c-pagination__page')
+                if not pagination or len(pagination) < page:
+                    print("Dernière page atteinte, fin de la pagination")
+                    break
+                continue
+            
+            page_etfs = []
+            for table in etf_tables:
+                rows = table.select('tbody tr')
+                print(f"Page {page}: {len(rows)} ETF trouvés dans le tableau")
+                
+                for row in rows:
+                    cells = row.select('td')
+                    if len(cells) >= 6:
+                        try:
+                            name = cells[0].get_text(strip=True)
+                            last_price = cells[1].get_text(strip=True)
+                            change = cells[2].get_text(strip=True)
+                            ytd = cells[3].get_text(strip=True) if len(cells) > 3 else "n/a"
+                            
+                            if change and not change.startswith('+') and not change.startswith('-'):
+                                change = f"+{change}" if float(change.replace(',', '.').replace('%', '')) > 0 else change
+                            
+                            # Identifier la catégorie (approximative) basée sur le nom
+                            category = "Actions"
+                            if any(kw in name.lower() for kw in ["bond", "oblig", "govies", "treasury", "gilt", "bund"]):
+                                category = "Obligations"
+                            elif any(kw in name.lower() for kw in ["gold", "silver", "metal", "commodit", "oil", "gas", "energy"]):
+                                category = "Matières premières"
+                            elif any(kw in name.lower() for kw in ["multi", "divers", "alloc"]):
+                                category = "Multi-actifs"
+                            
+                            # Identifier l'émetteur
+                            provider = "Autres"
+                            known_providers = {
+                                "ishares": "iShares",
+                                "lyxor": "Lyxor",
+                                "amundi": "Amundi",
+                                "bnp": "BNP Paribas",
+                                "vanguard": "Vanguard",
+                                "spdr": "SPDR",
+                                "invesco": "Invesco",
+                                "wisdomtree": "WisdomTree",
+                                "xtrackers": "Xtrackers",
+                                "ossiam": "Ossiam",
+                                "vaneck": "VanEck"
+                            }
+                            
+                            for key, value in known_providers.items():
+                                if key in name.lower():
+                                    provider = value
+                                    break
+                            
+                            etf = {
+                                "name": name,
+                                "last": last_price,
+                                "change": change,
+                                "ytd": ytd,
+                                "category": category,
+                                "provider": provider,
+                                # Valeurs par défaut pour les autres champs
+                                "assets": "n/a",
+                                "ratio": "n/a"
+                            }
+                            page_etfs.append(etf)
+                        except (ValueError, IndexError) as e:
+                            print(f"Erreur lors de l'extraction d'un ETF: {e}")
+            
+            # Ajouter les ETF de cette page à la liste complète
+            all_etfs.extend(page_etfs)
+            print(f"Page {page}: {len(page_etfs)} ETF extraits avec succès")
+            
+            # Vérifier s'il y a une page suivante
+            next_button = soup.select_one('a.c-pagination__next')
+            if next_button and 'c-pagination__next--disabled' in next_button.get('class', []):
+                print(f"Dernière page atteinte ({page}), fin de la pagination")
+                break
+                
+        except Exception as e:
+            print(f"Erreur lors de la récupération des ETF Boursorama page {page}: {e}")
+            # Continuer avec la page suivante même en cas d'erreur
+    
+    print(f"Total ETF récupérés depuis toutes les pages: {len(all_etfs)}")
+    return all_etfs
 
 def scrape_top_short_term_etfs():
     """Extrait les données des ETF avec performances court terme depuis Boursorama"""
@@ -415,6 +493,9 @@ def get_top_performers(etfs, count=3):
 
 def main():
     """Fonction principale"""
+    start_time = time.time()
+    print(f"Démarrage de la mise à jour des données ETF: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+    
     try:
         # Créer le répertoire de sortie s'il n'existe pas
         os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -428,7 +509,7 @@ def main():
         print(f"Total meilleurs ETF Obligations récupérés: {len(top_bond_etfs)}")
         print(f"Total ETF court terme récupérés: {len(top_short_term_etfs)}")
         
-        # Récupérer les données d'ETF de Boursorama
+        # Récupérer les données d'ETF de Boursorama avec pagination
         etfs = scrape_boursorama_etfs()
         print(f"Total ETF récupérés depuis Boursorama: {len(etfs)}")
         
@@ -448,7 +529,10 @@ def main():
             json.dump(data, f, ensure_ascii=False, indent=2)
         
         print(f"Fichier {output_path} enregistré avec succès")
-        print("Récupération et traitement des données ETF terminés avec succès")
+        
+        elapsed_time = time.time() - start_time
+        print(f"Mise à jour complétée en {elapsed_time:.2f} secondes")
+        print(f"Nombre total d'ETF récupérés: {data['meta']['count']}")
         
     except Exception as e:
         print(f"Erreur dans le processus principal: {e}")
