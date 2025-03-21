@@ -229,67 +229,118 @@ def scrape_boursorama_etfs():
     return all_etfs
 
 def scrape_top_short_term_etfs():
-    """Extrait les données des ETF avec performances court terme depuis Boursorama"""
+    """Extrait les données des ETF avec performances court terme depuis Boursorama avec pagination"""
     print("Récupération des ETF court terme depuis Boursorama...")
     
+    # Liste pour stocker tous les ETF court terme
+    all_short_term_etfs = []
+    
+    # Récupérer la première page pour déterminer le nombre total de pages
     try:
         html = fetch_page(BOURSORAMA_ETF_SHORT_TERM_URL)
         soup = BeautifulSoup(html, 'lxml')
-        
-        etfs = []
-        # Trouver le tableau de données
-        table = soup.select_one('table')
-        
-        if not table:
-            print("Aucun tableau d'ETF court terme trouvé!")
-            return etfs
-            
-        rows = table.select('tbody tr')
-        print(f"Trouvé {len(rows)} ETF court terme sur Boursorama")
-        
-        for row in rows:
-            try:
-                cells = row.select('td')
-                if len(cells) >= 6:
-                    # Trouver le libellé de l'ETF (première colonne)
-                    etf_name_elem = row.select_one('a.c-link')
-                    etf_name = etf_name_elem.get_text(strip=True) if etf_name_elem else "ETF Inconnu"
-                    
-                    # Trouver l'icône de tendance (flèche haut/bas)
-                    trend_icon = row.select_one('i.c-icon')
-                    trend = "up" if trend_icon and "up" in trend_icon.get('class', []) else "down"
-                    
-                    # Extraire les données des colonnes - attention à l'ordre correct
-                    # Colonnes: Libellé, ETF 1M, Catégorie 1M, Class 1M, ETF 6M, Catégorie 6M, Class 6M
-                    one_month_etf = cells[1].get_text(strip=True) if len(cells) > 1 else "0,00%"
-                    one_month_category = cells[2].get_text(strip=True) if len(cells) > 2 else "0,00%"
-                    one_month_rank = cells[3].get_text(strip=True) if len(cells) > 3 else ""
-                    
-                    six_month_etf = cells[4].get_text(strip=True) if len(cells) > 4 else "0,00%"
-                    six_month_category = cells[5].get_text(strip=True) if len(cells) > 5 else "0,00%"
-                    six_month_rank = cells[6].get_text(strip=True) if len(cells) > 6 else ""
-                    
-                    # Créer l'objet ETF
-                    etf = {
-                        "name": etf_name,
-                        "trend": trend,
-                        "one_month_etf": one_month_etf,
-                        "one_month_category": one_month_category,
-                        "one_month_rank": one_month_rank,
-                        "six_month_etf": six_month_etf,
-                        "six_month_category": six_month_category,
-                        "six_month_rank": six_month_rank
-                    }
-                    
-                    etfs.append(etf)
-                    print(f"Extrait ETF court terme: {etf_name}, 1M: {one_month_etf}, 6M: {six_month_etf}")
-            except Exception as e:
-                print(f"Erreur lors de l'extraction d'un ETF court terme: {e}")
-        
-        return etfs
+        detected_pages = get_total_pages(soup)
+        max_pages = min(detected_pages, 40)  # Limiter à 40 pages maximum comme demandé
+        print(f"Nombre total de pages d'ETF court terme détecté: {detected_pages}, pages à parcourir: {max_pages}")
     except Exception as e:
-        print(f"Erreur lors de la récupération des ETF court terme: {e}")
-        return []
+        print(f"Erreur lors de la détermination du nombre de pages d'ETF court terme: {e}")
+        max_pages = 40  # Valeur par défaut maximum
+    
+    # Parcourir chaque page
+    for page in range(1, max_pages + 1):
+        try:
+            # Construire l'URL avec le paramètre de page
+            page_url = f"{BOURSORAMA_ETF_SHORT_TERM_URL}&page={page}"
+            print(f"Récupération des ETF court terme - Page {page}/{max_pages}: {page_url}")
+            
+            # Ajout d'un délai entre les requêtes pour éviter d'être bloqué
+            if page > 1:
+                time.sleep(2)
+            
+            # Pour la première page, réutiliser le soup déjà chargé
+            if page == 1 and 'soup' in locals():
+                pass
+            else:
+                html = fetch_page(page_url)
+                soup = BeautifulSoup(html, 'lxml')
+            
+            # Vérifier si la page contient des données
+            if "Aucun résultat" in soup.text:
+                print(f"Page {page}: Aucun résultat trouvé, arrêt de la pagination")
+                break
+            
+            # Trouver le tableau de données
+            table = soup.select_one('table')
+            
+            if not table:
+                print(f"Page {page}: Aucun tableau d'ETF court terme trouvé")
+                # Vérifier si on a atteint la dernière page
+                pagination = soup.select('.c-pagination__page')
+                if not pagination or len(pagination) < page:
+                    print("Dernière page atteinte, fin de la pagination")
+                    break
+                continue
+            
+            # Extraire les lignes du tableau
+            rows = table.select('tbody tr')
+            print(f"Page {page}: {len(rows)} ETF court terme trouvés")
+            
+            page_etfs = []
+            for row in rows:
+                try:
+                    cells = row.select('td')
+                    if len(cells) >= 6:
+                        # Trouver le libellé de l'ETF (première colonne)
+                        etf_name_elem = row.select_one('a.c-link')
+                        etf_name = etf_name_elem.get_text(strip=True) if etf_name_elem else "ETF Inconnu"
+                        
+                        # Trouver l'icône de tendance (flèche haut/bas)
+                        trend_icon = row.select_one('i.c-icon')
+                        trend = "up" if trend_icon and "up" in trend_icon.get('class', []) else "down"
+                        
+                        # Extraire les données des colonnes - attention à l'ordre correct
+                        # Colonnes: Libellé, ETF 1M, Catégorie 1M, Class 1M, ETF 6M, Catégorie 6M, Class 6M
+                        one_month_etf = cells[1].get_text(strip=True) if len(cells) > 1 else "0,00%"
+                        one_month_category = cells[2].get_text(strip=True) if len(cells) > 2 else "0,00%"
+                        one_month_rank = cells[3].get_text(strip=True) if len(cells) > 3 else ""
+                        
+                        six_month_etf = cells[4].get_text(strip=True) if len(cells) > 4 else "0,00%"
+                        six_month_category = cells[5].get_text(strip=True) if len(cells) > 5 else "0,00%"
+                        six_month_rank = cells[6].get_text(strip=True) if len(cells) > 6 else ""
+                        
+                        # Créer l'objet ETF
+                        etf = {
+                            "name": etf_name,
+                            "trend": trend,
+                            "one_month_etf": one_month_etf,
+                            "one_month_category": one_month_category,
+                            "one_month_rank": one_month_rank,
+                            "six_month_etf": six_month_etf,
+                            "six_month_category": six_month_category,
+                            "six_month_rank": six_month_rank
+                        }
+                        
+                        page_etfs.append(etf)
+                        print(f"Extrait ETF court terme: {etf_name}, 1M: {one_month_etf}, 6M: {six_month_etf}")
+                except Exception as e:
+                    print(f"Erreur lors de l'extraction d'un ETF court terme: {e}")
+            
+            # Ajouter les ETF de cette page à la liste complète
+            all_short_term_etfs.extend(page_etfs)
+            print(f"Page {page}: {len(page_etfs)} ETF court terme extraits avec succès")
+            
+            # Vérifier s'il y a une page suivante
+            next_button = soup.select_one('a.c-pagination__next')
+            if next_button and 'c-pagination__next--disabled' in next_button.get('class', []):
+                print(f"Dernière page atteinte ({page}), fin de la pagination")
+                break
+                
+        except Exception as e:
+            print(f"Erreur lors de la récupération des ETF court terme page {page}: {e}")
+            # Continuer avec la page suivante même en cas d'erreur
+    
+    print(f"Total ETF court terme récupérés depuis toutes les pages: {len(all_short_term_etfs)}")
+    return all_short_term_etfs
 
 def scrape_top50_etfs():
     """Extrait les données des TOP 50 ETF depuis JustETF"""
@@ -500,6 +551,10 @@ def main():
         # Créer le répertoire de sortie s'il n'existe pas
         os.makedirs(OUTPUT_DIR, exist_ok=True)
         
+        # Récupérer les données d'ETF de Boursorama avec pagination
+        etfs = scrape_boursorama_etfs()
+        print(f"Total ETF récupérés depuis Boursorama: {len(etfs)}")
+        
         # Récupérer les données des TOP ETF
         top50_etfs = scrape_top50_etfs()
         top_bond_etfs = scrape_top_bond_etfs()
@@ -508,10 +563,6 @@ def main():
         print(f"Total TOP 50 ETF récupérés: {len(top50_etfs)}")
         print(f"Total meilleurs ETF Obligations récupérés: {len(top_bond_etfs)}")
         print(f"Total ETF court terme récupérés: {len(top_short_term_etfs)}")
-        
-        # Récupérer les données d'ETF de Boursorama avec pagination
-        etfs = scrape_boursorama_etfs()
-        print(f"Total ETF récupérés depuis Boursorama: {len(etfs)}")
         
         # Créer un objet de données unique
         data = init_data_structure()
