@@ -33,6 +33,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialiser la pagination
     initPagination();
     
+    // Initialiser la barre de recherche
+    initSearchFunctionality();
+    
     // Mettre à jour l'horloge du marché
     updateMarketTime();
     setInterval(updateMarketTime, 1000);
@@ -445,6 +448,276 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             
             container.appendChild(row);
+        });
+    }
+
+    /**
+     * Initialise la fonctionnalité de recherche
+     */
+    function initSearchFunctionality() {
+        // Éléments du DOM
+        const searchInput = document.getElementById('stock-search');
+        const clearButton = document.getElementById('clear-search');
+        const searchInfo = document.getElementById('search-info');
+        const searchCount = document.getElementById('search-count');
+        const alphabetTabs = document.querySelectorAll('.region-tab');
+        
+        if (!searchInput || !clearButton) return;
+        
+        // Ajouter un onglet "Tous" au début des filtres alphabétiques si nécessaire
+        const tabsContainer = document.querySelector('.region-tabs');
+        if (tabsContainer && !document.querySelector('.region-tab[data-region="all"]')) {
+            const allTab = document.createElement('div');
+            allTab.className = 'region-tab all-results';
+            allTab.setAttribute('data-region', 'all');
+            allTab.textContent = 'TOUS';
+            
+            // Insérer au début
+            tabsContainer.insertBefore(allTab, tabsContainer.firstChild);
+            
+            // Ajouter l'événement de clic
+            allTab.addEventListener('click', function() {
+                // Réinitialiser la recherche si active
+                if (searchInput.value.trim() !== '') {
+                    searchInput.value = '';
+                    clearSearch();
+                }
+                
+                // Mettre à jour les onglets actifs
+                alphabetTabs.forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                
+                // Afficher toutes les actions (en respectant la pagination)
+                showAllStocks();
+            });
+        }
+        
+        // Fonction pour montrer toutes les actions (si possible)
+        function showAllStocks() {
+            // Si la pagination est active (STOXX), on ne peut pas tout montrer
+            if (currentMarket === 'stoxx') {
+                // Afficher une notification
+                showNotification('La vue "TOUS" n\'est pas disponible pour ce marché en raison de la pagination.', 'warning');
+                return;
+            }
+            
+            // Afficher toutes les régions
+            const regionContents = document.querySelectorAll('.region-content');
+            regionContents.forEach(content => {
+                content.classList.remove('hidden');
+            });
+            
+            // Rendre visibles toutes les lignes qui étaient cachées par la recherche
+            const allRows = document.querySelectorAll('table tbody tr');
+            allRows.forEach(row => {
+                row.classList.remove('hidden', 'search-highlight');
+                row.style.display = '';
+            });
+        }
+        
+        // Recherche en temps réel
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.trim().toLowerCase();
+            
+            // Afficher/masquer le bouton d'effacement
+            clearButton.style.opacity = searchTerm ? '1' : '0';
+            
+            // Effectuer la recherche
+            if (searchTerm) {
+                performSearch(searchTerm);
+            } else {
+                clearSearch();
+            }
+        });
+        
+        // Effacer la recherche
+        clearButton.addEventListener('click', function() {
+            searchInput.value = '';
+            searchInput.focus();
+            clearSearch();
+        });
+        
+        // Fonction pour effectuer la recherche
+        function performSearch(searchTerm) {
+            let totalResults = 0;
+            let foundInRegions = new Set();
+            
+            // Sélectionner l'onglet "Tous" si présent
+            const allTab = document.querySelector('.region-tab[data-region="all"]');
+            if (allTab) {
+                alphabetTabs.forEach(tab => tab.classList.remove('active'));
+                allTab.classList.add('active');
+            }
+            
+            // Parcourir toutes les régions et rechercher dans chaque tableau
+            const alphabet = "abcdefghijklmnopqrstuvwxyz".split('');
+            
+            alphabet.forEach(letter => {
+                const tableBody = document.getElementById(`${letter}-indices-body`);
+                if (!tableBody) return;
+                
+                let regionResults = 0;
+                const rows = tableBody.querySelectorAll('tr');
+                
+                rows.forEach(row => {
+                    // Ne pas rechercher dans les lignes vides ou messages
+                    if (row.cells.length <= 1) return;
+                    
+                    const stockName = row.cells[0].textContent.toLowerCase();
+                    
+                    if (stockName.includes(searchTerm)) {
+                        // Marquer cette ligne comme résultat de recherche
+                        row.classList.add('search-highlight');
+                        row.classList.remove('hidden');
+                        row.style.display = '';
+                        regionResults++;
+                        totalResults++;
+                        foundInRegions.add(letter);
+                    } else {
+                        // Masquer cette ligne
+                        row.classList.remove('search-highlight');
+                        row.classList.add('hidden');
+                        row.style.display = 'none';
+                    }
+                });
+                
+                // Si pas de résultats dans cette région, ajouter un message
+                if (regionResults === 0 && rows.length > 0) {
+                    // Vérifier si un message existe déjà
+                    let noResultsRow = tableBody.querySelector('.no-results-row');
+                    if (!noResultsRow) {
+                        noResultsRow = document.createElement('tr');
+                        noResultsRow.className = 'no-results-row';
+                        noResultsRow.innerHTML = `
+                            <td colspan="8" class="no-results">
+                                <i class="fas fa-search mr-2"></i>
+                                Aucun résultat pour "${searchTerm}" dans cette section
+                            </td>
+                        `;
+                        tableBody.appendChild(noResultsRow);
+                    }
+                } else {
+                    // Supprimer les messages existants
+                    const noResultsRow = tableBody.querySelector('.no-results-row');
+                    if (noResultsRow) {
+                        noResultsRow.remove();
+                    }
+                }
+                
+                // Afficher/masquer les régions en fonction des résultats
+                const regionContent = document.getElementById(`${letter}-indices`);
+                if (regionContent) {
+                    if (regionResults > 0) {
+                        regionContent.classList.remove('hidden');
+                    } else {
+                        regionContent.classList.add('hidden');
+                    }
+                }
+            });
+            
+            // Mettre à jour le compteur de résultats
+            searchCount.textContent = totalResults;
+            searchInfo.classList.remove('hidden');
+            
+            // Actualiser les étiquettes des onglets
+            alphabetTabs.forEach(tab => {
+                const region = tab.getAttribute('data-region');
+                if (region !== 'all') {
+                    if (foundInRegions.has(region)) {
+                        tab.classList.add('has-results');
+                    } else {
+                        tab.classList.remove('has-results');
+                    }
+                }
+            });
+            
+            // Défiler vers le premier résultat si possible
+            if (totalResults > 0) {
+                const firstResult = document.querySelector('.search-highlight');
+                if (firstResult) {
+                    setTimeout(() => {
+                        firstResult.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }, 100);
+                }
+            }
+        }
+        
+        // Fonction pour effacer la recherche
+        function clearSearch() {
+            // Réinitialiser le compteur
+            searchInfo.classList.add('hidden');
+            
+            // Restaurer la visibilité normal des contenus
+            const alphabet = "abcdefghijklmnopqrstuvwxyz".split('');
+            
+            alphabet.forEach(letter => {
+                const tableBody = document.getElementById(`${letter}-indices-body`);
+                if (!tableBody) return;
+                
+                // Supprimer les messages de "pas de résultats"
+                const noResultsRow = tableBody.querySelector('.no-results-row');
+                if (noResultsRow) {
+                    noResultsRow.remove();
+                }
+                
+                // Réinitialiser toutes les lignes
+                const rows = tableBody.querySelectorAll('tr');
+                rows.forEach(row => {
+                    row.classList.remove('search-highlight', 'hidden');
+                    row.style.display = '';
+                });
+            });
+            
+            // Restaurer l'affichage normal des contenus de région
+            // selon l'onglet actif
+            const activeTab = document.querySelector('.region-tab.active');
+            if (activeTab) {
+                const activeRegion = activeTab.getAttribute('data-region');
+                
+                if (activeRegion === 'all') {
+                    // Afficher toutes les régions
+                    alphabet.forEach(letter => {
+                        const regionContent = document.getElementById(`${letter}-indices`);
+                        if (regionContent) {
+                            regionContent.classList.remove('hidden');
+                        }
+                    });
+                } else {
+                    // Afficher uniquement la région active
+                    alphabet.forEach(letter => {
+                        const regionContent = document.getElementById(`${letter}-indices`);
+                        if (regionContent) {
+                            if (letter === activeRegion) {
+                                regionContent.classList.remove('hidden');
+                            } else {
+                                regionContent.classList.add('hidden');
+                            }
+                        }
+                    });
+                }
+            }
+            
+            // Masquer le bouton d'effacement
+            clearButton.style.opacity = '0';
+        }
+        
+        // Gérer les événements de clic sur les onglets alphabétiques
+        alphabetTabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Si une recherche est active, l'effacer
+                if (searchInput.value.trim() !== '') {
+                    searchInput.value = '';
+                    clearSearch();
+                }
+            });
+        });
+        
+        // Support pour la touche Echap pour effacer la recherche
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && searchInput.value.trim() !== '') {
+                searchInput.value = '';
+                clearSearch();
+            }
         });
     }
     
