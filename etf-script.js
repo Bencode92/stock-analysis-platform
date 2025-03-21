@@ -740,6 +740,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     /**
      * Affiche les données des ETF court terme avec pagination
+     * Avec seulement les colonnes LIBELLÉ, 1 MOIS et 6 MOIS
      */
     function renderTopShortTermTable() {
         try {
@@ -793,26 +794,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Afficher les ETF court terme
+            // Afficher les ETF court terme avec seulement LIBELLÉ, 1 MOIS et 6 MOIS
             paginatedShortTerm.forEach((etf, index) => {
                 const row = document.createElement('tr');
                 const globalIndex = start + index + 1; // Pour numéroter les ETF
                 
                 // Détermine les classes CSS pour les valeurs numériques
                 const oneMonthClass = etf.oneMonth && parseFloat(etf.oneMonth) < 0 ? 'negative' : 'positive';
-                const oneYearClass = etf.oneYear && parseFloat(etf.oneYear) < 0 ? 'negative' : 'positive';
+                const sixMonthClass = etf.sixMonth && parseFloat(etf.sixMonth) < 0 ? 'negative' : 'positive';
                 
                 // Format avec % pour l'affichage
-                const oneMonthDisplay = etf.oneMonth ? etf.oneMonth + '%' : '-';
-                const oneYearDisplay = etf.oneYear ? etf.oneYear + '%' : '-';
+                const oneMonthDisplay = etf.oneMonth ? (etf.oneMonth.includes('+') ? etf.oneMonth : `+${etf.oneMonth}`) + '%' : '-';
+                const sixMonthDisplay = etf.sixMonth ? (etf.sixMonth.includes('+') ? etf.sixMonth : `+${etf.sixMonth}`) + '%' : '-';
                 
-                // Structure HTML adapté au tableau des ETF court terme
+                // Structure HTML adaptée au tableau des ETF court terme
+                // Nous n'affichons que 3 colonnes: LIBELLÉ, 1 MOIS et 6 MOIS
                 row.innerHTML = `
-                    <td class="font-medium">${globalIndex}. ${etf.name || '-'}</td>
+                    <td class="font-medium">${etf.name || '-'}</td>
                     <td class="${oneMonthClass}">${oneMonthDisplay}</td>
                     <td>${etf.category || '-'}</td>
                     <td>1</td>
-                    <td>${etf.ytd ? etf.ytd + '%' : '-'}</td>
+                    <td class="${sixMonthClass}">${sixMonthDisplay}</td>
                     <td>${etf.category || '-'}</td>
                     <td>1</td>
                 `;
