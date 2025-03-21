@@ -725,7 +725,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-top: 24px;
+            margin-top: 16px;
             margin-bottom: 24px;
         }
         
@@ -735,6 +735,7 @@
             transition: all 0.3s ease;
             display: flex;
             align-items: center;
+            cursor: pointer;
         }
         
         .dark .pagination-button {
@@ -1080,6 +1081,18 @@
                                 </tbody>
                             </table>
                         </div>
+                        <!-- Pagination pour ETF Court Terme -->
+                        <div id="pagination-shortterm" class="pagination-container py-3 px-4" style="display: none;">
+                            <button id="shortterm-prev-page" class="pagination-button mr-2">
+                                <i class="fas fa-chevron-left mr-2"></i> Précédent
+                            </button>
+                            <div class="pagination-info">
+                                Page <span id="shortterm-current-page">1</span> / <span id="shortterm-total-pages">1</span>
+                            </div>
+                            <button id="shortterm-next-page" class="pagination-button ml-2">
+                                Suivant <i class="fas fa-chevron-right ml-2"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
@@ -1107,6 +1120,18 @@
                                     </tr>
                                 </tbody>
                             </table>
+                        </div>
+                        <!-- Pagination pour TOP 50 ETF -->
+                        <div id="pagination-top50" class="pagination-container py-3 px-4" style="display: none;">
+                            <button id="top50-prev-page" class="pagination-button mr-2">
+                                <i class="fas fa-chevron-left mr-2"></i> Précédent
+                            </button>
+                            <div class="pagination-info">
+                                Page <span id="top50-current-page">1</span> / <span id="top50-total-pages">1</span>
+                            </div>
+                            <button id="top50-next-page" class="pagination-button ml-2">
+                                Suivant <i class="fas fa-chevron-right ml-2"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -1136,20 +1161,19 @@
                                 </tbody>
                             </table>
                         </div>
+                        <!-- Pagination pour TOP ETF Obligations -->
+                        <div id="pagination-bonds" class="pagination-container py-3 px-4" style="display: none;">
+                            <button id="bonds-prev-page" class="pagination-button mr-2">
+                                <i class="fas fa-chevron-left mr-2"></i> Précédent
+                            </button>
+                            <div class="pagination-info">
+                                Page <span id="bonds-current-page">1</span> / <span id="bonds-total-pages">1</span>
+                            </div>
+                            <button id="bonds-next-page" class="pagination-button ml-2">
+                                Suivant <i class="fas fa-chevron-right ml-2"></i>
+                            </button>
+                        </div>
                     </div>
-                </div>
-                
-                <!-- Pagination -->
-                <div id="pagination-container" class="pagination-container hidden">
-                    <button id="prev-page" class="pagination-button" disabled>
-                        <i class="fas fa-chevron-left mr-2"></i> Page précédente
-                    </button>
-                    <div class="pagination-info">
-                        Page <span id="current-page">1</span> / <span id="total-pages">1</span>
-                    </div>
-                    <button id="next-page" class="pagination-button">
-                        Page suivante <i class="fas fa-chevron-right ml-2"></i>
-                    </button>
                 </div>
                 
                 <!-- Top Performers -->
@@ -1496,77 +1520,6 @@
                    });
                });
            }
-           
-           // Initialisation des filtres par catégorie
-           const filterButtons = document.querySelectorAll('.filter-btn');
-           filterButtons.forEach(button => {
-               button.addEventListener('click', function() {
-                   // Mettre à jour l'état actif
-                   filterButtons.forEach(btn => btn.classList.remove('active'));
-                   this.classList.add('active');
-                   
-                   const category = this.getAttribute('data-category');
-                   
-                   // Filtrer les lignes selon la catégorie
-                   document.querySelectorAll('table.data-table tbody tr').forEach(row => {
-                       if (row.cells.length <= 1) return; // Ignorer les lignes spéciales
-                       
-                       if (category === 'all') {
-                           row.style.display = '';
-                       } else {
-                           const etfCategory = row.cells[1].textContent.toLowerCase();
-                           if (etfCategory.includes(category)) {
-                               row.style.display = '';
-                           } else {
-                               row.style.display = 'none';
-                           }
-                       }
-                   });
-               });
-           });
-           
-           // Initialisation des boutons de sélection de catégorie ETF 
-           const categoryButtons = document.querySelectorAll('.market-btn');
-           categoryButtons.forEach(button => {
-               button.addEventListener('click', function() {
-                   // Mettre à jour l'état actif des boutons
-                   categoryButtons.forEach(btn => btn.classList.remove('active'));
-                   this.classList.add('active');
-                   
-                   const category = this.getAttribute('data-category');
-                   
-                   // Mettre à jour le titre en fonction de la catégorie sélectionnée
-                   const titleElement = document.getElementById('market-title');
-                   if (titleElement) {
-                       if (category === 'top50') {
-                           titleElement.textContent = 'TOP 50 ETF';
-                       } else if (category === 'bonds') {
-                           titleElement.textContent = 'TOP ETF Obligations';
-                       } else if (category === 'shortterm') {
-                           titleElement.textContent = 'TOP ETF Court Terme';
-                       }
-                   }
-                   
-                   // Contrôler la visibilité des sections correspondantes
-                   const topEtfSection = document.querySelector('.top-etf-section');
-                   const topBondSection = document.querySelector('.top-bond-section');
-                   const topShortTermSection = document.querySelector('.top-short-term-section');
-                   
-                   if (category === 'top50') {
-                       topEtfSection.style.display = 'block';
-                       topBondSection.style.display = 'none';
-                       topShortTermSection.style.display = 'none';
-                   } else if (category === 'bonds') {
-                       topEtfSection.style.display = 'none';
-                       topBondSection.style.display = 'block';
-                       topShortTermSection.style.display = 'none';
-                   } else if (category === 'shortterm') {
-                       topEtfSection.style.display = 'none';
-                       topBondSection.style.display = 'none';
-                       topShortTermSection.style.display = 'block';
-                   }
-               });
-           });
        });
     </script>
 </body>
