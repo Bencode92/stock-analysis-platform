@@ -285,7 +285,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * Charge les données d'ETFs depuis le fichier JSON approprié
+     * Charge les données d'ETFs depuis le fichier JSON unique
      */
     async function loadEtfsData(forceRefresh = false) {
         // Éviter les chargements multiples simultanés
@@ -302,44 +302,25 @@ document.addEventListener('DOMContentLoaded', function() {
         hideElement('etfs-container');
         
         try {
-            // Déterminer le fichier à charger selon le marché et la page
-            let url;
-            if (currentMarket === 'world') {
-                url = `data/etfs_world.json`;
-            } else if (currentMarket === 'us') {
-                url = `data/etfs_us.json`;
-            } else {
-                url = `data/etfs_eu.json`;
-            }
+            // Utiliser le fichier ETF JSON unique
+            const url = `data/etf.json`;
             
             // Pour éviter le cache du navigateur en cas de forceRefresh
             const cacheBuster = forceRefresh ? `?t=${Date.now()}` : '';
             
             console.log(`🔍 Chargement des données depuis ${url}${cacheBuster}`);
             
-            // Simuler un délai pour le développement - À SUPPRIMER EN PRODUCTION
-            await new Promise(resolve => setTimeout(resolve, 800));
+            const response = await fetch(`${url}${cacheBuster}`);
             
-            // À remplacer par un vrai appel fetch quand les données seront disponibles
-            // const response = await fetch(`${url}${cacheBuster}`);
-            
-            // Simulation de données pour le développement - À REMPLACER PAR LE FETCH CI-DESSUS
-            const mockData = generateMockData();
-            
-            // if (!response.ok) {
-            //     throw new Error(`Erreur de chargement: ${response.status}`);
-            // }
+            if (!response.ok) {
+                throw new Error(`Erreur de chargement: ${response.status}`);
+            }
             
             // Charger les données
-            // const rawData = await response.json();
-            const rawData = mockData; // Remplacer par la ligne ci-dessus en production
+            const rawData = await response.json();
             
-            // S'assurer que toutes les régions existent dans les données
-            etfsData = {
-                indices: rawData.indices || {},
-                top_performers: rawData.top_performers || null,
-                meta: rawData.meta || {}
-            };
+            // Assigner les données chargées
+            etfsData = rawData;
             
             // Vérifier la fraîcheur des données
             const dataTimestamp = new Date(etfsData.meta.timestamp || Date.now());
@@ -350,22 +331,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // Marquer les données comme périmées si plus vieilles que MAX_DATA_AGE
             etfsData.meta.isStale = dataAge > MAX_DATA_AGE;
             
-            // Récupérer les informations de pagination si présentes
-            if (etfsData.meta.pagination) {
-                currentPage = etfsData.meta.pagination.currentPage || 1;
-                totalPages = etfsData.meta.pagination.totalPages || 1;
-                
-                // Mettre à jour l'interface de pagination
-                updatePaginationUI();
-            }
-            
             // Afficher une notification si les données sont périmées
             if (etfsData.meta.isStale) {
-                showNotification('Les données affichées datent de plus d\\'une heure', 'warning');
+                showNotification('Les données affichées datent de plus d\'une heure', 'warning');
             }
             
             // Afficher les données
             renderEtfsData();
+            renderTopEtfTables();
             lastUpdate = new Date();
         } catch (error) {
             console.error('❌ Erreur lors du chargement des données:', error);
@@ -376,79 +349,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Réinitialiser l'état
             isLoading = false;
         }
-    }
-    
-    /**
-     * Génère des données de test pour le développement
-     */
-    function generateMockData() {
-        const alphabet = 'abcdefghijklmnopqrstuvwxyz'.split('');
-        const categories = ['Actions', 'Obligations', 'Matières premières', 'Multi-actifs', 'Sectoriels', 'Thématiques'];
-        const providers = ['iShares', 'Vanguard', 'SPDR', 'Lyxor', 'Amundi', 'Invesco', 'WisdomTree', 'UBS'];
-        
-        const mockData = {
-            indices: {},
-            top_performers: {
-                daily: {
-                    best: [
-                        { name: 'Lyxor MSCI Water ESG', symbol: 'WATL', change: '+3,45%', ytd: '+12,38%' },
-                        { name: 'iShares Gold Producers', symbol: 'SPGP', change: '+2,87%', ytd: '+8,79%' },
-                        { name: 'WisdomTree Cloud Computing', symbol: 'WCLD', change: '+2,53%', ytd: '+14,62%' }
-                    ],
-                    worst: [
-                        { name: 'VanEck Vectors Oil Services', symbol: 'OIH', change: '-3,21%', ytd: '-7,14%' },
-                        { name: 'iShares MSCI Brazil', symbol: 'EWZ', change: '-2,75%', ytd: '-5,42%' },
-                        { name: 'Invesco Solar ETF', symbol: 'TAN', change: '-2,34%', ytd: '-9,85%' }
-                    ]
-                },
-                ytd: {
-                    best: [
-                        { name: 'ARK Innovation ETF', symbol: 'ARKK', change: '+0,75%', ytd: '+28,43%' },
-                        { name: 'iShares Semiconductor ETF', symbol: 'SOXX', change: '+1,24%', ytd: '+26,18%' },
-                        { name: 'Invesco QQQ Trust', symbol: 'QQQ', change: '+0,92%', ytd: '+22,75%' }
-                    ],
-                    worst: [
-                        { name: 'iShares MSCI Turkey ETF', symbol: 'TUR', change: '-0,87%', ytd: '-18,62%' },
-                        { name: 'VanEck Vectors Russia', symbol: 'RSX', change: '-1,35%', ytd: '-15,24%' },
-                        { name: 'iShares MSCI Chile ETF', symbol: 'ECH', change: '-0,65%', ytd: '-12,73%' }
-                    ]
-                }
-            },
-            meta: {
-                count: 250,
-                timestamp: new Date().toISOString(),
-                source: 'Mock Data Generator'
-            }
-        };
-        
-        // Générer des données pour chaque lettre
-        alphabet.forEach(letter => {
-            const itemCount = Math.floor(Math.random() * 10) + 1; // 1-10 items par lettre
-            mockData.indices[letter] = [];
-            
-            for (let i = 0; i < itemCount; i++) {
-                const category = categories[Math.floor(Math.random() * categories.length)];
-                const provider = providers[Math.floor(Math.random() * providers.length)];
-                const price = (Math.random() * 100 + 10).toFixed(2);
-                const change = ((Math.random() * 6) - 3).toFixed(2);
-                const ytd = ((Math.random() * 30) - 15).toFixed(2);
-                const assets = Math.floor(Math.random() * 10000) + 100;
-                const ratio = (Math.random() * 0.75 + 0.1).toFixed(2);
-                
-                mockData.indices[letter].push({
-                    name: `${provider} ${letter.toUpperCase()}${i+1} ${category}`,
-                    category: category,
-                    provider: provider,
-                    last: `${price} €`,
-                    change: change > 0 ? `+${change}%` : `${change}%`,
-                    ytd: ytd > 0 ? `+${ytd}%` : `${ytd}%`,
-                    assets: `${assets} M€`,
-                    ratio: `${ratio}%`
-                });
-            }
-        });
-        
-        return mockData;
     }
     
     /**
@@ -548,9 +448,65 @@ document.addEventListener('DOMContentLoaded', function() {
             applyFilters();
             
         } catch (error) {
-            console.error('❌ Erreur lors de l\\'affichage des données:', error);
+            console.error('❌ Erreur lors de l\'affichage des données:', error);
             hideElement('etfs-loading');
             showElement('etfs-error');
+        }
+    }
+
+    /**
+     * Affiche les données des TOP ETF et TOP ETF Obligations
+     */
+    function renderTopEtfTables() {
+        try {
+            // Vérifier si les données sont disponibles
+            if (!etfsData.top50_etfs || !etfsData.top_bond_etfs) {
+                console.warn("Les données TOP ETF ne sont pas disponibles");
+                return;
+            }
+            
+            // Récupérer les éléments du DOM
+            const topEtfBody = document.getElementById('top-etf-body');
+            const topBondBody = document.getElementById('top-bond-body');
+            
+            if (!topEtfBody || !topBondBody) {
+                console.warn("Les éléments du DOM pour les TOP ETF ne sont pas disponibles");
+                return;
+            }
+            
+            // Vider les conteneurs
+            topEtfBody.innerHTML = '';
+            topBondBody.innerHTML = '';
+            
+            // Afficher les TOP 50 ETF (limité aux 10 premiers pour la lisibilité)
+            const topEtfs = etfsData.top50_etfs.slice(0, 10);
+            topEtfs.forEach(etf => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="font-medium">${etf.name || etf.focus || '-'}</td>
+                    <td class="${etf.ytd.includes('-') ? 'negative' : 'positive'}">${etf.ytd || '-'}</td>
+                    <td class="${etf.one_month.includes('-') ? 'negative' : 'positive'}">${etf.one_month || '-'}</td>
+                    <td class="${etf.one_year.includes('-') ? 'negative' : 'positive'}">${etf.one_year || '-'}</td>
+                `;
+                topEtfBody.appendChild(row);
+            });
+            
+            // Afficher les TOP ETF Obligations (limité aux 10 premiers)
+            const topBondEtfs = etfsData.top_bond_etfs.slice(0, 10);
+            topBondEtfs.forEach(etf => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="font-medium">${etf.name || etf.focus || '-'}</td>
+                    <td class="${etf.ytd.includes('-') ? 'negative' : 'positive'}">${etf.ytd || '-'}</td>
+                    <td class="${etf.one_month.includes('-') ? 'negative' : 'positive'}">${etf.one_month || '-'}</td>
+                    <td class="${etf.one_year.includes('-') ? 'negative' : 'positive'}">${etf.one_year || '-'}</td>
+                `;
+                topBondBody.appendChild(row);
+            });
+            
+            console.log(`Rendu de ${topEtfs.length} TOP ETF et ${topBondEtfs.length} TOP ETF Obligations`);
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'affichage des TOP ETF:', error);
         }
     }
     
