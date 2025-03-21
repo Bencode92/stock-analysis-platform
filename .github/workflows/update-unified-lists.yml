@@ -1,0 +1,116 @@
+name: Mise à jour unifiée des données NASDAQ et STOXX
+
+on:
+  # Déclenchement manuel
+  workflow_dispatch:
+  # Ajout d'un déclenchement automatique toutes les 30 minutes
+  schedule:
+    - cron: '15,45 * * * *'  # Exécuter à 15e et 45e minute de chaque heure
+
+# Configuration des permissions
+permissions:
+  contents: write
+
+jobs:
+  update-market-data:
+    runs-on: ubuntu-latest
+    # Définir un timeout pour éviter les longues exécutions
+    timeout-minutes: 20
+    
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v3
+        with:
+          # S'assurer que l'action checkout récupère l'historique complet
+          fetch-depth: 0
+          # S'assurer que le token GitHub est utilisé pour l'authentification
+          token: ${{ github.token }}
+      
+      - name: 📦 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: 📂 Create data directory if needed
+        run: mkdir -p data
+          
+      - name: 📚 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests beautifulsoup4
+          # Désactiver les avertissements de certificat pour urllib3
+          pip install urllib3
+        
+      - name: 🚀 Execute unified lists data script
+        run: python scripts/update_unified_lists.py
+        continue-on-error: true  # Ne pas faire échouer le workflow si le script échoue
+        
+      - name: ✅ Verify data files exist
+        run: |
+          # Vérifier si les fichiers NASDAQ existent
+          if [ ! -f data/lists.json ]; then
+            echo "Fichier lists.json non trouvé, création d'un fichier vide"
+            echo '{
+              "indices": {
+                "a": [], "b": [], "c": [], "d": [], "e": [], "f": [], "g": [], "h": [], "i": [], "j": [],
+                "k": [], "l": [], "m": [], "n": [], "o": [], "p": [], "q": [], "r": [], "s": [], "t": [],
+                "u": [], "v": [], "w": [], "x": [], "y": [], "z": []
+              },
+              "top_performers": {
+                "daily": {"best": [], "worst": []},
+                "ytd": {"best": [], "worst": []}
+              },
+              "meta": {
+                "source": "Boursorama",
+                "description": "Actions du NASDAQ Composite (États-Unis)",
+                "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
+                "count": 0
+              }
+            }' > data/lists.json
+          fi
+          
+          # Vérifier si les fichiers STOXX existent
+          if ! ls data/stoxx_page_*.json 1>/dev/null 2>&1; then
+            echo "Aucun fichier stoxx_page_*.json trouvé, création d'un fichier de base"
+            echo '{
+              "indices": {
+                "a": [], "b": [], "c": [], "d": [], "e": [], "f": [], "g": [], "h": [], "i": [], "j": [],
+                "k": [], "l": [], "m": [], "n": [], "o": [], "p": [], "q": [], "r": [], "s": [], "t": [],
+                "u": [], "v": [], "w": [], "x": [], "y": [], "z": []
+              },
+              "top_performers": {
+                "daily": {"best": [], "worst": []},
+                "ytd": {"best": [], "worst": []}
+              },
+              "meta": {
+                "source": "Boursorama",
+                "description": "Actions du DJ STOXX 600 (Europe)",
+                "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
+                "count": 0,
+                "pagination": {
+                  "currentPage": 1,
+                  "totalPages": 1
+                }
+              }
+            }' > data/stoxx_page_1.json
+          fi
+        
+      - name: 💾 Commit and push if changed
+        run: |
+          # Configuration de git avec le token explicite
+          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          # Ajouter tous les fichiers pertinents
+          git add data/lists.json data/stoxx_page_*.json data/update_summary.json
+          
+          # Vérifier s'il y a des modifications à commiter
+          if git diff --staged --quiet; then
+            echo "Aucune modification détectée, pas de commit nécessaire"
+          else
+            echo "Modifications détectées, création d'un commit"
+            git commit -m "📊 Mise à jour unifiée des données NASDAQ et STOXX [skip ci]"
+            
+            # Utiliser le token GITHUB_TOKEN pour l'authentification
+            git push origin HEAD:${GITHUB_REF}
+          fi
