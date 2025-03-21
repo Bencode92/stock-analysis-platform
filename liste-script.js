@@ -183,10 +183,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Récupérer les données depuis le fichier JSON
             // Pour éviter le cache du navigateur en cas de forceRefresh
             const cacheBuster = forceRefresh ? `?t=${Date.now()}` : '';
-            const response = await fetch(`data/lists.json${cacheBuster}`);
+            const response = await fetch(`data/liste.json${cacheBuster}`);
             
             if (!response.ok) {
-                // Si le fichier lists.json n'existe pas, essayer avec markets.json
+                // Si le fichier liste.json n'existe pas, essayer avec markets.json
                 const marketResponse = await fetch(`data/markets.json${cacheBuster}`);
                 if (!marketResponse.ok) {
                     throw new Error(`Erreur de chargement: ${marketResponse.status}`);
@@ -631,7 +631,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!percentStr) return 0;
         
         // Enlever le symbole % et autres caractères non numériques, sauf le - et le .
-        const value = percentStr.replace(/[^0-9\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\.\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\-]/g, '');
+        const value = percentStr.replace(/[^0-9\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\.\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\-]/g, '');
         return parseFloat(value) || 0;
     }
     
