@@ -1,4 +1,4 @@
-name: Mise à jour unifiée des données NASDAQ et STOXX
+name: 📊 Mise à jour unifiée NASDAQ-STOXX
 
 on:
   # Déclenchement manuel
@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 jobs:
-  update-unified-lists:  # Nom du job modifié pour éviter la confusion avec update-market-data
+  update-nasdaq-stoxx-data:  # Nom du job complètement différent
     runs-on: ubuntu-latest
     # Définir un timeout pour éviter les longues exécutions
     timeout-minutes: 20
