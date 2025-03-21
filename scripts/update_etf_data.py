@@ -393,7 +393,7 @@ def scrape_top50_etfs():
                 return []
         
         # Analyser les en-têtes du tableau pour identifier correctement les colonnes
-        headers = [header.get_text(strip=True) for header in etf_table.select('thead th')]
+        headers = [header.get_text(strip=True).lower() for header in etf_table.select('thead th')]
         print(f"En-têtes de table détectés: {headers}")
         
         # Trouver les indices des colonnes qui nous intéressent
@@ -401,24 +401,47 @@ def scrape_top50_etfs():
         one_month_index = None
         one_year_index = None
         
+        # Rechercher explicitement les en-têtes corrects
         for i, header in enumerate(headers):
-            header_lower = header.lower()
-            if "ytd" in header_lower or "début" in header_lower:
+            # Pour YTD, chercher spécifiquement "en 2025" ou autres variantes
+            if "ytd" in header or "début" in header or "en 2025" in header or "2025" in header:
                 ytd_index = i
-            elif "1m" in header_lower or "1 mois" in header_lower:
+                print(f"Colonne YTD trouvée à l'index {i}: '{header}'")
+            elif "1m" in header or "1 m" in header or "1 mois" in header:
                 one_month_index = i
-            elif "1a" in header_lower or "1 an" in header_lower:
+                print(f"Colonne 1 mois trouvée à l'index {i}: '{header}'")
+            elif "1a" in header or "1 a" in header or "1 an" in header:
                 one_year_index = i
+                print(f"Colonne 1 an trouvée à l'index {i}: '{header}'")
         
-        print(f"Indices détectés - YTD: {ytd_index}, 1 Mois: {one_month_index}, 1 An: {one_year_index}")
+        # Si le nombre d'en-têtes correspond à ce qu'on voit dans l'image, on peut tenter une approche plus directe
+        # En se basant sur l'image, on sait que les colonnes sont dans cet ordre:
+        # Indice, graphique, 52 sem, en 2025, 1 mois, 3 mois, 1 an, etc.
+        if not ytd_index and len(headers) >= 9:
+            # L'index 3 correspond typiquement à "en 2025" (YTD)
+            ytd_index = 3
+            print(f"Colonne YTD assignée par position à l'index {ytd_index}")
         
-        # Utiliser les indices par défaut si les indices n'ont pas été trouvés
+        if not one_month_index and len(headers) >= 9:
+            # L'index 4 correspond typiquement à "1 mois"
+            one_month_index = 4
+            print(f"Colonne 1 mois assignée par position à l'index {one_month_index}")
+        
+        if not one_year_index and len(headers) >= 9:
+            # L'index 6 correspond typiquement à "1 an"
+            one_year_index = 6
+            print(f"Colonne 1 an assignée par position à l'index {one_year_index}")
+        
+        # Si on n'a toujours pas trouvé les indices, utiliser des valeurs par défaut
         if ytd_index is None:
-            ytd_index = 4  # valeur par défaut
+            ytd_index = 3  # Correction: souvent la 4ème colonne pour "en 2025"
+            print(f"Utilisation de l'index par défaut pour YTD: {ytd_index}")
         if one_month_index is None:
-            one_month_index = 6  # valeur par défaut pour 1 mois (ajusté)
+            one_month_index = 4  # valeur par défaut pour 1 mois
+            print(f"Utilisation de l'index par défaut pour 1 mois: {one_month_index}")
         if one_year_index is None:
-            one_year_index = 8  # valeur par défaut pour 1 an (ajusté)
+            one_year_index = 6  # valeur par défaut pour 1 an
+            print(f"Utilisation de l'index par défaut pour 1 an: {one_year_index}")
         
         top_etfs = []
         rows = etf_table.select('tbody tr')
@@ -439,6 +462,9 @@ def scrape_top50_etfs():
                     ytd = cells[ytd_index].get_text(strip=True) if ytd_index < len(cells) else "0,00%"
                     one_month = cells[one_month_index].get_text(strip=True) if one_month_index < len(cells) else "0,00%"
                     one_year = cells[one_year_index].get_text(strip=True) if one_year_index < len(cells) else "0,00%"
+                    
+                    # Debug pour vérifier les valeurs extraites
+                    print(f"YTD [{ytd_index}]: {ytd}, 1M [{one_month_index}]: {one_month}, 1Y [{one_year_index}]: {one_year}")
                     
                     # Exporter toutes les données pertinentes
                     top_etf = {
@@ -478,32 +504,53 @@ def scrape_top_bond_etfs():
                 return []
         
         # Analyser les en-têtes du tableau pour identifier correctement les colonnes
-        headers = [header.get_text(strip=True) for header in etf_table.select('thead th')]
-        print(f"En-têtes de table détectés: {headers}")
+        headers = [header.get_text(strip=True).lower() for header in etf_table.select('thead th')]
+        print(f"En-têtes de table TOP BOND détectés: {headers}")
         
         # Trouver les indices des colonnes qui nous intéressent
         ytd_index = None
         one_month_index = None
         one_year_index = None
         
+        # Rechercher explicitement les en-têtes corrects
         for i, header in enumerate(headers):
-            header_lower = header.lower()
-            if "ytd" in header_lower or "début" in header_lower:
+            # Pour YTD, chercher spécifiquement "en 2025" ou autres variantes
+            if "ytd" in header or "début" in header or "en 2025" in header or "2025" in header:
                 ytd_index = i
-            elif "1m" in header_lower or "1 mois" in header_lower:
+                print(f"BOND: Colonne YTD trouvée à l'index {i}: '{header}'")
+            elif "1m" in header or "1 m" in header or "1 mois" in header:
                 one_month_index = i
-            elif "1a" in header_lower or "1 an" in header_lower:
+                print(f"BOND: Colonne 1 mois trouvée à l'index {i}: '{header}'")
+            elif "1a" in header or "1 a" in header or "1 an" in header:
                 one_year_index = i
+                print(f"BOND: Colonne 1 an trouvée à l'index {i}: '{header}'")
         
-        print(f"Indices détectés - YTD: {ytd_index}, 1 Mois: {one_month_index}, 1 An: {one_year_index}")
+        # Si le nombre d'en-têtes correspond à ce qu'on voit dans l'image, on peut tenter une approche plus directe
+        if not ytd_index and len(headers) >= 9:
+            # L'index 3 correspond typiquement à "en 2025" (YTD)
+            ytd_index = 3
+            print(f"BOND: Colonne YTD assignée par position à l'index {ytd_index}")
         
-        # Utiliser les indices par défaut si les indices n'ont pas été trouvés
+        if not one_month_index and len(headers) >= 9:
+            # L'index 4 correspond typiquement à "1 mois"
+            one_month_index = 4
+            print(f"BOND: Colonne 1 mois assignée par position à l'index {one_month_index}")
+        
+        if not one_year_index and len(headers) >= 9:
+            # L'index 6 correspond typiquement à "1 an"
+            one_year_index = 6
+            print(f"BOND: Colonne 1 an assignée par position à l'index {one_year_index}")
+        
+        # Si on n'a toujours pas trouvé les indices, utiliser des valeurs par défaut
         if ytd_index is None:
-            ytd_index = 4  # valeur par défaut
+            ytd_index = 3  # Correction: souvent la 4ème colonne pour "en 2025"
+            print(f"BOND: Utilisation de l'index par défaut pour YTD: {ytd_index}")
         if one_month_index is None:
-            one_month_index = 6  # valeur par défaut pour 1 mois (ajusté)
+            one_month_index = 4  # valeur par défaut pour 1 mois
+            print(f"BOND: Utilisation de l'index par défaut pour 1 mois: {one_month_index}")
         if one_year_index is None:
-            one_year_index = 8  # valeur par défaut pour 1 an (ajusté)
+            one_year_index = 6  # valeur par défaut pour 1 an
+            print(f"BOND: Utilisation de l'index par défaut pour 1 an: {one_year_index}")
         
         top_bond_etfs = []
         rows = etf_table.select('tbody tr')
@@ -524,6 +571,9 @@ def scrape_top_bond_etfs():
                     ytd = cells[ytd_index].get_text(strip=True) if ytd_index < len(cells) else "0,00%"
                     one_month = cells[one_month_index].get_text(strip=True) if one_month_index < len(cells) else "0,00%"
                     one_year = cells[one_year_index].get_text(strip=True) if one_year_index < len(cells) else "0,00%"
+                    
+                    # Debug pour vérifier les valeurs extraites
+                    print(f"BOND - YTD [{ytd_index}]: {ytd}, 1M [{one_month_index}]: {one_month}, 1Y [{one_year_index}]: {one_year}")
                     
                     # Exporter toutes les données pertinentes
                     top_bond_etf = {
