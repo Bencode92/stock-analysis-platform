@@ -12,7 +12,8 @@ permissions:
   contents: write
 
 jobs:
-  update-nasdaq-stoxx-data:  # Nom du job complètement différent
+  # Nom de job clarifié pour éviter toute confusion avec update-market-data
+  update-lists-only:  # Nom de job modifié pour indiquer clairement qu'il ne touche que les listes
     runs-on: ubuntu-latest
     # Définir un timeout pour éviter les longues exécutions
     timeout-minutes: 20
