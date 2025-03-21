@@ -3,7 +3,7 @@ name: Update Lists Data
 on:
   # Déclenchement manuel
   workflow_dispatch:
-  # Ajout d'un déclenchement automatique toutes les 30 minutes
+  # Ajout d'un déclenchement automatique toutes les 30 minutes (décalé de 15 minutes par rapport à marches.html)
   schedule:
     - cron: '15,45 * * * *'  # Exécuter à 15e et 45e minute de chaque heure
 
@@ -21,7 +21,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          # S'assurer que l'action checkout récupère l'historat complet
+          # S'assurer que l'action checkout récupère l'historique complet
           fetch-depth: 0
           # S'assurer que le token GitHub est utilisé pour l'authentification
           token: ${{ github.token }}
@@ -41,21 +41,21 @@ jobs:
           # Désactiver les avertissements de certificat pour urllib3
           pip install urllib3
         
-      - name: Copy markets data to lists data
-        run: |
-          if [ -f data/markets.json ]; then
-            cp data/markets.json data/lists.json
-            echo "Fichier markets.json copié vers lists.json"
-          else
-            echo "Fichier markets.json non trouvé, création d'un fichier vide"
-            echo "{}" > data/lists.json
-          fi
+      - name: Execute lists data script
+        run: python scripts/scrape_lists.py
+        continue-on-error: true  # Ne pas faire échouer le workflow si le script échoue
         
       - name: Verify data file exists
         run: |
           if [ ! -f data/lists.json ]; then
-            echo "Fichier de données non trouvé, création d'un fichier vide"
-            echo "{}" > data/lists.json
+            echo "Fichier lists.json non trouvé, utilisation de markets.json comme fallback"
+            if [ -f data/markets.json ]; then
+              cp data/markets.json data/lists.json
+              echo "Fichier markets.json copié vers lists.json"
+            else
+              echo "Fichier markets.json non trouvé, création d'un fichier vide"
+              echo "{}" > data/lists.json
+            fi
           fi
         
       - name: Commit and push if changed
