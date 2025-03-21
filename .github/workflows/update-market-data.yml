@@ -1,4 +1,4 @@
-name: Update Market Data
+name: 📈 Update Markets Data Only
 
 on:
   # Déclenchement manuel
@@ -12,7 +12,8 @@ permissions:
   contents: write
 
 jobs:
-  update-data:
+  # Nom de job clarifié pour éviter toute confusion
+  update-markets-json-only:
     runs-on: ubuntu-latest
     # Définir un timeout plus court pour éviter les longues exécutions
     timeout-minutes: 10
@@ -62,7 +63,7 @@ jobs:
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          # Ajouter le fichier data/markets.json
+          # Ajouter UNIQUEMENT le fichier data/markets.json
           git add data/markets.json
           
           # Vérifier s'il y a des modifications à commiter
@@ -70,7 +71,7 @@ jobs:
             echo "Aucune modification détectée, pas de commit nécessaire"
           else
             echo "Modifications détectées, création d'un commit"
-            git commit -m "Update market data [skip ci]"
+            git commit -m "📈 Update markets.json data only [skip ci]"
             
             # Utiliser le token GITHUB_TOKEN pour l'authentification
             git push origin HEAD:${GITHUB_REF}
