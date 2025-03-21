@@ -311,7 +311,7 @@
              position: relative;
              text-decoration: none;
          }
- 
+
          /* Notification badge for alerts */
          .notification-badge {
              position: absolute;
@@ -392,7 +392,7 @@
              min-height: calc(100vh - var(--header-height));
              transition: background-color 0.3s ease;
          }
- 
+
          /* Glassmorphism cards */
          .glassmorphism {
              backdrop-filter: blur(12px);
@@ -413,7 +413,7 @@
          .glassmorphism:hover {
              box-shadow: var(--accent-glow-strong);
          }
- 
+
          /* Data table styles */
          .data-table {
              width: 100%;
@@ -446,7 +446,7 @@
          .data-table tr:hover td {
              background-color: var(--accent-subtle);
          }
- 
+
          /* Positive, negative, and neutral values */
          .positive {
              color: var(--accent-color);
@@ -462,7 +462,7 @@
              color: var(--neutral-color);
              font-weight: 600;
          }
- 
+
          /* Top performers */
          .top-performers-section {
              margin-bottom: 2rem;
@@ -548,7 +548,7 @@
              text-align: right;
              min-width: 62px;
          }
- 
+
          /* Autres styles */
          .section-title {
              font-size: 1.4rem;
@@ -569,7 +569,7 @@
              border-radius: 2px;
              box-shadow: 0 0 8px var(--accent-color);
          }
- 
+
          /* Cards with consistent headers */
          .card-header {
              padding: 12px 16px;
@@ -591,14 +591,14 @@
          .card-body {
              padding: 16px;
          }
- 
+
          /* Animations */
          @keyframes pulse {
              0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
              70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
              100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
          }
- 
+
          /* Loader */
          .loader {
              display: inline-block;
@@ -609,7 +609,7 @@
              border-top-color: var(--accent-color);
              animation: spin 1s ease-in-out infinite;
          }
- 
+
          @keyframes spin {
              0% { transform: rotate(0deg); }
              100% { transform: rotate(360deg); }
@@ -662,7 +662,7 @@
          .region-tab.active::after {
              width: 100%;
          }
- 
+
          /* Button styling */
          .action-button {
              padding: 6px 14px;
@@ -679,7 +679,91 @@
              background-color: var(--accent-medium);
              transform: translateY(-1px);
          }
- 
+         
+         /* Market Selector */
+         .market-selector {
+             margin-bottom: 24px;
+         }
+         
+         .market-selector-buttons {
+             display: flex;
+             gap: 16px;
+         }
+         
+         .market-btn {
+             padding: 12px 24px;
+             border-radius: 8px;
+             font-weight: 600;
+             transition: all 0.3s ease;
+             flex-grow: 1;
+             text-align: center;
+             border: 2px solid transparent;
+         }
+         
+         .dark .market-btn {
+             background-color: var(--accent-subtle);
+             color: rgba(255, 255, 255, 0.8);
+         }
+         
+         .light .market-btn {
+             background-color: rgba(0, 210, 110, 0.1);
+             color: var(--light-text-color);
+         }
+         
+         .market-btn.active {
+             border-color: var(--accent-color);
+             color: var(--accent-color);
+             box-shadow: var(--accent-glow);
+         }
+         
+         .market-btn:hover {
+             transform: translateY(-2px);
+         }
+         
+         /* Pagination Styling */
+         .pagination-container {
+             display: flex;
+             align-items: center;
+             justify-content: center;
+             margin-top: 24px;
+             margin-bottom: 24px;
+         }
+         
+         .pagination-button {
+             padding: 8px 16px;
+             border-radius: 6px;
+             transition: all 0.3s ease;
+             display: flex;
+             align-items: center;
+         }
+         
+         .dark .pagination-button {
+             background-color: var(--accent-subtle);
+             color: var(--text-color);
+             border: 1px solid var(--accent-medium);
+         }
+         
+         .light .pagination-button {
+             background-color: rgba(0, 210, 110, 0.1);
+             border: 1px solid rgba(0, 210, 110, 0.3);
+             color: var(--light-text-color);
+         }
+         
+         .pagination-button:not(:disabled):hover {
+             transform: translateY(-2px);
+             box-shadow: var(--accent-glow);
+         }
+         
+         .pagination-button:disabled {
+             opacity: 0.5;
+             cursor: not-allowed;
+         }
+         
+         .pagination-info {
+             margin: 0 16px;
+             font-weight: 500;
+         }
+
          /* Responsive */
          @media (max-width: 768px) {
              .main-header {
@@ -734,6 +818,10 @@
                  grid-template-columns: 1fr;
                  gap: 12px;
              }
+             
+             .market-selector-buttons {
+                 flex-direction: column;
+             }
          }
      </style>
  </head>
@@ -745,7 +833,7 @@
              <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
          </button>
      </div>
- 
+
      <!-- Sidebar de navigation verticale -->
      <aside class="sidebar">
          <div class="sidebar-logo">TP</div>
@@ -774,7 +862,7 @@
              </a>
          </nav>
      </aside>
- 
+
      <!-- Header principal -->
      <header class="main-header">
          <div class="header-left">
@@ -802,7 +890,7 @@
              </a>
          </div>
      </header>
- 
+
      <!-- Container principal -->
      <main class="main-container">
          <div class="p-6">
@@ -810,12 +898,38 @@
                  <!-- Header avec titre et dernière mise à jour -->
                  <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
                      <div>
-                         <h1 class="text-3xl font-bold mb-2">Actions NASDAQ Composite (États-Unis)</h1>
+                         <h1 class="text-3xl font-bold mb-2" id="market-title">Actions NASDAQ Composite (États-Unis)</h1>
                          <p class="text-gray-400">
                             <span id="stocks-count" class="font-semibold">0</span> actions listées | 
                             Dernière mise à jour: <span id="last-update-time" class="font-medium">Chargement...</span>
                          </p>
                      </div>
+                 </div>
+                 
+                 <!-- Sélecteur de marché -->
+                 <div class="market-selector mb-8">
+                     <h2 class="section-title mb-4">Sélectionner un marché</h2>
+                     <div class="market-selector-buttons">
+                         <button id="market-nasdaq" class="market-btn active" data-market="nasdaq">
+                             <i class="fas fa-flag-usa mr-2"></i> NASDAQ Composite (US)
+                         </button>
+                         <button id="market-stoxx" class="market-btn" data-market="stoxx">
+                             <i class="fas fa-globe-europe mr-2"></i> DJ STOXX 600 (Europe)
+                         </button>
+                     </div>
+                 </div>
+                 
+                 <!-- Pagination (pour STOXX 600) -->
+                 <div id="pagination-container" class="pagination-container hidden">
+                     <button id="prev-page" class="pagination-button" disabled>
+                         <i class="fas fa-chevron-left mr-2"></i> Page précédente
+                     </button>
+                     <div class="pagination-info">
+                         Page <span id="current-page">1</span> / <span id="total-pages">1</span>
+                     </div>
+                     <button id="next-page" class="pagination-button">
+                         Page suivante <i class="fas fa-chevron-right ml-2"></i>
+                     </button>
                  </div>
                  
                  <!-- Top Performers -->
@@ -1020,13 +1134,13 @@
                  
                  <!-- Source et avertissement -->
                  <div class="text-center text-sm text-gray-400 mb-6 p-4 glassmorphism rounded-lg bg-opacity-50">
-                     <p>Sources: <a href="https://www.boursorama.com/bourse/actions/cotations/international/?international_quotation_az_filter%5Bcountry%5D=1&international_quotation_az_filter%5Bmarket%5D=%24COMPX" target="_blank" class="text-green-400 hover:underline">Boursorama</a></p>
+                     <p id="source-link">Sources: <a href="https://www.boursorama.com/bourse/actions/cotations/international/?international_quotation_az_filter%5Bcountry%5D=1&international_quotation_az_filter%5Bmarket%5D=%24COMPX" target="_blank" class="text-green-400 hover:underline">Boursorama</a></p>
                      <p class="mt-2">Les données sont actualisées régulièrement mais peuvent accuser un retard par rapport aux marchés en temps réel.</p>
                  </div>
              </div>
          </div>
      </main>
- 
+
      <script src="liste-script.js"></script>
  </body>
  </html>
