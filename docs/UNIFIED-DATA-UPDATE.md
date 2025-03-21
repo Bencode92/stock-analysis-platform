@@ -16,18 +16,11 @@ L'objectif de cette modification est de simplifier et d'optimiser le processus d
    - Remplace les deux workflows précédents
    - Exécution planifiée toutes les 30 minutes
    - Gestion améliorée des erreurs et fallbacks
+   - **Nom du job distinct** : `update-nasdaq-stoxx-data` (pour éviter les conflits avec `update-market-data`)
 
 3. **Désactivation des anciens workflows** :
    - `.github/workflows/update-lists-data.yml` → `.github/workflows/update-lists-data.yml.disabled`
    - `.github/workflows/update-stoxx-data.yml` → `.github/workflows/update-stoxx-data.yml.disabled`
-
-## Important : Distinction avec update-market-data
-
-Le nouveau workflow **update-unified-lists** est **distinct** du workflow existant **update-market-data** :
-- **update-unified-lists** met à jour les données pour `liste.html` (NASDAQ) et les pages STOXX
-- **update-market-data** met à jour les données pour `marches.html`
-
-Nous avons spécifiquement nommé le job dans notre workflow "update-unified-lists" (et non "update-market-data") pour éviter toute confusion. Les deux workflows peuvent fonctionner indépendamment sans conflit.
 
 ## Avantages
 
@@ -36,6 +29,7 @@ Nous avons spécifiquement nommé le job dans notre workflow "update-unified-lis
 - **Réduction des exécutions** : Une seule exécution au lieu de deux
 - **Meilleure gestion des erreurs** : Système de fallback unifié et journal d'exécution consolidé
 - **Résumé de mise à jour** : Génération d'un fichier `update_summary.json` avec un récapitulatif des résultats
+- **Coexistence avec d'autres workflows** : Pas de conflit avec le workflow `update-market-data` existant
 
 ## Format des fichiers de données
 
@@ -113,11 +107,19 @@ Cette modification ne nécessite aucun changement côté front-end, car :
 - La structure des données JSON reste inchangée
 - Les formats sont entièrement compatibles avec les fichiers JavaScript existants
 
+## Différence avec update-market-data
+
+Notre workflow unifié (`update-unified-lists.yml`) fonctionne en parallèle avec le workflow existant `update-market-data.yml` :
+- **update-nasdaq-stoxx-data** : Met à jour spécifiquement les données NASDAQ et STOXX pour la page liste.html
+- **update-market-data** : Conserve ses fonctionnalités d'origine pour d'autres données de marché 
+
+En utilisant des noms de jobs distincts, nous évitons toute confusion entre les deux.
+
 ## Exécution manuelle
 
 Pour lancer manuellement le processus de mise à jour :
 1. Allez dans l'onglet Actions de votre dépôt GitHub
-2. Sélectionnez le workflow "Mise à jour unifiée des données NASDAQ et STOXX"
+2. Sélectionnez le workflow "📊 Mise à jour unifiée NASDAQ-STOXX"
 3. Cliquez sur "Run workflow" et confirmez
 
 ## Dépannage
