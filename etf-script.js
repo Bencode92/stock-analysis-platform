@@ -687,11 +687,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 paginatedTop50.forEach((etf, index) => {
                     const row = document.createElement('tr');
                     const globalIndex = top50Start + index + 1; // Pour numéroter les ETF
+                    
+                    // Utiliser les données correctement mappées
                     row.innerHTML = `
                         <td class="font-medium">${globalIndex}. ${etf.name || etf.focus || '-'}</td>
-                        <td class="${etf.ytd.includes('-') ? 'negative' : 'positive'}">${etf.ytd || '-'}</td>
-                        <td class="${etf.one_month.includes('-') ? 'negative' : 'positive'}">${etf.one_month || '-'}</td>
-                        <td class="${etf.one_year.includes('-') ? 'negative' : 'positive'}">${etf.one_year || '-'}</td>
+                        <td class="${etf.ytd && etf.ytd.includes('-') ? 'negative' : 'positive'}">${etf.ytd || '-'}</td>
+                        <td class="${etf.one_month && etf.one_month.includes('-') ? 'negative' : 'positive'}">${etf.one_month || '-'}</td>
+                        <td class="${etf.one_year && etf.one_year.includes('-') ? 'negative' : 'positive'}">${etf.one_year || '-'}</td>
                     `;
                     topEtfBody.appendChild(row);
                 });
@@ -718,11 +720,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 paginatedBonds.forEach((etf, index) => {
                     const row = document.createElement('tr');
                     const globalIndex = bondsStart + index + 1; // Pour numéroter les ETF
+                    
+                    // Utiliser les données correctement mappées
                     row.innerHTML = `
                         <td class="font-medium">${globalIndex}. ${etf.name || etf.focus || '-'}</td>
-                        <td class="${etf.ytd.includes('-') ? 'negative' : 'positive'}">${etf.ytd || '-'}</td>
-                        <td class="${etf.one_month.includes('-') ? 'negative' : 'positive'}">${etf.one_month || '-'}</td>
-                        <td class="${etf.one_year.includes('-') ? 'negative' : 'positive'}">${etf.one_year || '-'}</td>
+                        <td class="${etf.ytd && etf.ytd.includes('-') ? 'negative' : 'positive'}">${etf.ytd || '-'}</td>
+                        <td class="${etf.one_month && etf.one_month.includes('-') ? 'negative' : 'positive'}">${etf.one_month || '-'}</td>
+                        <td class="${etf.one_year && etf.one_year.includes('-') ? 'negative' : 'positive'}">${etf.one_year || '-'}</td>
                     `;
                     topBondBody.appendChild(row);
                 });
