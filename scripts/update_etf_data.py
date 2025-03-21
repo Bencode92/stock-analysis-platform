@@ -27,6 +27,7 @@ HEADERS = {
 
 # URLs
 BOURSORAMA_ETF_URL = "https://www.boursorama.com/bourse/trackers/"
+BOURSORAMA_ETF_SHORT_TERM_URL = "https://www.boursorama.com/bourse/trackers/recherche/autres/?etfSearch%5Bcurrent%5D=shortTerm&etfSearch%5BisEtf%5D=1"
 JUSTETF_TOP50_URL = "https://www.justetf.com/fr/market-overview/the-best-etfs.html"
 JUSTETF_TOP_BONDS_URL = "https://www.justetf.com/fr/market-overview/the-best-bond-etfs.html"
 
@@ -67,6 +68,7 @@ def init_data_structure():
         },
         "top50_etfs": [],
         "top_bond_etfs": [],
+        "top_short_term_etfs": [],
         "meta": {
             "count": 0,
             "timestamp": get_current_time(),
@@ -146,6 +148,69 @@ def scrape_boursorama_etfs():
         return etfs
     except Exception as e:
         print(f"Erreur lors de la récupération des ETF Boursorama: {e}")
+        return []
+
+def scrape_top_short_term_etfs():
+    """Extrait les données des ETF avec performances court terme depuis Boursorama"""
+    print("Récupération des ETF court terme depuis Boursorama...")
+    
+    try:
+        html = fetch_page(BOURSORAMA_ETF_SHORT_TERM_URL)
+        soup = BeautifulSoup(html, 'lxml')
+        
+        etfs = []
+        # Trouver le tableau de données
+        table = soup.select_one('table')
+        
+        if not table:
+            print("Aucun tableau d'ETF court terme trouvé!")
+            return etfs
+            
+        rows = table.select('tbody tr')
+        print(f"Trouvé {len(rows)} ETF court terme sur Boursorama")
+        
+        for row in rows:
+            try:
+                cells = row.select('td')
+                if len(cells) >= 6:
+                    # Trouver le libellé de l'ETF (première colonne)
+                    etf_name_elem = row.select_one('a.c-link')
+                    etf_name = etf_name_elem.get_text(strip=True) if etf_name_elem else "ETF Inconnu"
+                    
+                    # Trouver l'icône de tendance (flèche haut/bas)
+                    trend_icon = row.select_one('i.c-icon')
+                    trend = "up" if trend_icon and "up" in trend_icon.get('class', []) else "down"
+                    
+                    # Extraire les données des colonnes - attention à l'ordre correct
+                    # Colonnes: Libellé, ETF 1M, Catégorie 1M, Class 1M, ETF 6M, Catégorie 6M, Class 6M
+                    one_month_etf = cells[1].get_text(strip=True) if len(cells) > 1 else "0,00%"
+                    one_month_category = cells[2].get_text(strip=True) if len(cells) > 2 else "0,00%"
+                    one_month_rank = cells[3].get_text(strip=True) if len(cells) > 3 else ""
+                    
+                    six_month_etf = cells[4].get_text(strip=True) if len(cells) > 4 else "0,00%"
+                    six_month_category = cells[5].get_text(strip=True) if len(cells) > 5 else "0,00%"
+                    six_month_rank = cells[6].get_text(strip=True) if len(cells) > 6 else ""
+                    
+                    # Créer l'objet ETF
+                    etf = {
+                        "name": etf_name,
+                        "trend": trend,
+                        "one_month_etf": one_month_etf,
+                        "one_month_category": one_month_category,
+                        "one_month_rank": one_month_rank,
+                        "six_month_etf": six_month_etf,
+                        "six_month_category": six_month_category,
+                        "six_month_rank": six_month_rank
+                    }
+                    
+                    etfs.append(etf)
+                    print(f"Extrait ETF court terme: {etf_name}, 1M: {one_month_etf}, 6M: {six_month_etf}")
+            except Exception as e:
+                print(f"Erreur lors de l'extraction d'un ETF court terme: {e}")
+        
+        return etfs
+    except Exception as e:
+        print(f"Erreur lors de la récupération des ETF court terme: {e}")
         return []
 
 def scrape_top50_etfs():
@@ -357,9 +422,11 @@ def main():
         # Récupérer les données des TOP ETF
         top50_etfs = scrape_top50_etfs()
         top_bond_etfs = scrape_top_bond_etfs()
+        top_short_term_etfs = scrape_top_short_term_etfs()
         
         print(f"Total TOP 50 ETF récupérés: {len(top50_etfs)}")
         print(f"Total meilleurs ETF Obligations récupérés: {len(top_bond_etfs)}")
+        print(f"Total ETF court terme récupérés: {len(top_short_term_etfs)}")
         
         # Récupérer les données d'ETF de Boursorama
         etfs = scrape_boursorama_etfs()
@@ -371,6 +438,7 @@ def main():
         data["top_performers"] = get_top_performers(etfs)
         data["top50_etfs"] = top50_etfs
         data["top_bond_etfs"] = top_bond_etfs
+        data["top_short_term_etfs"] = top_short_term_etfs
         data["meta"]["count"] = len(etfs)
         data["meta"]["timestamp"] = get_current_time()
         
