@@ -21,10 +21,27 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // État pour le marché actuel et la pagination
     let currentMarket = 'world'; // 'world', 'us', ou 'eu'
-    let currentPage = 1;
-    let totalPages = 1;
     let currentCategory = 'all'; // filtre de catégorie actif
     let currentEtfCategory = 'top50'; // 'top50', 'bonds', 'shortterm'
+    
+    // Pagination pour chaque type d'ETF
+    let paginationState = {
+        top50: {
+            currentPage: 1,
+            totalPages: 1,
+            itemsPerPage: 10
+        },
+        bonds: {
+            currentPage: 1,
+            totalPages: 1,
+            itemsPerPage: 10
+        },
+        shortterm: {
+            currentPage: 1,
+            totalPages: 1,
+            itemsPerPage: 10
+        }
+    };
     
     // Initialiser les onglets alphabet
     initAlphabetTabs();
@@ -34,9 +51,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialiser les sélecteurs de catégorie ETF
     initEtfCategorySelector();
-    
-    // Initialiser la pagination
-    initPagination();
     
     // Initialiser les filtres de catégorie
     initCategoryFilters();
@@ -105,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (currentMarket !== 'world') {
                 // Mettre à jour l'état
                 currentMarket = 'world';
-                currentPage = 1;
+                resetAllPagination();
                 
                 // Mettre à jour l'interface
                 updateMarketUI();
@@ -119,7 +133,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (currentMarket !== 'us') {
                 // Mettre à jour l'état
                 currentMarket = 'us';
-                currentPage = 1;
+                resetAllPagination();
                 
                 // Mettre à jour l'interface
                 updateMarketUI();
@@ -133,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (currentMarket !== 'eu') {
                 // Mettre à jour l'état
                 currentMarket = 'eu';
-                currentPage = 1;
+                resetAllPagination();
                 
                 // Mettre à jour l'interface
                 updateMarketUI();
@@ -141,6 +155,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Charger les données
                 loadEtfsData(true);
             }
+        });
+    }
+    
+    /**
+     * Réinitialise toutes les paginations
+     */
+    function resetAllPagination() {
+        Object.keys(paginationState).forEach(key => {
+            paginationState[key].currentPage = 1;
         });
     }
     
@@ -217,6 +240,32 @@ document.addEventListener('DOMContentLoaded', function() {
             topBondSection.style.display = currentEtfCategory === 'bonds' ? 'block' : 'none';
             topShortTermSection.style.display = currentEtfCategory === 'shortterm' ? 'block' : 'none';
         }
+        
+        // Show/hide pagination for current category
+        updatePaginationVisibility();
+    }
+    
+    /**
+     * Update pagination visibility based on current category
+     */
+    function updatePaginationVisibility() {
+        // Hide all pagination containers first
+        document.querySelectorAll('.pagination-container').forEach(container => {
+            container.style.display = 'none';
+        });
+        
+        // Show the pagination for the current category
+        const paginationId = `pagination-${currentEtfCategory}`;
+        const pagination = document.getElementById(paginationId);
+        if (pagination) {
+            const state = paginationState[currentEtfCategory];
+            if (state.totalPages > 1) {
+                pagination.style.display = 'flex';
+                updatePaginationUI(currentEtfCategory);
+            } else {
+                pagination.style.display = 'none';
+            }
+        }
     }
     
     /**
@@ -262,27 +311,89 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * Initialise les boutons de pagination
+     * Initialise les boutons de pagination pour une catégorie spécifique
+     * @param {string} category - La catégorie (top50, bonds, shortterm)
      */
-    function initPagination() {
-        const prevButton = document.getElementById('prev-page');
-        const nextButton = document.getElementById('next-page');
+    function setupPagination(category) {
+        // Récupérer les éléments de pagination
+        const prevBtn = document.getElementById(`${category}-prev-page`);
+        const nextBtn = document.getElementById(`${category}-next-page`);
+        const currentPageElem = document.getElementById(`${category}-current-page`);
+        const totalPagesElem = document.getElementById(`${category}-total-pages`);
         
-        prevButton?.addEventListener('click', function() {
-            if (currentPage > 1) {
-                currentPage--;
-                updatePaginationUI();
-                loadEtfsData(true);
+        if (!prevBtn || !nextBtn) return;
+        
+        // Configuration des boutons
+        prevBtn.addEventListener('click', function() {
+            if (paginationState[category].currentPage > 1) {
+                paginationState[category].currentPage--;
+                updatePaginationUI(category);
+                
+                // Recharger les données du tableau
+                if (category === 'top50') {
+                    renderTopEtfTables();
+                } else if (category === 'bonds') {
+                    renderTopEtfTables();
+                } else if (category === 'shortterm') {
+                    renderTopShortTermTable();
+                }
             }
         });
         
-        nextButton?.addEventListener('click', function() {
-            if (currentPage < totalPages) {
-                currentPage++;
-                updatePaginationUI();
-                loadEtfsData(true);
+        nextBtn.addEventListener('click', function() {
+            if (paginationState[category].currentPage < paginationState[category].totalPages) {
+                paginationState[category].currentPage++;
+                updatePaginationUI(category);
+                
+                // Recharger les données du tableau
+                if (category === 'top50') {
+                    renderTopEtfTables();
+                } else if (category === 'bonds') {
+                    renderTopEtfTables();
+                } else if (category === 'shortterm') {
+                    renderTopShortTermTable();
+                }
             }
         });
+        
+        // Mettre à jour l'affichage
+        updatePaginationUI(category);
+    }
+    
+    /**
+     * Met à jour l'interface de pagination pour une catégorie spécifique
+     * @param {string} category - La catégorie (top50, bonds, shortterm)
+     */
+    function updatePaginationUI(category) {
+        const prevBtn = document.getElementById(`${category}-prev-page`);
+        const nextBtn = document.getElementById(`${category}-next-page`);
+        const currentPageElem = document.getElementById(`${category}-current-page`);
+        const totalPagesElem = document.getElementById(`${category}-total-pages`);
+        
+        if (!prevBtn || !nextBtn || !currentPageElem || !totalPagesElem) return;
+        
+        const state = paginationState[category];
+        
+        // Mise à jour des numéros de page
+        currentPageElem.textContent = state.currentPage;
+        totalPagesElem.textContent = state.totalPages;
+        
+        // Activation/désactivation des boutons
+        prevBtn.disabled = state.currentPage <= 1;
+        nextBtn.disabled = state.currentPage >= state.totalPages;
+        
+        // Style visuel des boutons
+        if (state.currentPage <= 1) {
+            prevBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            prevBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+        
+        if (state.currentPage >= state.totalPages) {
+            nextBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            nextBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
     }
     
     /**
@@ -323,43 +434,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             sourceLink.innerHTML = `Sources: <a href="https://www.boursorama.com/bourse/trackers/" target="_blank" class="text-green-400 hover:underline">Boursorama</a>, <a href="${justEtfLink}" target="_blank" class="text-green-400 hover:underline">JustETF</a>`;
-        }
-        
-        // Afficher/masquer la pagination si nécessaire
-        const paginationContainer = document.getElementById('pagination-container');
-        if (paginationContainer) {
-            if (totalPages > 1) {
-                paginationContainer.classList.remove('hidden');
-                updatePaginationUI();
-            } else {
-                paginationContainer.classList.add('hidden');
-            }
-        }
-    }
-    
-    /**
-     * Met à jour l'interface de pagination
-     */
-    function updatePaginationUI() {
-        const currentPageElement = document.getElementById('current-page');
-        const totalPagesElement = document.getElementById('total-pages');
-        const prevButton = document.getElementById('prev-page');
-        const nextButton = document.getElementById('next-page');
-        
-        if (currentPageElement) {
-            currentPageElement.textContent = currentPage.toString();
-        }
-        
-        if (totalPagesElement) {
-            totalPagesElement.textContent = totalPages.toString();
-        }
-        
-        if (prevButton) {
-            prevButton.disabled = currentPage <= 1;
-        }
-        
-        if (nextButton) {
-            nextButton.disabled = currentPage >= totalPages;
         }
     }
     
@@ -415,6 +489,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 showNotification('Les données affichées datent de plus d\'une heure', 'warning');
             }
             
+            // Calculer le nombre total de pages pour chaque catégorie
+            calculateTotalPages();
+            
+            // Mettre en place les paginations
+            setupPagination('top50');
+            setupPagination('bonds');
+            setupPagination('shortterm');
+            
+            // Mettre à jour la visibilité des paginations
+            updatePaginationVisibility();
+            
             // Afficher les données
             renderEtfsData();
             renderTopEtfTables();
@@ -428,6 +513,29 @@ document.addEventListener('DOMContentLoaded', function() {
         } finally {
             // Réinitialiser l'état
             isLoading = false;
+        }
+    }
+    
+    /**
+     * Calcule le nombre total de pages pour chaque catégorie
+     */
+    function calculateTotalPages() {
+        // TOP 50 ETF
+        if (etfsData.top50_etfs) {
+            const top50Count = etfsData.top50_etfs.length;
+            paginationState.top50.totalPages = Math.ceil(top50Count / paginationState.top50.itemsPerPage);
+        }
+        
+        // TOP Bond ETF
+        if (etfsData.top_bond_etfs) {
+            const bondCount = etfsData.top_bond_etfs.length;
+            paginationState.bonds.totalPages = Math.ceil(bondCount / paginationState.bonds.itemsPerPage);
+        }
+        
+        // TOP Short Term ETF
+        if (etfsData.top_short_term_etfs) {
+            const shortTermCount = etfsData.top_short_term_etfs.length;
+            paginationState.shortterm.totalPages = Math.ceil(shortTermCount / paginationState.shortterm.itemsPerPage);
         }
     }
     
@@ -535,7 +643,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
-     * Affiche les données des TOP ETF et TOP ETF Obligations
+     * Affiche les données des TOP ETF et TOP ETF Obligations avec pagination
      */
     function renderTopEtfTables() {
         try {
@@ -558,40 +666,76 @@ document.addEventListener('DOMContentLoaded', function() {
             topEtfBody.innerHTML = '';
             topBondBody.innerHTML = '';
             
-            // Afficher tous les TOP 50 ETF (sans limite)
-            const topEtfs = etfsData.top50_etfs;
-            topEtfs.forEach(etf => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="font-medium">${etf.name || etf.focus || '-'}</td>
-                    <td class="${etf.ytd.includes('-') ? 'negative' : 'positive'}">${etf.ytd || '-'}</td>
-                    <td class="${etf.one_month.includes('-') ? 'negative' : 'positive'}">${etf.one_month || '-'}</td>
-                    <td class="${etf.one_year.includes('-') ? 'negative' : 'positive'}">${etf.one_year || '-'}</td>
-                `;
-                topEtfBody.appendChild(row);
-            });
+            // Calculer les indices de début et de fin pour TOP 50 ETF
+            const top50State = paginationState.top50;
+            const top50Start = (top50State.currentPage - 1) * top50State.itemsPerPage;
+            const top50End = Math.min(top50Start + top50State.itemsPerPage, etfsData.top50_etfs.length);
             
-            // Afficher tous les TOP ETF Obligations (sans limite)
-            const topBondEtfs = etfsData.top_bond_etfs;
-            topBondEtfs.forEach(etf => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="font-medium">${etf.name || etf.focus || '-'}</td>
-                    <td class="${etf.ytd.includes('-') ? 'negative' : 'positive'}">${etf.ytd || '-'}</td>
-                    <td class="${etf.one_month.includes('-') ? 'negative' : 'positive'}">${etf.one_month || '-'}</td>
-                    <td class="${etf.one_year.includes('-') ? 'negative' : 'positive'}">${etf.one_year || '-'}</td>
-                `;
-                topBondBody.appendChild(row);
-            });
+            // Afficher les TOP 50 ETF pour la page actuelle
+            const paginatedTop50 = etfsData.top50_etfs.slice(top50Start, top50End);
             
-            console.log(`Rendu de ${topEtfs.length} TOP ETF et ${topBondEtfs.length} TOP ETF Obligations`);
+            if (paginatedTop50.length === 0) {
+                topEtfBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-gray-400">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Aucun ETF disponible pour cette page
+                        </td>
+                    </tr>
+                `;
+            } else {
+                paginatedTop50.forEach((etf, index) => {
+                    const row = document.createElement('tr');
+                    const globalIndex = top50Start + index + 1; // Pour numéroter les ETF
+                    row.innerHTML = `
+                        <td class="font-medium">${globalIndex}. ${etf.name || etf.focus || '-'}</td>
+                        <td class="${etf.ytd.includes('-') ? 'negative' : 'positive'}">${etf.ytd || '-'}</td>
+                        <td class="${etf.one_month.includes('-') ? 'negative' : 'positive'}">${etf.one_month || '-'}</td>
+                        <td class="${etf.one_year.includes('-') ? 'negative' : 'positive'}">${etf.one_year || '-'}</td>
+                    `;
+                    topEtfBody.appendChild(row);
+                });
+            }
+            
+            // Calculer les indices de début et de fin pour TOP Bond ETF
+            const bondsState = paginationState.bonds;
+            const bondsStart = (bondsState.currentPage - 1) * bondsState.itemsPerPage;
+            const bondsEnd = Math.min(bondsStart + bondsState.itemsPerPage, etfsData.top_bond_etfs.length);
+            
+            // Afficher les TOP Bond ETF pour la page actuelle
+            const paginatedBonds = etfsData.top_bond_etfs.slice(bondsStart, bondsEnd);
+            
+            if (paginatedBonds.length === 0) {
+                topBondBody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center py-4 text-gray-400">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Aucun ETF disponible pour cette page
+                        </td>
+                    </tr>
+                `;
+            } else {
+                paginatedBonds.forEach((etf, index) => {
+                    const row = document.createElement('tr');
+                    const globalIndex = bondsStart + index + 1; // Pour numéroter les ETF
+                    row.innerHTML = `
+                        <td class="font-medium">${globalIndex}. ${etf.name || etf.focus || '-'}</td>
+                        <td class="${etf.ytd.includes('-') ? 'negative' : 'positive'}">${etf.ytd || '-'}</td>
+                        <td class="${etf.one_month.includes('-') ? 'negative' : 'positive'}">${etf.one_month || '-'}</td>
+                        <td class="${etf.one_year.includes('-') ? 'negative' : 'positive'}">${etf.one_year || '-'}</td>
+                    `;
+                    topBondBody.appendChild(row);
+                });
+            }
+            
+            console.log(`Rendu de ${paginatedTop50.length} TOP ETF (page ${top50State.currentPage}/${top50State.totalPages}) et ${paginatedBonds.length} TOP ETF Obligations (page ${bondsState.currentPage}/${bondsState.totalPages})`);
         } catch (error) {
             console.error('❌ Erreur lors de l\'affichage des TOP ETF:', error);
         }
     }
     
     /**
-     * Affiche les données des ETF court terme
+     * Affiche les données des ETF court terme avec pagination
      */
     function renderTopShortTermTable() {
         try {
@@ -625,9 +769,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            // Afficher tous les ETF court terme
-            etfsData.top_short_term_etfs.forEach(etf => {
+            // Calculer les indices de début et de fin pour la pagination
+            const state = paginationState.shortterm;
+            const start = (state.currentPage - 1) * state.itemsPerPage;
+            const end = Math.min(start + state.itemsPerPage, etfsData.top_short_term_etfs.length);
+            
+            // Afficher les ETF court terme pour la page actuelle
+            const paginatedShortTerm = etfsData.top_short_term_etfs.slice(start, end);
+            
+            if (paginatedShortTerm.length === 0) {
+                topShortTermBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-gray-400">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Aucun ETF disponible pour cette page
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Afficher les ETF court terme
+            paginatedShortTerm.forEach((etf, index) => {
                 const row = document.createElement('tr');
+                const globalIndex = start + index + 1; // Pour numéroter les ETF
                 
                 // Détermine les classes CSS pour les valeurs numériques
                 const oneMonthClass = etf.oneMonth && parseFloat(etf.oneMonth) < 0 ? 'negative' : 'positive';
@@ -639,7 +804,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Structure HTML adapté au tableau des ETF court terme
                 row.innerHTML = `
-                    <td class="font-medium">${etf.name || '-'}</td>
+                    <td class="font-medium">${globalIndex}. ${etf.name || '-'}</td>
                     <td class="${oneMonthClass}">${oneMonthDisplay}</td>
                     <td>${etf.category || '-'}</td>
                     <td>1</td>
@@ -651,7 +816,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 topShortTermBody.appendChild(row);
             });
             
-            console.log(`Rendu de ${etfsData.top_short_term_etfs.length} TOP ETF court terme`);
+            console.log(`Rendu de ${paginatedShortTerm.length} TOP ETF court terme (page ${state.currentPage}/${state.totalPages})`);
         } catch (error) {
             console.error('❌ Erreur lors de l\'affichage des TOP ETF court terme:', error);
             
