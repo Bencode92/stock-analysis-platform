@@ -1022,18 +1022,18 @@
                     </div>
                 </div>
                 
-                <!-- Sélecteur de marché -->
+                <!-- Sélecteur de catégorie ETF -->
                 <div class="market-selector mb-8">
-                    <h2 class="section-title mb-4">Sélectionner un marché</h2>
+                    <h2 class="section-title mb-4">Sélectionner une catégorie</h2>
                     <div class="market-selector-buttons">
-                        <button id="market-world" class="market-btn active" data-market="world">
-                            <i class="fas fa-globe mr-2"></i> ETF Mondiaux
+                        <button id="category-top50" class="market-btn active" data-category="top50">
+                            <i class="fas fa-trophy mr-2"></i> TOP 50 ETF
                         </button>
-                        <button id="market-us" class="market-btn" data-market="us">
-                            <i class="fas fa-flag-usa mr-2"></i> ETF Américains
+                        <button id="category-bonds" class="market-btn" data-category="bonds">
+                            <i class="fas fa-file-invoice-dollar mr-2"></i> TOP ETF Obligations
                         </button>
-                        <button id="market-eu" class="market-btn" data-market="eu">
-                            <i class="fas fa-euro-sign mr-2"></i> ETF Européens
+                        <button id="category-shortterm" class="market-btn" data-category="shortterm">
+                            <i class="fas fa-bolt mr-2"></i> TOP ETF Court Terme
                         </button>
                     </div>
                 </div>
@@ -1522,6 +1522,49 @@
                            }
                        }
                    });
+               });
+           });
+           
+           // Initialisation des boutons de sélection de catégorie ETF 
+           const categoryButtons = document.querySelectorAll('.market-btn');
+           categoryButtons.forEach(button => {
+               button.addEventListener('click', function() {
+                   // Mettre à jour l'état actif des boutons
+                   categoryButtons.forEach(btn => btn.classList.remove('active'));
+                   this.classList.add('active');
+                   
+                   const category = this.getAttribute('data-category');
+                   
+                   // Mettre à jour le titre en fonction de la catégorie sélectionnée
+                   const titleElement = document.getElementById('market-title');
+                   if (titleElement) {
+                       if (category === 'top50') {
+                           titleElement.textContent = 'TOP 50 ETF';
+                       } else if (category === 'bonds') {
+                           titleElement.textContent = 'TOP ETF Obligations';
+                       } else if (category === 'shortterm') {
+                           titleElement.textContent = 'TOP ETF Court Terme';
+                       }
+                   }
+                   
+                   // Contrôler la visibilité des sections correspondantes
+                   const topEtfSection = document.querySelector('.top-etf-section');
+                   const topBondSection = document.querySelector('.top-bond-section');
+                   const topShortTermSection = document.querySelector('.top-short-term-section');
+                   
+                   if (category === 'top50') {
+                       topEtfSection.style.display = 'block';
+                       topBondSection.style.display = 'none';
+                       topShortTermSection.style.display = 'none';
+                   } else if (category === 'bonds') {
+                       topEtfSection.style.display = 'none';
+                       topBondSection.style.display = 'block';
+                       topShortTermSection.style.display = 'none';
+                   } else if (category === 'shortterm') {
+                       topEtfSection.style.display = 'none';
+                       topBondSection.style.display = 'none';
+                       topShortTermSection.style.display = 'block';
+                   }
                });
            });
        });
