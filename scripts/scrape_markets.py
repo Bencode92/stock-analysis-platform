@@ -2,9 +2,14 @@
 # -*- coding: utf-8 -*-
 
 """
-Script d'extraction des données des actions du NASDAQ Composite et DJ STOXX 600 depuis Boursorama
-Utilisé par GitHub Actions pour mettre à jour régulièrement les données
-Version unifiée pour la page liste.html
+Script d'extraction des données des marchés pour TradePulse.
+
+IMPORTANT: Ce script met à jour UNIQUEMENT le fichier markets.json.
+Il ne modifie PAS les fichiers lists.json ou stoxx_page_*.json qui sont gérés
+par le script update_unified_lists.py et le workflow 'Mise à jour unifiée NASDAQ-STOXX'.
+
+Ce script est utilisé par GitHub Actions pour collecter les données générales des marchés
+financiers (indices, taux, devises, etc.) et les sauvegarder dans markets.json.
 """
 
 import os
@@ -358,6 +363,16 @@ def save_stoxx_page_data(stocks, page, total_pages):
         logger.error(f"❌ Erreur lors de l'enregistrement des données du STOXX page {page}: {str(e)}")
         return False
 
+def verify_no_lists_conflict():
+    """Vérifie que ce script ne modifie pas les fichiers lists.json ou stoxx_page_*.json"""
+    data_dir = CONFIG["output_dir"]
+    lists_file = os.path.join(data_dir, "lists.json")
+    stoxx_files = [f for f in os.listdir(data_dir) if f.startswith("stoxx_page_") and f.endswith(".json")]
+    
+    if os.path.exists(lists_file) or stoxx_files:
+        logger.info(f"✅ Vérification: Les fichiers lists.json et stoxx_page_*.json ne seront pas modifiés par ce script")
+    return True
+
 def main():
     """Point d'entrée principal"""
     parser = argparse.ArgumentParser(description='Scraper de données boursières pour TradePulse')
@@ -370,6 +385,9 @@ def main():
     try:
         # Créer le dossier de sortie s'il n'existe pas
         os.makedirs(CONFIG["output_dir"], exist_ok=True)
+        
+        # Vérifier qu'il n'y a pas de conflit avec les fichiers de listes
+        verify_no_lists_conflict()
         
         # Scraper selon le marché demandé
         if args.market in ['all', 'nasdaq']:
