@@ -1,5 +1,5 @@
 /**
- * liste-script.js - Script pour afficher les actions du NASDAQ Composite
+ * liste-script.js - Script pour afficher les actions du NASDAQ Composite et DJ STOXX 600
  * Données mises à jour régulièrement par GitHub Actions
  */
 
@@ -19,8 +19,19 @@ document.addEventListener('DOMContentLoaded', function() {
     let isLoading = false;
     let lastUpdate = null;
     
-    // Initialiser les onglets de région
+    // État pour le marché actuel et la pagination
+    let currentMarket = 'nasdaq'; // 'nasdaq' ou 'stoxx'
+    let currentPage = 1;
+    let totalPages = 1;
+    
+    // Initialiser les onglets alphabet
     initAlphabetTabs();
+    
+    // Initialiser les sélecteurs de marché
+    initMarketSelector();
+    
+    // Initialiser la pagination
+    initPagination();
     
     // Mettre à jour l'horloge du marché
     updateMarketTime();
@@ -65,7 +76,136 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * Charge les données d'actions depuis le fichier JSON
+     * Initialise les sélecteurs de marché
+     */
+    function initMarketSelector() {
+        const nasdaqButton = document.getElementById('market-nasdaq');
+        const stoxxButton = document.getElementById('market-stoxx');
+        
+        nasdaqButton?.addEventListener('click', function() {
+            if (currentMarket !== 'nasdaq') {
+                // Mettre à jour l'état
+                currentMarket = 'nasdaq';
+                currentPage = 1;
+                
+                // Mettre à jour l'interface
+                updateMarketUI();
+                
+                // Charger les données
+                loadStocksData(true);
+            }
+        });
+        
+        stoxxButton?.addEventListener('click', function() {
+            if (currentMarket !== 'stoxx') {
+                // Mettre à jour l'état
+                currentMarket = 'stoxx';
+                currentPage = 1;
+                
+                // Mettre à jour l'interface
+                updateMarketUI();
+                
+                // Charger les données
+                loadStocksData(true);
+            }
+        });
+    }
+    
+    /**
+     * Initialise les boutons de pagination
+     */
+    function initPagination() {
+        const prevButton = document.getElementById('prev-page');
+        const nextButton = document.getElementById('next-page');
+        
+        prevButton?.addEventListener('click', function() {
+            if (currentPage > 1) {
+                currentPage--;
+                updatePaginationUI();
+                loadStocksData(true);
+            }
+        });
+        
+        nextButton?.addEventListener('click', function() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                updatePaginationUI();
+                loadStocksData(true);
+            }
+        });
+    }
+    
+    /**
+     * Met à jour l'interface en fonction du marché sélectionné
+     */
+    function updateMarketUI() {
+        // Mettre à jour les boutons de marché
+        const nasdaqButton = document.getElementById('market-nasdaq');
+        const stoxxButton = document.getElementById('market-stoxx');
+        
+        if (nasdaqButton && stoxxButton) {
+            nasdaqButton.classList.toggle('active', currentMarket === 'nasdaq');
+            stoxxButton.classList.toggle('active', currentMarket === 'stoxx');
+        }
+        
+        // Mettre à jour le titre de la page
+        const titleElement = document.getElementById('market-title');
+        if (titleElement) {
+            titleElement.textContent = currentMarket === 'nasdaq' 
+                ? 'Actions NASDAQ Composite (États-Unis)' 
+                : 'Actions DJ STOXX 600 (Europe)';
+        }
+        
+        // Mettre à jour le lien source
+        const sourceLink = document.getElementById('source-link');
+        if (sourceLink) {
+            const link = currentMarket === 'nasdaq'
+                ? 'https://www.boursorama.com/bourse/actions/cotations/international/?international_quotation_az_filter%5Bcountry%5D=1&international_quotation_az_filter%5Bmarket%5D=%24COMPX'
+                : 'https://www.boursorama.com/bourse/actions/cotations/international/?international_quotation_az_filter%5Bcountry%5D=EU&international_quotation_az_filter%5Bmarket%5D=2cSXXP';
+            
+            sourceLink.innerHTML = `Sources: <a href="${link}" target="_blank" class="text-green-400 hover:underline">Boursorama</a>`;
+        }
+        
+        // Afficher/masquer la pagination selon le marché
+        const paginationContainer = document.getElementById('pagination-container');
+        if (paginationContainer) {
+            if (currentMarket === 'stoxx') {
+                paginationContainer.classList.remove('hidden');
+                updatePaginationUI();
+            } else {
+                paginationContainer.classList.add('hidden');
+            }
+        }
+    }
+    
+    /**
+     * Met à jour l'interface de pagination
+     */
+    function updatePaginationUI() {
+        const currentPageElement = document.getElementById('current-page');
+        const totalPagesElement = document.getElementById('total-pages');
+        const prevButton = document.getElementById('prev-page');
+        const nextButton = document.getElementById('next-page');
+        
+        if (currentPageElement) {
+            currentPageElement.textContent = currentPage.toString();
+        }
+        
+        if (totalPagesElement) {
+            totalPagesElement.textContent = totalPages.toString();
+        }
+        
+        if (prevButton) {
+            prevButton.disabled = currentPage <= 1;
+        }
+        
+        if (nextButton) {
+            nextButton.disabled = currentPage >= totalPages;
+        }
+    }
+    
+    /**
+     * Charge les données d'actions depuis le fichier JSON approprié
      */
     async function loadStocksData(forceRefresh = false) {
         // Éviter les chargements multiples simultanés
@@ -82,10 +222,19 @@ document.addEventListener('DOMContentLoaded', function() {
         hideElement('indices-container');
         
         try {
-            // Récupérer les données depuis le fichier JSON
+            // Déterminer le fichier à charger selon le marché et la page
+            let url;
+            if (currentMarket === 'nasdaq') {
+                url = `data/lists.json`;
+            } else {
+                url = `data/stoxx_page_${currentPage}.json`;
+            }
+            
             // Pour éviter le cache du navigateur en cas de forceRefresh
             const cacheBuster = forceRefresh ? `?t=${Date.now()}` : '';
-            const response = await fetch(`data/lists.json${cacheBuster}`);
+            
+            console.log(`🔍 Chargement des données depuis ${url}${cacheBuster}`);
+            const response = await fetch(`${url}${cacheBuster}`);
             
             if (!response.ok) {
                 throw new Error(`Erreur de chargement: ${response.status}`);
@@ -97,6 +246,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // S'assurer que toutes les régions existent dans les données
             stocksData = {
                 indices: rawData.indices || {},
+                top_performers: rawData.top_performers || null,
                 meta: rawData.meta || {}
             };
             
@@ -109,9 +259,18 @@ document.addEventListener('DOMContentLoaded', function() {
             // Marquer les données comme périmées si plus vieilles que MAX_DATA_AGE
             stocksData.meta.isStale = dataAge > MAX_DATA_AGE;
             
+            // Récupérer les informations de pagination si présentes
+            if (stocksData.meta.pagination) {
+                currentPage = stocksData.meta.pagination.currentPage || 1;
+                totalPages = stocksData.meta.pagination.totalPages || 1;
+                
+                // Mettre à jour l'interface de pagination
+                updatePaginationUI();
+            }
+            
             // Afficher une notification si les données sont périmées
             if (stocksData.meta.isStale) {
-                showNotification('Les données affichées datent de plus d\\'une heure', 'warning');
+                showNotification('Les données affichées datent de plus d\'une heure', 'warning');
             }
             
             // Afficher les données
@@ -211,9 +370,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
             
-            // Calculer et afficher les top performers
-            if (rawData && rawData.top_performers) {
-                updateTopPerformers(rawData.top_performers);
+            // Mettre à jour les top performers
+            if (stocksData.top_performers) {
+                updateTopPerformers(stocksData.top_performers);
             }
             
             // Masquer le loader et afficher les données
@@ -222,7 +381,7 @@ document.addEventListener('DOMContentLoaded', function() {
             showElement('indices-container');
             
         } catch (error) {
-            console.error('❌ Erreur lors de l\\'affichage des données:', error);
+            console.error('❌ Erreur lors de l\'affichage des données:', error);
             hideElement('indices-loading');
             showElement('indices-error');
         }
@@ -271,16 +430,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // Générer le HTML pour chaque action
         stocks.forEach((stock, i) => {
             const row = document.createElement('div');
-            row.className = 'flex justify-between items-center py-2 border-b border-gray-700 last:border-0';
+            row.className = 'performer-row';
             
             const valueClass = (stock[valueField] || "").includes('-') ? 'negative' : 'positive';
             
             row.innerHTML = `
-                <div class="flex-1">
-                    <div class="font-medium">${stock.name || ""}</div>
-                    <div class="text-xs text-gray-400">${stock.symbol || ""}</div>
+                <div class="performer-info">
+                    <div class="performer-index">${stock.name || ""}</div>
+                    <div class="performer-country">${stock.symbol || ""}</div>
                 </div>
-                <div class="text-right ${valueClass} font-bold">
+                <div class="performer-value ${valueClass}">
                     ${stock[valueField] || "-"}
                 </div>
             `;
