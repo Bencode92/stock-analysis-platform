@@ -24,12 +24,16 @@ document.addEventListener('DOMContentLoaded', function() {
     let currentPage = 1;
     let totalPages = 1;
     let currentCategory = 'all'; // filtre de catégorie actif
+    let currentEtfCategory = 'top50'; // 'top50', 'bonds', 'shortterm'
     
     // Initialiser les onglets alphabet
     initAlphabetTabs();
     
     // Initialiser les sélecteurs de marché
     initMarketSelector();
+    
+    // Initialiser les sélecteurs de catégorie ETF
+    initEtfCategorySelector();
     
     // Initialiser la pagination
     initPagination();
@@ -138,6 +142,81 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadEtfsData(true);
             }
         });
+    }
+    
+    /**
+     * Initialise les sélecteurs de catégorie ETF
+     */
+    function initEtfCategorySelector() {
+        const top50Button = document.getElementById('category-top50');
+        const bondsButton = document.getElementById('category-bonds');
+        const shorttermButton = document.getElementById('category-shortterm');
+        
+        if (top50Button) {
+            top50Button.addEventListener('click', function() {
+                switchEtfCategory('top50');
+            });
+        }
+        
+        if (bondsButton) {
+            bondsButton.addEventListener('click', function() {
+                switchEtfCategory('bonds');
+            });
+        }
+        
+        if (shorttermButton) {
+            shorttermButton.addEventListener('click', function() {
+                switchEtfCategory('shortterm');
+            });
+        }
+        
+        // Initial setup of visibility
+        updateEtfCategoryUI();
+    }
+    
+    /**
+     * Switch to a different ETF category and update UI
+     */
+    function switchEtfCategory(category) {
+        if (currentEtfCategory !== category) {
+            currentEtfCategory = category;
+            updateEtfCategoryUI();
+        }
+    }
+    
+    /**
+     * Update UI based on selected ETF category
+     */
+    function updateEtfCategoryUI() {
+        // Update category buttons state
+        const categoryButtons = document.querySelectorAll('.market-btn');
+        categoryButtons.forEach(btn => {
+            const btnCategory = btn.getAttribute('data-category');
+            btn.classList.toggle('active', btnCategory === currentEtfCategory);
+        });
+        
+        // Update title based on category
+        const titleElement = document.getElementById('market-title');
+        if (titleElement) {
+            if (currentEtfCategory === 'top50') {
+                titleElement.textContent = 'TOP 50 ETF';
+            } else if (currentEtfCategory === 'bonds') {
+                titleElement.textContent = 'TOP ETF Obligations';
+            } else if (currentEtfCategory === 'shortterm') {
+                titleElement.textContent = 'TOP ETF Court Terme';
+            }
+        }
+        
+        // Show/hide relevant sections
+        const topEtfSection = document.querySelector('.top-etf-section');
+        const topBondSection = document.querySelector('.top-bond-section');
+        const topShortTermSection = document.querySelector('.top-short-term-section');
+        
+        if (topEtfSection && topBondSection && topShortTermSection) {
+            topEtfSection.style.display = currentEtfCategory === 'top50' ? 'block' : 'none';
+            topBondSection.style.display = currentEtfCategory === 'bonds' ? 'block' : 'none';
+            topShortTermSection.style.display = currentEtfCategory === 'shortterm' ? 'block' : 'none';
+        }
     }
     
     /**
@@ -339,6 +418,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Afficher les données
             renderEtfsData();
             renderTopEtfTables();
+            renderTopShortTermTable();
             lastUpdate = new Date();
         } catch (error) {
             console.error('❌ Erreur lors du chargement des données:', error);
@@ -478,8 +558,8 @@ document.addEventListener('DOMContentLoaded', function() {
             topEtfBody.innerHTML = '';
             topBondBody.innerHTML = '';
             
-            // Afficher les TOP 50 ETF (limité aux 10 premiers pour la lisibilité)
-            const topEtfs = etfsData.top50_etfs.slice(0, 10);
+            // Afficher tous les TOP 50 ETF (sans limite)
+            const topEtfs = etfsData.top50_etfs;
             topEtfs.forEach(etf => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -491,8 +571,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 topEtfBody.appendChild(row);
             });
             
-            // Afficher les TOP ETF Obligations (limité aux 10 premiers)
-            const topBondEtfs = etfsData.top_bond_etfs.slice(0, 10);
+            // Afficher tous les TOP ETF Obligations (sans limite)
+            const topBondEtfs = etfsData.top_bond_etfs;
             topBondEtfs.forEach(etf => {
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -507,6 +587,86 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log(`Rendu de ${topEtfs.length} TOP ETF et ${topBondEtfs.length} TOP ETF Obligations`);
         } catch (error) {
             console.error('❌ Erreur lors de l\'affichage des TOP ETF:', error);
+        }
+    }
+    
+    /**
+     * Affiche les données des ETF court terme
+     */
+    function renderTopShortTermTable() {
+        try {
+            // Vérifier si les données sont disponibles
+            if (!etfsData.top_short_term_etfs) {
+                console.warn("Les données TOP ETF court terme ne sont pas disponibles");
+                return;
+            }
+            
+            // Récupérer l'élément du DOM
+            const topShortTermBody = document.getElementById('top-short-term-body');
+            
+            if (!topShortTermBody) {
+                console.warn("L'élément DOM pour les TOP ETF court terme n'est pas disponible");
+                return;
+            }
+            
+            // Vider le conteneur
+            topShortTermBody.innerHTML = '';
+            
+            // Si pas de données, afficher un message
+            if (etfsData.top_short_term_etfs.length === 0) {
+                topShortTermBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-gray-400">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Aucun ETF court terme disponible
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Afficher tous les ETF court terme
+            etfsData.top_short_term_etfs.forEach(etf => {
+                const row = document.createElement('tr');
+                
+                // Détermine les classes CSS pour les valeurs numériques
+                const oneMonthClass = etf.oneMonth && parseFloat(etf.oneMonth) < 0 ? 'negative' : 'positive';
+                const oneYearClass = etf.oneYear && parseFloat(etf.oneYear) < 0 ? 'negative' : 'positive';
+                
+                // Format avec % pour l'affichage
+                const oneMonthDisplay = etf.oneMonth ? etf.oneMonth + '%' : '-';
+                const oneYearDisplay = etf.oneYear ? etf.oneYear + '%' : '-';
+                
+                // Structure HTML adapté au tableau des ETF court terme
+                row.innerHTML = `
+                    <td class="font-medium">${etf.name || '-'}</td>
+                    <td class="${oneMonthClass}">${oneMonthDisplay}</td>
+                    <td>${etf.category || '-'}</td>
+                    <td>1</td>
+                    <td>${etf.ytd ? etf.ytd + '%' : '-'}</td>
+                    <td>${etf.category || '-'}</td>
+                    <td>1</td>
+                `;
+                
+                topShortTermBody.appendChild(row);
+            });
+            
+            console.log(`Rendu de ${etfsData.top_short_term_etfs.length} TOP ETF court terme`);
+        } catch (error) {
+            console.error('❌ Erreur lors de l\'affichage des TOP ETF court terme:', error);
+            
+            // Afficher un message d'erreur dans le tableau
+            const topShortTermBody = document.getElementById('top-short-term-body');
+            if (topShortTermBody) {
+                topShortTermBody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-red-400">
+                            <i class="fas fa-exclamation-triangle mr-2"></i>
+                            Erreur lors du chargement des données ETF court terme
+                        </td>
+                    </tr>
+                `;
+            }
         }
     }
     
