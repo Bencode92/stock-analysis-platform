@@ -21,6 +21,14 @@ L'objectif de cette modification est de simplifier et d'optimiser le processus d
    - `.github/workflows/update-lists-data.yml` → `.github/workflows/update-lists-data.yml.disabled`
    - `.github/workflows/update-stoxx-data.yml` → `.github/workflows/update-stoxx-data.yml.disabled`
 
+## Important : Distinction avec update-market-data
+
+Le nouveau workflow **update-unified-lists** est **distinct** du workflow existant **update-market-data** :
+- **update-unified-lists** met à jour les données pour `liste.html` (NASDAQ) et les pages STOXX
+- **update-market-data** met à jour les données pour `marches.html`
+
+Nous avons spécifiquement nommé le job dans notre workflow "update-unified-lists" (et non "update-market-data") pour éviter toute confusion. Les deux workflows peuvent fonctionner indépendamment sans conflit.
+
 ## Avantages
 
 - **Simplicité de maintenance** : Un seul workflow et script à gérer
