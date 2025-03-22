@@ -312,33 +312,18 @@ def scrape_top_short_term_etfs():
             headers = [header.get_text(strip=True).lower() for header in table.select('thead th')]
             print(f"En-têtes trouvés dans le tableau ETF court terme: {headers}")
             
-           # Déterminer les indices des colonnes d'intérêt
-one_month_index = None
-six_month_index = None
-
-# Rechercher d'abord par en-tête exact
-for i, header in enumerate(headers):
-    # Pour 1 MOIS, colonne ETF (performance)
-    if ("1 mois" in header.lower() or "1m" in header.lower()) and i+1 < len(headers) and "etf" in headers[i+1].lower():
-        one_month_index = i+1  # Prendre l'index de la colonne ETF
-        print(f"Colonne ETF '1 MOIS' trouvée à l'indice {one_month_index}")
-    # Pour 6 MOIS, colonne ETF (performance)
-    if ("6 mois" in header.lower() or "6m" in header.lower()) and i+1 < len(headers) and "etf" in headers[i+1].lower():
-        six_month_index = i+1  # Prendre l'index de la colonne ETF
-        print(f"Colonne ETF '6 MOIS' trouvée à l'indice {six_month_index}")
-
-# Vérifier les noms de colonnes spécifiques à Boursorama
-if not one_month_index or not six_month_index:
-    for i, header in enumerate(headers):
-        if header.lower() == "etf" and i > 0 and i < len(headers):
-            # La première colonne "ETF" est généralement sous "1 MOIS"
-            one_month_index = i
-            print(f"Colonne ETF '1 MOIS' détectée à l'indice {i}")
-        
-        # Pour Boursorama, la colonne ETF sous "6 MOIS" est généralement 3 colonnes après
-        if header.lower() == "etf" and "class" in headers[i+2].lower() if i+2 < len(headers) else False:
-            six_month_index = i+3
-            print(f"Colonne ETF '6 MOIS' détectée à l'indice {six_month_index}")
+            # Déterminer les indices des colonnes d'intérêt
+            one_month_index = None
+            six_month_index = None
+            
+            for i, header in enumerate(headers):
+                if "1 mois" in header.lower() or "1m" in header.lower():
+                    one_month_index = i
+                    print(f"Colonne '1 MOIS' trouvée à l'indice {i}")
+                if "6 mois" in header.lower() or "6m" in header.lower():
+                    six_month_index = i
+                    print(f"Colonne '6 MOIS' trouvée à l'indice {i}")
+            
             # Si les indices n'ont pas été trouvés, utiliser des valeurs par défaut basées sur l'image
             # D'après l'image, la colonne "1 MOIS" est à l'indice 1 et "6 MOIS" est à l'indice 4
             if one_month_index is None:
