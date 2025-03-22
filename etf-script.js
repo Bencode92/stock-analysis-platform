@@ -765,7 +765,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (etfsData.top_short_term_etfs.length === 0) {
                 topShortTermBody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="text-center py-4 text-gray-400">
+                        <td colspan="3" class="text-center py-4 text-gray-400">
                             <i class="fas fa-info-circle mr-2"></i>
                             Aucun ETF court terme disponible
                         </td>
@@ -785,7 +785,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (paginatedShortTerm.length === 0) {
                 topShortTermBody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="text-center py-4 text-gray-400">
+                        <td colspan="3" class="text-center py-4 text-gray-400">
                             <i class="fas fa-info-circle mr-2"></i>
                             Aucun ETF disponible pour cette page
                         </td>
@@ -797,7 +797,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Afficher les ETF court terme avec seulement LIBELLÉ, 1 MOIS et 6 MOIS
             paginatedShortTerm.forEach((etf, index) => {
                 const row = document.createElement('tr');
-                const globalIndex = start + index + 1; // Pour numéroter les ETF
                 
                 // Détermine les classes CSS pour les valeurs numériques
                 const oneMonthClass = etf.oneMonth && parseFloat(etf.oneMonth) < 0 ? 'negative' : 'positive';
@@ -807,16 +806,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 const oneMonthDisplay = etf.oneMonth ? (etf.oneMonth.includes('+') ? etf.oneMonth : `+${etf.oneMonth}`) + '%' : '-';
                 const sixMonthDisplay = etf.sixMonth ? (etf.sixMonth.includes('+') ? etf.sixMonth : `+${etf.sixMonth}`) + '%' : '-';
                 
-                // Structure HTML adaptée au tableau des ETF court terme
-                // Nous n'affichons que 3 colonnes: LIBELLÉ, 1 MOIS et 6 MOIS
+                // Structure HTML simplifiée avec seulement 3 colonnes
                 row.innerHTML = `
                     <td class="font-medium">${etf.name || '-'}</td>
                     <td class="${oneMonthClass}">${oneMonthDisplay}</td>
-                    <td>${etf.category || '-'}</td>
-                    <td>1</td>
                     <td class="${sixMonthClass}">${sixMonthDisplay}</td>
-                    <td>${etf.category || '-'}</td>
-                    <td>1</td>
                 `;
                 
                 topShortTermBody.appendChild(row);
@@ -831,7 +825,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (topShortTermBody) {
                 topShortTermBody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="text-center py-4 text-red-400">
+                        <td colspan="3" class="text-center py-4 text-red-400">
                             <i class="fas fa-exclamation-triangle mr-2"></i>
                             Erreur lors du chargement des données ETF court terme
                         </td>
