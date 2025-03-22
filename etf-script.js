@@ -800,11 +800,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Détermine les classes CSS pour les valeurs numériques
                 const oneMonthClass = etf.oneMonth && parseFloat(etf.oneMonth) < 0 ? 'negative' : 'positive';
-                const sixMonthClass = etf.sixMonth && parseFloat(etf.sixMonth) < 0 ? 'negative' : 'positive';
+                
+                // Pour les valeurs à 6 mois, utiliser oneYear comme référence (d'après l'image 2)
+                const sixMonthClass = etf.oneYear && parseFloat(etf.oneYear) < 0 ? 'negative' : 'positive';
                 
                 // Format avec % pour l'affichage
                 const oneMonthDisplay = etf.oneMonth ? (etf.oneMonth.includes('+') ? etf.oneMonth : `+${etf.oneMonth}`) + '%' : '-';
-                const sixMonthDisplay = etf.sixMonth ? (etf.sixMonth.includes('+') ? etf.sixMonth : `+${etf.sixMonth}`) + '%' : '-';
+                
+                // Utiliser oneYear comme valeur pour 6 mois (visible dans l'image 2)
+                const sixMonthDisplay = etf.oneYear ? (etf.oneYear.includes('+') ? etf.oneYear : `+${etf.oneYear}`) + '%' : '-';
                 
                 // Structure HTML simplifiée avec seulement 3 colonnes
                 row.innerHTML = `
