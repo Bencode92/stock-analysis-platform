@@ -312,26 +312,26 @@ def scrape_top_short_term_etfs():
             headers = [header.get_text(strip=True).lower() for header in table.select('thead th')]
             print(f"En-têtes trouvés dans le tableau ETF court terme: {headers}")
             
-            # Déterminer les indices des colonnes d'intérêt
+            # Déterminer les indices des colonnes "1 MOIS - ETF" et "6 MOIS - ETF"
             one_month_index = None
             six_month_index = None
-            
+
+            # On parcourt les en-têtes pour repérer "1 MOIS" et "6 MOIS", mais on utilisera des indices manuels basés sur l'image
             for i, header in enumerate(headers):
                 if "1 mois" in header.lower() or "1m" in header.lower():
-                    one_month_index = i
-                    print(f"Colonne '1 MOIS' trouvée à l'indice {i}")
+                    one_month_index = i + 1  # l'ETF est juste après "1 MOIS"
+                    print(f"Colonne '1 MOIS - ETF' trouvée à l'indice {one_month_index}")
                 if "6 mois" in header.lower() or "6m" in header.lower():
-                    six_month_index = i
-                    print(f"Colonne '6 MOIS' trouvée à l'indice {i}")
-            
-            # Si les indices n'ont pas été trouvés, utiliser des valeurs par défaut basées sur l'image
-            # D'après l'image, la colonne "1 MOIS" est à l'indice 1 et "6 MOIS" est à l'indice 4
+                    six_month_index = i + 1  # l'ETF est juste après "6 MOIS"
+                    print(f"Colonne '6 MOIS - ETF' trouvée à l'indice {six_month_index}")
+
+            # Si les indices n'ont pas été trouvés automatiquement, on force ceux visibles dans l'image
             if one_month_index is None:
-                one_month_index = 1  # Position supposée de "1 MOIS"
-                print(f"Utilisation de l'indice par défaut pour '1 MOIS': {one_month_index}")
+                one_month_index = 1  # Colonne "ETF" sous "1 MOIS"
+                print(f"Utilisation de l'indice par défaut pour '1 MOIS - ETF': {one_month_index}")
             if six_month_index is None:
-                six_month_index = 4  # Position supposée de "6 MOIS"
-                print(f"Utilisation de l'indice par défaut pour '6 MOIS': {six_month_index}")
+                six_month_index = 4  # Colonne "ETF" sous "6 MOIS"
+                print(f"Utilisation de l'indice par défaut pour '6 MOIS - ETF': {six_month_index}")
             
             # Extraire les lignes du tableau
             rows = table.select('tbody tr')
