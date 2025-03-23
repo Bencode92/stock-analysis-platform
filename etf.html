@@ -726,30 +726,38 @@
         .search-wrapper {
             max-width: 100%;
             position: relative;
+            transform: translateY(0);
+            transition: transform 0.3s ease;
+        }
+        
+        .search-wrapper:focus-within {
+            transform: translateY(-5px);
         }
         
         .dark .main-search-input {
             background-color: rgba(255, 255, 255, 0.07);
-            border: 1px solid var(--card-border);
+            border: 2px solid var(--card-border);
             color: var(--text-color);
-            padding: 16px 18px;
-            padding-left: 45px;
-            border-radius: 8px;
-            font-size: 1rem;
+            padding: 18px 20px;
+            padding-left: 50px;
+            border-radius: 12px;
+            font-size: 1.05rem;
             width: 100%;
             transition: all 0.3s ease;
+            box-shadow: 0 0 0 rgba(0, 255, 135, 0);
         }
         
         .light .main-search-input {
             background-color: rgba(0, 0, 0, 0.05);
-            border: 1px solid rgba(0, 0, 0, 0.1);
+            border: 2px solid rgba(0, 0, 0, 0.1);
             color: var(--light-text-color);
-            padding: 16px 18px;
-            padding-left: 45px;
-            border-radius: 8px;
-            font-size: 1rem;
+            padding: 18px 20px;
+            padding-left: 50px;
+            border-radius: 12px;
+            font-size: 1.05rem;
             width: 100%;
             transition: all 0.3s ease;
+            box-shadow: 0 0 0 rgba(0, 255, 135, 0);
         }
         
         .main-search-input:focus {
@@ -759,17 +767,23 @@
         }
         
         .dark .search-wrapper i {
-            color: rgba(255, 255, 255, 0.5);
+            color: rgba(255, 255, 255, 0.6);
+            transition: color 0.3s ease;
         }
         
         .light .search-wrapper i {
             color: rgba(0, 0, 0, 0.5);
+            transition: color 0.3s ease;
+        }
+        
+        .search-wrapper:focus-within i.search-icon {
+            color: var(--accent-color);
         }
         
         .clear-btn {
             cursor: pointer;
-            padding: 5px;
-            font-size: 16px;
+            padding: 8px;
+            font-size: 18px;
             position: absolute;
             right: 15px;
             top: 50%;
@@ -777,24 +791,69 @@
             background: none;
             border: none;
             outline: none;
+            opacity: 0;
+            transition: all 0.3s ease;
         }
         
         .clear-btn:hover {
             color: var(--accent-color);
+            transform: translateY(-50%) scale(1.2);
         }
         
         .search-icon {
             position: absolute;
-            left: 15px;
+            left: 18px;
             top: 50%;
             transform: translateY(-50%);
-            font-size: 18px;
+            font-size: 20px;
+        }
+        
+        /* Suggestions pour l'autocomplétion */
+        .search-suggestions {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 0 0 12px 12px;
+            margin-top: 5px;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: all 0.3s ease;
+            z-index: 100;
+            box-shadow: var(--accent-glow);
+        }
+        
+        .search-suggestions.active {
+            max-height: 300px;
+            opacity: 1;
+            overflow-y: auto;
+        }
+        
+        .suggestion-item {
+            padding: 12px 18px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+            border-bottom: 1px solid var(--separator-color);
+        }
+        
+        .suggestion-item:last-child {
+            border-bottom: none;
+        }
+        
+        .suggestion-item:hover {
+            background-color: var(--accent-subtle);
         }
         
         /* Styles pour les résultats de recherche */
         .search-highlight {
             background-color: var(--accent-subtle);
+            padding: 2px 0;
+            border-radius: 3px;
             animation: highlight-pulse 2s infinite;
+            font-weight: 500;
         }
         
         @keyframes highlight-pulse {
@@ -821,6 +880,14 @@
         /* Style pour la section des résultats */
         .results-container {
             margin-top: 20px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        
+        .results-container.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
         
         /* Compteur de résultats */
@@ -829,6 +896,14 @@
             margin-bottom: 12px;
             font-size: 0.95rem;
             color: rgba(255, 255, 255, 0.7);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+        
+        .search-count.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
 
         /* Responsive */
@@ -964,7 +1039,7 @@
                 <!-- Header avec titre et dernière mise à jour -->
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
                     <div>
-                        <h1 class="text-3xl font-bold mb-2" id="market-title">ETF Mondiaux</h1>
+                        <h1 class="text-3xl font-bold mb-2" id="market-title">TOP 50 ETF</h1>
                         <p class="text-gray-400">
                            <span id="etfs-count" class="font-semibold">0</span> ETF listés | 
                            Dernière mise à jour: <span id="last-update-time" class="font-medium">Chargement...</span>
@@ -972,17 +1047,21 @@
                     </div>
                 </div>
                 
-                <!-- Barre de recherche principale -->
+                <!-- Barre de recherche principale améliorée -->
                 <div class="search-container mb-8">
                     <h2 class="section-title mb-4">Rechercher un ETF</h2>
                     <div class="search-wrapper relative">
                         <i class="fas fa-search search-icon"></i>
                         <input type="text" id="main-search-input" class="main-search-input" placeholder="Saisissez le nom d'un ETF (ex: 'MSCI World', 'S&P 500', 'Gold')..." autocomplete="off">
-                        <button id="clear-search" class="clear-btn" style="opacity: 0;">
+                        <button id="clear-search" class="clear-btn">
                             <i class="fas fa-times"></i>
                         </button>
+                        <!-- Container pour les suggestions -->
+                        <div id="search-suggestions" class="search-suggestions">
+                            <!-- Les suggestions seront ajoutées dynamiquement ici -->
+                        </div>
                     </div>
-                    <div id="search-count" class="search-count hidden">
+                    <div id="search-count" class="search-count">
                         <span id="results-count">0</span> résultats trouvés
                     </div>
                 </div>
@@ -1244,6 +1323,12 @@
            const resultsCount = document.getElementById('results-count');
            const searchResults = document.getElementById('search-results');
            const searchResultsBody = document.getElementById('search-results-body');
+           const searchSuggestions = document.getElementById('search-suggestions');
+           
+           // Variables pour les suggestions
+           let suggestionTimeout;
+           let currentSuggestions = [];
+           let selectedSuggestionIndex = -1;
            
            if (searchInput && clearButton) {
                // Recherche en temps réel
@@ -1253,11 +1338,19 @@
                    // Afficher/masquer le bouton d'effacement
                    clearButton.style.opacity = searchTerm ? '1' : '0';
                    
-                   // Effectuer la recherche
+                   // Annuler le timeout précédent pour les suggestions
+                   clearTimeout(suggestionTimeout);
+                   
+                   // Effectuer la recherche et afficher des suggestions après un court délai
                    if (searchTerm && searchTerm.length >= 2) {
-                       performSearch(searchTerm);
+                       // Définir un délai avant de montrer les suggestions (pour éviter trop de requêtes)
+                       suggestionTimeout = setTimeout(() => {
+                           performSearch(searchTerm);
+                           updateSuggestions(searchTerm);
+                       }, 300);
                    } else {
                        clearSearch();
+                       hideSuggestions();
                    }
                });
                
@@ -1266,18 +1359,138 @@
                    searchInput.value = '';
                    searchInput.focus();
                    clearSearch();
+                   hideSuggestions();
+                   this.style.opacity = '0';
                });
                
-               // Désactiver la fonction de recherche standard lors de l'appui sur Entrée
+               // Navigation au clavier dans les suggestions
                searchInput.addEventListener('keydown', function(e) {
-                   if (e.key === 'Enter') {
+                   if (e.key === 'ArrowDown') {
                        e.preventDefault();
-                       const searchTerm = this.value.trim().toLowerCase();
-                       if (searchTerm && searchTerm.length >= 2) {
-                           performSearch(searchTerm);
+                       if (currentSuggestions.length > 0) {
+                           selectedSuggestionIndex = (selectedSuggestionIndex + 1) % currentSuggestions.length;
+                           highlightSuggestion(selectedSuggestionIndex);
                        }
+                   } else if (e.key === 'ArrowUp') {
+                       e.preventDefault();
+                       if (currentSuggestions.length > 0) {
+                           if (selectedSuggestionIndex <= 0) {
+                               selectedSuggestionIndex = currentSuggestions.length - 1;
+                           } else {
+                               selectedSuggestionIndex--;
+                           }
+                           highlightSuggestion(selectedSuggestionIndex);
+                       }
+                   } else if (e.key === 'Enter') {
+                       e.preventDefault();
+                       
+                       // Si une suggestion est sélectionnée, l'utiliser
+                       if (selectedSuggestionIndex >= 0 && currentSuggestions.length > 0) {
+                           const selectedSuggestion = currentSuggestions[selectedSuggestionIndex];
+                           searchInput.value = selectedSuggestion.name;
+                           performSearch(selectedSuggestion.name.toLowerCase());
+                           hideSuggestions();
+                       } else {
+                           // Sinon, effectuer une recherche normale
+                           const searchTerm = this.value.trim().toLowerCase();
+                           if (searchTerm && searchTerm.length >= 2) {
+                               performSearch(searchTerm);
+                               hideSuggestions();
+                           }
+                       }
+                   } else if (e.key === 'Escape') {
+                       hideSuggestions();
                    }
                });
+               
+               // Masquer les suggestions lors du clic en dehors
+               document.addEventListener('click', function(e) {
+                   if (!searchInput.contains(e.target) && !searchSuggestions.contains(e.target)) {
+                       hideSuggestions();
+                   }
+               });
+               
+               // Focus sur l'input au chargement de la page
+               setTimeout(() => {
+                   searchInput.focus();
+               }, 500);
+           }
+           
+           // Fonction pour mettre en évidence une suggestion
+           function highlightSuggestion(index) {
+               const suggestionItems = searchSuggestions.querySelectorAll('.suggestion-item');
+               
+               suggestionItems.forEach((item, i) => {
+                   if (i === index) {
+                       item.classList.add('bg-accent-subtle');
+                   } else {
+                       item.classList.remove('bg-accent-subtle');
+                   }
+               });
+           }
+           
+           // Fonction pour masquer les suggestions
+           function hideSuggestions() {
+               if (searchSuggestions) {
+                   searchSuggestions.classList.remove('active');
+                   searchSuggestions.innerHTML = '';
+                   currentSuggestions = [];
+                   selectedSuggestionIndex = -1;
+               }
+           }
+           
+           // Fonction pour mettre à jour les suggestions
+           function updateSuggestions(searchTerm) {
+               if (!window.etfsData || !window.etfsData.indices) return;
+               
+               currentSuggestions = [];
+               const alphabet = "abcdefghijklmnopqrstuvwxyz".split('');
+               
+               // Collecter les ETF correspondants
+               alphabet.forEach(letter => {
+                   const etfs = window.etfsData.indices[letter] || [];
+                   
+                   etfs.forEach(etf => {
+                       if (etf.name && etf.name.toLowerCase().includes(searchTerm) && currentSuggestions.length < 5) {
+                           currentSuggestions.push(etf);
+                       }
+                   });
+               });
+               
+               // Afficher les suggestions
+               if (currentSuggestions.length > 0) {
+                   searchSuggestions.innerHTML = '';
+                   
+                   currentSuggestions.forEach((etf, index) => {
+                       const suggestionItem = document.createElement('div');
+                       suggestionItem.className = 'suggestion-item';
+                       
+                       // Mettre en évidence la partie correspondante
+                       const regex = new RegExp(`(${searchTerm})`, 'gi');
+                       const highlightedName = etf.name.replace(regex, '<span class="text-accent-color font-medium">$1</span>');
+                       
+                       suggestionItem.innerHTML = highlightedName;
+                       
+                       // Ajouter un event listener pour le clic
+                       suggestionItem.addEventListener('click', () => {
+                           searchInput.value = etf.name;
+                           performSearch(etf.name.toLowerCase());
+                           hideSuggestions();
+                       });
+                       
+                       // Ajouter un event listener pour le survol
+                       suggestionItem.addEventListener('mouseover', () => {
+                           selectedSuggestionIndex = index;
+                           highlightSuggestion(index);
+                       });
+                       
+                       searchSuggestions.appendChild(suggestionItem);
+                   });
+                   
+                   searchSuggestions.classList.add('active');
+               } else {
+                   hideSuggestions();
+               }
            }
            
            // Fonction pour effectuer la recherche
@@ -1292,9 +1505,14 @@
                    searchResultsBody.innerHTML = '';
                }
                
-               // Afficher la section de résultats
+               // Afficher la section de résultats avec animation
                if (searchResults) {
                    searchResults.classList.remove('hidden');
+                   
+                   // Ajouter la classe visible après un court délai pour l'animation
+                   setTimeout(() => {
+                       searchResults.classList.add('visible');
+                   }, 50);
                }
                
                let totalResults = 0;
@@ -1315,10 +1533,15 @@
                    });
                });
                
-               // Mettre à jour le compteur de résultats
+               // Mettre à jour le compteur de résultats avec animation
                if (searchCount && resultsCount) {
                    resultsCount.textContent = totalResults;
                    searchCount.classList.remove('hidden');
+                   
+                   // Ajouter la classe visible après un court délai pour l'animation
+                   setTimeout(() => {
+                       searchCount.classList.add('visible');
+                   }, 100);
                }
                
                // Afficher les résultats
@@ -1352,7 +1575,7 @@
                            if (searchTerm && highlightedName !== '-') {
                                // Mettre en évidence le terme recherché
                                const re = new RegExp(`(${searchTerm})`, 'gi');
-                               highlightedName = highlightedName.replace(re, '<mark class="bg-accent-subtle text-white">$1</mark>');
+                               highlightedName = highlightedName.replace(re, '<span class="search-highlight">$1</span>');
                            }
                            
                            row.innerHTML = `
@@ -1366,7 +1589,18 @@
                                <td>${etf.ratio || '-'}</td>
                            `;
                            
+                           // Ajouter l'effet d'apparition progressive
+                           row.style.opacity = '0';
+                           row.style.transform = 'translateY(10px)';
+                           row.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                           
                            searchResultsBody.appendChild(row);
+                           
+                           // Déclencher l'animation avec un délai croissant pour chaque ligne
+                           setTimeout(() => {
+                               row.style.opacity = '1';
+                               row.style.transform = 'translateY(0)';
+                           }, 50 + displayETFs.indexOf(etf) * 30);
                        });
                        
                        // Afficher un message si les résultats sont limités
@@ -1378,7 +1612,19 @@
                                    ${totalResults - 20} résultats supplémentaires trouvés. Affinez votre recherche pour des résultats plus précis.
                                </td>
                            `;
+                           
+                           // Ajouter l'effet d'apparition progressive
+                           moreRow.style.opacity = '0';
+                           moreRow.style.transform = 'translateY(10px)';
+                           moreRow.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                           
                            searchResultsBody.appendChild(moreRow);
+                           
+                           // Déclencher l'animation après toutes les autres lignes
+                           setTimeout(() => {
+                               moreRow.style.opacity = '1';
+                               moreRow.style.transform = 'translateY(0)';
+                           }, 50 + displayETFs.length * 30 + 100);
                        }
                    }
                }
@@ -1388,12 +1634,18 @@
            function clearSearch() {
                // Masquer le compteur de résultats
                if (searchCount) {
-                   searchCount.classList.add('hidden');
+                   searchCount.classList.remove('visible');
+                   setTimeout(() => {
+                       searchCount.classList.add('hidden');
+                   }, 300);
                }
                
                // Masquer la section de résultats
                if (searchResults) {
-                   searchResults.classList.add('hidden');
+                   searchResults.classList.remove('visible');
+                   setTimeout(() => {
+                       searchResults.classList.add('hidden');
+                   }, 300);
                }
                
                // Vider le tableau de résultats
