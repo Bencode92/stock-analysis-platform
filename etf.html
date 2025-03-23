@@ -615,54 +615,6 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Alphabet Tabs */
-        .region-tabs {
-            display: flex;
-            flex-wrap: wrap;
-            border-bottom: 1px solid var(--card-border);
-            margin-bottom: 24px;
-            background-color: var(--card-header);
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        
-        .region-tab {
-            padding: 14px;
-            cursor: pointer;
-            position: relative;
-            font-weight: 500;
-            opacity: 0.7;
-            transition: all 0.3s ease;
-            letter-spacing: 0.02em;
-        }
-        
-        .region-tab:hover {
-            background-color: var(--accent-subtle);
-            opacity: 0.9;
-        }
-        
-        .region-tab.active {
-            opacity: 1;
-            color: var(--accent-color);
-            background-color: var(--accent-subtle);
-        }
-        
-        .region-tab::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 0;
-            height: 3px;
-            background-color: var(--accent-color);
-            transition: width 0.3s ease;
-            box-shadow: 0 0 8px var(--accent-color);
-        }
-        
-        .region-tab.active::after {
-            width: 100%;
-        }
-
         /* Button styling */
         .action-button {
             padding: 6px 14px;
@@ -765,7 +717,7 @@
             font-weight: 500;
         }
         
-        /* Styles pour la barre de recherche */
+        /* Styles pour la barre de recherche améliorée */
         .search-container {
             max-width: 100%;
             margin-bottom: 24px;
@@ -776,21 +728,34 @@
             position: relative;
         }
         
-        .dark #etf-search {
+        .dark .main-search-input {
             background-color: rgba(255, 255, 255, 0.07);
-            border-color: var(--card-border);
+            border: 1px solid var(--card-border);
             color: var(--text-color);
+            padding: 16px 18px;
+            padding-left: 45px;
+            border-radius: 8px;
+            font-size: 1rem;
+            width: 100%;
+            transition: all 0.3s ease;
         }
         
-        .light #etf-search {
+        .light .main-search-input {
             background-color: rgba(0, 0, 0, 0.05);
-            border-color: rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(0, 0, 0, 0.1);
             color: var(--light-text-color);
+            padding: 16px 18px;
+            padding-left: 45px;
+            border-radius: 8px;
+            font-size: 1rem;
+            width: 100%;
+            transition: all 0.3s ease;
         }
         
-        #etf-search:focus {
+        .main-search-input:focus {
             border-color: var(--accent-color);
             box-shadow: var(--accent-glow);
+            outline: none;
         }
         
         .dark .search-wrapper i {
@@ -804,11 +769,26 @@
         .clear-btn {
             cursor: pointer;
             padding: 5px;
-            font-size: 14px;
+            font-size: 16px;
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            outline: none;
         }
         
         .clear-btn:hover {
             color: var(--accent-color);
+        }
+        
+        .search-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 18px;
         }
         
         /* Styles pour les résultats de recherche */
@@ -830,47 +810,25 @@
             color: var(--text-secondary);
         }
         
-        /* État actif pour la lettre "Tous" */
-        .region-tab.all-results {
-            font-weight: 600;
+        /* Tableau des résultats de recherche */
+        .search-results-table {
+            margin-top: 20px;
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
         }
         
-        .region-tab.all-results.active {
-            color: var(--accent-color);
+        /* Style pour la section des résultats */
+        .results-container {
+            margin-top: 20px;
         }
         
-        /* Section de filtrage des ETF */
-        .etf-filter-section {
-            margin-bottom: 24px;
-        }
-        
-        .filter-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
+        /* Compteur de résultats */
+        .search-count {
             margin-top: 12px;
-        }
-        
-        .filter-btn {
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: all 0.3s;
-            background-color: var(--accent-subtle);
-            border: 1px solid var(--accent-medium);
-            color: var(--text-color);
-        }
-        
-        .filter-btn.active {
-            background-color: var(--accent-medium);
-            color: var(--accent-color);
-            font-weight: 600;
-        }
-        
-        .filter-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--accent-glow);
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.7);
         }
 
         /* Responsive */
@@ -918,21 +876,12 @@
                 display: none;
             }
             
-            .region-tabs {
-                overflow-x: auto;
-                white-space: nowrap;
-            }
-            
             .top-performers-grid {
                 grid-template-columns: 1fr;
                 gap: 12px;
             }
             
             .market-selector-buttons {
-                flex-direction: column;
-            }
-            
-            .filter-buttons {
                 flex-direction: column;
             }
         }
@@ -1023,6 +972,21 @@
                     </div>
                 </div>
                 
+                <!-- Barre de recherche principale -->
+                <div class="search-container mb-8">
+                    <h2 class="section-title mb-4">Rechercher un ETF</h2>
+                    <div class="search-wrapper relative">
+                        <i class="fas fa-search search-icon"></i>
+                        <input type="text" id="main-search-input" class="main-search-input" placeholder="Saisissez le nom d'un ETF (ex: 'MSCI World', 'S&P 500', 'Gold')..." autocomplete="off">
+                        <button id="clear-search" class="clear-btn" style="opacity: 0;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div id="search-count" class="search-count hidden">
+                        <span id="results-count">0</span> résultats trouvés
+                    </div>
+                </div>
+                
                 <!-- Sélecteur de catégorie ETF -->
                 <div class="market-selector mb-8">
                     <h2 class="section-title mb-4">Sélectionner une catégorie</h2>
@@ -1036,20 +1000,6 @@
                         <button id="category-shortterm" class="market-btn" data-category="shortterm">
                             <i class="fas fa-bolt mr-2"></i> TOP ETF Court Terme
                         </button>
-                    </div>
-                </div>
-                
-                <!-- Filtres pour les ETF -->
-                <div class="etf-filter-section mb-8">
-                    <h2 class="section-title mb-4">Filtrer par catégorie</h2>
-                    <div class="filter-buttons">
-                        <button class="filter-btn active" data-category="all">Tous</button>
-                        <button class="filter-btn" data-category="equity">Actions</button>
-                        <button class="filter-btn" data-category="bond">Obligations</button>
-                        <button class="filter-btn" data-category="commodity">Matières premières</button>
-                        <button class="filter-btn" data-category="multi-asset">Multi-actifs</button>
-                        <button class="filter-btn" data-category="sector">Sectoriels</button>
-                        <button class="filter-btn" data-category="thematic">Thématiques</button>
                     </div>
                 </div>
                 
@@ -1247,141 +1197,28 @@
                     </div>
                 </div>
                 
-                <!-- Onglets alphabétiques -->
-                <div class="mb-8">
-                    <h2 class="section-title mb-6">ETF par lettre</h2>
-                    
-                    <!-- Barre de recherche -->
-                    <div class="search-container mb-4">
-                        <div class="search-wrapper relative">
-                            <input type="text" id="etf-search" placeholder="Rechercher un ETF..." class="w-full py-3 px-12 bg-opacity-10 rounded-lg border border-opacity-30 text-white focus:outline-none focus:border-accent" autocomplete="off">
-                            <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-opacity-70"></i>
-                            <button id="clear-search" class="clear-btn absolute right-4 top-1/2 transform -translate-y-1/2 opacity-0 transition-opacity duration-200">
-                                <i class="fas fa-times"></i>
-                            </button>
-                        </div>
-                        <div id="search-info" class="mt-2 text-sm opacity-70 hidden">
-                            <span id="search-count">0</span> résultats trouvés
-                        </div>
-                    </div>
-                    
-                    <div class="region-tabs mb-6">
-                        <div class="region-tab all-results" data-region="all">TOUS</div>
-                        <div class="region-tab active" data-region="a">A</div>
-                        <div class="region-tab" data-region="b">B</div>
-                        <div class="region-tab" data-region="c">C</div>
-                        <div class="region-tab" data-region="d">D</div>
-                        <div class="region-tab" data-region="e">E</div>
-                        <div class="region-tab" data-region="f">F</div>
-                        <div class="region-tab" data-region="g">G</div>
-                        <div class="region-tab" data-region="h">H</div>
-                        <div class="region-tab" data-region="i">I</div>
-                        <div class="region-tab" data-region="j">J</div>
-                        <div class="region-tab" data-region="k">K</div>
-                        <div class="region-tab" data-region="l">L</div>
-                        <div class="region-tab" data-region="m">M</div>
-                        <div class="region-tab" data-region="n">N</div>
-                        <div class="region-tab" data-region="o">O</div>
-                        <div class="region-tab" data-region="p">P</div>
-                        <div class="region-tab" data-region="q">Q</div>
-                        <div class="region-tab" data-region="r">R</div>
-                        <div class="region-tab" data-region="s">S</div>
-                        <div class="region-tab" data-region="t">T</div>
-                        <div class="region-tab" data-region="u">U</div>
-                        <div class="region-tab" data-region="v">V</div>
-                        <div class="region-tab" data-region="w">W</div>
-                        <div class="region-tab" data-region="x">X</div>
-                        <div class="region-tab" data-region="y">Y</div>
-                        <div class="region-tab" data-region="z">Z</div>
-                    </div>
-                    
-                    <!-- Conteneur pour le tableau des ETF -->
+                <!-- Résultats de recherche -->
+                <div id="search-results" class="results-container hidden mb-10">
+                    <h2 class="section-title mb-6">Résultats de recherche</h2>
                     <div class="glassmorphism rounded-lg overflow-hidden">
-                        <div id="etfs-loading" class="py-16 flex justify-center">
-                            <div class="loader"></div>
-                        </div>
-                        
-                        <div id="etfs-error" class="py-16 text-center hidden">
-                            <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
-                            <p class="text-lg">Impossible de charger les données des ETF.</p>
-                            <button id="retry-button" class="mt-4 search-button inline-flex items-center">
-                                <i class="fas fa-sync-alt mr-2"></i>
-                                Réessayer
-                            </button>
-                        </div>
-                        
-                        <div id="etfs-container" class="hidden">
-                            <!-- Contenu pour chaque lettre -->
-                            <div id="a-etfs" class="region-content">
-                                <div class="overflow-x-auto">
-                                    <table class="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>LIBELLÉ</th>
-                                                <th>CATÉGORIE</th>
-                                                <th>ÉMETTEUR</th>
-                                                <th>DERNIER</th>
-                                                <th>VAR %</th>
-                                                <th>VAR/1JANV</th>
-                                                <th>ENCOURS</th>
-                                                <th>RATIO FRAIS</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="a-etfs-body">
-                                            <!-- Les données seront injectées ici -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            
-                            <!-- B -->
-                            <div id="b-etfs" class="region-content hidden">
-                                <div class="overflow-x-auto">
-                                    <table class="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>LIBELLÉ</th>
-                                                <th>CATÉGORIE</th>
-                                                <th>ÉMETTEUR</th>
-                                                <th>DERNIER</th>
-                                                <th>VAR %</th>
-                                                <th>VAR/1JANV</th>
-                                                <th>ENCOURS</th>
-                                                <th>RATIO FRAIS</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="b-etfs-body">
-                                            <!-- Les données seront injectées ici -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            
-                            <!-- C -->
-                            <div id="c-etfs" class="region-content hidden">
-                                <div class="overflow-x-auto">
-                                    <table class="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>LIBELLÉ</th>
-                                                <th>CATÉGORIE</th>
-                                                <th>ÉMETTEUR</th>
-                                                <th>DERNIER</th>
-                                                <th>VAR %</th>
-                                                <th>VAR/1JANV</th>
-                                                <th>ENCOURS</th>
-                                                <th>RATIO FRAIS</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="c-etfs-body">
-                                            <!-- Les données seront injectées ici -->
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                            
-                            <!-- Vous pouvez ajouter des lettres supplémentaires au besoin -->
-                            
+                        <div class="overflow-x-auto">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>LIBELLÉ</th>
+                                        <th>CATÉGORIE</th>
+                                        <th>ÉMETTEUR</th>
+                                        <th>DERNIER</th>
+                                        <th>VAR %</th>
+                                        <th>VAR/1JANV</th>
+                                        <th>ENCOURS</th>
+                                        <th>RATIO FRAIS</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="search-results-body">
+                                    <!-- Les résultats de recherche seront injectés ici -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -1400,11 +1237,13 @@
     <!-- Script de recherche amélioré -->
     <script>
        document.addEventListener('DOMContentLoaded', function() {
-           // Sélectionner les éléments nécessaires à la recherche
-           const searchInput = document.getElementById('etf-search');
+           // Référence aux éléments de recherche
+           const searchInput = document.getElementById('main-search-input');
            const clearButton = document.getElementById('clear-search');
-           const searchInfo = document.getElementById('search-info');
            const searchCount = document.getElementById('search-count');
+           const resultsCount = document.getElementById('results-count');
+           const searchResults = document.getElementById('search-results');
+           const searchResultsBody = document.getElementById('search-results-body');
            
            if (searchInput && clearButton) {
                // Recherche en temps réel
@@ -1415,7 +1254,7 @@
                    clearButton.style.opacity = searchTerm ? '1' : '0';
                    
                    // Effectuer la recherche
-                   if (searchTerm) {
+                   if (searchTerm && searchTerm.length >= 2) {
                        performSearch(searchTerm);
                    } else {
                        clearSearch();
@@ -1433,89 +1272,139 @@
                searchInput.addEventListener('keydown', function(e) {
                    if (e.key === 'Enter') {
                        e.preventDefault();
+                       const searchTerm = this.value.trim().toLowerCase();
+                       if (searchTerm && searchTerm.length >= 2) {
+                           performSearch(searchTerm);
+                       }
                    }
                });
            }
            
            // Fonction pour effectuer la recherche
            function performSearch(searchTerm) {
-               let totalResults = 0;
-               
-               // Activer l'onglet "Tous" si présent
-               const allTab = document.querySelector('.region-tab[data-region="all"]');
-               const tabs = document.querySelectorAll('.region-tab');
-               
-               if (allTab) {
-                   tabs.forEach(tab => tab.classList.remove('active'));
-                   allTab.classList.add('active');
+               if (!window.etfsData || !window.etfsData.indices) {
+                   console.warn("Les données ETF ne sont pas encore chargées");
+                   return;
                }
                
-               // Afficher toutes les sections pour la recherche
-               document.querySelectorAll('.region-content').forEach(content => {
-                   content.classList.remove('hidden');
-               });
+               // Vider le tableau de résultats
+               if (searchResultsBody) {
+                   searchResultsBody.innerHTML = '';
+               }
                
-               // Rechercher dans chaque ligne de toutes les sections
-               document.querySelectorAll('table.data-table tbody tr').forEach(row => {
-                   if (row.cells.length <= 1) return; // Ignorer les lignes spéciales
+               // Afficher la section de résultats
+               if (searchResults) {
+                   searchResults.classList.remove('hidden');
+               }
+               
+               let totalResults = 0;
+               let matchingETFs = [];
+               
+               // Parcourir toutes les lettres et chercher les ETFs correspondants
+               const alphabet = "abcdefghijklmnopqrstuvwxyz".split('');
+               
+               alphabet.forEach(letter => {
+                   const etfs = window.etfsData.indices[letter] || [];
                    
-                   const etfName = row.cells[0].textContent.toLowerCase();
-                   
-                   if (etfName.includes(searchTerm)) {
-                       row.classList.add('search-highlight');
-                       row.style.display = '';
-                       totalResults++;
-                   } else {
-                       row.classList.remove('search-highlight');
-                       row.style.display = 'none';
-                   }
+                   etfs.forEach(etf => {
+                       // Recherche dans le nom d'ETF
+                       if (etf.name && etf.name.toLowerCase().includes(searchTerm)) {
+                           matchingETFs.push(etf);
+                           totalResults++;
+                       }
+                   });
                });
                
                // Mettre à jour le compteur de résultats
-               if (searchInfo && searchCount) {
-                   searchCount.textContent = totalResults;
-                   searchInfo.classList.remove('hidden');
+               if (searchCount && resultsCount) {
+                   resultsCount.textContent = totalResults;
+                   searchCount.classList.remove('hidden');
+               }
+               
+               // Afficher les résultats
+               if (searchResultsBody) {
+                   if (totalResults === 0) {
+                       searchResultsBody.innerHTML = `
+                           <tr>
+                               <td colspan="8" class="text-center py-4 text-gray-400">
+                                   <i class="fas fa-info-circle mr-2"></i>
+                                   Aucun ETF ne correspond à votre recherche
+                               </td>
+                           </tr>
+                       `;
+                   } else {
+                       // Trier les résultats par nom
+                       matchingETFs.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+                       
+                       // Limiter à 20 résultats pour la performance
+                       const displayETFs = matchingETFs.slice(0, 20);
+                       
+                       // Ajouter chaque ETF au tableau
+                       displayETFs.forEach(etf => {
+                           const row = document.createElement('tr');
+                           
+                           // Déterminer les classes pour les performances
+                           const changeClass = etf.change && etf.change.includes('-') ? 'negative' : 'positive';
+                           const ytdClass = etf.ytd && etf.ytd.includes('-') ? 'negative' : 'positive';
+                           
+                           // Création de la ligne avec mise en évidence du terme recherché
+                           let highlightedName = etf.name || '-';
+                           if (searchTerm && highlightedName !== '-') {
+                               // Mettre en évidence le terme recherché
+                               const re = new RegExp(`(${searchTerm})`, 'gi');
+                               highlightedName = highlightedName.replace(re, '<mark class="bg-accent-subtle text-white">$1</mark>');
+                           }
+                           
+                           row.innerHTML = `
+                               <td class="font-medium">${highlightedName}</td>
+                               <td>${etf.category || '-'}</td>
+                               <td>${etf.provider || '-'}</td>
+                               <td>${etf.last || '-'}</td>
+                               <td class="${changeClass}">${etf.change || '-'}</td>
+                               <td class="${ytdClass}">${etf.ytd || '-'}</td>
+                               <td>${etf.assets || '-'}</td>
+                               <td>${etf.ratio || '-'}</td>
+                           `;
+                           
+                           searchResultsBody.appendChild(row);
+                       });
+                       
+                       // Afficher un message si les résultats sont limités
+                       if (totalResults > 20) {
+                           const moreRow = document.createElement('tr');
+                           moreRow.innerHTML = `
+                               <td colspan="8" class="text-center py-2 text-gray-400">
+                                   <i class="fas fa-ellipsis-h mr-2"></i>
+                                   ${totalResults - 20} résultats supplémentaires trouvés. Affinez votre recherche pour des résultats plus précis.
+                               </td>
+                           `;
+                           searchResultsBody.appendChild(moreRow);
+                       }
+                   }
                }
            }
            
            // Fonction pour effacer la recherche
            function clearSearch() {
                // Masquer le compteur de résultats
-               if (searchInfo) {
-                   searchInfo.classList.add('hidden');
+               if (searchCount) {
+                   searchCount.classList.add('hidden');
                }
                
-               // Restaurer l'affichage normal des lignes
-               document.querySelectorAll('table.data-table tbody tr').forEach(row => {
-                   row.classList.remove('search-highlight');
-                   row.style.display = '';
-               });
+               // Masquer la section de résultats
+               if (searchResults) {
+                   searchResults.classList.add('hidden');
+               }
                
-               // Restaurer l'affichage normal des sections selon l'onglet actif
-               const activeTab = document.querySelector('.region-tab.active');
-               if (activeTab) {
-                   const activeRegion = activeTab.getAttribute('data-region');
-                   
-                   document.querySelectorAll('.region-content').forEach(content => {
-                       if (activeRegion === 'all' || content.id === `${activeRegion}-etfs`) {
-                           content.classList.remove('hidden');
-                       } else {
-                           content.classList.add('hidden');
-                       }
-                   });
+               // Vider le tableau de résultats
+               if (searchResultsBody) {
+                   searchResultsBody.innerHTML = '';
                }
            }
            
-           // Gestion des clics sur l'onglet "TOUS"
-           const allTab = document.querySelector('.region-tab[data-region="all"]');
-           if (allTab) {
-               allTab.addEventListener('click', function() {
-                   // Afficher toutes les sections
-                   document.querySelectorAll('.region-content').forEach(content => {
-                       content.classList.remove('hidden');
-                   });
-               });
-           }
+           // Exposer window.performSearch pour pouvoir être appelé depuis etf-script.js
+           window.performGlobalSearch = performSearch;
+           window.clearGlobalSearch = clearSearch;
        });
     </script>
 </body>
