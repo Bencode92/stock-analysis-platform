@@ -314,62 +314,31 @@ def scrape_top_short_term_etfs():
             headers_rows = table.select('thead tr')
             print(f"Nombre de lignes d'en-tête trouvées: {len(headers_rows)}")
             
-            # 2. Trouver tous les en-têtes principaux (1 MOIS, 6 MOIS)
+            # 2. Trouver tous les en-têtes principaux
             main_headers = []
             if headers_rows:
                 main_header_cells = headers_rows[0].select('th')
                 main_headers = [cell.get_text(strip=True) for cell in main_header_cells]
                 print(f"En-têtes principaux: {main_headers}")
             
-            # 3. Trouver les en-têtes secondaires (ETF, CATEGORIE, CLASS.)
+            # 3. Trouver les en-têtes secondaires
             sub_headers = []
             if len(headers_rows) > 1:
                 sub_header_cells = headers_rows[1].select('th')
                 sub_headers = [cell.get_text(strip=True) for cell in sub_header_cells]
                 print(f"En-têtes secondaires: {sub_headers}")
             
-            # 4. Déterminer la structure complexe du tableau
-            # Il s'agit d'un tableau à plusieurs niveaux où:
-            # - 1 MOIS est un en-tête principal qui couvre 3 colonnes (ETF, CATEGORIE, CLASS.)
-            # - 6 MOIS est un en-tête principal qui couvre 3 colonnes (ETF, CATEGORIE, CLASS.)
+            # 4. Extraire les données du tableau
             
-            # IMPORTANT: Enregistrer la structure HTML pour référence
-            structure_info = f"""
-            ANALYSE DE STRUCTURE DU TABLEAU:
-            En-têtes principaux: {main_headers}
-            En-têtes secondaires: {sub_headers}
-            """
-            with open(os.path.join(OUTPUT_DIR, f"table_structure_page_{page}.txt"), "w", encoding="utf-8") as f:
-                f.write(structure_info)
-                f.write("\n\nStructure HTML du tableau:\n")
-                f.write(str(table))
+            # D'après les logs et l'image, voici les indices CORRECTS des colonnes:
+            # - Colonne 0: LIBELLÉ (nom de l'ETF)
+            # - Colonne 2: 1 MOIS ETF (ex: +18,04%)
+            # - Colonne 5: 6 MOIS ETF (ex: +66,70%)
             
-            # 5. Déterminer les indices corrects des colonnes pour ETF sous 1 MOIS et ETF sous 6 MOIS
-            one_month_etf_index = None
-            six_month_etf_index = None
+            one_month_etf_index = 2  # Indice correct pour 1 MOIS ETF
+            six_month_etf_index = 5  # Indice correct pour 6 MOIS ETF
             
-            # Extraction directe depuis l'image: Les colonnes sont regroupées
-            # LIBELLÉ | 1 MOIS (ETF, CATEGORIE, CLASS.) | 6 MOIS (ETF, CATEGORIE, CLASS.)
-            
-            # Compter les colonnes pour déterminer le nombre total
-            total_columns = len(table.select('tbody tr:first-child td'))
-            print(f"Nombre total de colonnes dans le tableau: {total_columns}")
-            
-            # Basé sur l'image, assignons les indices corrects
-            # Colonne 0: LIBELLÉ
-            # Colonne 1: 1 MOIS - ETF (celle avec +18,04%)
-            # Colonne 4: 6 MOIS - ETF (celle avec +66,70%)
-            
-            one_month_etf_index = 1  # Premier pourcentage après LIBELLÉ
-            
-            # Si total_columns >= 7, l'indice 4 est probablement correct pour 6 MOIS - ETF
-            if total_columns >= 7:
-                six_month_etf_index = 4
-            else:
-                # Si moins de colonnes, essayer avec un indice plus petit
-                six_month_etf_index = min(4, total_columns - 1)
-            
-            print(f"Indices sélectionnés: 1 MOIS ETF = {one_month_etf_index}, 6 MOIS ETF = {six_month_etf_index}")
+            print(f"Indices CORRIGÉS: 1 MOIS ETF = {one_month_etf_index}, 6 MOIS ETF = {six_month_etf_index}")
             
             # Extraire les lignes du tableau
             rows = table.select('tbody tr')
@@ -397,45 +366,14 @@ def scrape_top_short_term_etfs():
                     name_link = name_cell.select_one('a')
                     name = name_link.get_text(strip=True) if name_link else name_cell.get_text(strip=True)
                     
-                    # EXTRACTION DIRECTE des valeurs numériques pour 1 mois ETF et 6 mois ETF
-                    # Obtention des textes complets des cellules
-                    one_month_cell = cells[one_month_etf_index]
-                    six_month_cell = cells[six_month_etf_index]
+                    # Extraire les valeurs 1 MOIS et 6 MOIS des bonnes colonnes
+                    one_month_text = cells[one_month_etf_index].get_text(strip=True)
+                    six_month_text = cells[six_month_etf_index].get_text(strip=True)
                     
-                    # Extraire les textes de manière robuste (peut contenir des éléments imbriqués)
-                    one_month_text = one_month_cell.get_text(strip=True)
-                    six_month_text = six_month_cell.get_text(strip=True)
-                    
-                    # Log très détaillé des valeurs brutes
+                    # Débogage: afficher le HTML et le texte des cellules
                     print(f"LIGNE {row_idx+1} - Nom: {name}")
-                    print(f"  1M (col {one_month_etf_index}) HTML: {one_month_cell}")
-                    print(f"  1M texte: '{one_month_text}'")
-                    print(f"  6M (col {six_month_etf_index}) HTML: {six_month_cell}")
-                    print(f"  6M texte: '{six_month_text}'")
-                    
-                    # Nettoyage des valeurs (supprimer les caractères non nécessaires, garder seulement le pourcentage)
-                    one_month_value = one_month_text.strip()
-                    six_month_value = six_month_text.strip()
-                    
-                    # Vérifier si les valeurs sont des pourcentages (contiennent %)
-                    if '%' not in one_month_value:
-                        print(f"  ATTENTION: 1M ne contient pas de % - valeur brute: '{one_month_value}'")
-                    if '%' not in six_month_value:
-                        print(f"  ATTENTION: 6M ne contient pas de % - valeur brute: '{six_month_value}'")
-                    
-                    # S'assurer que les valeurs sont formatées correctement
-                    # Si une valeur n'est pas un pourcentage, essayer de trouver un élément avec une classe spécifique
-                    if not one_month_value or '%' not in one_month_value:
-                        value_elem = one_month_cell.select_one('.c-instrument--variation, .c-positive, .c-negative')
-                        if value_elem:
-                            one_month_value = value_elem.get_text(strip=True)
-                            print(f"  1M trouvé dans sous-élément: '{one_month_value}'")
-                    
-                    if not six_month_value or '%' not in six_month_value:
-                        value_elem = six_month_cell.select_one('.c-instrument--variation, .c-positive, .c-negative')
-                        if value_elem:
-                            six_month_value = value_elem.get_text(strip=True)
-                            print(f"  6M trouvé dans sous-élément: '{six_month_value}'")
+                    print(f"  1M (col {one_month_etf_index}): '{one_month_text}'")
+                    print(f"  6M (col {six_month_etf_index}): '{six_month_text}'")
                     
                     # Détecter la catégorie basée sur le nom
                     category = "Divers"
@@ -447,14 +385,14 @@ def scrape_top_short_term_etfs():
                     # Créer l'objet ETF avec les données correctement extraites
                     etf = {
                         "name": name,
-                        "oneMonth": one_month_value,
-                        "sixMonth": six_month_value,
+                        "oneMonth": one_month_text,
+                        "sixMonth": six_month_text,
                         "category": category
                     }
                     
                     # Ajouter l'ETF à la liste
                     page_etfs.append(etf)
-                    print(f"ETF extrait: {name}, 1M: {one_month_value}, 6M: {six_month_value}")
+                    print(f"ETF extrait: {name}, 1M: {one_month_text}, 6M: {six_month_text}")
                 
                 except Exception as e:
                     print(f"Erreur lors de l'extraction d'un ETF court terme (ligne {row_idx+1}): {e}")
