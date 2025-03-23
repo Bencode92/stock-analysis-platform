@@ -794,21 +794,35 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
+            // Fonction pour formater correctement les pourcentages
+            const formatPerformance = (value) => {
+                if (!value || value === '') return '-';
+                
+                // Nettoyer la valeur en supprimant les symboles % existants
+                let cleanValue = value.replace(/%/g, '');
+                
+                // Vérifier si le signe + ou - existe déjà
+                if (cleanValue.startsWith('+')) {
+                    return cleanValue + '%';
+                } else if (cleanValue.startsWith('-')) {
+                    return cleanValue + '%';
+                } else {
+                    // Si pas de signe, ajouter un +
+                    return `+${cleanValue}%`;
+                }
+            };
+            
             // Afficher les ETF court terme avec seulement LIBELLÉ, 1 MOIS et 6 MOIS
             paginatedShortTerm.forEach((etf, index) => {
                 const row = document.createElement('tr');
                 
                 // Détermine les classes CSS pour les valeurs numériques
-                const oneMonthClass = etf.oneMonth && parseFloat(etf.oneMonth) < 0 ? 'negative' : 'positive';
+                const oneMonthClass = etf.oneMonth && parseFloat(etf.oneMonth.replace(',', '.').replace(/%/g, '')) < 0 ? 'negative' : 'positive';
+                const sixMonthClass = etf.sixMonth && parseFloat(etf.sixMonth.replace(',', '.').replace(/%/g, '')) < 0 ? 'negative' : 'positive';
                 
-                // Pour les valeurs à 6 mois, utiliser la propriété sixMonth directement
-                const sixMonthClass = etf.sixMonth && parseFloat(etf.sixMonth) < 0 ? 'negative' : 'positive';
-                
-                // Format avec % pour l'affichage
-                const oneMonthDisplay = etf.oneMonth ? (etf.oneMonth.includes('+') ? etf.oneMonth : `+${etf.oneMonth}`) + '%' : '-';
-                
-                // Afficher les données 6 mois correctement formatées
-                const sixMonthDisplay = etf.sixMonth ? (etf.sixMonth.startsWith('+') ? etf.sixMonth : `+${etf.sixMonth}`) + '%' : '-';
+                // Appliquer le formatage propre
+                const oneMonthDisplay = formatPerformance(etf.oneMonth);
+                const sixMonthDisplay = formatPerformance(etf.sixMonth);
                 
                 // Structure HTML simplifiée avec seulement 3 colonnes
                 row.innerHTML = `
