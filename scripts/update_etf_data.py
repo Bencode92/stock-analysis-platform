@@ -308,32 +308,46 @@ def scrape_top_short_term_etfs():
                 print(f"Page {page}: Aucun tableau trouvé, vérifiez la structure HTML")
                 continue
             
-            # Analyser les en-têtes du tableau pour trouver les colonnes "1 MOIS" et "6 MOIS"
-            headers = [header.get_text(strip=True).lower() for header in table.select('thead th')]
-            print(f"En-têtes trouvés dans le tableau ETF court terme: {headers}")
+            # Analyser la structure complète du tableau
+            print("Analyse de la structure du tableau...")
+            table_rows = table.select('tr')
+            all_headers = []
+            all_subheaders = []
             
-            # Déterminer les indices des colonnes "1 MOIS - ETF" et "6 MOIS - ETF"
-            one_month_index = None
-            six_month_index = None
-
-            # On parcourt les en-têtes pour repérer "1 MOIS" et "6 MOIS", mais on utilisera des indices manuels basés sur l'image
-            for i, header in enumerate(headers):
-                if "1 mois" in header.lower() or "1m" in header.lower():
-                    one_month_index = i + 1  # l'ETF est juste après "1 MOIS"
-                    print(f"Colonne '1 MOIS - ETF' trouvée à l'indice {one_month_index}")
-                if "6 mois" in header.lower() or "6m" in header.lower():
-                    six_month_index = i + 1  # l'ETF est juste après "6 MOIS"
-                    print(f"Colonne '6 MOIS - ETF' trouvée à l'indice {six_month_index}")
-
-            # Si les indices n'ont pas été trouvés automatiquement, on force ceux visibles dans l'image
-            if one_month_index is None:
-                one_month_index = 1  # Colonne "ETF" sous "1 MOIS"
-                print(f"Utilisation de l'indice par défaut pour '1 MOIS - ETF': {one_month_index}")
-            if six_month_index is None:
-                six_month_index = 4  # Colonne "ETF" sous "6 MOIS"
-                print(f"Utilisation de l'indice par défaut pour '6 MOIS - ETF': {six_month_index}")
+            if len(table_rows) > 0:
+                headers_row = table_rows[0]
+                all_headers = [h.get_text(strip=True) for h in headers_row.select('th')]
+                print(f"En-têtes principaux: {all_headers}")
+                
+                # Si le tableau a une deuxième ligne d'en-tête (sous-en-têtes)
+                if len(table_rows) > 1 and table_rows[1].select('th'):
+                    subheaders_row = table_rows[1]
+                    all_subheaders = [h.get_text(strip=True) for h in subheaders_row.select('th')]
+                    print(f"Sous-en-têtes: {all_subheaders}")
             
-            # Extraire les lignes du tableau
+            # Définir les indices corrects pour les colonnes 1 mois ETF et 6 mois ETF
+            one_month_etf_index = None  # Indice pour récupérer "+18,04%"
+            six_month_etf_index = None  # Indice pour récupérer "+66,70%"
+            
+            # Chercher les colonnes 1 MOIS et 6 MOIS
+            for i, header in enumerate(all_headers):
+                if "1 MOIS" in header.upper():
+                    one_month_etf_index = i
+                    print(f"Colonne '1 MOIS' trouvée à l'indice {i}")
+                if "6 MOIS" in header.upper():
+                    six_month_etf_index = i 
+                    print(f"Colonne '6 MOIS' trouvée à l'indice {i}")
+            
+            # Si les indices n'ont pas été trouvés, utiliser des valeurs par défaut basées sur la structure
+            if one_month_etf_index is None:
+                one_month_etf_index = 1  # Souvent la 2ème colonne 
+                print(f"Utilisation de l'indice par défaut pour '1 MOIS ETF': {one_month_etf_index}")
+            
+            if six_month_etf_index is None:
+                six_month_etf_index = 4  # Souvent la 5ème colonne
+                print(f"Utilisation de l'indice par défaut pour '6 MOIS ETF': {six_month_etf_index}")
+            
+            # Extraire les lignes du tableau (sauter les en-têtes)
             rows = table.select('tbody tr')
             print(f"Page {page}: {len(rows)} lignes d'ETF court terme trouvées")
             
@@ -341,24 +355,58 @@ def scrape_top_short_term_etfs():
             for row_idx, row in enumerate(rows):
                 try:
                     cells = row.select('td')
-                    if len(cells) >= max(one_month_index, six_month_index) + 1:  # S'assurer qu'il y a assez de cellules
-                        # Extraire le nom de l'ETF (première colonne)
+                    if len(cells) >= max(one_month_etf_index, six_month_etf_index) + 1:
+                        # Extraire le nom de l'ETF (première colonne normalement)
                         name_cell = cells[0]
                         name_link = name_cell.select_one('a')
                         name = name_link.get_text(strip=True) if name_link else name_cell.get_text(strip=True)
                         
-                        # Extraire les performances 1 mois et 6 mois
-                        one_month_text = cells[one_month_index].get_text(strip=True)
-                        six_month_text = cells[six_month_index].get_text(strip=True)
+                        # ⚠️ IMPORTANT: Vérifier si chaque cellule contient d'autres éléments HTML
+                        # Récupérer la performance 1 mois (colonne ETF)
+                        one_month_cell = cells[one_month_etf_index]
                         
-                        # Pour le débogage, affichons les valeurs brutes extraites
-                        print(f"Nom: {name}, 1M: {one_month_text}, 6M: {six_month_text}")
+                        # Essayer de trouver la valeur exacte au sein de la cellule
+                        # D'abord, chercher un élément avec la classe qui correspond typiquement à une valeur
+                        one_month_value_elem = one_month_cell.select_one('.c-instrument--variation, .c-positive, .c-negative')
+                        if one_month_value_elem:
+                            one_month_text = one_month_value_elem.get_text(strip=True)
+                        else:
+                            # Sinon, prendre le texte complet de la cellule
+                            one_month_text = one_month_cell.get_text(strip=True)
                         
-                        # Normaliser les valeurs (remplacer les virgules par des points pour conversion en nombre)
-                        one_month = one_month_text.replace('%', '').replace(',', '.')
-                        six_month = six_month_text.replace('%', '').replace(',', '.')
+                        # Faire de même pour la performance 6 mois
+                        six_month_cell = cells[six_month_etf_index]
+                        six_month_value_elem = six_month_cell.select_one('.c-instrument--variation, .c-positive, .c-negative')
+                        if six_month_value_elem:
+                            six_month_text = six_month_value_elem.get_text(strip=True)
+                        else:
+                            six_month_text = six_month_cell.get_text(strip=True)
                         
-                        # Détecter la catégorie (par défaut ou à partir du nom)
+                        # Log brut pour le débogage
+                        print(f"Brut - Nom: {name}, 1M: {one_month_text}, 6M: {six_month_text}")
+                        
+                        # Nettoyage et formatage des valeurs
+                        one_month = one_month_text.replace('%', '').replace(',', '.').strip()
+                        six_month = six_month_text.replace('%', '').replace(',', '.').strip()
+                        
+                        # Si les valeurs sont des nombres, ajouter le signe + si positif
+                        try:
+                            if one_month and not one_month.startswith('-') and not one_month.startswith('+'):
+                                one_month_val = float(one_month)
+                                one_month = f"+{one_month}" if one_month_val > 0 else one_month
+                        except ValueError:
+                            # En cas d'erreur, garder la valeur telle quelle
+                            pass
+                            
+                        try:
+                            if six_month and not six_month.startswith('-') and not six_month.startswith('+'):
+                                six_month_val = float(six_month)
+                                six_month = f"+{six_month}" if six_month_val > 0 else six_month
+                        except ValueError:
+                            # En cas d'erreur, garder la valeur telle quelle
+                            pass
+                        
+                        # Détecter la catégorie basée sur le nom
                         category = "Divers"  # Catégorie par défaut
                         if any(kw in name.lower() for kw in ["bond", "oblig", "treasury", "bund"]):
                             category = "Obligations"
@@ -369,13 +417,13 @@ def scrape_top_short_term_etfs():
                         etf = {
                             "name": name,
                             "oneMonth": one_month,
-                            "sixMonth": six_month,  # Nouvelle propriété pour stocker la performance à 6 mois
+                            "sixMonth": six_month,
                             "category": category
                         }
                         
                         # Ajouter l'ETF à la liste
                         page_etfs.append(etf)
-                        print(f"ETF extrait: {name}, 1M: {one_month}%, 6M: {six_month}%")
+                        print(f"ETF extrait: {name}, 1M: {one_month}, 6M: {six_month}")
                     else:
                         print(f"Page {page}, Ligne {row_idx+1}: Pas assez de cellules ({len(cells)}), ignorée")
                 
