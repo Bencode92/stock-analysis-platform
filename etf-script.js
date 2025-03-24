@@ -204,6 +204,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (currentEtfCategory !== category) {
             currentEtfCategory = category;
             updateEtfCategoryUI();
+            
+            // Mettre à jour les top performers pour cette catégorie
+            updateCategoryTopPerformers(category);
         }
     }
     
@@ -507,6 +510,10 @@ document.addEventListener('DOMContentLoaded', function() {
             renderEtfsData();
             renderTopEtfTables();
             renderTopShortTermTable();
+            
+            // Mettre à jour les top performers pour la catégorie actuelle
+            updateCategoryTopPerformers(currentEtfCategory);
+            
             lastUpdate = new Date();
         } catch (error) {
             console.error('❌ Erreur lors du chargement des données:', error);
@@ -857,6 +864,107 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
+     * Gère l'affichage des Top Performers spécifiques à chaque catégorie d'ETF
+     * @param {string} category - La catégorie d'ETF ('top50', 'bonds', 'shortterm')
+     */
+    function updateCategoryTopPerformers(category) {
+        // Définir les données sources en fonction de la catégorie sélectionnée
+        let sourceData;
+        let performersConfig;
+        
+        if (category === 'top50') {
+            // TOP 50 ETF - afficher 1 mois et YTD
+            sourceData = window.etfsData.top50_etfs || [];
+            performersConfig = [
+                { containerId: 'daily-top', valueField: 'one_month', title: 'Top 10 Hausse (1 MOIS)', isPositive: true },
+                { containerId: 'daily-bottom', valueField: 'one_month', title: 'Top 10 Baisse (1 MOIS)', isPositive: false },
+                { containerId: 'ytd-top', valueField: 'ytd', title: 'Top 10 Hausse (YTD)', isPositive: true },
+                { containerId: 'ytd-bottom', valueField: 'ytd', title: 'Top 10 Baisse (YTD)', isPositive: false }
+            ];
+        } else if (category === 'bonds') {
+            // TOP ETF Obligations - afficher 1 mois et YTD
+            sourceData = window.etfsData.top_bond_etfs || [];
+            performersConfig = [
+                { containerId: 'daily-top', valueField: 'one_month', title: 'Top 10 Hausse (1 MOIS)', isPositive: true },
+                { containerId: 'daily-bottom', valueField: 'one_month', title: 'Top 10 Baisse (1 MOIS)', isPositive: false },
+                { containerId: 'ytd-top', valueField: 'ytd', title: 'Top 10 Hausse (YTD)', isPositive: true },
+                { containerId: 'ytd-bottom', valueField: 'ytd', title: 'Top 10 Baisse (YTD)', isPositive: false }
+            ];
+        } else if (category === 'shortterm') {
+            // ETF Court Terme - afficher 1 mois et 6 mois
+            sourceData = window.etfsData.top_short_term_etfs || [];
+            performersConfig = [
+                { containerId: 'daily-top', valueField: 'oneMonth', title: 'Top 10 Hausse (1 MOIS)', isPositive: true },
+                { containerId: 'daily-bottom', valueField: 'oneMonth', title: 'Top 10 Baisse (1 MOIS)', isPositive: false },
+                { containerId: 'ytd-top', valueField: 'sixMonth', title: 'Top 10 Hausse (6 MOIS)', isPositive: true },
+                { containerId: 'ytd-bottom', valueField: 'sixMonth', title: 'Top 10 Baisse (6 MOIS)', isPositive: false }
+            ];
+        }
+        
+        // Si aucune donnée, ne rien faire
+        if (!sourceData || sourceData.length === 0) {
+            console.warn(`Aucune donnée disponible pour la catégorie ${category}`);
+            // Afficher des messages "Aucune donnée disponible" dans chaque conteneur
+            performersConfig.forEach(config => {
+                const container = document.getElementById(config.containerId);
+                if (container) {
+                    container.innerHTML = `
+                        <div class="flex justify-center items-center py-4 text-gray-400">
+                            <i class="fas fa-info-circle mr-2"></i>
+                            Aucune donnée disponible
+                        </div>
+                    `;
+                    
+                    // Mise à jour du titre de l'en-tête
+                    const header = container.closest('.performer-card').querySelector('.performer-header span:first-child');
+                    if (header) {
+                        header.textContent = config.title;
+                    }
+                }
+            });
+            return;
+        }
+        
+        // Pour chaque configuration, mettre à jour le conteneur correspondant
+        performersConfig.forEach(config => {
+            const { containerId, valueField, title, isPositive } = config;
+            
+            // Trier les ETF selon le champ de valeur
+            const sortedData = [...sourceData].filter(etf => {
+                // S'assurer que la valeur existe et est valide
+                const value = etf[valueField];
+                if (!value) return false;
+                
+                // Convertir la valeur en nombre pour le tri (en gérant le format avec %)
+                const numValue = parseFloat(value.replace(/[%+]/g, '').replace(',', '.'));
+                return !isNaN(numValue);
+            }).sort((a, b) => {
+                // Extraire les valeurs numériques pour comparer
+                const valueA = parseFloat(a[valueField].replace(/[%+]/g, '').replace(',', '.'));
+                const valueB = parseFloat(b[valueField].replace(/[%+]/g, '').replace(',', '.'));
+                
+                // Tri descendant pour les hausses, ascendant pour les baisses
+                return isPositive ? valueB - valueA : valueA - valueB;
+            });
+            
+            // Prendre les 10 premiers
+            const topTen = sortedData.slice(0, 10);
+            
+            // Mettre à jour le conteneur
+            updateTopPerformersHTML(containerId, topTen, valueField);
+            
+            // Mise à jour du titre de l'en-tête
+            const container = document.getElementById(containerId);
+            if (container) {
+                const header = container.closest('.performer-card').querySelector('.performer-header span:first-child');
+                if (header) {
+                    header.textContent = title;
+                }
+            }
+        });
+    }
+    
+    /**
      * Met à jour les top performers
      */
     function updateTopPerformers(topPerformersData) {
@@ -901,7 +1009,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const row = document.createElement('div');
             row.className = 'performer-row';
             
-            const valueClass = (etf[valueField] || "").includes('-') ? 'negative' : 'positive';
+            // Déterminer si la valeur est positive ou négative
+            const rawValue = etf[valueField] || "";
+            const isNegative = rawValue.includes('-');
+            const valueClass = isNegative ? 'negative' : 'positive';
             
             row.innerHTML = `
                 <div class="performer-info">
@@ -909,7 +1020,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="performer-country">${etf.symbol || ""}</div>
                 </div>
                 <div class="performer-value ${valueClass}">
-                    ${etf[valueField] || "-"}
+                    ${rawValue || "-"}
                 </div>
             `;
             
