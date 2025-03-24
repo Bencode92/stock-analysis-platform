@@ -1229,12 +1229,6 @@
                          <button class="top-tab-btn" data-index="global-losers">
                              <i class="fas fa-globe text-red-500 mr-2"></i> Baisses Globales
                          </button>
-                         <button class="top-tab-btn" data-index="global-ytd-gainers">
-                             <i class="fas fa-calendar-check text-blue-400 mr-2"></i> Hausses YTD Globales
-                         </button>
-                         <button class="top-tab-btn" data-index="global-ytd-losers">
-                             <i class="fas fa-calendar-times text-orange-400 mr-2"></i> Baisses YTD Globales
-                         </button>
                      </div>
                      
                      <!-- Conteneurs pour chaque vue (seul le premier est visible par défaut) -->
@@ -1253,18 +1247,6 @@
                      </div>
                      
                      <div id="top-global-losers" class="top-stocks-content hidden">
-                         <div class="stock-cards-container">
-                             <!-- Les cartes seront générées dynamiquement ici -->
-                         </div>
-                     </div>
-                     
-                     <div id="top-global-ytd-gainers" class="top-stocks-content hidden">
-                         <div class="stock-cards-container">
-                             <!-- Les cartes seront générées dynamiquement ici -->
-                         </div>
-                     </div>
-                     
-                     <div id="top-global-ytd-losers" class="top-stocks-content hidden">
                          <div class="stock-cards-container">
                              <!-- Les cartes seront générées dynamiquement ici -->
                          </div>
@@ -1344,6 +1326,677 @@
                              </div>
                          </div>
                      </div>
+                 </div>
+                 
+                 <!-- Onglets alphabétiques -->
+                 <div class="mb-8">
+                     <h2 class="section-title mb-6">Actions par lettre</h2>
+                     
+                     <!-- Barre de recherche -->
+                     <div class="search-container mb-4">
+                         <div class="search-wrapper relative">
+                             <input type="text" id="stock-search" placeholder="Rechercher une action..." class="w-full py-3 px-12 bg-opacity-10 rounded-lg border border-opacity-30 text-white focus:outline-none focus:border-accent" autocomplete="off">
+                             <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-opacity-70"></i>
+                             <button id="clear-search" class="clear-btn absolute right-4 top-1/2 transform -translate-y-1/2 opacity-0 transition-opacity duration-200">
+                                 <i class="fas fa-times"></i>
+                             </button>
+                         </div>
+                         <div id="search-info" class="mt-2 text-sm opacity-70 hidden">
+                             <span id="search-count">0</span> résultats trouvés
+                         </div>
+                     </div>
+                     
+                     <div class="region-tabs mb-6">
+                         <div class="region-tab all-results" data-region="all">TOUS</div>
+                         <div class="region-tab active" data-region="a">A</div>
+                         <div class="region-tab" data-region="b">B</div>
+                         <div class="region-tab" data-region="c">C</div>
+                         <div class="region-tab" data-region="d">D</div>
+                         <div class="region-tab" data-region="e">E</div>
+                         <div class="region-tab" data-region="f">F</div>
+                         <div class="region-tab" data-region="g">G</div>
+                         <div class="region-tab" data-region="h">H</div>
+                         <div class="region-tab" data-region="i">I</div>
+                         <div class="region-tab" data-region="j">J</div>
+                         <div class="region-tab" data-region="k">K</div>
+                         <div class="region-tab" data-region="l">L</div>
+                         <div class="region-tab" data-region="m">M</div>
+                         <div class="region-tab" data-region="n">N</div>
+                         <div class="region-tab" data-region="o">O</div>
+                         <div class="region-tab" data-region="p">P</div>
+                         <div class="region-tab" data-region="q">Q</div>
+                         <div class="region-tab" data-region="r">R</div>
+                         <div class="region-tab" data-region="s">S</div>
+                         <div class="region-tab" data-region="t">T</div>
+                         <div class="region-tab" data-region="u">U</div>
+                         <div class="region-tab" data-region="v">V</div>
+                         <div class="region-tab" data-region="w">W</div>
+                         <div class="region-tab" data-region="x">X</div>
+                         <div class="region-tab" data-region="y">Y</div>
+                         <div class="region-tab" data-region="z">Z</div>
+                     </div>
+                     
+                     <!-- Conteneur pour le tableau des actions -->
+                     <div class="glassmorphism rounded-lg overflow-hidden">
+                         <div id="indices-loading" class="py-16 flex justify-center">
+                             <div class="loader"></div>
+                         </div>
+                         
+                         <div id="indices-error" class="py-16 text-center hidden">
+                             <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                             <p class="text-lg">Impossible de charger les données des actions.</p>
+                             <button id="retry-button" class="mt-4 search-button inline-flex items-center">
+                                 <i class="fas fa-sync-alt mr-2"></i>
+                                 Réessayer
+                             </button>
+                         </div>
+                         
+                         <div id="indices-container" class="hidden">
+                             <!-- Contenu pour chaque lettre -->
+                             <div id="a-indices" class="region-content">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="a-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- B -->
+                             <div id="b-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="b-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- C -->
+                             <div id="c-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="c-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- D -->
+                             <div id="d-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="d-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- E -->
+                             <div id="e-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="e-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- F -->
+                             <div id="f-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="f-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- G -->
+                             <div id="g-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="g-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- H -->
+                             <div id="h-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="h-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- I -->
+                             <div id="i-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="i-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- J -->
+                             <div id="j-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="j-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- K -->
+                             <div id="k-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="k-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- L -->
+                             <div id="l-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="l-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- M -->
+                             <div id="m-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="m-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- N -->
+                             <div id="n-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="n-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- O -->
+                             <div id="o-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="o-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- P -->
+                             <div id="p-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="p-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- Q -->
+                             <div id="q-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="q-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- R -->
+                             <div id="r-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="r-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- S -->
+                             <div id="s-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="s-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- T -->
+                             <div id="t-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="t-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- U -->
+                             <div id="u-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="u-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- V -->
+                             <div id="v-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="v-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- W -->
+                             <div id="w-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="w-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- X -->
+                             <div id="x-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="x-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- Y -->
+                             <div id="y-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="y-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                             
+                             <!-- Z -->
+                             <div id="z-indices" class="region-content hidden">
+                                 <div class="overflow-x-auto">
+                                     <table class="data-table">
+                                         <thead>
+                                             <tr>
+                                                 <th>LIBELLÉ</th>
+                                                 <th>DERNIER</th>
+                                                 <th>VAR %</th>
+                                                 <th>OUVERTURE</th>
+                                                 <th>PLUS HAUT</th>
+                                                 <th>PLUS BAS</th>
+                                                 <th>VAR/1JANV</th>
+                                                 <th>VOLUME</th>
+                                             </tr>
+                                         </thead>
+                                         <tbody id="z-indices-body">
+                                             <!-- Les données seront injectées ici -->
+                                         </tbody>
+                                     </table>
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+                 
+                 <!-- Source et avertissement -->
+                 <div class="text-center text-sm text-gray-400 mb-6 p-4 glassmorphism rounded-lg bg-opacity-50">
+                     <p id="source-link">Sources: <a href="https://www.boursorama.com/bourse/actions/cotations/international/?international_quotation_az_filter%5Bcountry%5D=1&international_quotation_az_filter%5Bmarket%5D=%24COMPX" target="_blank" class="text-green-400 hover:underline">Boursorama</a></p>
+                     <p class="mt-2">Les données sont actualisées régulièrement mais peuvent accuser un retard par rapport aux marchés en temps réel.</p>
                  </div>
              </div>
          </div>
