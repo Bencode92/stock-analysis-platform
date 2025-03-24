@@ -10,6 +10,7 @@ IMPORTANT: Ce script met à jour UNIQUEMENT les fichiers suivants:
 - data/lists.json (données NASDAQ)
 - data/stoxx_page_*.json (données STOXX)
 - data/update_summary.json (résumé de la mise à jour)
+- data/global_top_performers.json (classement global NASDAQ + STOXX)
 
 Il ne modifie PAS le fichier markets.json qui est géré par le script scrape_markets.py
 et le workflow 'Update Markets Data Only'.
@@ -422,7 +423,8 @@ def scrape_all_stoxx():
         return {
             "status": "success",
             "pages": total_pages,
-            "stocks": total_stocks
+            "stocks": total_stocks,
+            "all_stocks": first_page_stocks  # Retourne les actions de la première page pour le classement global
         }
     except Exception as e:
         logger.error(f"❌ Erreur lors du scraping STOXX: {str(e)}")
@@ -432,6 +434,107 @@ def scrape_all_stoxx():
             "pages": 0,
             "stocks": 0
         }
+
+def create_global_rankings(nasdaq_stocks, stoxx_result):
+    """Crée un classement global combiné NASDAQ + STOXX et le sauvegarde"""
+    logger.info("🌐 Création du classement global NASDAQ + STOXX...")
+    
+    try:
+        # Ajouter l'information du marché pour chaque action NASDAQ
+        nasdaq_with_source = []
+        for stock in nasdaq_stocks:
+            stock_with_source = stock.copy()
+            stock_with_source['market'] = 'NASDAQ'
+            stock_with_source['marketIcon'] = '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
+            nasdaq_with_source.append(stock_with_source)
+        
+        # Récupérer toutes les actions STOXX (depuis toutes les pages)
+        all_stoxx_stocks = []
+        for page in range(1, stoxx_result.get('pages', 1) + 1):
+            stoxx_file = os.path.join(CONFIG["stoxx"]["output_dir"], f"stoxx_page_{page}.json")
+            if os.path.exists(stoxx_file):
+                with open(stoxx_file, 'r', encoding='utf-8') as f:
+                    page_data = json.load(f)
+                    # Extraire toutes les actions de cette page
+                    for letter in "abcdefghijklmnopqrstuvwxyz":
+                        all_stoxx_stocks.extend(page_data.get('indices', {}).get(letter, []))
+
+        # Ajouter l'information du marché pour chaque action STOXX
+        stoxx_with_source = []
+        for stock in all_stoxx_stocks:
+            stock_with_source = stock.copy()
+            stock_with_source['market'] = 'STOXX'
+            stock_with_source['marketIcon'] = '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
+            stoxx_with_source.append(stock_with_source)
+        
+        # Combiner toutes les actions
+        all_stocks = nasdaq_with_source + stoxx_with_source
+        
+        # Fonction pour extraire la valeur numérique d'un pourcentage
+        def parse_percentage(value_str):
+            if not value_str or value_str == "-":
+                return 0.0
+            # Nettoyer la chaîne
+            clean_value = value_str.replace('%', '').replace(',', '.').replace(' ', '')
+            try:
+                return float(clean_value)
+            except:
+                return 0.0
+        
+        # Trier pour le top quotidien (hausse)
+        all_stocks_daily_up = sorted(
+            [s for s in all_stocks if s.get('change')], 
+            key=lambda x: parse_percentage(x.get('change', '0')),
+            reverse=True
+        )
+        
+        # Trier pour le top quotidien (baisse)
+        all_stocks_daily_down = sorted(
+            [s for s in all_stocks if s.get('change')], 
+            key=lambda x: parse_percentage(x.get('change', '0'))
+        )
+        
+        # Trier pour le top YTD (hausse)
+        all_stocks_ytd_up = sorted(
+            [s for s in all_stocks if s.get('ytd')], 
+            key=lambda x: parse_percentage(x.get('ytd', '0')),
+            reverse=True
+        )
+        
+        # Trier pour le top YTD (baisse)
+        all_stocks_ytd_down = sorted(
+            [s for s in all_stocks if s.get('ytd')], 
+            key=lambda x: parse_percentage(x.get('ytd', '0'))
+        )
+        
+        # Créer la structure de données pour le classement global
+        global_rankings = {
+            "daily": {
+                "best": all_stocks_daily_up[:10],  # Top 10 hausse quotidienne
+                "worst": all_stocks_daily_down[:10]  # Top 10 baisse quotidienne
+            },
+            "ytd": {
+                "best": all_stocks_ytd_up[:10],  # Top 10 hausse YTD
+                "worst": all_stocks_ytd_down[:10]  # Top 10 baisse YTD
+            },
+            "meta": {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "count": len(all_stocks),
+                "description": "Classement global combiné (NASDAQ + STOXX)"
+            }
+        }
+        
+        # Sauvegarder dans un fichier JSON
+        output_path = os.path.join(CONFIG["stoxx"]["output_dir"], "global_top_performers.json")
+        with open(output_path, 'w', encoding='utf-8') as f:
+            json.dump(global_rankings, f, ensure_ascii=False, indent=2)
+        
+        logger.info(f"✅ Classement global enregistré dans {output_path}")
+        return True
+    
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de la création du classement global: {str(e)}")
+        return False
 
 def ensure_data_directory():
     """S'assure que le répertoire de données existe"""
@@ -473,6 +576,11 @@ def main():
         logger.info("📊 Début du scraping STOXX...")
         stoxx_result = scrape_all_stoxx()
         
+        # NOUVELLE ÉTAPE: Créer le classement global
+        if nasdaq_stocks and stoxx_result.get("status") == "success":
+            logger.info("📊 Création du classement global NASDAQ + STOXX...")
+            create_global_rankings(nasdaq_stocks, stoxx_result)
+        
         # 3. Enregistrer un résumé global
         result_summary = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -480,7 +588,11 @@ def main():
                 "count": len(nasdaq_stocks),
                 "status": "success" if nasdaq_stocks else "error"
             },
-            "stoxx": stoxx_result
+            "stoxx": stoxx_result,
+            "global_ranking": {
+                "status": "success" if nasdaq_stocks and stoxx_result.get("status") == "success" else "error",
+                "file": "global_top_performers.json"
+            }
         }
         
         # Sauvegarder le résumé
