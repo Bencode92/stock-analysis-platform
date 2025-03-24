@@ -34,7 +34,7 @@ logger = logging.getLogger(__name__)
 
 # Configuration
 CONFIG = {
-    "base_url": "https://www.boursorama.com/bourse/actions/cotations/international/",
+    "base_url": "https://www.boursorama.com/bourse/actions/cotations/international",
     "nasdaq": {
         "country": "1",  # États-Unis
         "market": "$COMPX",  # NASDAQ Composite
@@ -138,15 +138,26 @@ def get_top_performers(stocks, sort_field, reverse=True, limit=10):
 #
 def get_nasdaq_url(letter, page=1):
     """Génère l'URL pour obtenir la liste des actions NASDAQ pour une lettre donnée"""
+    # Générer un timestamp similaire à celui utilisé par Boursorama
+    pagination_timestamp = int(time.time())
+    
+    # Construire le chemin d'URL avec la page dans le chemin
+    base_path = f"{CONFIG['base_url']}/page-{page}"
+    
+    # Paramètres de requête
     params = {
         "international_quotation_az_filter[country]": CONFIG["nasdaq"]["country"],
         "international_quotation_az_filter[market]": CONFIG["nasdaq"]["market"],
         "international_quotation_az_filter[letter]": letter,
         "international_quotation_az_filter[filter]": "",
-        "page": page
+        f"pagination_{pagination_timestamp}": ""
     }
+    
+    # Construire la chaîne de requête
     query_params = "&".join([f"{k}={v}" for k, v in params.items()])
-    return f"{CONFIG['base_url']}?{query_params}"
+    
+    # Retourner l'URL complète
+    return f"{base_path}?{query_params}"
 
 def scrape_nasdaq_page(letter, page=1):
     """Scrape une page de la liste des actions NASDAQ"""
@@ -163,7 +174,7 @@ def scrape_nasdaq_page(letter, page=1):
         table = soup.find('table', class_='c-table')
         if not table:
             logger.warning(f"Aucun tableau trouvé pour la lettre {letter}, page {page}")
-            return []
+            return [], False
             
         # Trouver toutes les lignes de données (ignorer l'en-tête)
         rows = table.find('tbody').find_all('tr') if table.find('tbody') else []
@@ -176,12 +187,36 @@ def scrape_nasdaq_page(letter, page=1):
                 
         logger.info(f"Trouvé {len(stocks)} actions NASDAQ pour la lettre {letter}, page {page}")
         
-        # Vérifier s'il y a une pagination
+        # MISE À JOUR: Détection de pagination pour le nouveau format
         has_next_page = False
-        pagination = soup.find('ul', class_='c-pagination')
+        
+        # Recherche du bloc de pagination (nouvelle structure)
+        pagination = soup.select_one('.c-block-pagination__content')
         if pagination:
-            next_button = pagination.find('li', class_='c-pagination__item--next')
-            has_next_page = next_button and not next_button.has_attr('disabled')
+            # Rechercher le bouton "suivant"
+            next_button = pagination.select_one('a.c-block-pagination__next-btn, a.c-pagination__item--next')
+            has_next_page = next_button is not None and not ('disabled' in next_button.get('class', []))
+            
+            # Si nous ne trouvons pas de bouton spécifique "suivant", vérifier s'il y a une page avec un numéro plus élevé
+            if not has_next_page:
+                page_links = pagination.select('a.c-block-pagination__link')
+                for link in page_links:
+                    if link.text.isdigit() and int(link.text) > page:
+                        has_next_page = True
+                        break
+        
+        # Vérification de l'ancienne structure de pagination au cas où
+        if not has_next_page:
+            pagination_old = soup.find('ul', class_='c-pagination')
+            if pagination_old:
+                next_button = pagination_old.find('li', class_='c-pagination__item--next')
+                has_next_page = next_button and not next_button.has_attr('disabled')
+        
+        # Vérification supplémentaire: si nous avons des actions mais pas de pagination, 
+        # essayons quand même la page suivante
+        if len(stocks) > 0 and not has_next_page and len(stocks) >= 20:  # 20 est la taille de page courante
+            logger.info(f"Aucune pagination détectée mais {len(stocks)} actions trouvées, on essaie la page suivante")
+            has_next_page = True
             
         return stocks, has_next_page
         
@@ -196,8 +231,9 @@ def scrape_all_nasdaq_stocks():
     for letter in CONFIG["alphabet"]:
         page = 1
         has_next_page = True
+        max_pages_per_letter = 10  # Limite de sécurité pour éviter les boucles infinies
         
-        while has_next_page:
+        while has_next_page and page <= max_pages_per_letter:
             stocks, has_next_page = scrape_nasdaq_page(letter, page)
             all_stocks.extend(stocks)
             
@@ -210,6 +246,9 @@ def scrape_all_nasdaq_stocks():
             
             # Attente pour éviter de surcharger le serveur
             time.sleep(CONFIG["sleep_time"])
+        
+        if page > max_pages_per_letter:
+            logger.warning(f"Atteint la limite de {max_pages_per_letter} pages pour la lettre {letter}")
     
     return all_stocks
 
@@ -263,15 +302,21 @@ def save_nasdaq_data(stocks):
 #
 def get_stoxx_url(page=1, letter=""):
     """Génère l'URL pour obtenir la liste des actions STOXX pour une page donnée"""
+    # Générer un timestamp similaire à celui utilisé par Boursorama
+    pagination_timestamp = int(time.time())
+    
+    # Construire le chemin d'URL avec la page dans le chemin
+    base_path = f"{CONFIG['base_url']}/page-{page}"
+    
     params = {
         "international_quotation_az_filter[country]": CONFIG["stoxx"]["country"],
         "international_quotation_az_filter[market]": CONFIG["stoxx"]["market"],
         "international_quotation_az_filter[letter]": letter,
         "international_quotation_az_filter[filter]": "",
-        "pagination_1231311441": page
+        f"pagination_{pagination_timestamp}": ""
     }
     query_params = "&".join([f"{k}={v}" for k, v in params.items()])
-    return f"{CONFIG['base_url']}?{query_params}"
+    return f"{base_path}?{query_params}"
 
 def scrape_stoxx_page(page=1):
     """Scrape une page de la liste des actions du STOXX 600"""
