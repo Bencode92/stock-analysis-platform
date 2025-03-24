@@ -269,7 +269,7 @@ def convert_to_compatible_format(data):
     
     return compatible_data
 
-def get_top_performers(stocks, sort_field, reverse=True, limit=10):
+def get_top_performers(stocks, sort_field, reverse=True, limit=3):
     """Récupère les top/bottom performers basés sur un champ donné"""
     def extract_value(value_str):
         if not value_str:
