@@ -127,17 +127,33 @@ document.addEventListener('DOMContentLoaded', function() {
         if (topTabs) {
             topTabs.forEach(tab => {
                 tab.addEventListener('click', function() {
+                    // Déterminer si c'est un groupe d'onglets de top global ou marché unique
+                    const container = this.closest('.top-stocks-container');
+                    if (!container) return;
+                    
+                    // Sélectionner uniquement les onglets du même groupe
+                    const groupTabs = container.querySelectorAll('.top-tab-btn');
+                    
                     // Mettre à jour l'état des onglets
-                    topTabs.forEach(t => t.classList.remove('active'));
+                    groupTabs.forEach(t => t.classList.remove('active'));
                     this.classList.add('active');
                     
                     // Afficher le contenu correspondant
                     const index = this.getAttribute('data-index');
-                    const containers = document.querySelectorAll('.top-stocks-content');
                     
-                    containers.forEach(content => {
-                        content.classList.add('hidden');
-                    });
+                    // Si c'est un onglet du top global, utiliser un sélecteur spécifique
+                    if (index.startsWith('global-')) {
+                        const containers = document.querySelectorAll('#top-global-gainers, #top-global-losers, #top-global-ytd-gainers, #top-global-ytd-losers');
+                        containers.forEach(content => {
+                            content.classList.add('hidden');
+                        });
+                    } else {
+                        // Pour les tops par marché
+                        const containers = container.querySelectorAll('.top-stocks-content');
+                        containers.forEach(content => {
+                            content.classList.add('hidden');
+                        });
+                    }
                     
                     document.getElementById(`top-${index}`)?.classList.remove('hidden');
                 });
@@ -393,8 +409,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const globalResponse = await fetch('data/global_top_performers.json').catch(() => null);
             if (globalResponse?.ok) {
                 const globalData = await globalResponse.json();
+                console.log("✅ Données du top 10 global chargées avec succès");
                 updateGlobalTopTen(globalData);
                 return;
+            } else {
+                console.log("⚠️ Fichier global_top_performers.json non trouvé, fallback sur la combinaison manuelle");
             }
             
             // Sinon, charger les données individuelles
@@ -557,6 +576,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function updateGlobalTopTen(globalData = null) {
         // Si nous avons des données globales pré-combinées, les utiliser directement
         if (globalData && globalData.daily && globalData.ytd) {
+            console.log("✅ Utilisation des données globales pré-combinées");
+            
             if (globalData.daily && globalData.daily.best) {
                 renderTopTenCards('top-global-gainers', globalData.daily.best, 'change', 'global');
             }
@@ -576,11 +597,13 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        console.log("⚠️ Données globales pré-combinées non disponibles, combinaison manuelle...");
+        
         // Sinon, combiner manuellement les données
-        if (!globalData && (!globalData || !globalData.nasdaq || !globalData.stoxx)) {
+        if (!window.globalData && (!globalData || !globalData.nasdaq || !globalData.stoxx)) {
             // Si nous n'avons pas de données globales, utiliser les données stockées 
             // dans la variable globalData (scope parent)
-            if (!window.globalData || !window.globalData.nasdaq || !window.globalData.stoxx) {
+            if (!globalData && !globalData?.nasdaq && !globalData?.stoxx) {
                 console.error("Données globales manquantes pour le Top 10 combiné");
                 return;
             }
