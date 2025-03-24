@@ -577,47 +577,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Afficher le bottom 10 global
             renderTopTenCards('top-global-losers', bottom10Global, 'ytd', 'global');
         }
-        
-        // Trier par volume également
-        let combinedVolume = [];
-        
-        // Extraire et combiner tous les stocks avec des informations de volume
-        if (globalData.nasdaq.indices) {
-            Object.values(globalData.nasdaq.indices).forEach(stocksArray => {
-                const stocksWithVolume = stocksArray
-                    .filter(stock => stock.volume && stock.volume !== '-')
-                    .map(stock => ({
-                        ...stock,
-                        market: 'NASDAQ',
-                        volumeValue: parseVolumeToNumber(stock.volume)
-                    }));
-                
-                combinedVolume = [...combinedVolume, ...stocksWithVolume];
-            });
-        }
-        
-        if (globalData.stoxx.indices) {
-            Object.values(globalData.stoxx.indices).forEach(stocksArray => {
-                const stocksWithVolume = stocksArray
-                    .filter(stock => stock.volume && stock.volume !== '-')
-                    .map(stock => ({
-                        ...stock,
-                        market: 'STOXX',
-                        volumeValue: parseVolumeToNumber(stock.volume)
-                    }));
-                
-                combinedVolume = [...combinedVolume, ...stocksWithVolume];
-            });
-        }
-        
-        // Trier par volume et prendre le top 10
-        if (combinedVolume.length > 0) {
-            combinedVolume.sort((a, b) => b.volumeValue - a.volumeValue);
-            const top10Volume = combinedVolume.slice(0, 10);
-            
-            // Afficher le top 10 par volume
-            renderTopTenCards('top-global-volume', top10Volume, 'volume', 'global', true);
-        }
     }
     
     /**
