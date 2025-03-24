@@ -143,6 +143,9 @@ jobs:
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
+          # Pull avant de pousser pour éviter les conflits
+          git pull --rebase origin main
+          
           # Ajouter les fichiers de façon sécurisée (sans utiliser de wildcard)
           git add data/lists.json
           git add data/update_summary.json 
@@ -163,5 +166,5 @@ jobs:
             git commit -m "📊 Mise à jour unifiée des données NASDAQ et STOXX [skip ci]"
             
             # Utiliser le token GITHUB_TOKEN pour l'authentification
-            git push origin HEAD:${GITHUB_REF}
+            git push -f origin HEAD:${GITHUB_REF}
           fi
