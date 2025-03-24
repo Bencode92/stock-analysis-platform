@@ -110,7 +110,7 @@ def extract_stock_data(row):
         logger.error(f"Erreur lors de l'extraction des données d'une action: {str(e)}")
         return None
 
-def get_top_performers(stocks, sort_field, reverse=True, limit=3):
+def get_top_performers(stocks, sort_field, reverse=True, limit=10):
     """Récupère les top/bottom performers basés sur un champ donné"""
     def extract_value(value_str):
         if not value_str:
