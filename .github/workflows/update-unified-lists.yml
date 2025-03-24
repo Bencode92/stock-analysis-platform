@@ -143,9 +143,6 @@ jobs:
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          # Pull avant de pousser pour éviter les conflits
-          git pull --rebase origin main
-          
           # Ajouter les fichiers de façon sécurisée (sans utiliser de wildcard)
           git add data/lists.json
           git add data/update_summary.json 
@@ -165,6 +162,9 @@ jobs:
             echo "Modifications détectées, création d'un commit"
             git commit -m "📊 Mise à jour unifiée des données NASDAQ et STOXX [skip ci]"
             
-            # Utiliser le token GITHUB_TOKEN pour l'authentification
-            git push -f origin HEAD:${GITHUB_REF}
+            # Récupérer les dernières modifications sans rebase
+            git fetch origin
+            
+            # Force push (éviter les conflits)
+            git push --force origin HEAD:${GITHUB_REF}
           fi
