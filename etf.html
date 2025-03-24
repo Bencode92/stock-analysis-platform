@@ -815,8 +815,8 @@
             top: 100%;
             left: 0;
             right: 0;
-            background-color: var(--card-bg);
-            border: 1px solid var(--card-border);
+            background-color: rgba(15, 30, 50, 0.95); /* Fond moins transparent */
+            border: 1px solid var(--accent-color); /* Bordure plus visible */
             border-radius: 0 0 12px 12px;
             margin-top: 5px;
             max-height: 0;
@@ -824,7 +824,7 @@
             opacity: 0;
             transition: all 0.3s ease;
             z-index: 100;
-            box-shadow: var(--accent-glow);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5); /* Ombre plus prononcée */
         }
         
         .search-suggestions.active {
@@ -837,7 +837,9 @@
             padding: 12px 18px;
             cursor: pointer;
             transition: all 0.2s ease;
-            border-bottom: 1px solid var(--separator-color);
+            border-bottom: 1px solid rgba(0, 255, 135, 0.2); /* Bordure plus visible */
+            color: rgba(255, 255, 255, 0.95); /* Texte plus contrasté */
+            font-weight: 500; /* Texte plus épais */
         }
         
         .suggestion-item:last-child {
@@ -845,12 +847,14 @@
         }
         
         .suggestion-item:hover {
-            background-color: var(--accent-subtle);
+            background-color: rgba(0, 255, 135, 0.25); /* Couleur de survol plus prononcée */
             transform: translateX(5px);
         }
         
         .suggestion-item .text-green-400 {
             color: var(--accent-color);
+            font-weight: 600;
+            text-shadow: 0 0 8px rgba(0, 255, 135, 0.4); /* Léger halo */
         }
         
         /* Styles pour la mise en évidence des résultats */
@@ -887,10 +891,13 @@
             cursor: pointer;
         }
         
-        .data-table tbody tr:hover {
-            background-color: var(--accent-subtle);
-            transform: translateY(-2px);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        /* Amélioration des résultats de recherche dans le tableau */
+        #search-results-body tr {
+            background-color: rgba(15, 30, 50, 0.95); /* Fond moins transparent */
+        }
+        
+        #search-results-body tr:hover {
+            background-color: rgba(0, 255, 135, 0.15); /* Survol plus visible */
         }
         
         /* Compteur de résultats */
@@ -915,9 +922,10 @@
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            margin-right: 6px;
+            margin-right: 8px;
             position: relative;
             top: -1px;
+            box-shadow: 0 0 3px rgba(255, 255, 255, 0.5); /* Ombre légère pour meilleure visibilité */
         }
 
         .etf-type-standard {
