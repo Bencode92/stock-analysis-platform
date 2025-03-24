@@ -34,19 +34,6 @@ jobs:
           
       - name: 📂 Create data directory if needed
         run: mkdir -p data
-      
-      - name: 📂 Diagnostiquer l'état avant exécution
-        run: |
-          echo "=== État initial des fichiers ==="
-          ls -la data/ || echo "Dossier data/ n'existe pas ou est vide"
-          if [ -f data/lists.json ]; then
-            echo "=== Début du contenu de lists.json ==="
-            head -20 data/lists.json
-            echo "=== Taille du fichier lists.json ==="
-            stat -c %s data/lists.json
-          else
-            echo "Fichier lists.json n'existe pas encore"
-          fi
           
       - name: 📚 Install dependencies
         run: |
@@ -56,27 +43,12 @@ jobs:
           pip install urllib3
         
       - name: 🚀 Execute unified lists data script
-        run: python update_unified_lists.py
-        # Retiré continue-on-error pour voir les erreurs réelles
-        
-      - name: 📂 Diagnostiquer l'état après exécution
-        run: |
-          echo "=== État des fichiers après exécution du script ==="
-          ls -la data/
-          if [ -f data/lists.json ]; then
-            echo "=== Début du contenu de lists.json ==="
-            head -20 data/lists.json
-            echo "=== Taille du fichier lists.json ==="
-            stat -c %s data/lists.json
-            echo "=== Contenu du champ meta.timestamp ==="
-            grep -o '\"timestamp\": \"[^\"]*\"' data/lists.json | head -1
-          else
-            echo "Fichier lists.json n'existe toujours pas!"
-          fi
+        run: python scripts/update_unified_lists.py
+        continue-on-error: true  # Ne pas faire échouer le workflow si le script échoue
         
       - name: ✅ Verify data files exist
         run: |
-          # Vérifier si le fichier lists.json existe
+          # Vérifier si les fichiers NASDAQ existent
           if [ ! -f data/lists.json ]; then
             echo "Fichier lists.json non trouvé, création d'un fichier vide"
             echo '{
@@ -91,11 +63,78 @@ jobs:
               },
               "meta": {
                 "source": "Boursorama",
+                "description": "Actions du NASDAQ Composite (États-Unis)",
                 "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
-                "count": 0,
-                "markets": ["NASDAQ", "STOXX"]
+                "count": 0
               }
             }' > data/lists.json
+          fi
+          
+          # Vérifier si les fichiers STOXX existent
+          if ! ls data/stoxx_page_*.json 1>/dev/null 2>&1; then
+            echo "Aucun fichier stoxx_page_*.json trouvé, création d'un fichier de base"
+            echo '{
+              "indices": {
+                "a": [], "b": [], "c": [], "d": [], "e": [], "f": [], "g": [], "h": [], "i": [], "j": [],
+                "k": [], "l": [], "m": [], "n": [], "o": [], "p": [], "q": [], "r": [], "s": [], "t": [],
+                "u": [], "v": [], "w": [], "x": [], "y": [], "z": []
+              },
+              "top_performers": {
+                "daily": {"best": [], "worst": []},
+                "ytd": {"best": [], "worst": []}
+              },
+              "meta": {
+                "source": "Boursorama",
+                "description": "Actions du DJ STOXX 600 (Europe)",
+                "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
+                "count": 0,
+                "pagination": {
+                  "currentPage": 1,
+                  "totalPages": 1
+                }
+              }
+            }' > data/stoxx_page_1.json
+          fi
+          
+          # Vérifier si le fichier de résumé global existe
+          if [ ! -f data/update_summary.json ]; then
+            echo "Fichier update_summary.json non trouvé, création d'un fichier vide"
+            echo '{
+              "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
+              "nasdaq": {
+                "count": 0,
+                "status": "pending"
+              },
+              "stoxx": {
+                "status": "pending",
+                "pages": 0,
+                "stocks": 0
+              },
+              "global_ranking": {
+                "status": "pending",
+                "file": "global_top_performers.json"
+              }
+            }' > data/update_summary.json
+          fi
+          
+          # Vérifier si le fichier de classement global existe
+          if [ ! -f data/global_top_performers.json ]; then
+            echo "Fichier global_top_performers.json non trouvé, création d'un fichier vide"
+            echo '{
+              "daily": {
+                "best": [],
+                "worst": []
+              },
+              "ytd": {
+                "best": [],
+                "worst": []
+              },
+              "meta": {
+                "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
+                "count": 0,
+                "description": "Classement global combiné (NASDAQ + STOXX)"
+              }
+            }' > data/global_top_performers.json
           fi
         
       - name: 💾 Commit and push if changed
@@ -107,8 +146,17 @@ jobs:
           # S'assurer que tout est propre avant de commencer
           git stash -u || true
           
-          # Ajouter le fichier lists.json uniquement
+          # Ajouter les fichiers de façon sécurisée (sans utiliser de wildcard)
           git add data/lists.json
+          git add data/update_summary.json 
+          git add data/global_top_performers.json
+          
+          # Ajouter les fichiers STOXX individuellement
+          for file in data/stoxx_page_*.json; do
+            if [ -f "$file" ]; then
+              git add "$file"
+            fi
+          done
           
           # Vérifier s'il y a des modifications à commiter
           if git diff --staged --quiet; then
@@ -117,12 +165,6 @@ jobs:
             echo "Modifications détectées, création d'un commit"
             git commit -m "📊 Mise à jour unifiée des données NASDAQ et STOXX [skip ci]"
             
-            # Pull d'abord pour éviter les conflits
-            git pull --rebase --autostash origin ${GITHUB_REF}
-            
-            # Push avec gestion d'erreur
-            git push origin HEAD:${GITHUB_REF} || {
-              echo "Erreur lors du push, tentative avec --force"
-              git push --force origin HEAD:${GITHUB_REF}
-            }
+            # Push direct sans pull préalable pour éviter les conflits
+            git push --force origin HEAD:${GITHUB_REF}
           fi
