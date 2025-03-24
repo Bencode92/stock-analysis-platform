@@ -389,7 +389,15 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     async function loadGlobalData() {
         try {
-            // Charger les données NASDAQ si elles ne sont pas déjà chargées
+            // Essayer d'abord de charger le fichier global_top_performers.json
+            const globalResponse = await fetch('data/global_top_performers.json').catch(() => null);
+            if (globalResponse?.ok) {
+                const globalData = await globalResponse.json();
+                updateGlobalTopTen(globalData);
+                return;
+            }
+            
+            // Sinon, charger les données individuelles
             if (!globalData.nasdaq) {
                 const nasdaqResponse = await fetch('data/lists.json');
                 if (nasdaqResponse.ok) {
@@ -397,7 +405,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
             
-            // Charger les données STOXX si elles ne sont pas déjà chargées
             if (!globalData.stoxx) {
                 const stoxxResponse = await fetch('data/stoxx_page_1.json');
                 if (stoxxResponse.ok) {
@@ -570,23 +577,40 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Sinon, combiner manuellement les données
-        if (!globalData && (!globalData.nasdaq || !globalData.stoxx)) return;
+        if (!globalData && (!globalData || !globalData.nasdaq || !globalData.stoxx)) {
+            // Si nous n'avons pas de données globales, utiliser les données stockées 
+            // dans la variable globalData (scope parent)
+            if (!window.globalData || !window.globalData.nasdaq || !window.globalData.stoxx) {
+                console.error("Données globales manquantes pour le Top 10 combiné");
+                return;
+            }
+        }
         
+        // À ce stade, nous utilisons soit le globalData passé en paramètre, soit celui du scope parent
+        const data = globalData || window.globalData;
+        
+        // S'assurer que les deux sources de données sont disponibles
+        if (!data.nasdaq || !data.nasdaq.top_performers || !data.stoxx || !data.stoxx.top_performers) {
+            console.error("Données NASDAQ ou STOXX manquantes");
+            return;
+        }
+
         // Fusionner les données YTD
         let combinedYtdGainers = [];
         let combinedYtdLosers = [];
         let combinedDailyGainers = [];
         let combinedDailyLosers = [];
         
-        if (globalData.nasdaq.top_performers && globalData.nasdaq.top_performers.ytd) {
+        // Ajouter les données NASDAQ
+        if (data.nasdaq.top_performers && data.nasdaq.top_performers.ytd) {
             // Ajouter la source aux données
-            const nasdaqBest = globalData.nasdaq.top_performers.ytd.best.map(stock => ({
+            const nasdaqBest = data.nasdaq.top_performers.ytd.best.map(stock => ({
                 ...stock,
                 market: 'NASDAQ',
                 marketIcon: '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
             }));
             
-            const nasdaqWorst = globalData.nasdaq.top_performers.ytd.worst.map(stock => ({
+            const nasdaqWorst = data.nasdaq.top_performers.ytd.worst.map(stock => ({
                 ...stock,
                 market: 'NASDAQ',
                 marketIcon: '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
@@ -596,15 +620,16 @@ document.addEventListener('DOMContentLoaded', function() {
             combinedYtdLosers = [...combinedYtdLosers, ...nasdaqWorst];
         }
         
-        if (globalData.stoxx.top_performers && globalData.stoxx.top_performers.ytd) {
+        // Ajouter les données STOXX
+        if (data.stoxx.top_performers && data.stoxx.top_performers.ytd) {
             // Ajouter la source aux données
-            const stoxxBest = globalData.stoxx.top_performers.ytd.best.map(stock => ({
+            const stoxxBest = data.stoxx.top_performers.ytd.best.map(stock => ({
                 ...stock,
                 market: 'STOXX',
                 marketIcon: '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
             }));
             
-            const stoxxWorst = globalData.stoxx.top_performers.ytd.worst.map(stock => ({
+            const stoxxWorst = data.stoxx.top_performers.ytd.worst.map(stock => ({
                 ...stock,
                 market: 'STOXX',
                 marketIcon: '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
@@ -614,15 +639,15 @@ document.addEventListener('DOMContentLoaded', function() {
             combinedYtdLosers = [...combinedYtdLosers, ...stoxxWorst];
         }
         
-        // Ajout pour les données quotidiennes
-        if (globalData.nasdaq.top_performers && globalData.nasdaq.top_performers.daily) {
-            const nasdaqDailyBest = globalData.nasdaq.top_performers.daily.best.map(stock => ({
+        // Ajouter les données quotidiennes NASDAQ
+        if (data.nasdaq.top_performers && data.nasdaq.top_performers.daily) {
+            const nasdaqDailyBest = data.nasdaq.top_performers.daily.best.map(stock => ({
                 ...stock,
                 market: 'NASDAQ',
                 marketIcon: '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
             }));
             
-            const nasdaqDailyWorst = globalData.nasdaq.top_performers.daily.worst.map(stock => ({
+            const nasdaqDailyWorst = data.nasdaq.top_performers.daily.worst.map(stock => ({
                 ...stock,
                 market: 'NASDAQ',
                 marketIcon: '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
@@ -632,14 +657,15 @@ document.addEventListener('DOMContentLoaded', function() {
             combinedDailyLosers = [...combinedDailyLosers, ...nasdaqDailyWorst];
         }
         
-        if (globalData.stoxx.top_performers && globalData.stoxx.top_performers.daily) {
-            const stoxxDailyBest = globalData.stoxx.top_performers.daily.best.map(stock => ({
+        // Ajouter les données quotidiennes STOXX
+        if (data.stoxx.top_performers && data.stoxx.top_performers.daily) {
+            const stoxxDailyBest = data.stoxx.top_performers.daily.best.map(stock => ({
                 ...stock,
                 market: 'STOXX',
                 marketIcon: '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
             }));
             
-            const stoxxDailyWorst = globalData.stoxx.top_performers.daily.worst.map(stock => ({
+            const stoxxDailyWorst = data.stoxx.top_performers.daily.worst.map(stock => ({
                 ...stock,
                 market: 'STOXX',
                 marketIcon: '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
