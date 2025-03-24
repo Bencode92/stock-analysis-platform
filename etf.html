@@ -721,6 +721,8 @@
         .search-container {
             max-width: 100%;
             margin-bottom: 24px;
+            z-index: 10;
+            position: relative;
         }
         
         .search-wrapper {
@@ -728,6 +730,7 @@
             position: relative;
             transform: translateY(0);
             transition: transform 0.3s ease;
+            z-index: 20;
         }
         
         .search-wrapper:focus-within {
@@ -736,7 +739,7 @@
         
         /* Style amélioré pour l'input de recherche */
         .dark .main-search-input {
-            background-color: rgba(20, 40, 60, 0.95); /* Fond plus opaque */
+            background-color: rgba(20, 40, 60, 1); /* Fond 100% opaque */
             border: 2px solid var(--accent-color); /* Bordure plus visible */
             color: white; /* Texte plus contrasté */
             padding: 18px 20px;
@@ -749,7 +752,7 @@
         }
         
         .light .main-search-input {
-            background-color: rgba(240, 245, 255, 0.9);
+            background-color: rgba(240, 245, 255, 1); /* 100% opaque */
             border: 2px solid rgba(0, 210, 110, 0.5);
             color: var(--light-text-color);
             padding: 18px 20px;
@@ -765,7 +768,7 @@
             border-color: var(--accent-color);
             box-shadow: var(--accent-glow), 0 4px 15px rgba(0, 0, 0, 0.4);
             outline: none;
-            background-color: rgba(25, 45, 65, 0.98); /* Encore plus opaque en focus */
+            background-color: rgba(25, 45, 65, 1); /* 100% opaque en focus */
         }
         
         .light .main-search-input:focus {
@@ -823,7 +826,7 @@
             top: 100%;
             left: 0;
             right: 0;
-            background-color: rgba(20, 40, 60, 0.98); /* Fond beaucoup plus opaque */
+            background-color: rgba(20, 40, 60, 1); /* Fond 100% opaque */
             border: 1px solid var(--accent-color);
             border-radius: 0 0 12px 12px;
             margin-top: 5px;
@@ -849,7 +852,7 @@
             border-bottom: 1px solid rgba(0, 255, 135, 0.3);
             color: white;
             font-weight: 500;
-            background-color: rgba(20, 40, 60, 0.98); /* Fond opaque */
+            background-color: rgba(20, 40, 60, 1); /* Fond 100% opaque */
         }
         
         .suggestion-item:last-child {
@@ -880,7 +883,7 @@
         }
         
         #search-results-body tr {
-            background-color: rgba(20, 40, 60, 0.95); /* Fond plus opaque */
+            background-color: rgba(20, 40, 60, 1); /* Fond 100% opaque */
         }
         
         #search-results-body tr:hover {
@@ -891,8 +894,8 @@
         .search-count {
             margin-top: 12px;
             font-size: 0.95rem;
-            color: rgba(255, 255, 255, 0.9); /* Couleur plus visible */
-            background-color: rgba(20, 40, 60, 0.9); /* Fond légèrement opaque */
+            color: var(--accent-color); /* Couleur d'accent pour plus de visibilité */
+            background-color: rgba(20, 40, 60, 1); /* Fond 100% opaque */
             padding: 8px 16px;
             border-radius: 8px;
             display: inline-block;
@@ -900,6 +903,10 @@
             opacity: 0;
             transform: translateY(10px);
             transition: opacity 0.3s ease, transform 0.3s ease;
+            font-weight: 600; /* Texte en gras */
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Ombre portée */
+            z-index: 10;
+            position: relative;
         }
         
         .search-count.visible {
