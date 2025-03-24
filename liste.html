@@ -861,6 +861,130 @@
          .performers-scroll::-webkit-scrollbar-thumb:hover {
              background: var(--accent-medium);
          }
+         
+         /* Styles pour le top 10 redessiné */
+         .top-stocks-container {
+             max-width: 100%;
+             margin-bottom: 2rem;
+         }
+         
+         .index-tabs {
+             display: flex;
+             margin-bottom: 1.5rem;
+             border-bottom: 1px solid var(--card-border);
+             background-color: var(--card-header);
+             border-radius: 8px 8px 0 0;
+             overflow: hidden;
+         }
+         
+         .top-tab-btn {
+             padding: 14px 20px;
+             cursor: pointer;
+             position: relative;
+             font-weight: 500;
+             transition: all 0.3s ease;
+             border: none;
+             background: none;
+             color: var(--text-color);
+             opacity: 0.7;
+         }
+         
+         .top-tab-btn:hover {
+             background-color: var(--accent-subtle);
+             opacity: 0.9;
+         }
+         
+         .top-tab-btn.active {
+             color: var(--accent-color);
+             background-color: var(--accent-subtle);
+             opacity: 1;
+         }
+         
+         .top-tab-btn::after {
+             content: '';
+             position: absolute;
+             bottom: 0;
+             left: 0;
+             width: 0;
+             height: 3px;
+             background-color: var(--accent-color);
+             transition: width 0.3s;
+             box-shadow: 0 0 8px var(--accent-color);
+         }
+         
+         .top-tab-btn.active::after {
+             width: 100%;
+         }
+         
+         .stock-cards-container {
+             display: grid;
+             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+             gap: 16px;
+         }
+         
+         .stock-card {
+             display: flex;
+             align-items: center;
+             background-color: var(--card-bg);
+             border-radius: 12px;
+             padding: 16px;
+             transition: transform 0.3s ease, box-shadow 0.3s ease;
+             border: 1px solid var(--card-border);
+         }
+         
+         .stock-card:hover {
+             transform: translateY(-3px);
+             box-shadow: var(--accent-glow);
+         }
+         
+         .rank {
+             width: 30px;
+             height: 30px;
+             display: flex;
+             justify-content: center;
+             align-items: center;
+             border-radius: 50%;
+             font-weight: bold;
+             font-size: 0.9rem;
+             margin-right: 16px;
+             background-color: var(--accent-subtle);
+             color: var(--accent-color);
+         }
+         
+         .stock-info {
+             flex-grow: 1;
+         }
+         
+         .stock-name {
+             font-weight: 700;
+             font-size: 1.1rem;
+             margin-bottom: 4px;
+             display: flex;
+             align-items: center;
+         }
+         
+         .stock-fullname {
+             font-size: 0.85rem;
+             opacity: 0.7;
+             white-space: nowrap;
+             overflow: hidden;
+             text-overflow: ellipsis;
+             max-width: 180px;
+         }
+         
+         .stock-performance {
+             padding: 6px 12px;
+             border-radius: 6px;
+             font-weight: 600;
+             margin-left: 10px;
+         }
+         
+         /* Top 3 en évidence */
+         .stock-card:nth-child(-n+3) .rank {
+             background-color: var(--accent-medium);
+             color: white;
+             box-shadow: 0 0 10px rgba(0, 255, 135, 0.4);
+         }
 
          /* Responsive */
          @media (max-width: 768px) {
@@ -919,6 +1043,15 @@
              
              .market-selector-buttons {
                  flex-direction: column;
+             }
+             
+             .stock-cards-container {
+                 grid-template-columns: 1fr;
+             }
+             
+             .index-tabs {
+                 overflow-x: auto;
+                 flex-wrap: nowrap;
              }
          }
      </style>
@@ -1030,8 +1163,107 @@
                      </button>
                  </div>
                  
-                 <!-- Top Performers -->
-                 <div class="top-performers-section mb-10">
+                 <!-- Top 10 Redessiné -->
+                 <div class="top-stocks-container mb-10">
+                     <h2 class="section-title mb-4">Top 10 Performance du <span id="current-market-name">NASDAQ</span></h2>
+                     
+                     <!-- Onglets pour changer de vue -->
+                     <div class="index-tabs">
+                         <button class="top-tab-btn active" data-index="daily-gainers">
+                             <i class="fas fa-arrow-up text-green-400 mr-2"></i> Hausses du jour
+                         </button>
+                         <button class="top-tab-btn" data-index="daily-losers">
+                             <i class="fas fa-arrow-down text-red-500 mr-2"></i> Baisses du jour
+                         </button>
+                         <button class="top-tab-btn" data-index="ytd-gainers">
+                             <i class="fas fa-calendar-check text-blue-400 mr-2"></i> Hausses YTD
+                         </button>
+                         <button class="top-tab-btn" data-index="ytd-losers">
+                             <i class="fas fa-calendar-times text-orange-400 mr-2"></i> Baisses YTD
+                         </button>
+                     </div>
+                     
+                     <!-- Conteneurs pour chaque vue (seul le premier est visible par défaut) -->
+                     <div id="top-daily-gainers" class="top-stocks-content">
+                         <div class="stock-cards-container">
+                             <!-- Les cartes seront générées dynamiquement ici -->
+                             <div class="stock-card">
+                                 <div class="rank">#1</div>
+                                 <div class="stock-info">
+                                     <div class="stock-name">AAPL</div>
+                                     <div class="stock-fullname">Apple Inc.</div>
+                                 </div>
+                                 <div class="stock-performance positive">Chargement...</div>
+                             </div>
+                         </div>
+                     </div>
+                     
+                     <div id="top-daily-losers" class="top-stocks-content hidden">
+                         <div class="stock-cards-container">
+                             <!-- Les cartes seront générées dynamiquement ici -->
+                         </div>
+                     </div>
+                     
+                     <div id="top-ytd-gainers" class="top-stocks-content hidden">
+                         <div class="stock-cards-container">
+                             <!-- Les cartes seront générées dynamiquement ici -->
+                         </div>
+                     </div>
+                     
+                     <div id="top-ytd-losers" class="top-stocks-content hidden">
+                         <div class="stock-cards-container">
+                             <!-- Les cartes seront générées dynamiquement ici -->
+                         </div>
+                     </div>
+                 </div>
+                 
+                 <!-- Top 10 Global -->
+                 <div class="top-stocks-container mb-10">
+                     <h2 class="section-title mb-4">Top 10 Performance Globale (NASDAQ + STOXX)</h2>
+                     
+                     <!-- Onglets pour changer de vue -->
+                     <div class="index-tabs">
+                         <button class="top-tab-btn active" data-index="global-gainers">
+                             <i class="fas fa-globe text-green-400 mr-2"></i> Hausses Globales
+                         </button>
+                         <button class="top-tab-btn" data-index="global-losers">
+                             <i class="fas fa-globe text-red-500 mr-2"></i> Baisses Globales
+                         </button>
+                         <button class="top-tab-btn" data-index="global-volume">
+                             <i class="fas fa-chart-bar text-blue-400 mr-2"></i> Volume Global
+                         </button>
+                     </div>
+                     
+                     <!-- Conteneurs pour chaque vue (seul le premier est visible par défaut) -->
+                     <div id="top-global-gainers" class="top-stocks-content">
+                         <div class="stock-cards-container">
+                             <!-- Les cartes seront générées dynamiquement ici -->
+                             <div class="stock-card">
+                                 <div class="rank">#1</div>
+                                 <div class="stock-info">
+                                     <div class="stock-name">AAPL <i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i></div>
+                                     <div class="stock-fullname">Apple Inc.</div>
+                                 </div>
+                                 <div class="stock-performance positive">Chargement...</div>
+                             </div>
+                         </div>
+                     </div>
+                     
+                     <div id="top-global-losers" class="top-stocks-content hidden">
+                         <div class="stock-cards-container">
+                             <!-- Les cartes seront générées dynamiquement ici -->
+                         </div>
+                     </div>
+                     
+                     <div id="top-global-volume" class="top-stocks-content hidden">
+                         <div class="stock-cards-container">
+                             <!-- Les cartes seront générées dynamiquement ici -->
+                         </div>
+                     </div>
+                 </div>
+                 
+                 <!-- Top Performers (ancien design, maintenu pour compatibilité) -->
+                 <div class="top-performers-section mb-10 hidden">
                      <h2 class="top-performers-title mb-6">Top Performers du marché actuel</h2>
                      
                      <div class="top-performers-grid">
@@ -1099,47 +1331,6 @@
                                          <div class="performer-country"></div>
                                      </div>
                                      <div class="performer-value negative">-</div>
-                                 </div>
-                             </div>
-                         </div>
-                     </div>
-                 </div>
-                 
-                 <!-- Top Performers Globaux -->
-                 <div class="top-performers-section mb-10">
-                     <h2 class="top-performers-title mb-6">Top Performers Globaux (NASDAQ + STOXX)</h2>
-                     
-                     <div class="top-performers-grid grid-cols-1 md:grid-cols-2">
-                         <!-- Top 10 Hausse Globale -->
-                         <div class="performer-card">
-                             <div class="performer-header">
-                                 <span>Top 10 Mondial Hausse (YTD)</span>
-                                 <span class="text-sm positive"><i class="fas fa-globe"></i></span>
-                             </div>
-                             <div id="global-top" class="performers-scroll">
-                                 <div class="performer-row">
-                                     <div class="performer-info">
-                                         <div class="performer-index">Chargement...</div>
-                                         <div class="performer-country"></div>
-                                     </div>
-                                     <div class="performer-value positive">-</div>
-                                 </div>
-                             </div>
-                         </div>
-                         
-                         <!-- Top 10 Volume Global -->
-                         <div class="performer-card">
-                             <div class="performer-header">
-                                 <span>Top 10 Mondial Volume</span>
-                                 <span class="text-sm neutral"><i class="fas fa-chart-bar"></i></span>
-                             </div>
-                             <div id="global-volume" class="performers-scroll">
-                                 <div class="performer-row">
-                                     <div class="performer-info">
-                                         <div class="performer-index">Chargement...</div>
-                                         <div class="performer-country"></div>
-                                     </div>
-                                     <div class="performer-value neutral">-</div>
                                  </div>
                              </div>
                          </div>
@@ -1822,125 +2013,56 @@
 
      <script src="liste-script.js"></script>
      
-     <!-- Script de recherche amélioré -->
+     <!-- Script pour gérer les onglets du top 10 -->
      <script>
         document.addEventListener('DOMContentLoaded', function() {
-            // Sélectionner les éléments nécessaires à la recherche
-            const searchInput = document.getElementById('stock-search');
-            const clearButton = document.getElementById('clear-search');
-            const searchInfo = document.getElementById('search-info');
-            const searchCount = document.getElementById('search-count');
+            // Gestion des onglets pour le top 10 principal
+            const topTabsButtons = document.querySelectorAll('.top-tab-btn');
             
-            if (searchInput && clearButton) {
-                // Recherche en temps réel
-                searchInput.addEventListener('input', function() {
-                    const searchTerm = this.value.trim().toLowerCase();
+            topTabsButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Identifier le groupe d'onglets (s'il y a plusieurs sections)
+                    const parentContainer = this.closest('.top-stocks-container');
                     
-                    // Afficher/masquer le bouton d'effacement
-                    clearButton.style.opacity = searchTerm ? '1' : '0';
+                    // Désactiver tous les boutons du même groupe
+                    const buttons = parentContainer.querySelectorAll('.top-tab-btn');
+                    buttons.forEach(btn => btn.classList.remove('active'));
                     
-                    // Effectuer la recherche
-                    if (searchTerm) {
-                        performSearch(searchTerm);
-                    } else {
-                        clearSearch();
+                    // Activer le bouton actuel
+                    this.classList.add('active');
+                    
+                    // Récupérer l'identifiant de l'onglet
+                    const tabId = this.getAttribute('data-index');
+                    
+                    // Masquer tous les contenus du même groupe
+                    const contents = parentContainer.querySelectorAll('.top-stocks-content');
+                    contents.forEach(content => content.classList.add('hidden'));
+                    
+                    // Afficher le contenu correspondant
+                    const targetContent = document.getElementById(`top-${tabId}`);
+                    if (targetContent) {
+                        targetContent.classList.remove('hidden');
                     }
                 });
-                
-                // Effacer la recherche
-                clearButton.addEventListener('click', function() {
-                    searchInput.value = '';
-                    searchInput.focus();
-                    clearSearch();
-                });
-                
-                // Désactiver la fonction de recherche standard lors de l'appui sur Entrée
-                searchInput.addEventListener('keydown', function(e) {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                    }
-                });
-            }
+            });
             
-            // Fonction pour effectuer la recherche
-            function performSearch(searchTerm) {
-                let totalResults = 0;
-                
-                // Activer l'onglet "Tous" si présent
-                const allTab = document.querySelector('.region-tab[data-region="all"]');
-                const tabs = document.querySelectorAll('.region-tab');
-                
-                if (allTab) {
-                    tabs.forEach(tab => tab.classList.remove('active'));
-                    allTab.classList.add('active');
-                }
-                
-                // Afficher toutes les sections pour la recherche
-                document.querySelectorAll('.region-content').forEach(content => {
-                    content.classList.remove('hidden');
-                });
-                
-                // Rechercher dans chaque ligne de toutes les sections
-                document.querySelectorAll('table.data-table tbody tr').forEach(row => {
-                    if (row.cells.length <= 1) return; // Ignorer les lignes spéciales
-                    
-                    const stockName = row.cells[0].textContent.toLowerCase();
-                    
-                    if (stockName.includes(searchTerm)) {
-                        row.classList.add('search-highlight');
-                        row.style.display = '';
-                        totalResults++; 
-                    } else {
-                        row.classList.remove('search-highlight');
-                        row.style.display = 'none';
-                    }
-                });
-                
-                // Mettre à jour le compteur de résultats
-                if (searchInfo && searchCount) {
-                    searchCount.textContent = totalResults;
-                    searchInfo.classList.remove('hidden');
+            // Mettre à jour le nom du marché actuel
+            function updateMarketName() {
+                const marketNameElement = document.getElementById('current-market-name');
+                if (marketNameElement) {
+                    const nasdaqActive = document.getElementById('market-nasdaq')?.classList.contains('active');
+                    marketNameElement.textContent = nasdaqActive ? 'NASDAQ' : 'DJ STOXX';
                 }
             }
             
-            // Fonction pour effacer la recherche
-            function clearSearch() {
-                // Masquer le compteur de résultats
-                if (searchInfo) {
-                    searchInfo.classList.add('hidden');
-                }
-                
-                // Restaurer l'affichage normal des lignes
-                document.querySelectorAll('table.data-table tbody tr').forEach(row => {
-                    row.classList.remove('search-highlight');
-                    row.style.display = '';
-                });
-                
-                // Restaurer l'affichage normal des sections selon l'onglet actif
-                const activeTab = document.querySelector('.region-tab.active');
-                if (activeTab) {
-                    const activeRegion = activeTab.getAttribute('data-region');
-                    
-                    document.querySelectorAll('.region-content').forEach(content => {
-                        if (activeRegion === 'all' || content.id === `${activeRegion}-indices`) {
-                            content.classList.remove('hidden');
-                        } else {
-                            content.classList.add('hidden');
-                        }
-                    });
-                }
-            }
+            // Observer les changements sur les boutons de marché
+            const marketButtons = document.querySelectorAll('.market-btn');
+            marketButtons.forEach(button => {
+                button.addEventListener('click', updateMarketName);
+            });
             
-            // Gestion des clics sur l'onglet "TOUS"
-            const allTab = document.querySelector('.region-tab[data-region="all"]');
-            if (allTab) {
-                allTab.addEventListener('click', function() {
-                    // Afficher toutes les sections
-                    document.querySelectorAll('.region-content').forEach(content => {
-                        content.classList.remove('hidden');
-                    });
-                });
-            }
+            // Initialisation
+            updateMarketName();
         });
      </script>
  </body>
