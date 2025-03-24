@@ -475,6 +475,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Assigner les données chargées
             etfsData = rawData;
             
+            // IMPORTANT: Exposer les données ETF pour la fonction de recherche
+            window.etfsData = rawData;
+            
             // Vérifier la fraîcheur des données
             const dataTimestamp = new Date(etfsData.meta.timestamp || Date.now());
             const now = new Date();
