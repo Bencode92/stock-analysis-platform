@@ -34,6 +34,19 @@ jobs:
           
       - name: 📂 Create data directory if needed
         run: mkdir -p data
+      
+      - name: 📂 Diagnostiquer l'état avant exécution
+        run: |
+          echo "=== État initial des fichiers ==="
+          ls -la data/ || echo "Dossier data/ n'existe pas ou est vide"
+          if [ -f data/lists.json ]; then
+            echo "=== Début du contenu de lists.json ==="
+            head -20 data/lists.json
+            echo "=== Taille du fichier lists.json ==="
+            stat -c %s data/lists.json
+          else
+            echo "Fichier lists.json n'existe pas encore"
+          fi
           
       - name: 📚 Install dependencies
         run: |
@@ -44,7 +57,22 @@ jobs:
         
       - name: 🚀 Execute unified lists data script
         run: python scripts/update_unified_lists.py
-        continue-on-error: true  # Ne pas faire échouer le workflow si le script échoue
+        # Retiré continue-on-error pour voir les erreurs réelles
+        
+      - name: 📂 Diagnostiquer l'état après exécution
+        run: |
+          echo "=== État des fichiers après exécution du script ==="
+          ls -la data/
+          if [ -f data/lists.json ]; then
+            echo "=== Début du contenu de lists.json ==="
+            head -20 data/lists.json
+            echo "=== Taille du fichier lists.json ==="
+            stat -c %s data/lists.json
+            echo "=== Contenu du champ meta.timestamp ==="
+            grep -o '\"timestamp\": \"[^\"]*\"' data/lists.json | head -1
+          else
+            echo "Fichier lists.json n'existe toujours pas!"
+          fi
         
       - name: ✅ Verify data files exist
         run: |
