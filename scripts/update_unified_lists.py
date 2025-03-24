@@ -333,7 +333,7 @@ def scrape_stoxx_page(page=1, letter=""):
         table = soup.find('table', class_='c-table')
         if not table:
             logger.warning(f"Aucun tableau trouvé pour la lettre STOXX {letter}, page {page}")
-            return [], 0, 1
+            return [], page, 1, False
             
         # Trouver toutes les lignes de données (ignorer l'en-tête)
         rows = table.find('tbody').find_all('tr') if table.find('tbody') else []
@@ -514,7 +514,7 @@ def scrape_all_stoxx():
         logger.info(f"✅ Scraping STOXX terminé avec succès: {total_stocks} actions récupérées sur toutes les lettres")
         return {
             "status": "success",
-            "pages": total_pages_overall,
+            "pages": 1,  # On retourne 1 page puisqu'on a fusionné toutes les données en un seul fichier
             "stocks": total_stocks,
             "all_stocks": all_stocks
         }
@@ -540,16 +540,8 @@ def create_global_rankings(nasdaq_stocks, stoxx_result):
             stock_with_source['marketIcon'] = '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
             nasdaq_with_source.append(stock_with_source)
         
-        # Récupérer toutes les actions STOXX (depuis toutes les pages)
-        all_stoxx_stocks = []
-        for page in range(1, stoxx_result.get('pages', 1) + 1):
-            stoxx_file = os.path.join(CONFIG["stoxx"]["output_dir"], f"stoxx_page_{page}.json")
-            if os.path.exists(stoxx_file):
-                with open(stoxx_file, 'r', encoding='utf-8') as f:
-                    page_data = json.load(f)
-                    # Extraire toutes les actions de cette page
-                    for letter in "abcdefghijklmnopqrstuvwxyz":
-                        all_stoxx_stocks.extend(page_data.get('indices', {}).get(letter, []))
+        # Récupérer toutes les actions STOXX depuis stoxx_result
+        all_stoxx_stocks = stoxx_result.get('all_stocks', [])
 
         # Ajouter l'information du marché pour chaque action STOXX
         stoxx_with_source = []
