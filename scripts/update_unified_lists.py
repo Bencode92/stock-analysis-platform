@@ -301,7 +301,7 @@ def save_nasdaq_data(stocks):
 # Fonctions pour STOXX
 #
 def get_stoxx_url(page=1, letter=""):
-    """Génère l'URL pour obtenir la liste des actions STOXX pour une page donnée"""
+    """Génère l'URL pour obtenir la liste des actions STOXX pour une page et lettre données"""
     # Générer un timestamp similaire à celui utilisé par Boursorama
     pagination_timestamp = int(time.time())
     
@@ -318,10 +318,10 @@ def get_stoxx_url(page=1, letter=""):
     query_params = "&".join([f"{k}={v}" for k, v in params.items()])
     return f"{base_path}?{query_params}"
 
-def scrape_stoxx_page(page=1):
-    """Scrape une page de la liste des actions du STOXX 600"""
-    url = get_stoxx_url(page)
-    logger.info(f"Récupération des données STOXX pour la page {page}: {url}")
+def scrape_stoxx_page(page=1, letter=""):
+    """Scrape une page de la liste des actions du STOXX 600 pour une lettre donnée"""
+    url = get_stoxx_url(page, letter)
+    logger.info(f"Récupération des données STOXX pour la lettre {letter}, page {page}: {url}")
     
     try:
         response = requests.get(url, headers=get_headers(), timeout=30)
@@ -332,7 +332,7 @@ def scrape_stoxx_page(page=1):
         # Trouver le tableau des actions
         table = soup.find('table', class_='c-table')
         if not table:
-            logger.warning(f"Aucun tableau trouvé pour la page STOXX {page}")
+            logger.warning(f"Aucun tableau trouvé pour la lettre STOXX {letter}, page {page}")
             return [], 0, 1
             
         # Trouver toutes les lignes de données (ignorer l'en-tête)
@@ -344,7 +344,7 @@ def scrape_stoxx_page(page=1):
             if stock_data:
                 stocks.append(stock_data)
                 
-        logger.info(f"Trouvé {len(stocks)} actions STOXX pour la page {page}")
+        logger.info(f"Trouvé {len(stocks)} actions STOXX pour la lettre {letter}, page {page}")
         
         # Déterminer le nombre total de pages
         total_pages = 1
@@ -363,11 +363,41 @@ def scrape_stoxx_page(page=1):
             if current_item and current_item.text.isdigit():
                 current_page = int(current_item.text)
         
-        return stocks, current_page, total_pages
+        # MISE À JOUR: Détection de pagination pour le nouveau format
+        has_next_page = False
+        
+        # Recherche du bloc de pagination (nouvelle structure)
+        if pagination:
+            # Rechercher le bouton "suivant"
+            next_button = pagination.select_one('a.c-block-pagination__next-btn, a.c-pagination__item--next')
+            has_next_page = next_button is not None and not ('disabled' in next_button.get('class', []))
+            
+            # Si nous ne trouvons pas de bouton spécifique "suivant", vérifier s'il y a une page avec un numéro plus élevé
+            if not has_next_page:
+                page_links = pagination.select('a.c-block-pagination__link')
+                for link in page_links:
+                    if link.text.isdigit() and int(link.text) > page:
+                        has_next_page = True
+                        break
+        
+        # Vérification de l'ancienne structure de pagination au cas où
+        if not has_next_page:
+            pagination_old = soup.find('ul', class_='c-pagination')
+            if pagination_old:
+                next_button = pagination_old.find('li', class_='c-pagination__item--next')
+                has_next_page = next_button and not next_button.has_attr('disabled')
+        
+        # Vérification supplémentaire: si nous avons des actions mais pas de pagination, 
+        # essayons quand même la page suivante
+        if len(stocks) > 0 and not has_next_page and len(stocks) >= 20:  # 20 est la taille de page courante
+            logger.info(f"Aucune pagination détectée mais {len(stocks)} actions trouvées, on essaie la page suivante")
+            has_next_page = True
+        
+        return stocks, current_page, total_pages, has_next_page
         
     except Exception as e:
-        logger.error(f"Erreur lors du scraping STOXX de la page {page}: {str(e)}")
-        return [], page, 1
+        logger.error(f"Erreur lors du scraping STOXX lettre {letter}, page {page}: {str(e)}")
+        return [], page, 1, False
 
 def save_stoxx_data_for_page(stocks, page, total_pages):
     """Enregistre les données STOXX pour une page spécifique"""
@@ -429,47 +459,64 @@ def save_stoxx_data_for_page(stocks, page, total_pages):
         return False
 
 def scrape_all_stoxx():
-    """Scrape toutes les pages du STOXX 600"""
+    """Scrape toutes les actions du STOXX 600 par lettre et par page"""
+    all_stocks = []
+    max_pages_per_letter = 10  # Limite de sécurité
+    total_pages_overall = 0
+    total_stocks = 0
+    
     try:
-        # Récupérer les données de la première page pour obtenir le nombre total de pages
-        first_page_stocks, current_page, total_pages = scrape_stoxx_page(1)
-        
-        if not first_page_stocks:
-            logger.error("❌ Aucune action STOXX récupérée sur la première page")
-            return {
-                "status": "error",
-                "message": "Aucune donnée récupérée",
-                "pages": 0,
-                "stocks": 0
-            }
+        # Parcourir chaque lettre de l'alphabet
+        for letter in CONFIG["alphabet"]:
+            logger.info(f"📊 Récupération des données STOXX pour la lettre {letter}...")
             
-        # Enregistrer les données de la première page
-        save_stoxx_data_for_page(first_page_stocks, 1, total_pages)
-        
-        # Nombre total d'actions
-        total_stocks = len(first_page_stocks)
-        
-        # Récupérer les données des autres pages
-        for page in range(2, total_pages + 1):
-            # Attente pour éviter de surcharger le serveur
-            time.sleep(CONFIG["sleep_time"])
+            # Récupérer les données de la première page pour cette lettre
+            letter_stocks, current_page, total_pages, has_next_page = scrape_stoxx_page(1, letter)
             
-            # Récupérer les données de la page
-            stocks, _, _ = scrape_stoxx_page(page)
-            
-            if stocks:
-                # Ajouter au compteur total
-                total_stocks += len(stocks)
+            if letter_stocks:
+                all_stocks.extend(letter_stocks)
+                total_stocks += len(letter_stocks)
                 
-                # Enregistrer les données de la page
-                save_stoxx_data_for_page(stocks, page, total_pages)
+                # Mettre à jour le nombre total de pages pour cette lettre
+                letter_page_count = 1
+                
+                # Récupérer les pages suivantes pour cette lettre
+                page = 2
+                while has_next_page and page <= min(total_pages + 1, max_pages_per_letter + 1):
+                    # Attente pour éviter de surcharger le serveur
+                    time.sleep(CONFIG["sleep_time"])
+                    
+                    # Récupérer les données de la page
+                    page_stocks, _, _, page_has_next = scrape_stoxx_page(page, letter)
+                    
+                    if page_stocks:
+                        all_stocks.extend(page_stocks)
+                        total_stocks += len(page_stocks)
+                        letter_page_count += 1
+                    
+                    # Mettre à jour le flag pour la prochaine page
+                    has_next_page = page_has_next
+                    
+                    # Passer à la page suivante
+                    page += 1
+                    
+                # Mettre à jour le nombre total de pages global
+                total_pages_overall = max(total_pages_overall, letter_page_count)
+            
+            # Attente entre les lettres pour éviter de surcharger le serveur
+            time.sleep(CONFIG["sleep_time"])
         
-        logger.info(f"✅ Scraping STOXX terminé avec succès: {total_pages} pages, {total_stocks} actions récupérées")
+        # Si nous avons récupéré des données, les enregistrer
+        if all_stocks:
+            # Enregistrer les données dans le format de page standard
+            save_stoxx_data_for_page(all_stocks, 1, total_pages_overall)
+        
+        logger.info(f"✅ Scraping STOXX terminé avec succès: {total_stocks} actions récupérées sur toutes les lettres")
         return {
             "status": "success",
-            "pages": total_pages,
+            "pages": total_pages_overall,
             "stocks": total_stocks,
-            "all_stocks": first_page_stocks  # Retourne les actions de la première page pour le classement global
+            "all_stocks": all_stocks
         }
     except Exception as e:
         logger.error(f"❌ Erreur lors du scraping STOXX: {str(e)}")
