@@ -15,6 +15,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
     
+    // Données des deux marchés pour le classement global
+    let globalData = {
+        nasdaq: null,
+        stoxx: null
+    };
+    
     // État du scraper
     let isLoading = false;
     let lastUpdate = null;
@@ -45,6 +51,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Premier chargement des données
     loadStocksData();
+    
+    // Charger les données globales
+    loadGlobalData();
     
     // Ajouter les gestionnaires d'événements
     document.getElementById('retry-button')?.addEventListener('click', function() {
@@ -112,6 +121,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadStocksData(true);
             }
         });
+        
+        // Initialiser les onglets du top 10
+        const topTabs = document.querySelectorAll('.top-tab-btn');
+        if (topTabs) {
+            topTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Mettre à jour l'état des onglets
+                    topTabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Afficher le contenu correspondant
+                    const index = this.getAttribute('data-index');
+                    const containers = document.querySelectorAll('.top-stocks-content');
+                    
+                    containers.forEach(content => {
+                        content.classList.add('hidden');
+                    });
+                    
+                    document.getElementById(`top-${index}`)?.classList.remove('hidden');
+                });
+            });
+        }
     }
     
     /**
@@ -253,6 +284,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 meta: rawData.meta || {}
             };
             
+            // Stocker les données pour le classement global
+            if (currentMarket === 'nasdaq') {
+                globalData.nasdaq = stocksData;
+            } else {
+                globalData.stoxx = stocksData;
+            }
+            
             // Vérifier la fraîcheur des données
             const dataTimestamp = new Date(stocksData.meta.timestamp);
             const now = new Date();
@@ -279,6 +317,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // Afficher les données
             renderStocksData();
             lastUpdate = new Date();
+            
+            // Mettre à jour le top 10
+            updateTopTenStocks(stocksData);
+            
+            // Mettre à jour le top 10 global si les deux ensembles de données sont disponibles
+            if (globalData.nasdaq && globalData.stoxx) {
+                updateGlobalTopTen();
+            }
         } catch (error) {
             console.error('❌ Erreur lors du chargement des données:', error);
             showElement('indices-error');
@@ -287,6 +333,36 @@ document.addEventListener('DOMContentLoaded', function() {
         } finally {
             // Réinitialiser l'état
             isLoading = false;
+        }
+    }
+    
+    /**
+     * Charge les données pour le top 10 global
+     */
+    async function loadGlobalData() {
+        try {
+            // Charger les données NASDAQ si elles ne sont pas déjà chargées
+            if (!globalData.nasdaq) {
+                const nasdaqResponse = await fetch('data/lists.json');
+                if (nasdaqResponse.ok) {
+                    globalData.nasdaq = await nasdaqResponse.json();
+                }
+            }
+            
+            // Charger les données STOXX si elles ne sont pas déjà chargées
+            if (!globalData.stoxx) {
+                const stoxxResponse = await fetch('data/stoxx_page_1.json');
+                if (stoxxResponse.ok) {
+                    globalData.stoxx = await stoxxResponse.json();
+                }
+            }
+            
+            // Mettre à jour le top 10 global si les deux ensembles de données sont disponibles
+            if (globalData.nasdaq && globalData.stoxx) {
+                updateGlobalTopTen();
+            }
+        } catch (error) {
+            console.error('❌ Erreur lors du chargement des données globales:', error);
         }
     }
     
@@ -388,6 +464,238 @@ document.addEventListener('DOMContentLoaded', function() {
             hideElement('indices-loading');
             showElement('indices-error');
         }
+    }
+    
+    /**
+     * Met à jour le top 10 des actions
+     */
+    function updateTopTenStocks(data) {
+        if (!data || !data.top_performers) return;
+        
+        const topPerformers = data.top_performers;
+        
+        // Mise à jour du top 10 Hausse quotidienne
+        if (topPerformers.daily && topPerformers.daily.best) {
+            renderTopTenCards('top-daily-gainers', topPerformers.daily.best.slice(0, 10), 'change', currentMarket);
+        }
+        
+        // Mise à jour du top 10 Baisse quotidienne
+        if (topPerformers.daily && topPerformers.daily.worst) {
+            renderTopTenCards('top-daily-losers', topPerformers.daily.worst.slice(0, 10), 'change', currentMarket);
+        }
+        
+        // Mise à jour du top 10 Hausse YTD
+        if (topPerformers.ytd && topPerformers.ytd.best) {
+            renderTopTenCards('top-ytd-gainers', topPerformers.ytd.best.slice(0, 10), 'ytd', currentMarket);
+        }
+        
+        // Mise à jour du top 10 Baisse YTD
+        if (topPerformers.ytd && topPerformers.ytd.worst) {
+            renderTopTenCards('top-ytd-losers', topPerformers.ytd.worst.slice(0, 10), 'ytd', currentMarket);
+        }
+    }
+    
+    /**
+     * Met à jour le top 10 global (NASDAQ + STOXX)
+     */
+    function updateGlobalTopTen() {
+        if (!globalData.nasdaq || !globalData.stoxx) return;
+        
+        // Fusionner les données YTD
+        let combinedYtdGainers = [];
+        let combinedYtdLosers = [];
+        
+        if (globalData.nasdaq.top_performers && globalData.nasdaq.top_performers.ytd) {
+            // Ajouter la source aux données
+            const nasdaqBest = globalData.nasdaq.top_performers.ytd.best.map(stock => ({
+                ...stock,
+                market: 'NASDAQ'
+            }));
+            const nasdaqWorst = globalData.nasdaq.top_performers.ytd.worst.map(stock => ({
+                ...stock,
+                market: 'NASDAQ'
+            }));
+            
+            combinedYtdGainers = [...combinedYtdGainers, ...nasdaqBest];
+            combinedYtdLosers = [...combinedYtdLosers, ...nasdaqWorst];
+        }
+        
+        if (globalData.stoxx.top_performers && globalData.stoxx.top_performers.ytd) {
+            // Ajouter la source aux données
+            const stoxxBest = globalData.stoxx.top_performers.ytd.best.map(stock => ({
+                ...stock,
+                market: 'STOXX'
+            }));
+            const stoxxWorst = globalData.stoxx.top_performers.ytd.worst.map(stock => ({
+                ...stock,
+                market: 'STOXX'
+            }));
+            
+            combinedYtdGainers = [...combinedYtdGainers, ...stoxxBest];
+            combinedYtdLosers = [...combinedYtdLosers, ...stoxxWorst];
+        }
+        
+        // Trier les données fusionnées
+        if (combinedYtdGainers.length > 0) {
+            // Convertir les valeurs en nombre pour le tri
+            combinedYtdGainers = combinedYtdGainers.map(stock => {
+                // Nettoyer la valeur YTD et la convertir en nombre
+                const ytdValue = parseFloat(stock.ytd?.replace(/[+%]/g, '') || 0);
+                return {
+                    ...stock,
+                    ytdValue: ytdValue
+                };
+            });
+            
+            // Trier par YTD décroissant (plus hautes performances en premier)
+            combinedYtdGainers.sort((a, b) => b.ytdValue - a.ytdValue);
+            
+            // Prendre les 10 meilleurs
+            const top10Global = combinedYtdGainers.slice(0, 10);
+            
+            // Afficher le top 10 global
+            renderTopTenCards('top-global-gainers', top10Global, 'ytd', 'global');
+        }
+        
+        if (combinedYtdLosers.length > 0) {
+            // Convertir les valeurs en nombre pour le tri
+            combinedYtdLosers = combinedYtdLosers.map(stock => {
+                // Nettoyer la valeur YTD et la convertir en nombre
+                const ytdValue = parseFloat(stock.ytd?.replace(/[+%]/g, '') || 0);
+                return {
+                    ...stock,
+                    ytdValue: ytdValue
+                };
+            });
+            
+            // Trier par YTD croissant (plus basses performances en premier)
+            combinedYtdLosers.sort((a, b) => a.ytdValue - b.ytdValue);
+            
+            // Prendre les 10 pires
+            const bottom10Global = combinedYtdLosers.slice(0, 10);
+            
+            // Afficher le bottom 10 global
+            renderTopTenCards('top-global-losers', bottom10Global, 'ytd', 'global');
+        }
+        
+        // Trier par volume également
+        let combinedVolume = [];
+        
+        // Extraire et combiner tous les stocks avec des informations de volume
+        if (globalData.nasdaq.indices) {
+            Object.values(globalData.nasdaq.indices).forEach(stocksArray => {
+                const stocksWithVolume = stocksArray
+                    .filter(stock => stock.volume && stock.volume !== '-')
+                    .map(stock => ({
+                        ...stock,
+                        market: 'NASDAQ',
+                        volumeValue: parseVolumeToNumber(stock.volume)
+                    }));
+                
+                combinedVolume = [...combinedVolume, ...stocksWithVolume];
+            });
+        }
+        
+        if (globalData.stoxx.indices) {
+            Object.values(globalData.stoxx.indices).forEach(stocksArray => {
+                const stocksWithVolume = stocksArray
+                    .filter(stock => stock.volume && stock.volume !== '-')
+                    .map(stock => ({
+                        ...stock,
+                        market: 'STOXX',
+                        volumeValue: parseVolumeToNumber(stock.volume)
+                    }));
+                
+                combinedVolume = [...combinedVolume, ...stocksWithVolume];
+            });
+        }
+        
+        // Trier par volume et prendre le top 10
+        if (combinedVolume.length > 0) {
+            combinedVolume.sort((a, b) => b.volumeValue - a.volumeValue);
+            const top10Volume = combinedVolume.slice(0, 10);
+            
+            // Afficher le top 10 par volume
+            renderTopTenCards('top-global-volume', top10Volume, 'volume', 'global', true);
+        }
+    }
+    
+    /**
+     * Convertit le volume en nombre pour le tri
+     */
+    function parseVolumeToNumber(volumeStr) {
+        if (!volumeStr || volumeStr === '-') return 0;
+        
+        // Supprimer les espaces, les points et les virgules pour normaliser
+        const cleanedStr = volumeStr.replace(/\s+/g, '').replace(/\./g, '').replace(/,/g, '');
+        
+        // Extraire les chiffres
+        const matches = cleanedStr.match(/(\d+)/);
+        if (matches && matches[1]) {
+            return parseInt(matches[1], 10);
+        }
+        
+        return 0;
+    }
+    
+    /**
+     * Rend le HTML pour les cartes du top 10
+     */
+    function renderTopTenCards(containerId, stocks, valueField, marketSource, isVolume = false) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        
+        // Vider le conteneur
+        container.innerHTML = '';
+        
+        // Si pas de données, afficher un message
+        if (!stocks || stocks.length === 0) {
+            container.innerHTML = `
+                <div class="flex justify-center items-center py-4 text-gray-400">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    Aucune donnée disponible
+                </div>
+            `;
+            return;
+        }
+        
+        // Créer les cartes pour chaque action
+        stocks.forEach((stock, index) => {
+            // Déterminer le signe et la classe pour la valeur
+            let value = stock[valueField] || '-';
+            let valueClass = 'positive';
+            
+            if (isVolume) {
+                valueClass = 'neutral';
+            } else if (value.includes('-')) {
+                valueClass = 'negative';
+            }
+            
+            // Créer la carte
+            const card = document.createElement('div');
+            card.className = 'stock-card';
+            
+            // Déterminer l'icône du marché
+            let marketIcon = '';
+            if (marketSource === 'global') {
+                if (stock.market === 'NASDAQ') {
+                    marketIcon = '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>';
+                } else if (stock.market === 'STOXX') {
+                    marketIcon = '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>';
+                }
+            }
+            
+            card.innerHTML = `
+                <div class="rank">#${index + 1}</div>
+                <div class="stock-info">
+                    <div class="stock-name">${stock.symbol || stock.name.split(' ')[0] || '-'} ${marketIcon}</div>
+                    <div class="stock-fullname">${stock.name || '-'}</div>
+                </div>
+                <div class="stock-performance ${valueClass}">${value}</div>
+            `;
+            
+            container.appendChild(card);
+        });
     }
     
     /**
