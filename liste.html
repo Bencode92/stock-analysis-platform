@@ -490,8 +490,8 @@
          
          .top-performers-grid {
              display: grid;
-             grid-template-columns: repeat(4, 1fr);
-             grid-gap: 1px;
+             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+             grid-gap: 20px;
          }
          
          .performer-card {
@@ -838,6 +838,30 @@
              color: var(--accent-color);
          }
 
+         /* Scroll personnalisé pour les cartes top performers */
+         .performers-scroll {
+             max-height: 410px;
+             overflow-y: auto;
+         }
+         
+         .performers-scroll::-webkit-scrollbar {
+             width: 6px;
+         }
+         
+         .performers-scroll::-webkit-scrollbar-track {
+             background: rgba(255, 255, 255, 0.05);
+             border-radius: 3px;
+         }
+         
+         .performers-scroll::-webkit-scrollbar-thumb {
+             background: var(--accent-subtle);
+             border-radius: 3px;
+         }
+         
+         .performers-scroll::-webkit-scrollbar-thumb:hover {
+             background: var(--accent-medium);
+         }
+
          /* Responsive */
          @media (max-width: 768px) {
              .main-header {
@@ -1008,16 +1032,16 @@
                  
                  <!-- Top Performers -->
                  <div class="top-performers-section mb-10">
-                     <h2 class="top-performers-title mb-6">Top Performers</h2>
+                     <h2 class="top-performers-title mb-6">Top Performers du marché actuel</h2>
                      
                      <div class="top-performers-grid">
-                         <!-- Top 3 Hausse Quotidienne -->
+                         <!-- Top 10 Hausse Quotidienne -->
                          <div class="performer-card">
                              <div class="performer-header">
-                                 <span>Top 3 Hausse (VAR %)</span>
+                                 <span>Top 10 Hausse (VAR %)</span>
                                  <span class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
                              </div>
-                             <div id="daily-top">
+                             <div id="daily-top" class="performers-scroll">
                                  <div class="performer-row">
                                      <div class="performer-info">
                                          <div class="performer-index">Chargement...</div>
@@ -1028,13 +1052,13 @@
                              </div>
                          </div>
                          
-                         <!-- Top 3 Baisse Quotidienne -->
+                         <!-- Top 10 Baisse Quotidienne -->
                          <div class="performer-card">
                              <div class="performer-header">
-                                 <span>Top 3 Baisse (VAR %)</span>
+                                 <span>Top 10 Baisse (VAR %)</span>
                                  <span class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
                              </div>
-                             <div id="daily-bottom">
+                             <div id="daily-bottom" class="performers-scroll">
                                  <div class="performer-row">
                                      <div class="performer-info">
                                          <div class="performer-index">Chargement...</div>
@@ -1045,13 +1069,13 @@
                              </div>
                          </div>
                          
-                         <!-- Top 3 Hausse YTD -->
+                         <!-- Top 10 Hausse YTD -->
                          <div class="performer-card">
                              <div class="performer-header">
-                                 <span>Top 3 Hausse (YTD)</span>
+                                 <span>Top 10 Hausse (YTD)</span>
                                  <span class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
                              </div>
-                             <div id="ytd-top">
+                             <div id="ytd-top" class="performers-scroll">
                                  <div class="performer-row">
                                      <div class="performer-info">
                                          <div class="performer-index">Chargement...</div>
@@ -1062,19 +1086,60 @@
                              </div>
                          </div>
                          
-                         <!-- Top 3 Baisse YTD -->
+                         <!-- Top 10 Baisse YTD -->
                          <div class="performer-card">
                              <div class="performer-header">
-                                 <span>Top 3 Baisse (YTD)</span>
+                                 <span>Top 10 Baisse (YTD)</span>
                                  <span class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
                              </div>
-                             <div id="ytd-bottom">
+                             <div id="ytd-bottom" class="performers-scroll">
                                  <div class="performer-row">
                                      <div class="performer-info">
                                          <div class="performer-index">Chargement...</div>
                                          <div class="performer-country"></div>
                                      </div>
                                      <div class="performer-value negative">-</div>
+                                 </div>
+                             </div>
+                         </div>
+                     </div>
+                 </div>
+                 
+                 <!-- Top Performers Globaux -->
+                 <div class="top-performers-section mb-10">
+                     <h2 class="top-performers-title mb-6">Top Performers Globaux (NASDAQ + STOXX)</h2>
+                     
+                     <div class="top-performers-grid grid-cols-1 md:grid-cols-2">
+                         <!-- Top 10 Hausse Globale -->
+                         <div class="performer-card">
+                             <div class="performer-header">
+                                 <span>Top 10 Mondial Hausse (YTD)</span>
+                                 <span class="text-sm positive"><i class="fas fa-globe"></i></span>
+                             </div>
+                             <div id="global-top" class="performers-scroll">
+                                 <div class="performer-row">
+                                     <div class="performer-info">
+                                         <div class="performer-index">Chargement...</div>
+                                         <div class="performer-country"></div>
+                                     </div>
+                                     <div class="performer-value positive">-</div>
+                                 </div>
+                             </div>
+                         </div>
+                         
+                         <!-- Top 10 Volume Global -->
+                         <div class="performer-card">
+                             <div class="performer-header">
+                                 <span>Top 10 Mondial Volume</span>
+                                 <span class="text-sm neutral"><i class="fas fa-chart-bar"></i></span>
+                             </div>
+                             <div id="global-volume" class="performers-scroll">
+                                 <div class="performer-row">
+                                     <div class="performer-info">
+                                         <div class="performer-index">Chargement...</div>
+                                         <div class="performer-country"></div>
+                                     </div>
+                                     <div class="performer-value neutral">-</div>
                                  </div>
                              </div>
                          </div>
@@ -1824,7 +1889,7 @@
                     if (stockName.includes(searchTerm)) {
                         row.classList.add('search-highlight');
                         row.style.display = '';
-                        totalResults++;
+                        totalResults++; 
                     } else {
                         row.classList.remove('search-highlight');
                         row.style.display = 'none';
