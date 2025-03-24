@@ -64,7 +64,7 @@ jobs:
               "meta": {
                 "source": "Boursorama",
                 "description": "Actions du NASDAQ Composite (États-Unis)",
-                "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
+                "timestamp": "'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'",
                 "count": 0
               }
             }' > data/lists.json
@@ -86,7 +86,7 @@ jobs:
               "meta": {
                 "source": "Boursorama",
                 "description": "Actions du DJ STOXX 600 (Europe)",
-                "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
+                "timestamp": "'"$(date -u +"%Y-%m-%dT%H:%M:%SZ")"'",
                 "count": 0,
                 "pagination": {
                   "currentPage": 1,
@@ -102,8 +102,8 @@ jobs:
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          # Ajouter tous les fichiers pertinents
-          git add data/lists.json data/stoxx_page_*.json data/update_summary.json
+          # Ajouter tous les fichiers pertinents, y compris global_top_performers.json
+          git add data/lists.json data/stoxx_page_*.json data/update_summary.json data/global_top_performers.json
           
           # Vérifier s'il y a des modifications à commiter
           if git diff --staged --quiet; then
