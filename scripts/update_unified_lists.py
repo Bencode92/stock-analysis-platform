@@ -252,21 +252,18 @@ def scrape_all_nasdaq_stocks():
     
     return all_stocks
 
-def save_nasdaq_data(stocks):
-    """Enregistre les données NASDAQ dans un fichier JSON"""
+def save_combined_data(stocks, source_description="Actions NASDAQ + STOXX"):
+    """Enregistre les données combinées NASDAQ + STOXX dans lists.json"""
     try:
-        # Organiser les actions par première lettre
-        stocks_by_letter = {}
-        for letter in "abcdefghijklmnopqrstuvwxyz":
-            stocks_by_letter[letter] = []
-        
-        # Trier les actions par première lettre
+        stocks_by_letter = {letter: [] for letter in "abcdefghijklmnopqrstuvwxyz"}
+
         for stock in stocks:
-            first_letter = stock["name"][0].lower() if stock["name"] else "a"
-            if first_letter.isalpha() and first_letter in stocks_by_letter:
+            if not stock.get("name"):
+                continue
+            first_letter = stock["name"][0].lower()
+            if first_letter in stocks_by_letter:
                 stocks_by_letter[first_letter].append(stock)
-        
-        # Créer la structure compatible
+
         compatible_data = {
             "indices": stocks_by_letter,
             "top_performers": {
@@ -283,19 +280,19 @@ def save_nasdaq_data(stocks):
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "count": len(stocks),
                 "source": "Boursorama",
-                "description": "Actions du NASDAQ Composite (États-Unis)"
+                "description": source_description
             }
         }
-        
-        # Écrire le fichier JSON
+
         with open(CONFIG["nasdaq"]["output_path"], 'w', encoding='utf-8') as f:
             json.dump(compatible_data, f, ensure_ascii=False, indent=2)
-        
-        logger.info(f"✅ Données NASDAQ enregistrées dans {CONFIG['nasdaq']['output_path']}")
+
+        logger.info(f"✅ Données combinées enregistrées dans {CONFIG['nasdaq']['output_path']}")
         return True
     except Exception as e:
-        logger.error(f"❌ Erreur lors de l'enregistrement des données NASDAQ: {str(e)}")
+        logger.error(f"❌ Erreur lors de l'enregistrement des données combinées: {str(e)}")
         return False
+
 
 #
 # Fonctions pour STOXX
@@ -638,34 +635,29 @@ def main():
     """Point d'entrée principal"""
     try:
         logger.info("🚀 Démarrage du script unifié d'extraction des données NASDAQ et STOXX")
-        
-        # S'assurer que le répertoire de données existe
+
         ensure_data_directory()
-        
-        # Vérifier qu'il n'y a pas de conflit avec markets.json
         verify_no_markets_conflict()
-        
-        # 1. Scraper les données NASDAQ
+
         logger.info("📊 Début du scraping NASDAQ...")
         nasdaq_stocks = scrape_all_nasdaq_stocks()
-        
-        if nasdaq_stocks:
-            # Enregistrer les données NASDAQ
-            save_nasdaq_data(nasdaq_stocks)
-            logger.info(f"✅ Scraping NASDAQ terminé: {len(nasdaq_stocks)} actions récupérées")
-        else:
+
+        if not nasdaq_stocks:
             logger.error("❌ Aucune action NASDAQ récupérée")
-        
-        # 2. Scraper les données STOXX
+
         logger.info("📊 Début du scraping STOXX...")
         stoxx_result = scrape_all_stoxx()
-        
-        # NOUVELLE ÉTAPE: Créer le classement global
+
+        combined_stocks = nasdaq_stocks + stoxx_result.get("all_stocks", [])
+
+        if combined_stocks:
+            save_combined_data(combined_stocks)
+            logger.info(f"✅ Scraping combiné terminé: {len(combined_stocks)} actions total")
+
         if nasdaq_stocks and stoxx_result.get("status") == "success":
             logger.info("📊 Création du classement global NASDAQ + STOXX...")
             create_global_rankings(nasdaq_stocks, stoxx_result)
-        
-        # 3. Enregistrer un résumé global
+
         result_summary = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "nasdaq": {
@@ -678,15 +670,14 @@ def main():
                 "file": "global_top_performers.json"
             }
         }
-        
-        # Sauvegarder le résumé
+
         summary_path = os.path.join(CONFIG["stoxx"]["output_dir"], "update_summary.json")
         with open(summary_path, 'w', encoding='utf-8') as f:
             json.dump(result_summary, f, ensure_ascii=False, indent=2)
-        
+
         logger.info(f"📊 Résumé: {json.dumps(result_summary, indent=2)}")
         logger.info("✅ Script unifié terminé avec succès")
-        
+
         sys.exit(0)
     except Exception as e:
         logger.error(f"❌ Erreur fatale: {str(e)}")
