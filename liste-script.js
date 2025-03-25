@@ -272,13 +272,8 @@ document.addEventListener('DOMContentLoaded', function() {
         hideElement('indices-container');
         
         try {
-            // Déterminer le fichier à charger selon le marché et la page
-            let url;
-            if (currentMarket === 'nasdaq') {
-                url = `data/lists.json`;
-            } else {
-                url = `data/stoxx_page_${currentPage}.json`;
-            }
+            // Maintenant nous chargeons toujours depuis lists.json
+            const url = `data/lists.json`;
             
             // Pour éviter le cache du navigateur en cas de forceRefresh
             const cacheBuster = forceRefresh ? `?t=${Date.now()}` : '';
@@ -293,11 +288,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // Charger les données
             const rawData = await response.json();
             
+            // Sélectionner les données en fonction du marché
+            const marketData = rawData[currentMarket] || {};
+            
             // S'assurer que toutes les régions existent dans les données
             stocksData = {
-                indices: rawData.indices || {},
-                top_performers: rawData.top_performers || null,
-                meta: rawData.meta || {}
+                indices: marketData.indices || {},
+                top_performers: marketData.top_performers || null,
+                meta: marketData.meta || {}
             };
             
             // Stocker les données pour le classement global
@@ -358,36 +356,30 @@ document.addEventListener('DOMContentLoaded', function() {
     async function loadTopPerformersData() {
         try {
             // Tenter de charger les données complètes Top 10
-            const [nasdaqResponse, stoxxResponse, globalResponse] = await Promise.all([
-                fetch('data/nasdaq_top_performers.json').catch(() => null),
-                fetch('data/stoxx_top_performers.json').catch(() => null),
+            const [globalResponse] = await Promise.all([
                 fetch('data/global_top_performers.json').catch(() => null)
             ]);
             
-            // Si nous avons les fichiers spécifiques, les utiliser
-            if (nasdaqResponse?.ok && stoxxResponse?.ok && globalResponse?.ok) {
-                const nasdaqData = await nasdaqResponse.json();
-                const stoxxData = await stoxxResponse.json();
+            // Si nous avons le fichier global, l'utiliser
+            if (globalResponse?.ok) {
                 const globalData = await globalResponse.json();
                 
                 // Mettre à jour les affichages
-                updateTopTenStocks(nasdaqData, 'nasdaq');
-                updateTopTenStocks(stoxxData, 'stoxx');
                 updateGlobalTopTen(globalData);
                 
                 return true;
             }
             
             // Sinon, fallback sur les données standard
-            const fallbackResponse = await fetch('data/market_data.json').catch(() => null);
+            const fallbackResponse = await fetch('data/lists.json').catch(() => null);
             if (fallbackResponse?.ok) {
-                const globalData = await fallbackResponse.json();
+                const combinedData = await fallbackResponse.json();
                 
-                // Si nous n'avons pas les fichiers spécifiques, utiliser les données existantes
-                if (globalData.nasdaq && globalData.stoxx) {
-                    updateTopTenStocks(globalData.nasdaq.top_performers, 'nasdaq');
-                    updateTopTenStocks(globalData.stoxx.top_performers, 'stoxx');
-                    updateGlobalTopTen(globalData);
+                // Si nous avons les données combinées dans lists.json
+                if (combinedData.nasdaq && combinedData.stoxx) {
+                    globalData.nasdaq = combinedData.nasdaq;
+                    globalData.stoxx = combinedData.stoxx;
+                    updateGlobalTopTen();
                     return true;
                 }
             }
@@ -416,24 +408,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log("⚠️ Fichier global_top_performers.json non trouvé, fallback sur la combinaison manuelle");
             }
             
-            // Sinon, charger les données individuelles
-            if (!globalData.nasdaq) {
-                const nasdaqResponse = await fetch('data/lists.json');
-                if (nasdaqResponse.ok) {
-                    globalData.nasdaq = await nasdaqResponse.json();
+            // Sinon, charger les données de lists.json qui contient tout
+            const listsResponse = await fetch('data/lists.json');
+            if (listsResponse.ok) {
+                const combinedData = await listsResponse.json();
+                if (combinedData.nasdaq && combinedData.stoxx) {
+                    globalData.nasdaq = {
+                        indices: combinedData.nasdaq.indices,
+                        top_performers: combinedData.nasdaq.top_performers,
+                        meta: combinedData.nasdaq.meta
+                    };
+                    
+                    globalData.stoxx = {
+                        indices: combinedData.stoxx.indices,
+                        top_performers: combinedData.stoxx.top_performers,
+                        meta: combinedData.stoxx.meta
+                    };
+                    
+                    // Mettre à jour le top 10 global si les deux ensembles de données sont disponibles
+                    updateGlobalTopTen();
                 }
-            }
-            
-            if (!globalData.stoxx) {
-                const stoxxResponse = await fetch('data/stoxx_page_1.json');
-                if (stoxxResponse.ok) {
-                    globalData.stoxx = await stoxxResponse.json();
-                }
-            }
-            
-            // Mettre à jour le top 10 global si les deux ensembles de données sont disponibles
-            if (globalData.nasdaq && globalData.stoxx) {
-                updateGlobalTopTen();
             }
         } catch (error) {
             console.error('❌ Erreur lors du chargement des données globales:', error);
