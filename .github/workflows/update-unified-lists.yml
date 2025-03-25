@@ -139,19 +139,40 @@ jobs:
             }' > data/global_top_performers.json
           fi
         
+      - name: 📊 Vérifier l'état du fichier lists.json
+        run: |
+          if [ -f data/lists.json ]; then
+            echo "✅ Le fichier lists.json existe"
+            filesize=$(stat -c%s "data/lists.json")
+            echo "Taille du fichier: $filesize octets"
+            
+            if [ $filesize -lt 1000 ]; then
+              echo "⚠️ ATTENTION: Le fichier semble trop petit, peut-être incomplet"
+            else
+              echo "Taille correcte, vérification des données..."
+              head -n 30 data/lists.json
+            fi
+          else
+            echo "❌ ERREUR: lists.json n'existe pas!"
+          fi
+
       - name: 💾 Commit and push if changed
         run: |
           # Configuration de git avec le token explicite
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          # S'assurer que tout est propre avant de commencer
-          git stash -u || true
+          # Éviter d'utiliser stash qui peut masquer les changements
+          # git stash -u || true
           
-          # Ajouter les fichiers de façon sécurisée (sans utiliser de wildcard)
-          git add data/lists.json
-          git add data/update_summary.json 
-          git add data/global_top_performers.json
+          echo "État actuel des fichiers:"
+          git status data/lists.json data/update_summary.json data/global_top_performers.json
+          
+          # Forcer l'ajout des fichiers (même sans changement détecté)
+          echo "Ajout forcé des fichiers principaux..."
+          git add -f data/lists.json
+          git add -f data/update_summary.json 
+          git add -f data/global_top_performers.json
           
           # Supprimer les fichiers stoxx_page_*.json du repo s'ils existent
           for file in data/stoxx_page_*.json; do
@@ -160,13 +181,10 @@ jobs:
             fi
           done
           
-          # Vérifier s'il y a des modifications à commiter
-          if git diff --staged --quiet; then
-            echo "Aucune modification détectée, pas de commit nécessaire"
-          else
-            echo "Modifications détectées, création d'un commit"
-            git commit -m "📊 Mise à jour unifiée des données NASDAQ et STOXX [skip ci]"
-            
-            # Push direct sans pull préalable pour éviter les conflits
-            git push --force origin HEAD:${GITHUB_REF}
-          fi
+          # Créer un commit inconditionnel
+          echo "Création du commit..."
+          git commit -m "📊 Mise à jour forcée des données NASDAQ et STOXX [skip ci]" || echo "Pas de changements à committer"
+          
+          # Push avec force pour éviter les conflits
+          echo "Push des modifications..."
+          git push --force origin HEAD:${GITHUB_REF}
