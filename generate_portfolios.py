@@ -393,7 +393,7 @@ def update_history_index(history_file, portfolio_data):
 def main():
     print("🔍 Extraction des données financières...")
     actualites = extract_content_from_html('actualites.html')
-    marche = extract_content_from_html('marche.html')
+    marche = extract_content_from_html('marches.html')
     secteurs = extract_content_from_html('secteurs.html')
     listes = extract_content_from_html('liste.html')  # Nouveau
     etfs = extract_content_from_html('etf.html')      # Nouveau
