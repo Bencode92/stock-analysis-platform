@@ -492,6 +492,58 @@ def filter_lists_data(lists_data):
     
     return "\n".join(assets_summary) if assets_summary else "Aucune donnée d'actifs significative"
 
+def save_prompt_to_debug_file(prompt, timestamp=None):
+    """Sauvegarde le prompt complet dans un fichier de débogage."""
+    # Créer un répertoire de debug s'il n'existe pas
+    debug_dir = "debug/prompts"
+    os.makedirs(debug_dir, exist_ok=True)
+    
+    # Utiliser un horodatage fourni ou en générer un nouveau
+    if timestamp is None:
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    
+    # Créer le nom du fichier de débogage
+    debug_file = f"{debug_dir}/prompt_{timestamp}.txt"
+    
+    # Sauvegarder le prompt dans le fichier
+    with open(debug_file, 'w', encoding='utf-8') as f:
+        f.write(prompt)
+    
+    # Générer un fichier HTML plus lisible
+    html_file = f"{debug_dir}/prompt_{timestamp}.html"
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>TradePulse - Debug de Prompt</title>
+        <meta charset="UTF-8">
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }}
+            pre {{ background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; }}
+            h1, h2 {{ color: #2c3e50; }}
+            .info {{ background-color: #e8f4f8; padding: 10px; border-radius: 5px; margin-bottom: 20px; }}
+            .stats {{ display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; }}
+            .stat-box {{ background: #f0f7fa; padding: 10px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }}
+            .highlight {{ background-color: #ffffcc; }}
+        </style>
+    </head>
+    <body>
+        <h1>TradePulse - Debug de Prompt ChatGPT</h1>
+        <div class="info">
+            <p>Timestamp: {timestamp}</p>
+            <p>Taille totale du prompt: {len(prompt)} caractères</p>
+        </div>
+        <h2>Contenu du prompt envoyé à ChatGPT :</h2>
+        <pre>{prompt.replace('<', '&lt;').replace('>', '&gt;')}</pre>
+    </body>
+    </html>
+    """
+    
+    with open(html_file, 'w', encoding='utf-8') as f:
+        f.write(html_content)
+    
+    return debug_file, html_file
+
 def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data):
     """Génère trois portefeuilles optimisés en combinant les données fournies et le contexte actuel du marché."""
     api_key = os.environ.get('API_CHAT')
@@ -534,6 +586,9 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     # ===== SYSTÈME DE RETRY AVEC BACKOFF EXPONENTIEL =====
     max_retries = 3
     backoff_time = 1  # Commencer avec 1 seconde
+    
+    # Horodatage pour les fichiers de debug
+    debug_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     
     for attempt in range(max_retries):
         try:
@@ -587,6 +642,13 @@ Utilise ces données filtrées et synthétisées pour générer des portefeuille
 - Ne réponds qu'avec le JSON, sans commentaire ni explication.
 """
             
+            # ===== NOUVELLE FONCTIONNALITÉ: SAUVEGARDER LE PROMPT POUR DEBUG =====
+            print("\n🔍 GÉNÉRATION DU PROMPT COMPLET POUR DEBUG...")
+            debug_file, html_file = save_prompt_to_debug_file(prompt, debug_timestamp)
+            print(f"✅ Prompt complet sauvegardé dans {debug_file}")
+            print(f"✅ Version HTML plus lisible sauvegardée dans {html_file}")
+            print(f"📝 Consultez ces fichiers pour voir exactement ce qui est envoyé à ChatGPT")
+            
             headers = {
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
@@ -604,6 +666,12 @@ Utilise ces données filtrées et synthétisées pour générer des portefeuille
             
             result = response.json()
             content = result["choices"][0]["message"]["content"]
+            
+            # Sauvegarder également la réponse pour analyse
+            response_debug_file = f"debug/prompts/response_{debug_timestamp}.txt"
+            with open(response_debug_file, 'w', encoding='utf-8') as f:
+                f.write(content)
+            print(f"✅ Réponse de l'API sauvegardée dans {response_debug_file}")
             
             # Nettoyer la réponse pour extraire seulement le JSON
             content = re.sub(r'^```json', '', content)
