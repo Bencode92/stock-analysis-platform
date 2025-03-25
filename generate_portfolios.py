@@ -790,20 +790,32 @@ Utilise ces données filtrées et synthétisées pour générer des portefeuille
 2️⃣ Modéré : 10 à 20 actifs équilibrés (blue chips, ETF diversifiés, obligations d'entreprises).  
 3️⃣ Stable : 10 à 20 actifs défensifs (obligations souveraines, valeurs refuges, ETF stables).
 
+Pour chacun des portefeuilles, ajoute un paragraphe **Commentaire** qui justifie les choix à partir des données ci-dessus.
+
+Base tes explications sur :
+- Les **actualités macroéconomiques importantes** (impact fort),
+- Les **tendances de marché** (indices, top hausses/baisses),
+- Les **secteurs en forte croissance** ou en recul (YTD),
+- Les **ETF les plus performants** (YTD ou 1m),
+- Les **actifs très performants (>20% YTD)** depuis les listes.
+
+🧠 Explique pourquoi tu as sélectionné certains actifs ou classes d'actifs, et **fais le lien direct avec les données fournies**.
+
 📊 Format JSON uniquement:
-{{
-  "Agressif": {{
-    "Actions": {{
+{{{{
+  "Agressif": {{{{
+    "Commentaire": "Texte justifiant les choix basé sur les tendances actuelles",
+    "Actions": {{{{
       "Nom": "X%",
       ...
-    }},
-    "Crypto": {{ ... }},
-    "ETF": {{ ... }},
-    "Obligations": {{ ... }}
-  }},
-  "Modéré": {{ ... }},
-  "Stable": {{ ... }}
-}}
+    }}}},
+    "Crypto": {{{{ ... }}}},
+    "ETF": {{{{ ... }}}},
+    "Obligations": {{{{ ... }}}}
+  }}}},
+  "Modéré": {{{{ ... }}}},
+  "Stable": {{{{ ... }}}}
+}}}}
 
 ✅ Contraintes :
 - Chaque portefeuille: 10-20 actifs, somme 100%, minimum 2 classes d'actifs
@@ -866,16 +878,19 @@ Utilise ces données filtrées et synthétisées pour générer des portefeuille
                 # En cas d'échec de toutes les tentatives, retourner un portfolio par défaut
                 return {
                     "Agressif": {
+                        "Commentaire": "Ce portefeuille vise une croissance maximale en privilégiant des actifs à forte volatilité et à haut potentiel. Idéal pour les investisseurs avec une tolérance élevée au risque et un horizon de placement long.",
                         "Actions": {"Apple": "15%", "Tesla": "10%", "Nvidia": "15%"},
                         "Crypto": {"Bitcoin": "15%", "Ethereum": "10%"},
                         "ETF": {"ARK Innovation ETF": "15%", "SPDR S&P 500 ETF": "10%"}
                     },
                     "Modéré": {
+                        "Commentaire": "Ce portefeuille équilibré combine croissance et protection du capital. Il s'adresse aux investisseurs qui recherchent une appréciation de leur capital à moyen terme tout en limitant la volatilité.",
                         "Actions": {"Microsoft": "15%", "Alphabet": "10%", "Johnson & Johnson": "10%"},
                         "Obligations": {"US Treasury 10Y": "15%", "Corporate Bonds AAA": "15%"},
                         "ETF": {"Vanguard Total Stock Market ETF": "20%", "iShares Core MSCI EAFE ETF": "15%"}
                     },
                     "Stable": {
+                        "Commentaire": "Ce portefeuille défensif privilégie la préservation du capital et les revenus réguliers. Il convient aux investisseurs prudents ou proches de la retraite, cherchant à minimiser les fluctuations de leur portefeuille.",
                         "Actions": {"Procter & Gamble": "10%", "Coca-Cola": "10%", "McDonald's": "10%"},
                         "Obligations": {"US Treasury 30Y": "25%", "Municipal Bonds AAA": "15%"},
                         "ETF": {"Vanguard High Dividend Yield ETF": "15%", "SPDR Gold Shares": "15%"}
@@ -942,8 +957,9 @@ def update_history_index(history_file, portfolio_data):
         for portfolio_type, portfolio in portfolio_data["portfolios"].items():
             entry["summary"][portfolio_type] = {}
             for category, assets in portfolio.items():
-                count = len(assets)
-                entry["summary"][portfolio_type][category] = "{} actifs".format(count)
+                if category != "Commentaire":  # Ne pas compter le commentaire comme une catégorie d'actifs
+                    count = len(assets)
+                    entry["summary"][portfolio_type][category] = "{} actifs".format(count)
         
         # Ajouter la nouvelle entrée au début de la liste (plus récente en premier)
         index_data.insert(0, entry)
