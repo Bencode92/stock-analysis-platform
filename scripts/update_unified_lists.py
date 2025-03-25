@@ -616,11 +616,24 @@ def main():
             if stoxx_result.get("pages"):
                 combined_data["stoxx"]["meta"]["pagination"]["totalPages"] = stoxx_result.get("pages", 1)
 
-        # Sauvegarder les données combinées dans lists.json
-        with open(CONFIG["nasdaq"]["output_path"], 'w', encoding='utf-8') as f:
-            json.dump(combined_data, f, ensure_ascii=False, indent=2)
-        
-        logger.info(f"✅ Données NASDAQ et STOXX enregistrées dans {CONFIG['nasdaq']['output_path']}")
+        # Chemin explicite pour lists.json
+        lists_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "lists.json")
+        logger.info(f"📝 Sauvegarde des données combinées dans: {lists_path}")
+
+        # Vérifier que les données à écrire sont bien structurées
+        logger.info(f"📊 Structure des données: {len(combined_data.keys())} marchés, " 
+                  f"NASDAQ: {combined_data['nasdaq']['meta']['count']} actions, "
+                  f"STOXX: {combined_data['stoxx']['meta']['count']} actions")
+
+        # Sauvegarder les données dans lists.json avec gestion d'erreur
+        try:
+            with open(lists_path, 'w', encoding='utf-8') as f:
+                json.dump(combined_data, f, ensure_ascii=False, indent=2)
+            logger.info(f"✅ Données sauvegardées avec succès dans {lists_path}")
+        except Exception as e:
+            logger.error(f"❌ ERREUR lors de la sauvegarde dans lists.json: {str(e)}")
+            import traceback
+            traceback.print_exc()
 
         # Créer quand même le classement global pour compatibilité
         if nasdaq_stocks and stoxx_stocks:
