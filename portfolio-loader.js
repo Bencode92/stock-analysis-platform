@@ -104,6 +104,7 @@ class PortfolioManager {
     getDefaultPortfolios() {
         return {
             "Agressif": {
+                "Commentaire": "Ce portefeuille vise une croissance maximale en privilégiant des actifs à forte volatilité et à haut potentiel. Idéal pour les investisseurs avec une tolérance élevée au risque et un horizon de placement long.",
                 "Actions": {
                     "Apple": "15%",
                     "Tesla": "10%",
@@ -119,6 +120,7 @@ class PortfolioManager {
                 }
             },
             "Modéré": {
+                "Commentaire": "Ce portefeuille équilibré combine croissance et protection du capital. Il s'adresse aux investisseurs qui recherchent une appréciation de leur capital à moyen terme tout en limitant la volatilité.",
                 "Actions": {
                     "Microsoft": "15%",
                     "Alphabet": "10%",
@@ -134,6 +136,7 @@ class PortfolioManager {
                 }
             },
             "Stable": {
+                "Commentaire": "Ce portefeuille défensif privilégie la préservation du capital et les revenus réguliers. Il convient aux investisseurs prudents ou proches de la retraite, cherchant à minimiser les fluctuations de leur portefeuille.",
                 "Actions": {
                     "Procter & Gamble": "10%",
                     "Coca-Cola": "10%",
@@ -335,9 +338,21 @@ class PortfolioManager {
         // Générer la description du portefeuille
         const description = this.getPortfolioDescription(portfolioType);
         
-        // Compter le nombre total d'actifs
-        const totalAssets = Object.values(portfolio).reduce((sum, category) => {
-            return sum + Object.keys(category).length;
+        // Récupérer le commentaire du JSON (ou utiliser la description par défaut si non disponible)
+        // S'assurer que le commentaire est traité comme une chaîne de caractères
+        let portfolioComment = "";
+        if (typeof portfolio["Commentaire"] === "string") {
+            portfolioComment = portfolio["Commentaire"];
+        } else {
+            portfolioComment = description;
+        }
+        
+        // Compter le nombre total d'actifs (en excluant le champ Commentaire)
+        const totalAssets = Object.keys(portfolio).reduce((sum, key) => {
+            if (key !== "Commentaire" && typeof portfolio[key] === 'object') {
+                return sum + Object.keys(portfolio[key]).length;
+            }
+            return sum;
         }, 0);
         
         // Génération du graphique coloré selon le type
@@ -359,6 +374,31 @@ class PortfolioManager {
             <div class="portfolio-description">
                 <p>${description}</p>
             </div>
+        `;
+        
+        // Ajouter la section d'explication améliorée avec un design plus moderne
+        html += `
+            <div class="portfolio-explanation">
+                <div class="explanation-header">
+                    <i class="fas fa-lightbulb"></i>
+                    <span>Stratégie d'investissement</span>
+                </div>
+                <div class="explanation-content">
+                    <div class="insight-quote">
+                        <i class="fas fa-quote-left quote-icon"></i>
+                        ${this.formatComment(portfolioComment)}
+                        <i class="fas fa-quote-right quote-icon right-quote"></i>
+                    </div>
+                    <div class="insight-decorator">
+                        <span class="insight-line"></span>
+                        <span class="insight-dot"></span>
+                        <span class="insight-line"></span>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        html += `
             <div class="portfolio-overview">
                 ${chartHTML}
                 <div class="portfolio-allocation">
@@ -390,6 +430,9 @@ class PortfolioManager {
         html += '<div class="portfolio-details">';
         
         Object.keys(portfolio).forEach(category => {
+            // Ignorer le champ Commentaire
+            if (category === "Commentaire") return;
+            
             const assets = portfolio[category];
             
             // Ne montrer que les catégories non vides
@@ -442,12 +485,27 @@ class PortfolioManager {
     }
 
     /**
+     * Formate le commentaire pour mettre en évidence les informations importantes
+     */
+    formatComment(comment) {
+        if (!comment || typeof comment !== 'string') return '';
+        
+        // Mettre en évidence les mots-clés importants
+        return comment
+            .replace(/\b(croissance|hausse|baisse|performance|volatilité|rendement|secteur|tendance)\b/gi, '<span class="highlight-point">$1</span>')
+            .replace(/\b(\+\d+%|-\d+%|\d+%)\b/g, '<span class="highlight-point">$1</span>');
+    }
+
+    /**
      * Calcule la répartition par catégorie d'un portefeuille
      */
     calculateCategoryAllocation(portfolio) {
         const allocation = {};
         
         Object.keys(portfolio).forEach(category => {
+            // Ignorer le champ Commentaire
+            if (category === "Commentaire") return;
+            
             const assets = portfolio[category];
             const categoryTotal = Object.values(assets).reduce((sum, value) => {
                 // Convertir les pourcentages en nombres
@@ -577,6 +635,9 @@ class PortfolioManager {
             const colors = [];
             
             categories.forEach((category, index) => {
+                // Ignorer le champ Commentaire
+                if (category === "Commentaire") return;
+                
                 const assets = portfolio[category];
                 const categoryTotal = Object.values(assets).reduce((sum, value) => {
                     const numValue = parseFloat(value.replace('%', ''));
@@ -813,6 +874,14 @@ class PortfolioManager {
         // Préparer la description du portefeuille
         const description = this.getPortfolioDescription(portfolioType);
         
+        // Récupérer le commentaire du portefeuille
+        let portfolioComment = "";
+        if (typeof portfolioData["Commentaire"] === "string") {
+            portfolioComment = portfolioData["Commentaire"];
+        } else {
+            portfolioComment = description;
+        }
+        
         // Préparer la date actuelle
         const now = new Date();
         const formattedDate = now.toLocaleDateString('fr-FR') + ' à ' + 
@@ -830,6 +899,13 @@ class PortfolioManager {
                 <p style="font-size: 16px; line-height: 1.5; color: rgba(255,255,255,0.9); margin: 0 auto 30px; max-width: 650px; text-align: center;">
                     ${description}
                 </p>
+
+                <div style="border-left: 4px solid ${accentColor}; background-color: rgba(255,255,255,0.05); padding: 15px; text-align: left; margin: 20px 0 30px; border-radius: 6px;">
+                    <h3 style="color: ${accentColor}; font-size: 18px; margin-bottom: 10px;">Analyse du marché</h3>
+                    <p style="font-size: 14px; line-height: 1.6; color: rgba(255,255,255,0.9); margin: 0;">
+                        ${portfolioComment}
+                    </p>
+                </div>
                 
                 <p style="font-size: 14px; color: rgba(255,255,255,0.6); margin: 20px 0 40px;">
                     Généré le ${formattedDate}
@@ -854,6 +930,9 @@ class PortfolioManager {
         
         // Transformer les données de portefeuille en un tableau d'actifs
         Object.keys(portfolioData).forEach(category => {
+            // Ignorer le champ Commentaire
+            if (category === "Commentaire") return;
+            
             const categoryAssets = portfolioData[category];
             Object.keys(categoryAssets).forEach(asset => {
                 // Déterminer le symbole
@@ -1070,7 +1149,15 @@ class PortfolioManager {
         const shareText = `TradePulse - Portefeuille ${portfolioType}\n\n`;
         let portfolioText = '';
         
+        // Ajouter le commentaire du portefeuille
+        if (this.portfolios[portfolioType]["Commentaire"]) {
+            portfolioText += `${this.portfolios[portfolioType]["Commentaire"]}\n\n`;
+        }
+        
         Object.keys(this.portfolios[portfolioType]).forEach(category => {
+            // Ignorer le champ Commentaire
+            if (category === "Commentaire") return;
+            
             const assets = this.portfolios[portfolioType][category];
             if (Object.keys(assets).length === 0) return;
             
