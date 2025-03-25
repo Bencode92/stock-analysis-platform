@@ -579,18 +579,18 @@ def filter_etf_data(etf_data):
         summary.append("📊 TOP ETF 2025 (>10% YTD):")
         summary.extend(f"• {etf}" for etf in selected_top)
 
-    # 2. TOP ETF OBLIGATIONS 2025 → YTD > 3%
+    # 2. TOP ETF OBLIGATIONS 2025 → YTD > 2% (MODIFIÉ, était 3% avant)
     bond_etfs = etf_data.get("top_etf_obligations_2025", [])
     selected_bonds = []
     for etf in bond_etfs:
         try:
             ytd = float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.'))
-            if ytd > 3:
+            if ytd > 2:  # MODIFIÉ : Changé de 3% à 2%
                 selected_bonds.append(f"{etf['name']} : {etf['ytd']}")
         except:
             continue
     if selected_bonds:
-        summary.append("📉 TOP ETF OBLIGATIONS 2025 (>3% YTD):")
+        summary.append("📉 TOP ETF OBLIGATIONS 2025 (>2% YTD):")  # MODIFIÉ : Texte mis à jour
         summary.extend(f"• {etf}" for etf in selected_bonds)
 
     # 3. ETF court terme → performance 1 mois > 0%
@@ -607,12 +607,42 @@ def filter_etf_data(etf_data):
         summary.append("📆 ETF COURT TERME (>0% en 1 mois):")
         summary.extend(f"• {etf}" for etf in selected_short_term)
     
+    # 4. AJOUTÉ : ETF Sectoriels en croissance
+    sector_etfs = etf_data.get("etf_sectoriels", []) or []
+    selected_sector_etfs = []
+    for etf in sector_etfs:
+        try:
+            ytd = float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.'))
+            if ytd > 5:  # Seuil de 5% pour les ETF sectoriels
+                selected_sector_etfs.append(f"{etf['name']} : {etf['ytd']}")
+        except:
+            continue
+    if selected_sector_etfs:
+        summary.append("🔍 ETF SECTORIELS (>5% YTD):")
+        summary.extend(f"• {etf}" for etf in selected_sector_etfs)
+        
+    # 5. AJOUTÉ : ETF Marchés émergents
+    emerging_etfs = etf_data.get("etf_marches_emergents", []) or []
+    selected_emerging = []
+    for etf in emerging_etfs:
+        try:
+            ytd = float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.'))
+            # Sélectionner tous, avec priorité aux performances positives
+            selected_emerging.append((etf['name'], ytd, f"{etf['name']} : {etf['ytd']}"))
+        except:
+            continue
+    if selected_emerging:
+        # Trier par performance décroissante
+        selected_emerging.sort(key=lambda x: x[1], reverse=True)
+        summary.append("🌍 ETF MARCHÉS ÉMERGENTS:")
+        summary.extend(f"• {etf[2]}" for etf in selected_emerging[:5])  # Limiter aux 5 meilleurs
+    
     # Fallback pour les anciennes structures de données ou si aucune catégorie n'a été trouvée
     if not summary:
         # Essayer la structure top50_etfs standard
         if "top50_etfs" in etf_data and isinstance(etf_data["top50_etfs"], list):
             top_etfs = []
-            for etf in etf_data["top50_etfs"][:5]:  # Limiter aux 5 premiers
+            for etf in etf_data["top50_etfs"][:8]:  # Augmenté de 5 à 8
                 if not isinstance(etf, dict):
                     continue
                     
@@ -631,7 +661,7 @@ def filter_etf_data(etf_data):
                 best_ytd = etf_data["top_performers"]["ytd"].get("best", [])
                 if isinstance(best_ytd, list) and best_ytd:
                     best_names = []
-                    for etf in best_ytd[:3]:
+                    for etf in best_ytd[:5]:  # Augmenté de 3 à 5
                         if isinstance(etf, dict):
                             name = etf.get("name", "")
                             if name:
@@ -786,9 +816,9 @@ Utilise ces données filtrées et synthétisées pour générer des portefeuille
 📅 Contexte : Ces portefeuilles sont optimisés pour le mois de {current_month} en tenant compte des évolutions à court et moyen terme.
 
 🎯 Ton objectif : Générer trois portefeuilles optimisés :
-1️⃣ Agressif : 10 à 20 actifs très volatils (actions de croissance, crypto, ETF spéculatifs).  
-2️⃣ Modéré : 10 à 20 actifs équilibrés (blue chips, ETF diversifiés, obligations d'entreprises).  
-3️⃣ Stable : 10 à 20 actifs défensifs (obligations souveraines, valeurs refuges, ETF stables).
+1️⃣ Agressif : OBLIGATOIREMENT entre 12 et 15 actifs (actions de croissance, crypto, ETF spéculatifs).  
+2️⃣ Modéré : OBLIGATOIREMENT entre 12 et 15 actifs (blue chips, ETF diversifiés, obligations d'entreprises).  
+3️⃣ Stable : OBLIGATOIREMENT entre 12 et 15 actifs (obligations souveraines, valeurs refuges, ETF stables).
 
 Pour chacun des portefeuilles, ajoute un paragraphe **Commentaire** qui justifie les choix à partir des données ci-dessus.
 
@@ -807,7 +837,8 @@ Base tes explications sur :
     "Commentaire": "Texte justifiant les choix basé sur les tendances actuelles",
     "Actions": {{{{
       "Nom": "X%",
-      ...
+      ...,
+      "etc": "X%"
     }}}},
     "Crypto": {{{{ ... }}}},
     "ETF": {{{{ ... }}}},
@@ -817,8 +848,10 @@ Base tes explications sur :
   "Stable": {{{{ ... }}}}
 }}}}
 
-✅ Contraintes :
-- Chaque portefeuille: 10-20 actifs, somme 100%, minimum 2 classes d'actifs
+✅ Contraintes IMPÉRATIVES:
+- Chaque portefeuille DOIT contenir EXACTEMENT entre 12 et 15 actifs au total, pas moins
+- Somme des allocations DOIT être égale à 100%
+- Minimum 2 classes d'actifs par portefeuille
 - Surpondérer les secteurs en croissance dans Agressif/Modéré
 - Renforcer les actifs refuges dans Stable en cas d'incertitude
 - Ne réponds qu'avec le JSON, sans commentaire ni explication.
@@ -879,21 +912,69 @@ Base tes explications sur :
                 return {
                     "Agressif": {
                         "Commentaire": "Ce portefeuille vise une croissance maximale en privilégiant des actifs à forte volatilité et à haut potentiel. Idéal pour les investisseurs avec une tolérance élevée au risque et un horizon de placement long.",
-                        "Actions": {"Apple": "15%", "Tesla": "10%", "Nvidia": "15%"},
-                        "Crypto": {"Bitcoin": "15%", "Ethereum": "10%"},
-                        "ETF": {"ARK Innovation ETF": "15%", "SPDR S&P 500 ETF": "10%"}
+                        "Actions": {
+                            "Apple": "10%", 
+                            "Tesla": "8%", 
+                            "Nvidia": "10%",
+                            "Amazon": "7%",
+                            "Microsoft": "7%",
+                            "AMD": "6%",
+                            "Palantir": "5%",
+                            "Shopify": "5%"
+                        },
+                        "Crypto": {
+                            "Bitcoin": "10%", 
+                            "Ethereum": "8%",
+                            "Solana": "4%"
+                        },
+                        "ETF": {
+                            "ARK Innovation ETF": "10%", 
+                            "SPDR S&P 500 ETF": "10%"
+                        }
                     },
                     "Modéré": {
                         "Commentaire": "Ce portefeuille équilibré combine croissance et protection du capital. Il s'adresse aux investisseurs qui recherchent une appréciation de leur capital à moyen terme tout en limitant la volatilité.",
-                        "Actions": {"Microsoft": "15%", "Alphabet": "10%", "Johnson & Johnson": "10%"},
-                        "Obligations": {"US Treasury 10Y": "15%", "Corporate Bonds AAA": "15%"},
-                        "ETF": {"Vanguard Total Stock Market ETF": "20%", "iShares Core MSCI EAFE ETF": "15%"}
+                        "Actions": {
+                            "Microsoft": "10%", 
+                            "Alphabet": "8%", 
+                            "Johnson & Johnson": "6%",
+                            "Procter & Gamble": "6%",
+                            "Coca-Cola": "5%",
+                            "Visa": "5%"
+                        },
+                        "Obligations": {
+                            "US Treasury 10Y": "10%", 
+                            "Corporate Bonds AAA": "10%",
+                            "Municipal Bonds": "5%",
+                            "TIPS": "5%"
+                        },
+                        "ETF": {
+                            "Vanguard Total Stock Market ETF": "10%", 
+                            "iShares Core MSCI EAFE ETF": "10%",
+                            "Vanguard Real Estate ETF": "5%",
+                            "SPDR Gold Shares": "5%"
+                        }
                     },
                     "Stable": {
                         "Commentaire": "Ce portefeuille défensif privilégie la préservation du capital et les revenus réguliers. Il convient aux investisseurs prudents ou proches de la retraite, cherchant à minimiser les fluctuations de leur portefeuille.",
-                        "Actions": {"Procter & Gamble": "10%", "Coca-Cola": "10%", "McDonald's": "10%"},
-                        "Obligations": {"US Treasury 30Y": "25%", "Municipal Bonds AAA": "15%"},
-                        "ETF": {"Vanguard High Dividend Yield ETF": "15%", "SPDR Gold Shares": "15%"}
+                        "Actions": {
+                            "Procter & Gamble": "5%", 
+                            "Coca-Cola": "5%", 
+                            "McDonald's": "4%",
+                            "Walmart": "4%",
+                            "Johnson & Johnson": "4%"
+                        },
+                        "Obligations": {
+                            "US Treasury 30Y": "15%", 
+                            "Municipal Bonds AAA": "15%",
+                            "German Bunds 10Y": "10%",
+                            "Swiss Government Bonds": "8%"
+                        },
+                        "ETF": {
+                            "Vanguard High Dividend Yield ETF": "10%", 
+                            "SPDR Gold Shares": "10%",
+                            "iShares 20+ Year Treasury Bond ETF": "10%"
+                        }
                     }
                 }
 
