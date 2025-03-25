@@ -97,13 +97,95 @@ def extract_content_from_html(html_file):
                                 sector_perf = cols[1].get_text(strip=True) if len(cols) > 1 else ""
                                 content.append("• {}: {}".format(sector_name, sector_perf))
             
+            elif html_file.endswith('liste.html'):
+                # Pour les listes, on cherche les tableaux ou cartes d'actifs
+                asset_items = soup.select('.asset-item, .watchlist-item, .stock-item, .list-card')
+                if not asset_items:
+                    # Fallback
+                    asset_items = soup.select('.card, .item, tr, .asset')
+                
+                content = []
+                content.append("📋 LISTES D'ACTIFS SURVEILLÉS:")
+                
+                for item in asset_items:
+                    name = item.select_one('h3, h4, .asset-name, .name, .symbol, .title, td:first-child')
+                    sector = item.select_one('.sector, .category, .type')
+                    price = item.select_one('.price, .value, .current-price')
+                    
+                    if name:
+                        name_text = name.get_text(strip=True)
+                        if name_text:
+                            data_line = "• {}".format(name_text)
+                            if sector:
+                                sector_text = sector.get_text(strip=True)
+                                data_line += " ({}): ".format(sector_text)
+                            if price:
+                                price_text = price.get_text(strip=True)
+                                data_line += "{}".format(price_text)
+                            content.append(data_line)
+                
+                # Si aucun actif n'a été trouvé, essayer d'extraire des tableaux
+                if len(content) <= 1:
+                    tables = soup.select('table')
+                    for table in tables:
+                        rows = table.select('tr')
+                        for row in rows[1:10]:  # Skip header, limit to 10 rows
+                            cols = row.select('td')
+                            if len(cols) >= 2:
+                                asset_name = cols[0].get_text(strip=True)
+                                asset_info = cols[1].get_text(strip=True) if len(cols) > 1 else ""
+                                content.append("• {}: {}".format(asset_name, asset_info))
+            
+            elif html_file.endswith('etf.html'):
+                # Pour les ETFs, on cherche les cartes ou tableaux d'ETF
+                etf_items = soup.select('.etf-card, .etf-item, .fund-card, .etf-table tr')
+                if not etf_items:
+                    # Fallback
+                    etf_items = soup.select('.card, .etf, tr, .fund')
+                
+                content = []
+                content.append("📊 ANALYSE DES ETF:")
+                
+                for item in etf_items:
+                    name = item.select_one('h3, h4, .etf-name, .name, .symbol, .title, td:first-child')
+                    category = item.select_one('.category, .type, .asset-class')
+                    aum = item.select_one('.aum, .size, .assets')
+                    expense = item.select_one('.expense, .ter, .fee')
+                    
+                    if name:
+                        name_text = name.get_text(strip=True)
+                        if name_text:
+                            data_line = "• {}".format(name_text)
+                            if category:
+                                category_text = category.get_text(strip=True)
+                                data_line += " ({}):".format(category_text)
+                            if aum:
+                                aum_text = aum.get_text(strip=True)
+                                data_line += " AUM: {}".format(aum_text)
+                            if expense:
+                                expense_text = expense.get_text(strip=True)
+                                data_line += ", Frais: {}".format(expense_text)
+                            content.append(data_line)
+                
+                # Si aucun ETF n'a été trouvé, essayer d'extraire des tableaux
+                if len(content) <= 1:
+                    tables = soup.select('table')
+                    for table in tables:
+                        rows = table.select('tr')
+                        for row in rows[1:10]:  # Skip header, limit to 10 rows
+                            cols = row.select('td')
+                            if len(cols) >= 2:
+                                etf_name = cols[0].get_text(strip=True)
+                                etf_info = cols[1].get_text(strip=True) if len(cols) > 1 else ""
+                                content.append("• {}: {}".format(etf_name, etf_info))
+            
             return "\n".join(content)
     except Exception as e:
         print("Erreur lors de l'extraction du contenu de {}: {}".format(html_file, str(e)))
         # En cas d'erreur, retourner un placeholder pour ne pas bloquer l'exécution
         return "[Contenu non disponible pour {}]".format(html_file)
 
-def generate_portfolios(actualites, marche, secteurs):
+def generate_portfolios(actualites, marche, secteurs, listes, etfs):
     """Génère trois portefeuilles optimisés en combinant les données fournies et le contexte actuel du marché."""
     api_key = os.environ.get('API_CHAT')
     if not api_key:
@@ -116,6 +198,8 @@ Utilise :
   📰 Actualités financières : {actualites}  
   📈 Tendances du marché : {marche}  
   🏭 Analyse sectorielle : {secteurs}  
+  📋 Listes d'actifs surveillés : {listes}
+  📊 Analyse des ETF : {etfs}
 - Et **ton propre contexte actuel du marché** (connaissances à jour, tendances macroéconomiques, comportements des investisseurs, mouvements des classes d'actifs).
 
 🎯 Ton objectif : Générer trois portefeuilles optimisés en fonction de toutes ces informations.
@@ -148,6 +232,8 @@ Utilise :
 - Chaque portefeuille contient **entre 10 et 20 actifs**.
 - La somme des pourcentages fait **100%** par portefeuille.
 - L'allocation reflète à la fois les données fournies **et** les tendances actuelles du marché.
+- Privilégie les ETF mentionnés dans la section ETF pour les allocations ETF.
+- Utilise les actifs des listes de surveillance quand c'est pertinent.
 - Ne réponds **qu'avec le JSON**, sans commentaire ni explication.
 """
     
@@ -281,9 +367,11 @@ def main():
     actualites = extract_content_from_html('actualites.html')
     marche = extract_content_from_html('marche.html')
     secteurs = extract_content_from_html('secteurs.html')
+    listes = extract_content_from_html('liste.html')  # Nouveau
+    etfs = extract_content_from_html('etf.html')      # Nouveau
     
     print("🧠 Génération des portefeuilles optimisés...")
-    portfolios = generate_portfolios(actualites, marche, secteurs)
+    portfolios = generate_portfolios(actualites, marche, secteurs, listes, etfs)
     
     print("💾 Sauvegarde des portefeuilles...")
     save_portfolios(portfolios)
