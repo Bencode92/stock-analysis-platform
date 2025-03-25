@@ -7,8 +7,7 @@ Combine les fonctionnalités de scrape_lists.py et scrape_stoxx.py
 Utilisé par GitHub Actions pour mettre à jour régulièrement les données
 
 IMPORTANT: Ce script met à jour UNIQUEMENT les fichiers suivants:
-- data/lists.json (données NASDAQ)
-- data/stoxx_page_*.json (données STOXX)
+- data/lists.json (données NASDAQ et STOXX unifiées)
 - data/update_summary.json (résumé de la mise à jour)
 - data/global_top_performers.json (classement global NASDAQ + STOXX)
 
@@ -252,48 +251,6 @@ def scrape_all_nasdaq_stocks():
     
     return all_stocks
 
-def save_combined_data(stocks, source_description="Actions NASDAQ + STOXX"):
-    """Enregistre les données combinées NASDAQ + STOXX dans lists.json"""
-    try:
-        stocks_by_letter = {letter: [] for letter in "abcdefghijklmnopqrstuvwxyz"}
-
-        for stock in stocks:
-            if not stock.get("name"):
-                continue
-            first_letter = stock["name"][0].lower()
-            if first_letter in stocks_by_letter:
-                stocks_by_letter[first_letter].append(stock)
-
-        compatible_data = {
-            "indices": stocks_by_letter,
-            "top_performers": {
-                "daily": {
-                    "best": get_top_performers(stocks, "change", reverse=True),
-                    "worst": get_top_performers(stocks, "change", reverse=False)
-                },
-                "ytd": {
-                    "best": get_top_performers(stocks, "ytd", reverse=True),
-                    "worst": get_top_performers(stocks, "ytd", reverse=False)
-                }
-            },
-            "meta": {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "count": len(stocks),
-                "source": "Boursorama",
-                "description": source_description
-            }
-        }
-
-        with open(CONFIG["nasdaq"]["output_path"], 'w', encoding='utf-8') as f:
-            json.dump(compatible_data, f, ensure_ascii=False, indent=2)
-
-        logger.info(f"✅ Données combinées enregistrées dans {CONFIG['nasdaq']['output_path']}")
-        return True
-    except Exception as e:
-        logger.error(f"❌ Erreur lors de l'enregistrement des données combinées: {str(e)}")
-        return False
-
-
 #
 # Fonctions pour STOXX
 #
@@ -396,65 +353,6 @@ def scrape_stoxx_page(page=1, letter=""):
         logger.error(f"Erreur lors du scraping STOXX lettre {letter}, page {page}: {str(e)}")
         return [], page, 1, False
 
-def save_stoxx_data_for_page(stocks, page, total_pages):
-    """Enregistre les données STOXX pour une page spécifique"""
-    try:
-        # Organiser les actions par lettre
-        stocks_by_letter = {}
-        for letter in "abcdefghijklmnopqrstuvwxyz":
-            stocks_by_letter[letter] = []
-            
-        # Répartir les actions par lettre
-        for stock in stocks:
-            if not stock.get("name"):
-                continue
-                
-            first_letter = stock["name"][0].lower()
-            if first_letter.isalpha() and first_letter in stocks_by_letter:
-                stocks_by_letter[first_letter].append(stock)
-        
-        # Préparer les données de top performers
-        top_performers = {
-            "daily": {
-                "best": get_top_performers(stocks, "change", reverse=True),
-                "worst": get_top_performers(stocks, "change", reverse=False)
-            },
-            "ytd": {
-                "best": get_top_performers(stocks, "ytd", reverse=True),
-                "worst": get_top_performers(stocks, "ytd", reverse=False)
-            }
-        }
-        
-        # Créer l'objet de données final
-        data = {
-            "indices": stocks_by_letter,
-            "top_performers": top_performers,
-            "meta": {
-                "source": "Boursorama",
-                "url": CONFIG["base_url"],
-                "description": "Actions du DJ STOXX 600 (Europe)",
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "count": len(stocks),
-                "pagination": {
-                    "currentPage": page,
-                    "totalPages": total_pages
-                }
-            }
-        }
-        
-        # Chemin du fichier de sortie
-        output_path = os.path.join(CONFIG["stoxx"]["output_dir"], f"stoxx_page_{page}.json")
-        
-        # Écrire le fichier JSON
-        with open(output_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-        
-        logger.info(f"✅ Données STOXX pour la page {page} enregistrées dans {output_path}")
-        return True
-    except Exception as e:
-        logger.error(f"❌ Erreur lors de l'enregistrement des données STOXX pour la page {page}: {str(e)}")
-        return False
-
 def scrape_all_stoxx():
     """Scrape toutes les actions du STOXX 600 par lettre et par page"""
     all_stocks = []
@@ -503,15 +401,10 @@ def scrape_all_stoxx():
             # Attente entre les lettres pour éviter de surcharger le serveur
             time.sleep(CONFIG["sleep_time"])
         
-        # Si nous avons récupéré des données, les enregistrer
-        if all_stocks:
-            # Enregistrer les données dans le format de page standard
-            save_stoxx_data_for_page(all_stocks, 1, total_pages_overall)
-        
         logger.info(f"✅ Scraping STOXX terminé avec succès: {total_stocks} actions récupérées sur toutes les lettres")
         return {
             "status": "success",
-            "pages": 1,  # On retourne 1 page puisqu'on a fusionné toutes les données en un seul fichier
+            "pages": total_pages_overall,
             "stocks": total_stocks,
             "all_stocks": all_stocks
         }
@@ -521,7 +414,8 @@ def scrape_all_stoxx():
             "status": "error",
             "message": str(e),
             "pages": 0,
-            "stocks": 0
+            "stocks": 0,
+            "all_stocks": []
         }
 
 def create_global_rankings(nasdaq_stocks, stoxx_result):
@@ -639,34 +533,114 @@ def main():
         ensure_data_directory()
         verify_no_markets_conflict()
 
+        # Créer la structure de base pour les deux marchés
+        combined_data = {
+            "nasdaq": {
+                "indices": {letter: [] for letter in "abcdefghijklmnopqrstuvwxyz"},
+                "top_performers": {
+                    "daily": {"best": [], "worst": []},
+                    "ytd": {"best": [], "worst": []}
+                },
+                "meta": {
+                    "source": "Boursorama",
+                    "description": "Actions du NASDAQ Composite (États-Unis)",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "count": 0
+                }
+            },
+            "stoxx": {
+                "indices": {letter: [] for letter in "abcdefghijklmnopqrstuvwxyz"},
+                "top_performers": {
+                    "daily": {"best": [], "worst": []},
+                    "ytd": {"best": [], "worst": []}
+                },
+                "meta": {
+                    "source": "Boursorama",
+                    "description": "Actions du DJ STOXX 600 (Europe)",
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "count": 0,
+                    "pagination": {
+                        "currentPage": 1,
+                        "totalPages": 1
+                    }
+                }
+            }
+        }
+
+        # Extraction des données NASDAQ
         logger.info("📊 Début du scraping NASDAQ...")
         nasdaq_stocks = scrape_all_nasdaq_stocks()
+        
+        if nasdaq_stocks:
+            # Organiser par lettre alphabétique
+            nasdaq_by_letter = {letter: [] for letter in "abcdefghijklmnopqrstuvwxyz"}
+            for stock in nasdaq_stocks:
+                if stock.get("name"):
+                    first_letter = stock["name"][0].lower()
+                    if first_letter in nasdaq_by_letter:
+                        nasdaq_by_letter[first_letter].append(stock)
+            
+            # Mettre à jour les données NASDAQ
+            combined_data["nasdaq"]["indices"] = nasdaq_by_letter
+            combined_data["nasdaq"]["top_performers"]["daily"]["best"] = get_top_performers(nasdaq_stocks, "change", True)
+            combined_data["nasdaq"]["top_performers"]["daily"]["worst"] = get_top_performers(nasdaq_stocks, "change", False)
+            combined_data["nasdaq"]["top_performers"]["ytd"]["best"] = get_top_performers(nasdaq_stocks, "ytd", True)
+            combined_data["nasdaq"]["top_performers"]["ytd"]["worst"] = get_top_performers(nasdaq_stocks, "ytd", False)
+            combined_data["nasdaq"]["meta"]["count"] = len(nasdaq_stocks)
+            combined_data["nasdaq"]["meta"]["timestamp"] = datetime.now(timezone.utc).isoformat()
 
-        if not nasdaq_stocks:
-            logger.error("❌ Aucune action NASDAQ récupérée")
-
+        # Extraction des données STOXX
         logger.info("📊 Début du scraping STOXX...")
         stoxx_result = scrape_all_stoxx()
+        stoxx_stocks = stoxx_result.get("all_stocks", [])
+        
+        if stoxx_stocks:
+            # Organiser par lettre alphabétique
+            stoxx_by_letter = {letter: [] for letter in "abcdefghijklmnopqrstuvwxyz"}
+            for stock in stoxx_stocks:
+                if stock.get("name"):
+                    first_letter = stock["name"][0].lower()
+                    if first_letter in stoxx_by_letter:
+                        stoxx_by_letter[first_letter].append(stock)
+            
+            # Mettre à jour les données STOXX
+            combined_data["stoxx"]["indices"] = stoxx_by_letter
+            combined_data["stoxx"]["top_performers"]["daily"]["best"] = get_top_performers(stoxx_stocks, "change", True)
+            combined_data["stoxx"]["top_performers"]["daily"]["worst"] = get_top_performers(stoxx_stocks, "change", False)
+            combined_data["stoxx"]["top_performers"]["ytd"]["best"] = get_top_performers(stoxx_stocks, "ytd", True)
+            combined_data["stoxx"]["top_performers"]["ytd"]["worst"] = get_top_performers(stoxx_stocks, "ytd", False)
+            combined_data["stoxx"]["meta"]["count"] = len(stoxx_stocks)
+            combined_data["stoxx"]["meta"]["timestamp"] = datetime.now(timezone.utc).isoformat()
+            
+            # Si nous avons des informations de pagination
+            if stoxx_result.get("pages"):
+                combined_data["stoxx"]["meta"]["pagination"]["totalPages"] = stoxx_result.get("pages", 1)
 
-        combined_stocks = nasdaq_stocks + stoxx_result.get("all_stocks", [])
+        # Sauvegarder les données combinées dans lists.json
+        with open(CONFIG["nasdaq"]["output_path"], 'w', encoding='utf-8') as f:
+            json.dump(combined_data, f, ensure_ascii=False, indent=2)
+        
+        logger.info(f"✅ Données NASDAQ et STOXX enregistrées dans {CONFIG['nasdaq']['output_path']}")
 
-        if combined_stocks:
-            save_combined_data(combined_stocks)
-            logger.info(f"✅ Scraping combiné terminé: {len(combined_stocks)} actions total")
-
-        if nasdaq_stocks and stoxx_result.get("status") == "success":
+        # Créer quand même le classement global pour compatibilité
+        if nasdaq_stocks and stoxx_stocks:
             logger.info("📊 Création du classement global NASDAQ + STOXX...")
             create_global_rankings(nasdaq_stocks, stoxx_result)
 
+        # Résumé de la mise à jour
         result_summary = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "nasdaq": {
                 "count": len(nasdaq_stocks),
                 "status": "success" if nasdaq_stocks else "error"
             },
-            "stoxx": stoxx_result,
+            "stoxx": {
+                "count": len(stoxx_stocks),
+                "status": "success" if stoxx_stocks else "error"
+            },
+            "combined_file": "lists.json",
             "global_ranking": {
-                "status": "success" if nasdaq_stocks and stoxx_result.get("status") == "success" else "error",
+                "status": "success" if nasdaq_stocks and stoxx_stocks else "error",
                 "file": "global_top_performers.json"
             }
         }
