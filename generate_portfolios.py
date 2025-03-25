@@ -3,8 +3,10 @@ import json
 import requests
 import datetime
 import locale
-from bs4 import BeautifulSoup
+import time
+import random
 import re
+from bs4 import BeautifulSoup
 
 def extract_content_from_html(html_file):
     """Extraire le contenu pertinent d'un fichier HTML."""
@@ -301,7 +303,196 @@ def get_current_month_fr():
     # Obtenir le mois en français
     return datetime.datetime.now().strftime('%B').lower()
 
-def generate_portfolios(actualites, marche, secteurs, listes, etfs):
+def filter_news_data(news_data):
+    """Filtre les données d'actualités pour n'inclure que les plus pertinentes."""
+    if not news_data or not isinstance(news_data, dict):
+        return "Aucune donnée d'actualité disponible"
+    
+    # Sélectionner uniquement les actualités des derniers jours
+    filtered_news = []
+    
+    # Parcourir les actualités par région
+    for region, news_list in news_data.items():
+        if not isinstance(news_list, list):
+            continue
+            
+        # Ne prendre que les 5 actualités les plus importantes par région
+        important_news = []
+        for news in news_list[:5]:  # Limiter à 5 actualités par région
+            if not isinstance(news, dict):
+                continue
+                
+            # Ne garder que les champs essentiels
+            important_news.append({
+                "title": news.get("title", ""),
+                "impact": news.get("impact", ""),
+                "category": news.get("category", ""),
+                "date": news.get("date", "")
+            })
+        
+        # Ajouter seulement si nous avons des actualités
+        if important_news:
+            filtered_news.append(f"Région {region}: " + 
+                               ", ".join([f"{n['title']} ({n['impact']})" for n in important_news]))
+    
+    return "\n".join(filtered_news) if filtered_news else "Aucune actualité pertinente"
+
+def filter_markets_data(markets_data):
+    """Filtre les données de marché pour n'inclure que les tendances principales."""
+    if not markets_data or not isinstance(markets_data, dict):
+        return "Aucune donnée de marché disponible"
+    
+    market_summary = []
+    
+    # Traiter les indices
+    if "indices" in markets_data and isinstance(markets_data["indices"], dict):
+        for region, indices in markets_data["indices"].items():
+            if not isinstance(indices, list):
+                continue
+                
+            # Extraire seulement les principaux indices
+            main_indices = []
+            for idx in indices[:3]:  # Limiter à 3 indices par région
+                if not isinstance(idx, dict):
+                    continue
+                    
+                name = idx.get("index_name", "")
+                change = idx.get("change", "")
+                trend = idx.get("trend", "")
+                
+                if name and change:
+                    main_indices.append(f"{name}: {change} ({trend})")
+            
+            if main_indices:
+                market_summary.append(f"Indices {region}: " + ", ".join(main_indices))
+    
+    # Ajouter d'autres sections importantes des marchés si nécessaire
+    # Par exemple, devises, matières premières, etc.
+    
+    return "\n".join(market_summary) if market_summary else "Aucune donnée de marché significative"
+
+def filter_sectors_data(sectors_data):
+    """Filtre les données sectorielles pour identifier les secteurs performants et sous-performants."""
+    if not sectors_data or not isinstance(sectors_data, dict):
+        return "Aucune donnée sectorielle disponible"
+    
+    sector_summary = []
+    
+    if "sectors" in sectors_data and isinstance(sectors_data["sectors"], dict):
+        # Identifier les secteurs avec les meilleures/pires performances
+        top_performers = []
+        worst_performers = []
+        
+        for sector_name, sector_data in sectors_data["sectors"].items():
+            if not isinstance(sector_data, list):
+                continue
+                
+            for item in sector_data[:2]:  # Limiter à 2 éléments par secteur
+                if not isinstance(item, dict):
+                    continue
+                    
+                name = item.get("name", "")
+                change = item.get("change", "")
+                trend = item.get("trend", "")
+                
+                if name and change:
+                    if trend == "up" and change.startswith("+"):
+                        top_performers.append(f"{name} ({sector_name}): {change}")
+                    elif trend == "down" and change.startswith("-"):
+                        worst_performers.append(f"{name} ({sector_name}): {change}")
+        
+        # Limiter aux 5 meilleurs et 5 pires
+        if top_performers:
+            sector_summary.append("Secteurs performants: " + ", ".join(top_performers[:5]))
+        if worst_performers:
+            sector_summary.append("Secteurs sous-performants: " + ", ".join(worst_performers[:5]))
+    
+    return "\n".join(sector_summary) if sector_summary else "Aucune donnée sectorielle significative"
+
+def filter_etf_data(etf_data):
+    """Filtre les données ETF pour n'inclure que les ETF les plus performants."""
+    if not etf_data or not isinstance(etf_data, dict):
+        return "Aucune donnée ETF disponible"
+    
+    etf_summary = []
+    
+    # Extraire les ETF performants
+    if "top50_etfs" in etf_data and isinstance(etf_data["top50_etfs"], list):
+        top_etfs = []
+        for etf in etf_data["top50_etfs"][:5]:  # Limiter aux 5 premiers
+            if not isinstance(etf, dict):
+                continue
+                
+            name = etf.get("name", "")
+            ytd = etf.get("ytd", "")
+            
+            if name and ytd:
+                top_etfs.append(f"{name}: {ytd}")
+        
+        if top_etfs:
+            etf_summary.append("ETF performants: " + ", ".join(top_etfs))
+    
+    # Ajouter les top performers si disponibles
+    if "top_performers" in etf_data and isinstance(etf_data["top_performers"], dict):
+        if "ytd" in etf_data["top_performers"] and isinstance(etf_data["top_performers"]["ytd"], dict):
+            best_ytd = etf_data["top_performers"]["ytd"].get("best", [])
+            if isinstance(best_ytd, list) and best_ytd:
+                best_names = []
+                for etf in best_ytd[:3]:
+                    if isinstance(etf, dict):
+                        name = etf.get("name", "")
+                        if name:
+                            best_names.append(name)
+                
+                if best_names:
+                    etf_summary.append("Meilleurs ETF YTD: " + ", ".join(best_names))
+    
+    return "\n".join(etf_summary) if etf_summary else "Aucune donnée ETF significative"
+
+def filter_lists_data(lists_data):
+    """Extrait les actifs les plus pertinents des listes de surveillance."""
+    if not lists_data or not isinstance(lists_data, dict):
+        return "Aucune liste d'actifs disponible"
+    
+    assets_summary = []
+    
+    # Parcourir les différentes listes
+    for list_name, list_data in lists_data.items():
+        if not isinstance(list_data, dict):
+            continue
+            
+        trending_up = []
+        trending_down = []
+        
+        # Rechercher dans les indices
+        if "indices" in list_data and isinstance(list_data["indices"], dict):
+            for letter, assets in list_data["indices"].items():
+                if not isinstance(assets, list):
+                    continue
+                    
+                for asset in assets:
+                    if not isinstance(asset, dict):
+                        continue
+                        
+                    name = asset.get("name", "")
+                    change = asset.get("change", "")
+                    trend = asset.get("trend", "")
+                    
+                    if name and change:
+                        if trend == "up" and not change.startswith("-"):
+                            trending_up.append(f"{name}: {change}")
+                        elif trend == "down" and change.startswith("-"):
+                            trending_down.append(f"{name}: {change}")
+        
+        # Limiter aux 5 meilleurs et 5 pires
+        if trending_up:
+            assets_summary.append(f"Actifs {list_name} en hausse: " + ", ".join(trending_up[:5]))
+        if trending_down:
+            assets_summary.append(f"Actifs {list_name} en baisse: " + ", ".join(trending_down[:5]))
+    
+    return "\n".join(assets_summary) if assets_summary else "Aucune donnée d'actifs significative"
+
+def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data):
     """Génère trois portefeuilles optimisés en combinant les données fournies et le contexte actuel du marché."""
     api_key = os.environ.get('API_CHAT')
     if not api_key:
@@ -310,130 +501,148 @@ def generate_portfolios(actualites, marche, secteurs, listes, etfs):
     # Obtenir le mois courant en français
     current_month = get_current_month_fr()
     
-    # Ajouter des logs pour déboguer les entrées
-    print(f"🔍 Longueur des données extraites:")
-    print(f"  📰 Actualités: {len(actualites)} caractères")
-    print(f"  📈 Marché: {len(marche)} caractères")
-    print(f"  🏭 Secteurs: {len(secteurs)} caractères")
-    print(f"  📋 Listes: {len(listes)} caractères")
-    print(f"  📊 ETFs: {len(etfs)} caractères")
+    # ===== OPTIMISATION : FILTRER LES DONNÉES =====
+    # Filtrer les données pour réduire la taille
+    filtered_news = filter_news_data(news_data)
+    filtered_markets = filter_markets_data(markets_data)
+    filtered_sectors = filter_sectors_data(sectors_data)
+    filtered_lists = filter_lists_data(lists_data)
+    filtered_etfs = filter_etf_data(etfs_data)
     
-    # Afficher les premiers caractères de chaque source pour vérification
-    print("\n===== APERÇU DU CONTENU EXTRAIT =====")
-    print("\n----- ACTUALITÉS (premiers 200 caractères) -----")
-    print(actualites[:200] + "..." if len(actualites) > 200 else actualites)
-    print("\n----- MARCHÉS (premiers 200 caractères) -----")
-    print(marche[:200] + "..." if len(marche) > 200 else marche)
-    print("\n----- SECTEURS (premiers 200 caractères) -----")
-    print(secteurs[:200] + "..." if len(secteurs) > 200 else secteurs)
-    print("\n----- LISTES (premiers 200 caractères) -----")
-    print(listes[:200] + "..." if len(listes) > 200 else listes)
-    print("\n----- ETF (premiers 200 caractères) -----")
-    print(etfs[:200] + "..." if len(etfs) > 200 else etfs)
+    # Ajouter des logs pour déboguer les entrées
+    print(f"🔍 Longueur des données FILTRÉES:")
+    print(f"  📰 Actualités: {len(filtered_news)} caractères")
+    print(f"  📈 Marché: {len(filtered_markets)} caractères")
+    print(f"  🏭 Secteurs: {len(filtered_sectors)} caractères")
+    print(f"  📋 Listes: {len(filtered_lists)} caractères")
+    print(f"  📊 ETFs: {len(filtered_etfs)} caractères")
+    
+    # Afficher les données filtrées pour vérification
+    print("\n===== APERÇU DES DONNÉES FILTRÉES =====")
+    print("\n----- ACTUALITÉS (données filtrées) -----")
+    print(filtered_news[:200] + "..." if len(filtered_news) > 200 else filtered_news)
+    print("\n----- MARCHÉS (données filtrées) -----")
+    print(filtered_markets[:200] + "..." if len(filtered_markets) > 200 else filtered_markets)
+    print("\n----- SECTEURS (données filtrées) -----")
+    print(filtered_sectors[:200] + "..." if len(filtered_sectors) > 200 else filtered_sectors)
+    print("\n----- LISTES (données filtrées) -----")
+    print(filtered_lists[:200] + "..." if len(filtered_lists) > 200 else filtered_lists)
+    print("\n----- ETF (données filtrées) -----")
+    print(filtered_etfs[:200] + "..." if len(filtered_etfs) > 200 else filtered_etfs)
     print("\n===========================================")
     
-    prompt = f"""
+    # ===== SYSTÈME DE RETRY AVEC BACKOFF EXPONENTIEL =====
+    max_retries = 3
+    backoff_time = 1  # Commencer avec 1 seconde
+    
+    for attempt in range(max_retries):
+        try:
+            # Construire un prompt beaucoup plus court avec les données filtrées
+            prompt = f"""
 Tu es un expert en gestion de portefeuille, avec une expertise en allocation stratégique et tactique. Tu vises à maximiser le rendement ajusté au risque en tenant compte de l'environnement macroéconomique actuel.
 
-Utilise :
-- Les **données suivantes** :  
-  📰 Actualités financières : {actualites}  
-  📈 Tendances du marché : {marche}  
-  🏭 Analyse sectorielle : {secteurs}  
-  📋 Listes d'actifs surveillés : {listes}
-  📊 Analyse des ETF : {etfs}
-- Et **ton propre contexte actuel du marché** (connaissances à jour, tendances macroéconomiques, comportements des investisseurs, mouvements des classes d'actifs).
+Utilise ces données filtrées et synthétisées pour générer des portefeuilles optimisés :
+
+📰 Actualités financières récentes: 
+{filtered_news}
+
+📈 Tendances du marché: 
+{filtered_markets}
+
+🏭 Analyse sectorielle: 
+{filtered_sectors}
+
+📋 Listes d'actifs surveillés: 
+{filtered_lists}
+
+📊 Analyse des ETF: 
+{filtered_etfs}
 
 📅 Contexte : Ces portefeuilles sont optimisés pour le mois de {current_month} en tenant compte des évolutions à court et moyen terme.
 
 🎯 Ton objectif : Générer trois portefeuilles optimisés :
-1️⃣ **Agressif** : 10 à 20 actifs très volatils (actions de croissance, crypto, ETF spéculatifs).  
-2️⃣ **Modéré** : 10 à 20 actifs équilibrés (blue chips, ETF diversifiés, obligations d'entreprises).  
-3️⃣ **Stable** : 10 à 20 actifs défensifs (obligations souveraines, valeurs refuges, ETF stables).
+1️⃣ Agressif : 10 à 20 actifs très volatils (actions de croissance, crypto, ETF spéculatifs).  
+2️⃣ Modéré : 10 à 20 actifs équilibrés (blue chips, ETF diversifiés, obligations d'entreprises).  
+3️⃣ Stable : 10 à 20 actifs défensifs (obligations souveraines, valeurs refuges, ETF stables).
 
-📊 **Format attendu : JSON uniquement**
+📊 Format JSON uniquement:
 {{
   "Agressif": {{
     "Actions": {{
       "Nom": "X%",
       ...
     }},
-    "Crypto": {{
-      ...
-    }},
-    "ETF": {{
-      ...
-    }},
-    "Obligations": {{
-      ...
-    }}
+    "Crypto": {{ ... }},
+    "ETF": {{ ... }},
+    "Obligations": {{ ... }}
   }},
   "Modéré": {{ ... }},
   "Stable": {{ ... }}
 }}
 
-✅ **Contraintes** :
-- Chaque portefeuille contient **entre 10 et 20 actifs**.
-- La somme des pourcentages fait **100%** par portefeuille.
-- Chaque portefeuille inclut **au minimum deux classes d'actifs différentes**.
-- L'allocation reflète à la fois les données fournies **et** les tendances actuelles du marché.
-- Si un secteur est en forte croissance selon l'analyse sectorielle, surpondère-le dans les portefeuilles Agressif et Modéré.
-- En cas d'incertitude macroéconomique, renforce les allocations en actifs refuges dans le portefeuille Stable.
-- Privilégie les ETF mentionnés dans la section ETF pour les allocations ETF.
-- Utilise les actifs des listes de surveillance quand c'est pertinent.
-- Les poids d'allocation sont exprimés en **% du portefeuille total**.
-- Ne réponds **qu'avec le JSON**, sans commentaire ni explication.
+✅ Contraintes :
+- Chaque portefeuille: 10-20 actifs, somme 100%, minimum 2 classes d'actifs
+- Surpondérer les secteurs en croissance dans Agressif/Modéré
+- Renforcer les actifs refuges dans Stable en cas d'incertitude
+- Ne réponds qu'avec le JSON, sans commentaire ni explication.
 """
-    
-    try:
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        
-        data = {
-            "model": "gpt-4o",
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.7
-        }
-        
-        print("🚀 Envoi de la requête à l'API OpenAI...")
-        response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
-        response.raise_for_status()
-        
-        result = response.json()
-        content = result["choices"][0]["message"]["content"]
-        
-        # Nettoyer la réponse pour extraire seulement le JSON
-        content = re.sub(r'^```json', '', content)
-        content = re.sub(r'```$', '', content)
-        content = content.strip()
-        
-        # Vérifier que le contenu est bien du JSON valide
-        portfolios = json.loads(content)
-        print("✅ Portefeuilles générés avec succès")
-        return portfolios
-    
-    except Exception as e:
-        print(f"❌ Erreur lors de la génération des portefeuilles: {str(e)}")
-        # En cas d'erreur, retourner un portfolio par défaut
-        return {
-            "Agressif": {
-                "Actions": {"Apple": "15%", "Tesla": "10%", "Nvidia": "15%"},
-                "Crypto": {"Bitcoin": "15%", "Ethereum": "10%"},
-                "ETF": {"ARK Innovation ETF": "15%", "SPDR S&P 500 ETF": "10%"}
-            },
-            "Modéré": {
-                "Actions": {"Microsoft": "15%", "Alphabet": "10%", "Johnson & Johnson": "10%"},
-                "Obligations": {"US Treasury 10Y": "15%", "Corporate Bonds AAA": "15%"},
-                "ETF": {"Vanguard Total Stock Market ETF": "20%", "iShares Core MSCI EAFE ETF": "15%"}
-            },
-            "Stable": {
-                "Actions": {"Procter & Gamble": "10%", "Coca-Cola": "10%", "McDonald's": "10%"},
-                "Obligations": {"US Treasury 30Y": "25%", "Municipal Bonds AAA": "15%"},
-                "ETF": {"Vanguard High Dividend Yield ETF": "15%", "SPDR Gold Shares": "15%"}
+            
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
             }
-        }
+            
+            data = {
+                "model": "gpt-4o",
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.7
+            }
+            
+            print(f"🚀 Envoi de la requête à l'API OpenAI (tentative {attempt+1}/{max_retries})...")
+            response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
+            response.raise_for_status()
+            
+            result = response.json()
+            content = result["choices"][0]["message"]["content"]
+            
+            # Nettoyer la réponse pour extraire seulement le JSON
+            content = re.sub(r'^```json', '', content)
+            content = re.sub(r'```$', '', content)
+            content = content.strip()
+            
+            # Vérifier que le contenu est bien du JSON valide
+            portfolios = json.loads(content)
+            print("✅ Portefeuilles générés avec succès")
+            return portfolios
+        
+        except Exception as e:
+            print(f"❌ Erreur lors de la tentative {attempt+1}: {str(e)}")
+            
+            if attempt < max_retries - 1:
+                sleep_time = backoff_time + random.uniform(0, 1)
+                print(f"⏳ Nouvelle tentative dans {sleep_time:.2f} secondes...")
+                time.sleep(sleep_time)
+                backoff_time *= 2  # Double le temps d'attente pour la prochaine tentative
+            else:
+                print("❌ Échec après plusieurs tentatives, utilisation du portfolio par défaut")
+                # En cas d'échec de toutes les tentatives, retourner un portfolio par défaut
+                return {
+                    "Agressif": {
+                        "Actions": {"Apple": "15%", "Tesla": "10%", "Nvidia": "15%"},
+                        "Crypto": {"Bitcoin": "15%", "Ethereum": "10%"},
+                        "ETF": {"ARK Innovation ETF": "15%", "SPDR S&P 500 ETF": "10%"}
+                    },
+                    "Modéré": {
+                        "Actions": {"Microsoft": "15%", "Alphabet": "10%", "Johnson & Johnson": "10%"},
+                        "Obligations": {"US Treasury 10Y": "15%", "Corporate Bonds AAA": "15%"},
+                        "ETF": {"Vanguard Total Stock Market ETF": "20%", "iShares Core MSCI EAFE ETF": "15%"}
+                    },
+                    "Stable": {
+                        "Actions": {"Procter & Gamble": "10%", "Coca-Cola": "10%", "McDonald's": "10%"},
+                        "Obligations": {"US Treasury 30Y": "25%", "Municipal Bonds AAA": "15%"},
+                        "ETF": {"Vanguard High Dividend Yield ETF": "15%", "SPDR Gold Shares": "15%"}
+                    }
+                }
 
 def save_portfolios(portfolios):
     """Sauvegarder les portefeuilles dans un fichier JSON et conserver l'historique."""
