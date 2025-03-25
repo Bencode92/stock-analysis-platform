@@ -37,155 +37,242 @@ def extract_content_from_html(html_file):
                                     content.append("  {}...".format(summary_text[:150]))  # Limiter la longueur
             
             elif html_file.endswith('marches.html'):
-                # Pour les marchés, on cherche les données de tendance
-                market_data = soup.select('.market-trend, .market-data, .trend-item, .index-card')
-                if not market_data:
-                    # Fallback
-                    market_data = soup.select('.card, .market, .indice, .asset-card')
-                    print(f"Fallback utilisé pour {html_file}, trouvé {len(market_data)} éléments")
+                # Extraction améliorée pour les marchés - cibler les tableaux
+                tables = soup.select('table, .table')
+                if tables:
+                    print(f"Trouvé {len(tables)} tableaux dans {html_file}")
+                    for table in tables:
+                        # Extraire l'en-tête du tableau si présent
+                        table_header = table.select_one('caption, thead, th')
+                        if table_header:
+                            header_text = table_header.get_text(strip=True)
+                            content.append(f"📊 {header_text.upper()}:")
+                        
+                        # Extraire les lignes du tableau
+                        rows = table.select('tr, .row')
+                        for row in rows[:10]:  # Limiter à 10 lignes
+                            cells = row.select('td, th, .cell')
+                            if cells:
+                                row_data = " | ".join([cell.get_text(strip=True) for cell in cells if cell.get_text(strip=True)])
+                                if row_data:
+                                    content.append(f"• {row_data}")
                 
-                for item in market_data:
-                    name = item.select_one('h3, h4, .name, .asset-name, .title')
-                    value = item.select_one('.value, .price, .current-price')
-                    change = item.select_one('.change, .variation, .performance')
+                # Si aucun tableau n'est trouvé, essayer d'autres sélecteurs
+                if not content:
+                    market_data = soup.select('.market-trend, .market-data, .trend-item, .index-card, .market-item')
+                    if not market_data:
+                        # Fallback pour les éléments génériques
+                        market_data = soup.select('.card, .market, .indice, .asset-card')
                     
-                    if name:
-                        name_text = name.get_text(strip=True)
-                        if name_text:
-                            data_line = "• {}".format(name_text)
-                            if value:
-                                value_text = value.get_text(strip=True)
-                                data_line += ": {}".format(value_text)
-                            if change:
-                                change_text = change.get_text(strip=True)
-                                data_line += " ({})".format(change_text)
-                            content.append(data_line)
+                    for item in market_data:
+                        name = item.select_one('h3, h4, .name, .asset-name, .title')
+                        value = item.select_one('.value, .price, .current-price')
+                        change = item.select_one('.change, .variation, .performance')
+                        
+                        if name:
+                            name_text = name.get_text(strip=True)
+                            if name_text:
+                                data_line = "• {}".format(name_text)
+                                if value:
+                                    value_text = value.get_text(strip=True)
+                                    data_line += ": {}".format(value_text)
+                                if change:
+                                    change_text = change.get_text(strip=True)
+                                    data_line += " ({})".format(change_text)
+                                content.append(data_line)
             
             elif html_file.endswith('secteurs.html'):
-                # Pour les secteurs, on cherche les performances sectorielles
-                sector_data = soup.select('.sector-card, .sector-item, .performance-card')
-                if not sector_data:
-                    # Fallback
-                    sector_data = soup.select('.card, .sector, .industry-card, .industry-item')
-                
-                content.append("📊 PERFORMANCES SECTORIELLES:")
-                
-                for item in sector_data:
-                    name = item.select_one('h3, h4, .sector-name, .name, .title')
-                    performance = item.select_one('.performance, .change, .variation')
-                    trend = item.select_one('.trend, .direction, .recommendation')
-                    
-                    if name:
-                        name_text = name.get_text(strip=True)
-                        if name_text:
-                            data_line = "• {}".format(name_text)
-                            if performance:
-                                perf_text = performance.get_text(strip=True)
-                                data_line += ": {}".format(perf_text)
-                            if trend:
-                                trend_text = trend.get_text(strip=True)
-                                data_line += " - {}".format(trend_text)
-                            content.append(data_line)
-                
-                # Si aucun secteur n'a été trouvé, essayer d'extraire des tableaux
-                if len(content) <= 1:
-                    tables = soup.select('table')
+                # Extraction améliorée pour les secteurs - cibler les tableaux
+                tables = soup.select('table, .table')
+                if tables:
+                    print(f"Trouvé {len(tables)} tableaux dans {html_file}")
                     for table in tables:
-                        rows = table.select('tr')
-                        for row in rows[1:6]:  # Skip header, limit to 5 rows
-                            cols = row.select('td')
-                            if len(cols) >= 2:
-                                sector_name = cols[0].get_text(strip=True)
-                                sector_perf = cols[1].get_text(strip=True) if len(cols) > 1 else ""
-                                content.append("• {}: {}".format(sector_name, sector_perf))
+                        # Extraire l'en-tête du tableau si présent
+                        table_header = table.select_one('caption, thead, th')
+                        if table_header:
+                            header_text = table_header.get_text(strip=True)
+                            content.append(f"📊 {header_text.upper() or 'PERFORMANCES SECTORIELLES'}:")
+                        else:
+                            content.append("📊 PERFORMANCES SECTORIELLES:")
+                        
+                        # Extraire les lignes du tableau
+                        rows = table.select('tr, .row')
+                        for row in rows[:15]:  # Limiter à 15 lignes
+                            cells = row.select('td, th, .cell')
+                            if cells:
+                                row_data = " | ".join([cell.get_text(strip=True) for cell in cells if cell.get_text(strip=True)])
+                                if row_data:
+                                    content.append(f"• {row_data}")
+                
+                # Si aucun tableau n'est trouvé, essayer les sélecteurs originaux
+                if len(content) <= 1:
+                    sector_data = soup.select('.sector-card, .sector-item, .performance-card')
+                    if not sector_data:
+                        # Fallback
+                        sector_data = soup.select('.card, .sector, .industry-card, .industry-item')
+                    
+                    if not content:
+                        content.append("📊 PERFORMANCES SECTORIELLES:")
+                    
+                    for item in sector_data:
+                        name = item.select_one('h3, h4, .sector-name, .name, .title')
+                        performance = item.select_one('.performance, .change, .variation')
+                        trend = item.select_one('.trend, .direction, .recommendation')
+                        
+                        if name:
+                            name_text = name.get_text(strip=True)
+                            if name_text:
+                                data_line = "• {}".format(name_text)
+                                if performance:
+                                    perf_text = performance.get_text(strip=True)
+                                    data_line += ": {}".format(perf_text)
+                                if trend:
+                                    trend_text = trend.get_text(strip=True)
+                                    data_line += " - {}".format(trend_text)
+                                content.append(data_line)
             
             elif html_file.endswith('liste.html'):
-                # Pour les listes, on cherche les tableaux ou cartes d'actifs
-                asset_items = soup.select('.asset-item, .watchlist-item, .stock-item, .list-card')
-                if not asset_items:
-                    # Fallback
-                    asset_items = soup.select('.card, .item, tr, .asset')
-                
-                content.append("📋 LISTES D'ACTIFS SURVEILLÉS:")
-                
-                for item in asset_items:
-                    name = item.select_one('h3, h4, .asset-name, .name, .symbol, .title, td:first-child')
-                    sector = item.select_one('.sector, .category, .type')
-                    price = item.select_one('.price, .value, .current-price')
-                    
-                    if name:
-                        name_text = name.get_text(strip=True)
-                        if name_text:
-                            data_line = "• {}".format(name_text)
-                            if sector:
-                                sector_text = sector.get_text(strip=True)
-                                data_line += " ({}): ".format(sector_text)
-                            if price:
-                                price_text = price.get_text(strip=True)
-                                data_line += "{}".format(price_text)
-                            content.append(data_line)
-                
-                # Si aucun actif n'a été trouvé, essayer d'extraire des tableaux
-                if len(content) <= 1:
-                    tables = soup.select('table')
+                # Extraction améliorée pour les listes - cibler les tableaux
+                tables = soup.select('table, .table')
+                if tables:
+                    print(f"Trouvé {len(tables)} tableaux dans {html_file}")
                     for table in tables:
-                        rows = table.select('tr')
-                        for row in rows[1:10]:  # Skip header, limit to 10 rows
-                            cols = row.select('td')
-                            if len(cols) >= 2:
-                                asset_name = cols[0].get_text(strip=True)
-                                asset_info = cols[1].get_text(strip=True) if len(cols) > 1 else ""
-                                content.append("• {}: {}".format(asset_name, asset_info))
+                        # Extraire l'en-tête du tableau si présent
+                        table_header = table.select_one('caption, thead, th')
+                        if table_header:
+                            header_text = table_header.get_text(strip=True)
+                            content.append(f"📋 {header_text.upper() or 'LISTES D\'ACTIFS SURVEILLÉS'}:")
+                        else:
+                            content.append("📋 LISTES D'ACTIFS SURVEILLÉS:")
+                        
+                        # Extraire les lignes du tableau
+                        rows = table.select('tr, .row')
+                        for row in rows[:20]:  # Limiter à 20 lignes
+                            cells = row.select('td, th, .cell')
+                            if cells:
+                                row_data = " | ".join([cell.get_text(strip=True) for cell in cells if cell.get_text(strip=True)])
+                                if row_data:
+                                    content.append(f"• {row_data}")
+                
+                # Si aucun tableau n'est trouvé, essayer les sélecteurs originaux
+                if len(content) <= 1:
+                    asset_items = soup.select('.asset-item, .watchlist-item, .stock-item, .list-card')
+                    if not asset_items:
+                        # Fallback
+                        asset_items = soup.select('.card, .item, tr, .asset')
+                    
+                    if not content:
+                        content.append("📋 LISTES D'ACTIFS SURVEILLÉS:")
+                    
+                    for item in asset_items:
+                        name = item.select_one('h3, h4, .asset-name, .name, .symbol, .title, td:first-child')
+                        sector = item.select_one('.sector, .category, .type')
+                        price = item.select_one('.price, .value, .current-price')
+                        
+                        if name:
+                            name_text = name.get_text(strip=True)
+                            if name_text:
+                                data_line = "• {}".format(name_text)
+                                if sector:
+                                    sector_text = sector.get_text(strip=True)
+                                    data_line += " ({}): ".format(sector_text)
+                                if price:
+                                    price_text = price.get_text(strip=True)
+                                    data_line += "{}".format(price_text)
+                                content.append(data_line)
             
             elif html_file.endswith('etf.html'):
-                # Pour les ETFs, on cherche les cartes ou tableaux d'ETF
-                etf_items = soup.select('.etf-card, .etf-item, .fund-card, .etf-table tr')
-                if not etf_items:
-                    # Fallback
-                    etf_items = soup.select('.card, .etf, tr, .fund')
-                
-                content.append("📊 ANALYSE DES ETF:")
-                
-                for item in etf_items:
-                    name = item.select_one('h3, h4, .etf-name, .name, .symbol, .title, td:first-child')
-                    category = item.select_one('.category, .type, .asset-class')
-                    aum = item.select_one('.aum, .size, .assets')
-                    expense = item.select_one('.expense, .ter, .fee')
-                    
-                    if name:
-                        name_text = name.get_text(strip=True)
-                        if name_text:
-                            data_line = "• {}".format(name_text)
-                            if category:
-                                category_text = category.get_text(strip=True)
-                                data_line += " ({})".format(category_text)
-                            if aum:
-                                aum_text = aum.get_text(strip=True)
-                                data_line += " AUM: {}".format(aum_text)
-                            if expense:
-                                expense_text = expense.get_text(strip=True)
-                                data_line += ", Frais: {}".format(expense_text)
-                            content.append(data_line)
-                
-                # Si aucun ETF n'a été trouvé, essayer d'extraire des tableaux
-                if len(content) <= 1:
-                    tables = soup.select('table')
+                # Extraction améliorée pour les ETF - cibler les tableaux
+                tables = soup.select('table, .table')
+                if tables:
+                    print(f"Trouvé {len(tables)} tableaux dans {html_file}")
                     for table in tables:
-                        rows = table.select('tr')
-                        for row in rows[1:10]:  # Skip header, limit to 10 rows
-                            cols = row.select('td')
-                            if len(cols) >= 2:
-                                etf_name = cols[0].get_text(strip=True)
-                                etf_info = cols[1].get_text(strip=True) if len(cols) > 1 else ""
-                                content.append("• {}: {}".format(etf_name, etf_info))
+                        # Extraire l'en-tête du tableau si présent
+                        table_header = table.select_one('caption, thead, th, h2, h3')
+                        if table_header:
+                            header_text = table_header.get_text(strip=True)
+                            if "ETF" in header_text or not header_text:
+                                content.append("📊 TOP ETF PERFORMANCES:")
+                            else:
+                                content.append(f"📊 {header_text.upper()}:")
+                        else:
+                            content.append("📊 ANALYSE DES ETF:")
+                        
+                        # Extraire les lignes du tableau
+                        rows = table.select('tr, .row')
+                        for row in rows[:15]:  # Limiter à 15 lignes
+                            cells = row.select('td, th, .cell')
+                            if cells:
+                                row_data = " | ".join([cell.get_text(strip=True) for cell in cells if cell.get_text(strip=True)])
+                                if row_data:
+                                    content.append(f"• {row_data}")
+                
+                # Si aucun tableau n'est trouvé, essayer des sections ou cartes d'ETF spécifiques
+                if len(content) <= 1:
+                    # Chercher d'abord des sections avec des titres mentionnant ETF
+                    etf_sections = []
+                    for heading in soup.select('h1, h2, h3, h4, h5, h6'):
+                        if 'ETF' in heading.get_text():
+                            etf_sections.append(heading.parent)
+                    
+                    # Si des sections sont trouvées, extraire leur contenu
+                    if etf_sections:
+                        content.append("📊 ANALYSE DES ETF:")
+                        for section in etf_sections:
+                            title = section.select_one('h1, h2, h3, h4, h5, h6')
+                            if title:
+                                content.append(f"• {title.get_text(strip=True)}")
+                            
+                            # Extraire des éléments liste ou paragraphes
+                            items = section.select('li, p')
+                            for item in items[:10]:
+                                content.append(f"  - {item.get_text(strip=True)}")
+                    
+                    # Fallback sur les sélecteurs originaux
+                    if len(content) <= 1:
+                        etf_items = soup.select('.etf-card, .etf-item, .fund-card, .etf-table tr')
+                        if not etf_items:
+                            # Fallback
+                            etf_items = soup.select('.card, .etf, tr, .fund')
+                        
+                        if not content:
+                            content.append("📊 ANALYSE DES ETF:")
+                        
+                        for item in etf_items:
+                            name = item.select_one('h3, h4, .etf-name, .name, .symbol, .title, td:first-child')
+                            category = item.select_one('.category, .type, .asset-class')
+                            aum = item.select_one('.aum, .size, .assets')
+                            expense = item.select_one('.expense, .ter, .fee')
+                            
+                            if name:
+                                name_text = name.get_text(strip=True)
+                                if name_text:
+                                    data_line = "• {}".format(name_text)
+                                    if category:
+                                        category_text = category.get_text(strip=True)
+                                        data_line += " ({})".format(category_text)
+                                    if aum:
+                                        aum_text = aum.get_text(strip=True)
+                                        data_line += " AUM: {}".format(aum_text)
+                                    if expense:
+                                        expense_text = expense.get_text(strip=True)
+                                        data_line += ", Frais: {}".format(expense_text)
+                                    content.append(data_line)
             
-            # Si aucun contenu n'a été extrait, ajouter un message par défaut
+            # Si aucun contenu spécifique n'a été trouvé, extraire le texte brut 
             if not content:
-                content.append(f"[Aucun contenu trouvé dans {html_file}]")
-                # Essayer d'extraire le texte brut du body
+                # Extraire tout le contenu textuel de la page pour avoir quelque chose
                 body_text = soup.body.get_text(strip=True) if soup.body else ""
                 if body_text:
-                    content.append(f"Extrait du texte brut: {body_text[:300]}...")
+                    # Limiter à 1000 caractères pour éviter un prompt trop long
+                    content.append(f"[Extraction brute de {html_file}]")
+                    
+                    # Découper le texte en lignes plus courtes pour plus de lisibilité
+                    chunks = [body_text[i:i+100] for i in range(0, min(1000, len(body_text)), 100)]
+                    for chunk in chunks:
+                        content.append(chunk)
+                else:
+                    content.append(f"[Aucun contenu trouvé dans {html_file}]")
             
             # Ajouter une ligne de log pour déboguer
             print(f"✅ Contenu extrait de {html_file}: {len(content)} éléments trouvés")
