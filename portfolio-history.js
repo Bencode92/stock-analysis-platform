@@ -9,6 +9,7 @@ class PortfolioHistoryViewer {
         this.currentPortfolio = null;
         this.historyData = [];
         this.selectedHistoryIndex = 0;
+        this.activePortfolioType = 'agressif'; // Type de portefeuille actif par défaut
     }
 
     /**
@@ -19,6 +20,10 @@ class PortfolioHistoryViewer {
         this.showLoading(true);
         
         try {
+            // Déterminer le type de portefeuille actif depuis l'URL
+            this.activePortfolioType = this.getActivePortfolioType();
+            console.log('Type de portefeuille actif pour l\'historique:', this.activePortfolioType);
+            
             // Charger l'index des portefeuilles historiques
             const response = await fetch('data/portfolio_history/index.json');
             if (!response.ok) throw new Error('Impossible de charger l\'index historique');
@@ -42,6 +47,36 @@ class PortfolioHistoryViewer {
         }
         
         this.showLoading(false);
+    }
+
+    /**
+     * Récupère le type de portefeuille actif depuis l'URL ou l'état de l'interface
+     */
+    getActivePortfolioType() {
+        // Chercher dans l'URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const typeParam = urlParams.get('type');
+        
+        if (typeParam) {
+            return this.normalizePortfolioType(typeParam);
+        }
+        
+        // Chercher dans l'interface (onglet actif)
+        const activeTab = document.querySelector('.portfolio-tab.active');
+        if (activeTab && activeTab.dataset.target) {
+            return activeTab.dataset.target.replace('portfolio-', '');
+        }
+        
+        return 'agressif'; // Valeur par défaut
+    }
+
+    /**
+     * Normalise le type de portefeuille (enlève les accents, minuscules)
+     */
+    normalizePortfolioType(type) {
+        return type.toLowerCase()
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "");
     }
 
     /**
@@ -105,7 +140,6 @@ class PortfolioHistoryViewer {
     async loadAndComparePortfolios() {
         const loadingDiv = document.createElement('div');
         loadingDiv.className = 'portfolio-history-loading';
-        loadingDiv.textContent = 'Chargement de la comparaison...';
         
         const historicalContainer = document.getElementById('historical-portfolio-container');
         historicalContainer.innerHTML = '';
@@ -114,35 +148,61 @@ class PortfolioHistoryViewer {
         try {
             // Charger le portefeuille historique sélectionné
             const historyItem = this.historyData[this.selectedHistoryIndex];
+            console.log('Chargement du fichier historique:', historyItem.file);
+            
             const response = await fetch(`data/portfolio_history/${historyItem.file}`);
             
-            if (!response.ok) throw new Error(`Impossible de charger ${historyItem.file}`);
+            if (!response.ok) {
+                console.error('Erreur HTTP:', response.status);
+                throw new Error(`Impossible de charger ${historyItem.file}`);
+            }
             
             const historyData = await response.json();
+            console.log('Données historiques chargées:', historyData);
+            
             const historicalPortfolio = historyData.portfolios;
             
-            // Afficher les deux portefeuilles côte à côte
-            this.displayPortfolio('current-portfolio-container', this.currentPortfolio);
-            this.displayPortfolio('historical-portfolio-container', historicalPortfolio);
+            // Afficher uniquement le portefeuille actif (du type sélectionné)
+            this.displayPortfolio('current-portfolio-container', this.currentPortfolio, this.activePortfolioType);
+            this.displayPortfolio('historical-portfolio-container', historicalPortfolio, this.activePortfolioType);
             
             // Mettre en évidence les différences
-            this.highlightDifferences(this.currentPortfolio, historicalPortfolio);
+            this.highlightDifferences(this.currentPortfolio, historicalPortfolio, this.activePortfolioType);
             
         } catch (error) {
             console.error('Erreur lors de la comparaison:', error);
-            historicalContainer.innerHTML = '<div class="error-message">Erreur lors du chargement de la comparaison</div>';
+            historicalContainer.innerHTML = `<div class="error-message">Erreur lors du chargement de la comparaison: ${error.message}</div>`;
         }
     }
 
     /**
      * Affiche un portefeuille dans un conteneur
+     * @param {string} containerId - ID du conteneur HTML
+     * @param {object} portfolio - Données du portefeuille
+     * @param {string} activeType - Type de portefeuille à afficher (agressif, modere, stable)
      */
-    displayPortfolio(containerId, portfolio) {
+    displayPortfolio(containerId, portfolio, activeType) {
         const container = document.getElementById(containerId);
         container.innerHTML = '';
         
+        if (!portfolio) {
+            container.innerHTML = '<div class="error-message">Données de portefeuille non disponibles</div>';
+            return;
+        }
+        
+        // Normaliser le type actif pour la comparaison
+        activeType = this.normalizePortfolioType(activeType);
+        
         // Pour chaque type de portefeuille (Agressif, Modéré, Stable)
+        // Filter to only display the active portfolio type
         Object.keys(portfolio).forEach(portfolioType => {
+            const normalizedType = this.normalizePortfolioType(portfolioType);
+            
+            // Ne traiter que le type de portefeuille actif
+            if (normalizedType !== activeType) {
+                return;
+            }
+            
             const panel = document.createElement('div');
             panel.className = 'history-portfolio-panel';
             
@@ -175,19 +235,61 @@ class PortfolioHistoryViewer {
             panel.innerHTML = html;
             container.appendChild(panel);
         });
+        
+        // Si aucun portefeuille correspondant n'a été trouvé
+        if (container.children.length === 0) {
+            container.innerHTML = `<div class="error-message">Portefeuille de type "${activeType}" non trouvé</div>`;
+        }
     }
 
     /**
      * Met en évidence les différences entre deux portefeuilles
+     * @param {object} current - Portefeuille actuel
+     * @param {object} historical - Portefeuille historique
+     * @param {string} activeType - Type de portefeuille actif
      */
-    highlightDifferences(current, historical) {
+    highlightDifferences(current, historical, activeType) {
+        // Normaliser le type actif
+        activeType = this.normalizePortfolioType(activeType);
+        
+        // Convertir les types pour faciliter la comparaison
+        const typeMap = {
+            'agressif': ['Agressif', 'agressif'],
+            'modere': ['Modéré', 'modere', 'Modere'],
+            'stable': ['Stable', 'stable']
+        };
+        
+        // Trouver la clé correspondante dans chaque portefeuille
+        let currentTypeKey = null;
+        let historicalTypeKey = null;
+        
+        // Pour le portefeuille actuel
+        for (const key in current) {
+            if (typeMap[activeType].includes(key) || this.normalizePortfolioType(key) === activeType) {
+                currentTypeKey = key;
+                break;
+            }
+        }
+        
+        // Pour le portefeuille historique
+        for (const key in historical) {
+            if (typeMap[activeType].includes(key) || this.normalizePortfolioType(key) === activeType) {
+                historicalTypeKey = key;
+                break;
+            }
+        }
+        
+        if (!currentTypeKey || !historicalTypeKey) {
+            console.error('Type de portefeuille non trouvé:', activeType);
+            return;
+        }
+        
         // Parcourir tous les éléments d'allocation pour trouver les différences
         const allocationElements = document.querySelectorAll('.asset-allocation');
         
         allocationElements.forEach(element => {
             const assetName = element.previousElementSibling.textContent;
             const portfolioPanel = element.closest('.history-portfolio-panel');
-            const portfolioType = portfolioPanel.querySelector('h4').textContent;
             const category = element.closest('.history-category').querySelector('h5').textContent;
             
             // Vérifier si la valeur est différente entre les deux portefeuilles
@@ -198,10 +300,12 @@ class PortfolioHistoryViewer {
                 
                 if (isInCurrentContainer) {
                     // Élément du portefeuille actuel, chercher la valeur dans l'historique
-                    otherValue = historical[portfolioType][category][assetName];
+                    otherValue = historical[historicalTypeKey][category] ? 
+                                 historical[historicalTypeKey][category][assetName] : null;
                 } else {
                     // Élément du portefeuille historique, chercher la valeur dans l'actuel
-                    otherValue = current[portfolioType][category][assetName];
+                    otherValue = current[currentTypeKey][category] ? 
+                                 current[currentTypeKey][category][assetName] : null;
                 }
                 
                 // Si la valeur n'existe pas dans l'autre portefeuille ou est différente
@@ -216,13 +320,18 @@ class PortfolioHistoryViewer {
                     if (!otherValue) {
                         tooltip.textContent = isInCurrentContainer ? 'Nouvel actif' : 'Actif supprimé';
                     } else {
-                        const diff = parseFloat(currentValue) - parseFloat(otherValue);
+                        // Extraire les valeurs numériques pour la comparaison
+                        const currentNum = parseFloat(currentValue.replace('%', '').trim());
+                        const otherNum = parseFloat(otherValue.replace('%', '').trim());
+                        const diff = currentNum - otherNum;
+                        
                         tooltip.textContent = `${diff > 0 ? '+' : ''}${diff.toFixed(1)}%`;
                     }
                     
                     element.appendChild(tooltip);
                 }
             } catch (e) {
+                console.warn('Erreur lors de la comparaison:', e);
                 // Ignorer les erreurs si la structure ne correspond pas
             }
         });
