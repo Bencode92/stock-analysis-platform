@@ -9,6 +9,9 @@ import re
 def extract_content_from_html(html_file):
     """Extraire le contenu pertinent d'un fichier HTML."""
     try:
+        # Initialiser content comme une liste vide par défaut
+        content = []
+        
         with open(html_file, 'r', encoding='utf-8') as file:
             soup = BeautifulSoup(file, 'html.parser')
             
@@ -20,7 +23,6 @@ def extract_content_from_html(html_file):
                     # Fallback: essayer de trouver d'autres éléments qui pourraient contenir des actualités
                     articles = soup.select('article, .news, .actualite, .card')
                 
-                content = []
                 for article in articles[:15]:  # Limiter aux 15 premiers articles pour éviter un prompt trop long
                     title = article.select_one('h2, h3, .title, .headline')
                     summary = article.select_one('p, .summary, .description')
@@ -34,14 +36,14 @@ def extract_content_from_html(html_file):
                                 if summary_text:
                                     content.append("  {}...".format(summary_text[:150]))  # Limiter la longueur
             
-            elif html_file.endswith('marche.html'):
+            elif html_file.endswith('marches.html'):
                 # Pour les marchés, on cherche les données de tendance
                 market_data = soup.select('.market-trend, .market-data, .trend-item, .index-card')
                 if not market_data:
                     # Fallback
                     market_data = soup.select('.card, .market, .indice, .asset-card')
+                    print(f"Fallback utilisé pour {html_file}, trouvé {len(market_data)} éléments")
                 
-                content = []
                 for item in market_data:
                     name = item.select_one('h3, h4, .name, .asset-name, .title')
                     value = item.select_one('.value, .price, .current-price')
@@ -66,7 +68,6 @@ def extract_content_from_html(html_file):
                     # Fallback
                     sector_data = soup.select('.card, .sector, .industry-card, .industry-item')
                 
-                content = []
                 content.append("📊 PERFORMANCES SECTORIELLES:")
                 
                 for item in sector_data:
@@ -105,7 +106,6 @@ def extract_content_from_html(html_file):
                     # Fallback
                     asset_items = soup.select('.card, .item, tr, .asset')
                 
-                content = []
                 content.append("📋 LISTES D'ACTIFS SURVEILLÉS:")
                 
                 for item in asset_items:
@@ -144,7 +144,6 @@ def extract_content_from_html(html_file):
                     # Fallback
                     etf_items = soup.select('.card, .etf, tr, .fund')
                 
-                content = []
                 content.append("📊 ANALYSE DES ETF:")
                 
                 for item in etf_items:
@@ -180,11 +179,22 @@ def extract_content_from_html(html_file):
                                 etf_info = cols[1].get_text(strip=True) if len(cols) > 1 else ""
                                 content.append("• {}: {}".format(etf_name, etf_info))
             
+            # Si aucun contenu n'a été extrait, ajouter un message par défaut
+            if not content:
+                content.append(f"[Aucun contenu trouvé dans {html_file}]")
+                # Essayer d'extraire le texte brut du body
+                body_text = soup.body.get_text(strip=True) if soup.body else ""
+                if body_text:
+                    content.append(f"Extrait du texte brut: {body_text[:300]}...")
+            
+            # Ajouter une ligne de log pour déboguer
+            print(f"✅ Contenu extrait de {html_file}: {len(content)} éléments trouvés")
+            
             return "\n".join(content)
     except Exception as e:
-        print("Erreur lors de l'extraction du contenu de {}: {}".format(html_file, str(e)))
+        print(f"❌ Erreur lors de l'extraction du contenu de {html_file}: {str(e)}")
         # En cas d'erreur, retourner un placeholder pour ne pas bloquer l'exécution
-        return "[Contenu non disponible pour {}]".format(html_file)
+        return f"[Contenu non disponible pour {html_file}]"
 
 def get_current_month_fr():
     """Retourne le nom du mois courant en français."""
@@ -211,6 +221,28 @@ def generate_portfolios(actualites, marche, secteurs, listes, etfs):
     
     # Obtenir le mois courant en français
     current_month = get_current_month_fr()
+    
+    # Ajouter des logs pour déboguer les entrées
+    print(f"🔍 Longueur des données extraites:")
+    print(f"  📰 Actualités: {len(actualites)} caractères")
+    print(f"  📈 Marché: {len(marche)} caractères")
+    print(f"  🏭 Secteurs: {len(secteurs)} caractères")
+    print(f"  📋 Listes: {len(listes)} caractères")
+    print(f"  📊 ETFs: {len(etfs)} caractères")
+    
+    # Afficher les premiers caractères de chaque source pour vérification
+    print("\n===== APERÇU DU CONTENU EXTRAIT =====")
+    print("\n----- ACTUALITÉS (premiers 200 caractères) -----")
+    print(actualites[:200] + "..." if len(actualites) > 200 else actualites)
+    print("\n----- MARCHÉS (premiers 200 caractères) -----")
+    print(marche[:200] + "..." if len(marche) > 200 else marche)
+    print("\n----- SECTEURS (premiers 200 caractères) -----")
+    print(secteurs[:200] + "..." if len(secteurs) > 200 else secteurs)
+    print("\n----- LISTES (premiers 200 caractères) -----")
+    print(listes[:200] + "..." if len(listes) > 200 else listes)
+    print("\n----- ETF (premiers 200 caractères) -----")
+    print(etfs[:200] + "..." if len(etfs) > 200 else etfs)
+    print("\n===========================================")
     
     prompt = f"""
 Tu es un expert en gestion de portefeuille, avec une expertise en allocation stratégique et tactique. Tu vises à maximiser le rendement ajusté au risque en tenant compte de l'environnement macroéconomique actuel.
@@ -277,6 +309,7 @@ Utilise :
             "temperature": 0.7
         }
         
+        print("🚀 Envoi de la requête à l'API OpenAI...")
         response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
         response.raise_for_status()
         
@@ -290,10 +323,11 @@ Utilise :
         
         # Vérifier que le contenu est bien du JSON valide
         portfolios = json.loads(content)
+        print("✅ Portefeuilles générés avec succès")
         return portfolios
     
     except Exception as e:
-        print(f"Erreur lors de la génération des portefeuilles: {str(e)}")
+        print(f"❌ Erreur lors de la génération des portefeuilles: {str(e)}")
         # En cas d'erreur, retourner un portfolio par défaut
         return {
             "Agressif": {
@@ -393,10 +427,10 @@ def update_history_index(history_file, portfolio_data):
 def main():
     print("🔍 Extraction des données financières...")
     actualites = extract_content_from_html('actualites.html')
-    marche = extract_content_from_html('marches.html')
+    marche = extract_content_from_html('marches.html')  # Corrigé: marche.html -> marches.html
     secteurs = extract_content_from_html('secteurs.html')
-    listes = extract_content_from_html('liste.html')  # Nouveau
-    etfs = extract_content_from_html('etf.html')      # Nouveau
+    listes = extract_content_from_html('liste.html')
+    etfs = extract_content_from_html('etf.html')
     
     print("🧠 Génération des portefeuilles optimisés...")
     portfolios = generate_portfolios(actualites, marche, secteurs, listes, etfs)
