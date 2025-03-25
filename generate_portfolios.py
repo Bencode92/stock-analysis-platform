@@ -338,76 +338,97 @@ def filter_news_data(news_data):
     return "\n".join(filtered_news) if filtered_news else "Aucune actualité pertinente"
 
 def filter_markets_data(markets_data):
-    """Filtre les données de marché pour n'inclure que les tendances principales."""
+    """Filtre les données de marché pour inclure les indices clés et les top performers."""
     if not markets_data or not isinstance(markets_data, dict):
         return "Aucune donnée de marché disponible"
     
-    market_summary = []
+    lines = []
     
-    # Traiter les indices
-    if "indices" in markets_data and isinstance(markets_data["indices"], dict):
-        for region, indices in markets_data["indices"].items():
-            if not isinstance(indices, list):
-                continue
-                
-            # Extraire seulement les principaux indices
-            main_indices = []
-            for idx in indices[:3]:  # Limiter à 3 indices par région
-                if not isinstance(idx, dict):
-                    continue
-                    
-                name = idx.get("index_name", "")
-                change = idx.get("change", "")
-                trend = idx.get("trend", "")
-                
-                if name and change:
-                    main_indices.append(f"{name}: {change} ({trend})")
-            
-            if main_indices:
-                market_summary.append(f"Indices {region}: " + ", ".join(main_indices))
+    # 🌍 Résumé par région – indices globaux
+    indices_data = markets_data.get("indices", {})
+    for region, indices in indices_data.items():
+        if not isinstance(indices, list):
+            continue
+        
+        lines.append(f"📈 {region}")
+        for idx in indices[:5]:  # max 5 indices par région
+            name = idx.get("index_name", "")
+            var = idx.get("change", "")
+            ytd = idx.get("ytdChange", "")
+            if name and var:
+                lines.append(f"• {name}: {var} | YTD: {ytd}")
     
-    # Ajouter d'autres sections importantes des marchés si nécessaire
-    # Par exemple, devises, matières premières, etc.
+    # 🚀 Top Performers
+    top = markets_data.get("top", {})
     
-    return "\n".join(market_summary) if market_summary else "Aucune donnée de marché significative"
+    # Top 3 Hausses (VAR %)
+    if isinstance(top.get("top_var", []), list):
+        lines.append("🏆 Top 3 Hausses (variation %):")
+        for item in top["top_var"][:3]:
+            name = item.get("name", "")
+            var = item.get("var", "")
+            country = item.get("country", "")
+            lines.append(f"• {name} ({country}) : {var}")
+    
+    # Top 3 Baisses (VAR %)
+    if isinstance(top.get("worst_var", []), list):
+        lines.append("📉 Top 3 Baisses (variation %):")
+        for item in top["worst_var"][:3]:
+            name = item.get("name", "")
+            var = item.get("var", "")
+            country = item.get("country", "")
+            lines.append(f"• {name} ({country}) : {var}")
+    
+    # Top 3 Hausses/Baisses YTD
+    if isinstance(top.get("top_ytd", []), list):
+        lines.append("📈 Top 3 Hausses (YTD):")
+        for item in top["top_ytd"][:3]:
+            name = item.get("name", "")
+            ytd = item.get("ytd", "")
+            country = item.get("country", "")
+            lines.append(f"• {name} ({country}) : {ytd}")
+    
+    if isinstance(top.get("worst_ytd", []), list):
+        lines.append("📉 Top 3 Baisses (YTD):")
+        for item in top["worst_ytd"][:3]:
+            name = item.get("name", "")
+            ytd = item.get("ytd", "")
+            country = item.get("country", "")
+            lines.append(f"• {name} ({country}) : {ytd}")
+    
+    return "\n".join(lines) if lines else "Aucune donnée de marché significative"
 
 def filter_sectors_data(sectors_data):
-    """Filtre les données sectorielles pour identifier les secteurs performants et sous-performants."""
+    """Filtre les données sectorielles pour montrer les meilleures et pires variations par région."""
     if not sectors_data or not isinstance(sectors_data, dict):
         return "Aucune donnée sectorielle disponible"
     
-    sector_summary = []
+    summary = []
+    sectors = sectors_data.get("sectors", {})
     
-    if "sectors" in sectors_data and isinstance(sectors_data["sectors"], dict):
-        # Identifier les secteurs avec les meilleures/pires performances
-        top_performers = []
-        worst_performers = []
+    for region, sector_list in sectors.items():
+        if not isinstance(sector_list, list):
+            continue
         
-        for sector_name, sector_data in sectors_data["sectors"].items():
-            if not isinstance(sector_data, list):
-                continue
-                
-            for item in sector_data[:2]:  # Limiter à 2 éléments par secteur
-                if not isinstance(item, dict):
-                    continue
-                    
-                name = item.get("name", "")
-                change = item.get("change", "")
-                trend = item.get("trend", "")
-                
-                if name and change:
-                    if trend == "up" and change.startswith("+"):
-                        top_performers.append(f"{name} ({sector_name}): {change}")
-                    elif trend == "down" and change.startswith("-"):
-                        worst_performers.append(f"{name} ({sector_name}): {change}")
+        # Trier par variation YTD si disponible
+        try:
+            sector_list_sorted = sorted(
+                sector_list, 
+                key=lambda x: float(str(x.get("ytd", "0")).replace('%','').replace(',', '.')), 
+                reverse=True
+            )
+        except (ValueError, TypeError):
+            sector_list_sorted = sector_list
         
-        # Limiter aux 5 meilleurs et 5 pires
-        if top_performers:
-            sector_summary.append("Secteurs performants: " + ", ".join(top_performers[:5]))
-        if worst_performers:
-            sector_summary.append("Secteurs sous-performants: " + ", ".join(worst_performers[:5]))
+        summary.append(f"🏭 {region}")
+        for sec in sector_list_sorted[:5]:  # Top 5
+            name = sec.get("name", "")
+            var = sec.get("change", "")
+            ytd = sec.get("ytd", "")
+            if name and var:
+                summary.append(f"• {name} : {var} | YTD : {ytd}")
     
-    return "\n".join(sector_summary) if sector_summary else "Aucune donnée sectorielle significative"
+    return "\n".join(summary) if summary else "Aucune donnée sectorielle significative"
 
 def filter_etf_data(etf_data):
     """Filtre les données ETF pour n'inclure que les ETF les plus performants."""
