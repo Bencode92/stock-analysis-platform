@@ -216,6 +216,7 @@
                 <div class="debug-tab active" data-tab="promptsTab">Prompts</div>
                 <div class="debug-tab" data-tab="responsesTab">Réponses</div>
                 <div class="debug-tab" data-tab="statsTab">Statistiques</div>
+                <div class="debug-tab" data-tab="helpTab">Aide</div>
             </div>
 
             <div class="debug-content-section active" id="promptsTab">
@@ -248,6 +249,23 @@
                     </div>
                 </div>
             </div>
+
+            <div class="debug-content-section" id="helpTab">
+                <h2>Comment utiliser l'outil de débogage</h2>
+                <p>Cet outil vous permet de visualiser en détail les prompts envoyés à ChatGPT lors de la génération de portefeuilles.</p>
+                
+                <h3>Pour générer et voir un prompt:</h3>
+                <ol>
+                    <li>Exécutez le script <code>generate_portfolios.py</code> pour générer un nouveau portefeuille</li>
+                    <li>Le script crée automatiquement des fichiers de débogage dans le dossier <code>debug/prompts/</code></li>
+                    <li>Revenez sur cette page et cliquez sur <strong>Rafraîchir</strong> pour voir les nouveaux prompts</li>
+                    <li>Cliquez sur <strong>Voir</strong> pour afficher le contenu du prompt</li>
+                    <li>Cliquez sur <strong>Ouvrir HTML</strong> pour une version formatée plus lisible</li>
+                </ol>
+
+                <h3>Astuce:</h3>
+                <p>Les prompts et réponses sont enregistrés avec un horodatage (<code>YYYYMMDD_HHMMSS</code>) pour vous permettre de faire correspondre les prompts aux réponses correspondantes.</p>
+            </div>
         </div>
     </main>
 
@@ -264,184 +282,7 @@
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Références DOM
-            const debugList = document.getElementById('debugList');
-            const responsesList = document.getElementById('responsesList');
-            const debugModal = document.getElementById('debugModal');
-            const modalTitle = document.getElementById('modalTitle');
-            const modalContent = document.getElementById('modalContent');
-            const closeModal = document.getElementById('closeModal');
-            const btnRefresh = document.getElementById('btnRefresh');
-            const tabs = document.querySelectorAll('.debug-tab');
-            const contentSections = document.querySelectorAll('.debug-content-section');
-
-            // Gérer les onglets
-            tabs.forEach(tab => {
-                tab.addEventListener('click', function() {
-                    tabs.forEach(t => t.classList.remove('active'));
-                    this.classList.add('active');
-                    
-                    const tabId = this.getAttribute('data-tab');
-                    contentSections.forEach(section => {
-                        section.classList.remove('active');
-                        if (section.id === tabId) {
-                            section.classList.add('active');
-                        }
-                    });
-                });
-            });
-
-            // Fonction pour charger les fichiers de debug
-            async function loadDebugFiles() {
-                try {
-                    // Simuler le chargement des fichiers depuis le système de fichiers
-                    // Dans un environnement réel, il faudrait appeler une API ou accéder au système de fichiers
-                    
-                    // Pour l'instant, simulons avec des données d'exemple
-                    const debugFiles = await simulateFileSystem();
-                    
-                    if (debugFiles.prompts.length > 0) {
-                        debugList.innerHTML = '';
-                        debugFiles.prompts.forEach(file => {
-                            const entry = createDebugEntry(file, 'prompt');
-                            debugList.appendChild(entry);
-                        });
-                    }
-
-                    if (debugFiles.responses.length > 0) {
-                        responsesList.innerHTML = '';
-                        debugFiles.responses.forEach(file => {
-                            const entry = createDebugEntry(file, 'response');
-                            responsesList.appendChild(entry);
-                        });
-                    }
-                } catch (error) {
-                    console.error('Erreur lors du chargement des fichiers de débogage:', error);
-                    debugList.innerHTML = `
-                        <div class="empty-state">
-                            <div class="empty-icon">❌</div>
-                            <h3>Erreur de chargement</h3>
-                            <p>${error.message}</p>
-                        </div>
-                    `;
-                }
-            }
-
-            // Fonction pour créer une entrée de débogage
-            function createDebugEntry(file, type) {
-                const entry = document.createElement('div');
-                entry.className = 'debug-entry';
-                entry.innerHTML = `
-                    <div class="debug-timestamp">${file.timestamp}</div>
-                    <div class="debug-filename">${file.filename}</div>
-                    <div class="debug-actions">
-                        <button class="debug-btn view-btn" data-path="${file.path}" data-type="${type}">Voir</button>
-                        <button class="debug-btn debug-btn-primary open-html-btn" data-html="${file.htmlPath}">Ouvrir HTML</button>
-                    </div>
-                `;
-
-                // Ajouter un gestionnaire d'événements pour le bouton "Voir"
-                entry.querySelector('.view-btn').addEventListener('click', async function() {
-                    const path = this.getAttribute('data-path');
-                    const fileType = this.getAttribute('data-type');
-                    const content = await getFileContent(path);
-                    
-                    modalTitle.textContent = fileType === 'prompt' ? 'Contenu du prompt' : 'Réponse de ChatGPT';
-                    modalContent.textContent = content;
-                    debugModal.classList.add('active');
-                });
-
-                // Ajouter un gestionnaire d'événements pour le bouton "Ouvrir HTML"
-                entry.querySelector('.open-html-btn').addEventListener('click', function() {
-                    const htmlPath = this.getAttribute('data-html');
-                    // Dans un environnement web, on peut juste ouvrir dans un nouvel onglet
-                    window.open(htmlPath, '_blank');
-                });
-
-                return entry;
-            }
-
-            // Fonction pour simuler le système de fichiers
-            async function simulateFileSystem() {
-                // Cette fonction devrait être remplacée par l'accès au système de fichiers réel
-                return {
-                    prompts: [
-                        {
-                            filename: 'prompt_20250325_124843.txt',
-                            path: 'debug/prompts/prompt_20250325_124843.txt',
-                            htmlPath: 'debug/prompts/prompt_20250325_124843.html',
-                            timestamp: '25 Mars 2025, 12:48:43'
-                        },
-                        {
-                            filename: 'prompt_20250320_093012.txt',
-                            path: 'debug/prompts/prompt_20250320_093012.txt',
-                            htmlPath: 'debug/prompts/prompt_20250320_093012.html',
-                            timestamp: '20 Mars 2025, 09:30:12'
-                        }
-                    ],
-                    responses: [
-                        {
-                            filename: 'response_20250325_124843.txt',
-                            path: 'debug/prompts/response_20250325_124843.txt',
-                            htmlPath: '',
-                            timestamp: '25 Mars 2025, 12:48:43'
-                        },
-                        {
-                            filename: 'response_20250320_093012.txt',
-                            path: 'debug/prompts/response_20250320_093012.txt',
-                            htmlPath: '',
-                            timestamp: '20 Mars 2025, 09:30:12'
-                        }
-                    ]
-                };
-            }
-
-            // Fonction pour obtenir le contenu d'un fichier
-            async function getFileContent(path) {
-                // Cette fonction devrait être remplacée par l'accès au fichier réel
-                // Pour l'instant, simulons que nous avons accès au contenu
-                return `# Exemple de contenu de fichier pour ${path}
-                
-Tu es un expert en gestion de portefeuille, avec une expertise en allocation stratégique et tactique...
-
-📰 Actualités financières récentes:
-Région Europe: Inflation en baisse dans la zone euro (impact élevé)
-Région USA: Fed maintient les taux d'intérêt (impact élevé)
-
-📈 Tendances du marché:
-Indices Europe: DAX: +0.5% (up), CAC40: -0.2% (down)
-                
-... [contenu tronqué pour la démo] ...`;
-            }
-
-            // Gestionnaire d'événements pour fermer la modal
-            closeModal.addEventListener('click', function() {
-                debugModal.classList.remove('active');
-            });
-
-            // Fermer la modal en cliquant en dehors du contenu
-            debugModal.addEventListener('click', function(e) {
-                if (e.target === debugModal) {
-                    debugModal.classList.remove('active');
-                }
-            });
-
-            // Rafraîchir la liste des fichiers
-            btnRefresh.addEventListener('click', loadDebugFiles);
-
-            // Chargement initial
-            loadDebugFiles();
-
-            // Charger les données réelles lorsque la fonction est disponible
-            window.addEventListener('message', function(event) {
-                if (event.data && event.data.type === 'debug-files') {
-                    console.log('Données de débogage reçues:', event.data.files);
-                    // Mettre à jour l'interface avec les fichiers réels
-                }
-            });
-        });
-    </script>
+    <!-- Intégration du JS de débogage -->
+    <script src="debug-prompts.js"></script>
 </body>
 </html>
