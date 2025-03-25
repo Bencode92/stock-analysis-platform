@@ -358,86 +358,128 @@ def filter_markets_data(markets_data):
             if name and var:
                 lines.append(f"• {name}: {var} | YTD: {ytd}")
     
-    # 🚀 Top Performers
-    top = markets_data.get("top", {})
+    # 🚀 Traitement des Top Performers
+    # Utilisation directe de la structure top_performers existante
+    if "top_performers" in markets_data and isinstance(markets_data["top_performers"], dict):
+        # Top performers quotidiens
+        if "daily" in markets_data["top_performers"]:
+            daily = markets_data["top_performers"]["daily"]
+            
+            # Meilleurs performers quotidiens
+            if "best" in daily and isinstance(daily["best"], list) and daily["best"]:
+                lines.append("🏆 Top Hausses (variation quotidienne):")
+                for item in daily["best"][:3]:
+                    if isinstance(item, dict):
+                        name = item.get("index_name", "")
+                        change = item.get("change", "")
+                        country = item.get("country", "")
+                        if name and country:
+                            lines.append(f"• {name} ({country}): {change}")
+            
+            # Pires performers quotidiens
+            if "worst" in daily and isinstance(daily["worst"], list) and daily["worst"]:
+                lines.append("📉 Top Baisses (variation quotidienne):")
+                for item in daily["worst"][:3]:
+                    if isinstance(item, dict):
+                        name = item.get("index_name", "")
+                        change = item.get("change", "")
+                        country = item.get("country", "")
+                        if name and country:
+                            lines.append(f"• {name} ({country}): {change}")
+        
+        # Top performers YTD (year-to-date)
+        if "ytd" in markets_data["top_performers"]:
+            ytd = markets_data["top_performers"]["ytd"]
+            
+            # Meilleurs performers YTD
+            if "best" in ytd and isinstance(ytd["best"], list) and ytd["best"]:
+                lines.append("📈 Top Hausses (YTD):")
+                for item in ytd["best"][:3]:
+                    if isinstance(item, dict):
+                        name = item.get("index_name", "")
+                        ytd_change = item.get("ytdChange", "")
+                        country = item.get("country", "")
+                        if name and country:
+                            lines.append(f"• {name} ({country}): {ytd_change}")
+            
+            # Pires performers YTD
+            if "worst" in ytd and isinstance(ytd["worst"], list) and ytd["worst"]:
+                lines.append("📉 Top Baisses (YTD):")
+                for item in ytd["worst"][:3]:
+                    if isinstance(item, dict):
+                        name = item.get("index_name", "")
+                        ytd_change = item.get("ytdChange", "")
+                        country = item.get("country", "")
+                        if name and country:
+                            lines.append(f"• {name} ({country}): {ytd_change}")
     
-    # Correction: Vérifier si 'top_var' existe dans 'top' avant d'y accéder
-    if "top_var" in top and isinstance(top["top_var"], list):
-        lines.append("🏆 Top 3 Hausses (variation %):")
-        for item in top["top_var"][:3]:
-            name = item.get("name", "")
-            var = item.get("var", "")
-            country = item.get("country", "")
-            lines.append(f"• {name} ({country}) : {var}")
-    
-    # Ou utiliser top_performers s'il existe
-    if "top_performers" in markets_data:
-        if "daily" in markets_data["top_performers"] and "best" in markets_data["top_performers"]["daily"]:
+    # Ancienne structure (pour compatibilité) - uniquement si top_performers n'existe pas
+    elif "top" in markets_data and isinstance(markets_data["top"], dict):
+        top = markets_data["top"]
+        
+        # Top 3 Hausses (VAR %)
+        if "top_var" in top and isinstance(top["top_var"], list):
             lines.append("🏆 Top 3 Hausses (variation %):")
-            for item in markets_data["top_performers"]["daily"]["best"][:3]:
-                name = item.get("index_name", "")
-                change = item.get("change", "")
+            for item in top["top_var"][:3]:
+                name = item.get("name", "")
+                var = item.get("var", "")
                 country = item.get("country", "")
-                lines.append(f"• {name} ({country}) : {change}")
-    
-    # Worst performers
-    if "worst_var" in top and isinstance(top["worst_var"], list):
-        lines.append("📉 Top 3 Baisses (variation %):")
-        for item in top["worst_var"][:3]:
-            name = item.get("name", "")
-            var = item.get("var", "")
-            country = item.get("country", "")
-            lines.append(f"• {name} ({country}) : {var}")
-    
-    # Ou utiliser top_performers s'il existe
-    if "top_performers" in markets_data:
-        if "daily" in markets_data["top_performers"] and "worst" in markets_data["top_performers"]["daily"]:
+                lines.append(f"• {name} ({country}) : {var}")
+        
+        # Top 3 Baisses (VAR %)
+        if "worst_var" in top and isinstance(top["worst_var"], list):
             lines.append("📉 Top 3 Baisses (variation %):")
-            for item in markets_data["top_performers"]["daily"]["worst"][:3]:
-                name = item.get("index_name", "")
-                change = item.get("change", "")
+            for item in top["worst_var"][:3]:
+                name = item.get("name", "")
+                var = item.get("var", "")
                 country = item.get("country", "")
-                lines.append(f"• {name} ({country}) : {change}")
-    
-    # Top 3 Hausses/Baisses YTD
-    if "top_ytd" in top and isinstance(top["top_ytd"], list):
-        lines.append("📈 Top 3 Hausses (YTD):")
-        for item in top["top_ytd"][:3]:
-            name = item.get("name", "")
-            ytd = item.get("ytd", "")
-            country = item.get("country", "")
-            lines.append(f"• {name} ({country}) : {ytd}")
-    
-    # Ou utiliser top_performers s'il existe
-    if "top_performers" in markets_data and "ytd" in markets_data["top_performers"]:
-        if "best" in markets_data["top_performers"]["ytd"]:
+                lines.append(f"• {name} ({country}) : {var}")
+        
+        # Top 3 Hausses YTD
+        if "top_ytd" in top and isinstance(top["top_ytd"], list):
             lines.append("📈 Top 3 Hausses (YTD):")
-            for item in markets_data["top_performers"]["ytd"]["best"][:3]:
-                name = item.get("index_name", "")
-                ytd = item.get("ytdChange", "")
+            for item in top["top_ytd"][:3]:
+                name = item.get("name", "")
+                ytd = item.get("ytd", "")
+                country = item.get("country", "")
+                lines.append(f"• {name} ({country}) : {ytd}")
+        
+        # Top 3 Baisses YTD
+        if "worst_ytd" in top and isinstance(top["worst_ytd"], list):
+            lines.append("📉 Top 3 Baisses (YTD):")
+            for item in top["worst_ytd"][:3]:
+                name = item.get("name", "")
+                ytd = item.get("ytd", "")
                 country = item.get("country", "")
                 lines.append(f"• {name} ({country}) : {ytd}")
     
-    if "worst_ytd" in top and isinstance(top["worst_ytd"], list):
-        lines.append("📉 Top 3 Baisses (YTD):")
-        for item in top["worst_ytd"][:3]:
-            name = item.get("name", "")
-            ytd = item.get("ytd", "")
-            country = item.get("country", "")
-            lines.append(f"• {name} ({country}) : {ytd}")
-    
-    # Fallback si aucune donnée n'a été trouvée
-    if not lines:
-        lines.append("Données de marché extraites des indices disponibles:")
-        # Ajouter quelques indices de base si disponibles
+    # Fallback si aucune donnée de top performers n'est trouvée
+    if not lines or len(lines) <= 5:  # S'il n'y a que les titres de région
+        # Ajouter une synthèse basique basée sur les indices
         for region, indices in indices_data.items():
-            if isinstance(indices, list) and indices:
-                lines.append(f"📈 {region.upper()}:")
-                for idx in indices[:3]:  # Juste 3 par région pour limiter
-                    name = idx.get("index_name", "")
-                    change = idx.get("change", "")
-                    if name:
-                        lines.append(f"• {name}: {change}")
+            if not isinstance(indices, list) or not indices:
+                continue
+                
+            # Chercher les indices avec les plus grandes variations
+            try:
+                # Trier par variation
+                sorted_indices = sorted(
+                    indices,
+                    key=lambda x: float(str(x.get("change", "0")).replace('%','').replace(',', '.')),
+                    reverse=True
+                )
+                
+                # Prendre le meilleur et le pire
+                best = sorted_indices[0] if sorted_indices else None
+                worst = sorted_indices[-1] if len(sorted_indices) > 1 else None
+                
+                if best:
+                    lines.append(f"• Meilleur {region}: {best.get('index_name', '')} ({best.get('change', '')})")
+                if worst:
+                    lines.append(f"• Pire {region}: {worst.get('index_name', '')} ({worst.get('change', '')})")
+            except (ValueError, TypeError):
+                # En cas d'erreur, ignorer ce tri
+                pass
     
     return "\n".join(lines) if lines else "Aucune donnée de marché significative"
 
