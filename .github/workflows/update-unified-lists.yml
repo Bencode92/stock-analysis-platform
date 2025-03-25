@@ -48,52 +48,49 @@ jobs:
         
       - name: ✅ Verify data files exist
         run: |
-          # Vérifier si les fichiers NASDAQ existent
+          # Vérifier si le fichier lists.json existe
           if [ ! -f data/lists.json ]; then
             echo "Fichier lists.json non trouvé, création d'un fichier vide"
             echo '{
-              "indices": {
-                "a": [], "b": [], "c": [], "d": [], "e": [], "f": [], "g": [], "h": [], "i": [], "j": [],
-                "k": [], "l": [], "m": [], "n": [], "o": [], "p": [], "q": [], "r": [], "s": [], "t": [],
-                "u": [], "v": [], "w": [], "x": [], "y": [], "z": []
+              "nasdaq": {
+                "indices": {
+                  "a": [], "b": [], "c": [], "d": [], "e": [], "f": [], "g": [], "h": [], "i": [], "j": [],
+                  "k": [], "l": [], "m": [], "n": [], "o": [], "p": [], "q": [], "r": [], "s": [], "t": [],
+                  "u": [], "v": [], "w": [], "x": [], "y": [], "z": []
+                },
+                "top_performers": {
+                  "daily": {"best": [], "worst": []},
+                  "ytd": {"best": [], "worst": []}
+                },
+                "meta": {
+                  "source": "Boursorama",
+                  "description": "Actions du NASDAQ Composite (États-Unis)",
+                  "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
+                  "count": 0
+                }
               },
-              "top_performers": {
-                "daily": {"best": [], "worst": []},
-                "ytd": {"best": [], "worst": []}
-              },
-              "meta": {
-                "source": "Boursorama",
-                "description": "Actions du NASDAQ Composite (États-Unis)",
-                "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
-                "count": 0
-              }
-            }' > data/lists.json
-          fi
-          
-          # Vérifier si les fichiers STOXX existent
-          if ! ls data/stoxx_page_*.json 1>/dev/null 2>&1; then
-            echo "Aucun fichier stoxx_page_*.json trouvé, création d'un fichier de base"
-            echo '{
-              "indices": {
-                "a": [], "b": [], "c": [], "d": [], "e": [], "f": [], "g": [], "h": [], "i": [], "j": [],
-                "k": [], "l": [], "m": [], "n": [], "o": [], "p": [], "q": [], "r": [], "s": [], "t": [],
-                "u": [], "v": [], "w": [], "x": [], "y": [], "z": []
-              },
-              "top_performers": {
-                "daily": {"best": [], "worst": []},
-                "ytd": {"best": [], "worst": []}
-              },
-              "meta": {
-                "source": "Boursorama",
-                "description": "Actions du DJ STOXX 600 (Europe)",
-                "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
-                "count": 0,
-                "pagination": {
-                  "currentPage": 1,
-                  "totalPages": 1
+              "stoxx": {
+                "indices": {
+                  "a": [], "b": [], "c": [], "d": [], "e": [], "f": [], "g": [], "h": [], "i": [], "j": [],
+                  "k": [], "l": [], "m": [], "n": [], "o": [], "p": [], "q": [], "r": [], "s": [], "t": [],
+                  "u": [], "v": [], "w": [], "x": [], "y": [], "z": []
+                },
+                "top_performers": {
+                  "daily": {"best": [], "worst": []},
+                  "ytd": {"best": [], "worst": []}
+                },
+                "meta": {
+                  "source": "Boursorama",
+                  "description": "Actions du DJ STOXX 600 (Europe)",
+                  "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'",
+                  "count": 0,
+                  "pagination": {
+                    "currentPage": 1,
+                    "totalPages": 1
+                  }
                 }
               }
-            }' > data/stoxx_page_1.json
+            }' > data/lists.json
           fi
           
           # Vérifier si le fichier de résumé global existe
@@ -110,6 +107,7 @@ jobs:
                 "pages": 0,
                 "stocks": 0
               },
+              "combined_file": "lists.json",
               "global_ranking": {
                 "status": "pending",
                 "file": "global_top_performers.json"
@@ -150,13 +148,6 @@ jobs:
           git add data/lists.json
           git add data/update_summary.json 
           git add data/global_top_performers.json
-          
-          # Ajouter les fichiers STOXX individuellement
-          for file in data/stoxx_page_*.json; do
-            if [ -f "$file" ]; then
-              git add "$file"
-            fi
-          done
           
           # Vérifier s'il y a des modifications à commiter
           if git diff --staged --quiet; then
