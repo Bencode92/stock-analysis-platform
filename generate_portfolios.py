@@ -559,44 +559,88 @@ def filter_lists_data(lists_data):
     return "\n".join(assets_summary) if assets_summary else "Aucune donnée d'actifs significative"
 
 def filter_etf_data(etf_data):
-    """Filtre les données ETF pour n'inclure que les ETF les plus performants."""
+    """Filtre les ETF par catégories et critères spécifiques."""
     if not etf_data or not isinstance(etf_data, dict):
         return "Aucune donnée ETF disponible"
     
-    etf_summary = []
+    summary = []
+
+    # 1. TOP ETF 2025 → YTD > 10%
+    top_etfs = etf_data.get("top_etf_2025", [])
+    selected_top = []
+    for etf in top_etfs:
+        try:
+            ytd = float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.'))
+            if ytd > 10:
+                selected_top.append(f"{etf['name']} : {etf['ytd']}")
+        except:
+            continue
+    if selected_top:
+        summary.append("📊 TOP ETF 2025 (>10% YTD):")
+        summary.extend(f"• {etf}" for etf in selected_top)
+
+    # 2. TOP ETF OBLIGATIONS 2025 → YTD > 3%
+    bond_etfs = etf_data.get("top_etf_obligations_2025", [])
+    selected_bonds = []
+    for etf in bond_etfs:
+        try:
+            ytd = float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.'))
+            if ytd > 3:
+                selected_bonds.append(f"{etf['name']} : {etf['ytd']}")
+        except:
+            continue
+    if selected_bonds:
+        summary.append("📉 TOP ETF OBLIGATIONS 2025 (>3% YTD):")
+        summary.extend(f"• {etf}" for etf in selected_bonds)
+
+    # 3. ETF court terme → performance 1 mois > 0%
+    short_term_etfs = etf_data.get("etf_court_terme", [])
+    selected_short_term = []
+    for etf in short_term_etfs:
+        try:
+            one_month = float(str(etf.get("1m", "0")).replace('%','').replace(',', '.'))
+            if one_month > 0:
+                selected_short_term.append(f"{etf['name']} : {etf['1m']}")
+        except:
+            continue
+    if selected_short_term:
+        summary.append("📆 ETF COURT TERME (>0% en 1 mois):")
+        summary.extend(f"• {etf}" for etf in selected_short_term)
     
-    # Extraire les ETF performants
-    if "top50_etfs" in etf_data and isinstance(etf_data["top50_etfs"], list):
-        top_etfs = []
-        for etf in etf_data["top50_etfs"][:5]:  # Limiter aux 5 premiers
-            if not isinstance(etf, dict):
-                continue
+    # Fallback pour les anciennes structures de données ou si aucune catégorie n'a été trouvée
+    if not summary:
+        # Essayer la structure top50_etfs standard
+        if "top50_etfs" in etf_data and isinstance(etf_data["top50_etfs"], list):
+            top_etfs = []
+            for etf in etf_data["top50_etfs"][:5]:  # Limiter aux 5 premiers
+                if not isinstance(etf, dict):
+                    continue
+                    
+                name = etf.get("name", "")
+                ytd = etf.get("ytd", "")
                 
-            name = etf.get("name", "")
-            ytd = etf.get("ytd", "")
+                if name and ytd:
+                    top_etfs.append(f"{name}: {ytd}")
             
-            if name and ytd:
-                top_etfs.append(f"{name}: {ytd}")
+            if top_etfs:
+                summary.append("ETF performants: " + ", ".join(top_etfs))
         
-        if top_etfs:
-            etf_summary.append("ETF performants: " + ", ".join(top_etfs))
+        # Essayer d'utiliser top_performers si disponible
+        if "top_performers" in etf_data and isinstance(etf_data["top_performers"], dict):
+            if "ytd" in etf_data["top_performers"] and isinstance(etf_data["top_performers"]["ytd"], dict):
+                best_ytd = etf_data["top_performers"]["ytd"].get("best", [])
+                if isinstance(best_ytd, list) and best_ytd:
+                    best_names = []
+                    for etf in best_ytd[:3]:
+                        if isinstance(etf, dict):
+                            name = etf.get("name", "")
+                            if name:
+                                best_names.append(name)
+                    
+                    if best_names:
+                        summary.append("Meilleurs ETF YTD: " + ", ".join(best_names))
     
-    # Ajouter les top performers si disponibles
-    if "top_performers" in etf_data and isinstance(etf_data["top_performers"], dict):
-        if "ytd" in etf_data["top_performers"] and isinstance(etf_data["top_performers"]["ytd"], dict):
-            best_ytd = etf_data["top_performers"]["ytd"].get("best", [])
-            if isinstance(best_ytd, list) and best_ytd:
-                best_names = []
-                for etf in best_ytd[:3]:
-                    if isinstance(etf, dict):
-                        name = etf.get("name", "")
-                        if name:
-                            best_names.append(name)
-                
-                if best_names:
-                    etf_summary.append("Meilleurs ETF YTD: " + ", ".join(best_names))
-    
-    return "\n".join(etf_summary) if etf_summary else "Aucune donnée ETF significative"
+    return "\n".join(summary) if summary else "Aucune donnée ETF significative"
 
 def save_prompt_to_debug_file(prompt, timestamp=None):
     """Sauvegarde le prompt complet dans un fichier de débogage."""
