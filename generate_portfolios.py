@@ -361,8 +361,8 @@ def filter_markets_data(markets_data):
     # 🚀 Top Performers
     top = markets_data.get("top", {})
     
-    # Top 3 Hausses (VAR %)
-    if isinstance(top.get("top_var", []), list):
+    # Correction: Vérifier si 'top_var' existe dans 'top' avant d'y accéder
+    if "top_var" in top and isinstance(top["top_var"], list):
         lines.append("🏆 Top 3 Hausses (variation %):")
         for item in top["top_var"][:3]:
             name = item.get("name", "")
@@ -370,8 +370,18 @@ def filter_markets_data(markets_data):
             country = item.get("country", "")
             lines.append(f"• {name} ({country}) : {var}")
     
-    # Top 3 Baisses (VAR %)
-    if isinstance(top.get("worst_var", []), list):
+    # Ou utiliser top_performers s'il existe
+    if "top_performers" in markets_data:
+        if "daily" in markets_data["top_performers"] and "best" in markets_data["top_performers"]["daily"]:
+            lines.append("🏆 Top 3 Hausses (variation %):")
+            for item in markets_data["top_performers"]["daily"]["best"][:3]:
+                name = item.get("index_name", "")
+                change = item.get("change", "")
+                country = item.get("country", "")
+                lines.append(f"• {name} ({country}) : {change}")
+    
+    # Worst performers
+    if "worst_var" in top and isinstance(top["worst_var"], list):
         lines.append("📉 Top 3 Baisses (variation %):")
         for item in top["worst_var"][:3]:
             name = item.get("name", "")
@@ -379,8 +389,18 @@ def filter_markets_data(markets_data):
             country = item.get("country", "")
             lines.append(f"• {name} ({country}) : {var}")
     
+    # Ou utiliser top_performers s'il existe
+    if "top_performers" in markets_data:
+        if "daily" in markets_data["top_performers"] and "worst" in markets_data["top_performers"]["daily"]:
+            lines.append("📉 Top 3 Baisses (variation %):")
+            for item in markets_data["top_performers"]["daily"]["worst"][:3]:
+                name = item.get("index_name", "")
+                change = item.get("change", "")
+                country = item.get("country", "")
+                lines.append(f"• {name} ({country}) : {change}")
+    
     # Top 3 Hausses/Baisses YTD
-    if isinstance(top.get("top_ytd", []), list):
+    if "top_ytd" in top and isinstance(top["top_ytd"], list):
         lines.append("📈 Top 3 Hausses (YTD):")
         for item in top["top_ytd"][:3]:
             name = item.get("name", "")
@@ -388,13 +408,36 @@ def filter_markets_data(markets_data):
             country = item.get("country", "")
             lines.append(f"• {name} ({country}) : {ytd}")
     
-    if isinstance(top.get("worst_ytd", []), list):
+    # Ou utiliser top_performers s'il existe
+    if "top_performers" in markets_data and "ytd" in markets_data["top_performers"]:
+        if "best" in markets_data["top_performers"]["ytd"]:
+            lines.append("📈 Top 3 Hausses (YTD):")
+            for item in markets_data["top_performers"]["ytd"]["best"][:3]:
+                name = item.get("index_name", "")
+                ytd = item.get("ytdChange", "")
+                country = item.get("country", "")
+                lines.append(f"• {name} ({country}) : {ytd}")
+    
+    if "worst_ytd" in top and isinstance(top["worst_ytd"], list):
         lines.append("📉 Top 3 Baisses (YTD):")
         for item in top["worst_ytd"][:3]:
             name = item.get("name", "")
             ytd = item.get("ytd", "")
             country = item.get("country", "")
             lines.append(f"• {name} ({country}) : {ytd}")
+    
+    # Fallback si aucune donnée n'a été trouvée
+    if not lines:
+        lines.append("Données de marché extraites des indices disponibles:")
+        # Ajouter quelques indices de base si disponibles
+        for region, indices in indices_data.items():
+            if isinstance(indices, list) and indices:
+                lines.append(f"📈 {region.upper()}:")
+                for idx in indices[:3]:  # Juste 3 par région pour limiter
+                    name = idx.get("index_name", "")
+                    change = idx.get("change", "")
+                    if name:
+                        lines.append(f"• {name}: {change}")
     
     return "\n".join(lines) if lines else "Aucune donnée de marché significative"
 
