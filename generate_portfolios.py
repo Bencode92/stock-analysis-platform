@@ -744,6 +744,252 @@ if (window.recordDebugFile) {{
     
     return debug_file, html_file
 
+# Listes d'obligations et ETF spécifiques pour éviter les noms génériques
+SPECIFIC_OBLIGATIONS = {
+    "Obligations souveraines US": [
+        "US Treasury 2Y", "US Treasury 5Y", "US Treasury 10Y", "US Treasury 30Y", 
+        "US TIPS 5Y", "US TIPS 10Y"
+    ],
+    "Obligations souveraines EU": [
+        "German Bunds 2Y", "German Bunds 5Y", "German Bunds 10Y",
+        "French OAT 10Y", "Italian BTP 10Y", "Spanish Bonos 10Y"
+    ],
+    "Obligations d'entreprises euro": [
+        "iShares Euro Corporate Bond", "SPDR Euro Corporate Bond", 
+        "Lyxor Euro Corporate Bond", "Amundi Euro Corporate Bond"
+    ],
+    "Obligations d'entreprises US": [
+        "Vanguard Short-Term Corporate Bond", "iShares Corporate Bond", 
+        "SPDR Corporate Bond", "BlackRock Corporate Bond"
+    ],
+    "ETF Obligataire Speculatif": [
+        "iShares High Yield Corporate Bond", "SPDR High Yield Bond ETF",
+        "Vanguard High Yield Corporate", "PIMCO High Yield Corporate Bond"
+    ]
+}
+
+def replace_generic_names(portfolios):
+    """Remplace les noms génériques par des noms spécifiques d'actifs."""
+    for portfolio_type, portfolio in portfolios.items():
+        for category, assets in portfolio.items():
+            if category == "Commentaire":
+                continue
+                
+            # Créer une copie du dictionnaire d'actifs pour éviter de modifier pendant l'itération
+            assets_copy = assets.copy()
+            
+            for asset_name, allocation in assets_copy.items():
+                # Vérifier si le nom est générique (correspond à une clé dans SPECIFIC_OBLIGATIONS)
+                if asset_name in SPECIFIC_OBLIGATIONS:
+                    # Supprimer l'entrée générique
+                    del assets[asset_name]
+                    
+                    # Diviser l'allocation entre les actifs spécifiques
+                    specific_assets = SPECIFIC_OBLIGATIONS[asset_name]
+                    num_specific = len(specific_assets)
+                    
+                    if num_specific > 0:
+                        # Convertir l'allocation en nombre
+                        allocation_value = float(allocation.replace('%', '').strip())
+                        
+                        # Répartir entre les actifs spécifiques (garder au moins 2%)
+                        for i, specific_asset in enumerate(specific_assets):
+                            # Pour le dernier actif, prendre le reste pour éviter les erreurs d'arrondi
+                            if i == num_specific - 1:
+                                specific_allocation = allocation_value - (num_specific - 1) * 2
+                            else:
+                                specific_allocation = 2
+                                allocation_value -= 2
+                            
+                            # Ajouter seulement si l'allocation est positive
+                            if specific_allocation > 0:
+                                assets[specific_asset] = f"{specific_allocation:.1f}%"
+    
+    return portfolios
+
+def check_portfolio_constraints(portfolios):
+    """Vérifie que les portefeuilles générés respectent les contraintes."""
+    is_valid = True
+    issues = []
+    
+    for portfolio_type, portfolio in portfolios.items():
+        # Compter le nombre total d'actifs (hors commentaire)
+        total_assets = 0
+        for category, assets in portfolio.items():
+            if category != "Commentaire":
+                total_assets += len(assets)
+        
+        # Vérifier que le nombre d'actifs est entre 12 et 15
+        if total_assets < 12 or total_assets > 15:
+            is_valid = False
+            issues.append(f"Portfolio {portfolio_type} a {total_assets} actifs (doit être entre 12-15)")
+        
+        # Vérifier qu'il y a au moins 2 catégories d'actifs
+        categories = [cat for cat in portfolio.keys() if cat != "Commentaire"]
+        if len(categories) < 2:
+            is_valid = False
+            issues.append(f"Portfolio {portfolio_type} a seulement {len(categories)} catégories (minimum 2)")
+        
+        # Vérifier que la somme des allocations est égale à 100%
+        total_allocation = 0
+        for category, assets in portfolio.items():
+            if category != "Commentaire":
+                for allocation in assets.values():
+                    try:
+                        total_allocation += float(allocation.replace('%', '').strip())
+                    except ValueError:
+                        is_valid = False
+                        issues.append(f"Portfolio {portfolio_type} contient une allocation non numérique: {allocation}")
+        
+        # Tolérance pour les erreurs d'arrondi
+        if total_allocation < 99.5 or total_allocation > 100.5:
+            is_valid = False
+            issues.append(f"Portfolio {portfolio_type} a une allocation totale de {total_allocation}% (doit être 100%)")
+    
+    return is_valid, issues
+
+def adjust_portfolios(portfolios):
+    """Ajuste les portefeuilles pour respecter les contraintes."""
+    adjusted_portfolios = {}
+    
+    # Définir des actifs supplémentaires par catégorie pour compléter si nécessaire
+    additional_assets = {
+        "Actions": [
+            "Apple", "Microsoft", "Google", "Amazon", "Meta", "NVIDIA", 
+            "Tesla", "Johnson & Johnson", "Procter & Gamble", "Walmart",
+            "Nike", "Coca-Cola", "PepsiCo", "McDonald's", "Starbucks"
+        ],
+        "ETF": [
+            "Vanguard S&P 500", "iShares MSCI World", "Invesco QQQ", 
+            "SPDR Gold Shares", "iShares MSCI Emerging Markets",
+            "Vanguard Total Bond Market", "Vanguard FTSE Developed Markets",
+            "Vanguard Real Estate ETF", "iShares Russell 2000"
+        ],
+        "Obligations": [
+            "US Treasury 1Y", "US Treasury 3Y", "German Bunds 2Y", 
+            "French OAT 5Y", "UK Gilt 10Y", "Japanese JGB 5Y",
+            "Swiss Government Bond 10Y", "Canadian Government Bond 5Y"
+        ],
+        "Crypto": [
+            "Bitcoin", "Ethereum", "Solana", "Cardano", "Polkadot", 
+            "Avalanche", "Polygon", "Chainlink"
+        ]
+    }
+    
+    for portfolio_type, portfolio in portfolios.items():
+        # Créer une copie pour ne pas modifier l'original
+        adjusted_portfolio = {key: (value.copy() if key != "Commentaire" else value) 
+                             for key, value in portfolio.items()}
+        
+        # Compter le nombre total d'actifs actuels
+        total_assets = sum(len(assets) for category, assets in adjusted_portfolio.items() 
+                          if category != "Commentaire")
+        
+        # Si moins de 12 actifs, ajouter des actifs supplémentaires
+        if total_assets < 12:
+            # Déterminer combien d'actifs à ajouter
+            to_add = 12 - total_assets
+            
+            # Déterminer quelles catégories utiliser pour l'ajout
+            categories_for_addition = []
+            
+            if portfolio_type == "Agressif":
+                categories_for_addition = ["Actions", "ETF", "Crypto"]
+            elif portfolio_type == "Modéré":
+                categories_for_addition = ["Actions", "ETF", "Obligations"]
+            else:  # Stable
+                categories_for_addition = ["ETF", "Obligations", "Actions"]
+            
+            # Ajouter des actifs
+            added = 0
+            for category in categories_for_addition:
+                if added >= to_add:
+                    break
+                
+                # S'assurer que la catégorie existe dans le portefeuille
+                if category not in adjusted_portfolio:
+                    adjusted_portfolio[category] = {}
+                
+                # Déterminer combien d'actifs ajouter dans cette catégorie
+                category_to_add = min(to_add - added, 3)  # Max 3 par catégorie
+                
+                # Ajouter les actifs
+                for i in range(category_to_add):
+                    # Trouver un actif qui n'est pas déjà dans le portefeuille
+                    for asset in additional_assets[category]:
+                        if asset not in adjusted_portfolio[category]:
+                            # Utiliser 2% d'allocation pour les actifs ajoutés
+                            adjusted_portfolio[category][asset] = "2.0%"
+                            added += 1
+                            break
+            
+            # Ajuster les allocations pour que le total soit 100%
+            total_allocation = sum(float(allocation.replace('%', '').strip()) 
+                                  for cat, assets in adjusted_portfolio.items() 
+                                  if cat != "Commentaire" 
+                                  for allocation in assets.values())
+            
+            # Si nécessaire, ajuster la plus grande allocation pour obtenir 100%
+            if total_allocation != 100:
+                # Trouver la plus grande allocation
+                max_allocation = 0
+                max_cat = None
+                max_asset = None
+                
+                for cat, assets in adjusted_portfolio.items():
+                    if cat != "Commentaire":
+                        for asset, allocation in assets.items():
+                            alloc_value = float(allocation.replace('%', '').strip())
+                            if alloc_value > max_allocation:
+                                max_allocation = alloc_value
+                                max_cat = cat
+                                max_asset = asset
+                
+                # Ajuster l'allocation
+                if max_cat and max_asset:
+                    adjusted_value = max_allocation + (100 - total_allocation)
+                    adjusted_portfolio[max_cat][max_asset] = f"{adjusted_value:.1f}%"
+        
+        # Si plus de 15 actifs, supprimer les plus petites allocations
+        elif total_assets > 15:
+            # Créer une liste de tous les actifs avec leurs allocations
+            all_assets = []
+            for category, assets in adjusted_portfolio.items():
+                if category != "Commentaire":
+                    for asset, allocation in assets.items():
+                        alloc_value = float(allocation.replace('%', '').strip())
+                        all_assets.append((category, asset, alloc_value))
+            
+            # Trier par allocation croissante
+            all_assets.sort(key=lambda x: x[2])
+            
+            # Supprimer les actifs avec les plus petites allocations jusqu'à atteindre 15 actifs
+            to_remove = total_assets - 15
+            removed_allocation = 0
+            
+            for i in range(to_remove):
+                cat, asset, alloc = all_assets[i]
+                removed_allocation += alloc
+                del adjusted_portfolio[cat][asset]
+                
+                # Supprimer également la catégorie si elle est vide
+                if not adjusted_portfolio[cat]:
+                    del adjusted_portfolio[cat]
+            
+            # Redistribuer l'allocation supprimée
+            if removed_allocation > 0:
+                # Trouver l'actif avec la plus grande allocation
+                if all_assets and len(all_assets) > to_remove:
+                    max_cat, max_asset, max_alloc = all_assets[-1]
+                    
+                    # Vérifier que l'actif existe toujours dans le portefeuille
+                    if max_cat in adjusted_portfolio and max_asset in adjusted_portfolio[max_cat]:
+                        adjusted_portfolio[max_cat][max_asset] = f"{max_alloc + removed_allocation:.1f}%"
+        
+        adjusted_portfolios[portfolio_type] = adjusted_portfolio
+    
+    return adjusted_portfolios
+
 def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data):
     """Génère trois portefeuilles optimisés en combinant les données fournies et le contexte actuel du marché."""
     api_key = os.environ.get('API_CHAT')
@@ -790,13 +1036,22 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     # Horodatage pour les fichiers de debug
     debug_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     
+    # Exemples précis d'obligations et d'ETF à inclure
+    obligations_examples = """
+Liste d'exemples d'obligations à utiliser :
+- Pour Obligations Souveraines US: US Treasury 2Y, US Treasury 5Y, US Treasury 10Y, US Treasury 30Y
+- Pour Obligations Souveraines EU: German Bunds 2Y, German Bunds 5Y, German Bunds 10Y, French OAT 10Y
+- Pour Obligations d'Entreprises: iShares Corporate Bond ETF, Vanguard Corporate Bond ETF, PIMCO Investment Grade
+- Pour Obligations Spéculatives: iShares High Yield Corporate Bond, SPDR Bloomberg High Yield Bond ETF
+"""
+    
     for attempt in range(max_retries):
         try:
             # Construire un prompt beaucoup plus court avec les données filtrées
             prompt = f"""
-Tu es un expert en gestion de portefeuille, avec une expertise en allocation stratégique et tactique. Tu vises à maximiser le rendement ajusté au risque en tenant compte de l'environnement macroéconomique actuel.
+Tu es un expert en gestion de portefeuille. Tu dois IMPÉRATIVEMENT créer TROIS portefeuilles contenant EXACTEMENT entre 12 et 15 actifs CHACUN.
 
-Utilise ces données filtrées et synthétisées pour générer des portefeuilles optimisés :
+Utilise ces données filtrées pour générer les portefeuilles :
 
 📰 Actualités financières récentes: 
 {filtered_news}
@@ -813,32 +1068,32 @@ Utilise ces données filtrées et synthétisées pour générer des portefeuille
 📊 Analyse des ETF: 
 {filtered_etfs}
 
-📅 Contexte : Ces portefeuilles sont optimisés pour le mois de {current_month} en tenant compte des évolutions à court et moyen terme.
+📅 Contexte : Ces portefeuilles sont optimisés pour le mois de {current_month}.
 
-🎯 Ton objectif : Générer trois portefeuilles optimisés :
-1️⃣ Agressif : OBLIGATOIREMENT entre 12 et 15 actifs (actions de croissance, crypto, ETF spéculatifs).  
-2️⃣ Modéré : OBLIGATOIREMENT entre 12 et 15 actifs (blue chips, ETF diversifiés, obligations d'entreprises).  
-3️⃣ Stable : OBLIGATOIREMENT entre 12 et 15 actifs (obligations souveraines, valeurs refuges, ETF stables).
+🎯 INSTRUCTIONS TRÈS PRÉCISES (À RESPECTER ABSOLUMENT) :
 
-Pour chacun des portefeuilles, ajoute un paragraphe **Commentaire** qui justifie les choix à partir des données ci-dessus.
+1. Tu dois générer trois portefeuilles :
+   a) Agressif : EXACTEMENT entre 12 et 15 actifs au total
+   b) Modéré : EXACTEMENT entre 12 et 15 actifs au total  
+   c) Stable : EXACTEMENT entre 12 et 15 actifs au total
 
-Base tes explications sur :
-- Les **actualités macroéconomiques importantes** (impact fort),
-- Les **tendances de marché** (indices, top hausses/baisses),
-- Les **secteurs en forte croissance** ou en recul (YTD),
-- Les **ETF les plus performants** (YTD ou 1m),
-- Les **actifs très performants (>20% YTD)** depuis les listes.
+2. OBLIGATION de nommer précisément les actifs :
+   - Utilise des noms d'obligations très précis (comme "US Treasury 10Y" ou "German Bunds 5Y") 
+   - N'utilise JAMAIS de termes génériques comme "ETF Obligataire Spéculatif" ou "Obligations Souveraines"
+   - Tous les noms doivent être précis et spécifiques
 
-🧠 Explique pourquoi tu as sélectionné certains actifs ou classes d'actifs, et **fais le lien direct avec les données fournies**.
+{obligations_examples}
 
-📊 Format JSON uniquement:
+3. Pour chaque portefeuille, ajoute un paragraphe "Commentaire" qui justifie les choix.
+
+📊 Format JSON requis:
 {{{{
   "Agressif": {{{{
     "Commentaire": "Texte justifiant les choix basé sur les tendances actuelles",
     "Actions": {{{{
-      "Nom": "X%",
-      ...,
-      "etc": "X%"
+      "Nom Précis de l'Action 1": "X%",
+      "Nom Précis de l'Action 2": "Y%",
+      ...etc (jusqu'à avoir entre 12-15 actifs au total)
     }}}},
     "Crypto": {{{{ ... }}}},
     "ETF": {{{{ ... }}}},
@@ -848,13 +1103,12 @@ Base tes explications sur :
   "Stable": {{{{ ... }}}}
 }}}}
 
-✅ Contraintes IMPÉRATIVES:
-- Chaque portefeuille DOIT contenir EXACTEMENT entre 12 et 15 actifs au total, pas moins
-- Somme des allocations DOIT être égale à 100%
+⚠️ CRITÈRES DE VALIDATION (ABSOLUMENT REQUIS) :
+- Chaque portefeuille DOIT contenir EXACTEMENT entre 12 et 15 actifs au total, PAS MOINS, PAS PLUS
+- La somme des allocations de chaque portefeuille DOIT être EXACTEMENT 100%
 - Minimum 2 classes d'actifs par portefeuille
-- Surpondérer les secteurs en croissance dans Agressif/Modéré
-- Renforcer les actifs refuges dans Stable en cas d'incertitude
-- Ne réponds qu'avec le JSON, sans commentaire ni explication.
+- Chaque actif doit avoir un nom SPÉCIFIQUE et PRÉCIS, PAS de noms génériques
+- Ne réponds qu'avec le JSON, sans commentaire ni explication supplémentaire
 """
             
             # ===== NOUVELLE FONCTIONNALITÉ: SAUVEGARDER LE PROMPT POUR DEBUG =====
@@ -895,7 +1149,38 @@ Base tes explications sur :
             
             # Vérifier que le contenu est bien du JSON valide
             portfolios = json.loads(content)
-            print("✅ Portefeuilles générés avec succès")
+            
+            # Remplacer les noms génériques par des noms spécifiques
+            portfolios = replace_generic_names(portfolios)
+            
+            # Vérifier que les contraintes sont respectées
+            is_valid, issues = check_portfolio_constraints(portfolios)
+            
+            if not is_valid:
+                print(f"⚠️ Le portefeuille généré ne respecte pas les contraintes:")
+                for issue in issues:
+                    print(f"  - {issue}")
+                
+                print("🛠️ Ajustement automatique du portefeuille...")
+                portfolios = adjust_portfolios(portfolios)
+                
+                # Vérifier à nouveau
+                is_valid, issues = check_portfolio_constraints(portfolios)
+                if not is_valid:
+                    print(f"⚠️ Le portefeuille ajusté ne respecte toujours pas les contraintes:")
+                    for issue in issues:
+                        print(f"  - {issue}")
+                else:
+                    print("✅ Portefeuille ajusté avec succès!")
+            
+            print("✅ Portefeuilles générés")
+            
+            # Afficher un résumé des actifs par portefeuille
+            for portfolio_type, portfolio in portfolios.items():
+                asset_count = sum(len(assets) for cat, assets in portfolio.items() if cat != "Commentaire")
+                categories = [cat for cat in portfolio.keys() if cat != "Commentaire"]
+                print(f"  📊 {portfolio_type}: {asset_count} actifs, {len(categories)} catégories")
+            
             return portfolios
         
         except Exception as e:
@@ -913,67 +1198,75 @@ Base tes explications sur :
                     "Agressif": {
                         "Commentaire": "Ce portefeuille vise une croissance maximale en privilégiant des actifs à forte volatilité et à haut potentiel. Idéal pour les investisseurs avec une tolérance élevée au risque et un horizon de placement long.",
                         "Actions": {
-                            "Apple": "10%", 
-                            "Tesla": "8%", 
-                            "Nvidia": "10%",
-                            "Amazon": "7%",
-                            "Microsoft": "7%",
-                            "AMD": "6%",
-                            "Palantir": "5%",
-                            "Shopify": "5%"
+                            "Apple": "8%", 
+                            "Tesla": "7%", 
+                            "Nvidia": "8%",
+                            "Amazon": "6%",
+                            "Microsoft": "6%",
+                            "AMD": "5%",
+                            "Palantir": "4%",
+                            "Shopify": "4%"
                         },
                         "Crypto": {
-                            "Bitcoin": "10%", 
-                            "Ethereum": "8%",
+                            "Bitcoin": "8%", 
+                            "Ethereum": "6%",
                             "Solana": "4%"
                         },
                         "ETF": {
-                            "ARK Innovation ETF": "10%", 
-                            "SPDR S&P 500 ETF": "10%"
+                            "ARK Innovation ETF": "8%", 
+                            "SPDR S&P 500 ETF": "8%",
+                            "Vanguard Information Technology ETF": "4%",
+                            "iShares Semiconductor ETF": "4%"
+                        },
+                        "Obligations": {
+                            "iShares High Yield Corporate Bond": "10%"
                         }
                     },
                     "Modéré": {
                         "Commentaire": "Ce portefeuille équilibré combine croissance et protection du capital. Il s'adresse aux investisseurs qui recherchent une appréciation de leur capital à moyen terme tout en limitant la volatilité.",
                         "Actions": {
-                            "Microsoft": "10%", 
-                            "Alphabet": "8%", 
-                            "Johnson & Johnson": "6%",
-                            "Procter & Gamble": "6%",
-                            "Coca-Cola": "5%",
-                            "Visa": "5%"
+                            "Microsoft": "8%", 
+                            "Alphabet": "7%", 
+                            "Johnson & Johnson": "5%",
+                            "Procter & Gamble": "5%",
+                            "Coca-Cola": "4%",
+                            "Visa": "4%"
                         },
                         "Obligations": {
-                            "US Treasury 10Y": "10%", 
-                            "Corporate Bonds AAA": "10%",
-                            "Municipal Bonds": "5%",
-                            "TIPS": "5%"
+                            "US Treasury 10Y": "8%", 
+                            "US Treasury 5Y": "7%",
+                            "German Bunds 10Y": "6%",
+                            "iShares Corporate Bond ETF": "10%"
                         },
                         "ETF": {
-                            "Vanguard Total Stock Market ETF": "10%", 
-                            "iShares Core MSCI EAFE ETF": "10%",
+                            "Vanguard Total Stock Market ETF": "8%", 
+                            "iShares Core MSCI EAFE ETF": "8%",
                             "Vanguard Real Estate ETF": "5%",
-                            "SPDR Gold Shares": "5%"
+                            "SPDR Gold Shares": "5%",
+                            "iShares Core US Aggregate Bond ETF": "10%"
                         }
                     },
                     "Stable": {
                         "Commentaire": "Ce portefeuille défensif privilégie la préservation du capital et les revenus réguliers. Il convient aux investisseurs prudents ou proches de la retraite, cherchant à minimiser les fluctuations de leur portefeuille.",
                         "Actions": {
-                            "Procter & Gamble": "5%", 
-                            "Coca-Cola": "5%", 
-                            "McDonald's": "4%",
-                            "Walmart": "4%",
-                            "Johnson & Johnson": "4%"
+                            "Procter & Gamble": "4%", 
+                            "Coca-Cola": "4%", 
+                            "McDonald's": "3%",
+                            "Walmart": "3%",
+                            "Johnson & Johnson": "3%"
                         },
                         "Obligations": {
-                            "US Treasury 30Y": "15%", 
-                            "Municipal Bonds AAA": "15%",
+                            "US Treasury 30Y": "12%", 
+                            "US Treasury 10Y": "12%",
                             "German Bunds 10Y": "10%",
-                            "Swiss Government Bonds": "8%"
+                            "French OAT 10Y": "8%",
+                            "Swiss Government Bonds 10Y": "8%"
                         },
                         "ETF": {
                             "Vanguard High Dividend Yield ETF": "10%", 
-                            "SPDR Gold Shares": "10%",
-                            "iShares 20+ Year Treasury Bond ETF": "10%"
+                            "SPDR Gold Shares": "8%",
+                            "iShares 20+ Year Treasury Bond ETF": "8%",
+                            "Vanguard Short-Term Bond ETF": "7%"
                         }
                     }
                 }
