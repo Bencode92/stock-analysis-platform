@@ -46,6 +46,10 @@ jobs:
         run: python scripts/update_unified_lists.py
         continue-on-error: true  # Ne pas faire échouer le workflow si le script échoue
         
+      - name: 🧹 Cleanup old files
+        run: python scripts/cleanup_old_files.py
+        continue-on-error: true  # Ne pas faire échouer le workflow en cas d'erreur de nettoyage
+        
       - name: ✅ Verify data files exist
         run: |
           # Vérifier si le fichier lists.json existe
@@ -148,6 +152,13 @@ jobs:
           git add data/lists.json
           git add data/update_summary.json 
           git add data/global_top_performers.json
+          
+          # Supprimer les fichiers stoxx_page_*.json du repo s'ils existent
+          for file in data/stoxx_page_*.json; do
+            if [ -f "$file" ]; then
+              git rm "$file" || true
+            fi
+          done
           
           # Vérifier s'il y a des modifications à commiter
           if git diff --staged --quiet; then
