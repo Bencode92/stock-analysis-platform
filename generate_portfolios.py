@@ -515,6 +515,49 @@ def filter_sectors_data(sectors_data):
     
     return "\n".join(summary) if summary else "Aucune donnée sectorielle significative"
 
+def filter_lists_data(lists_data):
+    """Extrait les actifs avec une variation YTD > 20% depuis lists.json."""
+    if not lists_data or not isinstance(lists_data, dict):
+        return "Aucune liste d'actifs disponible"
+    
+    assets_summary = []
+    high_performers = []
+    
+    for list_name, list_data in lists_data.items():
+        if not isinstance(list_data, dict):
+            continue
+            
+        indices = list_data.get("indices", {})
+        for letter, assets in indices.items():
+            if not isinstance(assets, list):
+                continue
+                
+            for asset in assets:
+                if not isinstance(asset, dict):
+                    continue
+                    
+                name = asset.get("name", "")
+                ytd = asset.get("ytd", "")
+                
+                # Nettoyage et conversion YTD
+                try:
+                    ytd_value = float(re.sub(r"[^\d\.-]", "", str(ytd).replace(",", ".")))
+                except (ValueError, AttributeError):
+                    continue
+                
+                if ytd_value >= 20:
+                    high_performers.append((name, ytd_value))
+    
+    # Trier du plus fort au plus faible YTD
+    high_performers.sort(key=lambda x: x[1], reverse=True)
+    
+    if high_performers:
+        assets_summary.append("📋 Actifs avec YTD > 20% :")
+        for name, ytd_value in high_performers[:10]:  # top 10
+            assets_summary.append(f"• {name}: {ytd_value:.2f}%")
+    
+    return "\n".join(assets_summary) if assets_summary else "Aucune donnée d'actifs significative"
+
 def filter_etf_data(etf_data):
     """Filtre les données ETF pour n'inclure que les ETF les plus performants."""
     if not etf_data or not isinstance(etf_data, dict):
@@ -554,49 +597,6 @@ def filter_etf_data(etf_data):
                     etf_summary.append("Meilleurs ETF YTD: " + ", ".join(best_names))
     
     return "\n".join(etf_summary) if etf_summary else "Aucune donnée ETF significative"
-
-def filter_lists_data(lists_data):
-    """Extrait les actifs les plus pertinents des listes de surveillance."""
-    if not lists_data or not isinstance(lists_data, dict):
-        return "Aucune liste d'actifs disponible"
-    
-    assets_summary = []
-    
-    # Parcourir les différentes listes
-    for list_name, list_data in lists_data.items():
-        if not isinstance(list_data, dict):
-            continue
-            
-        trending_up = []
-        trending_down = []
-        
-        # Rechercher dans les indices
-        if "indices" in list_data and isinstance(list_data["indices"], dict):
-            for letter, assets in list_data["indices"].items():
-                if not isinstance(assets, list):
-                    continue
-                    
-                for asset in assets:
-                    if not isinstance(asset, dict):
-                        continue
-                        
-                    name = asset.get("name", "")
-                    change = asset.get("change", "")
-                    trend = asset.get("trend", "")
-                    
-                    if name and change:
-                        if trend == "up" and not change.startswith("-"):
-                            trending_up.append(f"{name}: {change}")
-                        elif trend == "down" and change.startswith("-"):
-                            trending_down.append(f"{name}: {change}")
-        
-        # Limiter aux 5 meilleurs et 5 pires
-        if trending_up:
-            assets_summary.append(f"Actifs {list_name} en hausse: " + ", ".join(trending_up[:5]))
-        if trending_down:
-            assets_summary.append(f"Actifs {list_name} en baisse: " + ", ".join(trending_down[:5]))
-    
-    return "\n".join(assets_summary) if assets_summary else "Aucune donnée d'actifs significative"
 
 def save_prompt_to_debug_file(prompt, timestamp=None):
     """Sauvegarde le prompt complet dans un fichier de débogage."""
