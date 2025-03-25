@@ -25,10 +25,16 @@ class PortfolioHistoryViewer {
             console.log('Type de portefeuille actif pour l\'historique:', this.activePortfolioType);
             
             // Charger l'index des portefeuilles historiques
+            console.log('Chargement de l\'index des portefeuilles historiques...');
             const response = await fetch('data/portfolio_history/index.json');
-            if (!response.ok) throw new Error('Impossible de charger l\'index historique');
+            
+            if (!response.ok) {
+                console.error('Erreur HTTP lors du chargement de l\'index:', response.status);
+                throw new Error(`Impossible de charger l'index historique: ${response.status}`);
+            }
             
             this.historyData = await response.json();
+            console.log(`${this.historyData.length} entrées historiques trouvées`);
             
             // Trier par date (du plus récent au plus ancien)
             this.historyData.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -37,13 +43,17 @@ class PortfolioHistoryViewer {
             const currentResponse = await fetch('portefeuilles.json');
             if (currentResponse.ok) {
                 this.currentPortfolio = await currentResponse.json();
+                console.log('Portefeuille actuel chargé avec succès');
+            } else {
+                console.error('Erreur lors du chargement du portefeuille actuel:', currentResponse.status);
+                throw new Error('Impossible de charger le portefeuille actuel');
             }
             
             // Rendre l'interface
             this.renderHistoryInterface();
         } catch (error) {
             console.error('Erreur lors du chargement de l\'historique:', error);
-            this.showError('Impossible de charger l\'historique des portefeuilles.');
+            this.showError(`Impossible de charger l'historique des portefeuilles: ${error.message}`);
         }
         
         this.showLoading(false);
@@ -150,15 +160,24 @@ class PortfolioHistoryViewer {
             const historyItem = this.historyData[this.selectedHistoryIndex];
             console.log('Chargement du fichier historique:', historyItem.file);
             
+            // Mettre à jour le type de portefeuille actif (au cas où il aurait changé)
+            this.activePortfolioType = this.getActivePortfolioType();
+            
             const response = await fetch(`data/portfolio_history/${historyItem.file}`);
             
             if (!response.ok) {
                 console.error('Erreur HTTP:', response.status);
-                throw new Error(`Impossible de charger ${historyItem.file}`);
+                throw new Error(`Impossible de charger ${historyItem.file} (Status: ${response.status})`);
             }
             
             const historyData = await response.json();
-            console.log('Données historiques chargées:', historyData);
+            console.log('Structure des données historiques:', Object.keys(historyData));
+            
+            // Vérifier la structure correcte du fichier
+            if (!historyData.portfolios) {
+                console.error('Structure JSON incorrecte - pas de clé "portfolios"');
+                throw new Error('Format de fichier historique incorrect');
+            }
             
             const historicalPortfolio = historyData.portfolios;
             
@@ -281,6 +300,8 @@ class PortfolioHistoryViewer {
         
         if (!currentTypeKey || !historicalTypeKey) {
             console.error('Type de portefeuille non trouvé:', activeType);
+            console.log('Clés disponibles dans portefeuille actuel:', Object.keys(current));
+            console.log('Clés disponibles dans portefeuille historique:', Object.keys(historical));
             return;
         }
         
