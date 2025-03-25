@@ -513,20 +513,32 @@ def update_history_index(history_file, portfolio_data):
         print("⚠️ Avertissement: Erreur lors de la mise à jour de l'index: {}".format(str(e)))
 
 def main():
-    print("🔍 Extraction des données financières...")
-    actualites = extract_content_from_html('actualites.html')
-    marche = extract_content_from_html('marches.html')  # Corrigé: marche.html -> marches.html
-    secteurs = extract_content_from_html('secteurs.html')
-    listes = extract_content_from_html('liste.html')
-    etfs = extract_content_from_html('etf.html')
+    print("🔍 Chargement des données financières...")
+    # Charger les données JSON directement depuis le dossier data/
+    news_data = load_json_data('data/news.json')
+    markets_data = load_json_data('data/markets.json')
+    sectors_data = load_json_data('data/sectors.json')
+    lists_data = load_json_data('data/lists.json')
+    etfs_data = load_json_data('data/etf.json')
     
     print("🧠 Génération des portefeuilles optimisés...")
-    portfolios = generate_portfolios(actualites, marche, secteurs, listes, etfs)
+    portfolios = generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data)
     
     print("💾 Sauvegarde des portefeuilles...")
     save_portfolios(portfolios)
     
     print("✨ Traitement terminé!")
+
+def load_json_data(file_path):
+    """Charger des données depuis un fichier JSON."""
+    try:
+        with open(file_path, 'r', encoding='utf-8') as file:
+            data = json.load(file)
+            print(f"✅ Données JSON chargées avec succès depuis {file_path}")
+            return data
+    except Exception as e:
+        print(f"❌ Erreur lors du chargement de {file_path}: {str(e)}")
+        return {}
 
 if __name__ == "__main__":
     main()
