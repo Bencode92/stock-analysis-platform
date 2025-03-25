@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradePulse - Débogage des Prompts ChatGPT</title>
+    <link rel="stylesheet" href="enhanced-ui.css">
+    <link rel="stylesheet" href="pages-style.css">
+    <style>
+        .debug-container {
+            max-width: 1200px;
+            margin: 20px auto;
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+        .debug-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+        .debug-title {
+            color: var(--accent-color);
+            margin: 0;
+        }
+        .debug-controls {
+            display: flex;
+            gap: 10px;
+        }
+        .debug-list {
+            margin-bottom: 30px;
+        }
+        .debug-entry {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-color);
+            transition: all 0.2s;
+        }
+        .debug-entry:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        .debug-timestamp {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+        .debug-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .debug-btn {
+            padding: 6px 12px;
+            border-radius: 4px;
+            background: var(--btn-bg);
+            color: var(--btn-text);
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+        .debug-btn:hover {
+            background: var(--btn-hover);
+        }
+        .debug-btn-primary {
+            background: var(--accent-color);
+            color: white;
+        }
+        .debug-btn-primary:hover {
+            background: var(--accent-hover);
+        }
+        .debug-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s;
+        }
+        .debug-modal.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .debug-modal-content {
+            width: 90%;
+            max-width: 1000px;
+            height: 80%;
+            background: var(--bg-primary);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .debug-modal-header {
+            padding: 15px 20px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .debug-modal-body {
+            flex-grow: 1;
+            overflow: auto;
+            padding: 20px;
+        }
+        .debug-modal-body pre {
+            margin: 0;
+            white-space: pre-wrap;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            background: var(--bg-secondary);
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.3;
+        }
+        .highlight {
+            background-color: #ffffcc;
+            padding: 2px;
+            border-radius: 3px;
+        }
+        .debug-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        .debug-tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+        }
+        .debug-tab.active {
+            border-bottom-color: var(--accent-color);
+            color: var(--accent-color);
+            font-weight: 500;
+        }
+        .debug-content-section {
+            display: none;
+        }
+        .debug-content-section.active {
+            display: block;
+        }
+        .btn-refresh {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1; }
+            100% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <header>
+        <nav class="main-nav">
+            <div class="logo-container">
+                <div class="logo">TRADEPULSE</div>
+            </div>
+            <div class="nav-links">
+                <a href="index.html">Accueil</a>
+                <a href="actualites.html">Actualités</a>
+                <a href="portefeuille.html">Portefeuilles</a>
+                <a href="dashboard.html">Tableau de bord</a>
+                <a href="marches.html">Marchés</a>
+                <a href="alertes.html">Alertes</a>
+                <a href="parametres.html">Paramètres</a>
+                <a href="debug-prompts.html" class="active">Débogage</a>
+            </div>
+            <div class="user-controls">
+                <div class="theme-toggle">
+                    <i class="fas fa-sun"></i>
+                    <i class="fas fa-moon"></i>
+                </div>
+                <div class="user-profile">
+                    <img src="https://via.placeholder.com/40" alt="Profil">
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div class="debug-container">
+            <div class="debug-header">
+                <h1 class="debug-title">Débogage des Prompts ChatGPT</h1>
+                <div class="debug-controls">
+                    <button id="btnRefresh" class="debug-btn debug-btn-primary btn-refresh">Rafraîchir</button>
+                </div>
+            </div>
+
+            <div class="debug-tabs">
+                <div class="debug-tab active" data-tab="promptsTab">Prompts</div>
+                <div class="debug-tab" data-tab="responsesTab">Réponses</div>
+                <div class="debug-tab" data-tab="statsTab">Statistiques</div>
+            </div>
+
+            <div class="debug-content-section active" id="promptsTab">
+                <div id="debugList" class="debug-list">
+                    <!-- Les entrées de débogage seront chargées ici dynamiquement -->
+                    <div class="empty-state">
+                        <div class="empty-icon">📝</div>
+                        <h3>Aucun prompt trouvé</h3>
+                        <p>Exécutez le script generate_portfolios.py pour générer des prompts de débogage</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="debug-content-section" id="responsesTab">
+                <div id="responsesList" class="debug-list">
+                    <!-- Les réponses seront chargées ici dynamiquement -->
+                    <div class="empty-state">
+                        <div class="empty-icon">💬</div>
+                        <h3>Aucune réponse trouvée</h3>
+                    </div>
+                </div>
+            </div>
+
+            <div class="debug-content-section" id="statsTab">
+                <div class="debug-stats">
+                    <div class="empty-state">
+                        <div class="empty-icon">📊</div>
+                        <h3>Statistiques à venir</h3>
+                        <p>Les statistiques sur l'utilisation des prompts seront disponibles prochainement</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal pour afficher le contenu complet -->
+    <div class="debug-modal" id="debugModal">
+        <div class="debug-modal-content">
+            <div class="debug-modal-header">
+                <h2 id="modalTitle">Contenu du prompt</h2>
+                <button class="debug-btn" id="closeModal">Fermer</button>
+            </div>
+            <div class="debug-modal-body">
+                <pre id="modalContent"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Références DOM
+            const debugList = document.getElementById('debugList');
+            const responsesList = document.getElementById('responsesList');
+            const debugModal = document.getElementById('debugModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalContent = document.getElementById('modalContent');
+            const closeModal = document.getElementById('closeModal');
+            const btnRefresh = document.getElementById('btnRefresh');
+            const tabs = document.querySelectorAll('.debug-tab');
+            const contentSections = document.querySelectorAll('.debug-content-section');
+
+            // Gérer les onglets
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    tabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    const tabId = this.getAttribute('data-tab');
+                    contentSections.forEach(section => {
+                        section.classList.remove('active');
+                        if (section.id === tabId) {
+                            section.classList.add('active');
+                        }
+                    });
+                });
+            });
+
+            // Fonction pour charger les fichiers de debug
+            async function loadDebugFiles() {
+                try {
+                    // Simuler le chargement des fichiers depuis le système de fichiers
+                    // Dans un environnement réel, il faudrait appeler une API ou accéder au système de fichiers
+                    
+                    // Pour l'instant, simulons avec des données d'exemple
+                    const debugFiles = await simulateFileSystem();
+                    
+                    if (debugFiles.prompts.length > 0) {
+                        debugList.innerHTML = '';
+                        debugFiles.prompts.forEach(file => {
+                            const entry = createDebugEntry(file, 'prompt');
+                            debugList.appendChild(entry);
+                        });
+                    }
+
+                    if (debugFiles.responses.length > 0) {
+                        responsesList.innerHTML = '';
+                        debugFiles.responses.forEach(file => {
+                            const entry = createDebugEntry(file, 'response');
+                            responsesList.appendChild(entry);
+                        });
+                    }
+                } catch (error) {
+                    console.error('Erreur lors du chargement des fichiers de débogage:', error);
+                    debugList.innerHTML = `
+                        <div class="empty-state">
+                            <div class="empty-icon">❌</div>
+                            <h3>Erreur de chargement</h3>
+                            <p>${error.message}</p>
+                        </div>
+                    `;
+                }
+            }
+
+            // Fonction pour créer une entrée de débogage
+            function createDebugEntry(file, type) {
+                const entry = document.createElement('div');
+                entry.className = 'debug-entry';
+                entry.innerHTML = `
+                    <div class="debug-timestamp">${file.timestamp}</div>
+                    <div class="debug-filename">${file.filename}</div>
+                    <div class="debug-actions">
+                        <button class="debug-btn view-btn" data-path="${file.path}" data-type="${type}">Voir</button>
+                        <button class="debug-btn debug-btn-primary open-html-btn" data-html="${file.htmlPath}">Ouvrir HTML</button>
+                    </div>
+                `;
+
+                // Ajouter un gestionnaire d'événements pour le bouton "Voir"
+                entry.querySelector('.view-btn').addEventListener('click', async function() {
+                    const path = this.getAttribute('data-path');
+                    const fileType = this.getAttribute('data-type');
+                    const content = await getFileContent(path);
+                    
+                    modalTitle.textContent = fileType === 'prompt' ? 'Contenu du prompt' : 'Réponse de ChatGPT';
+                    modalContent.textContent = content;
+                    debugModal.classList.add('active');
+                });
+
+                // Ajouter un gestionnaire d'événements pour le bouton "Ouvrir HTML"
+                entry.querySelector('.open-html-btn').addEventListener('click', function() {
+                    const htmlPath = this.getAttribute('data-html');
+                    // Dans un environnement web, on peut juste ouvrir dans un nouvel onglet
+                    window.open(htmlPath, '_blank');
+                });
+
+                return entry;
+            }
+
+            // Fonction pour simuler le système de fichiers
+            async function simulateFileSystem() {
+                // Cette fonction devrait être remplacée par l'accès au système de fichiers réel
+                return {
+                    prompts: [
+                        {
+                            filename: 'prompt_20250325_124843.txt',
+                            path: 'debug/prompts/prompt_20250325_124843.txt',
+                            htmlPath: 'debug/prompts/prompt_20250325_124843.html',
+                            timestamp: '25 Mars 2025, 12:48:43'
+                        },
+                        {
+                            filename: 'prompt_20250320_093012.txt',
+                            path: 'debug/prompts/prompt_20250320_093012.txt',
+                            htmlPath: 'debug/prompts/prompt_20250320_093012.html',
+                            timestamp: '20 Mars 2025, 09:30:12'
+                        }
+                    ],
+                    responses: [
+                        {
+                            filename: 'response_20250325_124843.txt',
+                            path: 'debug/prompts/response_20250325_124843.txt',
+                            htmlPath: '',
+                            timestamp: '25 Mars 2025, 12:48:43'
+                        },
+                        {
+                            filename: 'response_20250320_093012.txt',
+                            path: 'debug/prompts/response_20250320_093012.txt',
+                            htmlPath: '',
+                            timestamp: '20 Mars 2025, 09:30:12'
+                        }
+                    ]
+                };
+            }
+
+            // Fonction pour obtenir le contenu d'un fichier
+            async function getFileContent(path) {
+                // Cette fonction devrait être remplacée par l'accès au fichier réel
+                // Pour l'instant, simulons que nous avons accès au contenu
+                return `# Exemple de contenu de fichier pour ${path}
+                
+Tu es un expert en gestion de portefeuille, avec une expertise en allocation stratégique et tactique...
+
+📰 Actualités financières récentes:
+Région Europe: Inflation en baisse dans la zone euro (impact élevé)
+Région USA: Fed maintient les taux d'intérêt (impact élevé)
+
+📈 Tendances du marché:
+Indices Europe: DAX: +0.5% (up), CAC40: -0.2% (down)
+                
+... [contenu tronqué pour la démo] ...`;
+            }
+
+            // Gestionnaire d'événements pour fermer la modal
+            closeModal.addEventListener('click', function() {
+                debugModal.classList.remove('active');
+            });
+
+            // Fermer la modal en cliquant en dehors du contenu
+            debugModal.addEventListener('click', function(e) {
+                if (e.target === debugModal) {
+                    debugModal.classList.remove('active');
+                }
+            });
+
+            // Rafraîchir la liste des fichiers
+            btnRefresh.addEventListener('click', loadDebugFiles);
+
+            // Chargement initial
+            loadDebugFiles();
+
+            // Charger les données réelles lorsque la fonction est disponible
+            window.addEventListener('message', function(event) {
+                if (event.data && event.data.type === 'debug-files') {
+                    console.log('Données de débogage reçues:', event.data.files);
+                    // Mettre à jour l'interface avec les fichiers réels
+                }
+            });
+        });
+    </script>
+</body>
+</html>
