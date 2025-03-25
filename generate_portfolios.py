@@ -542,6 +542,26 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
     with open(html_file, 'w', encoding='utf-8') as f:
         f.write(html_content)
     
+    # Créer également un fichier JavaScript pour enregistrer le debug dans localStorage
+    # (pour l'intégration avec l'interface web)
+    js_debug_path = "debug/prompts/debug_data.js"
+    with open(js_debug_path, 'w', encoding='utf-8') as f:
+        f.write(f"""
+// Script de debug généré automatiquement
+// Ce fichier est utilisé par l'interface web de debug
+
+// Enregistrer les infos de ce debug
+if (window.recordDebugFile) {{
+    window.recordDebugFile('{timestamp}', {{
+        prompt_length: {len(prompt)},
+        prompt_path: '{debug_file}',
+        html_path: '{html_file}'
+    }});
+}}
+""")
+    
+    print(f"✅ Pour voir le prompt dans l'interface web, accédez à: debug-prompts.html")
+    
     return debug_file, html_file
 
 def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data):
