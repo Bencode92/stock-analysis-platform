@@ -141,9 +141,10 @@ def extract_content_from_html(html_file):
                         table_header = table.select_one('caption, thead, th')
                         if table_header:
                             header_text = table_header.get_text(strip=True)
-                            content.append(f"📋 {header_text.upper() or 'LISTES D\'ACTIFS SURVEILLÉS'}:")
+                            # Utiliser des guillemets doubles pour éviter d'échapper l'apostrophe
+                            content.append(f"📋 {header_text.upper() or 'LISTES ACTIFS SURVEILLÉS'}:")
                         else:
-                            content.append("📋 LISTES D'ACTIFS SURVEILLÉS:")
+                            content.append("📋 LISTES ACTIFS SURVEILLÉS:")
                         
                         # Extraire les lignes du tableau
                         rows = table.select('tr, .row')
@@ -162,7 +163,7 @@ def extract_content_from_html(html_file):
                         asset_items = soup.select('.card, .item, tr, .asset')
                     
                     if not content:
-                        content.append("📋 LISTES D'ACTIFS SURVEILLÉS:")
+                        content.append("📋 LISTES ACTIFS SURVEILLÉS:")
                     
                     for item in asset_items:
                         name = item.select_one('h3, h4, .asset-name, .name, .symbol, .title, td:first-child')
