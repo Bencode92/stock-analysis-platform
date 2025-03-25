@@ -2,6 +2,7 @@ import os
 import json
 import requests
 import datetime
+import locale
 from bs4 import BeautifulSoup
 import re
 
@@ -158,7 +159,7 @@ def extract_content_from_html(html_file):
                             data_line = "• {}".format(name_text)
                             if category:
                                 category_text = category.get_text(strip=True)
-                                data_line += " ({}):".format(category_text)
+                                data_line += " ({})".format(category_text)
                             if aum:
                                 aum_text = aum.get_text(strip=True)
                                 data_line += " AUM: {}".format(aum_text)
@@ -185,14 +186,35 @@ def extract_content_from_html(html_file):
         # En cas d'erreur, retourner un placeholder pour ne pas bloquer l'exécution
         return "[Contenu non disponible pour {}]".format(html_file)
 
+def get_current_month_fr():
+    """Retourne le nom du mois courant en français."""
+    try:
+        # Tenter de définir la locale en français
+        locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
+    except locale.Error:
+        # Fallback si la locale française n'est pas disponible
+        month_names = {
+            1: "janvier", 2: "février", 3: "mars", 4: "avril",
+            5: "mai", 6: "juin", 7: "juillet", 8: "août",
+            9: "septembre", 10: "octobre", 11: "novembre", 12: "décembre"
+        }
+        return month_names[datetime.datetime.now().month]
+    
+    # Obtenir le mois en français
+    return datetime.datetime.now().strftime('%B').lower()
+
 def generate_portfolios(actualites, marche, secteurs, listes, etfs):
     """Génère trois portefeuilles optimisés en combinant les données fournies et le contexte actuel du marché."""
     api_key = os.environ.get('API_CHAT')
     if not api_key:
         raise ValueError("La clé API OpenAI (API_CHAT) n'est pas définie.")
     
+    # Obtenir le mois courant en français
+    current_month = get_current_month_fr()
+    
     prompt = f"""
-Tu es un expert en finance et en gestion de portefeuille.
+Tu es un expert en gestion de portefeuille, avec une expertise en allocation stratégique et tactique. Tu vises à maximiser le rendement ajusté au risque en tenant compte de l'environnement macroéconomique actuel.
+
 Utilise :
 - Les **données suivantes** :  
   📰 Actualités financières : {actualites}  
@@ -202,7 +224,9 @@ Utilise :
   📊 Analyse des ETF : {etfs}
 - Et **ton propre contexte actuel du marché** (connaissances à jour, tendances macroéconomiques, comportements des investisseurs, mouvements des classes d'actifs).
 
-🎯 Ton objectif : Générer trois portefeuilles optimisés en fonction de toutes ces informations.
+📅 Contexte : Ces portefeuilles sont optimisés pour le mois de {current_month} en tenant compte des évolutions à court et moyen terme.
+
+🎯 Ton objectif : Générer trois portefeuilles optimisés :
 1️⃣ **Agressif** : 10 à 20 actifs très volatils (actions de croissance, crypto, ETF spéculatifs).  
 2️⃣ **Modéré** : 10 à 20 actifs équilibrés (blue chips, ETF diversifiés, obligations d'entreprises).  
 3️⃣ **Stable** : 10 à 20 actifs défensifs (obligations souveraines, valeurs refuges, ETF stables).
@@ -231,9 +255,13 @@ Utilise :
 ✅ **Contraintes** :
 - Chaque portefeuille contient **entre 10 et 20 actifs**.
 - La somme des pourcentages fait **100%** par portefeuille.
+- Chaque portefeuille inclut **au minimum deux classes d'actifs différentes**.
 - L'allocation reflète à la fois les données fournies **et** les tendances actuelles du marché.
+- Si un secteur est en forte croissance selon l'analyse sectorielle, surpondère-le dans les portefeuilles Agressif et Modéré.
+- En cas d'incertitude macroéconomique, renforce les allocations en actifs refuges dans le portefeuille Stable.
 - Privilégie les ETF mentionnés dans la section ETF pour les allocations ETF.
 - Utilise les actifs des listes de surveillance quand c'est pertinent.
+- Les poids d'allocation sont exprimés en **% du portefeuille total**.
 - Ne réponds **qu'avec le JSON**, sans commentaire ni explication.
 """
     
