@@ -1084,24 +1084,41 @@ Utilise ces données filtrées pour générer les portefeuilles :
 
 {obligations_examples}
 
-3. Pour chaque portefeuille, ajoute un paragraphe "Commentaire" qui justifie les choix.
+3. Pour chaque portefeuille (Agressif, Modéré, Stable), tu dois générer un **commentaire unique** qui suit une structure **top-down** claire et logique.
+
+Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
+
+📰 **Actualités** — Résume objectivement les tendances macroéconomiques ou géopolitiques actuelles (ex. inflation, taux, conflits, croissance).  
+📈 **Marchés** — Analyse les performances récentes des marchés régionaux (Europe, US, Amérique Latine...), en insistant sur les mouvements marquants (hausse, baisse, stabilité).  
+🏭 **Secteurs** — Détaille les secteurs les plus dynamiques ou les plus en retrait selon les données récentes, sans orientation personnelle.  
+📊 **Choix des actifs** — Explique les allocations choisies dans le portefeuille en cohérence avec le profil (Agressif / Modéré / Stable), en s'appuyant uniquement sur les données fournies (ETF, actions, obligations, crypto...).
+
+🎯 Le style doit être fluide, professionnel et synthétique.  
+❌ Aucun biais : ne fais pas d'hypothèse sur les classes d'actifs à privilégier. Base-toi uniquement sur les données fournies.  
+✅ Le commentaire doit être **adapté au profil de risque** (Agressif, Modéré, Stable) sans forcer une direction (ex: ne dis pas "la techno est à privilégier" sauf si les données le montrent clairement).
+
+4. Pour les **ETF** et les **obligations**, tu dois absolument choisir **uniquement** parmi ceux présents dans la section 📊 Analyse des ETF.  
+❌ Tu n'as pas le droit d'inventer un ETF ou d'écrire un nom générique (comme "ETF marchés émergents" ou "Obligations d'entreprises").  
+✅ Chaque nom d'ETF ou d'obligation utilisé doit correspondre **exactement** à un des actifs listés dans les données fournies (📊 Analyse des ETF).
+
+🚫 Aucun nom inventé, aucun actif synthétique. Seulement des noms **précis et issus des données reçues**.
 
 📊 Format JSON requis:
-{{{{
-  "Agressif": {{{{
-    "Commentaire": "Texte justifiant les choix basé sur les tendances actuelles",
-    "Actions": {{{{
+{{
+  "Agressif": {{
+    "Commentaire": "Texte structuré suivant le format top-down demandé",
+    "Actions": {{
       "Nom Précis de l'Action 1": "X%",
       "Nom Précis de l'Action 2": "Y%",
       ...etc (jusqu'à avoir entre 12-15 actifs au total)
-    }}}},
-    "Crypto": {{{{ ... }}}},
-    "ETF": {{{{ ... }}}},
-    "Obligations": {{{{ ... }}}}
-  }}}},
-  "Modéré": {{{{ ... }}}},
-  "Stable": {{{{ ... }}}}
-}}}}
+    }},
+    "Crypto": {{ ... }},
+    "ETF": {{ ... }},
+    "Obligations": {{ ... }}
+  }},
+  "Modéré": {{ ... }},
+  "Stable": {{ ... }}
+}}
 
 ⚠️ CRITÈRES DE VALIDATION (ABSOLUMENT REQUIS) :
 - Chaque portefeuille DOIT contenir EXACTEMENT entre 12 et 15 actifs au total, PAS MOINS, PAS PLUS
