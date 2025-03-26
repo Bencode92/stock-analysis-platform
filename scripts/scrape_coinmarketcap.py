@@ -3,7 +3,7 @@
 
 """
 Script d'extraction des données des cryptomonnaies depuis CoinMarketCap
-avec focus sur les gagnants/perdants sur 7 jours
+avec fallback sur CoinGecko en cas d'échec
 Produit un fichier crypto_lists.json avec une structure de données optimisée
 """
 
@@ -26,10 +26,13 @@ logger = logging.getLogger(__name__)
 
 # Configuration
 CONFIG = {
-    "api_key": os.environ.get("CMC_API_KEY", ""),  # Clé API CoinMarketCap (si disponible)
     "scraping_urls": {
-        "all": "https://coinmarketcap.com/?type=coins&tableRankBy=gainer_loser_7d",
-        "top100": "https://coinmarketcap.com/?type=coins&tableRankBy=gainer_loser_7d"
+        "all": "https://coinmarketcap.com/",
+        "top100": "https://coinmarketcap.com/"
+    },
+    "coingecko_urls": {
+        "all": "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=250&page=1&sparkline=false&price_change_percentage=1h,24h,7d",
+        "top100": "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=1h,24h,7d"
     },
     "output_path": os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "crypto_lists.json"),
     "user_agents": [
@@ -61,79 +64,61 @@ def get_headers():
     
     return headers
 
-def fetch_crypto_data_via_scraping(market="all"):
-    """Récupère les données en faisant du scraping sur CoinMarketCap"""
-    logger.info(f"Récupération des données via web scraping ({market})...")
+def fetch_crypto_data_via_coingecko(market="all"):
+    """Récupère les données via l'API CoinGecko"""
+    logger.info(f"Récupération des données via API CoinGecko ({market})...")
     
-    url = CONFIG["scraping_urls"][market]
+    url = CONFIG["coingecko_urls"][market]
     all_cryptos = []
     
     try:
-        # Pour toutes
-        if market == "all":
-            # Récupérer plusieurs pages
-            max_pages = 5  # Limiter à 500 cryptos (100 par page)
-            for page in range(1, max_pages + 1):
-                page_url = url.replace("page=1", f"page={page}")
+        for attempt in range(CONFIG["retries"]):
+            try:
+                response = requests.get(
+                    url,
+                    headers=get_headers(),
+                    timeout=30
+                )
                 
-                for attempt in range(CONFIG["retries"]):
-                    try:
-                        logger.info(f"Scraping de la page {page}...")
-                        response = requests.get(
-                            page_url,
-                            headers=get_headers(),
-                            timeout=30
-                        )
-                        
-                        if response.status_code == 200:
-                            cryptos = parse_coinmarketcap_page(response.text)
-                            if not cryptos:
-                                logger.warning(f"Aucune crypto trouvée sur la page {page}")
-                                break
-                                
-                            all_cryptos.extend(cryptos)
-                            logger.info(f"✅ Page {page} récupérée: {len(cryptos)} cryptomonnaies")
-                            
-                            # Respecter le rate limiting
-                            time.sleep(CONFIG["sleep_time"])
-                            break
-                        else:
-                            logger.error(f"Erreur HTTP {response.status_code} pour la page {page}")
-                            time.sleep(CONFIG["sleep_time"])
-                    except Exception as e:
-                        logger.error(f"Erreur lors du scraping de la page {page}: {str(e)}")
-                        if attempt < CONFIG["retries"] - 1:
-                            time.sleep(CONFIG["sleep_time"] * 2)
-        
-        # Pour top 100 (juste la première page)
-        else:
-            for attempt in range(CONFIG["retries"]):
-                try:
-                    response = requests.get(
-                        url,
-                        headers=get_headers(),
-                        timeout=30
-                    )
+                if response.status_code == 200:
+                    data = response.json()
                     
-                    if response.status_code == 200:
-                        cryptos = parse_coinmarketcap_page(response.text)
-                        if cryptos:
-                            all_cryptos = cryptos[:100]  # Limiter aux 100 premiers
-                            logger.info(f"✅ Top 100 récupéré: {len(all_cryptos)} cryptomonnaies")
-                        break
-                    else:
-                        logger.error(f"Erreur HTTP {response.status_code} pour le top 100")
-                        time.sleep(CONFIG["sleep_time"])
-                except Exception as e:
-                    logger.error(f"Erreur lors du scraping du top 100: {str(e)}")
-                    if attempt < CONFIG["retries"] - 1:
-                        time.sleep(CONFIG["sleep_time"] * 2)
-        
-        logger.info(f"✅ Total: {len(all_cryptos)} cryptomonnaies récupérées par scraping")
+                    # Transformer les données au format attendu
+                    for coin in data:
+                        crypto = {
+                            "name": coin.get("name", ""),
+                            "symbol": coin.get("symbol", "").upper(),
+                            "last": f"${coin.get('current_price', 0)}",
+                            "change": f"{coin.get('price_change_percentage_24h', 0)}%",
+                            "1h": f"{coin.get('price_change_percentage_1h_in_currency', 0)}%",
+                            "7d": f"{coin.get('price_change_percentage_7d_in_currency', 0)}%",
+                            "change30d": "",  # Non disponible
+                            "ytd": f"{coin.get('price_change_percentage_7d_in_currency', 0)}%",
+                            "volume": f"${coin.get('total_volume', 0)}",
+                            "marketCap": f"${coin.get('market_cap', 0)}",
+                            "rank": str(coin.get("market_cap_rank", ""))
+                        }
+                        all_cryptos.append(crypto)
+                    
+                    logger.info(f"✅ Récupéré {len(all_cryptos)} cryptomonnaies de CoinGecko")
+                    break
+                    
+                elif response.status_code == 429:
+                    logger.warning("Rate limiting détecté sur CoinGecko, attente avant nouvelle tentative...")
+                    time.sleep(60)  # Attendre 1 minute
+                else:
+                    logger.error(f"Erreur HTTP {response.status_code} depuis CoinGecko")
+                    time.sleep(CONFIG["sleep_time"])
+                    
+            except Exception as e:
+                logger.error(f"Erreur lors de la requête à CoinGecko: {str(e)}")
+                if attempt < CONFIG["retries"] - 1:
+                    time.sleep(CONFIG["sleep_time"] * 2)
+                    
         return all_cryptos
         
     except Exception as e:
-        logger.error(f"Erreur générale lors du scraping: {str(e)}")
+        logger.error(f"Erreur générale avec CoinGecko: {str(e)}")
         return []
 
 def parse_coinmarketcap_page(html_content):
@@ -143,13 +128,13 @@ def parse_coinmarketcap_page(html_content):
     try:
         soup = BeautifulSoup(html_content, 'html.parser')
         
-        # Trouver la table des cryptomonnaies
+        # Trouver la table des cryptomonnaies - recherche plus générique
         table = soup.select_one('table')
         if not table:
             logger.error("Aucune table trouvée dans la page")
             return []
         
-        # Parcourir chaque ligne du tableau (sauf l'en-tête)
+        # Parcourir chaque ligne du tableau
         rows = table.select('tbody tr')
         logger.info(f"Nombre de lignes trouvées: {len(rows)}")
         
@@ -158,52 +143,93 @@ def parse_coinmarketcap_page(html_content):
                 # Extraire les données de base
                 cells = row.select('td')
                 
-                if len(cells) < 9:  # Vérifier le nombre minimal de cellules
+                # Adaptation à la nouvelle structure avec moins de cellules
+                if len(cells) < 5:  # Nouveau minimum requis
                     logger.warning(f"Pas assez de cellules: {len(cells)}")
                     continue
                 
-                # Extraire le rang
+                # Extraire le rang (première cellule)
                 rank = cells[0].get_text(strip=True) if len(cells) > 0 else ""
                 
                 # Extraire le nom et le symbole
-                name_cell = cells[2]
+                # Nouvelle structure: la 2ème cellule (index 1) contient le nom et symbole
+                name_cell = cells[1] if len(cells) > 1 else None
                 if not name_cell:
                     continue
                 
-                # Nom et symbole
-                name_element = name_cell.select_one('p')
-                symbol_element = name_cell.select_one('.coin-item-symbol')
+                # Trouver les bons sélecteurs pour la nouvelle structure
+                # Vérifier tous les éléments pour trouver celui avec le nom et symbole
+                name = ""
+                symbol = ""
                 
-                name = name_element.get_text(strip=True) if name_element else ""
-                symbol = symbol_element.get_text(strip=True) if symbol_element else ""
+                # Chercher n'importe quel élément contenant le nom
+                name_elements = name_cell.select('p, span, div')
                 
-                # Prix
-                price_cell = cells[3]
+                # Logique pour déterminer lequel est le nom et lequel est le symbole
+                if len(name_elements) >= 2:
+                    name = name_elements[0].get_text(strip=True)
+                    symbol = name_elements[1].get_text(strip=True)
+                elif len(name_elements) == 1:
+                    # Si un seul élément, essayer de séparer le texte
+                    text = name_elements[0].get_text(strip=True)
+                    parts = text.split()
+                    if len(parts) > 1:
+                        name = parts[0]
+                        symbol = parts[-1]
+                    else:
+                        name = text
+                else:
+                    # Fallback: prendre tout le texte
+                    full_text = name_cell.get_text(strip=True)
+                    parts = full_text.split()
+                    if len(parts) > 1:
+                        name = parts[0]
+                        symbol = parts[-1]
+                    else:
+                        name = full_text
+                
+                # Prix (généralement 3ème cellule)
+                price_cell = cells[2] if len(cells) > 2 else None
                 price = price_cell.get_text(strip=True) if price_cell else ""
                 
-                # Variations
-                var_1h = cells[4].get_text(strip=True) if len(cells) > 4 else ""
-                var_24h = cells[5].get_text(strip=True) if len(cells) > 5 else ""
-                var_7d = cells[6].get_text(strip=True) if len(cells) > 6 else ""
+                # Variations (adaptation à la nouvelle structure)
+                # Les positions peuvent varier, alors cherchons les % dans les cellules
+                var_1h = ""
+                var_24h = ""
+                var_7d = ""
                 
-                # Capitalisation boursière
-                market_cap_cell = cells[7]
-                market_cap = market_cap_cell.get_text(strip=True) if market_cap_cell else ""
+                # Parcourir les cellules restantes pour trouver les variations
+                for i in range(3, len(cells)):
+                    cell_text = cells[i].get_text(strip=True)
+                    if "%" in cell_text:
+                        if not var_24h:
+                            var_24h = cell_text
+                        elif not var_7d:
+                            var_7d = cell_text
+                        elif not var_1h:
+                            var_1h = cell_text
                 
-                # Volume sur 24h
-                volume_cell = cells[8]
-                volume = volume_cell.get_text(strip=True) if volume_cell else ""
+                # Dernières cellules pour market cap et volume
+                market_cap = ""
+                volume = ""
+                
+                # Les deux dernières cellules sont probablement le volume et la market cap
+                if len(cells) >= 6:
+                    market_cap = cells[-2].get_text(strip=True)
+                    volume = cells[-1].get_text(strip=True)
+                elif len(cells) >= 5:
+                    market_cap = cells[-1].get_text(strip=True)
                 
                 # Créer l'objet crypto avec structure compatible
                 crypto = {
                     "name": name,
                     "symbol": symbol,
                     "last": price,
-                    "change": var_24h,  # Compatibilité avec le format existant
-                    "1h": var_1h,       # Nouveau champ pour 1h
-                    "7d": var_7d,       # Nouveau champ pour 7d
-                    "change30d": "",    # Vide car non disponible dans cette vue
-                    "ytd": var_7d,      # Utiliser 7d comme YTD pour la compatibilité
+                    "change": var_24h,
+                    "1h": var_1h,
+                    "7d": var_7d,
+                    "change30d": "",  # Non disponible
+                    "ytd": var_7d,    # Utiliser 7d comme YTD
                     "volume": volume,
                     "marketCap": market_cap,
                     "rank": rank
@@ -226,245 +252,98 @@ def parse_coinmarketcap_page(html_content):
         logger.error(traceback.format_exc())
         return []
 
-def organize_by_letter(coins):
-    """Organise les cryptomonnaies par lettre initiale"""
-    by_letter = {letter: [] for letter in "abcdefghijklmnopqrstuvwxyz"}
+def fetch_crypto_data_via_scraping(market="all"):
+    """Récupère les données en faisant du scraping sur CoinMarketCap"""
+    logger.info(f"Récupération des données via web scraping ({market})...")
     
-    for coin in coins:
-        # Déterminer la première lettre (en minuscule)
-        first_letter = coin["name"][0].lower() if coin["name"] else "a"
-        
-        # Vérifier si la lettre est dans l'alphabet
-        if first_letter in by_letter:
-            by_letter[first_letter].append(coin)
-        else:
-            # Pour les caractères non alphabétiques, les mettre sous 'a'
-            by_letter["a"].append(coin)
+    url = CONFIG["scraping_urls"][market]
+    all_cryptos = []
     
-    return by_letter
-
-def get_top_performers(coins, sort_field, reverse=True, limit=10):
-    """Identifie les meilleures ou pires performances des cryptomonnaies"""
-    def extract_value(coin):
-        value = coin.get(sort_field, "0%")
-        # Extraire la valeur numérique du pourcentage formaté
-        if isinstance(value, str) and "%" in value:
-            try:
-                # Supprimer le symbole % et convertir en float
-                value = value.replace("%", "").replace(",", ".").replace(" ", "")
-                # Gestion du signe + explicite
-                if "+" in value:
-                    value = value.replace("+", "")
-                return float(value)
-            except:
-                return 0
-        return 0
-    
-    # Trier les cryptos selon le champ spécifié
-    sorted_coins = sorted(coins, key=extract_value, reverse=reverse)
-    
-    # Prendre les premières selon la limite
-    return sorted_coins[:limit]
-
-def generate_crypto_json(all_coins, top100_coins=None):
-    """Génère le fichier JSON final avec la structure attendue par l'interface"""
-    # Si top100_coins n'est pas fourni, utiliser les 100 premières de all_coins
-    if top100_coins is None:
-        top100_coins = all_coins[:100] if len(all_coins) >= 100 else all_coins
-    
-    # Organiser par lettre
-    all_by_letter = organize_by_letter(all_coins)
-    top100_by_letter = organize_by_letter(top100_coins)
-    
-    # Créer la structure pour les top performers
-    all_top_performers = {
-        "daily": {
-            "best": get_top_performers(all_coins, "change", True),
-            "worst": get_top_performers(all_coins, "change", False)
-        },
-        "ytd": {  # Utiliser la variation sur 7 jours comme YTD
-            "best": get_top_performers(all_coins, "7d", True),
-            "worst": get_top_performers(all_coins, "7d", False)
-        }
-    }
-    
-    # Ajout des top performers pour 1h
-    all_top_performers["hourly"] = {
-        "best": get_top_performers(all_coins, "1h", True),
-        "worst": get_top_performers(all_coins, "1h", False)
-    }
-    
-    top100_top_performers = {
-        "daily": {
-            "best": get_top_performers(top100_coins, "change", True),
-            "worst": get_top_performers(top100_coins, "change", False)
-        },
-        "ytd": {
-            "best": get_top_performers(top100_coins, "7d", True),
-            "worst": get_top_performers(top100_coins, "7d", False)
-        },
-        "hourly": {
-            "best": get_top_performers(top100_coins, "1h", True),
-            "worst": get_top_performers(top100_coins, "1h", False)
-        }
-    }
-    
-    # Horodatage actuel
-    timestamp = datetime.now(timezone.utc).isoformat()
-    
-    # Créer la structure finale
-    crypto_data = {
-        "all": {
-            "indices": all_by_letter,
-            "top_performers": all_top_performers,
-            "meta": {
-                "source": "CoinMarketCap (Gainers/Losers 7d)",
-                "description": "Cryptomonnaies triées par performance sur 7 jours",
-                "timestamp": timestamp,
-                "count": len(all_coins)
-            }
-        },
-        "top100": {
-            "indices": top100_by_letter,
-            "top_performers": top100_top_performers,
-            "meta": {
-                "source": "CoinMarketCap (Gainers/Losers 7d - Top 100)",
-                "description": "Top 100 Cryptomonnaies triées par performance sur 7 jours",
-                "timestamp": timestamp,
-                "count": len(top100_coins)
-            }
-        }
-    }
-    
-    return crypto_data
-
-def save_data(data):
-    """Sauvegarde les données dans le fichier JSON"""
     try:
-        # Créer le dossier data s'il n'existe pas
-        data_dir = os.path.dirname(CONFIG["output_path"])
-        if not os.path.exists(data_dir):
-            os.makedirs(data_dir, exist_ok=True)
+        # Pour le scraping, nous utilisons une seule page pour éviter la détection
+        for attempt in range(CONFIG["retries"]):
+            try:
+                logger.info(f"Scraping de CoinMarketCap...")
+                response = requests.get(
+                    url,
+                    headers=get_headers(),
+                    timeout=30
+                )
+                
+                if response.status_code == 200:
+                    # Vérifier si nous avons été bloqués
+                    if "Sorry, en ce moment vous ne pouvez pas accéder à ce site." in response.text or "cf-captcha-form" in response.text:
+                        logger.warning("⚠️ Détection de bot possible sur CoinMarketCap, passer à CoinGecko")
+                        return []
+                        
+                    cryptos = parse_coinmarketcap_page(response.text)
+                    if not cryptos:
+                        logger.warning(f"Aucune crypto trouvée sur CoinMarketCap")
+                        break
+                            
+                    all_cryptos.extend(cryptos)
+                    logger.info(f"✅ Récupérées: {len(cryptos)} cryptomonnaies")
+                    
+                    # Si c'est le top100, limiter aux 100 premiers
+                    if market == "top100" and len(all_cryptos) > 100:
+                        all_cryptos = all_cryptos[:100]
+                        
+                    break
+                else:
+                    logger.error(f"Erreur HTTP {response.status_code} pour CoinMarketCap")
+                    time.sleep(CONFIG["sleep_time"])
+            except Exception as e:
+                logger.error(f"Erreur lors du scraping: {str(e)}")
+                if attempt < CONFIG["retries"] - 1:
+                    time.sleep(CONFIG["sleep_time"] * 2)
         
-        # Écrire le fichier JSON
-        with open(CONFIG["output_path"], 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        logger.info(f"✅ Total: {len(all_cryptos)} cryptomonnaies récupérées par scraping")
+        return all_cryptos
         
-        logger.info(f"✅ Données sauvegardées dans {CONFIG['output_path']}")
-        return True
     except Exception as e:
-        logger.error(f"❌ Erreur lors de la sauvegarde des données: {str(e)}")
-        return False
-
-def create_demo_data():
-    """Crée des données de démo en cas d'erreur avec l'API et le scraping"""
-    logger.info("Création de données de démo pour les cryptomonnaies...")
-    
-    # Liste des cryptos de démo
-    demo_cryptos = [
-        {
-            "name": "Bitcoin",
-            "symbol": "BTC",
-            "last": "€57,123.45",
-            "change": "+1.23%",
-            "1h": "+0.5%",
-            "7d": "+5.67%",
-            "change30d": "+15.67%",
-            "ytd": "+42.56%",
-            "volume": "€28.5B",
-            "marketCap": "€1.1T",
-            "rank": "1"
-        },
-        {
-            "name": "Ethereum",
-            "symbol": "ETH",
-            "last": "€3,245.67",
-            "change": "+2.56%",
-            "1h": "+0.8%",
-            "7d": "+7.12%",
-            "change30d": "+23.45%",
-            "ytd": "+67.89%",
-            "volume": "€12.3B",
-            "marketCap": "€389.2B",
-            "rank": "2"
-        },
-        {
-            "name": "Binance Coin",
-            "symbol": "BNB",
-            "last": "€523.45",
-            "change": "-0.78%",
-            "1h": "-0.3%",
-            "7d": "+1.65%",
-            "change30d": "+8.91%",
-            "ytd": "+34.56%",
-            "volume": "€2.1B",
-            "marketCap": "€81.5B",
-            "rank": "3"
-        },
-        {
-            "name": "Solana",
-            "symbol": "SOL",
-            "last": "€138.90",
-            "change": "+4.32%",
-            "1h": "+1.2%",
-            "7d": "+12.45%",
-            "change30d": "+45.67%",
-            "ytd": "+123.45%",
-            "volume": "€3.4B",
-            "marketCap": "€55.6B",
-            "rank": "4"
-        },
-        {
-            "name": "Cardano",
-            "symbol": "ADA",
-            "last": "€0.58",
-            "change": "-1.23%",
-            "1h": "-0.5%",
-            "7d": "-3.45%",
-            "change30d": "-5.67%",
-            "ytd": "-12.34%",
-            "volume": "€890M",
-            "marketCap": "€20.5B",
-            "rank": "5"
-        },
-        {
-            "name": "Avalanche",
-            "symbol": "AVAX",
-            "last": "€34.25",
-            "change": "+3.45%",
-            "1h": "+0.9%",
-            "7d": "+8.76%",
-            "change30d": "+18.90%",
-            "ytd": "+56.78%",
-            "volume": "€456M",
-            "marketCap": "€12.3B",
-            "rank": "6"
-        }
-    ]
-    
-    return generate_crypto_json(demo_cryptos)
+        logger.error(f"Erreur générale lors du scraping: {str(e)}")
+        return []
 
 def main():
     """Point d'entrée principal du script"""
     try:
-        logger.info("🚀 Démarrage du script d'extraction des données CoinMarketCap (Gainers/Losers 7d)")
+        logger.info("🚀 Démarrage du script d'extraction des données crypto")
         
-        # Récupérer les données via scraping
-        logger.info("Récupération des données via scraping")
+        # Essayer d'abord avec scraping
+        logger.info("Tentative avec CoinMarketCap")
         all_coins = fetch_crypto_data_via_scraping("all")
-        top100_coins = fetch_crypto_data_via_scraping("top100") if len(all_coins) < 100 else all_coins[:100]
         
-        # Si le scraping réussit, générer les données
-        if all_coins:
-            crypto_data = generate_crypto_json(all_coins, top100_coins)
+        # Si le scraping échoue, utiliser CoinGecko
+        if not all_coins:
+            logger.info("⚠️ Échec de CoinMarketCap, passage à CoinGecko")
+            all_coins = fetch_crypto_data_via_coingecko("all")
+            top100_coins = fetch_crypto_data_via_coingecko("top100") if len(all_coins) > 100 else all_coins[:100]
+            
+            # Mettre à jour les sources dans les métadonnées
+            source_name = "CoinGecko API"
         else:
-            # En dernier recours, utiliser des données de démo
-            logger.warning("❌ Échec de récupération des données, utilisation de données de démo")
+            # CoinMarketCap a fonctionné
+            top100_coins = fetch_crypto_data_via_scraping("top100") if len(all_coins) > 100 else all_coins[:100]
+            if not top100_coins:
+                top100_coins = all_coins[:100] if len(all_coins) >= 100 else all_coins
+            
+            source_name = "CoinMarketCap"
+        
+        # Si aucune source n'a fonctionné, utiliser les données de démo
+        if not all_coins:
+            logger.warning("❌ Toutes les sources ont échoué, utilisation de données de démo")
             crypto_data = create_demo_data()
+        else:
+            # Générer les données JSON
+            crypto_data = generate_crypto_json(all_coins, top100_coins)
+            
+            # Mettre à jour les sources
+            crypto_data["all"]["meta"]["source"] = f"{source_name}"
+            crypto_data["top100"]["meta"]["source"] = f"{source_name} (Top 100)"
         
         # Sauvegarder les données
         if save_data(crypto_data):
-            logger.info("✅ Script terminé avec succès")
+            logger.info(f"✅ Script terminé avec succès (source: {source_name})")
             sys.exit(0)
         else:
             logger.error("❌ Échec lors de la sauvegarde des données")
@@ -475,6 +354,3 @@ def main():
         import traceback
         logger.error(traceback.format_exc())
         sys.exit(1)
-
-if __name__ == "__main__":
-    main()
