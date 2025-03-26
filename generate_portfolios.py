@@ -7,8 +7,8 @@ import time
 import random
 import re
 from bs4 import BeautifulSoup
-# Importer les fonctions d'ajustement des portefeuilles
-from portfolio_adjuster import check_portfolio_constraints, adjust_portfolios, get_portfolio_prompt_additions, valid_etfs_cache, valid_bonds_cache
+# Import simplifié sans les fonctions de validation
+from portfolio_adjuster import get_portfolio_prompt_additions
 
 def extract_content_from_html(html_file):
     """Extraire le contenu pertinent d'un fichier HTML."""
@@ -568,7 +568,7 @@ def filter_etf_data(etfs_data):
     
     summary = []
 
-    # Ajouter une section标题 pour faciliter l'identification
+    # Ajouter une section pour faciliter l'identification
     summary.append("📊 LISTE DES ETF DISPONIBLES POUR LES PORTEFEUILLES:")
 
     # 1. TOP ETF 2025 → YTD > 10%
@@ -585,18 +585,18 @@ def filter_etf_data(etfs_data):
         summary.append("📊 TOP ETF 2025 (>10% YTD):")
         summary.extend(f"• {etf}" for etf in selected_top)
 
-    # 2. TOP ETF OBLIGATIONS 2025 → YTD > 2% (MODIFIÉ, était 3% avant)
+    # 2. TOP ETF OBLIGATIONS 2025 → YTD > 1%
     bond_etfs = etfs_data.get("top_etf_obligations_2025", [])
     selected_bonds = []
     for etf in bond_etfs:
         try:
             ytd = float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.'))
-            if ytd > 1:  # MODIFIÉ : Changé de 3% à 2%
+            if ytd > 1:  # Seuil de 1% pour les obligations
                 selected_bonds.append(f"{etf['name']} : {etf['ytd']}")
         except:
             continue
     if selected_bonds:
-        summary.append("📉 TOP OBLIGATIONS 2025 (>2% YTD):")  # MODIFIÉ : Texte mis à jour
+        summary.append("📉 TOP OBLIGATIONS 2025 (>1% YTD):")
         summary.extend(f"• {etf}" for etf in selected_bonds)
 
     # 3. ETF court terme → performance 1 mois > 0%
@@ -613,7 +613,7 @@ def filter_etf_data(etfs_data):
         summary.append("📆 ETF COURT TERME (>0% en 1 mois):")
         summary.extend(f"• {etf}" for etf in selected_short_term)
     
-    # 4. AJOUTÉ : ETF Sectoriels en croissance
+    # 4. ETF Sectoriels en croissance
     sector_etfs = etfs_data.get("etf_sectoriels", []) or []
     selected_sector_etfs = []
     for etf in sector_etfs:
@@ -627,7 +627,7 @@ def filter_etf_data(etfs_data):
         summary.append("🔍 ETF SECTORIELS (>5% YTD):")
         summary.extend(f"• {etf}" for etf in selected_sector_etfs)
         
-    # 5. AJOUTÉ : ETF Marchés émergents
+    # 5. ETF Marchés émergents
     emerging_etfs = etfs_data.get("etf_marches_emergents", []) or []
     selected_emerging = []
     for etf in emerging_etfs:
@@ -643,23 +643,12 @@ def filter_etf_data(etfs_data):
         summary.append("🌍 ETF MARCHÉS ÉMERGENTS:")
         summary.extend(f"• {etf[2]}" for etf in selected_emerging[:5])  # Limiter aux 5 meilleurs
     
-    # S'assurer d'avoir au moins un ETF et une obligation pour les tests
-    if not any("ETF" in line.upper() for line in summary if "•" in line):
-        summary.append("📊 ETF EXEMPLE:")
-        summary.append("• iShares MSCI World ETF : 12.5%")
-        summary.append("• Vanguard S&P 500 ETF : 8.3%")
-    
-    if not any("OBLIGATION" in line.upper() for line in summary if "•" in line):
-        summary.append("📉 OBLIGATIONS EXEMPLE:")
-        summary.append("• iShares Global Govt Bond ETF : 4.2%")
-        summary.append("• Vanguard Total Bond Market ETF : 3.1%")
-    
-    # Fallback pour les anciennes structures de données ou si aucune catégorie n'a été trouvée
+    # Fallback pour les anciennes structures de données si aucune catégorie n'a été trouvée
     if len(summary) <= 1:  # Si seulement le titre est présent
         # Essayer la structure top50_etfs standard
         if "top50_etfs" in etfs_data and isinstance(etfs_data["top50_etfs"], list):
             summary.append("📊 TOP 50 ETF:")
-            for etf in etfs_data["top50_etfs"][:8]:  # Augmenté de 5 à 8
+            for etf in etfs_data["top50_etfs"][:8]:  # Top 8
                 if not isinstance(etf, dict):
                     continue
                     
@@ -675,7 +664,7 @@ def filter_etf_data(etfs_data):
                 best_ytd = etfs_data["top_performers"]["ytd"].get("best", [])
                 if isinstance(best_ytd, list) and best_ytd:
                     summary.append("📈 MEILLEURS ETF YTD:")
-                    for etf in best_ytd[:5]:  # Augmenté de 3 à 5
+                    for etf in best_ytd[:5]:  # Top 5
                         if isinstance(etf, dict):
                             name = etf.get("name", "")
                             ytd = etf.get("ytd", "")
@@ -756,68 +745,6 @@ if (window.recordDebugFile) {{
     
     return debug_file, html_file
 
-def validate_and_fix_portfolios(portfolios, valid_etfs, valid_bonds):
-    """Valide et corrige automatiquement les portefeuilles en strictement respectant les listes d'actifs valides"""
-    
-    for portfolio_type, portfolio in portfolios.items():
-        # 1. Supprimer les allocations négatives
-        for category, assets in portfolio.items():
-            if category == "Commentaire":
-                continue
-            
-            assets_to_remove = []
-            for asset, allocation in assets.items():
-                # Convertir en nombre et prendre la valeur absolue
-                try:
-                    alloc_value = float(allocation.replace('%', '').strip())
-                    if alloc_value < 0:
-                        assets[asset] = f"{abs(alloc_value)}%"
-                except ValueError:
-                    # Si conversion impossible, marquer pour suppression
-                    assets_to_remove.append(asset)
-            
-            # Supprimer les actifs problématiques
-            for asset in assets_to_remove:
-                del assets[asset]
-        
-        # 2. Vérifier strictement que les ETF et obligations sont dans leurs listes respectives
-        for category in list(portfolio.keys()):
-            if category != "Commentaire":
-                assets_to_remove = []
-                
-                # Suppression des actifs non valides dans les catégories ETF et Obligations
-                if category == "ETF":
-                    for asset in portfolio[category]:
-                        if asset not in valid_etfs:
-                            assets_to_remove.append(asset)
-                            print(f"❌ Suppression de l'ETF invalide: {asset} (non présent dans la liste d'ETF valides)")
-                
-                elif category == "Obligations":
-                    for asset in portfolio[category]:
-                        if asset not in valid_bonds:
-                            assets_to_remove.append(asset)
-                            print(f"❌ Suppression de l'Obligation invalide: {asset} (non présente dans la liste d'obligations valides)")
-                
-                # Suppression des actifs invalides
-                for asset in assets_to_remove:
-                    del portfolio[category][asset]
-                
-                # Si la catégorie est vide après suppression, préparer pour suppression
-                if not portfolio[category]:
-                    print(f"⚠️ La catégorie {category} est maintenant vide dans le portefeuille {portfolio_type}")
-        
-        # 3. Supprimer les catégories vides
-        categories_to_remove = []
-        for category, assets in portfolio.items():
-            if category != "Commentaire" and len(assets) == 0:
-                categories_to_remove.append(category)
-        
-        for category in categories_to_remove:
-            del portfolio[category]
-            print(f"❌ Suppression de la catégorie vide: {category} dans le portefeuille {portfolio_type}")
-    
-    return portfolios
-
 def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data):
     """Génère trois portefeuilles optimisés en combinant les données fournies et le contexte actuel du marché."""
     api_key = os.environ.get('API_CHAT')
@@ -834,61 +761,6 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     filtered_sectors = filter_sectors_data(sectors_data)
     filtered_lists = filter_lists_data(lists_data)
     filtered_etfs = filter_etf_data(etfs_data)
-    
-    # ===== EXTRACTION DIRECTE DES ETF ET OBLIGATIONS =====
-    # Extraction directe des ETF depuis les structures JSON
-    valid_etfs = []
-    # Top 50 ETF (prendre les 15 premiers)
-    if "top50_etfs" in etfs_data and isinstance(etfs_data["top50_etfs"], list):
-        valid_etfs.extend([
-            etf.get("name", "") for etf in etfs_data["top50_etfs"][:15] 
-            if etf.get("name")
-        ])
-
-    # ETF court terme avec performance positive
-    if "etf_court_terme" in etfs_data and isinstance(etfs_data["etf_court_terme"], list):
-        valid_etfs.extend([
-            etf.get("name", "") for etf in etfs_data["etf_court_terme"]
-            if etf.get("name") and float(str(etf.get("1m", "0")).replace('%','').replace(',', '.')) > 0
-        ])
-
-    # ETF sectoriels performants 
-    if "etf_sectoriels" in etfs_data and isinstance(etfs_data["etf_sectoriels"], list):
-        valid_etfs.extend([
-            etf.get("name", "") for etf in etfs_data["etf_sectoriels"]
-            if etf.get("name") and float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.')) > 5
-        ])
-
-    # Extraction directe des obligations depuis les structures JSON
-    valid_bonds = []
-    # Obligations performantes (YTD > 2%)
-    if "top_etf_obligations_2025" in etfs_data and isinstance(etfs_data["top_etf_obligations_2025"], list):
-        valid_bonds.extend([
-            etf.get("name", "") for etf in etfs_data["top_etf_obligations_2025"]
-            if etf.get("name") and float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.')) > 2
-        ])
-
-    # Éliminer les doublons
-    valid_etfs = list(set(valid_etfs))
-    valid_bonds = list(set(valid_bonds))
-
-    # Mettre à jour les caches globaux
-    global valid_etfs_cache, valid_bonds_cache
-    valid_etfs_cache = valid_etfs.copy()
-    valid_bonds_cache = valid_bonds.copy()
-
-    # Afficher les résultats
-    print(f"📊 ETF extraits directement: {len(valid_etfs)}")
-    for etf in valid_etfs:
-        print(f"  - {etf}")
-
-    print(f"📊 Obligations extraites directement: {len(valid_bonds)}")
-    for bond in valid_bonds:
-        print(f"  - {bond}")
-    
-    # Formatage pour le prompt
-    etfs_list = "\n".join([f"- {etf}" for etf in valid_etfs])
-    bonds_list = "\n".join([f"- {bond}" for bond in valid_bonds])
     
     # Ajouter des logs pour déboguer les entrées
     print(f"🔍 Longueur des données FILTRÉES:")
@@ -919,22 +791,12 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     # Horodatage pour les fichiers de debug
     debug_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     
-    # CORRECTION: Fusionner les règles strictes en un seul bloc pour plus de clarté
-    strict_rules = """
-🎯 RÈGLES STRICTES POUR LA SÉLECTION DES ACTIFS:
-1. Utilise UNIQUEMENT les noms d'ETF et d'obligations fournis dans les listes ci-dessus
-2. N'utilise JAMAIS de termes génériques comme "Obligations Souveraines US" ou "ETF Obligataire Spéculatif"
-3. Si aucun ETF ou obligation de la liste ne convient, utilise d'autres classes d'actifs plutôt que d'inventer
-4. Pour les actions, utilise toujours des noms précis et spécifiques d'entreprises, pas de catégories
-5. NE PAS utiliser de noms proches ou similaires - UNIQUEMENT les noms EXACTS des listes
-"""
-    
     for attempt in range(max_retries):
         try:
             # Obtenir les exigences minimales pour les portefeuilles
             minimum_requirements = get_portfolio_prompt_additions()
             
-            # Construire un prompt avec les listes explicites d'ETF et obligations
+            # Construire un prompt simplifié sans contraintes sur les noms d'ETF et d'obligations
             prompt = f"""
 Tu es un expert en gestion de portefeuille. Tu dois IMPÉRATIVEMENT créer TROIS portefeuilles contenant EXACTEMENT entre 12 et 15 actifs CHACUN.
 
@@ -957,26 +819,16 @@ Utilise ces données filtrées pour générer les portefeuilles :
 
 📅 Contexte : Ces portefeuilles sont optimisés pour le mois de {current_month}.
 
-🎯 LISTES D'ETF ET OBLIGATIONS AUTORISÉS :
-
-ETF autorisés (utiliser UNIQUEMENT ces noms exacts) :
-{etfs_list}
-
-Obligations autorisées (utiliser UNIQUEMENT ces noms exacts) :
-{bonds_list}
-
-🎯 INSTRUCTIONS TRÈS PRÉCISES (À RESPECTER ABSOLUMENT) :
+🎯 INSTRUCTIONS GÉNÉRALES :
 
 1. Tu dois générer trois portefeuilles :
    a) Agressif : EXACTEMENT entre 12 et 15 actifs au total
    b) Modéré : EXACTEMENT entre 12 et 15 actifs au total  
    c) Stable : EXACTEMENT entre 12 et 15 actifs au total
 
-2. {strict_rules}
-
 {minimum_requirements}
 
-3. Pour chaque portefeuille (Agressif, Modéré, Stable), tu dois générer un **commentaire unique** qui suit une structure **top-down** claire et logique.
+2. Pour chaque portefeuille (Agressif, Modéré, Stable), tu dois générer un **commentaire unique** qui suit une structure **top-down** claire et logique.
 
 Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 
@@ -989,8 +841,6 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 - Tous les actifs sélectionnés doivent refléter une **analyse rationnelle** basée sur les données fournies.
 - Il est strictement interdit de choisir des actifs par défaut, sans lien évident avec les tendances économiques, géographiques ou sectorielles.
 - Le commentaire ne doit jamais mentionner un secteur, une région ou une dynamique **qui n'est pas représentée** dans les actifs choisis.
-- Les ETF doivent être **sélectionnés exclusivement** parmi ceux listés plus haut, en cohérence avec leurs performances réelles (YTD ou 1 mois), et **variés selon le profil (agressif, modéré, stable)**.
-- **Pas de sélection générique ou par défaut** comme "Vanguard S&P 500" si d'autres ETF plus pertinents sont disponibles.
 - Chaque portefeuille doit être construit de manière 100% logique à partir des données fournies.
 - Les actifs sélectionnés doivent découler directement des performances réelles, secteurs en croissance, régions dynamiques, et tendances de marché analysées dans les données ci-dessus.
 
@@ -1020,7 +870,6 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 - La somme des allocations de chaque portefeuille DOIT être EXACTEMENT 100%
 - Minimum 2 classes d'actifs par portefeuille
 - Chaque actif doit avoir un nom SPÉCIFIQUE et PRÉCIS, PAS de noms génériques
-- Pour les ETF et obligations, utilise UNIQUEMENT les noms exacts fournis dans les listes ci-dessus
 - Ne réponds qu'avec le JSON, sans commentaire ni explication supplémentaire
 """
             
@@ -1062,30 +911,6 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
             
             # Vérifier que le contenu est bien du JSON valide
             portfolios = json.loads(content)
-            
-            # NOUVEAU: Valider et corriger les portefeuilles avec une validation stricte
-            print("🔍 Validation et correction des portefeuilles...")
-            portfolios = validate_and_fix_portfolios(portfolios, valid_etfs, valid_bonds)
-            
-            # Vérifier que les contraintes sont respectées
-            is_valid, issues = check_portfolio_constraints(portfolios)
-            
-            if not is_valid:
-                print(f"⚠️ Le portefeuille généré ne respecte pas les contraintes:")
-                for issue in issues:
-                    print(f"  - {issue}")
-                
-                print("🛠️ Ajustement automatique du portefeuille...")
-                portfolios = adjust_portfolios(portfolios)
-                
-                # Vérifier à nouveau
-                is_valid, issues = check_portfolio_constraints(portfolios)
-                if not is_valid:
-                    print(f"⚠️ Le portefeuille ajusté ne respecte toujours pas les contraintes:")
-                    for issue in issues:
-                        print(f"  - {issue}")
-                else:
-                    print("✅ Portefeuille ajusté avec succès!")
             
             print("✅ Portefeuilles générés")
             
