@@ -33,40 +33,34 @@ CONFIG = {
     "timeout": 30,  # Timeout en secondes
     "max_pages": 40,  # Maximum de pages à scraper
     "delay_between_pages": 2,  # Délai entre les pages (secondes)
-    "categories": {
-        # Priorité aux catégories 7d
-        "top_gainers_7d": [],
-        "top_losers_7d": [],
-        "trending": [],
-        # Catégories secondaires
-        "top_gainers_24h": [],
-        "top_losers_24h": []
-    },
     "max_coins_top_7d": 40,  # Plus de coins pour les catégories 7d
     "max_coins_other": 20    # Moins pour les autres catégories
 }
 
-# Structure pour les données
+# Structure pour les données, MODIFIÉE pour correspondre exactement à ce que crypto-script.js attend
 CRYPTO_DATA = {
-    "categories": {
-        # Priorité aux catégories 7d
-        "top_gainers_7d": [],
-        "top_losers_7d": [],
-        "trending": [],
-        # Catégories secondaires
-        "top_gainers_24h": [],
-        "top_losers_24h": []
+    "indices": {}, # Sera initialisé avec toutes les lettres de l'alphabet
+    "top_performers": {
+        "daily": {
+            "best": [],
+            "worst": []
+        },
+        "ytd": {
+            "best": [],
+            "worst": []
+        }
     },
-    "most_visited": [],
-    "all_coins": [],  # Pour stocker toutes les cryptos récupérées
     "meta": {
         "sources": ["CoinMarketCap"],
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "count": 0,
-        "pages_scraped": 0,
         "lastUpdated": datetime.now(timezone.utc).isoformat()
     }
 }
+
+# Initialiser l'alphabet dans CRYPTO_DATA.indices
+for letter in "abcdefghijklmnopqrstuvwxyz":
+    CRYPTO_DATA["indices"][letter] = []
 
 def get_headers():
     """Crée des en-têtes HTTP aléatoires pour éviter la détection de bot"""
@@ -174,21 +168,17 @@ def extract_coin_data_api():
                             # Logo URL
                             logo_url = crypto.get("logo", "")
                             
-                            # Créer l'objet crypto
+                            # Créer l'objet crypto adapté à la structure attendue par le frontend
                             coin = {
-                                "rank": str(rank),
                                 "name": name,
                                 "symbol": symbol,
-                                "logo": logo_url,
-                                "price": price_str,
-                                "change_1h": change_1h_str,
-                                "change_24h": change_24h_str,
-                                "change_7d": change_7d_str,
-                                "market_cap": market_cap_str,
-                                "volume_24h": volume_str,
-                                "trend_24h": trend_24h,
-                                "trend_7d": trend_7d,
-                                # Ajouter les valeurs numériques pour le tri
+                                "last": price_str,
+                                "change": change_24h_str,
+                                "volume": volume_str,
+                                "marketCap": market_cap_str,
+                                "ytd": change_7d_str,  # Utiliser le changement sur 7j comme YTD
+                                "ath": "",  # Pas disponible, mais nécessaire pour la structure
+                                # Valeurs pour le tri interne uniquement
                                 "_change_24h_value": percent_change_24h,
                                 "_change_7d_value": percent_change_7d
                             }
@@ -214,7 +204,6 @@ def extract_coin_data_api():
                 continue
         
         logger.info(f"Extraction API terminée. {total_pages_scraped} pages extraites, {len(all_coins)} cryptos au total.")
-        CRYPTO_DATA["meta"]["pages_scraped"] = total_pages_scraped
         return all_coins
     
     except Exception as e:
@@ -327,21 +316,17 @@ def extract_coin_data_html():
                                         # Logo URL
                                         logo_url = crypto.get('logo', '')
                                         
-                                        # Créer l'objet crypto
+                                        # Créer l'objet crypto adapté à la structure attendue par le frontend
                                         coin = {
-                                            "rank": str(rank),
                                             "name": name,
                                             "symbol": symbol,
-                                            "logo": logo_url,
-                                            "price": price_str,
-                                            "change_1h": change_1h_str,
-                                            "change_24h": change_24h_str,
-                                            "change_7d": change_7d_str,
-                                            "market_cap": market_cap_str,
-                                            "volume_24h": volume_str,
-                                            "trend_24h": trend_24h,
-                                            "trend_7d": trend_7d,
-                                            # Ajouter les valeurs numériques pour le tri
+                                            "last": price_str,
+                                            "change": change_24h_str,
+                                            "volume": volume_str,
+                                            "marketCap": market_cap_str,
+                                            "ytd": change_7d_str,  # Utiliser le changement sur 7j comme YTD
+                                            "ath": "",  # Pas disponible, mais nécessaire pour la structure
+                                            # Valeurs pour le tri interne uniquement
                                             "_change_24h_value": percent_change_24h,
                                             "_change_7d_value": percent_change_7d
                                         }
@@ -377,7 +362,6 @@ def extract_coin_data_html():
                 continue
         
         logger.info(f"Extraction HTML terminée. {total_pages_scraped} pages extraites, {len(all_coins)} cryptos au total.")
-        CRYPTO_DATA["meta"]["pages_scraped"] = total_pages_scraped
         return all_coins
     
     except Exception as e:
@@ -387,79 +371,76 @@ def extract_coin_data_html():
         return []
 
 def categorize_coins(coins):
-    """Catégorise les cryptos en fonction de leurs performances avec priorité sur 7 jours"""
+    """Catégorise les cryptos dans la structure attendue par le frontend"""
     # Réinitialiser les catégories
-    for category in CRYPTO_DATA["categories"]:
-        CRYPTO_DATA["categories"][category] = []
+    for letter in CRYPTO_DATA["indices"]:
+        CRYPTO_DATA["indices"][letter] = []
+    
+    CRYPTO_DATA["top_performers"]["daily"]["best"] = []
+    CRYPTO_DATA["top_performers"]["daily"]["worst"] = []
+    CRYPTO_DATA["top_performers"]["ytd"]["best"] = []
+    CRYPTO_DATA["top_performers"]["ytd"]["worst"] = []
     
     # Si pas de coins, sortir
     if not coins:
         logger.warning("Aucune crypto à catégoriser")
         return
     
-    # Enregistrer toutes les cryptos (sans les propriétés internes _)
-    CRYPTO_DATA["all_coins"] = [
-        {k: v for k, v in coin.items() if not k.startswith('_')} 
-        for coin in coins
-    ]
+    # Organiser les cryptos par lettre
+    for coin in coins:
+        name = coin["name"]
+        if name:
+            first_letter = name[0].lower()
+            if first_letter.isalpha() and first_letter in CRYPTO_DATA["indices"]:
+                # Créer une copie sans les propriétés internes commençant par _
+                clean_coin = {k: v for k, v in coin.items() if not k.startswith('_')}
+                CRYPTO_DATA["indices"][first_letter].append(clean_coin)
     
-    # === CATÉGORIES 7D (PRIORITAIRES) ===
-    
-    # Top gainers 7d (premiers éléments) - avec plus de cryptos
-    sorted_7d_gainers = sorted(coins, key=lambda x: x.get("_change_7d_value", 0), reverse=True)
-    top_gainers_7d = [
-        {k: v for k, v in coin.items() if not k.startswith('_')} 
-        for coin in sorted_7d_gainers[:CONFIG["max_coins_top_7d"]] 
-        if coin.get("_change_7d_value", 0) > 0
-    ]
-    CRYPTO_DATA["categories"]["top_gainers_7d"] = top_gainers_7d
-    
-    # Top losers 7d (derniers éléments) - avec plus de cryptos
-    sorted_7d_losers = sorted(coins, key=lambda x: x.get("_change_7d_value", 0))
-    top_losers_7d = [
-        {k: v for k, v in coin.items() if not k.startswith('_')} 
-        for coin in sorted_7d_losers[:CONFIG["max_coins_top_7d"]] 
-        if coin.get("_change_7d_value", 0) < 0
-    ]
-    CRYPTO_DATA["categories"]["top_losers_7d"] = top_losers_7d
-    
-    # Les 20 premières par market cap pour "trending"
-    trending = [
-        {k: v for k, v in coin.items() if not k.startswith('_')} 
-        for coin in coins[:CONFIG["max_coins_other"]]
-    ]
-    CRYPTO_DATA["categories"]["trending"] = trending
-    
-    # === CATÉGORIES 24H (SECONDAIRES) ===
-    
-    # Top gainers 24h (premiers éléments)
+    # Top gainers 24h
     sorted_24h_gainers = sorted(coins, key=lambda x: x.get("_change_24h_value", 0), reverse=True)
     top_gainers_24h = [
         {k: v for k, v in coin.items() if not k.startswith('_')} 
         for coin in sorted_24h_gainers[:CONFIG["max_coins_other"]] 
         if coin.get("_change_24h_value", 0) > 0
     ]
-    CRYPTO_DATA["categories"]["top_gainers_24h"] = top_gainers_24h
+    CRYPTO_DATA["top_performers"]["daily"]["best"] = top_gainers_24h
     
-    # Top losers 24h (derniers éléments)
+    # Top losers 24h
     sorted_24h_losers = sorted(coins, key=lambda x: x.get("_change_24h_value", 0))
     top_losers_24h = [
         {k: v for k, v in coin.items() if not k.startswith('_')} 
         for coin in sorted_24h_losers[:CONFIG["max_coins_other"]] 
         if coin.get("_change_24h_value", 0) < 0
     ]
-    CRYPTO_DATA["categories"]["top_losers_24h"] = top_losers_24h
+    CRYPTO_DATA["top_performers"]["daily"]["worst"] = top_losers_24h
     
-    # Ajouter quelques cryptos aux most_visited si vide - priorité aux meilleures performances 7d
-    if not CRYPTO_DATA["most_visited"] and trending:
-        CRYPTO_DATA["most_visited"] = top_gainers_7d[:10] if top_gainers_7d else trending[:10]
+    # Top gainers 7d (en tant que YTD dans crypto-script.js)
+    sorted_7d_gainers = sorted(coins, key=lambda x: x.get("_change_7d_value", 0), reverse=True)
+    top_gainers_7d = [
+        {k: v for k, v in coin.items() if not k.startswith('_')} 
+        for coin in sorted_7d_gainers[:CONFIG["max_coins_top_7d"]] 
+        if coin.get("_change_7d_value", 0) > 0
+    ]
+    CRYPTO_DATA["top_performers"]["ytd"]["best"] = top_gainers_7d
+    
+    # Top losers 7d (en tant que YTD dans crypto-script.js)
+    sorted_7d_losers = sorted(coins, key=lambda x: x.get("_change_7d_value", 0))
+    top_losers_7d = [
+        {k: v for k, v in coin.items() if not k.startswith('_')} 
+        for coin in sorted_7d_losers[:CONFIG["max_coins_top_7d"]] 
+        if coin.get("_change_7d_value", 0) < 0
+    ]
+    CRYPTO_DATA["top_performers"]["ytd"]["worst"] = top_losers_7d
     
     # Mettre à jour le compteur
-    CRYPTO_DATA["meta"]["count"] = len(CRYPTO_DATA["all_coins"])
+    total_count = 0
+    for letter in CRYPTO_DATA["indices"]:
+        total_count += len(CRYPTO_DATA["indices"][letter])
+    CRYPTO_DATA["meta"]["count"] = total_count
     
-    logger.info(f"Catégorisation terminée: {len(top_gainers_7d)} gainers 7d, {len(top_losers_7d)} losers 7d, "
-                f"{len(trending)} trending, {len(top_gainers_24h)} gainers 24h, {len(top_losers_24h)} losers 24h, "
-                f"{len(CRYPTO_DATA['all_coins'])} total")
+    logger.info(f"Catégorisation terminée: {len(top_gainers_24h)} gainers 24h, {len(top_losers_24h)} losers 24h, "
+                f"{len(top_gainers_7d)} gainers 7d, {len(top_losers_7d)} losers 7d, "
+                f"{total_count} total")
 
 def scrape_crypto_data():
     """Récupère et traite les données des cryptomonnaies"""
@@ -484,6 +465,7 @@ def scrape_crypto_data():
         categorize_coins(coins)
         
         # Mettre à jour l'horodatage
+        CRYPTO_DATA["meta"]["timestamp"] = datetime.now(timezone.utc).isoformat()
         CRYPTO_DATA["meta"]["lastUpdated"] = datetime.now(timezone.utc).isoformat()
         
         return True
