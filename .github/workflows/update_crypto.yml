@@ -23,11 +23,9 @@ jobs:
           pip install requests beautifulsoup4 playwright
           playwright install --with-deps chromium
           
-      - name: Run crypto scraper (CoinMarketCap via Playwright)
+      - name: Run crypto scraper (CoinGecko)
         run: |
           python scripts/scrape_coinmarketcap.py
-        env:
-          CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
           
       - name: Commit updated data
         run: |
@@ -36,7 +34,7 @@ jobs:
           git add data/crypto_lists.json
           # Ajouter aussi les fichiers de debug si présents
           git add data/debug/* || true
-          git diff --quiet && git diff --staged --quiet || git commit -m "Update crypto data (automated)"
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update crypto data from CoinGecko (automated)"
           
       - name: Push changes
         uses: ad-m/github-push-action@master
