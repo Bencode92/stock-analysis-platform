@@ -7,6 +7,8 @@ import time
 import random
 import re
 from bs4 import BeautifulSoup
+# Importer les fonctions d'ajustement des portefeuilles
+from portfolio_adjuster import check_portfolio_constraints, adjust_portfolios, get_portfolio_prompt_additions, valid_etfs_cache, valid_bonds_cache
 
 def extract_content_from_html(html_file):
     """Extraire le contenu pertinent d'un fichier HTML."""
@@ -747,6 +749,9 @@ if (window.recordDebugFile) {{
 # NOUVELLE FONCTION: Extraction des actifs valides des données filtrées
 def extract_valid_assets(filtered_etfs):
     """Extrait spécifiquement les Top ETF et Top Obligations depuis les données filtrées"""
+    # Initialiser les variables globales
+    global valid_etfs_cache, valid_bonds_cache
+    
     valid_etfs = []
     valid_bonds = []
     
@@ -776,6 +781,10 @@ def extract_valid_assets(filtered_etfs):
                 valid_etfs.append(asset_name)
             elif current_section == "TOP_BOND":
                 valid_bonds.append(asset_name)
+    
+    # Mettre à jour les variables globales pour les utiliser dans adjust_portfolios()
+    valid_etfs_cache = valid_etfs
+    valid_bonds_cache = valid_bonds
     
     # Afficher les informations sur les actifs trouvés
     print(f"📊 ETF trouvés: {len(valid_etfs)} (TOP ETF et court terme)")
@@ -846,100 +855,6 @@ def validate_and_fix_portfolios(portfolios, valid_etfs, valid_bonds):
     
     return portfolios
 
-def check_portfolio_constraints(portfolios):
-    """Vérifie que les portefeuilles générés respectent les contraintes."""
-    is_valid = True
-    issues = []
-    
-    for portfolio_type, portfolio in portfolios.items():
-        # Compter le nombre total d'actifs (hors commentaire)
-        total_assets = 0
-        for category, assets in portfolio.items():
-            if category != "Commentaire":
-                total_assets += len(assets)
-        
-        # Vérifier que le nombre d'actifs est entre 12 et 15
-        if total_assets < 12 or total_assets > 15:
-            is_valid = False
-            issues.append(f"Portfolio {portfolio_type} a {total_assets} actifs (doit être entre 12-15)")
-        
-        # Vérifier qu'il y a au moins 2 catégories d'actifs
-        categories = [cat for cat in portfolio.keys() if cat != "Commentaire"]
-        if len(categories) < 2:
-            is_valid = False
-            issues.append(f"Portfolio {portfolio_type} a seulement {len(categories)} catégories (minimum 2)")
-        
-        # Vérifier que la somme des allocations est égale à 100%
-        total_allocation = 0
-        for category, assets in portfolio.items():
-            if category != "Commentaire":
-                for allocation in assets.values():
-                    try:
-                        total_allocation += float(allocation.replace('%', '').strip())
-                    except ValueError:
-                        is_valid = False
-                        issues.append(f"Portfolio {portfolio_type} contient une allocation non numérique: {allocation}")
-        
-        # Tolérance pour les erreurs d'arrondi
-        if total_allocation < 99.5 or total_allocation > 100.5:
-            is_valid = False
-            issues.append(f"Portfolio {portfolio_type} a une allocation totale de {total_allocation}% (doit être 100%)")
-    
-    return is_valid, issues
-
-def adjust_portfolios(portfolios):
-    """Ajuste les portefeuilles pour respecter les contraintes sans ajouter d'actifs génériques."""
-    adjusted_portfolios = {}
-    
-    for portfolio_type, portfolio in portfolios.items():
-        # Créer une copie pour ne pas modifier l'original
-        adjusted_portfolio = {key: (value.copy() if key != "Commentaire" else value) 
-                             for key, value in portfolio.items()}
-        
-        # Compter le nombre total d'actifs actuels
-        total_assets = sum(len(assets) for category, assets in adjusted_portfolio.items() 
-                          if category != "Commentaire")
-        
-        # Si plus de 15 actifs, supprimer les plus petites allocations
-        if total_assets > 15:
-            # Créer une liste de tous les actifs avec leurs allocations
-            all_assets = []
-            for category, assets in adjusted_portfolio.items():
-                if category != "Commentaire":
-                    for asset, allocation in assets.items():
-                        alloc_value = float(allocation.replace('%', '').strip())
-                        all_assets.append((category, asset, alloc_value))
-            
-            # Trier par allocation croissante
-            all_assets.sort(key=lambda x: x[2])
-            
-            # Supprimer les actifs avec les plus petites allocations jusqu'à atteindre 15 actifs
-            to_remove = total_assets - 15
-            removed_allocation = 0
-            
-            for i in range(to_remove):
-                cat, asset, alloc = all_assets[i]
-                removed_allocation += alloc
-                del adjusted_portfolio[cat][asset]
-                
-                # Supprimer également la catégorie si elle est vide
-                if not adjusted_portfolio[cat]:
-                    del adjusted_portfolio[cat]
-            
-            # Redistribuer l'allocation supprimée
-            if removed_allocation > 0:
-                # Trouver l'actif avec la plus grande allocation
-                if all_assets and len(all_assets) > to_remove:
-                    max_cat, max_asset, max_alloc = all_assets[-1]
-                    
-                    # Vérifier que l'actif existe toujours dans le portefeuille
-                    if max_cat in adjusted_portfolio and max_asset in adjusted_portfolio[max_cat]:
-                        adjusted_portfolio[max_cat][max_asset] = f"{max_alloc + removed_allocation:.1f}%"
-        
-        adjusted_portfolios[portfolio_type] = adjusted_portfolio
-    
-    return adjusted_portfolios
-
 def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data):
     """Génère trois portefeuilles optimisés en combinant les données fournies et le contexte actuel du marché."""
     api_key = os.environ.get('API_CHAT')
@@ -1006,6 +921,9 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     
     for attempt in range(max_retries):
         try:
+            # Obtenir les exigences minimales pour les portefeuilles
+            minimum_requirements = get_portfolio_prompt_additions()
+            
             # Construire un prompt avec les listes explicites d'ETF et obligations
             prompt = f"""
 Tu es un expert en gestion de portefeuille. Tu dois IMPÉRATIVEMENT créer TROIS portefeuilles contenant EXACTEMENT entre 12 et 15 actifs CHACUN.
@@ -1048,6 +966,8 @@ Utilise ces données filtrées pour générer les portefeuilles :
    - ❌ JAMAIS de noms inventés, AUCUN actif synthétique - seulement des noms précis et identifiables dans les listes fournies
 
 {obligations_examples}
+
+{minimum_requirements}
 
 3. Pour chaque portefeuille (Agressif, Modéré, Stable), tu dois générer un **commentaire unique** qui suit une structure **top-down** claire et logique.
 
