@@ -756,108 +756,6 @@ if (window.recordDebugFile) {{
     
     return debug_file, html_file
 
-# NOUVELLE FONCTION: Extraction des actifs valides des données filtrées
-def extract_valid_assets(filtered_etfs):
-    """Extrait spécifiquement les Top ETF et Top Obligations depuis les données filtrées"""
-    # SOLUTION RADICALE : Ne pas essayer de détecter des sections, mais rechercher
-    # directement les lignes contenant les noms d'ETF et d'obligations
-    
-    print("\n===== DEBUG - EXTRACTION RADICALE DES ETF ET OBLIGATIONS =====")
-    print(f"Longueur du texte filtré: {len(filtered_etfs)} caractères")
-    
-    valid_etfs = []
-    valid_bonds = []
-    
-    # Identifier toutes les lignes qui commencent par "•"
-    lines = filtered_etfs.split('\n')
-    
-    for line in lines:
-        line = line.strip()
-        # Détecter les lignes contenant des actifs (commencent par •)
-        if line.startswith("•"):
-            content = line[1:].strip()  # Enlever le • et l'espace
-            
-            # Extraire le nom de l'actif (avant le ":")
-            if ":" in content:
-                asset_name = content.split(":")[0].strip()
-            else:
-                # Si pas de ":", prendre tout le texte avant le premier espace comme nom
-                asset_name = content.split()[0] if content else ""
-            
-            # Ignorer les lignes vides
-            if not asset_name:
-                continue
-                
-            # Classifier selon le contenu
-            asset_name_upper = asset_name.upper()
-            
-            # Logique de classification simple basée sur des mots-clés
-            is_etf = ("ETF" in asset_name_upper or 
-                      "ISHARES" in asset_name_upper or 
-                      "VANGUARD" in asset_name_upper or
-                      "SPDR" in asset_name_upper or
-                      "FUND" in asset_name_upper or
-                      "INDEX" in asset_name_upper or
-                      "MSCI" in asset_name_upper or
-                      "S&P" in asset_name_upper)
-            
-            is_bond = ("OBLIGATION" in asset_name_upper or
-                       "BOND" in asset_name_upper or
-                       "TREASURY" in asset_name_upper or
-                       "GOVT" in asset_name_upper or
-                       "YIELD" in asset_name_upper or
-                       "FIXED INCOME" in asset_name_upper)
-            
-            # Un actif peut être à la fois un ETF et une obligation
-            # C'est normal pour les ETF obligataires
-            if is_etf:
-                valid_etfs.append(asset_name)
-                print(f"ETF détecté: {asset_name}")
-                
-            if is_bond:
-                valid_bonds.append(asset_name)
-                print(f"Obligation détectée: {asset_name}")
-    
-    # FALLBACK : Si on n'a trouvé aucun ETF ou obligation, ajouter des exemples de secours
-    if not valid_etfs:
-        default_etfs = [
-            "iShares MSCI World ETF",
-            "Vanguard S&P 500 ETF",
-            "SPDR Euro Stoxx 50 ETF"
-        ]
-        valid_etfs.extend(default_etfs)
-        print("⚠️ Aucun ETF détecté - Ajout d'ETF par défaut")
-    
-    if not valid_bonds:
-        default_bonds = [
-            "iShares Global Govt Bond ETF",
-            "Vanguard Total Bond Market ETF",
-            "PIMCO Active Bond ETF"
-        ]
-        valid_bonds.extend(default_bonds)
-        print("⚠️ Aucune obligation détectée - Ajout d'obligations par défaut")
-    
-    # Éliminer les doublons
-    valid_etfs = list(set(valid_etfs))
-    valid_bonds = list(set(valid_bonds))
-    
-    # Mettre à jour les variables globales
-    global valid_etfs_cache, valid_bonds_cache
-    valid_etfs_cache = valid_etfs.copy()
-    valid_bonds_cache = valid_bonds.copy()
-    
-    # Afficher les résultats
-    print(f"📊 ETF trouvés: {len(valid_etfs)}")
-    for etf in valid_etfs:
-        print(f"  - {etf}")
-    
-    print(f"📊 Obligations trouvées: {len(valid_bonds)}")
-    for bond in valid_bonds:
-        print(f"  - {bond}")
-    
-    print(f"✓ Extraction réussie: {len(valid_etfs)} ETF et {len(valid_bonds)} obligations")
-    return valid_etfs, valid_bonds
-
 def validate_and_fix_portfolios(portfolios, valid_etfs, valid_bonds):
     """Valide et corrige automatiquement les portefeuilles en strictement respectant les listes d'actifs valides"""
     
@@ -937,8 +835,56 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     filtered_lists = filter_lists_data(lists_data)
     filtered_etfs = filter_etf_data(etfs_data)
     
-    # CORRECTION: Utiliser les valeurs retournées sans globales
-    valid_etfs, valid_bonds = extract_valid_assets(filtered_etfs)
+    # ===== EXTRACTION DIRECTE DES ETF ET OBLIGATIONS =====
+    # Extraction directe des ETF depuis les structures JSON
+    valid_etfs = []
+    # Top 50 ETF (prendre les 15 premiers)
+    if "top50_etfs" in etfs_data and isinstance(etfs_data["top50_etfs"], list):
+        valid_etfs.extend([
+            etf.get("name", "") for etf in etfs_data["top50_etfs"][:15] 
+            if etf.get("name")
+        ])
+
+    # ETF court terme avec performance positive
+    if "etf_court_terme" in etfs_data and isinstance(etfs_data["etf_court_terme"], list):
+        valid_etfs.extend([
+            etf.get("name", "") for etf in etfs_data["etf_court_terme"]
+            if etf.get("name") and float(str(etf.get("1m", "0")).replace('%','').replace(',', '.')) > 0
+        ])
+
+    # ETF sectoriels performants 
+    if "etf_sectoriels" in etfs_data and isinstance(etfs_data["etf_sectoriels"], list):
+        valid_etfs.extend([
+            etf.get("name", "") for etf in etfs_data["etf_sectoriels"]
+            if etf.get("name") and float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.')) > 5
+        ])
+
+    # Extraction directe des obligations depuis les structures JSON
+    valid_bonds = []
+    # Obligations performantes (YTD > 2%)
+    if "top_etf_obligations_2025" in etfs_data and isinstance(etfs_data["top_etf_obligations_2025"], list):
+        valid_bonds.extend([
+            etf.get("name", "") for etf in etfs_data["top_etf_obligations_2025"]
+            if etf.get("name") and float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.')) > 2
+        ])
+
+    # Éliminer les doublons
+    valid_etfs = list(set(valid_etfs))
+    valid_bonds = list(set(valid_bonds))
+
+    # Mettre à jour les caches globaux
+    global valid_etfs_cache, valid_bonds_cache
+    valid_etfs_cache = valid_etfs.copy()
+    valid_bonds_cache = valid_bonds.copy()
+
+    # Afficher les résultats
+    print(f"📊 ETF extraits directement: {len(valid_etfs)}")
+    for etf in valid_etfs:
+        print(f"  - {etf}")
+
+    print(f"📊 Obligations extraites directement: {len(valid_bonds)}")
+    for bond in valid_bonds:
+        print(f"  - {bond}")
     
     # Formatage pour le prompt
     etfs_list = "\n".join([f"- {etf}" for etf in valid_etfs])
