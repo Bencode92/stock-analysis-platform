@@ -585,7 +585,7 @@ def filter_etf_data(etf_data):
     for etf in bond_etfs:
         try:
             ytd = float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.'))
-            if ytd > 2:  # MODIFIÉ : Changé de 3% à 2%
+            if ytd > 1:  # MODIFIÉ : Changé de 3% à 2%
                 selected_bonds.append(f"{etf['name']} : {etf['ytd']}")
         except:
             continue
