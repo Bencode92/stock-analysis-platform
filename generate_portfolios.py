@@ -7,8 +7,8 @@ import time
 import random
 import re
 from bs4 import BeautifulSoup
-# Import simplifié sans les fonctions de validation
-from portfolio_adjuster import get_portfolio_prompt_additions
+# Importer les fonctions d'ajustement des portefeuilles
+from portfolio_adjuster import check_portfolio_constraints, adjust_portfolios, get_portfolio_prompt_additions, valid_etfs_cache, valid_bonds_cache
 
 def extract_content_from_html(html_file):
     """Extraire le contenu pertinent d'un fichier HTML."""
@@ -588,15 +588,17 @@ def filter_etf_data(etfs_data):
     # 2. TOP ETF OBLIGATIONS 2025 → YTD > 1%
     bond_etfs = etfs_data.get("top_etf_obligations_2025", [])
     selected_bonds = []
+    bond_names = []  # Liste des noms d'ETF obligataires pour la whitelist
     for etf in bond_etfs:
         try:
             ytd = float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.'))
-            if ytd > 1:  # Seuil de 1% pour les obligations
+            if ytd > 0:  # Abaissé à 0% pour avoir plus d'options
                 selected_bonds.append(f"{etf['name']} : {etf['ytd']}")
+                bond_names.append(etf['name'])
         except:
             continue
     if selected_bonds:
-        summary.append("📉 TOP OBLIGATIONS 2025 (>1% YTD):")
+        summary.append("📉 TOP OBLIGATIONS 2025 (>0% YTD):")
         summary.extend(f"• {etf}" for etf in selected_bonds)
 
     # 3. ETF court terme → performance 1 mois > 0%
@@ -643,6 +645,23 @@ def filter_etf_data(etfs_data):
         summary.append("🌍 ETF MARCHÉS ÉMERGENTS:")
         summary.extend(f"• {etf[2]}" for etf in selected_emerging[:5])  # Limiter aux 5 meilleurs
     
+    # Si aucun ETF obligataire n'a été trouvé, ajouter un message d'avertissement
+    if not bond_names:
+        print("⚠️ Aucun ETF obligataire n'a dépassé le seuil de YTD > 0%")
+        # Ajouter tous les ETF obligataires sans filtre
+        for etf in bond_etfs:
+            if etf.get('name'):
+                bond_names.append(etf['name'])
+                
+    # Si toujours aucun ETF obligataire, ajouter des exemples
+    if not bond_names:
+        print("⚠️ Aucun ETF obligataire trouvé dans les données, ajout d'exemples de secours")
+        bond_names = [
+            "iShares Euro Government Bond 3-5yr UCITS ETF",
+            "Xtrackers II Eurozone Government Bond UCITS ETF",
+            "Lyxor Euro Government Bond UCITS ETF"
+        ]
+    
     # Fallback pour les anciennes structures de données si aucune catégorie n'a été trouvée
     if len(summary) <= 1:  # Si seulement le titre est présent
         # Essayer la structure top50_etfs standard
@@ -671,7 +690,7 @@ def filter_etf_data(etfs_data):
                             if name:
                                 summary.append(f"• {name}: {ytd}")
     
-    return "\n".join(summary) if summary else "Aucune donnée ETF significative"
+    return "\n".join(summary), bond_names  # Retourne le texte filtré et la liste des noms d'ETF obligataires
 
 def save_prompt_to_debug_file(prompt, timestamp=None):
     """Sauvegarde le prompt complet dans un fichier de débogage."""
@@ -760,7 +779,10 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     filtered_markets = filter_markets_data(markets_data)
     filtered_sectors = filter_sectors_data(sectors_data)
     filtered_lists = filter_lists_data(lists_data)
-    filtered_etfs = filter_etf_data(etfs_data)
+    filtered_etfs, bond_etf_names = filter_etf_data(etfs_data)  # Récupère aussi la liste des ETF obligataires
+    
+    # Formater la liste des ETF obligataires pour le prompt
+    bond_etf_list = "\n".join([f"- {name}" for name in bond_etf_names])
     
     # Ajouter des logs pour déboguer les entrées
     print(f"🔍 Longueur des données FILTRÉES:")
@@ -784,6 +806,11 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     print(filtered_etfs[:200] + "..." if len(filtered_etfs) > 200 else filtered_etfs)
     print("\n===========================================")
     
+    # Afficher la liste des ETF obligataires trouvés
+    print(f"\n📊 ETF obligataires trouvés: {len(bond_etf_names)}")
+    for name in bond_etf_names:
+        print(f"  - {name}")
+    
     # ===== SYSTÈME DE RETRY AVEC BACKOFF EXPONENTIEL =====
     max_retries = 3
     backoff_time = 1  # Commencer avec 1 seconde
@@ -796,7 +823,7 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
             # Obtenir les exigences minimales pour les portefeuilles
             minimum_requirements = get_portfolio_prompt_additions()
             
-            # Construire un prompt simplifié sans contraintes sur les noms d'ETF et d'obligations
+            # Construire un prompt avec la whitelist d'ETF obligataires explicite
             prompt = f"""
 Tu es un expert en gestion de portefeuille. Tu dois IMPÉRATIVEMENT créer TROIS portefeuilles contenant EXACTEMENT entre 12 et 15 actifs CHACUN.
 
@@ -819,18 +846,19 @@ Utilise ces données filtrées pour générer les portefeuilles :
 
 📅 Contexte : Ces portefeuilles sont optimisés pour le mois de {current_month}.
 
-🎯 INSTRUCTIONS SPÉCIFIQUES :
+🛡️ LISTE DES SEULS ETF OBLIGATAIRES AUTORISÉS (TOP OBLIGATIONS 2025) :
+{bond_etf_list}
+
+🎯 INSTRUCTIONS TRÈS PRÉCISES (À RESPECTER ABSOLUMENT) :
 
 1. Tu dois générer trois portefeuilles :
    a) Agressif : EXACTEMENT entre 12 et 15 actifs au total
    b) Modéré : EXACTEMENT entre 12 et 15 actifs au total  
    c) Stable : EXACTEMENT entre 12 et 15 actifs au total
 
-{minimum_requirements}
+2. Pour les obligations : Tu dois piocher UNIQUEMENT dans la **liste ci-dessus des ETF obligataires autorisés**. Tu ne dois JAMAIS inventer ou utiliser d'autres noms. Tu ne dois PAS réutiliser un ETF de cette liste dans une autre catégorie (comme ETF générique ou action).
 
-2. Pour les obligations : tu dois sélectionner UNIQUEMENT des ETF obligataires issus de la section "TOP OBLIGATIONS 2025" des données ci-dessus.
-   N'utilise jamais de noms génériques comme "Obligation 1" ou "Obligation Souveraine".
-   Chaque obligation doit porter le nom complet et exact d'un ETF obligataire spécifique listé dans les données.
+{minimum_requirements}
 
 3. Pour chaque portefeuille (Agressif, Modéré, Stable), tu dois générer un **commentaire unique** qui suit une structure **top-down** claire et logique.
 
@@ -874,7 +902,6 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 - La somme des allocations de chaque portefeuille DOIT être EXACTEMENT 100%
 - Minimum 2 classes d'actifs par portefeuille
 - Chaque actif doit avoir un nom SPÉCIFIQUE et PRÉCIS, PAS de noms génériques
-- Toutes les obligations DOIVENT être des ETF obligataires avec leurs noms exacts
 - Ne réponds qu'avec le JSON, sans commentaire ni explication supplémentaire
 """
             
