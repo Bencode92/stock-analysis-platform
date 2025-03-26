@@ -1078,8 +1078,8 @@ Utilise ces données filtrées pour générer les portefeuilles :
    c) Stable : EXACTEMENT entre 12 et 15 actifs au total
 
 2. RÈGLES DE SÉLECTION DES ACTIFS :
-   - Pour les **ETF** et les **obligations**, tu dois absolument choisir **uniquement** parmi ceux présents dans la section 📊 Analyse des ETF
-   - Chaque nom d'ETF ou d'obligation utilisé doit correspondre **exactement** à un des actifs listés dans les données fournies
+   - Pour les **ETF** et les **obligations**, tu dois absolument choisir **uniquement** parmi ceux **listés dans 📊 Analyse des ETF ci-dessus (= {filtered_etfs})**.
+   - Tu n'as PAS le droit d'ajouter d'autres noms, ni d'inventer, même si le nom paraît réaliste.
    - Pour les actions et autres actifs, utilise toujours des noms précis et spécifiques (noms d'entreprises exacts, pas de catégories génériques)
    - N'utilise JAMAIS de termes génériques comme "ETF Obligataire Spéculatif" ou "Obligations Souveraines"
    - Aucun nom inventé, aucun actif synthétique - seulement des noms précis et identifiables
