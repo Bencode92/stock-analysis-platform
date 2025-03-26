@@ -16,13 +16,6 @@ import logging
 import time
 import re
 import random
-import traceback
-from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException
 
 # Configuration du logger
 logging.basicConfig(
@@ -35,7 +28,6 @@ logger = logging.getLogger(__name__)
 CONFIG = {
     "url": "https://coinmarketcap.com/?type=coins&tableRankBy=gainer_loser_7d",
     "output_path": os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "crypto_lists.json"),
-    "chrome_driver_path": "/usr/bin/chromedriver",  # Ajustez selon votre installation
     "timeout": 30,  # Timeout en secondes
     "categories": {
         "top_gainers_24h": [],
@@ -90,202 +82,118 @@ def get_headers():
         "DNT": "1"
     }
 
-def setup_selenium_driver():
-    """Configure et retourne un driver Selenium pour Chrome"""
+def extract_coin_data_api():
+    """Extrait les données en utilisant l'API CoinMarketCap (version gratuite)"""
     try:
-        chrome_options = Options()
-        chrome_options.add_argument("--headless")  # Exécution sans interface graphique
-        chrome_options.add_argument("--no-sandbox")
-        chrome_options.add_argument("--disable-dev-shm-usage")
-        chrome_options.add_argument("--disable-gpu")
-        chrome_options.add_argument("--window-size=1920,1080")
+        logger.info("Tentative d'extraction via l'API CoinMarketCap...")
         
-        # Ajouter un user agent aléatoire
-        user_agent = get_headers()["User-Agent"]
-        chrome_options.add_argument(f"user-agent={user_agent}")
+        # URL de l'API CoinMarketCap (endpoint gratuit avec limite)
+        api_url = "https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing"
+        params = {
+            "start": 1,
+            "limit": 100,
+            "sortBy": "market_cap",
+            "sortType": "desc",
+            "convert": "USD",
+            "cryptoType": "all",
+            "tagType": "all"
+        }
         
-        # Initialiser le driver
-        driver = webdriver.Chrome(options=chrome_options)
-        return driver
-    except Exception as e:
-        logger.error(f"Erreur lors de l'initialisation du driver Selenium: {str(e)}")
-        return None
-
-def extract_coin_data_selenium():
-    """Extrait les données des cryptomonnaies en utilisant Selenium"""
-    driver = None
-    try:
-        logger.info("Initialisation du driver Selenium...")
-        driver = setup_selenium_driver()
-        if not driver:
-            logger.error("Impossible d'initialiser le driver Selenium")
+        headers = get_headers()
+        response = requests.get(api_url, params=params, headers=headers, timeout=CONFIG["timeout"])
+        
+        if response.status_code != 200:
+            logger.warning(f"Erreur API {response.status_code} - {response.reason}")
             return []
         
-        logger.info(f"Accès à l'URL: {CONFIG['url']}")
-        driver.get(CONFIG['url'])
-        
-        # Attendre que le tableau soit chargé
-        logger.info("Attente du chargement du tableau...")
-        wait = WebDriverWait(driver, CONFIG['timeout'])
-        table = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "table.cmc-table")))
-        
-        # Attendre un peu plus pour laisser le JS se charger complètement
-        time.sleep(5)
-        
-        # Extraire les données du tableau
-        coins = []
-        
-        # Trouver les lignes du tableau
-        rows = driver.find_elements(By.CSS_SELECTOR, "table.cmc-table tbody tr")
-        logger.info(f"Nombre de lignes trouvées: {len(rows)}")
-        
-        for row in rows:
-            try:
-                # Récupérer les cellules
-                cells = row.find_elements(By.TAG_NAME, "td")
-                
-                if len(cells) < 8:  # Vérifier qu'il y a assez de cellules
-                    continue
-                
-                # Extraire le rang
-                rank_cell = cells[0]
-                rank_text = rank_cell.text.strip()
-                
-                # Extraire le nom et le symbole
-                name_cell = cells[1]
-                name_element = name_cell.find_element(By.CSS_SELECTOR, "p")
-                symbol_element = name_cell.find_element(By.CSS_SELECTOR, "p.coin-item-symbol")
-                
-                name = name_element.text.strip()
-                symbol = symbol_element.text.strip()
-                
-                # Logo (si disponible)
-                logo_url = ""
-                try:
-                    logo_element = name_cell.find_element(By.TAG_NAME, "img")
-                    logo_url = logo_element.get_attribute("src")
-                except:
-                    pass
-                
-                # Prix actuel
-                price_cell = cells[2]
-                price = price_cell.text.strip()
-                
-                # Variations de prix
-                h1_change_cell = cells[3]
-                h24_change_cell = cells[4]
-                d7_change_cell = cells[5]
-                
-                h1_change = h1_change_cell.text.strip()
-                h24_change = h24_change_cell.text.strip()
-                d7_change = d7_change_cell.text.strip()
-                
-                # Market Cap
-                market_cap_cell = cells[6]
-                market_cap = market_cap_cell.text.strip()
-                
-                # Volume (24h)
-                volume_cell = cells[7]
-                volume = volume_cell.text.strip()
-                
-                # Déterminer la tendance
-                trend_24h = "up" if "+" in h24_change else "down"
-                trend_7d = "up" if "+" in d7_change else "down"
-                
-                # Créer l'objet crypto
-                coin = {
-                    "rank": rank_text,
-                    "name": name,
-                    "symbol": symbol,
-                    "logo": logo_url,
-                    "price": price,
-                    "change_1h": h1_change,
-                    "change_24h": h24_change,
-                    "change_7d": d7_change,
-                    "market_cap": market_cap,
-                    "volume_24h": volume,
-                    "trend_24h": trend_24h,
-                    "trend_7d": trend_7d
-                }
-                
-                coins.append(coin)
-                logger.info(f"Crypto extraite: {name} ({symbol})")
-                
-            except Exception as e:
-                logger.error(f"Erreur lors de l'extraction des données d'une crypto: {str(e)}")
-                continue
-        
-        # Extraire les cryptos les plus visitées (si disponible)
         try:
-            # Identifier la section "Most Visited"
-            most_visited_elements = driver.find_elements(By.XPATH, "//h2[contains(text(), 'Most Visited')]")
+            data = response.json()
+            if "data" not in data or "cryptoCurrencyList" not in data["data"]:
+                logger.warning("Format de réponse API inattendu")
+                return []
             
-            if most_visited_elements:
-                most_visited_section = most_visited_elements[0].find_element(By.XPATH, "./ancestor::div[contains(@class, 'section')]")
-                most_visited_rows = most_visited_section.find_elements(By.CSS_SELECTOR, "tr")
-                
-                for row in most_visited_rows:
-                    try:
-                        cells = row.find_elements(By.TAG_NAME, "td")
-                        
-                        if len(cells) < 3:  # Vérifier qu'il y a assez de cellules
-                            continue
-                        
-                        # Extraire le nom et le symbole
-                        name_cell = cells[0]
-                        name_element = name_cell.find_element(By.CSS_SELECTOR, "p")
-                        symbol_element = name_cell.find_element(By.CSS_SELECTOR, "p.coin-item-symbol")
-                        
-                        name = name_element.text.strip()
-                        symbol = symbol_element.text.strip()
-                        
-                        # Prix actuel
-                        price_cell = cells[1]
-                        price = price_cell.text.strip()
-                        
-                        # Variation de prix
-                        change_cell = cells[2]
-                        change = change_cell.text.strip()
-                        
-                        # Déterminer la tendance
-                        trend = "up" if "+" in change else "down"
-                        
-                        # Créer l'objet crypto
-                        coin = {
-                            "name": name,
-                            "symbol": symbol,
-                            "price": price,
-                            "change_24h": change,
-                            "trend": trend
-                        }
-                        
-                        CRYPTO_DATA["most_visited"].append(coin)
-                        logger.info(f"Crypto 'most visited' extraite: {name} ({symbol})")
-                        
-                    except Exception as e:
-                        logger.error(f"Erreur lors de l'extraction d'une crypto 'most visited': {str(e)}")
+            crypto_list = data["data"]["cryptoCurrencyList"]
+            coins = []
+            
+            for crypto in crypto_list:
+                try:
+                    # Extraire les données de base
+                    name = crypto.get("name", "")
+                    symbol = crypto.get("symbol", "")
+                    rank = crypto.get("rank", 0)
+                    
+                    # Extraire les données de prix (USD)
+                    quotes = crypto.get("quotes", [])
+                    usd_data = next((q for q in quotes if q.get("name") == "USD"), None)
+                    
+                    if not usd_data:
                         continue
-        except Exception as e:
-            logger.warning(f"Erreur lors de l'extraction des cryptos les plus visitées: {str(e)}")
-        
-        return coins
+                    
+                    price = usd_data.get("price", 0)
+                    percent_change_1h = usd_data.get("percentChange1h", 0)
+                    percent_change_24h = usd_data.get("percentChange24h", 0)
+                    percent_change_7d = usd_data.get("percentChange7d", 0)
+                    market_cap = usd_data.get("marketCap", 0)
+                    volume_24h = usd_data.get("volume24h", 0)
+                    
+                    # Préparer l'affichage
+                    price_str = f"${price:.6f}" if price < 1 else f"${price:.2f}"
+                    market_cap_str = f"${market_cap:,.0f}"
+                    volume_str = f"${volume_24h:,.0f}"
+                    
+                    change_1h_str = f"{'+' if percent_change_1h > 0 else ''}{percent_change_1h:.2f}%"
+                    change_24h_str = f"{'+' if percent_change_24h > 0 else ''}{percent_change_24h:.2f}%"
+                    change_7d_str = f"{'+' if percent_change_7d > 0 else ''}{percent_change_7d:.2f}%"
+                    
+                    # Déterminer les tendances
+                    trend_24h = "up" if percent_change_24h > 0 else "down"
+                    trend_7d = "up" if percent_change_7d > 0 else "down"
+                    
+                    # Logo URL
+                    logo_url = crypto.get("logo", "")
+                    
+                    # Créer l'objet crypto
+                    coin = {
+                        "rank": str(rank),
+                        "name": name,
+                        "symbol": symbol,
+                        "logo": logo_url,
+                        "price": price_str,
+                        "change_1h": change_1h_str,
+                        "change_24h": change_24h_str,
+                        "change_7d": change_7d_str,
+                        "market_cap": market_cap_str,
+                        "volume_24h": volume_str,
+                        "trend_24h": trend_24h,
+                        "trend_7d": trend_7d,
+                        # Ajouter les valeurs numériques pour le tri
+                        "_change_24h_value": percent_change_24h,
+                        "_change_7d_value": percent_change_7d
+                    }
+                    
+                    coins.append(coin)
+                    logger.info(f"Crypto extraite: {name} ({symbol})")
+                    
+                except Exception as e:
+                    logger.error(f"Erreur lors du traitement d'une crypto: {str(e)}")
+                    continue
+            
+            return coins
+            
+        except ValueError as e:
+            logger.error(f"Erreur JSON: {str(e)}")
+            return []
     
-    except TimeoutException:
-        logger.error("Timeout lors du chargement de la page")
-        return []
     except Exception as e:
-        logger.error(f"Erreur lors de l'extraction des données: {str(e)}")
+        logger.error(f"Erreur lors de l'extraction via API: {str(e)}")
+        import traceback
         logger.error(traceback.format_exc())
         return []
-    finally:
-        if driver:
-            driver.quit()
-            logger.info("Driver Selenium fermé")
 
-def extract_coin_data_requests():
-    """Tentative d'extraction via requests (fallback si Selenium échoue)"""
+def extract_coin_data_html():
+    """Tentative d'extraction via le HTML (fallback)"""
     try:
-        logger.info("Tentative d'extraction via requests...")
+        logger.info("Tentative d'extraction via le HTML...")
         headers = get_headers()
         response = requests.get(CONFIG["url"], headers=headers, timeout=CONFIG["timeout"])
         
@@ -294,7 +202,6 @@ def extract_coin_data_requests():
             return []
         
         html = response.text
-        soup = BeautifulSoup(html, 'html.parser')
         
         # Générer un fichier HTML de débogage
         debug_dir = os.path.dirname(CONFIG["output_path"])
@@ -305,81 +212,109 @@ def extract_coin_data_requests():
             f.write(html)
         logger.info(f"HTML sauvegardé pour débogage dans {debug_file_path}")
         
-        # Rechercher le tableau principal
-        table = soup.find('table', class_='cmc-table')
-        if not table:
-            logger.warning("Tableau principal non trouvé")
-            return []
+        # Tenter de trouver des données dans le HTML
+        soup = BeautifulSoup(html, 'html.parser')
         
+        # Rechercher les balises script qui contiennent potentiellement les données JSON
+        scripts = soup.find_all('script')
         coins = []
-        rows = table.find('tbody').find_all('tr')
         
-        for row in rows:
-            try:
-                cells = row.find_all('td')
-                
-                if len(cells) < 8:
-                    continue
-                
-                # Extraire le rang
-                rank_text = cells[0].text.strip()
-                
-                # Extraire le nom et le symbole
-                name_cell = cells[1]
-                name = name_cell.find('p', class_='coin-item-name').text.strip()
-                symbol = name_cell.find('p', class_='coin-item-symbol').text.strip()
-                
-                # Logo (si disponible)
-                logo_url = ""
-                logo_element = name_cell.find('img')
-                if logo_element:
-                    logo_url = logo_element.get('src', '')
-                
-                # Prix actuel
-                price = cells[2].text.strip()
-                
-                # Variations de prix
-                h1_change = cells[3].text.strip()
-                h24_change = cells[4].text.strip()
-                d7_change = cells[5].text.strip()
-                
-                # Market Cap
-                market_cap = cells[6].text.strip()
-                
-                # Volume (24h)
-                volume = cells[7].text.strip()
-                
-                # Déterminer la tendance
-                trend_24h = "up" if "+" in h24_change else "down"
-                trend_7d = "up" if "+" in d7_change else "down"
-                
-                # Créer l'objet crypto
-                coin = {
-                    "rank": rank_text,
-                    "name": name,
-                    "symbol": symbol,
-                    "logo": logo_url,
-                    "price": price,
-                    "change_1h": h1_change,
-                    "change_24h": h24_change,
-                    "change_7d": d7_change,
-                    "market_cap": market_cap,
-                    "volume_24h": volume,
-                    "trend_24h": trend_24h,
-                    "trend_7d": trend_7d
-                }
-                
-                coins.append(coin)
-                logger.info(f"Crypto extraite (requests): {name} ({symbol})")
-                
-            except Exception as e:
-                logger.error(f"Erreur lors de l'extraction des données d'une crypto (requests): {str(e)}")
+        for script in scripts:
+            script_text = script.string
+            if not script_text:
                 continue
+            
+            # Rechercher des données JSON qui ressemblent à des données de cryptocurrencies
+            if 'cryptoCurrencyList' in script_text:
+                try:
+                    # Extraire le JSON à partir du script
+                    start_index = script_text.find('{')
+                    end_index = script_text.rfind('}') + 1
+                    
+                    if start_index < 0 or end_index <= 0:
+                        continue
+                    
+                    json_str = script_text[start_index:end_index]
+                    data = json.loads(json_str)
+                    
+                    # Trouver les données de crypto dans l'objet JSON
+                    if 'data' in data and 'cryptoCurrencyList' in data['data']:
+                        crypto_list = data['data']['cryptoCurrencyList']
+                        
+                        for crypto in crypto_list:
+                            try:
+                                name = crypto.get('name', '')
+                                symbol = crypto.get('symbol', '')
+                                rank = crypto.get('rank', 0)
+                                
+                                # Extraire les données de prix
+                                quotes = crypto.get('quotes', [])
+                                usd_data = next((q for q in quotes if q.get('name') == 'USD'), None)
+                                
+                                if not usd_data:
+                                    continue
+                                
+                                price = usd_data.get('price', 0)
+                                percent_change_1h = usd_data.get('percentChange1h', 0)
+                                percent_change_24h = usd_data.get('percentChange24h', 0)
+                                percent_change_7d = usd_data.get('percentChange7d', 0)
+                                market_cap = usd_data.get('marketCap', 0)
+                                volume_24h = usd_data.get('volume24h', 0)
+                                
+                                # Préparer l'affichage
+                                price_str = f"${price:.6f}" if price < 1 else f"${price:.2f}"
+                                market_cap_str = f"${market_cap:,.0f}"
+                                volume_str = f"${volume_24h:,.0f}"
+                                
+                                change_1h_str = f"{'+' if percent_change_1h > 0 else ''}{percent_change_1h:.2f}%"
+                                change_24h_str = f"{'+' if percent_change_24h > 0 else ''}{percent_change_24h:.2f}%"
+                                change_7d_str = f"{'+' if percent_change_7d > 0 else ''}{percent_change_7d:.2f}%"
+                                
+                                # Déterminer les tendances
+                                trend_24h = "up" if percent_change_24h > 0 else "down"
+                                trend_7d = "up" if percent_change_7d > 0 else "down"
+                                
+                                # Logo URL
+                                logo_url = crypto.get('logo', '')
+                                
+                                # Créer l'objet crypto
+                                coin = {
+                                    "rank": str(rank),
+                                    "name": name,
+                                    "symbol": symbol,
+                                    "logo": logo_url,
+                                    "price": price_str,
+                                    "change_1h": change_1h_str,
+                                    "change_24h": change_24h_str,
+                                    "change_7d": change_7d_str,
+                                    "market_cap": market_cap_str,
+                                    "volume_24h": volume_str,
+                                    "trend_24h": trend_24h,
+                                    "trend_7d": trend_7d,
+                                    # Ajouter les valeurs numériques pour le tri
+                                    "_change_24h_value": percent_change_24h,
+                                    "_change_7d_value": percent_change_7d
+                                }
+                                
+                                coins.append(coin)
+                                logger.info(f"Crypto extraite du HTML: {name} ({symbol})")
+                                
+                            except Exception as e:
+                                logger.error(f"Erreur lors du traitement d'une crypto: {str(e)}")
+                                continue
+                        
+                        # Si on a trouvé des données, on arrête la recherche
+                        if coins:
+                            break
+                except Exception as e:
+                    logger.warning(f"Erreur lors du parsing JSON: {str(e)}")
+                    continue
         
         return coins
     
     except Exception as e:
-        logger.error(f"Erreur lors de l'extraction via requests: {str(e)}")
+        logger.error(f"Erreur lors de l'extraction via HTML: {str(e)}")
+        import traceback
         logger.error(traceback.format_exc())
         return []
 
@@ -389,32 +324,57 @@ def categorize_coins(coins):
     for category in CRYPTO_DATA["categories"]:
         CRYPTO_DATA["categories"][category] = []
     
-    # Trier par performance sur 24h (pour top gainers/losers 24h)
-    sorted_24h = sorted(coins, key=lambda x: float(x["change_24h"].replace("%", "").replace("+", "").replace(",", "").strip()), reverse=True)
+    # Si pas de coins, sortir
+    if not coins:
+        logger.warning("Aucune crypto à catégoriser")
+        return
     
     # Top gainers 24h (premiers éléments)
-    top_gainers_24h = [coin for coin in sorted_24h if "+" in coin["change_24h"]][:CONFIG["max_coins_per_category"]]
+    sorted_24h_gainers = sorted(coins, key=lambda x: x.get("_change_24h_value", 0), reverse=True)
+    top_gainers_24h = [
+        {k: v for k, v in coin.items() if not k.startswith('_')} 
+        for coin in sorted_24h_gainers[:CONFIG["max_coins_per_category"]] 
+        if coin.get("_change_24h_value", 0) > 0
+    ]
     CRYPTO_DATA["categories"]["top_gainers_24h"] = top_gainers_24h
     
     # Top losers 24h (derniers éléments)
-    sorted_losers_24h = sorted(sorted_24h, key=lambda x: float(x["change_24h"].replace("%", "").replace("+", "").replace("-", "").replace(",", "").strip()))
-    top_losers_24h = [coin for coin in sorted_losers_24h if "-" in coin["change_24h"]][:CONFIG["max_coins_per_category"]]
+    sorted_24h_losers = sorted(coins, key=lambda x: x.get("_change_24h_value", 0))
+    top_losers_24h = [
+        {k: v for k, v in coin.items() if not k.startswith('_')} 
+        for coin in sorted_24h_losers[:CONFIG["max_coins_per_category"]] 
+        if coin.get("_change_24h_value", 0) < 0
+    ]
     CRYPTO_DATA["categories"]["top_losers_24h"] = top_losers_24h
     
-    # Trier par performance sur 7d (pour top gainers/losers 7d)
-    sorted_7d = sorted(coins, key=lambda x: float(x["change_7d"].replace("%", "").replace("+", "").replace(",", "").strip()), reverse=True)
-    
     # Top gainers 7d (premiers éléments)
-    top_gainers_7d = [coin for coin in sorted_7d if "+" in coin["change_7d"]][:CONFIG["max_coins_per_category"]]
+    sorted_7d_gainers = sorted(coins, key=lambda x: x.get("_change_7d_value", 0), reverse=True)
+    top_gainers_7d = [
+        {k: v for k, v in coin.items() if not k.startswith('_')} 
+        for coin in sorted_7d_gainers[:CONFIG["max_coins_per_category"]] 
+        if coin.get("_change_7d_value", 0) > 0
+    ]
     CRYPTO_DATA["categories"]["top_gainers_7d"] = top_gainers_7d
     
     # Top losers 7d (derniers éléments)
-    sorted_losers_7d = sorted(sorted_7d, key=lambda x: float(x["change_7d"].replace("%", "").replace("+", "").replace("-", "").replace(",", "").strip()))
-    top_losers_7d = [coin for coin in sorted_losers_7d if "-" in coin["change_7d"]][:CONFIG["max_coins_per_category"]]
+    sorted_7d_losers = sorted(coins, key=lambda x: x.get("_change_7d_value", 0))
+    top_losers_7d = [
+        {k: v for k, v in coin.items() if not k.startswith('_')} 
+        for coin in sorted_7d_losers[:CONFIG["max_coins_per_category"]] 
+        if coin.get("_change_7d_value", 0) < 0
+    ]
     CRYPTO_DATA["categories"]["top_losers_7d"] = top_losers_7d
     
-    # Les 20 premières pour "trending"
-    CRYPTO_DATA["categories"]["trending"] = coins[:CONFIG["max_coins_per_category"]]
+    # Les 20 premières par market cap pour "trending"
+    trending = [
+        {k: v for k, v in coin.items() if not k.startswith('_')} 
+        for coin in coins[:CONFIG["max_coins_per_category"]]
+    ]
+    CRYPTO_DATA["categories"]["trending"] = trending
+    
+    # Ajouter quelques cryptos aux most_visited si vide
+    if not CRYPTO_DATA["most_visited"] and trending:
+        CRYPTO_DATA["most_visited"] = trending[:10]
     
     # Mettre à jour le compteur
     total_count = sum(len(category) for category in CRYPTO_DATA["categories"].values())
@@ -422,20 +382,20 @@ def categorize_coins(coins):
     
     logger.info(f"Catégorisation terminée: {len(top_gainers_24h)} gainers 24h, {len(top_losers_24h)} losers 24h, "
                 f"{len(top_gainers_7d)} gainers 7d, {len(top_losers_7d)} losers 7d, "
-                f"{len(CRYPTO_DATA['categories']['trending'])} trending")
+                f"{len(trending)} trending")
 
 def scrape_crypto_data():
     """Récupère et traite les données des cryptomonnaies"""
     try:
-        logger.info("Démarrage de l'extraction des données...")
+        logger.info("Démarrage de l'extraction des données de CoinMarketCap...")
         
-        # Essayer d'abord avec Selenium
-        coins = extract_coin_data_selenium()
+        # Essayer d'abord l'API
+        coins = extract_coin_data_api()
         
-        # Si Selenium échoue, essayer avec requests (attention: peut ne pas fonctionner à cause du JavaScript)
+        # Si l'API échoue, essayer l'extraction HTML
         if not coins:
-            logger.info("L'extraction avec Selenium a échoué, tentative avec requests...")
-            coins = extract_coin_data_requests()
+            logger.info("L'extraction via API a échoué, tentative via HTML...")
+            coins = extract_coin_data_html()
         
         if not coins:
             logger.error("Aucune donnée extraite.")
@@ -453,6 +413,7 @@ def scrape_crypto_data():
     
     except Exception as e:
         logger.error(f"Erreur lors de l'extraction des données: {str(e)}")
+        import traceback
         logger.error(traceback.format_exc())
         return False
 
@@ -472,6 +433,7 @@ def save_crypto_data():
         return True
     except Exception as e:
         logger.error(f"❌ Erreur lors de l'enregistrement des données: {str(e)}")
+        import traceback
         logger.error(traceback.format_exc())
         return False
 
@@ -515,6 +477,7 @@ def main():
             
     except Exception as e:
         logger.error(f"❌ Erreur fatale: {str(e)}")
+        import traceback
         logger.error(traceback.format_exc())
         
         # Si une erreur se produit mais que le fichier existe déjà, ne pas faire échouer le workflow
