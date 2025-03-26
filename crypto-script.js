@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let cryptoData = {
         indices: {},
         meta: {
-            source: 'CoinGecko',
+            source: 'CoinMarketCap',
             timestamp: null,
             count: 0,
             isStale: false
@@ -175,11 +175,8 @@ document.addEventListener('DOMContentLoaded', function() {
         // Mettre à jour le lien source
         const sourceLink = document.getElementById('source-link');
         if (sourceLink) {
-            const link = currentMarket === 'all'
-                ? 'https://www.coingecko.com/'
-                : 'https://www.coingecko.com/fr/pieces/top-100-by-market-cap';
-            
-            sourceLink.innerHTML = `Sources: <a href="${link}" target="_blank" class="text-green-400 hover:underline">CoinGecko</a>`;
+            const link = 'https://coinmarketcap.com/fr/';
+            sourceLink.innerHTML = `Sources: <a href="${link}" target="_blank" class="text-green-400 hover:underline">CoinMarketCap</a>`;
         }
     }
     
@@ -216,16 +213,26 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Charger les données
             const rawData = await response.json();
+            console.log("Données chargées:", rawData);
             
-            // Sélectionner les données en fonction du marché
-            const marketData = rawData[currentMarket] || {};
+            // Adaptation au nouveau format
+            // Organisation des données en indices par lettre alphabétique
+            cryptoData.indices = organizeByLetter(rawData.all_coins || []);
             
-            // S'assurer que toutes les régions existent dans les données
-            cryptoData = {
-                indices: marketData.indices || {},
-                top_performers: marketData.top_performers || null,
-                meta: marketData.meta || {}
+            // Adaptation des top performers
+            cryptoData.top_performers = {
+                daily: {
+                    best: rawData.categories?.top_gainers_24h || [],
+                    worst: rawData.categories?.top_losers_24h || []
+                },
+                ytd: {
+                    best: rawData.categories?.top_gainers_7d || [],
+                    worst: rawData.categories?.top_losers_7d || []
+                }
             };
+            
+            // Métadonnées
+            cryptoData.meta = rawData.meta || {};
             
             // Stocker les données pour le classement global
             if (currentMarket === 'all') {
@@ -235,7 +242,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Vérifier la fraîcheur des données
-            const dataTimestamp = new Date(cryptoData.meta.timestamp);
+            const dataTimestamp = new Date(cryptoData.meta.timestamp || cryptoData.meta.lastUpdated);
             const now = new Date();
             const dataAge = now - dataTimestamp;
             const MAX_DATA_AGE = 60 * 60 * 1000; // 1 heure en millisecondes
@@ -267,6 +274,43 @@ document.addEventListener('DOMContentLoaded', function() {
             // Réinitialiser l'état
             isLoading = false;
         }
+    }
+    
+    /**
+     * Organise les cryptos par lettre initiale
+     */
+    function organizeByLetter(coins) {
+        const result = {};
+        const alphabet = "abcdefghijklmnopqrstuvwxyz".split('');
+        
+        // Initialiser chaque lettre avec un tableau vide
+        alphabet.forEach(letter => {
+            result[letter] = [];
+        });
+        
+        // Répartir les cryptos par lettre
+        coins.forEach(coin => {
+            const name = coin.name || "";
+            if (name) {
+                const firstLetter = name[0].toLowerCase();
+                if (alphabet.includes(firstLetter)) {
+                    // Adapter la structure de la crypto pour correspondre aux attentes de l'interface
+                    const adaptedCoin = {
+                        name: coin.name,
+                        symbol: coin.symbol,
+                        last: coin.price,
+                        change: coin.change_24h,
+                        volume: coin.volume_24h,
+                        marketCap: coin.market_cap,
+                        ytd: coin.change_7d,
+                        ath: "" // Information non disponible dans les données
+                    };
+                    result[firstLetter].push(adaptedCoin);
+                }
+            }
+        });
+        
+        return result;
     }
     
     /**
@@ -333,7 +377,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderCryptoData() {
         try {
             // Mettre à jour l'horodatage
-            const timestamp = new Date(cryptoData.meta.timestamp);
+            const timestamp = new Date(cryptoData.meta.timestamp || cryptoData.meta.lastUpdated);
             
             let formattedDate = timestamp.toLocaleDateString('fr-FR', {
                 day: '2-digit',
@@ -442,14 +486,14 @@ document.addEventListener('DOMContentLoaded', function() {
             renderTopTenCards('top-daily-losers', topPerformers.daily.worst.slice(0, 10), 'change', currentMarket);
         }
         
-        // Mise à jour du top 10 Hausse YTD
+        // Mise à jour du top 10 Hausse YTD (using 7d data)
         if (topPerformers.ytd && topPerformers.ytd.best) {
-            renderTopTenCards('top-ytd-gainers', topPerformers.ytd.best.slice(0, 10), 'ytd', currentMarket);
+            renderTopTenCards('top-ytd-gainers', topPerformers.ytd.best.slice(0, 10), 'change_7d', currentMarket);
         }
         
-        // Mise à jour du top 10 Baisse YTD
+        // Mise à jour du top 10 Baisse YTD (using 7d data)
         if (topPerformers.ytd && topPerformers.ytd.worst) {
-            renderTopTenCards('top-ytd-losers', topPerformers.ytd.worst.slice(0, 10), 'ytd', currentMarket);
+            renderTopTenCards('top-ytd-losers', topPerformers.ytd.worst.slice(0, 10), 'change_7d', currentMarket);
         }
     }
     
@@ -479,7 +523,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         displayCryptos.forEach((crypto, index) => {
             // Déterminer le signe et la classe pour la valeur
-            let value = crypto[valueField] || '-';
+            // Support pour les deux formats de données possibles
+            let value = crypto[valueField] || crypto.change_7d || crypto.change || crypto.ytd || '-';
             let valueClass = 'positive';
             
             if (value.includes('-')) {
@@ -523,7 +568,7 @@ document.addEventListener('DOMContentLoaded', function() {
             card.innerHTML = `
                 <div class="rank ${rankBg} ${rankStyle} ${glowEffect}">#${index + 1}</div>
                 <div class="stock-info ${specialClass}">
-                    <div class="stock-name">${crypto.symbol || crypto.name.split(' ')[0] || '-'} ${marketIcon}</div>
+                    <div class="stock-name">${crypto.symbol || crypto.name?.split(' ')[0] || '-'} ${marketIcon}</div>
                     <div class="stock-fullname">${crypto.name || '-'}</div>
                 </div>
                 <div class="stock-performance ${valueClass}">
@@ -576,12 +621,18 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // Adaptation du champ de valeur selon le format
+        const getDisplayValue = (crypto, field) => {
+            return crypto[field] || crypto.change_7d || crypto.change || crypto.ytd || '-';
+        };
+        
         // Générer le HTML pour chaque cryptomonnaie
         cryptos.forEach((crypto, i) => {
             const row = document.createElement('div');
             row.className = 'performer-row';
             
-            const valueClass = (crypto[valueField] || "").includes('-') ? 'negative' : 'positive';
+            const displayValue = getDisplayValue(crypto, valueField);
+            const valueClass = displayValue.includes('-') ? 'negative' : 'positive';
             
             row.innerHTML = `
                 <div class="performer-info">
@@ -589,7 +640,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="performer-country">${crypto.symbol || ""}</div>
                 </div>
                 <div class="performer-value ${valueClass}">
-                    ${crypto[valueField] || "-"}
+                    ${displayValue}
                 </div>
             `;
             
