@@ -62,10 +62,11 @@ def extract_content_from_html(html_file):
                                     content.append(f"• {row_data}")
                 
                 # Si aucun tableau n'est trouvé, essayer d'autres sélecteurs
-                if not content:
+                # CORRECTION: Vérifier que le contenu n'a pas de lignes de données (avec •)
+                if not content or not any("•" in item for item in content):
                     market_data = soup.select('.market-trend, .market-data, .trend-item, .index-card, .market-item')
                     if not market_data:
-                        # Fallback pour les éléments génériques
+                        # Fallback
                         market_data = soup.select('.card, .market, .indice, .asset-card')
                     
                     for item in market_data:
@@ -108,8 +109,8 @@ def extract_content_from_html(html_file):
                                 if row_data:
                                     content.append(f"• {row_data}")
                 
-                # Si aucun tableau n'est trouvé, essayer les sélecteurs originaux
-                if len(content) <= 1:
+                # CORRECTION: Vérifier que le contenu n'a pas de lignes de données (avec •)
+                if not any("•" in item for item in content):
                     sector_data = soup.select('.sector-card, .sector-item, .performance-card')
                     if not sector_data:
                         # Fallback
@@ -159,8 +160,8 @@ def extract_content_from_html(html_file):
                                 if row_data:
                                     content.append(f"• {row_data}")
                 
-                # Si aucun tableau n'est trouvé, essayer les sélecteurs originaux
-                if len(content) <= 1:
+                # CORRECTION: Vérifier que le contenu n'a pas de lignes de données (avec •)
+                if not any("•" in item for item in content):
                     asset_items = soup.select('.asset-item, .watchlist-item, .stock-item, .list-card')
                     if not asset_items:
                         # Fallback
@@ -212,8 +213,8 @@ def extract_content_from_html(html_file):
                                 if row_data:
                                     content.append(f"• {row_data}")
                 
-                # Si aucun tableau n'est trouvé, essayer des sections ou cartes d'ETF spécifiques
-                if len(content) <= 1:
+                # CORRECTION: Vérifier que le contenu n'a pas de lignes de données (avec •)
+                if not any("•" in item for item in content):
                     # Chercher d'abord des sections avec des titres mentionnant ETF
                     etf_sections = []
                     for heading in soup.select('h1, h2, h3, h4, h5, h6'):
@@ -233,8 +234,8 @@ def extract_content_from_html(html_file):
                             for item in items[:10]:
                                 content.append(f"  - {item.get_text(strip=True)}")
                     
-                    # Fallback sur les sélecteurs originaux
-                    if len(content) <= 1:
+                    # Fallback sur les sélecteurs originaux si aucune ligne de données trouvée
+                    if not any("•" in item for item in content):
                         etf_items = soup.select('.etf-card, .etf-item, .fund-card, .etf-table tr')
                         if not etf_items:
                             # Fallback
@@ -264,13 +265,13 @@ def extract_content_from_html(html_file):
                                         data_line += ", Frais: {}".format(expense_text)
                                     content.append(data_line)
             
-            # Si aucun contenu spécifique n'a été trouvé, extraire le texte brut 
+            # CORRECTION: Si aucun contenu spécifique n'a été trouvé, extraire le texte brut avec marqueur clair
             if not content:
                 # Extraire tout le contenu textuel de la page pour avoir quelque chose
                 body_text = soup.body.get_text(strip=True) if soup.body else ""
                 if body_text:
                     # Limiter à 1000 caractères pour éviter un prompt trop long
-                    content.append(f"[Extraction brute de {html_file}]")
+                    content.append(f"[FALLBACK BRUT - {html_file}]")
                     
                     # Découper le texte en lignes plus courtes pour plus de lisibilité
                     chunks = [body_text[i:i+100] for i in range(0, min(1000, len(body_text)), 100)]
@@ -337,7 +338,7 @@ def filter_news_data(news_data):
             filtered_news.append(f"Région {region}: " + 
                                ", ".join([f"{n['title']} ({n['impact']})" for n in important_news]))
     
-    return "\n".join(filtered_news) if filtered_news else "Aucune actualité pertinente"
+    return "\n".join(filtered_news) if filtered_news else "Aucune donnée d'actualité pertinente"
 
 def filter_markets_data(markets_data):
     """Filtre les données de marché pour inclure les indices clés et les top performers."""
@@ -456,7 +457,7 @@ def filter_markets_data(markets_data):
                 lines.append(f"• {name} ({country}) : {ytd}")
     
     # Fallback si aucune donnée de top performers n'est trouvée
-    if not lines or len(lines) <= 5:  # S'il n'y a que les titres de région
+    if not lines or not any("•" in line for line in lines):  # CORRECTION: Vérifier l'absence de lignes de données
         # Ajouter une synthèse basique basée sur les indices
         for region, indices in indices_data.items():
             if not isinstance(indices, list) or not indices:
@@ -749,9 +750,7 @@ if (window.recordDebugFile) {{
 # NOUVELLE FONCTION: Extraction des actifs valides des données filtrées
 def extract_valid_assets(filtered_etfs):
     """Extrait spécifiquement les Top ETF et Top Obligations depuis les données filtrées"""
-    # Initialiser les variables globales
-    global valid_etfs_cache, valid_bonds_cache
-    
+    # CORRECTION: Ne pas utiliser de variables globales, retourner les valeurs
     valid_etfs = []
     valid_bonds = []
     
@@ -783,8 +782,10 @@ def extract_valid_assets(filtered_etfs):
                 valid_bonds.append(asset_name)
     
     # Mettre à jour les variables globales pour les utiliser dans adjust_portfolios()
-    valid_etfs_cache = valid_etfs
-    valid_bonds_cache = valid_bonds
+    # CORRECTION: Modifier l'accès aux variables globales
+    global valid_etfs_cache, valid_bonds_cache
+    valid_etfs_cache = valid_etfs.copy()
+    valid_bonds_cache = valid_bonds.copy()
     
     # Afficher les informations sur les actifs trouvés
     print(f"📊 ETF trouvés: {len(valid_etfs)} (TOP ETF et court terme)")
@@ -872,7 +873,7 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     filtered_lists = filter_lists_data(lists_data)
     filtered_etfs = filter_etf_data(etfs_data)
     
-    # NOUVEAU: Extraire les ETF et obligations valides
+    # CORRECTION: Utiliser les valeurs retournées sans globales
     valid_etfs, valid_bonds = extract_valid_assets(filtered_etfs)
     
     # Formatage pour le prompt
@@ -910,13 +911,14 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     # Horodatage pour les fichiers de debug
     debug_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     
-    # Exemples précis d'obligations et d'ETF à inclure avec des instructions plus strictes
-    obligations_examples = """
-❌ ATTENTION - RÈGLES STRICTES POUR LES OBLIGATIONS ET ETF:
-1. Utilise UNIQUEMENT les noms d'obligations et ETF fournis dans les listes ci-dessus
-2. N'utilise JAMAIS de termes génériques comme "Obligations Souveraines US" ou "Obligations d'Entreprises euro"
-3. Si aucune obligation de la liste ne convient, utilise d'autres classes d'actifs plutôt que d'inventer
-4. NE PAS utiliser de noms proches ou similaires - UNIQUEMENT les noms EXACTS tels qu'ils apparaissent dans la liste
+    # CORRECTION: Fusionner les règles strictes en un seul bloc pour plus de clarté
+    strict_rules = """
+🎯 RÈGLES STRICTES POUR LA SÉLECTION DES ACTIFS:
+1. Utilise UNIQUEMENT les noms d'ETF et d'obligations fournis dans les listes ci-dessus
+2. N'utilise JAMAIS de termes génériques comme "Obligations Souveraines US" ou "ETF Obligataire Spéculatif"
+3. Si aucun ETF ou obligation de la liste ne convient, utilise d'autres classes d'actifs plutôt que d'inventer
+4. Pour les actions, utilise toujours des noms précis et spécifiques d'entreprises, pas de catégories
+5. NE PAS utiliser de noms proches ou similaires - UNIQUEMENT les noms EXACTS des listes
 """
     
     for attempt in range(max_retries):
@@ -954,18 +956,7 @@ Utilise ces données filtrées pour générer les portefeuilles :
    b) Modéré : EXACTEMENT entre 12 et 15 actifs au total  
    c) Stable : EXACTEMENT entre 12 et 15 actifs au total
 
-2. RÈGLES DE SÉLECTION DES ACTIFS :
-   - Pour les **ETF**, tu dois choisir UNIQUEMENT et STRICTEMENT parmi cette liste exacte:
-     {etfs_list}
-   
-   - Pour les **obligations**, tu dois choisir UNIQUEMENT et STRICTEMENT parmi cette liste exacte:
-     {bonds_list}
-   
-   - Pour les actions et autres actifs, utilise toujours des noms précis et spécifiques (noms d'entreprises exacts, pas de catégories génériques)
-   - ❌ N'utilise JAMAIS de termes génériques comme "ETF Obligataire Spéculatif" ou "Obligations Souveraines"
-   - ❌ JAMAIS de noms inventés, AUCUN actif synthétique - seulement des noms précis et identifiables dans les listes fournies
-
-{obligations_examples}
+2. {strict_rules}
 
 {minimum_requirements}
 
