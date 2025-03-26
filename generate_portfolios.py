@@ -809,7 +809,7 @@ def extract_valid_assets(filtered_etfs):
     return valid_etfs, valid_bonds
 
 def validate_and_fix_portfolios(portfolios, valid_etfs, valid_bonds):
-    """Valide et corrige automatiquement les portefeuilles"""
+    """Valide et corrige automatiquement les portefeuilles en strictement respectant les listes d'actifs valides"""
     
     for portfolio_type, portfolio in portfolios.items():
         # 1. Supprimer les allocations négatives
@@ -832,98 +832,50 @@ def validate_and_fix_portfolios(portfolios, valid_etfs, valid_bonds):
             for asset in assets_to_remove:
                 del assets[asset]
         
-        # 2. Vérifier et corriger les ETF et obligations
+        # 2. Vérifier strictement que les ETF et obligations sont dans leurs listes respectives
         for category in list(portfolio.keys()):
-            if category == "Commentaire":
-                continue
-            
-            assets_to_move = {}
-            assets_to_remove = []
-            
-            for asset, allocation in list(portfolio[category].items()):
-                # Vérifier si l'actif est dans la mauvaise catégorie
-                is_etf = any(etf in asset for etf in valid_etfs) or asset in valid_etfs
-                is_bond = any(bond in asset for bond in valid_bonds) or asset in valid_bonds
+            if category != "Commentaire":
+                assets_to_remove = []
                 
-                # Si c'est un ETF mal classé
-                if is_etf and category != "ETF":
-                    assets_to_move[(asset, "ETF")] = allocation
-                    assets_to_remove.append((category, asset))
+                # Suppression des actifs non valides dans les catégories ETF et Obligations
+                if category == "ETF":
+                    for asset in portfolio[category]:
+                        if asset not in valid_etfs:
+                            assets_to_remove.append(asset)
+                            print(f"❌ Suppression de l'ETF invalide: {asset} (non présent dans la liste d'ETF valides)")
                 
-                # Si c'est une obligation mal classée
-                elif is_bond and category != "Obligations":
-                    assets_to_move[(asset, "Obligations")] = allocation
-                    assets_to_remove.append((category, asset))
+                elif category == "Obligations":
+                    for asset in portfolio[category]:
+                        if asset not in valid_bonds:
+                            assets_to_remove.append(asset)
+                            print(f"❌ Suppression de l'Obligation invalide: {asset} (non présente dans la liste d'obligations valides)")
                 
-                # Si c'est un ETF/obligation invalide
-                elif (category == "ETF" and not is_etf) or (category == "Obligations" and not is_bond):
-                    # Pour les obligations et ETF, on est strict
-                    assets_to_remove.append((category, asset))
-            
-            # Déplacer les actifs vers les bonnes catégories
-            for (asset, target_category), allocation in assets_to_move.items():
-                if target_category not in portfolio:
-                    portfolio[target_category] = {}
-                portfolio[target_category][asset] = allocation
-            
-            # Supprimer les actifs mal classés ou invalides
-            for category, asset in assets_to_remove:
-                if category in portfolio and asset in portfolio[category]:
+                # Suppression des actifs invalides
+                for asset in assets_to_remove:
                     del portfolio[category][asset]
+                
+                # Si la catégorie est vide après suppression, préparer pour suppression
+                if not portfolio[category]:
+                    print(f"⚠️ La catégorie {category} est maintenant vide dans le portefeuille {portfolio_type}")
         
-        # 3. Gérer le cas des catégories vides
+        # 3. Supprimer les catégories vides
         categories_to_remove = []
         for category, assets in portfolio.items():
-            if category == "Commentaire":
-                continue
-            
-            if len(assets) == 0:
+            if category != "Commentaire" and len(assets) == 0:
                 categories_to_remove.append(category)
         
-        # Supprimer les catégories vides
         for category in categories_to_remove:
             del portfolio[category]
+            print(f"❌ Suppression de la catégorie vide: {category} dans le portefeuille {portfolio_type}")
     
     return portfolios
 
-def replace_generic_names(portfolios):
-    """Remplace les noms génériques par des noms spécifiques d'actifs."""
-    for portfolio_type, portfolio in portfolios.items():
-        for category, assets in portfolio.items():
-            if category == "Commentaire":
-                continue
-                
-            # Créer une copie du dictionnaire d'actifs pour éviter de modifier pendant l'itération
-            assets_copy = assets.copy()
-            
-            for asset_name, allocation in assets_copy.items():
-                # Vérifier si le nom est générique (correspond à une clé dans SPECIFIC_OBLIGATIONS)
-                if asset_name in SPECIFIC_OBLIGATIONS:
-                    # Supprimer l'entrée générique
-                    del assets[asset_name]
-                    
-                    # Diviser l'allocation entre les actifs spécifiques
-                    specific_assets = SPECIFIC_OBLIGATIONS[asset_name]
-                    num_specific = len(specific_assets)
-                    
-                    if num_specific > 0:
-                        # Convertir l'allocation en nombre
-                        allocation_value = float(allocation.replace('%', '').strip())
-                        
-                        # Répartir entre les actifs spécifiques (garder au moins 2%)
-                        for i, specific_asset in enumerate(specific_assets):
-                            # Pour le dernier actif, prendre le reste pour éviter les erreurs d'arrondi
-                            if i == num_specific - 1:
-                                specific_allocation = allocation_value - (num_specific - 1) * 2
-                            else:
-                                specific_allocation = 2
-                                allocation_value -= 2
-                            
-                            # Ajouter seulement si l'allocation est positive
-                            if specific_allocation > 0:
-                                assets[specific_asset] = f"{specific_allocation:.1f}%"
-    
-    return portfolios
+# La fonction replace_generic_names a été intentionnellement désactivée pour éviter l'introduction d'obligations non valides
+# Elle est conservée dans le code comme référence mais ne sera pas appelée
+def replace_generic_names_DISABLED(portfolios):
+    """Remplace les noms génériques par des noms spécifiques d'actifs. DÉSACTIVÉ INTENTIONNELLEMENT."""
+    print("⚠️ AVERTISSEMENT: La fonction replace_generic_names est désactivée pour éviter l'introduction d'obligations non valides")
+    return portfolios  # Retourne les portefeuilles sans modification
 
 def check_portfolio_constraints(portfolios):
     """Vérifie que les portefeuilles générés respectent les contraintes."""
@@ -1163,13 +1115,13 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     # Horodatage pour les fichiers de debug
     debug_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
     
-    # Exemples précis d'obligations et d'ETF à inclure
+    # Exemples précis d'obligations et d'ETF à inclure avec des instructions plus strictes
     obligations_examples = """
-Liste d'exemples d'obligations à utiliser :
-- Pour Obligations Souveraines US: US Treasury 2Y, US Treasury 5Y, US Treasury 10Y, US Treasury 30Y
-- Pour Obligations Souveraines EU: German Bunds 2Y, German Bunds 5Y, German Bunds 10Y, French OAT 10Y
-- Pour Obligations d'Entreprises: iShares Corporate Bond ETF, Vanguard Corporate Bond ETF, PIMCO Investment Grade
-- Pour Obligations Spéculatives: iShares High Yield Corporate Bond, SPDR Bloomberg High Yield Bond ETF
+❌ ATTENTION - RÈGLES STRICTES POUR LES OBLIGATIONS ET ETF:
+1. Utilise UNIQUEMENT les noms d'obligations et ETF fournis dans les listes ci-dessus
+2. N'utilise JAMAIS de termes génériques comme "Obligations Souveraines US" ou "Obligations d'Entreprises euro"
+3. Si aucune obligation de la liste ne convient, utilise d'autres classes d'actifs plutôt que d'inventer
+4. NE PAS utiliser de noms proches ou similaires - UNIQUEMENT les noms EXACTS tels qu'ils apparaissent dans la liste
 """
     
     for attempt in range(max_retries):
@@ -1205,15 +1157,15 @@ Utilise ces données filtrées pour générer les portefeuilles :
    c) Stable : EXACTEMENT entre 12 et 15 actifs au total
 
 2. RÈGLES DE SÉLECTION DES ACTIFS :
-   - Pour les **ETF**, tu dois choisir UNIQUEMENT parmi cette liste exacte:
+   - Pour les **ETF**, tu dois choisir UNIQUEMENT et STRICTEMENT parmi cette liste exacte:
      {etfs_list}
    
-   - Pour les **obligations**, tu dois choisir UNIQUEMENT parmi cette liste exacte:
+   - Pour les **obligations**, tu dois choisir UNIQUEMENT et STRICTEMENT parmi cette liste exacte:
      {bonds_list}
    
    - Pour les actions et autres actifs, utilise toujours des noms précis et spécifiques (noms d'entreprises exacts, pas de catégories génériques)
-   - N'utilise JAMAIS de termes génériques comme "ETF Obligataire Spéculatif" ou "Obligations Souveraines"
-   - Aucun nom inventé, aucun actif synthétique - seulement des noms précis et identifiables
+   - ❌ N'utilise JAMAIS de termes génériques comme "ETF Obligataire Spéculatif" ou "Obligations Souveraines"
+   - ❌ JAMAIS de noms inventés, AUCUN actif synthétique - seulement des noms précis et identifiables dans les listes fournies
 
 {obligations_examples}
 
@@ -1252,6 +1204,7 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 - La somme des allocations de chaque portefeuille DOIT être EXACTEMENT 100%
 - Minimum 2 classes d'actifs par portefeuille
 - Chaque actif doit avoir un nom SPÉCIFIQUE et PRÉCIS, PAS de noms génériques
+- Pour les ETF et obligations, utilise UNIQUEMENT les noms exacts fournis dans les listes ci-dessus
 - Ne réponds qu'avec le JSON, sans commentaire ni explication supplémentaire
 """
             
@@ -1294,10 +1247,10 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
             # Vérifier que le contenu est bien du JSON valide
             portfolios = json.loads(content)
             
-            # Remplacer les noms génériques par des noms spécifiques
-            portfolios = replace_generic_names(portfolios)
+            # IMPORTANT: Ne pas appeler replace_generic_names pour éviter d'introduire des obligations non valides
+            # portfolios = replace_generic_names(portfolios) # CETTE LIGNE EST DÉSACTIVÉE INTENTIONNELLEMENT
             
-            # NOUVEAU: Valider et corriger les portefeuilles
+            # NOUVEAU: Valider et corriger les portefeuilles avec une validation stricte
             print("🔍 Validation et correction des portefeuilles...")
             portfolios = validate_and_fix_portfolios(portfolios, valid_etfs, valid_bonds)
             
