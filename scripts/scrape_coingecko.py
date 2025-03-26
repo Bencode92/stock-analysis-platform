@@ -30,17 +30,17 @@ CONFIG = {
     "sources": [
         {
             "name": "CoinGecko - All Cryptocurrencies",
-            "url": "https://www.coingecko.com/",
+            "url": "https://www.coingecko.com/en",
             "type": "all"
         },
         {
             "name": "CoinGecko - Top 100",
-            "url": "https://www.coingecko.com/",
+            "url": "https://www.coingecko.com/en",
             "type": "top100"
         }
     ],
     "output_path": os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "crypto_lists.json"),
-    "sleep_time": 2.0,  # Délai entre les requêtes pour éviter le rate limiting
+    "sleep_time": 5.0,  # Délai entre les requêtes pour éviter le rate limiting
     "retries": 3        # Nombre de tentatives en cas d'échec
 }
 
@@ -90,30 +90,46 @@ CRYPTO_DATA = {
 ALL_CRYPTOS = []
 TOP100_CRYPTOS = []
 
-def get_headers():
-    """Crée des en-têtes HTTP aléatoires pour éviter la détection de bot"""
+def get_headers(referer="https://www.google.com/search?q=crypto+prices"):
+    """Crée des en-têtes HTTP réalistes pour éviter la détection de bot"""
+    
+    # User agents plus réalistes
     user_agents = [
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36 Edg/122.0.2365.52",
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_3 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Mobile/15E148 Safari/604.1"
     ]
     
-    return {
+    # En-têtes complets et variés qui imitent mieux un navigateur réel
+    headers = {
         "User-Agent": random.choice(user_agents),
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-        "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+        "Accept-Language": "en-US,en;q=0.9,fr;q=0.8",
         "Accept-Encoding": "gzip, deflate, br",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-        "Referer": "https://www.google.com/",
         "Connection": "keep-alive",
-        "Upgrade-Insecure-Requests": "1",
+        "Cache-Control": "max-age=0",
         "Sec-Fetch-Dest": "document",
         "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "cross-site",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-User": "?1",
+        "Sec-Ch-Ua": '"Chromium";v="122", "Google Chrome";v="122", "Not(A:Brand";v="24"',
+        "Sec-Ch-Ua-Mobile": "?0",
+        "Sec-Ch-Ua-Platform": '"Windows"',
+        "Upgrade-Insecure-Requests": "1",
+        "Referer": referer,
         "DNT": "1"
     }
+    
+    return headers
+
+def add_delay():
+    """Ajoute un délai aléatoire pour éviter la détection de bot"""
+    delay = random.uniform(CONFIG["sleep_time"] * 0.8, CONFIG["sleep_time"] * 1.2)
+    time.sleep(delay)
+    return delay
 
 def extract_coingecko_data(html, market_type="all"):
     """Extraire les données de cryptomonnaies depuis la page CoinGecko"""
@@ -425,27 +441,91 @@ def scrape_crypto_data():
     try:
         logger.info("Récupération des données depuis CoinGecko...")
         
-        # Récupérer le contenu de la page avec délai
-        time.sleep(random.uniform(1, 3))
+        # Utilisation d'un navigateur plus sécurisé avec un User-Agent réaliste
+        delay = add_delay()
+        logger.info(f"Attente de {delay:.2f} secondes...")
+        
+        # Utiliser le endpoint en langue anglaise et avec une référence Google
         headers = get_headers()
         logger.info(f"Utilisation du User-Agent: {headers['User-Agent']}")
         
-        response = requests.get("https://www.coingecko.com/", headers=headers, timeout=30)
+        for attempt in range(1, CONFIG["retries"] + 1):
+            try:
+                logger.info(f"Tentative {attempt}/{CONFIG['retries']}...")
+                
+                # Simuler le comportement d'un navigateur réel
+                # 1. D'abord visiter Google et rechercher "coingecko"
+                search_url = "https://www.google.com/search?q=coingecko+crypto+prices"
+                search_headers = get_headers(referer="https://www.google.com/")
+                requests.get(search_url, headers=search_headers, timeout=30)
+                
+                # 2. Puis naviguer vers la page principale avec des paramètres réalistes
+                session = requests.Session()
+                session.headers.update(get_headers(referer=search_url))
+                
+                # Ajouter des cookies pour simuler un vrai navigateur
+                session.cookies.set("cookie_consent", "true")
+                session.cookies.set("locale", "en")
+                
+                # Ajouter un petit délai aléatoire pour simuler un vrai utilisateur
+                time.sleep(random.uniform(1, 3))
+                
+                # 3. Visiter la page des cryptomonnaies
+                response = session.get(
+                    "https://www.coingecko.com/en", 
+                    timeout=30,
+                    allow_redirects=True
+                )
+                
+                if response.status_code == 200:
+                    logger.info(f"Succès! Réponse HTTP 200 reçue de CoinGecko")
+                    break
+                elif response.status_code == 403:
+                    logger.warning(f"Erreur 403 reçue, tentative d'une autre approche...")
+                    # Si 403, essayer une autre approche avec plus de délai
+                    time.sleep(random.uniform(3, 5))
+                    session.headers.update(get_headers(referer="https://www.bing.com/search?q=cryptocurrency+prices"))
+                    response = session.get("https://www.coingecko.com/en", timeout=30)
+                    if response.status_code == 200:
+                        logger.info(f"Succès avec la 2ème approche! Réponse HTTP 200 reçue")
+                        break
+                
+                if attempt < CONFIG["retries"]:
+                    # Attendre plus longtemps entre les tentatives
+                    wait_time = random.uniform(3, 5) * attempt
+                    logger.info(f"Attente de {wait_time:.2f} secondes avant la prochaine tentative...")
+                    time.sleep(wait_time)
+            
+            except Exception as e:
+                logger.warning(f"Exception lors de la tentative {attempt}: {str(e)}")
+                if attempt < CONFIG["retries"]:
+                    wait_time = random.uniform(3, 5) * attempt
+                    logger.info(f"Attente de {wait_time:.2f} secondes avant la prochaine tentative...")
+                    time.sleep(wait_time)
         
+        # Vérifier si on a réussi après toutes les tentatives
         if response.status_code != 200:
-            logger.warning(f"Erreur {response.status_code} pour CoinGecko - {response.reason}")
-            return False
-        
-        logger.info(f"Réponse HTTP {response.status_code} reçue pour CoinGecko")
-        
-        # Vérifier le contenu de base
-        html = response.text
-        if len(html) < 1000:
-            logger.warning(f"Contenu suspect (trop court): {len(html)} caractères")
-            return False
+            logger.warning(f"Échec après {CONFIG['retries']} tentatives: {response.status_code} - {response.reason}")
+            logger.warning(f"Essai alternatif avec un API ou une URL différente...")
+            
+            # Essayer une URL alternative
+            alt_response = requests.get(
+                "https://www.coingecko.com/en/coins/bitcoin",
+                headers=get_headers(),
+                timeout=30
+            )
+            
+            if alt_response.status_code != 200:
+                logger.error(f"Échec de l'URL alternative: {alt_response.status_code} - {alt_response.reason}")
+                return False
+            else:
+                logger.info(f"URL alternative réussie: {alt_response.status_code}")
+                # Nous avons pu accéder au site, mais pas à la page principale
+                # Utiliser les données de démonstration
+                return False
         
         # Extraire les données
-        all_cryptos = extract_coingecko_data(html, "all")
+        all_cryptos = extract_coingecko_data(response.text, "all")
         
         if not all_cryptos:
             logger.warning("Aucune cryptomonnaie extraite!")
@@ -464,6 +544,7 @@ def scrape_crypto_data():
         # Calculer les top performers
         calculate_top_performers()
         
+        logger.info(f"Extraction réussie: {len(ALL_CRYPTOS)} cryptos extraites")
         return True
         
     except Exception as e:
