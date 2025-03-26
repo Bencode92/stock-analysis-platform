@@ -20,13 +20,13 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests
+          pip install requests beautifulsoup4
           
       - name: Run crypto scraper
         run: |
-          python scripts/scrape_crypto.py
+          python scripts/scrape_coinmarketcap.py
         env:
-          COINGECKO_API_KEY: ${{ secrets.COINGECKO_API_KEY }}
+          CMC_API_KEY: ${{ secrets.CMC_API_KEY }}
           
       - name: Commit updated data
         run: |
