@@ -20,12 +20,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests beautifulsoup4 playwright
-          playwright install --with-deps chromium
+          pip install requests beautifulsoup4
           
       - name: Run crypto scraper (CoinGecko)
         run: |
-          python scripts/scrape_coinmarketcap.py
+          python scripts/scrape_coingecko.py
           
       - name: Commit updated data
         run: |
