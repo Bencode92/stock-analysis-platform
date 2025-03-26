@@ -897,8 +897,6 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     print(f"  🏭 Secteurs: {len(filtered_sectors)} caractères")
     print(f"  📋 Listes: {len(filtered_lists)} caractères")
     print(f"  📊 ETFs: {len(filtered_etfs)} caractères")
-    print(f"  🧩 ETF valides extraits: {len(valid_etfs)}")
-    print(f"  🧩 Obligations valides extraites: {len(valid_bonds)}")
     
     # Afficher les données filtrées pour vérification
     print("\n===== APERÇU DES DONNÉES FILTRÉES =====")
