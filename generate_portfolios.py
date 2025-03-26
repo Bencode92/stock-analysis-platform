@@ -819,7 +819,7 @@ Utilise ces données filtrées pour générer les portefeuilles :
 
 📅 Contexte : Ces portefeuilles sont optimisés pour le mois de {current_month}.
 
-🎯 INSTRUCTIONS GÉNÉRALES :
+🎯 INSTRUCTIONS SPÉCIFIQUES :
 
 1. Tu dois générer trois portefeuilles :
    a) Agressif : EXACTEMENT entre 12 et 15 actifs au total
@@ -828,7 +828,11 @@ Utilise ces données filtrées pour générer les portefeuilles :
 
 {minimum_requirements}
 
-2. Pour chaque portefeuille (Agressif, Modéré, Stable), tu dois générer un **commentaire unique** qui suit une structure **top-down** claire et logique.
+2. Pour les obligations : tu dois sélectionner UNIQUEMENT des ETF obligataires issus de la section "TOP OBLIGATIONS 2025" des données ci-dessus.
+   N'utilise jamais de noms génériques comme "Obligation 1" ou "Obligation Souveraine".
+   Chaque obligation doit porter le nom complet et exact d'un ETF obligataire spécifique listé dans les données.
+
+3. Pour chaque portefeuille (Agressif, Modéré, Stable), tu dois générer un **commentaire unique** qui suit une structure **top-down** claire et logique.
 
 Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 
@@ -846,7 +850,7 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 
 🎯 Le style doit être fluide, professionnel et synthétique.  
 ❌ Aucun biais : ne fais pas d'hypothèse sur les classes d'actifs à privilégier. Base-toi uniquement sur les données fournies.  
-✅ Le commentaire doit être **adapté au profil de risque** (Agressif, Modéré, Stable) sans forcer une direction (ex: ne dis pas "la techno est à privilégier" sauf si les données le montrent clairement).
+✅ Le commentaire doit être **adapté au profil de risque** (Agressif / Modéré / Stable) sans forcer une direction (ex: ne dis pas "la techno est à privilégier" sauf si les données le montrent clairement).
 
 📊 Format JSON requis:
 {{
@@ -870,6 +874,7 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 - La somme des allocations de chaque portefeuille DOIT être EXACTEMENT 100%
 - Minimum 2 classes d'actifs par portefeuille
 - Chaque actif doit avoir un nom SPÉCIFIQUE et PRÉCIS, PAS de noms génériques
+- Toutes les obligations DOIVENT être des ETF obligataires avec leurs noms exacts
 - Ne réponds qu'avec le JSON, sans commentaire ni explication supplémentaire
 """
             
