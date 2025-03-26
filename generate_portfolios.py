@@ -770,46 +770,44 @@ SPECIFIC_OBLIGATIONS = {
 
 # NOUVELLE FONCTION: Extraction des actifs valides des données filtrées
 def extract_valid_assets(filtered_etfs):
-    """Extrait les noms exacts d'ETF et d'obligations depuis les données filtrées"""
+    """Extrait spécifiquement les Top ETF et Top Obligations depuis les données filtrées"""
     valid_etfs = []
     valid_bonds = []
     
-    # Identifier les sections d'ETF et d'obligations
+    # Identifier les sections spécifiques d'ETF et d'obligations
     lines = filtered_etfs.split('\n')
     current_section = None
     
     for line in lines:
-        # Détecter les sections
-        if "ETF" in line and line.startswith("📊"):
-            current_section = "ETF"
+        # Détecter spécifiquement les sections qui nous intéressent
+        if "TOP ETF" in line.upper() or "TOP 50 ETF" in line.upper():
+            current_section = "TOP_ETF"
             continue
-        elif "OBLIGATION" in line.upper() and line.startswith("📉"):
-            current_section = "OBLIGATION"
+        elif "ETF COURT TERME" in line.upper():
+            current_section = "ETF_COURT_TERME"
+            continue
+        elif "TOP" in line.upper() and "OBLIGATION" in line.upper():
+            current_section = "TOP_BOND"
             continue
             
-        # Extraire les noms d'actifs (lignes commençant par "•")
+        # Extraire les noms d'actifs (lignes commençant par "•") pour les sections ciblées
         if line.startswith("•") and current_section:
             # Nettoyer pour extraire juste le nom (avant les ":")
-            asset_name = line.split('•')[1].split(':')[0].strip()
+            parts = line.split('•')[1].split(':')
+            asset_name = parts[0].strip()
             
-            if current_section == "ETF":
+            if current_section in ["TOP_ETF", "ETF_COURT_TERME"]:
                 valid_etfs.append(asset_name)
-            elif current_section == "OBLIGATION":
+            elif current_section == "TOP_BOND":
                 valid_bonds.append(asset_name)
     
-    # Si aucun ETF ou obligation trouvé, utiliser ceux définis dans SPECIFIC_OBLIGATIONS
-    if not valid_etfs and not valid_bonds:
-        print("⚠️ Aucun ETF ou obligation trouvé dans les données filtrées, utilisation des valeurs par défaut")
-        for category, assets in SPECIFIC_OBLIGATIONS.items():
-            if "ETF" in category:
-                valid_etfs.extend(assets)
-            else:
-                valid_bonds.extend(assets)
+    # Afficher les informations sur les actifs trouvés
+    print(f"📊 ETF trouvés: {len(valid_etfs)} (TOP ETF et court terme)")
+    print(f"📊 Obligations trouvées: {len(valid_bonds)} (TOP Bonds)")
     
     print(f"✓ Extraction réussie: {len(valid_etfs)} ETF et {len(valid_bonds)} obligations")
     return valid_etfs, valid_bonds
 
-# NOUVELLE FONCTION: Validation et correction des portefeuilles
 def validate_and_fix_portfolios(portfolios, valid_etfs, valid_bonds):
     """Valide et corrige automatiquement les portefeuilles"""
     
