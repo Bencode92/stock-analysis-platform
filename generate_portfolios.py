@@ -744,30 +744,6 @@ if (window.recordDebugFile) {{
     
     return debug_file, html_file
 
-# Listes d'obligations et ETF spécifiques pour éviter les noms génériques
-SPECIFIC_OBLIGATIONS = {
-    "Obligations souveraines US": [
-        "US Treasury 2Y", "US Treasury 5Y", "US Treasury 10Y", "US Treasury 30Y", 
-        "US TIPS 5Y", "US TIPS 10Y"
-    ],
-    "Obligations souveraines EU": [
-        "German Bunds 2Y", "German Bunds 5Y", "German Bunds 10Y",
-        "French OAT 10Y", "Italian BTP 10Y", "Spanish Bonos 10Y"
-    ],
-    "Obligations d'entreprises euro": [
-        "iShares Euro Corporate Bond", "SPDR Euro Corporate Bond", 
-        "Lyxor Euro Corporate Bond", "Amundi Euro Corporate Bond"
-    ],
-    "Obligations d'entreprises US": [
-        "Vanguard Short-Term Corporate Bond", "iShares Corporate Bond", 
-        "SPDR Corporate Bond", "BlackRock Corporate Bond"
-    ],
-    "ETF Obligataire Speculatif": [
-        "iShares High Yield Corporate Bond", "SPDR High Yield Bond ETF",
-        "Vanguard High Yield Corporate", "PIMCO High Yield Corporate Bond"
-    ]
-}
-
 # NOUVELLE FONCTION: Extraction des actifs valides des données filtrées
 def extract_valid_assets(filtered_etfs):
     """Extrait spécifiquement les Top ETF et Top Obligations depuis les données filtrées"""
@@ -870,13 +846,6 @@ def validate_and_fix_portfolios(portfolios, valid_etfs, valid_bonds):
     
     return portfolios
 
-# La fonction replace_generic_names a été intentionnellement désactivée pour éviter l'introduction d'obligations non valides
-# Elle est conservée dans le code comme référence mais ne sera pas appelée
-def replace_generic_names_DISABLED(portfolios):
-    """Remplace les noms génériques par des noms spécifiques d'actifs. DÉSACTIVÉ INTENTIONNELLEMENT."""
-    print("⚠️ AVERTISSEMENT: La fonction replace_generic_names est désactivée pour éviter l'introduction d'obligations non valides")
-    return portfolios  # Retourne les portefeuilles sans modification
-
 def check_portfolio_constraints(portfolios):
     """Vérifie que les portefeuilles générés respectent les contraintes."""
     is_valid = True
@@ -919,32 +888,8 @@ def check_portfolio_constraints(portfolios):
     return is_valid, issues
 
 def adjust_portfolios(portfolios):
-    """Ajuste les portefeuilles pour respecter les contraintes."""
+    """Ajuste les portefeuilles pour respecter les contraintes sans ajouter d'actifs génériques."""
     adjusted_portfolios = {}
-    
-    # Définir des actifs supplémentaires par catégorie pour compléter si nécessaire
-    additional_assets = {
-        "Actions": [
-            "Apple", "Microsoft", "Google", "Amazon", "Meta", "NVIDIA", 
-            "Tesla", "Johnson & Johnson", "Procter & Gamble", "Walmart",
-            "Nike", "Coca-Cola", "PepsiCo", "McDonald's", "Starbucks"
-        ],
-        "ETF": [
-            "Vanguard S&P 500", "iShares MSCI World", "Invesco QQQ", 
-            "SPDR Gold Shares", "iShares MSCI Emerging Markets",
-            "Vanguard Total Bond Market", "Vanguard FTSE Developed Markets",
-            "Vanguard Real Estate ETF", "iShares Russell 2000"
-        ],
-        "Obligations": [
-            "US Treasury 1Y", "US Treasury 3Y", "German Bunds 2Y", 
-            "French OAT 5Y", "UK Gilt 10Y", "Japanese JGB 5Y",
-            "Swiss Government Bond 10Y", "Canadian Government Bond 5Y"
-        ],
-        "Crypto": [
-            "Bitcoin", "Ethereum", "Solana", "Cardano", "Polkadot", 
-            "Avalanche", "Polygon", "Chainlink"
-        ]
-    }
     
     for portfolio_type, portfolio in portfolios.items():
         # Créer une copie pour ne pas modifier l'original
@@ -955,73 +900,8 @@ def adjust_portfolios(portfolios):
         total_assets = sum(len(assets) for category, assets in adjusted_portfolio.items() 
                           if category != "Commentaire")
         
-        # Si moins de 12 actifs, ajouter des actifs supplémentaires
-        if total_assets < 12:
-            # Déterminer combien d'actifs à ajouter
-            to_add = 12 - total_assets
-            
-            # Déterminer quelles catégories utiliser pour l'ajout
-            categories_for_addition = []
-            
-            if portfolio_type == "Agressif":
-                categories_for_addition = ["Actions", "ETF", "Crypto"]
-            elif portfolio_type == "Modéré":
-                categories_for_addition = ["Actions", "ETF", "Obligations"]
-            else:  # Stable
-                categories_for_addition = ["ETF", "Obligations", "Actions"]
-            
-            # Ajouter des actifs
-            added = 0
-            for category in categories_for_addition:
-                if added >= to_add:
-                    break
-                
-                # S'assurer que la catégorie existe dans le portefeuille
-                if category not in adjusted_portfolio:
-                    adjusted_portfolio[category] = {}
-                
-                # Déterminer combien d'actifs ajouter dans cette catégorie
-                category_to_add = min(to_add - added, 3)  # Max 3 par catégorie
-                
-                # Ajouter les actifs
-                for i in range(category_to_add):
-                    # Trouver un actif qui n'est pas déjà dans le portefeuille
-                    for asset in additional_assets[category]:
-                        if asset not in adjusted_portfolio[category]:
-                            # Utiliser 2% d'allocation pour les actifs ajoutés
-                            adjusted_portfolio[category][asset] = "2.0%"
-                            added += 1
-                            break
-            
-            # Ajuster les allocations pour que le total soit 100%
-            total_allocation = sum(float(allocation.replace('%', '').strip()) 
-                                  for cat, assets in adjusted_portfolio.items() 
-                                  if cat != "Commentaire" 
-                                  for allocation in assets.values())
-            
-            # Si nécessaire, ajuster la plus grande allocation pour obtenir 100%
-            if total_allocation != 100:
-                # Trouver la plus grande allocation
-                max_allocation = 0
-                max_cat = None
-                max_asset = None
-                
-                for cat, assets in adjusted_portfolio.items():
-                    if cat != "Commentaire":
-                        for asset, allocation in assets.items():
-                            alloc_value = float(allocation.replace('%', '').strip())
-                            if alloc_value > max_allocation:
-                                max_allocation = alloc_value
-                                max_cat = cat
-                                max_asset = asset
-                
-                # Ajuster l'allocation
-                if max_cat and max_asset:
-                    adjusted_value = max_allocation + (100 - total_allocation)
-                    adjusted_portfolio[max_cat][max_asset] = f"{adjusted_value:.1f}%"
-        
         # Si plus de 15 actifs, supprimer les plus petites allocations
-        elif total_assets > 15:
+        if total_assets > 15:
             # Créer une liste de tous les actifs avec leurs allocations
             all_assets = []
             for category, assets in adjusted_portfolio.items():
@@ -1178,6 +1058,15 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 🏭 **Secteurs** — Détaille les secteurs les plus dynamiques ou les plus en retrait selon les données récentes, sans orientation personnelle.  
 📊 **Choix des actifs** — Explique les allocations choisies dans le portefeuille en cohérence avec le profil (Agressif / Modéré / Stable), en s'appuyant uniquement sur les données fournies (ETF, actions, obligations, crypto...).
 
+📌 COHÉRENCE ET LOGIQUE DANS LA CONSTRUCTION DES PORTEFEUILLES :
+- Tous les actifs sélectionnés doivent refléter une **analyse rationnelle** basée sur les données fournies.
+- Il est strictement interdit de choisir des actifs par défaut, sans lien évident avec les tendances économiques, géographiques ou sectorielles.
+- Le commentaire ne doit jamais mentionner un secteur, une région ou une dynamique **qui n'est pas représentée** dans les actifs choisis.
+- Les ETF doivent être **sélectionnés exclusivement** parmi ceux listés plus haut, en cohérence avec leurs performances réelles (YTD ou 1 mois), et **variés selon le profil (agressif, modéré, stable)**.
+- **Pas de sélection générique ou par défaut** comme "Vanguard S&P 500" si d'autres ETF plus pertinents sont disponibles.
+- Chaque portefeuille doit être construit de manière 100% logique à partir des données fournies.
+- Les actifs sélectionnés doivent découler directement des performances réelles, secteurs en croissance, régions dynamiques, et tendances de marché analysées dans les données ci-dessus.
+
 🎯 Le style doit être fluide, professionnel et synthétique.  
 ❌ Aucun biais : ne fais pas d'hypothèse sur les classes d'actifs à privilégier. Base-toi uniquement sur les données fournies.  
 ✅ Le commentaire doit être **adapté au profil de risque** (Agressif, Modéré, Stable) sans forcer une direction (ex: ne dis pas "la techno est à privilégier" sauf si les données le montrent clairement).
@@ -1246,9 +1135,6 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
             
             # Vérifier que le contenu est bien du JSON valide
             portfolios = json.loads(content)
-            
-            # IMPORTANT: Ne pas appeler replace_generic_names pour éviter d'introduire des obligations non valides
-            # portfolios = replace_generic_names(portfolios) # CETTE LIGNE EST DÉSACTIVÉE INTENTIONNELLEMENT
             
             # NOUVEAU: Valider et corriger les portefeuilles avec une validation stricte
             print("🔍 Validation et correction des portefeuilles...")
