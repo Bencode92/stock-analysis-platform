@@ -1,10 +1,10 @@
-name: Update Crypto Data
+name: Update ETF Data
 on:
   schedule:
-    - cron: '0 */12 * * *'  # Exécution toutes les 12 heures (crypto marché 24/7)
+    - cron: '0 6 * *1-5'  # Exécution tous les jours de la semaine à 6h00 UTC
   workflow_dispatch:  # Permet l'exécution manuelle
 jobs:
-  update-crypto-data:
+  update-etf-data:
     runs-on: ubuntu-latest
     
     steps:
@@ -16,40 +16,15 @@ jobs:
         with:
           python-version: '3.10'
       
-      - name: Install Chrome
-        run: |
-          wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | sudo apt-key add -
-          sudo sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google-chrome.list'
-          sudo apt-get update
-          sudo apt-get install -y google-chrome-stable
-      
-      - name: Install ChromeDriver
-        run: |
-          CHROME_VERSION=$(google-chrome --version | awk '{print $3}' | cut -d. -f1)
-          CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_$CHROME_VERSION")
-          wget -q "https://chromedriver.storage.googleapis.com/$CHROMEDRIVER_VERSION/chromedriver_linux64.zip"
-          unzip chromedriver_linux64.zip
-          sudo mv chromedriver /usr/bin/chromedriver
-          sudo chmod +x /usr/bin/chromedriver
-      
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install beautifulsoup4 requests selenium lxml pandas urllib3
-      
+          pip install beautifulsoup4 requests pandas lxml pytz
       - name: Create data directory if it doesn't exist
         run: mkdir -p data
-      
-      - name: Debug environment
+      - name: Scrape ETF data
         run: |
-          google-chrome --version
-          chromedriver --version
-          ls -la
-          ls -la scripts/
-      
-      - name: Scrape crypto data
-        run: |
-          python scripts/scrape_coinmarketcap.py
+          python scripts/update_etf_data.py
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
@@ -57,6 +32,6 @@ jobs:
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add data/crypto_lists.json
-          git diff --quiet && git diff --staged --quiet || git commit -m "Auto-update Crypto data $(date +'%Y-%m-%d %H:%M:%S')"
+          git add data/etf.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "Auto-update ETF data $(date +'%Y-%m-%d')"
           git push
