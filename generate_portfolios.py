@@ -31,49 +31,50 @@ def extract_valid_assets(filtered_etfs):
             elif current_section == "TOP_BOND":
                 valid_bonds.append(asset_name)
     
-    # Vérifier si nous avons trouvé suffisamment d'éléments
-    min_required = 5  # Au moins 5 éléments dans chaque catégorie
-    
+    # Afficher les informations sur les actifs trouvés
     print(f"📊 ETF trouvés: {len(valid_etfs)} (TOP ETF et court terme)")
     print(f"📊 Obligations trouvées: {len(valid_bonds)} (TOP Bonds)")
     
+    # Commenté: Nous ne voulons plus ajouter de valeurs par défaut
+    # min_required = 5  # Au moins 5 éléments dans chaque catégorie
+    
     # Si pas assez d'ETF trouvés, ajouter des valeurs par défaut
-    if len(valid_etfs) < min_required:
-        print("⚠️ Pas assez d'ETF trouvés dans les données filtrées, ajout de valeurs par défaut")
-        default_etfs = [
-            "Vanguard S&P 500 ETF", 
-            "iShares MSCI World ETF", 
-            "Invesco QQQ ETF",
-            "SPDR Gold Shares ETF",
-            "Vanguard Total Bond Market ETF",
-            "iShares Core MSCI Emerging Markets ETF",
-            "Vanguard FTSE Europe ETF",
-            "ARK Innovation ETF",
-            "Vanguard Dividend Appreciation ETF",
-            "iShares MSCI Japan ETF"
-        ]
-        for etf in default_etfs:
-            if etf not in valid_etfs:
-                valid_etfs.append(etf)
+    # if len(valid_etfs) < min_required:
+    #     print("⚠️ Pas assez d'ETF trouvés dans les données filtrées, ajout de valeurs par défaut")
+    #     default_etfs = [
+    #         "Vanguard S&P 500 ETF", 
+    #         "iShares MSCI World ETF", 
+    #         "Invesco QQQ ETF",
+    #         "SPDR Gold Shares ETF",
+    #         "Vanguard Total Bond Market ETF",
+    #         "iShares Core MSCI Emerging Markets ETF",
+    #         "Vanguard FTSE Europe ETF",
+    #         "ARK Innovation ETF",
+    #         "Vanguard Dividend Appreciation ETF",
+    #         "iShares MSCI Japan ETF"
+    #     ]
+    #     for etf in default_etfs:
+    #         if etf not in valid_etfs:
+    #             valid_etfs.append(etf)
     
     # Si pas assez d'obligations trouvées, ajouter des valeurs par défaut
-    if len(valid_bonds) < min_required:
-        print("⚠️ Pas assez d'obligations trouvées dans les données filtrées, ajout de valeurs par défaut")
-        default_bonds = [
-            "US Treasury 10Y", 
-            "US Treasury 5Y", 
-            "US Treasury 30Y",
-            "German Bunds 10Y",
-            "French OAT 10Y",
-            "iShares Corporate Bond ETF",
-            "SPDR Bloomberg High Yield Bond ETF",
-            "Vanguard Total International Bond ETF",
-            "PIMCO Total Return Bond Fund",
-            "iShares iBoxx $ Investment Grade Corporate Bond ETF"
-        ]
-        for bond in default_bonds:
-            if bond not in valid_bonds:
-                valid_bonds.append(bond)
+    # if len(valid_bonds) < min_required:
+    #     print("⚠️ Pas assez d'obligations trouvées dans les données filtrées, ajout de valeurs par défaut")
+    #     default_bonds = [
+    #         "US Treasury 10Y", 
+    #         "US Treasury 5Y", 
+    #         "US Treasury 30Y",
+    #         "German Bunds 10Y",
+    #         "French OAT 10Y",
+    #         "iShares Corporate Bond ETF",
+    #         "SPDR Bloomberg High Yield Bond ETF",
+    #         "Vanguard Total International Bond ETF",
+    #         "PIMCO Total Return Bond Fund",
+    #         "iShares iBoxx $ Investment Grade Corporate Bond ETF"
+    #     ]
+    #     for bond in default_bonds:
+    #         if bond not in valid_bonds:
+    #             valid_bonds.append(bond)
     
-    print(f"✓ Extraction réussie après validation: {len(valid_etfs)} ETF et {len(valid_bonds)} obligations")
+    print(f"✓ Extraction réussie: {len(valid_etfs)} ETF et {len(valid_bonds)} obligations")
     return valid_etfs, valid_bonds
