@@ -173,7 +173,7 @@ def fetch_crypto_data_via_scraping(market="all"):
         return []
 
 def parse_coinmarketcap_page(html_content):
-    """Analyse le contenu HTML de CoinMarketCap pour extraire les données des cryptomonnaies"""
+    """Analyse le contenu HTML de CoinMarketCap pour extraire les données avec des colonnes personnalisées"""
     cryptos = []
     
     try:
@@ -188,257 +188,184 @@ def parse_coinmarketcap_page(html_content):
             f.write(html_content)
         logger.info(f"HTML sauvegardé pour débogage dans {debug_file_path}")
         
-        # MÉTHODE 1: Chercher toutes les tables présentes
-        tables = soup.find_all('table')
-        logger.info(f"Nombre de tableaux trouvés: {len(tables)}")
+        # Déterminer le nombre de colonnes en examinant les en-têtes
+        headers = soup.select('table thead th')
+        header_texts = [header.get_text(strip=True) for header in headers]
+        logger.info(f"En-têtes trouvés: {header_texts}")
         
-        if tables:
-            for i, table in enumerate(tables):
-                logger.info(f"Analyse du tableau #{i+1}")
-                
-                # Trouver toutes les lignes
-                rows = table.find_all('tr')
-                logger.info(f"Nombre de lignes dans le tableau #{i+1}: {len(rows)}")
-                
-                # Essayons de comprendre les en-têtes pour repérer les colonnes importantes
-                headers = []
-                header_row = rows[0] if rows else None
-                if header_row:
-                    headers = [th.get_text(strip=True) for th in header_row.find_all(['th', 'td'])]
-                    logger.info(f"En-têtes trouvés: {headers}")
-                
-                # Chercher spécifiquement les colonnes qui nous intéressent
-                name_idx = price_idx = change_24h_idx = change_30d_idx = ytd_idx = -1
-                
-                # Identifier les colonnes à partir des en-têtes
-                for j, header in enumerate(headers):
-                    header_lower = header.lower()
-                    if any(term in header_lower for term in ['nom', 'name']):
-                        name_idx = j
-                    elif any(term in header_lower for term in ['prix', 'price']):
-                        price_idx = j
-                    elif '24h' in header_lower or '24 h' in header_lower:
-                        change_24h_idx = j
-                    elif '30j' in header_lower or '30 j' in header_lower:
-                        change_30d_idx = j
-                    elif 'ytd' in header_lower or 'year' in header_lower or 'début' in header_lower:
-                        ytd_idx = j
-                
-                # Si on n'a pas d'en-têtes clairs, essayer de les déterminer par position
-                if name_idx < 0 and len(headers) >= 2:
-                    name_idx = 1  # Souvent la 2ème colonne
-                if price_idx < 0 and len(headers) >= 4:
-                    price_idx = 3  # Souvent la 4ème colonne
-                if change_24h_idx < 0 and len(headers) >= 8:
-                    change_24h_idx = 7  # Souvent vers la fin
-                if change_30d_idx < 0 and len(headers) >= 9:
-                    change_30d_idx = 8  # Souvent vers la fin
-                if ytd_idx < 0 and len(headers) >= 10:
-                    ytd_idx = 9  # Souvent la dernière colonne
-                
-                logger.info(f"Indices des colonnes: Nom={name_idx}, Prix={price_idx}, 24h={change_24h_idx}, 30j={change_30d_idx}, YTD={ytd_idx}")
-                
-                # Parcourir les lignes de données (ignorer l'en-tête)
-                for row_idx, row in enumerate(rows[1:], 1):
-                    try:
-                        cells = row.find_all(['td', 'th'])
-                        
-                        # Vérifier qu'il y a assez de cellules
-                        if len(cells) < max(3, name_idx+1, price_idx+1):
-                            continue
-                        
-                        # Extraire le nom et le symbole
-                        name = ""
-                        symbol = ""
-                        if name_idx >= 0 and name_idx < len(cells):
-                            name_cell = cells[name_idx]
-                            
-                            # Essayer d'extraire le nom et le symbole
-                            # 1. Chercher des éléments spécifiques pour le nom/symbole
-                            name_elements = name_cell.find_all(['p', 'div', 'span', 'a'])
-                            
-                            for elem in name_elements:
-                                elem_text = elem.get_text(strip=True)
-                                if not elem_text:
-                                    continue
-                                    
-                                # Si on trouve un texte court en majuscules, c'est probablement le symbole
-                                if re.match(r'^[A-Z0-9]{2,6}$', elem_text):
-                                    symbol = elem_text
-                                # Sinon, c'est probablement le nom
-                                elif not name and len(elem_text) < 30:
-                                    name = elem_text
-                            
-                            # Si on n'a pas trouvé de nom, utiliser le texte complet
-                            if not name:
-                                name = name_cell.get_text(strip=True)
-                                
-                                # Essayer d'extraire le symbole s'il est dans le nom
-                                symbol_match = re.search(r'\b[A-Z0-9]{2,6}\b', name)
-                                if symbol_match:
-                                    symbol = symbol_match.group(0)
-                        
-                        # Si on n'a pas de nom valide, passer à la ligne suivante
-                        if not name:
-                            continue
-                        
-                        # Extraire les valeurs qui nous intéressent le plus: prix, var 24h, var 30j, var YTD
-                        price = ""
-                        change_24h = ""
-                        change_30d = ""
-                        ytd = ""
-                        
-                        # Extraire le prix
-                        if price_idx >= 0 and price_idx < len(cells):
-                            price_cell = cells[price_idx]
-                            price = price_cell.get_text(strip=True)
-                        
-                        # Extraire la variation sur 24h
-                        if change_24h_idx >= 0 and change_24h_idx < len(cells):
-                            change_24h_cell = cells[change_24h_idx]
-                            change_24h = change_24h_cell.get_text(strip=True)
-                            # Nettoyer: s'assurer que le format est correct
-                            if "%" not in change_24h and re.match(r'^[+\-]?\d+(\.\d+)?$', change_24h):
-                                change_24h = f"{change_24h}%"
-                        
-                        # Extraire la variation sur 30j
-                        if change_30d_idx >= 0 and change_30d_idx < len(cells):
-                            change_30d_cell = cells[change_30d_idx]
-                            change_30d = change_30d_cell.get_text(strip=True)
-                            # Nettoyer: s'assurer que le format est correct
-                            if "%" not in change_30d and re.match(r'^[+\-]?\d+(\.\d+)?$', change_30d):
-                                change_30d = f"{change_30d}%"
-                        
-                        # Extraire la variation YTD
-                        if ytd_idx >= 0 and ytd_idx < len(cells):
-                            ytd_cell = cells[ytd_idx]
-                            ytd = ytd_cell.get_text(strip=True)
-                            # Nettoyer: s'assurer que le format est correct
-                            if "%" not in ytd and re.match(r'^[+\-]?\d+(\.\d+)?$', ytd):
-                                ytd = f"{ytd}%"
-                        
-                        # Si on n'a pu extraire ni le prix ni la variation, cette ligne est probablement invalide
-                        if not price and not change_24h and not change_30d and not ytd:
-                            continue
-                        
-                        # Créer l'objet crypto avec les données extraites
-                        crypto = {
-                            "name": name,
-                            "symbol": symbol,
-                            "last": price,
-                            "change": change_24h,
-                            "change30d": change_30d,
-                            "ytd": ytd,
-                            "volume": "",  # Pas prioritaire
-                            "marketCap": ""  # Pas prioritaire
-                        }
-                        
-                        # Ajouter cette crypto à la liste
-                        cryptos.append(crypto)
-                        if len(cryptos) <= 5:  # Juste pour déboguer les 5 premières
-                            logger.info(f"Crypto extraite: {name} ({symbol}) - Prix: {price}, 24h: {change_24h}, 30j: {change_30d}, YTD: {ytd}")
-                        
-                    except Exception as e:
-                        logger.warning(f"Erreur lors de l'analyse de la ligne {row_idx}: {str(e)}")
-                        continue
-                
-                # Si on a trouvé des cryptos, stopper l'analyse des tableaux
-                if cryptos:
-                    logger.info(f"✅ {len(cryptos)} cryptomonnaies trouvées dans le tableau #{i+1}")
-                    break
+        # Rechercher les indices des colonnes importantes
+        # D'après l'image, l'ordre est généralement: #, Nom, Prix, Cap. Boursière, Volume (24h), Offre en Circulation, 30j, %24h, %30j, %YTD
+        nom_idx = -1
+        prix_idx = -1
+        cap_idx = -1
+        volume_idx = -1
+        pct_24h_idx = -1
+        pct_30j_idx = -1
+        pct_ytd_idx = -1
         
-        # MÉTHODE 2: Analyse visuelle du contenu de la page
-        if not cryptos:
-            logger.info("Aucune crypto trouvée par la méthode des tableaux, essai d'une méthode alternative...")
+        for i, header in enumerate(header_texts):
+            header_lower = header.lower()
+            if "nom" in header_lower:
+                nom_idx = i
+            elif "prix" in header_lower:
+                prix_idx = i
+            elif "cap" in header_lower and "bours" in header_lower:
+                cap_idx = i
+            elif "volume" in header_lower:
+                volume_idx = i
+            elif "24h" in header_lower or "24 h" in header_lower:
+                pct_24h_idx = i
+            elif "30j" in header_lower or "30 j" in header_lower:
+                pct_30j_idx = i
+            elif "ytd" in header_lower or "début" in header_lower or "de ytd" in header_lower:
+                pct_ytd_idx = i
+        
+        # Si on n'a pas trouvé certains indices par nom, utiliser les positions typiques
+        if nom_idx == -1 and len(header_texts) > 1:
+            nom_idx = 1  # Généralement colonne 2
+        if prix_idx == -1 and len(header_texts) > 2:
+            prix_idx = 2  # Généralement colonne 3
+        if cap_idx == -1 and len(header_texts) > 3:
+            cap_idx = 3  # Généralement colonne 4
+        if volume_idx == -1 and len(header_texts) > 4:
+            volume_idx = 4  # Généralement colonne 5
             
-            # Chercher des éléments qui pourraient contenir des lignes de crypto
-            potential_rows = soup.find_all(['tr', 'div'], class_=lambda x: x and ('row' in x or 'item' in x or 'tr' in x))
-            logger.info(f"Trouvé {len(potential_rows)} éléments potentiels pour des crypto")
+        # Pour les colonnes de pourcentage, chercher aussi en utilisant le contenu de la cellule
+        # Si on n'a pas trouvé les indices pour les pourcentages, chercher aux positions habituelles en fin de tableau
+        if pct_24h_idx == -1 and len(header_texts) >= 8:
+            # Essayer de trouver par position (souvent antépénultième colonne)
+            pct_24h_idx = len(header_texts) - 3
+        if pct_30j_idx == -1 and len(header_texts) >= 9:
+            # Essayer de trouver par position (souvent avant-dernière colonne)
+            pct_30j_idx = len(header_texts) - 2
+        if pct_ytd_idx == -1 and len(header_texts) >= 10:
+            # Essayer de trouver par position (souvent dernière colonne)
+            pct_ytd_idx = len(header_texts) - 1
             
-            for i, row in enumerate(potential_rows):
-                try:
-                    # Chercher tous les textes dans cette ligne
-                    texts = [t.strip() for t in row.get_text(separator="|").split("|") if t.strip()]
-                    
-                    # Si ligne trop courte, ignorer
-                    if len(texts) < 3:
-                        continue
-                    
-                    # Chercher un symbole de crypto typique (lettres majuscules)
-                    symbol = ""
-                    for text in texts:
-                        if re.match(r'^[A-Z0-9]{2,6}$', text):
-                            symbol = text
-                            break
-                    
-                    # Si pas de symbole trouvé, chercher un motif de symbole dans les textes
-                    if not symbol:
-                        for text in texts:
-                            symbol_match = re.search(r'\b[A-Z0-9]{2,6}\b', text)
-                            if symbol_match:
-                                symbol = symbol_match.group(0)
-                                break
-                    
-                    # Si toujours pas de symbole, cette ligne n'est probablement pas une crypto
-                    if not symbol:
-                        continue
-                    
-                    # Chercher un nom (généralement près du symbole)
-                    name = ""
-                    symbol_index = next((i for i, text in enumerate(texts) if symbol in text), -1)
-                    
-                    if symbol_index != -1:
-                        # Essayer d'obtenir le nom à partir du texte contenant le symbole
-                        if texts[symbol_index] != symbol:
-                            name = texts[symbol_index].replace(symbol, "").strip()
-                        # Sinon chercher dans les éléments adjacents
-                        elif symbol_index > 0:
-                            name = texts[symbol_index - 1]
-                        elif len(texts) > symbol_index + 1:
-                            name = texts[symbol_index + 1]
-                    
-                    # Chercher les valeurs numériques (prix et variations)
-                    price = ""
-                    change_24h = ""
-                    change_30d = ""
-                    ytd = ""
-                    
-                    # Parcourir les textes pour trouver les motifs correspondants
-                    for text in texts:
-                        # Prix (format monétaire)
-                        if (re.search(r'[$€]\s*[\d,.]+', text) or re.search(r'[\d,.]+\s*[$€]', text)) and not price:
-                            price = text
-                        # Variations (pourcentage avec signe + ou -)
-                        elif '%' in text and ('+' in text or '-' in text):
-                            if not change_24h:
-                                change_24h = text
-                            elif not change_30d:
-                                change_30d = text
-                            elif not ytd:
-                                ytd = text
-                    
-                    # Si on a au moins un nom/symbole et un prix/variation, ajouter cette crypto
-                    if (name or symbol) and (price or change_24h or change_30d or ytd):
-                        crypto = {
-                            "name": name or symbol,  # Utiliser le symbole comme nom si pas de nom
-                            "symbol": symbol,
-                            "last": price,
-                            "change": change_24h,
-                            "change30d": change_30d,
-                            "ytd": ytd,
-                            "volume": "",
-                            "marketCap": ""
-                        }
-                        
-                        # Vérifier si cette crypto n'est pas déjà dans la liste
-                        if not any(c["symbol"] == symbol for c in cryptos):
-                            cryptos.append(crypto)
-                            if len(cryptos) <= 10:  # Déboguer les 10 premières
-                                logger.info(f"Crypto trouvée par analyse visuelle: {name or symbol} ({symbol}) - Prix: {price}, 24h: {change_24h}, 30j: {change_30d}, YTD: {ytd}")
+        logger.info(f"Indices des colonnes: Nom={nom_idx}, Prix={prix_idx}, Cap={cap_idx}, Volume={volume_idx}, " 
+                   f"24h={pct_24h_idx}, 30j={pct_30j_idx}, YTD={pct_ytd_idx}")
+        
+        # Analyser les lignes
+        rows = soup.select('table tbody tr')
+        for row in rows:
+            try:
+                # Extraire toutes les cellules de la ligne
+                cells = row.select('td')
                 
-                except Exception as e:
-                    logger.warning(f"Erreur lors de l'analyse visuelle d'un élément: {str(e)}")
+                # Vérifier qu'on a assez de cellules
+                min_cells = max(nom_idx, prix_idx, cap_idx, volume_idx, pct_24h_idx, pct_30j_idx, pct_ytd_idx) + 1
+                if len(cells) < min_cells:
+                    logger.warning(f"Pas assez de cellules: {len(cells)} < {min_cells}")
                     continue
+                
+                # Extraire le nom et symbole
+                name = ""
+                symbol = ""
+                
+                if 0 <= nom_idx < len(cells):
+                    name_cell = cells[nom_idx]
+                    
+                    # Chercher nom et symbole dans des éléments spécifiques
+                    name_elem = name_cell.select_one('.coin-item-name, [class*="name"]')
+                    symbol_elem = name_cell.select_one('.coin-item-symbol, [class*="symbol"]')
+                    
+                    if name_elem:
+                        name = name_elem.get_text(strip=True)
+                    if symbol_elem:
+                        symbol = symbol_elem.get_text(strip=True)
+                    
+                    # Si on n'a pas trouvé avec les sélecteurs, essayer d'autres approches
+                    if not name or not symbol:
+                        # Essayer d'extraire d'un élément <a> (lien)
+                        link_elem = name_cell.select_one('a')
+                        if link_elem:
+                            full_text = link_elem.get_text(strip=True)
+                            # Chercher un motif typique nom (symbole)
+                            parentheses_match = re.search(r'(.+?)\s*\(([A-Z0-9]{2,6})\)', full_text)
+                            if parentheses_match:
+                                name = parentheses_match.group(1).strip()
+                                symbol = parentheses_match.group(2).strip()
+                            else:
+                                # Chercher un mot en majuscules qui pourrait être le symbole
+                                parts = full_text.split()
+                                for part in parts:
+                                    if re.match(r'^[A-Z0-9]{2,6}$', part):
+                                        symbol = part
+                                        # Le nom est tout sauf le symbole
+                                        name_parts = [p for p in parts if p != symbol]
+                                        name = ' '.join(name_parts)
+                                        break
+                                
+                                # Si toujours pas de nom/symbole, utiliser tout le texte comme nom
+                                if not name:
+                                    name = full_text
+                
+                # Extraire le prix
+                price = ""
+                if 0 <= prix_idx < len(cells):
+                    price = cells[prix_idx].get_text(strip=True)
+                
+                # Extraire la capitalisation boursière
+                market_cap = ""
+                if 0 <= cap_idx < len(cells):
+                    market_cap = cells[cap_idx].get_text(strip=True)
+                
+                # Extraire le volume
+                volume = ""
+                if 0 <= volume_idx < len(cells):
+                    volume = cells[volume_idx].get_text(strip=True)
+                    # Nettoyer (prendre seulement la première ligne)
+                    volume = volume.split('\n')[0] if '\n' in volume else volume
+                
+                # Extraire les pourcentages
+                change_24h = ""
+                if 0 <= pct_24h_idx < len(cells):
+                    change_24h = cells[pct_24h_idx].get_text(strip=True)
+                    # Nettoyer (enlever les icônes, garder que le %)
+                    if change_24h:
+                        percent_match = re.search(r'[-+]?\d+\.?\d*\%', change_24h)
+                        if percent_match:
+                            change_24h = percent_match.group(0)
+                
+                change_30j = ""
+                if 0 <= pct_30j_idx < len(cells):
+                    change_30j = cells[pct_30j_idx].get_text(strip=True)
+                    if change_30j:
+                        percent_match = re.search(r'[-+]?\d+\.?\d*\%', change_30j)
+                        if percent_match:
+                            change_30j = percent_match.group(0)
+                
+                ytd = ""
+                if 0 <= pct_ytd_idx < len(cells):
+                    ytd = cells[pct_ytd_idx].get_text(strip=True)
+                    if ytd:
+                        percent_match = re.search(r'[-+]?\d+\.?\d*\%', ytd)
+                        if percent_match:
+                            ytd = percent_match.group(0)
+                
+                # Créer l'objet crypto
+                crypto = {
+                    "name": name,
+                    "symbol": symbol,
+                    "last": price,
+                    "change": change_24h,
+                    "change30d": change_30j,
+                    "ytd": ytd,
+                    "volume": volume,
+                    "marketCap": market_cap
+                }
+                
+                # S'assurer qu'on a au moins le nom/symbole
+                if (name or symbol):
+                    cryptos.append(crypto)
+                    if len(cryptos) <= 5:  # Log des 5 premières pour débogage
+                        logger.info(f"Crypto extraite: {name} ({symbol}) - Prix: {price}, "
+                                   f"Cap: {market_cap}, Vol: {volume}, 24h: {change_24h}, "
+                                   f"30j: {change_30j}, YTD: {ytd}")
+            
+            except Exception as e:
+                logger.warning(f"Erreur lors de l'extraction d'une ligne: {str(e)}")
+                continue
         
         logger.info(f"Nombre total de cryptomonnaies extraites: {len(cryptos)}")
         return cryptos
