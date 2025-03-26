@@ -17,6 +17,7 @@ from datetime import datetime, timezone, timedelta
 import time
 import random
 from bs4 import BeautifulSoup
+import re
 
 # Configuration du logger
 logging.basicConfig(
@@ -37,9 +38,10 @@ CONFIG = {
     },
     "output_path": os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "crypto_lists.json"),
     "user_agents": [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Safari/605.1.15",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:90.0) Gecko/20100101 Firefox/90.0"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.3 Safari/605.1.15",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:122.0) Gecko/20100101 Firefox/122.0",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
     ],
     "sleep_time": 2.0,  # Délai entre les requêtes pour éviter le rate limiting
     "retries": 3        # Nombre de tentatives en cas d'échec
@@ -53,10 +55,17 @@ def get_headers():
     """Crée des en-têtes HTTP pour les requêtes"""
     headers = {
         "User-Agent": get_random_user_agent(),
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
         "Cache-Control": "no-cache",
-        "Pragma": "no-cache"
+        "Pragma": "no-cache",
+        "Referer": "https://www.google.com/",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "Sec-Fetch-Dest": "document",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Site": "cross-site",
+        "DNT": "1"
     }
     
     return headers
@@ -190,76 +199,323 @@ def parse_coinmarketcap_page(html_content):
     try:
         soup = BeautifulSoup(html_content, 'html.parser')
         
-        # Trouver la table des cryptomonnaies
-        table = soup.select_one('table')
-        if not table:
-            logger.error("Aucune table trouvée dans la page")
-            return []
+        # Générer fichier de debug
+        debug_dir = os.path.dirname(CONFIG["output_path"])
+        if not os.path.exists(debug_dir):
+            os.makedirs(debug_dir, exist_ok=True)
+        debug_file_path = os.path.join(debug_dir, "debug_coinmarketcap.html")
+        with open(debug_file_path, 'w', encoding='utf-8') as f:
+            f.write(html_content)
+        logger.info(f"HTML sauvegardé pour débogage dans {debug_file_path}")
         
-        # Parcourir chaque ligne du tableau (sauf l'en-tête)
-        rows = table.select('tbody tr')
+        # MÉTHODE 1: Chercher toutes les tables présentes
+        tables = soup.find_all('table')
+        logger.info(f"Nombre de tableaux trouvés: {len(tables)}")
         
-        for row in rows:
-            try:
-                # Extraire les données de base
-                name_cell = row.select_one('td:nth-child(3)')
-                if not name_cell:
-                    continue
+        if tables:
+            for i, table in enumerate(tables):
+                logger.info(f"Analyse du tableau #{i+1}")
                 
-                # Nom et symbole
-                name = name_cell.select_one('.sc-4984dd93-0')
-                if not name:
+                # Trouver toutes les lignes
+                rows = table.find_all('tr')
+                
+                # Extraire les en-têtes
+                headers = []
+                header_row = rows[0] if rows else None
+                if header_row:
+                    headers = [th.get_text(strip=True) for th in header_row.find_all(['th', 'td'])]
+                    logger.info(f"En-têtes trouvés: {headers}")
+                
+                # Déterminer les indices des colonnes importantes
+                name_idx = -1
+                symbol_idx = -1
+                price_idx = -1
+                change_24h_idx = -1
+                change_30d_idx = -1
+                ytd_idx = -1
+                volume_idx = -1
+                market_cap_idx = -1
+                
+                # Trouver les positions des colonnes d'après leurs titres
+                for j, header in enumerate(headers):
+                    header_lower = header.lower()
+                    if 'name' in header_lower or 'nom' in header_lower:
+                        name_idx = j
+                    elif 'symbol' in header_lower or 'symbole' in header_lower:
+                        symbol_idx = j
+                    elif 'price' in header_lower or 'prix' in header_lower:
+                        price_idx = j
+                    elif '24h' in header_lower and ('%' in header_lower or 'var' in header_lower or 'change' in header_lower):
+                        change_24h_idx = j
+                    elif '30' in header_lower and ('%' in header_lower or 'var' in header_lower or 'change' in header_lower):
+                        change_30d_idx = j
+                    elif 'ytd' in header_lower or 'jan' in header_lower or 'année' in header_lower:
+                        ytd_idx = j
+                    elif 'volume' in header_lower:
+                        volume_idx = j
+                    elif 'market' in header_lower or 'cap' in header_lower or 'capitalisation' in header_lower:
+                        market_cap_idx = j
+                
+                # Si nom et symbole sont dans la même colonne
+                if name_idx >= 0 and symbol_idx < 0:
+                    symbol_idx = name_idx
+                
+                # Parcourir les lignes de données (sauter l'en-tête)
+                for row in rows[1:]:
+                    cells = row.find_all(['td', 'th'])
+                    
+                    # Vérifier qu'il y a assez de cellules
+                    if len(cells) < 3:
+                        continue
+                    
+                    try:
+                        # Extraire les données de base
+                        name = ""
+                        symbol = ""
+                        
+                        # Obtenir nom et symbole
+                        if name_idx >= 0 and name_idx < len(cells):
+                            name_cell = cells[name_idx]
+                            
+                            # Essayer différentes approches pour extraire le nom
+                            name_elements = name_cell.find_all(['p', 'div', 'span', 'a'])
+                            
+                            if name_elements:
+                                # Si la cellule contient des éléments imbriqués
+                                for element in name_elements:
+                                    element_text = element.get_text(strip=True)
+                                    if element_text and len(element_text) < 30:  # Ignorer textes trop longs
+                                        if not name:
+                                            name = element_text
+                                        elif not symbol and len(element_text) <= 5:  # Symboles courts
+                                            symbol = element_text
+                            else:
+                                # Sinon utiliser le texte complet de la cellule
+                                name = name_cell.get_text(strip=True)
+                        
+                        # Si le nom et symbole sont dans des colonnes séparées
+                        if symbol_idx >= 0 and symbol_idx != name_idx and symbol_idx < len(cells):
+                            symbol = cells[symbol_idx].get_text(strip=True)
+                        
+                        # Si on n'a toujours pas de symbole mais qu'on a un nom
+                        if not symbol and name:
+                            # Chercher un format typique de symbole dans le nom (3-5 lettres majuscules)
+                            matches = re.findall(r'\b[A-Z]{2,5}\b', name)
+                            if matches:
+                                symbol = matches[0]
+                                # Retirer le symbole du nom
+                                name = name.replace(symbol, "").strip()
+                        
+                        # Si le nom est vide, passer à la ligne suivante
+                        if not name:
+                            continue
+                        
+                        # Récupérer les autres valeurs en fonction des indices trouvés
+                        price = cells[price_idx].get_text(strip=True) if price_idx >= 0 and price_idx < len(cells) else ""
+                        change_24h = cells[change_24h_idx].get_text(strip=True) if change_24h_idx >= 0 and change_24h_idx < len(cells) else ""
+                        change_30d = cells[change_30d_idx].get_text(strip=True) if change_30d_idx >= 0 and change_30d_idx < len(cells) else ""
+                        ytd = cells[ytd_idx].get_text(strip=True) if ytd_idx >= 0 and ytd_idx < len(cells) else ""
+                        volume = cells[volume_idx].get_text(strip=True) if volume_idx >= 0 and volume_idx < len(cells) else ""
+                        market_cap = cells[market_cap_idx].get_text(strip=True) if market_cap_idx >= 0 and market_cap_idx < len(cells) else ""
+                        
+                        # Si les données semblent valides
+                        if name and (price or change_24h):
+                            crypto = {
+                                "name": name,
+                                "symbol": symbol,
+                                "last": price,
+                                "change": change_24h,
+                                "change30d": change_30d,
+                                "ytd": ytd,
+                                "volume": volume,
+                                "marketCap": market_cap,
+                                "ath": ""  # Pas toujours disponible
+                            }
+                            
+                            cryptos.append(crypto)
+                    except Exception as e:
+                        logger.warning(f"Erreur lors de l'analyse d'une ligne: {str(e)}")
+                        continue
+                
+                # Si on a trouvé des cryptos, pas besoin de continuer
+                if cryptos:
+                    logger.info(f"✅ {len(cryptos)} cryptomonnaies trouvées dans le tableau #{i+1}")
+                    break
+            
+        # MÉTHODE 2: Recherche de données via des sélecteurs spécifiques
+        if not cryptos:
+            logger.info("Tentative d'extraction avec sélecteurs spécifiques...")
+            
+            # Rechercher les éléments qui contiennent des crypto par classes ou attributs spécifiques
+            # Ces sélecteurs changent souvent, mais essayons quelques possibilités
+            crypto_rows = soup.select('tbody tr')
+            
+            for row in crypto_rows:
+                try:
+                    # Extraction des cellules
+                    cells = row.find_all(['td'])
+                    
+                    if len(cells) < 3:  # Minimum de cellules nécessaires
+                        continue
+                    
+                    # Tenter d'extraire nom et symbole des premières cellules
+                    name = ""
+                    symbol = ""
+                    
+                    # Explorer les 2-3 premières cellules pour nom/symbole
+                    for i in range(min(3, len(cells))):
+                        cell_text = cells[i].get_text(strip=True)
+                        
+                        # Rechercher un symbole typique (lettres majuscules)
+                        symbol_matches = re.findall(r'\b[A-Z]{2,5}\b', cell_text)
+                        if symbol_matches and not symbol:
+                            symbol = symbol_matches[0]
+                            
+                        # Si la cellule contient peu de texte, c'est probablement un nom/symbole
+                        if len(cell_text) < 30 and not name:
+                            name = cell_text.replace(symbol, "").strip()
+                    
+                    # Extraire les données financières des autres cellules
+                    price = ""
+                    change_24h = ""
+                    volume = ""
+                    market_cap = ""
+                    
+                    for i, cell in enumerate(cells):
+                        text = cell.get_text(strip=True)
+                        
+                        # Détecter prix (habituellement chiffres avec $ ou €)
+                        if (re.search(r'[$€]\s*[\d,.]+', text) or re.search(r'[\d,.]+\s*[$€]', text)) and not price:
+                            price = text
+                        
+                        # Détecter variation (pourcentage avec + ou -)
+                        elif '%' in text and ('+' in text or '-' in text) and not change_24h:
+                            change_24h = text
+                        
+                        # Détecter volume (chiffres avec B, M, K)
+                        elif any(x in text for x in ['B', 'M', 'K', 'G']) and ('+' not in text and '-' not in text) and not volume:
+                            volume = text
+                        
+                        # Détecter cap. marché (chiffres avec B, T)
+                        elif any(x in text for x in ['B', 'T']) and not market_cap and i > 3:
+                            market_cap = text
+                    
+                    # Si on a trouvé des données minimales
+                    if name and (price or change_24h):
+                        crypto = {
+                            "name": name,
+                            "symbol": symbol,
+                            "last": price,
+                            "change": change_24h,
+                            "change30d": "",
+                            "ytd": "",
+                            "volume": volume,
+                            "marketCap": market_cap,
+                            "ath": ""
+                        }
+                        
+                        cryptos.append(crypto)
+                except Exception as e:
+                    logger.warning(f"Erreur lors de l'extraction par sélecteurs: {str(e)}")
                     continue
                     
-                name_text = name.text.strip()
+        # MÉTHODE 3: Recherche par analyse visuelle du HTML
+        if not cryptos:
+            logger.info("Tentative d'extraction par recherche visuelle...")
+            
+            # Rechercher les divs qui pourraient contenir une liste de cryptos
+            potential_containers = soup.find_all(['div', 'section', 'table'], class_=lambda c: c and ('table' in c.lower() or 'list' in c.lower() or 'grid' in c.lower()))
+            
+            for container in potential_containers:
+                # Rechercher tous les éléments avec des textes ressemblant à des symboles crypto
+                crypto_elements = container.find_all(string=re.compile(r'\b[A-Z]{2,5}\b'))
                 
-                symbol_element = name_cell.select_one('.coin-item-symbol')
-                symbol = symbol_element.text.strip() if symbol_element else ""
-                
-                # Prix
-                price_cell = row.select_one('td:nth-child(4)')
-                price = price_cell.text.strip() if price_cell else ""
-                
-                # Capitalisation boursière
-                market_cap_cell = row.select_one('td:nth-child(6)')
-                market_cap = market_cap_cell.text.strip() if market_cap_cell else ""
-                
-                # Volume sur 24h
-                volume_cell = row.select_one('td:nth-child(7)')
-                volume = volume_cell.text.strip() if volume_cell else ""
-                
-                # Variations
-                var_24h_cell = row.select_one('td:nth-child(8)')
-                var_24h = var_24h_cell.text.strip() if var_24h_cell else ""
-                
-                var_30d_cell = row.select_one('td:nth-child(10)')
-                var_30d = var_30d_cell.text.strip() if var_30d_cell else ""
-                
-                var_ytd_cell = row.select_one('td:nth-child(11)')
-                var_ytd = var_ytd_cell.text.strip() if var_ytd_cell else ""
-                
-                # Créer l'objet crypto
-                crypto = {
-                    "name": name_text,
-                    "symbol": symbol,
-                    "last": price,
-                    "change": var_24h,
-                    "change30d": var_30d,
-                    "ytd": var_ytd,
-                    "volume": volume,
-                    "marketCap": market_cap
-                }
-                
-                cryptos.append(crypto)
-                
-            except Exception as e:
-                logger.error(f"Erreur lors de l'analyse d'une ligne: {str(e)}")
-                continue
+                if len(crypto_elements) > 5:  # Si on trouve au moins 5 potentiels symboles
+                    logger.info(f"Trouvé un conteneur avec {len(crypto_elements)} symboles potentiels")
+                    
+                    # Pour chaque élément de texte trouvé, essayer d'extraire des infos
+                    for element in crypto_elements:
+                        try:
+                            parent = element.parent
+                            if not parent:
+                                continue
+                                
+                            # Trouver le "bloc" parent (tr, div, etc)
+                            block = parent
+                            for _ in range(3):  # Remonter jusqu'à 3 niveaux
+                                if block and block.name in ['tr', 'div', 'li', 'article']:
+                                    break
+                                block = block.parent if block.parent else None
+                            
+                            if not block:
+                                continue
+                                
+                            # Extraire le texte de tous les éléments enfants
+                            all_text = [t.get_text(strip=True) for t in block.find_all(['div', 'span', 'td', 'p']) if t.get_text(strip=True)]
+                            
+                            # Chercher des motifs dans le texte
+                            name = ""
+                            symbol = ""
+                            price = ""
+                            change = ""
+                            
+                            # Trouver le symbole (3-5 lettres majuscules)
+                            for text in all_text:
+                                matches = re.findall(r'\b[A-Z]{2,5}\b', text)
+                                if matches:
+                                    symbol = matches[0]
+                                    # Si le texte contient juste le symbole ou presque, c'est probablement le nom aussi
+                                    if len(text) < 10:
+                                        name = text
+                                    break
+                            
+                            # Trouver le prix (format monétaire)
+                            for text in all_text:
+                                if re.search(r'[$€]\s*[\d,.]+', text) or re.search(r'[\d,.]+\s*[$€]', text):
+                                    price = text
+                                    break
+                            
+                            # Trouver la variation (pourcentage)
+                            for text in all_text:
+                                if '%' in text and ('+' in text or '-' in text):
+                                    change = text
+                                    break
+                            
+                            # Si on a trouvé des données cohérentes
+                            if symbol and (price or change):
+                                # Chercher un nom si on n'en a pas
+                                if not name:
+                                    for text in all_text:
+                                        if symbol not in text and len(text) < 30:
+                                            name = text
+                                            break
+                                
+                                crypto = {
+                                    "name": name or "Unknown",
+                                    "symbol": symbol,
+                                    "last": price,
+                                    "change": change,
+                                    "change30d": "",
+                                    "ytd": "",
+                                    "volume": "",
+                                    "marketCap": "",
+                                    "ath": ""
+                                }
+                                
+                                # Vérifier si cette crypto n'est pas déjà dans la liste
+                                if not any(c["symbol"] == symbol for c in cryptos):
+                                    cryptos.append(crypto)
+                        except Exception as e:
+                            logger.warning(f"Erreur lors de l'analyse visuelle: {str(e)}")
+                            continue
         
+        logger.info(f"Nombre total de cryptomonnaies extraites: {len(cryptos)}")
         return cryptos
         
     except Exception as e:
         logger.error(f"Erreur lors de l'analyse HTML: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         return []
 
 def process_api_data(api_data):
