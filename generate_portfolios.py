@@ -750,7 +750,10 @@ if (window.recordDebugFile) {{
 # NOUVELLE FONCTION: Extraction des actifs valides des données filtrées
 def extract_valid_assets(filtered_etfs):
     """Extrait spécifiquement les Top ETF et Top Obligations depuis les données filtrées"""
-    # CORRECTION: Ne pas utiliser de variables globales, retourner les valeurs
+    # Ajouter des logs de débogage
+    print("===== DEBUG - CONTENU filtered_etfs =====")
+    print(filtered_etfs)
+    
     valid_etfs = []
     valid_bonds = []
     
@@ -758,16 +761,33 @@ def extract_valid_assets(filtered_etfs):
     lines = filtered_etfs.split('\n')
     current_section = None
     
+    print("===== ANALYSE DES SECTIONS =====")
+    
     for line in lines:
+        # Log pour chaque ligne analysée
+        print(f"Analyse ligne: '{line}'")
+        
         # Détecter spécifiquement les sections qui nous intéressent
-        if "TOP ETF" in line.upper() or "TOP 50 ETF" in line.upper():
+        if "TOP ETF" in line.upper() or "ETF 2025" in line.upper():
             current_section = "TOP_ETF"
+            print(f"-> Section détectée: TOP_ETF")
             continue
         elif "ETF COURT TERME" in line.upper():
             current_section = "ETF_COURT_TERME"
+            print(f"-> Section détectée: ETF_COURT_TERME")
             continue
-        elif "TOP" in line.upper() and "OBLIGATION" in line.upper():
+        elif "ETF OBLIGATION" in line.upper() or "TOP OBLIGATION" in line.upper():
             current_section = "TOP_BOND"
+            print(f"-> Section détectée: TOP_BOND")
+            continue
+        # AJOUT: Détecter toute section contenant ETF ou OBLIGATION pour être plus souple
+        elif "ETF" in line.upper() and ":" in line:
+            current_section = "TOP_ETF"
+            print(f"-> Section ETF générique détectée: {line}")
+            continue
+        elif "OBLIGATION" in line.upper() and ":" in line:
+            current_section = "TOP_BOND"
+            print(f"-> Section OBLIGATION générique détectée: {line}")
             continue
             
         # Extraire les noms d'actifs (lignes commençant par "•") pour les sections ciblées
@@ -778,8 +798,10 @@ def extract_valid_assets(filtered_etfs):
             
             if current_section in ["TOP_ETF", "ETF_COURT_TERME"]:
                 valid_etfs.append(asset_name)
+                print(f"  ✓ ETF ajouté: {asset_name}")
             elif current_section == "TOP_BOND":
                 valid_bonds.append(asset_name)
+                print(f"  ✓ Obligation ajoutée: {asset_name}")
     
     # Mettre à jour les variables globales pour les utiliser dans adjust_portfolios()
     # CORRECTION: Modifier l'accès aux variables globales
@@ -790,6 +812,16 @@ def extract_valid_assets(filtered_etfs):
     # Afficher les informations sur les actifs trouvés
     print(f"📊 ETF trouvés: {len(valid_etfs)} (TOP ETF et court terme)")
     print(f"📊 Obligations trouvées: {len(valid_bonds)} (TOP Bonds)")
+    
+    if len(valid_etfs) > 0:
+        print("Liste des ETF trouvés:")
+        for etf in valid_etfs:
+            print(f"  - {etf}")
+    
+    if len(valid_bonds) > 0:
+        print("Liste des obligations trouvées:")
+        for bond in valid_bonds:
+            print(f"  - {bond}")
     
     print(f"✓ Extraction réussie: {len(valid_etfs)} ETF et {len(valid_bonds)} obligations")
     return valid_etfs, valid_bonds
