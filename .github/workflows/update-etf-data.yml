@@ -1,7 +1,7 @@
 name: Update ETF Data
 on:
   schedule:
-    - cron: '0 6 * *1-5'  # Exécution tous les jours de la semaine à 6h00 UTC
+    - cron: '0 6 * * 1-5'  # Exécution tous les jours de la semaine à 6h00 UTC
   workflow_dispatch:  # Permet l'exécution manuelle
 jobs:
   update-etf-data:
@@ -20,8 +20,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install beautifulsoup4 requests pandas lxml pytz
+      
       - name: Create data directory if it doesn't exist
         run: mkdir -p data
+      
       - name: Scrape ETF data
         run: |
           python scripts/update_etf_data.py
