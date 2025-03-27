@@ -31,7 +31,7 @@ CONFIG = {
     "base_url": "https://coinmarketcap.com/?type=coins&tableRankBy=gainer_loser_7d",
     "output_path": os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "crypto_lists.json"),
     "timeout": 30,  # Timeout en secondes
-    "max_pages": 40,  # Maximum de pages à scraper
+    "max_pages": 40,  # Maximum de pages à scraper (couvre les 32 pages)
     "delay_between_pages": 2,  # Délai entre les pages (secondes)
     "categories": {
         # Priorité aux catégories 7d
@@ -42,7 +42,7 @@ CONFIG = {
         "top_gainers_24h": [],
         "top_losers_24h": []
     },
-    "max_coins_top_7d": 40,  # Plus de coins pour les catégories 7d
+    "max_coins_top_7d": 5000,  # Modifié : valeur très élevée pour récupérer toutes les cryptos
     "max_coins_other": 20    # Moins pour les autres catégories
 }
 
@@ -405,22 +405,30 @@ def categorize_coins(coins):
     
     # === CATÉGORIES 7D (PRIORITAIRES) ===
     
-    # Top gainers 7d (premiers éléments) - avec plus de cryptos
+    # Top gainers 7d - TOUTES les cryptos avec gains positifs sur 7 jours
     sorted_7d_gainers = sorted(coins, key=lambda x: x.get("_change_7d_value", 0), reverse=True)
     top_gainers_7d = [
         {k: v for k, v in coin.items() if not k.startswith('_')} 
-        for coin in sorted_7d_gainers[:CONFIG["max_coins_top_7d"]] 
+        for coin in sorted_7d_gainers
         if coin.get("_change_7d_value", 0) > 0
     ]
+    
+    # Ajout de log pour débogage
+    logger.info(f"Nombre total de cryptos avec gains positifs sur 7 jours: {len(top_gainers_7d)}")
+    
     CRYPTO_DATA["categories"]["top_gainers_7d"] = top_gainers_7d
     
-    # Top losers 7d (derniers éléments) - avec plus de cryptos
+    # Top losers 7d - TOUTES les cryptos avec performances négatives sur 7 jours
     sorted_7d_losers = sorted(coins, key=lambda x: x.get("_change_7d_value", 0))
     top_losers_7d = [
         {k: v for k, v in coin.items() if not k.startswith('_')} 
-        for coin in sorted_7d_losers[:CONFIG["max_coins_top_7d"]] 
+        for coin in sorted_7d_losers
         if coin.get("_change_7d_value", 0) < 0
     ]
+    
+    # Ajout de log pour débogage
+    logger.info(f"Nombre total de cryptos avec performances négatives sur 7 jours: {len(top_losers_7d)}")
+    
     CRYPTO_DATA["categories"]["top_losers_7d"] = top_losers_7d
     
     # Les 20 premières par market cap pour "trending"
@@ -530,7 +538,7 @@ def main():
     try:
         logger.info("🚀 Démarrage du script de scraping de CoinMarketCap")
         logger.info(f"Configuration: {CONFIG['max_pages']} pages max, {CONFIG['delay_between_pages']}s entre les pages")
-        logger.info(f"Focus sur les variations 7 jours avec jusqu'à {CONFIG['max_coins_top_7d']} cryptos pour les catégories 7d")
+        logger.info(f"Focus sur les variations 7 jours - récupération de TOUTES les cryptos avec gains positifs")
         
         # Vérifier si les données existent déjà
         has_existing_data = check_existing_data()
