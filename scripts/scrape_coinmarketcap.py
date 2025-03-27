@@ -3,9 +3,8 @@
 
 """
 Script d'extraction des données de cryptomonnaies depuis CoinMarketCap
-URLs cibles: 
+URL cible: 
 - https://coinmarketcap.com/ (page principale)
-- https://coinmarketcap.com/?type=coins&tableRankBy=trending_7d (trending 7d)
 Avec pagination jusqu'à 40 pages
 Filtre: Volume 24h > 50 millions de dollars
 """
@@ -30,17 +29,13 @@ logger = logging.getLogger(__name__)
 
 # Configuration
 CONFIG = {
-    "urls": {
-        "main": "https://coinmarketcap.com/",
-        "trending": "https://coinmarketcap.com/?type=coins&tableRankBy=trending_7d"
-    },
+    "main_url": "https://coinmarketcap.com/",
     "output_path": os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "crypto_lists.json"),
     "timeout": 30,  # Timeout en secondes
     "max_pages": 40,  # Maximum de pages à scraper (couvre les 32 pages)
     "delay_between_pages": 2,  # Délai entre les pages (secondes)
     "categories": {
         "main": [],          # Page principale de CoinMarketCap
-        "trending_7d": [],   # Trending sur 7 jours
         "top_gainers_24h": [],
         "top_losers_24h": []
     },
@@ -52,7 +47,6 @@ CONFIG = {
 CRYPTO_DATA = {
     "categories": {
         "main": [],          # Page principale de CoinMarketCap
-        "trending_7d": [],   # Trending sur 7 jours
         "top_gainers_24h": [],
         "top_losers_24h": []
     },
@@ -93,10 +87,10 @@ def get_headers():
         "DNT": "1"
     }
 
-def extract_coin_data_api(url_type="main"):
+def extract_coin_data_api():
     """Extrait les données en utilisant l'API CoinMarketCap (version gratuite) avec pagination"""
     try:
-        logger.info(f"Tentative d'extraction via l'API CoinMarketCap pour {url_type} avec pagination...")
+        logger.info("Tentative d'extraction via l'API CoinMarketCap avec pagination...")
         
         all_coins = []
         total_pages_scraped = 0
@@ -106,31 +100,17 @@ def extract_coin_data_api(url_type="main"):
             try:
                 # URL de l'API CoinMarketCap (endpoint gratuit avec limite)
                 api_url = "https://api.coinmarketcap.com/data-api/v3/cryptocurrency/listing"
+                params = {
+                    "start": (page - 1) * 100 + 1,  # Offset pour la pagination
+                    "limit": 100,
+                    "sortBy": "market_cap",
+                    "sortType": "desc",
+                    "convert": "USD",
+                    "cryptoType": "all",
+                    "tagType": "all"
+                }
                 
-                # Paramètres différents selon le type d'URL
-                if url_type == "trending":
-                    params = {
-                        "start": (page - 1) * 100 + 1,  # Offset pour la pagination
-                        "limit": 100,
-                        "sortBy": "trending",
-                        "sortType": "desc",
-                        "convert": "USD",
-                        "cryptoType": "all",
-                        "tagType": "all",
-                        "timeframe": "7d"
-                    }
-                else:  # Page principale (par défaut)
-                    params = {
-                        "start": (page - 1) * 100 + 1,  # Offset pour la pagination
-                        "limit": 100,
-                        "sortBy": "market_cap",
-                        "sortType": "desc",
-                        "convert": "USD",
-                        "cryptoType": "all",
-                        "tagType": "all"
-                    }
-                
-                logger.info(f"Extraction de {url_type} page {page}...")
+                logger.info(f"Extraction de la page {page}...")
                 headers = get_headers()
                 response = requests.get(api_url, params=params, headers=headers, timeout=CONFIG["timeout"])
                 
@@ -238,28 +218,22 @@ def extract_coin_data_api(url_type="main"):
             if coin.get("volume_24h_raw", 0) >= CONFIG["min_volume_24h"]
         ]
         
-        logger.info(f"Extraction API terminée pour {url_type}. {total_pages_scraped} pages extraites.")
+        logger.info(f"Extraction API terminée. {total_pages_scraped} pages extraites.")
         logger.info(f"Coins avec volume > {CONFIG['min_volume_24h']/1000000}M$: {len(filtered_coins)}/{len(all_coins)}")
         
         CRYPTO_DATA["meta"]["pages_scraped"] = total_pages_scraped
         return filtered_coins
     
     except Exception as e:
-        logger.error(f"Erreur lors de l'extraction via API pour {url_type}: {str(e)}")
+        logger.error(f"Erreur lors de l'extraction via API: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
         return []
 
-def extract_coin_data_html(url_type="main"):
+def extract_coin_data_html():
     """Tentative d'extraction via le HTML (fallback) avec pagination"""
     try:
-        # Déterminer l'URL de base en fonction du type
-        if url_type == "trending":
-            base_url = CONFIG["urls"]["trending"]
-        else:
-            base_url = CONFIG["urls"]["main"]
-            
-        logger.info(f"Tentative d'extraction via le HTML pour {url_type} avec pagination...")
+        logger.info("Tentative d'extraction via le HTML avec pagination...")
         
         all_coins = []
         total_pages_scraped = 0
@@ -268,8 +242,8 @@ def extract_coin_data_html(url_type="main"):
         for page in range(1, CONFIG["max_pages"] + 1):
             try:
                 # URL avec pagination
-                url = f"{base_url}&page={page}" if "?" in base_url else f"{base_url}?page={page}"
-                logger.info(f"Extraction de {url_type} page {page}: {url}")
+                url = f"{CONFIG['main_url']}?page={page}"
+                logger.info(f"Extraction de la page {page}: {url}")
                 
                 headers = get_headers()
                 response = requests.get(url, headers=headers, timeout=CONFIG["timeout"])
@@ -285,10 +259,10 @@ def extract_coin_data_html(url_type="main"):
                     debug_dir = os.path.dirname(CONFIG["output_path"])
                     if not os.path.exists(debug_dir):
                         os.makedirs(debug_dir, exist_ok=True)
-                    debug_file_path = os.path.join(debug_dir, f"debug_coinmarketcap_{url_type}.html")
+                    debug_file_path = os.path.join(debug_dir, "debug_coinmarketcap.html")
                     with open(debug_file_path, 'w', encoding='utf-8') as f:
                         f.write(html)
-                    logger.info(f"HTML de la page 1 de {url_type} sauvegardé pour débogage dans {debug_file_path}")
+                    logger.info(f"HTML de la page 1 sauvegardé pour débogage dans {debug_file_path}")
                 
                 # Tenter de trouver des données dans le HTML
                 soup = BeautifulSoup(html, 'html.parser')
@@ -420,140 +394,98 @@ def extract_coin_data_html(url_type="main"):
             if coin.get("volume_24h_raw", 0) >= CONFIG["min_volume_24h"]
         ]
         
-        logger.info(f"Extraction HTML terminée pour {url_type}. {total_pages_scraped} pages extraites.")
+        logger.info(f"Extraction HTML terminée. {total_pages_scraped} pages extraites.")
         logger.info(f"Coins avec volume > {CONFIG['min_volume_24h']/1000000}M$: {len(filtered_coins)}/{len(all_coins)}")
         
         CRYPTO_DATA["meta"]["pages_scraped"] = total_pages_scraped
         return filtered_coins
     
     except Exception as e:
-        logger.error(f"Erreur lors de l'extraction via HTML pour {url_type}: {str(e)}")
+        logger.error(f"Erreur lors de l'extraction via HTML: {str(e)}")
         import traceback
         logger.error(traceback.format_exc())
         return []
 
-def categorize_coins(main_coins, trending_coins):
-    """Catégorise les cryptos en fonction des données sources"""
+def categorize_coins(coins):
+    """Catégorise les cryptos en fonction des données de la page principale"""
     # Réinitialiser les catégories
     for category in CRYPTO_DATA["categories"]:
         CRYPTO_DATA["categories"][category] = []
     
-    # Vérifier si nous avons des données
-    all_coins = []
-    
-    # Ajouter les coins des différentes sources à all_coins
-    if main_coins:
-        all_coins.extend(main_coins)
-        # Liste des cryptos de la page principale (sans les propriétés internes)
-        CRYPTO_DATA["categories"]["main"] = [
-            {k: v for k, v in coin.items() if not k.startswith('_') and not k == "volume_24h_raw"}
-            for coin in main_coins
-        ]
-        logger.info(f"Ajouté {len(main_coins)} cryptos à la catégorie 'main'")
-    
-    if trending_coins:
-        # Ajouter des coins uniques (qui ne sont pas dans main_coins)
-        existing_symbols = {coin["symbol"] for coin in main_coins} if main_coins else set()
-        unique_trending = [coin for coin in trending_coins if coin["symbol"] not in existing_symbols]
-        
-        # Ajouter les coins uniques
-        all_coins.extend(unique_trending)
-        
-        # Liste des cryptos trending (sans les propriétés internes)
-        CRYPTO_DATA["categories"]["trending_7d"] = [
-            {k: v for k, v in coin.items() if not k.startswith('_') and not k == "volume_24h_raw"}
-            for coin in trending_coins
-        ]
-        logger.info(f"Ajouté {len(trending_coins)} cryptos à la catégorie 'trending_7d'")
-    
     # Si pas de coins, sortir
-    if not all_coins:
+    if not coins:
         logger.warning("Aucune crypto à catégoriser")
         return
+    
+    # Enregistrer toutes les cryptos pour la catégorie principale
+    CRYPTO_DATA["categories"]["main"] = [
+        {k: v for k, v in coin.items() if not k.startswith('_') and not k == "volume_24h_raw"}
+        for coin in coins
+    ]
+    logger.info(f"Ajouté {len(coins)} cryptos à la catégorie 'main'")
     
     # Enregistrer toutes les cryptos (sans les propriétés internes _)
     CRYPTO_DATA["all_coins"] = [
         {k: v for k, v in coin.items() if not k.startswith('_') and not k == "volume_24h_raw"} 
-        for coin in all_coins
+        for coin in coins
     ]
     
     # === CATÉGORIES 24H (SECONDAIRES) ===
     
     # Top gainers 24h (premiers éléments)
-    sorted_24h_gainers = sorted(all_coins, key=lambda x: x.get("_change_24h_value", 0), reverse=True)
+    sorted_24h_gainers = sorted(coins, key=lambda x: x.get("_change_24h_value", 0), reverse=True)
     top_gainers_24h = [
         {k: v for k, v in coin.items() if not k.startswith('_') and not k == "volume_24h_raw"} 
-        for coin in sorted_24h_gainers[:CONFIG["max_coins_per_category"]] 
+        for coin in sorted_24h_gainers
         if coin.get("_change_24h_value", 0) > 0
     ]
     CRYPTO_DATA["categories"]["top_gainers_24h"] = top_gainers_24h
     
     # Top losers 24h (derniers éléments)
-    sorted_24h_losers = sorted(all_coins, key=lambda x: x.get("_change_24h_value", 0))
+    sorted_24h_losers = sorted(coins, key=lambda x: x.get("_change_24h_value", 0))
     top_losers_24h = [
         {k: v for k, v in coin.items() if not k.startswith('_') and not k == "volume_24h_raw"} 
-        for coin in sorted_24h_losers[:CONFIG["max_coins_per_category"]] 
+        for coin in sorted_24h_losers
         if coin.get("_change_24h_value", 0) < 0
     ]
     CRYPTO_DATA["categories"]["top_losers_24h"] = top_losers_24h
     
-    # Ajouter les cryptos most_visited (top 10 de la page principale)
-    if main_coins:
-        CRYPTO_DATA["most_visited"] = [
-            {k: v for k, v in coin.items() if not k.startswith('_') and not k == "volume_24h_raw"}
-            for coin in main_coins[:10]
-        ]
+    # Ajouter les 10 premières cryptos aux most_visited
+    CRYPTO_DATA["most_visited"] = [
+        {k: v for k, v in coin.items() if not k.startswith('_') and not k == "volume_24h_raw"}
+        for coin in coins[:10]
+    ]
     
     # Mettre à jour le compteur
     CRYPTO_DATA["meta"]["count"] = len(CRYPTO_DATA["all_coins"])
     
     logger.info(f"Catégorisation terminée: "
                 f"{len(CRYPTO_DATA['categories']['main'])} main, "
-                f"{len(CRYPTO_DATA['categories']['trending_7d'])} trending_7d, "
                 f"{len(top_gainers_24h)} gainers 24h, "
                 f"{len(top_losers_24h)} losers 24h, "
                 f"{len(CRYPTO_DATA['all_coins'])} total")
 
 def scrape_crypto_data():
-    """Récupère et traite les données des cryptomonnaies depuis plusieurs sources"""
+    """Récupère et traite les données des cryptomonnaies"""
     try:
         logger.info("Démarrage de l'extraction des données de CoinMarketCap...")
         
-        # --- EXTRACTION DES DONNÉES DE LA PAGE PRINCIPALE ---
-        logger.info("1. Extraction des données de la page principale...")
-        main_coins = extract_coin_data_api("main")
+        # Extraction des données de la page principale
+        main_coins = extract_coin_data_api()
         
         # Si l'API échoue, essayer l'extraction HTML
         if not main_coins:
-            logger.info("L'extraction via API a échoué pour la page principale, tentative via HTML...")
-            main_coins = extract_coin_data_html("main")
+            logger.info("L'extraction via API a échoué, tentative via HTML...")
+            main_coins = extract_coin_data_html()
         
         if not main_coins:
-            logger.warning("Aucune donnée extraite de la page principale.")
-        else:
-            logger.info(f"Extraction réussie de {len(main_coins)} cryptos de la page principale.")
-        
-        # --- EXTRACTION DES DONNÉES DE TRENDING ---
-        logger.info("2. Extraction des données trending sur 7 jours...")
-        trending_coins = extract_coin_data_api("trending")
-        
-        # Si l'API échoue, essayer l'extraction HTML
-        if not trending_coins:
-            logger.info("L'extraction via API a échoué pour trending, tentative via HTML...")
-            trending_coins = extract_coin_data_html("trending")
-        
-        if not trending_coins:
-            logger.warning("Aucune donnée extraite pour trending.")
-        else:
-            logger.info(f"Extraction réussie de {len(trending_coins)} cryptos trending.")
-        
-        # Vérifier si au moins une source a fourni des données
-        if not main_coins and not trending_coins:
-            logger.error("Aucune donnée extraite des deux sources.")
+            logger.error("Aucune donnée extraite.")
             return False
         
-        # Catégoriser les cryptos extraites
-        categorize_coins(main_coins, trending_coins)
+        logger.info(f"{len(main_coins)} cryptomonnaies extraites avec succès.")
+        
+        # Catégoriser les coins
+        categorize_coins(main_coins)
         
         # Mettre à jour l'horodatage
         CRYPTO_DATA["meta"]["lastUpdated"] = datetime.now(timezone.utc).isoformat()
@@ -602,7 +534,7 @@ def main():
     try:
         logger.info("🚀 Démarrage du script de scraping de CoinMarketCap")
         logger.info(f"Configuration: {CONFIG['max_pages']} pages max, {CONFIG['delay_between_pages']}s entre les pages")
-        logger.info(f"URLs cibles: {CONFIG['urls']['main']} et {CONFIG['urls']['trending']}")
+        logger.info(f"URL cible: {CONFIG['main_url']}")
         logger.info(f"Filtre: Volume 24h > ${CONFIG['min_volume_24h']/1000000}M")
         
         # Vérifier si les données existent déjà
