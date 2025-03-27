@@ -37,7 +37,9 @@ CONFIG = {
     "categories": {
         "main": [],          # Page principale de CoinMarketCap
         "top_gainers_24h": [],
-        "top_losers_24h": []
+        "top_losers_24h": [],
+        "top_gainers_7d": [],  # Ajout des catégories pour top 10 avec var 7 jours
+        "top_losers_7d": []    # Ajout des catégories pour top 10 avec var 7 jours
     },
     "min_volume_24h": 50000000,  # Volume minimum en dollars (50 millions)
     "max_coins_per_category": 5000  # Valeur élevée pour récupérer toutes les cryptos
@@ -48,7 +50,9 @@ CRYPTO_DATA = {
     "categories": {
         "main": [],          # Page principale de CoinMarketCap
         "top_gainers_24h": [],
-        "top_losers_24h": []
+        "top_losers_24h": [],
+        "top_gainers_7d": [],  # Ajout des catégories pour top 10 avec var 7 jours
+        "top_losers_7d": []    # Ajout des catégories pour top 10 avec var 7 jours
     },
     "most_visited": [],
     "all_coins": [],  # Pour stocker toutes les cryptos récupérées
@@ -439,7 +443,7 @@ def categorize_coins(coins):
         for coin in sorted_24h_gainers
         if coin.get("_change_24h_value", 0) > 0
     ]
-    CRYPTO_DATA["categories"]["top_gainers_24h"] = top_gainers_24h
+    CRYPTO_DATA["categories"]["top_gainers_24h"] = top_gainers_24h[:10]  # Limiter à 10
     
     # Top losers 24h (derniers éléments)
     sorted_24h_losers = sorted(coins, key=lambda x: x.get("_change_24h_value", 0))
@@ -448,7 +452,27 @@ def categorize_coins(coins):
         for coin in sorted_24h_losers
         if coin.get("_change_24h_value", 0) < 0
     ]
-    CRYPTO_DATA["categories"]["top_losers_24h"] = top_losers_24h
+    CRYPTO_DATA["categories"]["top_losers_24h"] = top_losers_24h[:10]  # Limiter à 10
+    
+    # === CATÉGORIES 7D (TERTIAIRES) ===
+    
+    # Top gainers 7d (premiers éléments)
+    sorted_7d_gainers = sorted(coins, key=lambda x: x.get("_change_7d_value", 0), reverse=True)
+    top_gainers_7d = [
+        {k: v for k, v in coin.items() if not k.startswith('_') and not k == "volume_24h_raw"} 
+        for coin in sorted_7d_gainers
+        if coin.get("_change_7d_value", 0) > 0
+    ]
+    CRYPTO_DATA["categories"]["top_gainers_7d"] = top_gainers_7d[:10]  # Limiter à 10
+    
+    # Top losers 7d (derniers éléments)
+    sorted_7d_losers = sorted(coins, key=lambda x: x.get("_change_7d_value", 0))
+    top_losers_7d = [
+        {k: v for k, v in coin.items() if not k.startswith('_') and not k == "volume_24h_raw"} 
+        for coin in sorted_7d_losers
+        if coin.get("_change_7d_value", 0) < 0
+    ]
+    CRYPTO_DATA["categories"]["top_losers_7d"] = top_losers_7d[:10]  # Limiter à 10
     
     # Ajouter les 10 premières cryptos aux most_visited
     CRYPTO_DATA["most_visited"] = [
@@ -460,10 +484,12 @@ def categorize_coins(coins):
     CRYPTO_DATA["meta"]["count"] = len(CRYPTO_DATA["all_coins"])
     
     logger.info(f"Catégorisation terminée: "
-                f"{len(CRYPTO_DATA['categories']['main'])} main, "
-                f"{len(top_gainers_24h)} gainers 24h, "
-                f"{len(top_losers_24h)} losers 24h, "
-                f"{len(CRYPTO_DATA['all_coins'])} total")
+               f"{len(CRYPTO_DATA['categories']['main'])} main, "
+               f"{len(CRYPTO_DATA['categories']['top_gainers_24h'])} gainers 24h, "
+               f"{len(CRYPTO_DATA['categories']['top_losers_24h'])} losers 24h, "
+               f"{len(CRYPTO_DATA['categories']['top_gainers_7d'])} gainers 7d, "
+               f"{len(CRYPTO_DATA['categories']['top_losers_7d'])} losers 7d, "
+               f"{len(CRYPTO_DATA['all_coins'])} total")
 
 def scrape_crypto_data():
     """Récupère et traite les données des cryptomonnaies"""
