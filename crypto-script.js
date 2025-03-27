@@ -1,6 +1,7 @@
 /**
  * crypto-script.js - Script pour afficher les données des cryptomonnaies
  * Données mises à jour régulièrement par GitHub Actions
+ * Ajout de support pour les top 10 hausses/baisses sur 24h et 7j
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -478,20 +479,20 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Mise à jour du top 10 Hausse quotidienne
         if (topPerformers.daily && topPerformers.daily.best) {
-            renderTopTenCards('top-daily-gainers', topPerformers.daily.best.slice(0, 10), 'change', currentMarket);
+            renderTopTenCards('top-daily-gainers', topPerformers.daily.best.slice(0, 10), 'change_24h', currentMarket);
         }
         
         // Mise à jour du top 10 Baisse quotidienne
         if (topPerformers.daily && topPerformers.daily.worst) {
-            renderTopTenCards('top-daily-losers', topPerformers.daily.worst.slice(0, 10), 'change', currentMarket);
+            renderTopTenCards('top-daily-losers', topPerformers.daily.worst.slice(0, 10), 'change_24h', currentMarket);
         }
         
-        // Mise à jour du top 10 Hausse YTD (using 7d data)
+        // Mise à jour du top 10 Hausse 7 jours
         if (topPerformers.ytd && topPerformers.ytd.best) {
             renderTopTenCards('top-ytd-gainers', topPerformers.ytd.best.slice(0, 10), 'change_7d', currentMarket);
         }
         
-        // Mise à jour du top 10 Baisse YTD (using 7d data)
+        // Mise à jour du top 10 Baisse 7 jours
         if (topPerformers.ytd && topPerformers.ytd.worst) {
             renderTopTenCards('top-ytd-losers', topPerformers.ytd.worst.slice(0, 10), 'change_7d', currentMarket);
         }
