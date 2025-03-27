@@ -7,6 +7,7 @@ URL cible:
 - https://coinmarketcap.com/ (page principale)
 Avec pagination jusqu'à 40 pages
 Filtre: Volume 24h > 50 millions de dollars
+Ajout: Top 10 hausses/baisses pour 24h et 7j
 """
 
 import os
@@ -37,10 +38,13 @@ CONFIG = {
     "categories": {
         "main": [],          # Page principale de CoinMarketCap
         "top_gainers_24h": [],
-        "top_losers_24h": []
+        "top_losers_24h": [],
+        "top_gainers_7d": [],  # Nouveau: top gains 7 jours
+        "top_losers_7d": []    # Nouveau: top pertes 7 jours
     },
     "min_volume_24h": 50000000,  # Volume minimum en dollars (50 millions)
-    "max_coins_per_category": 5000  # Valeur élevée pour récupérer toutes les cryptos
+    "max_coins_per_category": 5000,  # Valeur élevée pour récupérer toutes les cryptos
+    "top_n": 10  # Nombre d'éléments dans les tops (top 10 par défaut)
 }
 
 # Structure pour les données
@@ -48,7 +52,9 @@ CRYPTO_DATA = {
     "categories": {
         "main": [],          # Page principale de CoinMarketCap
         "top_gainers_24h": [],
-        "top_losers_24h": []
+        "top_losers_24h": [],
+        "top_gainers_7d": [],  # Nouveau: top gains 7 jours
+        "top_losers_7d": []    # Nouveau: top pertes 7 jours
     },
     "most_visited": [],
     "all_coins": [],  # Pour stocker toutes les cryptos récupérées
@@ -406,6 +412,66 @@ def extract_coin_data_html():
         logger.error(traceback.format_exc())
         return []
 
+def create_top_performers(coins, period="24h", count=10):
+    """
+    Crée les top performers (hausse et baisse) pour une période donnée
+    
+    Args:
+        coins: Liste des cryptomonnaies
+        period: "24h" ou "7d" pour 24 heures ou 7 jours
+        count: Nombre de cryptos à inclure dans le top (10 par défaut)
+    
+    Returns:
+        Dictionnaire avec "best" et "worst" performers pour la période
+    """
+    if not coins:
+        return {"best": [], "worst": []}
+    
+    if period == "24h":
+        value_key = "_change_24h_value"
+        display_key = "change_24h"
+    elif period == "7d":
+        value_key = "_change_7d_value"
+        display_key = "change_7d"
+    else:
+        logger.error(f"Période non reconnue: {period}")
+        return {"best": [], "worst": []}
+    
+    # Exclure les coins sans valeur de changement
+    valid_coins = [coin for coin in coins if value_key in coin and coin[value_key] is not None]
+    
+    # Trier pour les hausses (du plus grand au plus petit)
+    top_gainers = sorted(valid_coins, key=lambda x: x.get(value_key, 0), reverse=True)
+    # Prendre les count meilleurs et nettoyer
+    top_gainers = [
+        {k: v for k, v in coin.items() if not k.startswith('_') and k != "volume_24h_raw"} 
+        for coin in top_gainers[:count]
+    ]
+    
+    # Trier pour les baisses (du plus petit au plus grand)
+    top_losers = sorted(valid_coins, key=lambda x: x.get(value_key, 0))
+    # Prendre les count pires et nettoyer
+    top_losers = [
+        {k: v for k, v in coin.items() if not k.startswith('_') and k != "volume_24h_raw"} 
+        for coin in top_losers[:count]
+    ]
+    
+    logger.info(f"TOP {count} {period}: {len(top_gainers)} gainers et {len(top_losers)} losers")
+    
+    # Ajouter des détails pour le formatage dans l'interface
+    for coins_list in [top_gainers, top_losers]:
+        for coin in coins_list:
+            # Ajouter une classe CSS pour le style (pour l'affichage web)
+            if period == "24h":
+                coin["change_class"] = "positive" if coin["trend_24h"] == "up" else "negative"
+            else:  # 7d
+                coin["change_class"] = "positive" if coin["trend_7d"] == "up" else "negative"
+    
+    return {
+        "best": top_gainers,
+        "worst": top_losers
+    }
+
 def categorize_coins(coins):
     """Catégorise les cryptos en fonction des données de la page principale"""
     # Réinitialiser les catégories
@@ -430,25 +496,20 @@ def categorize_coins(coins):
         for coin in coins
     ]
     
+    # Top N à utiliser pour les listes
+    top_n = CONFIG.get("top_n", 10)
+    
     # === CATÉGORIES 24H (SECONDAIRES) ===
+    # Utiliser la fonction générique pour créer les top performers 24h
+    top_24h = create_top_performers(coins, period="24h", count=top_n)
+    CRYPTO_DATA["categories"]["top_gainers_24h"] = top_24h["best"]
+    CRYPTO_DATA["categories"]["top_losers_24h"] = top_24h["worst"]
     
-    # Top gainers 24h (premiers éléments)
-    sorted_24h_gainers = sorted(coins, key=lambda x: x.get("_change_24h_value", 0), reverse=True)
-    top_gainers_24h = [
-        {k: v for k, v in coin.items() if not k.startswith('_') and not k == "volume_24h_raw"} 
-        for coin in sorted_24h_gainers
-        if coin.get("_change_24h_value", 0) > 0
-    ]
-    CRYPTO_DATA["categories"]["top_gainers_24h"] = top_gainers_24h
-    
-    # Top losers 24h (derniers éléments)
-    sorted_24h_losers = sorted(coins, key=lambda x: x.get("_change_24h_value", 0))
-    top_losers_24h = [
-        {k: v for k, v in coin.items() if not k.startswith('_') and not k == "volume_24h_raw"} 
-        for coin in sorted_24h_losers
-        if coin.get("_change_24h_value", 0) < 0
-    ]
-    CRYPTO_DATA["categories"]["top_losers_24h"] = top_losers_24h
+    # === CATÉGORIES 7D (NOUVELLES) ===
+    # Utiliser la fonction générique pour créer les top performers 7d
+    top_7d = create_top_performers(coins, period="7d", count=top_n)
+    CRYPTO_DATA["categories"]["top_gainers_7d"] = top_7d["best"]
+    CRYPTO_DATA["categories"]["top_losers_7d"] = top_7d["worst"]
     
     # Ajouter les 10 premières cryptos aux most_visited
     CRYPTO_DATA["most_visited"] = [
@@ -461,8 +522,10 @@ def categorize_coins(coins):
     
     logger.info(f"Catégorisation terminée: "
                 f"{len(CRYPTO_DATA['categories']['main'])} main, "
-                f"{len(top_gainers_24h)} gainers 24h, "
-                f"{len(top_losers_24h)} losers 24h, "
+                f"{len(CRYPTO_DATA['categories']['top_gainers_24h'])} gainers 24h, "
+                f"{len(CRYPTO_DATA['categories']['top_losers_24h'])} losers 24h, "
+                f"{len(CRYPTO_DATA['categories']['top_gainers_7d'])} gainers 7d, "
+                f"{len(CRYPTO_DATA['categories']['top_losers_7d'])} losers 7d, "
                 f"{len(CRYPTO_DATA['all_coins'])} total")
 
 def scrape_crypto_data():
@@ -484,7 +547,7 @@ def scrape_crypto_data():
         
         logger.info(f"{len(main_coins)} cryptomonnaies extraites avec succès.")
         
-        # Catégoriser les coins
+        # Catégoriser les coins (y compris nouveaux tops 7j)
         categorize_coins(main_coins)
         
         # Mettre à jour l'horodatage
@@ -536,6 +599,7 @@ def main():
         logger.info(f"Configuration: {CONFIG['max_pages']} pages max, {CONFIG['delay_between_pages']}s entre les pages")
         logger.info(f"URL cible: {CONFIG['main_url']}")
         logger.info(f"Filtre: Volume 24h > ${CONFIG['min_volume_24h']/1000000}M")
+        logger.info(f"Top N: {CONFIG.get('top_n', 10)} (utilisé pour les tops haussiers/baissiers)")
         
         # Vérifier si les données existent déjà
         has_existing_data = check_existing_data()
