@@ -1141,36 +1141,23 @@
                      </div>
                  </div>
                  
-                 <!-- Sélecteur de marché -->
-                 <div class="market-selector mb-8">
-                     <h2 class="section-title mb-4">Sélectionner un marché</h2>
-                     <div class="market-selector-buttons">
-                         <button id="market-all" class="market-btn active" data-market="all">
-                             <i class="fab fa-bitcoin mr-2"></i> Toutes les cryptomonnaies
-                         </button>
-                         <button id="market-top100" class="market-btn" data-market="top100">
-                             <i class="fas fa-star mr-2"></i> Top 100
-                         </button>
-                     </div>
-                 </div>
-                 
-                 <!-- Top 10 Redessiné -->
+                 <!-- Section des performances crypto -->
                  <div class="top-stocks-container mb-10">
-                     <h2 class="section-title mb-4">Top 10 Performance <span id="current-market-name">Crypto</span></h2>
+                     <h2 class="section-title mb-4">Performances Crypto</h2>
                      
-                     <!-- Onglets pour changer de vue -->
+                     <!-- Onglets pour changer de vue avec les nouveaux libellés -->
                      <div class="index-tabs">
                          <button class="top-tab-btn active" data-index="daily-gainers">
-                             <i class="fas fa-arrow-up text-green-400 mr-2"></i> Hausses du jour
+                             <i class="fas fa-arrow-up text-green-400 mr-2"></i> Hausses en 24h
                          </button>
                          <button class="top-tab-btn" data-index="daily-losers">
-                             <i class="fas fa-arrow-down text-red-500 mr-2"></i> Baisses du jour
+                             <i class="fas fa-arrow-down text-red-500 mr-2"></i> Baisses en 24h
                          </button>
                          <button class="top-tab-btn" data-index="ytd-gainers">
-                             <i class="fas fa-calendar-check text-blue-400 mr-2"></i> Hausses YTD
+                             <i class="fas fa-calendar-check text-blue-400 mr-2"></i> Hausses 7d
                          </button>
                          <button class="top-tab-btn" data-index="ytd-losers">
-                             <i class="fas fa-calendar-times text-orange-400 mr-2"></i> Baisses YTD
+                             <i class="fas fa-calendar-times text-orange-400 mr-2"></i> Baisses 7d
                          </button>
                      </div>
                      
@@ -1413,24 +1400,6 @@
                     }
                 });
             });
-            
-            // Mettre à jour le nom du marché actuel
-            function updateMarketName() {
-                const marketNameElement = document.getElementById('current-market-name');
-                if (marketNameElement) {
-                    const allActive = document.getElementById('market-all')?.classList.contains('active');
-                    marketNameElement.textContent = allActive ? 'Crypto' : 'Top 100';
-                }
-            }
-            
-            // Observer les changements sur les boutons de marché
-            const marketButtons = document.querySelectorAll('.market-btn');
-            marketButtons.forEach(button => {
-                button.addEventListener('click', updateMarketName);
-            });
-            
-            // Initialisation
-            updateMarketName();
         });
      </script>
  </body>
