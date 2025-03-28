@@ -26,6 +26,11 @@ document.addEventListener('DOMContentLoaded', function() {
     let isLoading = false;
     let lastUpdate = null;
     
+    // Variables pour le rechargement automatique
+    const AUTO_REFRESH_INTERVAL = 2 * 60 * 60 * 1000; // 2 heures en millisecondes
+    let autoRefreshTimer = null;
+    let nextRefreshTime = null;
+    
     // État pour le marché actuel
     let currentMarket = 'all'; // 'all' ou 'top100'
     
@@ -51,12 +56,74 @@ document.addEventListener('DOMContentLoaded', function() {
     // Premier chargement des données
     loadCryptoData();
     
+    // Démarrer le rechargement automatique
+    startAutoRefresh();
+    
     // Ajouter les gestionnaires d'événements
     document.getElementById('retry-button')?.addEventListener('click', function() {
         hideElement('indices-error');
         showElement('indices-loading');
         loadCryptoData(true);
     });
+    
+    /**
+     * Démarre le rechargement automatique
+     */
+    function startAutoRefresh() {
+        // Arrêter le timer précédent si existant
+        if (autoRefreshTimer) {
+            clearInterval(autoRefreshTimer);
+        }
+        
+        // Configurer le prochain temps de rechargement
+        nextRefreshTime = new Date(Date.now() + AUTO_REFRESH_INTERVAL);
+        
+        // Créer un élément pour afficher le temps restant (s'il n'existe pas déjà)
+        let refreshInfoElement = document.getElementById('refresh-info');
+        if (!refreshInfoElement) {
+            refreshInfoElement = document.createElement('div');
+            refreshInfoElement.id = 'refresh-info';
+            refreshInfoElement.classList.add('text-sm', 'text-gray-400', 'mt-2');
+            
+            // Ajouter au DOM à côté de la dernière mise à jour
+            const lastUpdateElement = document.getElementById('last-update-time');
+            if (lastUpdateElement && lastUpdateElement.parentNode) {
+                lastUpdateElement.parentNode.appendChild(refreshInfoElement);
+            }
+        }
+        
+        // Mettre à jour le compteur toutes les minutes
+        const updateRefreshCounter = () => {
+            if (!nextRefreshTime) return;
+            
+            const now = new Date();
+            const timeRemaining = nextRefreshTime - now;
+            
+            if (timeRemaining <= 0) {
+                // C'est l'heure de recharger
+                refreshInfoElement.textContent = "Actualisation en cours...";
+                loadCryptoData(true);
+                return;
+            }
+            
+            // Calculer les heures/minutes restantes
+            const hours = Math.floor(timeRemaining / (60 * 60 * 1000));
+            const minutes = Math.floor((timeRemaining % (60 * 60 * 1000)) / (60 * 1000));
+            
+            // Afficher le temps restant
+            refreshInfoElement.textContent = `Prochaine actualisation dans ${hours}h ${minutes}min`;
+        };
+        
+        // Mettre à jour immédiatement puis toutes les minutes
+        updateRefreshCounter();
+        const counterInterval = setInterval(updateRefreshCounter, 60 * 1000);
+        
+        // Configurer l'intervalle principal pour recharger les données
+        autoRefreshTimer = setInterval(() => {
+            loadCryptoData(true);
+            nextRefreshTime = new Date(Date.now() + AUTO_REFRESH_INTERVAL);
+        }, AUTO_REFRESH_INTERVAL);
+    }
     
     /**
      * Crée dynamiquement les sections HTML pour toutes les lettres de l'alphabet
@@ -342,6 +409,9 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Mettre à jour le top 10
             updateTopTenCrypto(cryptoData);
+            
+            // Afficher une notification pour indiquer la réussite du chargement
+            showNotification('Données mises à jour avec succès', 'success');
             
         } catch (error) {
             console.error('❌ Erreur lors du chargement des données:', error);
@@ -946,6 +1016,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 notification.style.backgroundColor = 'rgba(255, 193, 7, 0.1)';
                 notification.style.borderLeft = '3px solid #FFC107';
                 notification.style.color = '#FFC107';
+            } else if (type === 'success') {
+                notification.style.backgroundColor = 'rgba(0, 255, 135, 0.1)';
+                notification.style.borderLeft = '3px solid var(--accent-color)';
+                notification.style.color = 'var(--accent-color)';
             } else {
                 notification.style.backgroundColor = 'rgba(0, 255, 135, 0.1)';
                 notification.style.borderLeft = '3px solid var(--accent-color)';
