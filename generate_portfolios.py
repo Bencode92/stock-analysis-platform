@@ -793,56 +793,73 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
     with open(debug_file, 'w', encoding='utf-8') as f:
         f.write(prompt)
     
-    # Générer un fichier HTML plus lisible
-    html_file = f"{debug_dir}/prompt_{timestamp}.html"
-    html_content = f"""
+    # Créer le contenu HTML sans utiliser de f-string complexe
+    html_head = """
     <!DOCTYPE html>
     <html>
     <head>
         <title>TradePulse - Debug de Prompt</title>
         <meta charset="UTF-8">
         <style>
-            body {{ font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }}
-            pre {{ background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; }}
-            h1, h2 {{ color: #2c3e50; }}
-            .info {{ background-color: #e8f4f8; padding: 10px; border-radius: 5px; margin-bottom: 20px; }}
-            .stats {{ display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; }}
-            .stat-box {{ background: #f0f7fa; padding: 10px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }}
-            .highlight {{ background-color: #ffffcc; }}
+            body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
+            pre { background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; }
+            h1, h2 { color: #2c3e50; }
+            .info { background-color: #e8f4f8; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
+            .stats { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; }
+            .stat-box { background: #f0f7fa; padding: 10px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+            .highlight { background-color: #ffffcc; }
         </style>
     </head>
     <body>
         <h1>TradePulse - Debug de Prompt ChatGPT</h1>
+    """
+    
+    # Ajouter les informations de base
+    info_section = f"""
         <div class="info">
             <p>Timestamp: {timestamp}</p>
             <p>Taille totale du prompt: {len(prompt)} caractères</p>
         </div>
         <h2>Contenu du prompt envoyé à ChatGPT :</h2>
-        <pre>{prompt.replace('<', '&lt;').replace('>', '&gt;')}</pre>
+    """
+    
+    # Ajouter le contenu du prompt (en échappant les caractères spéciaux)
+    safe_prompt = prompt.replace('<', '&lt;').replace('>', '&gt;')
+    prompt_section = f"<pre>{safe_prompt}</pre>"
+    
+    # Fermer le document HTML
+    html_footer = """
     </body>
     </html>
     """
     
+    # Assembler le HTML complet
+    html_content = html_head + info_section + prompt_section + html_footer
+    
+    # Sauvegarder le HTML
+    html_file = f"{debug_dir}/prompt_{timestamp}.html"
     with open(html_file, 'w', encoding='utf-8') as f:
         f.write(html_content)
     
-    # Créer également un fichier JavaScript pour enregistrer le debug dans localStorage
-    # (pour l'intégration avec l'interface web)
-    js_debug_path = "debug/prompts/debug_data.js"
-    with open(js_debug_path, 'w', encoding='utf-8') as f:
-        f.write(f"""
+    # Créer le contenu JS sans utiliser de f-string complexe
+    js_content = """
 // Script de debug généré automatiquement
 // Ce fichier est utilisé par l'interface web de debug
 
 // Enregistrer les infos de ce debug
-if (window.recordDebugFile) {{
-    window.recordDebugFile('{timestamp}', {{
-        prompt_length: {len(prompt)},
-        prompt_path: '{debug_file}',
-        html_path: '{html_file}'
-    }});
-}}
-""")
+if (window.recordDebugFile) {
+"""
+    js_content += f"    window.recordDebugFile('{timestamp}', {{\n"
+    js_content += f"        prompt_length: {len(prompt)},\n"
+    js_content += f"        prompt_path: '{debug_file}',\n"
+    js_content += f"        html_path: '{html_file}'\n"
+    js_content += "    });\n"
+    js_content += "}\n"
+    
+    # Sauvegarder le JavaScript
+    js_debug_path = "debug/prompts/debug_data.js"
+    with open(js_debug_path, 'w', encoding='utf-8') as f:
+        f.write(js_content)
     
     print(f"✅ Pour voir le prompt dans l'interface web, accédez à: debug-prompts.html")
     
