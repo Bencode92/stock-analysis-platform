@@ -155,8 +155,23 @@ def get_top_performers(stocks, field='change', reverse=True):
             reverse=reverse
         )
         
-        # Retourner les 10 premières actions (ou moins si moins disponibles)
-        return sorted_stocks[:10]
+        # NOUVELLE LOGIQUE: Dédupliquer les actions par nom
+        seen_names = set()
+        unique_stocks = []
+        
+        for stock in sorted_stocks:
+            # Utiliser le nom comme identifiant unique (ou symbole s'il existe)
+            identifier = stock.get('name', '')
+            if identifier and identifier not in seen_names:
+                seen_names.add(identifier)
+                unique_stocks.append(stock)
+                # Ajouter un log pour débogage
+                logger.debug(f"Action unique ajoutée: {identifier} avec {field}={stock.get(field, '-')}")
+        
+        logger.info(f"Nombre d'actions uniques après déduplication: {len(unique_stocks)} sur {len(sorted_stocks)} triées")
+        
+        # Retourner les 10 premières actions uniques (ou moins si moins disponibles)
+        return unique_stocks[:10]
     except Exception as e:
         logger.error(f"Erreur lors de l'extraction des top performers: {e}")
         return []
