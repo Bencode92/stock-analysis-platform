@@ -1,0 +1,374 @@
+/**
+ * crypto-enhanced-styles.css
+ * Améliorations de design pour la page crypto
+ */
+
+/* ========== 1. Navigation et organisation ========== */
+
+/* Rendre les onglets alphabétiques fixes lors du défilement */
+.alphabet-tabs-container {
+    position: sticky;
+    top: var(--header-height);
+    z-index: 90;
+    background-color: var(--background-color);
+    padding: 5px 0;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    margin-bottom: 20px;
+}
+
+/* Amélioration de l'onglet actif */
+.region-tab.active {
+    font-weight: 700;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 255, 135, 0.3);
+}
+
+.region-tab.active::after {
+    height: 4px;
+    box-shadow: 0 0 10px var(--accent-color);
+}
+
+/* ========== 2. Visualisation des données ========== */
+
+/* Conteneur pour le mini-graphique */
+.mini-chart-container {
+    width: 60px;
+    height: 20px;
+    display: inline-block;
+    margin-left: 10px;
+    vertical-align: middle;
+}
+
+/* Badge pour les variations importantes */
+.extreme-change {
+    position: relative;
+    font-weight: 700;
+}
+
+.extreme-change::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    right: -6px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    animation: pulse-extreme 2s infinite;
+}
+
+.extreme-change.positive::after {
+    background-color: var(--accent-color);
+}
+
+.extreme-change.negative::after {
+    background-color: var(--negative-color);
+}
+
+/* Filtres rapides */
+.quick-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.filter-chip {
+    background-color: var(--accent-subtle);
+    border: 1px solid var(--accent-medium);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.filter-chip:hover {
+    background-color: var(--accent-medium);
+    transform: translateY(-2px);
+}
+
+.filter-chip.active {
+    background-color: var(--accent-medium);
+    border-color: var(--accent-color);
+    box-shadow: 0 0 10px rgba(0, 255, 135, 0.3);
+}
+
+/* ========== 3. Améliorations des interactions ========== */
+
+/* Bouton pour basculer entre les vues */
+.view-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    margin-bottom: 20px;
+    background-color: var(--accent-subtle);
+    border-radius: 8px;
+    border: 1px solid var(--accent-medium);
+}
+
+.view-toggle-btn {
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.view-toggle-btn.active {
+    background-color: var(--accent-medium);
+    color: white;
+}
+
+/* Actions rapides */
+.crypto-row {
+    position: relative;
+}
+
+.row-actions {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    display: flex;
+    gap: 10px;
+}
+
+.crypto-row:hover .row-actions {
+    opacity: 1;
+}
+
+.row-action-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--accent-subtle);
+    color: var(--accent-color);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.row-action-btn:hover {
+    background-color: var(--accent-medium);
+    transform: scale(1.1);
+}
+
+/* ========== 4. Esthétique visuelle ========== */
+
+/* Alternance de couleurs */
+.data-table tbody tr:nth-child(odd) {
+    background-color: rgba(15, 40, 70, 0.3);
+}
+
+/* Effet de survol amélioré */
+.data-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.data-table tbody tr:hover {
+    background-color: var(--accent-subtle);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 255, 135, 0.15);
+}
+
+/* Animation au chargement des données */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.data-table tbody tr {
+    animation: fadeIn 0.3s ease forwards;
+}
+
+/* Simuler un délai d'animation basé sur l'index */
+.data-table tbody tr:nth-child(1) { animation-delay: 0.03s; }
+.data-table tbody tr:nth-child(2) { animation-delay: 0.06s; }
+.data-table tbody tr:nth-child(3) { animation-delay: 0.09s; }
+.data-table tbody tr:nth-child(4) { animation-delay: 0.12s; }
+.data-table tbody tr:nth-child(5) { animation-delay: 0.15s; }
+.data-table tbody tr:nth-child(6) { animation-delay: 0.18s; }
+.data-table tbody tr:nth-child(7) { animation-delay: 0.21s; }
+.data-table tbody tr:nth-child(8) { animation-delay: 0.24s; }
+.data-table tbody tr:nth-child(9) { animation-delay: 0.27s; }
+.data-table tbody tr:nth-child(10) { animation-delay: 0.30s; }
+.data-table tbody tr:nth-child(n+11) { animation-delay: 0.33s; }
+
+/* Badges personnalisés */
+.crypto-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    border-radius: 4px;
+    margin-left: 6px;
+    vertical-align: middle;
+    font-weight: 600;
+}
+
+.badge-defi {
+    background-color: rgba(130, 71, 229, 0.2);
+    color: #8247e5;
+}
+
+.badge-gaming {
+    background-color: rgba(255, 107, 0, 0.2);
+    color: #ff6b00;
+}
+
+.badge-layer1 {
+    background-color: rgba(0, 163, 255, 0.2);
+    color: #00a3ff;
+}
+
+.badge-meme {
+    background-color: rgba(255, 71, 166, 0.2);
+    color: #ff47a6;
+}
+
+.badge-exchange {
+    background-color: rgba(247, 147, 26, 0.2);
+    color: #f7931a;
+}
+
+/* ========== 5. Animations ========== */
+
+@keyframes pulse-extreme {
+    0% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+    70% { box-shadow: 0 0 0 6px rgba(255, 255, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+
+/* ========== 6. Vue en cartes ========== */
+
+.card-view {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+}
+
+.crypto-card {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--card-border);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.crypto-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--accent-glow-strong);
+}
+
+.crypto-card-name {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+}
+
+.crypto-card-symbol {
+    font-size: 0.9rem;
+    color: var(--neutral-color);
+    margin-bottom: 12px;
+}
+
+.crypto-card-price {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.crypto-card-changes {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.crypto-card-change {
+    text-align: center;
+}
+
+.crypto-card-change span {
+    font-size: 0.8rem;
+    opacity: 0.7;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.crypto-card-change div {
+    font-weight: 600;
+}
+
+.crypto-card-volume {
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: var(--neutral-color);
+}
+
+.crypto-card-actions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    display: flex;
+    gap: 6px;
+}
+
+/* ========== 7. Responsive Design ========== */
+
+@media (max-width: 768px) {
+    .alphabet-tabs-container {
+        overflow-x: auto;
+        position: relative;
+        top: 0;
+        padding-bottom: 10px;
+    }
+    
+    .card-view {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+    
+    .data-table th:nth-child(4), 
+    .data-table td:nth-child(4),
+    .data-table th:nth-child(7), 
+    .data-table td:nth-child(7) {
+        display: none;
+    }
+    
+    .quick-filters {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        padding-bottom: 10px;
+    }
+}
+
+/* ========== 8. Mode clair ========== */
+
+.light .data-table tbody tr:nth-child(odd) {
+    background-color: rgba(240, 245, 255, 0.5);
+}
+
+.light .data-table tbody tr:hover {
+    background-color: rgba(0, 210, 110, 0.1);
+    box-shadow: 0 2px 8px rgba(0, 210, 110, 0.15);
+}
+
+.light .filter-chip {
+    background-color: rgba(0, 210, 110, 0.1);
+    border-color: rgba(0, 210, 110, 0.3);
+}
+
+.light .filter-chip.active,
+.light .filter-chip:hover {
+    background-color: rgba(0, 210, 110, 0.2);
+}
