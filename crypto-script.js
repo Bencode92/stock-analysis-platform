@@ -216,9 +216,35 @@ document.addEventListener('DOMContentLoaded', function() {
             const rawData = await response.json();
             console.log("Données chargées:", rawData);
             
-            // Adaptation au nouveau format
+            // Récupérer toutes les cryptomonnaies de toutes les sources possibles
+            const allCoins = [
+                ...(rawData.all_coins || []),
+                ...(rawData.categories?.main || []),
+                ...(rawData.most_visited || []),
+                ...(rawData.categories?.top_gainers_24h || []),
+                ...(rawData.categories?.top_losers_24h || []),
+                ...(rawData.categories?.top_gainers_7d || []),
+                ...(rawData.categories?.top_losers_7d || [])
+            ];
+            
+            // Supprimer les doublons en utilisant le symbole comme identifiant unique
+            const uniqueSymbols = new Set();
+            const uniqueCoins = [];
+            
+            allCoins.forEach(coin => {
+                if (coin.symbol && !uniqueSymbols.has(coin.symbol)) {
+                    uniqueSymbols.add(coin.symbol);
+                    uniqueCoins.push(coin);
+                }
+            });
+            
+            console.log(`🔢 Nombre de cryptomonnaies uniques trouvées: ${uniqueCoins.length}`);
+            
             // Organisation des données en indices par lettre alphabétique
-            cryptoData.indices = organizeByLetter(rawData.all_coins || []);
+            cryptoData.indices = organizeByLetter(uniqueCoins);
+            
+            // Mettre à jour le compte total des cryptomonnaies
+            const totalCryptos = Object.values(cryptoData.indices).reduce((total, cryptos) => total + cryptos.length, 0);
             
             // Adaptation des top performers
             cryptoData.top_performers = {
@@ -234,6 +260,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Métadonnées
             cryptoData.meta = rawData.meta || {};
+            cryptoData.meta.count = totalCryptos;
             
             // Stocker les données pour le classement global
             if (currentMarket === 'all') {
