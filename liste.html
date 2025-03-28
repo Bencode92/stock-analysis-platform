@@ -1163,6 +1163,60 @@
                      </button>
                  </div>
                  
+                 <!-- Top 10 Global Redessiné -->
+                 <div class="top-stocks-container mb-10">
+                     <h2 class="section-title mb-4">Top 10 Performance Globale (NASDAQ + STOXX)</h2>
+                     
+                     <!-- Onglets pour changer de vue -->
+                     <div class="index-tabs">
+                         <button class="top-tab-btn active" data-index="global-gainers">
+                             <i class="fas fa-arrow-up text-green-400 mr-2"></i> Hausses du jour
+                         </button>
+                         <button class="top-tab-btn" data-index="global-losers">
+                             <i class="fas fa-arrow-down text-red-500 mr-2"></i> Baisses du jour
+                         </button>
+                         <button class="top-tab-btn" data-index="global-ytd-gainers">
+                             <i class="fas fa-calendar-check text-blue-400 mr-2"></i> Hausses YTD
+                         </button>
+                         <button class="top-tab-btn" data-index="global-ytd-losers">
+                             <i class="fas fa-calendar-times text-orange-400 mr-2"></i> Baisses YTD
+                         </button>
+                     </div>
+                     
+                     <!-- Conteneurs pour chaque vue (seul le premier est visible par défaut) -->
+                     <div id="top-global-gainers" class="top-stocks-content">
+                         <div class="stock-cards-container">
+                             <!-- Les cartes seront générées dynamiquement ici -->
+                             <div class="stock-card">
+                                 <div class="rank">#1</div>
+                                 <div class="stock-info">
+                                     <div class="stock-name">Chargement <i class="fas fa-spinner fa-spin ml-1"></i></div>
+                                     <div class="stock-fullname">Récupération des données globales...</div>
+                                 </div>
+                                 <div class="stock-performance positive">-</div>
+                             </div>
+                         </div>
+                     </div>
+                     
+                     <div id="top-global-losers" class="top-stocks-content hidden">
+                         <div class="stock-cards-container">
+                             <!-- Les cartes seront générées dynamiquement ici -->
+                         </div>
+                     </div>
+                     
+                     <div id="top-global-ytd-gainers" class="top-stocks-content hidden">
+                         <div class="stock-cards-container">
+                             <!-- Les cartes seront générées dynamiquement ici -->
+                         </div>
+                     </div>
+                     
+                     <div id="top-global-ytd-losers" class="top-stocks-content hidden">
+                         <div class="stock-cards-container">
+                             <!-- Les cartes seront générées dynamiquement ici -->
+                         </div>
+                     </div>
+                 </div>
+                 
                  <!-- Top 10 Redessiné -->
                  <div class="top-stocks-container mb-10">
                      <h2 class="section-title mb-4">Top 10 Performance du <span id="current-market-name">NASDAQ</span></h2>
