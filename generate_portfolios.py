@@ -568,24 +568,20 @@ def filter_etf_data(etfs_data):
     
     summary = []
 
-    # Ajouter une section pour faciliter l'identification
-    summary.append("📊 LISTE DES ETF DISPONIBLES POUR LES PORTEFEUILLES:")
+    # Ajouter une section pour faciliter l'identification et la séparation
+    summary.append("📊 LISTE DES ETF STANDARDS DISPONIBLES POUR LES PORTEFEUILLES:")
 
-    # 1. TOP ETF 2025 → YTD > 10%
-    top_etfs = etfs_data.get("top_etf_2025", [])
+    # 1. TOP ETF 2025 → à utiliser comme ETF standards
+    top_etfs = etfs_data.get("top50_etfs", [])
     selected_top = []
     for etf in top_etfs:
-        try:
-            ytd = float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.'))
-            if ytd > 10:
-                selected_top.append(f"{etf['name']} : {etf['ytd']}")
-        except:
-            continue
+        if etf.get('name'):
+            selected_top.append(f"{etf['name']} : {etf.get('ytd', 'N/A')}")
     if selected_top:
-        summary.append("📊 TOP ETF 2025 (>10% YTD):")
+        summary.append("📊 TOP ETF STANDARDS 2025:")
         summary.extend(f"• {etf}" for etf in selected_top)
 
-    # 2. Utiliser directement top_bond_etfs sans filtrage
+    # 2. TOP ETF OBLIGATIONS 2025 - À utiliser UNIQUEMENT dans la catégorie Obligations
     bond_etfs = etfs_data.get("top_bond_etfs", [])
     bond_names = []  # Liste des noms d'ETF obligataires pour la whitelist
     selected_bonds = []
@@ -598,24 +594,20 @@ def filter_etf_data(etfs_data):
             selected_bonds.append(f"{etf['name']} : {etf.get('ytd', 'N/A')}")
     
     if selected_bonds:
-        summary.append("📉 TOP ETF OBLIGATIONS:")
+        summary.append("📉 LISTE DES ETF OBLIGATAIRES (À UTILISER UNIQUEMENT DANS LA CATÉGORIE OBLIGATIONS):")
         summary.extend(f"• {etf}" for etf in selected_bonds)
 
-    # 3. ETF court terme → performance 1 mois > 0%
-    short_term_etfs = etfs_data.get("etf_court_terme", [])
+    # 3. ETF court terme → à utiliser comme ETF standards
+    short_term_etfs = etfs_data.get("top_short_term_etfs", [])
     selected_short_term = []
     for etf in short_term_etfs:
-        try:
-            one_month = float(str(etf.get("1m", "0")).replace('%','').replace(',', '.'))
-            if one_month > 0:
-                selected_short_term.append(f"{etf['name']} : {etf['1m']}")
-        except:
-            continue
+        if etf.get('name'):
+            selected_short_term.append(f"{etf['name']} : {etf.get('oneMonth', 'N/A')}")
     if selected_short_term:
-        summary.append("📆 ETF COURT TERME (>0% en 1 mois):")
+        summary.append("📆 ETF COURT TERME:")
         summary.extend(f"• {etf}" for etf in selected_short_term)
     
-    # 4. ETF Sectoriels en croissance
+    # 4. ETF Sectoriels en croissance (si disponible)
     sector_etfs = etfs_data.get("etf_sectoriels", []) or []
     selected_sector_etfs = []
     for etf in sector_etfs:
@@ -629,7 +621,7 @@ def filter_etf_data(etfs_data):
         summary.append("🔍 ETF SECTORIELS (>5% YTD):")
         summary.extend(f"• {etf}" for etf in selected_sector_etfs)
         
-    # 5. ETF Marchés émergents
+    # 5. ETF Marchés émergents (si disponible)
     emerging_etfs = etfs_data.get("etf_marches_emergents", []) or []
     selected_emerging = []
     for etf in emerging_etfs:
@@ -668,19 +660,6 @@ def filter_etf_data(etfs_data):
                 
                 if name and ytd:
                     summary.append(f"• {name}: {ytd}")
-            
-        # Essayer d'utiliser top_performers si disponible
-        if "top_performers" in etfs_data and isinstance(etfs_data["top_performers"], dict):
-            if "ytd" in etfs_data["top_performers"] and isinstance(etfs_data["top_performers"]["ytd"], dict):
-                best_ytd = etfs_data["top_performers"]["ytd"].get("best", [])
-                if isinstance(best_ytd, list) and best_ytd:
-                    summary.append("📈 MEILLEURS ETF YTD:")
-                    for etf in best_ytd[:5]:  # Top 5
-                        if isinstance(etf, dict):
-                            name = etf.get("name", "")
-                            ytd = etf.get("ytd", "")
-                            if name:
-                                summary.append(f"• {name}: {ytd}")
     
     return "\n".join(summary), bond_names  # Retourne le texte filtré et la liste des noms d'ETF obligataires
 
@@ -919,7 +898,17 @@ Utilise ces données filtrées pour générer les portefeuilles :
    b) Modéré : EXACTEMENT entre 12 et 15 actifs au total  
    c) Stable : EXACTEMENT entre 12 et 15 actifs au total
 
-2. Pour les obligations : Tu dois piocher UNIQUEMENT dans la **liste ci-dessus des ETF obligataires autorisés**. Tu ne dois JAMAIS inventer ou utiliser d'autres noms. Tu ne dois PAS réutiliser un ETF de cette liste dans une autre catégorie (comme ETF générique ou action).
+2. Pour les obligations : Tu dois piocher UNIQUEMENT dans la **liste ci-dessus des ETF obligataires autorisés**. Tu ne dois JAMAIS inventer ou utiliser d'autres noms. 
+
+🛡️ RÈGLES DE CATÉGORISATION STRICTES (À RESPECTER IMPÉRATIVEMENT) :
+
+1. Catégorie "ETF" : Utilise UNIQUEMENT les ETF provenant des sections "TOP ETF STANDARDS 2025" et "ETF COURT TERME"
+   * N'inclus JAMAIS les ETF obligataires dans cette catégorie
+
+2. Catégorie "Obligations" : Utilise EXCLUSIVEMENT les ETF de la liste suivante:
+{bond_etf_list}
+   * Ces ETF obligataires doivent UNIQUEMENT apparaître dans la catégorie "Obligations"
+   * Ne les place JAMAIS dans la catégorie "ETF"
 
 📌 CONCERNANT LES CRYPTO-MONNAIES :
 
