@@ -694,7 +694,7 @@ def filter_etf_data(etfs_data):
 
 def filter_crypto_data(crypto_data):
     """Filtre les crypto-monnaies pour n'inclure que celles avec une performance positive sur 7 jours."""
-    if not crypto_data or not isinstance(crypto_data, list):
+    if not crypto_data or not isinstance(crypto_data, dict):
         return "Aucune donnée de crypto-monnaie disponible"
     
     summary = []
@@ -702,22 +702,73 @@ def filter_crypto_data(crypto_data):
     # Ajouter une section pour faciliter l'identification
     summary.append("🪙 LISTE DES CRYPTO-MONNAIES PERFORMANTES (7j% > 0):")
     
-    # Filtrer et trier les cryptos par performance 7j décroissante
+    # Traiter les différentes catégories du fichier crypto_lists.json
+    categories_to_check = ['main', 'top_gainers_7d']
     positive_cryptos = []
-    for crypto in crypto_data:
-        try:
-            change_7d = float(crypto.get("7d_change_percent", 0))
-            if change_7d > 0:
-                positive_cryptos.append((crypto["name"], crypto["symbol"], change_7d))
-        except (ValueError, TypeError, KeyError):
-            continue
     
-    # Trier par performance décroissante
+    # Chercher d'abord dans la catégorie main et top_gainers_7d
+    for category in categories_to_check:
+        if category in crypto_data.get('categories', {}):
+            crypto_list = crypto_data['categories'][category]
+            
+            for crypto in crypto_list:
+                try:
+                    # Extraire la variation sur 7 jours
+                    change_7d_str = crypto.get('change_7d', '0%')
+                    # Nettoyer la valeur pour extraire uniquement le nombre
+                    change_7d_clean = change_7d_str.replace('+', '').replace('%', '').strip()
+                    change_7d = float(change_7d_clean)
+                    
+                    # Vérifier si la tendance sur 7j est positive
+                    trend_7d_positive = crypto.get('trend_7d') == 'up'
+                    
+                    if change_7d > 0 or trend_7d_positive:
+                        name = crypto.get('name', '')
+                        symbol = crypto.get('symbol', '')
+                        price = crypto.get('price', '').replace('$', '')
+                        
+                        # Éviter les doublons en vérifiant si le symbole est déjà dans la liste
+                        existing_symbols = [c[1] for c in positive_cryptos]
+                        if symbol not in existing_symbols and name and price:
+                            positive_cryptos.append((name, symbol, change_7d, price))
+                except (ValueError, TypeError):
+                    continue
+    
+    # Si nous n'avons pas trouvé de crypto positives dans les catégories principales,
+    # essayer dans la liste générale all_coins
+    if not positive_cryptos and 'all_coins' in crypto_data:
+        for crypto in crypto_data['all_coins']:
+            try:
+                change_7d_str = crypto.get('change_7d', '0%')
+                change_7d_clean = change_7d_str.replace('+', '').replace('%', '').strip()
+                change_7d = float(change_7d_clean)
+                
+                trend_7d_positive = crypto.get('trend_7d') == 'up'
+                
+                if change_7d > 0 or trend_7d_positive:
+                    name = crypto.get('name', '')
+                    symbol = crypto.get('symbol', '')
+                    price = crypto.get('price', '').replace('$', '')
+                    
+                    # Éviter les doublons
+                    existing_symbols = [c[1] for c in positive_cryptos]
+                    if symbol not in existing_symbols and name and price:
+                        positive_cryptos.append((name, symbol, change_7d, price))
+            except (ValueError, TypeError):
+                continue
+    
+    # Trier les crypto-monnaies par performance 7j décroissante
     positive_cryptos.sort(key=lambda x: x[2], reverse=True)
     
-    # Ajouter les cryptos les plus performantes à la liste
-    for name, symbol, change_7d in positive_cryptos[:10]:  # Top 10
-        summary.append(f"• {name} ({symbol}): +{change_7d:.2f}%")
+    # Ajouter les crypto les plus performantes à la liste (limiter à 10)
+    for name, symbol, change_7d, price in positive_cryptos[:10]:
+        # Formater le prix avec 2 décimales si c'est un grand nombre, ou plus si c'est un petit nombre
+        if float(price) > 1:
+            formatted_price = f"${float(price):.2f}"
+        else:
+            formatted_price = f"${float(price):.6f}"
+            
+        summary.append(f"• {name} ({symbol}): +{change_7d:.2f}% | Prix: {formatted_price}")
     
     # En l'absence de cryptos positives, ajouter un message
     if not positive_cryptos:
@@ -928,21 +979,21 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 ✅ Le commentaire doit être **adapté au profil de risque** (Agressif / Modéré / Stable) sans forcer une direction (ex: ne dis pas "la techno est à privilégier" sauf si les données le montrent clairement).
 
 📊 Format JSON requis:
-{{
-  "Agressif": {{
+{
+  "Agressif": {
     "Commentaire": "Texte structuré suivant le format top-down demandé",
-    "Actions": {{
+    "Actions": {
       "Nom Précis de l'Action 1": "X%",
       "Nom Précis de l'Action 2": "Y%",
       ...etc (jusqu'à avoir entre 12-15 actifs au total)
-    }},
-    "Crypto": {{ ... }},
-    "ETF": {{ ... }},
-    "Obligations": {{ ... }}
-  }},
-  "Modéré": {{ ... }},
-  "Stable": {{ ... }}
-}}
+    },
+    "Crypto": { ... },
+    "ETF": { ... },
+    "Obligations": { ... }
+  },
+  "Modéré": { ... },
+  "Stable": { ... }
+}
 
 ⚠️ CRITÈRES DE VALIDATION (ABSOLUMENT REQUIS) :
 - Chaque portefeuille DOIT contenir EXACTEMENT entre 12 et 15 actifs au total, PAS MOINS, PAS PLUS
