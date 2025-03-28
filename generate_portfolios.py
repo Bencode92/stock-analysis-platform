@@ -519,7 +519,7 @@ def filter_sectors_data(sectors_data):
     return "\n".join(summary) if summary else "Aucune donnée sectorielle significative"
 
 def filter_lists_data(lists_data):
-    """Extrait les actifs avec une variation YTD > 10% depuis lists.json."""
+    """Extrait les actifs avec une variation YTD > 20% depuis lists.json."""
     if not lists_data or not isinstance(lists_data, dict):
         return "Aucune liste d'actifs disponible"
     
@@ -548,14 +548,14 @@ def filter_lists_data(lists_data):
                 except (ValueError, AttributeError):
                     continue
                 
-                if ytd_value >= 10:
+                if ytd_value >= 20:
                     high_performers.append((name, ytd_value))
     
     # Trier du plus fort au plus faible YTD
     high_performers.sort(key=lambda x: x[1], reverse=True)
     
     if high_performers:
-        assets_summary.append("📋 Actifs avec YTD > 10% :")
+        assets_summary.append("📋 Actifs avec YTD > 20% :")
         for name, ytd_value in high_performers[:10]:  # top 10
             assets_summary.append(f"• {name}: {ytd_value:.2f}%")
     
