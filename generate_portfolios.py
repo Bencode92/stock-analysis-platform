@@ -585,8 +585,8 @@ def filter_etf_data(etfs_data):
         summary.append("📊 TOP ETF 2025 (>10% YTD):")
         summary.extend(f"• {etf}" for etf in selected_top)
 
-    # 2. TOP ETF OBLIGATIONS 2025 - MODIFICATION: Inclus tous sans filtrage
-    bond_etfs = etfs_data.get("top_etf_obligations_2025", [])
+    # 2. Utiliser directement top_bond_etfs sans filtrage
+    bond_etfs = etfs_data.get("top_bond_etfs", [])
     bond_names = []  # Liste des noms d'ETF obligataires pour la whitelist
     selected_bonds = []
     
@@ -598,7 +598,7 @@ def filter_etf_data(etfs_data):
             selected_bonds.append(f"{etf['name']} : {etf.get('ytd', 'N/A')}")
     
     if selected_bonds:
-        summary.append("📉 TOUS LES ETF OBLIGATIONS 2025:")
+        summary.append("📉 TOP ETF OBLIGATIONS:")
         summary.extend(f"• {etf}" for etf in selected_bonds)
 
     # 3. ETF court terme → performance 1 mois > 0%
@@ -909,7 +909,7 @@ Utilise ces données filtrées pour générer les portefeuilles :
 
 📅 Contexte : Ces portefeuilles sont optimisés pour le mois de {current_month}.
 
-🛡️ LISTE DES SEULS ETF OBLIGATAIRES AUTORISÉS (TOP OBLIGATIONS 2025) :
+🛡️ LISTE DES SEULS ETF OBLIGATAIRES AUTORISÉS (TOP BOND ETFs) :
 {bond_etf_list}
 
 🎯 INSTRUCTIONS TRÈS PRÉCISES (À RESPECTER ABSOLUMENT) :
