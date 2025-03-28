@@ -300,11 +300,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         name: coin.name,
                         symbol: coin.symbol,
                         last: coin.price,
+                        change_1h: coin.change_1h,    // Ajout du changement sur 1h
                         change: coin.change_24h,
-                        volume: coin.volume_24h,
-                        marketCap: coin.market_cap,
                         ytd: coin.change_7d,
-                        ath: "" // Information non disponible dans les données
+                        volume: coin.volume_24h,
+                        marketCap: coin.market_cap
                     };
                     result[firstLetter].push(adaptedCoin);
                 }
@@ -322,12 +322,12 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Créer quelques cryptos de démo
         const demoCryptos = [
-            { name: "Bitcoin", symbol: "BTC", last: "$62,150.25", change: "+1.2%", volume: "$28.5B", marketCap: "$1.25T", ytd: "+45.8%", ath: "$69,000" },
-            { name: "Ethereum", symbol: "ETH", last: "$3,340.18", change: "+2.5%", volume: "$15.2B", marketCap: "$401.8B", ytd: "+32.9%", ath: "$4,891" },
-            { name: "Binance Coin", symbol: "BNB", last: "$567.32", change: "-0.8%", volume: "$1.9B", marketCap: "$86.5B", ytd: "+18.6%", ath: "$686" },
-            { name: "Solana", symbol: "SOL", last: "$146.75", change: "+5.3%", volume: "$3.1B", marketCap: "$65.2B", ytd: "+123.4%", ath: "$260" },
-            { name: "Cardano", symbol: "ADA", last: "$0.65", change: "-1.2%", volume: "$780M", marketCap: "$22.9B", ytd: "-12.5%", ath: "$3.10" },
-            { name: "Avalanche", symbol: "AVAX", last: "$35.25", change: "+2.5%", volume: "$520M", marketCap: "$13.2B", ytd: "+42.8%", ath: "$146" }
+            { name: "Bitcoin", symbol: "BTC", last: "$62,150.25", change_1h: "+0.5%", change: "+1.2%", volume: "$28.5B", marketCap: "$1.25T", ytd: "+45.8%" },
+            { name: "Ethereum", symbol: "ETH", last: "$3,340.18", change_1h: "+0.8%", change: "+2.5%", volume: "$15.2B", marketCap: "$401.8B", ytd: "+32.9%" },
+            { name: "Binance Coin", symbol: "BNB", last: "$567.32", change_1h: "-0.2%", change: "-0.8%", volume: "$1.9B", marketCap: "$86.5B", ytd: "+18.6%" },
+            { name: "Solana", symbol: "SOL", last: "$146.75", change_1h: "+1.1%", change: "+5.3%", volume: "$3.1B", marketCap: "$65.2B", ytd: "+123.4%" },
+            { name: "Cardano", symbol: "ADA", last: "$0.65", change_1h: "-0.4%", change: "-1.2%", volume: "$780M", marketCap: "$22.9B", ytd: "-12.5%" },
+            { name: "Avalanche", symbol: "AVAX", last: "$35.25", change_1h: "+0.7%", change: "+2.5%", volume: "$520M", marketCap: "$13.2B", ytd: "+42.8%" }
         ];
         
         // Organiser par lettre
@@ -431,6 +431,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             const row = document.createElement('tr');
                             
                             // Déterminer la classe CSS pour les valeurs (positif/négatif)
+                            const change1hClass = crypto.change_1h && crypto.change_1h.includes('-') ? 'negative' : 'positive';
                             const changeClass = crypto.change && crypto.change.includes('-') ? 'negative' : 'positive';
                             const ytdClass = crypto.ytd && crypto.ytd.includes('-') ? 'negative' : 'positive';
                             
@@ -439,11 +440,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <td class="font-medium">${crypto.name || '-'}</td>
                                 <td>${crypto.symbol || '-'}</td>
                                 <td>${crypto.last || '-'}</td>
+                                <td class="${change1hClass}">${crypto.change_1h || '-'}</td>
                                 <td class="${changeClass}">${crypto.change || '-'}</td>
+                                <td class="${ytdClass}">${crypto.ytd || '-'}</td>
                                 <td>${crypto.volume || '-'}</td>
                                 <td>${crypto.marketCap || '-'}</td>
-                                <td class="${ytdClass}">${crypto.ytd || '-'}</td>
-                                <td>${crypto.ath || '-'}</td>
                             `;
                             
                             tableBody.appendChild(row);
