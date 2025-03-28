@@ -1,7 +1,7 @@
 name: Update Crypto Data
 on:
   schedule:
-    - cron: '0 */12 * * *'  # Toutes les 12 heures (marché crypto 24/7)
+    - cron: '0 */2 * * *'  # Toutes les 2 heures (marché crypto 24/7)
   workflow_dispatch:  # Permet le déclenchement manuel
 
 jobs:
