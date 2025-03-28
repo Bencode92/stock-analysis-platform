@@ -692,6 +692,39 @@ def filter_etf_data(etfs_data):
     
     return "\n".join(summary), bond_names  # Retourne le texte filtré et la liste des noms d'ETF obligataires
 
+def filter_crypto_data(crypto_data):
+    """Filtre les crypto-monnaies pour n'inclure que celles avec une performance positive sur 7 jours."""
+    if not crypto_data or not isinstance(crypto_data, list):
+        return "Aucune donnée de crypto-monnaie disponible"
+    
+    summary = []
+    
+    # Ajouter une section pour faciliter l'identification
+    summary.append("🪙 LISTE DES CRYPTO-MONNAIES PERFORMANTES (7j% > 0):")
+    
+    # Filtrer et trier les cryptos par performance 7j décroissante
+    positive_cryptos = []
+    for crypto in crypto_data:
+        try:
+            change_7d = float(crypto.get("7d_change_percent", 0))
+            if change_7d > 0:
+                positive_cryptos.append((crypto["name"], crypto["symbol"], change_7d))
+        except (ValueError, TypeError, KeyError):
+            continue
+    
+    # Trier par performance décroissante
+    positive_cryptos.sort(key=lambda x: x[2], reverse=True)
+    
+    # Ajouter les cryptos les plus performantes à la liste
+    for name, symbol, change_7d in positive_cryptos[:10]:  # Top 10
+        summary.append(f"• {name} ({symbol}): +{change_7d:.2f}%")
+    
+    # En l'absence de cryptos positives, ajouter un message
+    if not positive_cryptos:
+        summary.append("Aucune crypto-monnaie n'affiche une performance positive sur 7 jours.")
+    
+    return "\n".join(summary)
+
 def save_prompt_to_debug_file(prompt, timestamp=None):
     """Sauvegarde le prompt complet dans un fichier de débogage."""
     # Créer un répertoire de debug s'il n'existe pas
@@ -764,7 +797,7 @@ if (window.recordDebugFile) {{
     
     return debug_file, html_file
 
-def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data):
+def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data=None):
     """Génère trois portefeuilles optimisés en combinant les données fournies et le contexte actuel du marché."""
     api_key = os.environ.get('API_CHAT')
     if not api_key:
@@ -780,6 +813,7 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     filtered_sectors = filter_sectors_data(sectors_data)
     filtered_lists = filter_lists_data(lists_data)
     filtered_etfs, bond_etf_names = filter_etf_data(etfs_data)  # Récupère aussi la liste des ETF obligataires
+    filtered_crypto = filter_crypto_data(crypto_data) if crypto_data else "Aucune donnée de crypto-monnaie disponible"
     
     # Formater la liste des ETF obligataires pour le prompt
     bond_etf_list = "\n".join([f"- {name}" for name in bond_etf_names])
@@ -791,6 +825,7 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     print(f"  🏭 Secteurs: {len(filtered_sectors)} caractères")
     print(f"  📋 Listes: {len(filtered_lists)} caractères")
     print(f"  📊 ETFs: {len(filtered_etfs)} caractères")
+    print(f"  🪙 Cryptos: {len(filtered_crypto)} caractères")
     
     # Afficher les données filtrées pour vérification
     print("\n===== APERÇU DES DONNÉES FILTRÉES =====")
@@ -804,6 +839,8 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     print(filtered_lists[:200] + "..." if len(filtered_lists) > 200 else filtered_lists)
     print("\n----- ETF (données filtrées) -----")
     print(filtered_etfs[:200] + "..." if len(filtered_etfs) > 200 else filtered_etfs)
+    print("\n----- CRYPTO (données filtrées) -----")
+    print(filtered_crypto[:200] + "..." if len(filtered_crypto) > 200 else filtered_crypto)
     print("\n===========================================")
     
     # Afficher la liste des ETF obligataires trouvés
@@ -844,6 +881,9 @@ Utilise ces données filtrées pour générer les portefeuilles :
 📊 Analyse des ETF: 
 {filtered_etfs}
 
+🪙 Crypto-monnaies performantes:
+{filtered_crypto}
+
 📅 Contexte : Ces portefeuilles sont optimisés pour le mois de {current_month}.
 
 🛡️ LISTE DES SEULS ETF OBLIGATAIRES AUTORISÉS (TOP OBLIGATIONS 2025) :
@@ -857,6 +897,13 @@ Utilise ces données filtrées pour générer les portefeuilles :
    c) Stable : EXACTEMENT entre 12 et 15 actifs au total
 
 2. Pour les obligations : Tu dois piocher UNIQUEMENT dans la **liste ci-dessus des ETF obligataires autorisés**. Tu ne dois JAMAIS inventer ou utiliser d'autres noms. Tu ne dois PAS réutiliser un ETF de cette liste dans une autre catégorie (comme ETF générique ou action).
+
+📌 CONCERNANT LES CRYPTO-MONNAIES :
+
+- Tu peux inclure des crypto-monnaies dans les portefeuilles si elles ont une performance positive sur 7 jours (7D%)
+- Les crypto-monnaies sont particulièrement adaptées au portefeuille Agressif, mais peuvent être incluses dans les autres profils avec une allocation plus faible
+- Tu dois sélectionner uniquement parmi les crypto-monnaies listées dans la section "Crypto-monnaies performantes"
+- N'inclus PAS de crypto-monnaies si aucune ne présente une performance positive sur 7 jours
 
 {minimum_requirements}
 
@@ -1052,9 +1099,10 @@ def main():
     sectors_data = load_json_data('data/sectors.json')
     lists_data = load_json_data('data/lists.json')
     etfs_data = load_json_data('data/etf.json')
+    crypto_data = load_json_data('data/crypto_lists.json')  # Nouveau fichier à charger
     
     print("🧠 Génération des portefeuilles optimisés...")
-    portfolios = generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data)
+    portfolios = generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data)
     
     print("💾 Sauvegarde des portefeuilles...")
     save_portfolios(portfolios)
