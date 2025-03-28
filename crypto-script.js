@@ -29,6 +29,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // État pour le marché actuel
     let currentMarket = 'all'; // 'all' ou 'top100'
     
+    // Créer dynamiquement les sections HTML pour toutes les lettres
+    createAlphabetSections();
+    
     // Initialiser les onglets alphabet
     initAlphabetTabs();
     
@@ -54,6 +57,56 @@ document.addEventListener('DOMContentLoaded', function() {
         showElement('indices-loading');
         loadCryptoData(true);
     });
+    
+    /**
+     * Crée dynamiquement les sections HTML pour toutes les lettres de l'alphabet
+     */
+    function createAlphabetSections() {
+        const indicesContainer = document.getElementById('indices-container');
+        if (!indicesContainer) return;
+        
+        const alphabet = "abcdefghijklmnopqrstuvwxyz".split('');
+        
+        // Vérifier si les sections existent déjà
+        const existingSections = {};
+        alphabet.forEach(letter => {
+            existingSections[letter] = document.getElementById(`${letter}-indices`) !== null;
+        });
+        
+        // Créer les sections manquantes
+        alphabet.forEach(letter => {
+            if (!existingSections[letter]) {
+                // Créer le conteneur pour cette lettre
+                const sectionDiv = document.createElement('div');
+                sectionDiv.id = `${letter}-indices`;
+                sectionDiv.className = 'region-content hidden';
+                
+                // Créer la table et l'en-tête
+                sectionDiv.innerHTML = `
+                    <div class="overflow-x-auto">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>NOM</th>
+                                    <th>SYMBOLE</th>
+                                    <th>PRIX</th>
+                                    <th>% 1H</th>
+                                    <th>% 24H</th>
+                                    <th>% 7D</th>
+                                    <th>VOLUME</th>
+                                    <th>MARKET CAPITALISATION</th>
+                                </tr>
+                            </thead>
+                            <tbody id="${letter}-indices-body"></tbody>
+                        </table>
+                    </div>
+                `;
+                
+                // Ajouter au conteneur principal
+                indicesContainer.appendChild(sectionDiv);
+            }
+        });
+    }
     
     /**
      * Initialise les onglets alphabet
