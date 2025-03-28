@@ -585,20 +585,20 @@ def filter_etf_data(etfs_data):
         summary.append("📊 TOP ETF 2025 (>10% YTD):")
         summary.extend(f"• {etf}" for etf in selected_top)
 
-    # 2. TOP ETF OBLIGATIONS 2025 → YTD > 1%
+    # 2. TOP ETF OBLIGATIONS 2025 - MODIFICATION: Inclus tous sans filtrage
     bond_etfs = etfs_data.get("top_etf_obligations_2025", [])
-    selected_bonds = []
     bond_names = []  # Liste des noms d'ETF obligataires pour la whitelist
+    selected_bonds = []
+    
     for etf in bond_etfs:
-        try:
-            ytd = float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.'))
-            if ytd > 0:  # Abaissé à 0% pour avoir plus d'options
-                selected_bonds.append(f"{etf['name']} : {etf['ytd']}")
-                bond_names.append(etf['name'])
-        except:
-            continue
+        if etf.get('name'):
+            # Ajouter tous les ETF obligataires à la liste sans filtre
+            bond_names.append(etf['name'])
+            # Ajouter au résumé avec leur performance
+            selected_bonds.append(f"{etf['name']} : {etf.get('ytd', 'N/A')}")
+    
     if selected_bonds:
-        summary.append("📉 TOP OBLIGATIONS 2025 (>0% YTD):")
+        summary.append("📉 TOUS LES ETF OBLIGATIONS 2025:")
         summary.extend(f"• {etf}" for etf in selected_bonds)
 
     # 3. ETF court terme → performance 1 mois > 0%
@@ -645,15 +645,7 @@ def filter_etf_data(etfs_data):
         summary.append("🌍 ETF MARCHÉS ÉMERGENTS:")
         summary.extend(f"• {etf[2]}" for etf in selected_emerging[:5])  # Limiter aux 5 meilleurs
     
-    # Si aucun ETF obligataire n'a été trouvé, ajouter un message d'avertissement
-    if not bond_names:
-        print("⚠️ Aucun ETF obligataire n'a dépassé le seuil de YTD > 0%")
-        # Ajouter tous les ETF obligataires sans filtre
-        for etf in bond_etfs:
-            if etf.get('name'):
-                bond_names.append(etf['name'])
-                
-    # Si toujours aucun ETF obligataire, ajouter des exemples
+    # Si aucun ETF obligataire n'a été trouvé, ajouter des exemples par défaut
     if not bond_names:
         print("⚠️ Aucun ETF obligataire trouvé dans les données, ajout d'exemples de secours")
         bond_names = [
@@ -697,81 +689,61 @@ def filter_crypto_data(crypto_data):
     if not crypto_data or not isinstance(crypto_data, dict):
         return "Aucune donnée de crypto-monnaie disponible"
     
-    summary = []
+    summary = ["🪙 LISTE DES CRYPTO-MONNAIES PERFORMANTES (7j% > 0):"]
     
-    # Ajouter une section pour faciliter l'identification
-    summary.append("🪙 LISTE DES CRYPTO-MONNAIES PERFORMANTES (7j% > 0):")
-    
-    # Traiter les différentes catégories du fichier crypto_lists.json
-    categories_to_check = ['main', 'top_gainers_7d']
+    # Liste pour stocker les cryptos à performance positive
     positive_cryptos = []
     
-    # Chercher d'abord dans la catégorie main et top_gainers_7d
-    for category in categories_to_check:
-        if category in crypto_data.get('categories', {}):
-            crypto_list = crypto_data['categories'][category]
-            
-            for crypto in crypto_list:
-                try:
-                    # Extraire la variation sur 7 jours
-                    change_7d_str = crypto.get('change_7d', '0%')
-                    # Nettoyer la valeur pour extraire uniquement le nombre
-                    change_7d_clean = change_7d_str.replace('+', '').replace('%', '').strip()
-                    change_7d = float(change_7d_clean)
-                    
-                    # Vérifier si la tendance sur 7j est positive
-                    trend_7d_positive = crypto.get('trend_7d') == 'up'
-                    
-                    if change_7d > 0 or trend_7d_positive:
-                        name = crypto.get('name', '')
-                        symbol = crypto.get('symbol', '')
-                        price = crypto.get('price', '').replace('$', '')
-                        
-                        # Éviter les doublons en vérifiant si le symbole est déjà dans la liste
-                        existing_symbols = [c[1] for c in positive_cryptos]
-                        if symbol not in existing_symbols and name and price:
-                            positive_cryptos.append((name, symbol, change_7d, price))
-                except (ValueError, TypeError):
-                    continue
-    
-    # Si nous n'avons pas trouvé de crypto positives dans les catégories principales,
-    # essayer dans la liste générale all_coins
-    if not positive_cryptos and 'all_coins' in crypto_data:
-        for crypto in crypto_data['all_coins']:
+    # Traiter la catégorie principale
+    main_cryptos = crypto_data.get('categories', {}).get('main', [])
+    if main_cryptos:
+        for crypto in main_cryptos:
             try:
-                change_7d_str = crypto.get('change_7d', '0%')
-                change_7d_clean = change_7d_str.replace('+', '').replace('%', '').strip()
-                change_7d = float(change_7d_clean)
+                # Extraire la variation sur 7 jours 
+                change_7d = crypto.get('change_7d', '0%')
+                # Nettoyer la valeur
+                change_7d = change_7d.replace('+', '').replace('%', '')
+                change_7d = float(change_7d)
                 
-                trend_7d_positive = crypto.get('trend_7d') == 'up'
-                
-                if change_7d > 0 or trend_7d_positive:
+                # Vérifier si positive
+                if change_7d > 0:
                     name = crypto.get('name', '')
                     symbol = crypto.get('symbol', '')
-                    price = crypto.get('price', '').replace('$', '')
+                    price = crypto.get('price', '')
                     
-                    # Éviter les doublons
-                    existing_symbols = [c[1] for c in positive_cryptos]
-                    if symbol not in existing_symbols and name and price:
+                    # Vérifier que nous avons les infos de base
+                    if name and symbol:
                         positive_cryptos.append((name, symbol, change_7d, price))
             except (ValueError, TypeError):
                 continue
     
-    # Trier les crypto-monnaies par performance 7j décroissante
+    # Vérifier aussi les top_gainers_7d si disponibles
+    top_gainers = crypto_data.get('categories', {}).get('top_gainers_7d', [])
+    if top_gainers:
+        for crypto in top_gainers:
+            try:
+                name = crypto.get('name', '')
+                symbol = crypto.get('symbol', '')
+                change_7d = crypto.get('change_7d', '0%')
+                price = crypto.get('price', '')
+                
+                # Éviter les doublons (vérifier si symbole existe déjà)
+                if name and symbol and not any(symbol == c[1] for c in positive_cryptos):
+                    # Nettoyer et convertir la variation
+                    change_value = float(change_7d.replace('+', '').replace('%', ''))
+                    positive_cryptos.append((name, symbol, change_value, price))
+            except (ValueError, TypeError):
+                continue
+    
+    # Trier par performance décroissante
     positive_cryptos.sort(key=lambda x: x[2], reverse=True)
     
-    # Ajouter les crypto les plus performantes à la liste (limiter à 10)
-    for name, symbol, change_7d, price in positive_cryptos[:10]:
-        # Formater le prix avec 2 décimales si c'est un grand nombre, ou plus si c'est un petit nombre
-        if float(price) > 1:
-            formatted_price = f"${float(price):.2f}"
-        else:
-            formatted_price = f"${float(price):.6f}"
-            
-        summary.append(f"• {name} ({symbol}): +{change_7d:.2f}% | Prix: {formatted_price}")
+    # Ajouter les top 10 cryptos à la liste
+    for name, symbol, change, price in positive_cryptos[:10]:
+        summary.append(f"• {name} ({symbol}): +{change:.2f}% | Prix: {price}")
     
-    # En l'absence de cryptos positives, ajouter un message
-    if not positive_cryptos:
+    # Si aucune crypto positive n'a été trouvée
+    if len(summary) == 1:
         summary.append("Aucune crypto-monnaie n'affiche une performance positive sur 7 jours.")
     
     return "\n".join(summary)
@@ -793,73 +765,56 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
     with open(debug_file, 'w', encoding='utf-8') as f:
         f.write(prompt)
     
-    # Créer le contenu HTML sans utiliser de f-string complexe
-    html_head = """
+    # Générer un fichier HTML plus lisible
+    html_file = f"{debug_dir}/prompt_{timestamp}.html"
+    html_content = f"""
     <!DOCTYPE html>
     <html>
     <head>
         <title>TradePulse - Debug de Prompt</title>
         <meta charset="UTF-8">
         <style>
-            body { font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }
-            pre { background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; }
-            h1, h2 { color: #2c3e50; }
-            .info { background-color: #e8f4f8; padding: 10px; border-radius: 5px; margin-bottom: 20px; }
-            .stats { display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; }
-            .stat-box { background: #f0f7fa; padding: 10px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-            .highlight { background-color: #ffffcc; }
+            body {{ font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }}
+            pre {{ background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; }}
+            h1, h2 {{ color: #2c3e50; }}
+            .info {{ background-color: #e8f4f8; padding: 10px; border-radius: 5px; margin-bottom: 20px; }}
+            .stats {{ display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; }}
+            .stat-box {{ background: #f0f7fa; padding: 10px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }}
+            .highlight {{ background-color: #ffffcc; }}
         </style>
     </head>
     <body>
         <h1>TradePulse - Debug de Prompt ChatGPT</h1>
-    """
-    
-    # Ajouter les informations de base
-    info_section = f"""
         <div class="info">
             <p>Timestamp: {timestamp}</p>
             <p>Taille totale du prompt: {len(prompt)} caractères</p>
         </div>
         <h2>Contenu du prompt envoyé à ChatGPT :</h2>
-    """
-    
-    # Ajouter le contenu du prompt (en échappant les caractères spéciaux)
-    safe_prompt = prompt.replace('<', '&lt;').replace('>', '&gt;')
-    prompt_section = f"<pre>{safe_prompt}</pre>"
-    
-    # Fermer le document HTML
-    html_footer = """
+        <pre>{prompt.replace('<', '&lt;').replace('>', '&gt;')}</pre>
     </body>
     </html>
     """
     
-    # Assembler le HTML complet
-    html_content = html_head + info_section + prompt_section + html_footer
-    
-    # Sauvegarder le HTML
-    html_file = f"{debug_dir}/prompt_{timestamp}.html"
     with open(html_file, 'w', encoding='utf-8') as f:
         f.write(html_content)
     
-    # Créer le contenu JS sans utiliser de f-string complexe
-    js_content = """
+    # Créer également un fichier JavaScript pour enregistrer le debug dans localStorage
+    # (pour l'intégration avec l'interface web)
+    js_debug_path = "debug/prompts/debug_data.js"
+    with open(js_debug_path, 'w', encoding='utf-8') as f:
+        f.write(f"""
 // Script de debug généré automatiquement
 // Ce fichier est utilisé par l'interface web de debug
 
 // Enregistrer les infos de ce debug
-if (window.recordDebugFile) {
-"""
-    js_content += f"    window.recordDebugFile('{timestamp}', {{\n"
-    js_content += f"        prompt_length: {len(prompt)},\n"
-    js_content += f"        prompt_path: '{debug_file}',\n"
-    js_content += f"        html_path: '{html_file}'\n"
-    js_content += "    });\n"
-    js_content += "}\n"
-    
-    # Sauvegarder le JavaScript
-    js_debug_path = "debug/prompts/debug_data.js"
-    with open(js_debug_path, 'w', encoding='utf-8') as f:
-        f.write(js_content)
+if (window.recordDebugFile) {{
+    window.recordDebugFile('{timestamp}', {{
+        prompt_length: {len(prompt)},
+        prompt_path: '{debug_file}',
+        html_path: '{html_file}'
+    }});
+}}
+""")
     
     print(f"✅ Pour voir le prompt dans l'interface web, accédez à: debug-prompts.html")
     
@@ -880,7 +835,7 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     filtered_markets = filter_markets_data(markets_data)
     filtered_sectors = filter_sectors_data(sectors_data)
     filtered_lists = filter_lists_data(lists_data)
-    filtered_etfs, bond_etf_names = filter_etf_data(etfs_data)  # Récupère aussi la liste des ETF obligataires
+    filtered_etfs, bond_etf_names = filter_etf_data(etfs_data)  # Récupère aussi la liste des noms d'ETF obligataires
     filtered_crypto = filter_crypto_data(crypto_data) if crypto_data else "Aucune donnée de crypto-monnaie disponible"
     
     # Formater la liste des ETF obligataires pour le prompt
@@ -996,21 +951,21 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 ✅ Le commentaire doit être **adapté au profil de risque** (Agressif / Modéré / Stable) sans forcer une direction (ex: ne dis pas "la techno est à privilégier" sauf si les données le montrent clairement).
 
 📊 Format JSON requis:
-{
-  "Agressif": {
+{{
+  "Agressif": {{
     "Commentaire": "Texte structuré suivant le format top-down demandé",
-    "Actions": {
+    "Actions": {{
       "Nom Précis de l'Action 1": "X%",
       "Nom Précis de l'Action 2": "Y%",
       ...etc (jusqu'à avoir entre 12-15 actifs au total)
-    },
-    "Crypto": { ... },
-    "ETF": { ... },
-    "Obligations": { ... }
-  },
-  "Modéré": { ... },
-  "Stable": { ... }
-}
+    }},
+    "Crypto": {{ ... }},
+    "ETF": {{ ... }},
+    "Obligations": {{ ... }}
+  }},
+  "Modéré": {{ ... }},
+  "Stable": {{ ... }}
+}}
 
 ⚠️ CRITÈRES DE VALIDATION (ABSOLUMENT REQUIS) :
 - Chaque portefeuille DOIT contenir EXACTEMENT entre 12 et 15 actifs au total, PAS MOINS, PAS PLUS
