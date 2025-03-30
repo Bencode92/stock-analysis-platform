@@ -252,6 +252,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (nextButton) {
             nextButton.disabled = currentPage >= totalPages;
         }
+        
+        // Ajouter un log de débogage pour la pagination
+        console.log(`Pagination mise à jour: Page ${currentPage}/${totalPages}, buttons: prev=${!prevButton?.disabled}, next=${!nextButton?.disabled}`);
     }
     
     /**
@@ -288,8 +291,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // Charger les données
             const rawData = await response.json();
             
+            // Vérifier explicitement si les données du marché demandé sont disponibles
+            if (!rawData[currentMarket]) {
+                console.error(`Données pour le marché ${currentMarket} non disponibles dans le fichier JSON`);
+                throw new Error(`Données pour le marché ${currentMarket} non disponibles`);
+            }
+            
             // Sélectionner les données en fonction du marché
-            const marketData = rawData[currentMarket] || {};
+            const marketData = rawData[currentMarket];
             
             // S'assurer que toutes les régions existent dans les données
             stocksData = {
@@ -315,11 +324,16 @@ document.addEventListener('DOMContentLoaded', function() {
             stocksData.meta.isStale = dataAge > MAX_DATA_AGE;
             
             // Récupérer les informations de pagination si présentes
-            if (stocksData.meta.pagination) {
+            if (stocksData.meta && stocksData.meta.pagination) {
                 currentPage = stocksData.meta.pagination.currentPage || 1;
                 totalPages = stocksData.meta.pagination.totalPages || 1;
-                
-                // Mettre à jour l'interface de pagination
+                console.log(`📄 Pagination ${currentMarket}: page ${currentPage}/${totalPages}`);
+                updatePaginationUI();
+            } else if (currentMarket === 'stoxx') {
+                // STOXX devrait toujours avoir des informations de pagination
+                console.warn("⚠️ Informations de pagination manquantes pour STOXX, utilisation des valeurs par défaut");
+                currentPage = 1;
+                totalPages = Math.max(1, Math.ceil((stocksData.meta.count || 600) / 100));
                 updatePaginationUI();
             }
             
@@ -818,8 +832,17 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // Dédupliquer les stocks en conservant l'ordre
+        const seen = new Set();
+        const uniqueStocks = stocks.filter(stock => {
+            const key = stock.name + '|' + stock.symbol;
+            const isDuplicate = seen.has(key);
+            seen.add(key);
+            return !isDuplicate;
+        });
+        
         // Créer les cartes pour chaque action (jusqu'à 10)
-        const displayStocks = stocks.slice(0, 10);
+        const displayStocks = uniqueStocks.slice(0, 10);
         
         displayStocks.forEach((stock, index) => {
             // Déterminer le signe et la classe pour la valeur
@@ -920,8 +943,17 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // Dédupliquer les stocks en conservant l'ordre
+        const seen = new Set();
+        const uniqueStocks = stocks.filter(stock => {
+            const key = stock.name + '|' + stock.symbol;
+            const isDuplicate = seen.has(key);
+            seen.add(key);
+            return !isDuplicate;
+        });
+        
         // Générer le HTML pour chaque action
-        stocks.forEach((stock, i) => {
+        uniqueStocks.forEach((stock, i) => {
             const row = document.createElement('div');
             row.className = 'performer-row';
             
