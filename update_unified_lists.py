@@ -75,6 +75,9 @@ def parse_stock_data(html_content, market_type):
     rows = table.select('tbody tr')
     logger.info(f"Nombre de lignes trouvées: {len(rows)}")
     
+    # Ensemble pour suivre les noms d'actions uniques
+    seen_names = set()
+    
     for row in rows:
         try:
             # Extraire les cellules
@@ -86,6 +89,13 @@ def parse_stock_data(html_content, market_type):
             # Extraire le nom de l'action
             name_cell = cells[0]
             name = name_cell.get_text(strip=True)
+            
+            # Vérifier pour les doublons
+            if name in seen_names:
+                logger.warning(f"Action dupliquée ignorée: {name}")
+                continue
+            
+            seen_names.add(name)
             
             # Autres données
             last = cells[1].get_text(strip=True) if len(cells) > 1 else "-"
@@ -104,6 +114,19 @@ def parse_stock_data(html_content, market_type):
             if symbol_elem:
                 symbol = symbol_elem.get_text(strip=True)
             
+            # Extraire le lien si disponible
+            link = ""
+            a_elem = name_cell.select_one('a')
+            if a_elem and a_elem.has_attr('href'):
+                link = "https://www.boursorama.com" + a_elem['href']
+            
+            # Déterminer la tendance (up, down, neutral)
+            trend = "neutral"
+            if change and "+" in change:
+                trend = "up"
+            elif change and "-" in change:
+                trend = "down"
+            
             # Créer l'objet stock
             stock = {
                 "name": name,
@@ -115,6 +138,8 @@ def parse_stock_data(html_content, market_type):
                 "low": low,
                 "ytd": ytd,
                 "volume": volume,
+                "trend": trend,
+                "link": link,
                 "market": market_type
             }
             
@@ -155,17 +180,16 @@ def get_top_performers(stocks, field='change', reverse=True):
             reverse=reverse
         )
         
-        # NOUVELLE LOGIQUE: Dédupliquer les actions par nom
-        seen_names = set()
+        # AMÉLIORATION: Dédupliquer strictement par nom ET symbole
+        seen_identifiers = set()
         unique_stocks = []
         
         for stock in sorted_stocks:
-            # Utiliser le nom comme identifiant unique (ou symbole s'il existe)
-            identifier = stock.get('name', '')
-            if identifier and identifier not in seen_names:
-                seen_names.add(identifier)
+            # Créer un identifiant unique combinant nom et symbole
+            identifier = f"{stock.get('name', '')}-{stock.get('symbol', '')}"
+            if identifier and identifier not in seen_identifiers:
+                seen_identifiers.add(identifier)
                 unique_stocks.append(stock)
-                # Ajouter un log pour débogage
                 logger.debug(f"Action unique ajoutée: {identifier} avec {field}={stock.get(field, '-')}")
         
         logger.info(f"Nombre d'actions uniques après déduplication: {len(unique_stocks)} sur {len(sorted_stocks)} triées")
@@ -220,7 +244,36 @@ def main():
         stoxx_html = get_page_content(STOXX_URL)
         stoxx_indices, stoxx_stocks = parse_stock_data(stoxx_html, "STOXX")
         
-        # Combinaison des données pour générer un seul fichier lists.json
+        # Créer un fichier structuré pour les listes.json
+        logger.info("Création des structures de données pour les fichiers JSON")
+        
+        # Données NASDAQ
+        nasdaq_data = {
+            "indices": nasdaq_indices,
+            "top_performers": create_top_performers(nasdaq_stocks),
+            "meta": {
+                "timestamp": timestamp,
+                "count": len(nasdaq_stocks),
+                "source": "Boursorama"
+            }
+        }
+        
+        # Données STOXX avec pagination
+        stoxx_data = {
+            "indices": stoxx_indices,
+            "top_performers": create_top_performers(stoxx_stocks),
+            "meta": {
+                "timestamp": timestamp,
+                "count": len(stoxx_stocks),
+                "source": "Boursorama",
+                "pagination": {
+                    "currentPage": 1,
+                    "totalPages": max(1, len(stoxx_stocks) // 100)  # 100 éléments par page par exemple
+                }
+            }
+        }
+        
+        # Combinaison des données pour le marché global
         logger.info("Combinaison des données NASDAQ et STOXX")
         
         # Fusionner les indices par lettre
@@ -238,17 +291,21 @@ def main():
         if stoxx_stocks:
             all_stocks.extend(stoxx_stocks)
         
-        top_performers = create_top_performers(all_stocks)
+        combined_top_performers = create_top_performers(all_stocks)
         
         # Structure finale pour le fichier lists.json
         lists_data = {
-            "indices": merged_indices,
-            "top_performers": top_performers,
-            "meta": {
-                "timestamp": timestamp,
-                "count": len(all_stocks),
-                "source": "Boursorama",
-                "markets": ["NASDAQ", "STOXX"]
+            "nasdaq": nasdaq_data,
+            "stoxx": stoxx_data,
+            "combined": {
+                "indices": merged_indices,
+                "top_performers": combined_top_performers,
+                "meta": {
+                    "timestamp": timestamp,
+                    "count": len(all_stocks),
+                    "source": "Boursorama",
+                    "markets": ["NASDAQ", "STOXX"]
+                }
             }
         }
         
@@ -257,7 +314,17 @@ def main():
         with open(lists_path, 'w', encoding='utf-8') as f:
             json.dump(lists_data, f, ensure_ascii=False, indent=2)
         
-        logger.info(f"Fichier {lists_path} généré avec succès")
+        # Créer également un fichier séparé pour les top performers globaux
+        global_top_performers = {
+            "daily": combined_top_performers["daily"],
+            "ytd": combined_top_performers["ytd"]
+        }
+        
+        global_top_path = os.path.join(OUTPUT_DIR, "global_top_performers.json")
+        with open(global_top_path, 'w', encoding='utf-8') as f:
+            json.dump(global_top_performers, f, ensure_ascii=False, indent=2)
+        
+        logger.info(f"Fichiers JSON générés avec succès")
         
         return 0  # Code de sortie réussi
         
