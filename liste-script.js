@@ -646,25 +646,53 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Mise à jour du top 10 Hausse quotidienne
         if (topPerformers.daily && topPerformers.daily.best) {
-            const uniqueBest = dedupStocks(topPerformers.daily.best);
+            // Ajouter les attributs de marché à chaque action
+            const uniqueBest = dedupStocks(topPerformers.daily.best).map(stock => ({
+                ...stock,
+                market: currentMarket.toUpperCase(),
+                marketIcon: currentMarket === 'nasdaq' 
+                    ? '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
+                    : '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
+            }));
             renderTopTenCards('top-daily-gainers', uniqueBest.slice(0, 10), 'change', currentMarket);
         }
         
         // Mise à jour du top 10 Baisse quotidienne
         if (topPerformers.daily && topPerformers.daily.worst) {
-            const uniqueWorst = dedupStocks(topPerformers.daily.worst);
+            // Ajouter les attributs de marché à chaque action
+            const uniqueWorst = dedupStocks(topPerformers.daily.worst).map(stock => ({
+                ...stock,
+                market: currentMarket.toUpperCase(),
+                marketIcon: currentMarket === 'nasdaq' 
+                    ? '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
+                    : '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
+            }));
             renderTopTenCards('top-daily-losers', uniqueWorst.slice(0, 10), 'change', currentMarket);
         }
         
         // Mise à jour du top 10 Hausse YTD
         if (topPerformers.ytd && topPerformers.ytd.best) {
-            const uniqueBestYtd = dedupStocks(topPerformers.ytd.best);
+            // Ajouter les attributs de marché à chaque action
+            const uniqueBestYtd = dedupStocks(topPerformers.ytd.best).map(stock => ({
+                ...stock,
+                market: currentMarket.toUpperCase(),
+                marketIcon: currentMarket === 'nasdaq' 
+                    ? '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
+                    : '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
+            }));
             renderTopTenCards('top-ytd-gainers', uniqueBestYtd.slice(0, 10), 'ytd', currentMarket);
         }
         
         // Mise à jour du top 10 Baisse YTD
         if (topPerformers.ytd && topPerformers.ytd.worst) {
-            const uniqueWorstYtd = dedupStocks(topPerformers.ytd.worst);
+            // Ajouter les attributs de marché à chaque action
+            const uniqueWorstYtd = dedupStocks(topPerformers.ytd.worst).map(stock => ({
+                ...stock,
+                market: currentMarket.toUpperCase(),
+                marketIcon: currentMarket === 'nasdaq' 
+                    ? '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
+                    : '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
+            }));
             renderTopTenCards('top-ytd-losers', uniqueWorstYtd.slice(0, 10), 'ytd', currentMarket);
         }
     }
@@ -952,6 +980,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Déterminer l'icône du marché
             let marketIcon = '';
             if (marketSource === 'global') {
+                marketIcon = stock.marketIcon || '';
+            } else {
                 marketIcon = stock.marketIcon || '';
             }
             
