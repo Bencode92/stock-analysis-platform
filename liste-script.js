@@ -307,6 +307,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 meta: marketData.meta || {}
             };
             
+            // DÉDUPLICATION: Si le top_performers existe, dédupliquer toutes les listes
+            if (stocksData.top_performers) {
+                // Dédupliquer les listes daily et ytd
+                if (stocksData.top_performers.daily) {
+                    stocksData.top_performers.daily.best = dedupStocks(stocksData.top_performers.daily.best || []);
+                    stocksData.top_performers.daily.worst = dedupStocks(stocksData.top_performers.daily.worst || []);
+                }
+                
+                if (stocksData.top_performers.ytd) {
+                    stocksData.top_performers.ytd.best = dedupStocks(stocksData.top_performers.ytd.best || []);
+                    stocksData.top_performers.ytd.worst = dedupStocks(stocksData.top_performers.ytd.worst || []);
+                }
+            }
+            
             // Stocker les données pour le classement global
             if (currentMarket === 'nasdaq') {
                 globalData.nasdaq = stocksData;
@@ -365,6 +379,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
+     * Déduplique les actions en utilisant le nom et le symbole
+     * @param {Array} stocks 
+     * @returns {Array} stocks dédupliqués
+     */
+    function dedupStocks(stocks) {
+        if (!stocks || !Array.isArray(stocks)) return [];
+        
+        const seen = new Map();
+        return stocks.filter(stock => {
+            if (!stock || typeof stock !== 'object') return false;
+            
+            // Identifiant unique basé sur le nom (obligatoire) et le symbole (optionnel)
+            const name = stock.name || "";
+            const symbol = stock.symbol || "";
+            const key = `${name}|${symbol}`;
+            
+            if (seen.has(key)) return false;
+            
+            seen.set(key, true);
+            return true;
+        });
+    }
+    
+    /**
      * Charge les données pour le Top 10 NASDAQ et STOXX
      */
     async function loadTopPerformersData() {
@@ -377,6 +415,17 @@ document.addEventListener('DOMContentLoaded', function() {
             // Si nous avons le fichier global, l'utiliser
             if (globalResponse?.ok) {
                 const globalData = await globalResponse.json();
+                
+                // Déduplication des données globales
+                if (globalData.daily) {
+                    globalData.daily.best = dedupStocks(globalData.daily.best || []);
+                    globalData.daily.worst = dedupStocks(globalData.daily.worst || []);
+                }
+                
+                if (globalData.ytd) {
+                    globalData.ytd.best = dedupStocks(globalData.ytd.best || []);
+                    globalData.ytd.worst = dedupStocks(globalData.ytd.worst || []);
+                }
                 
                 // Mettre à jour les affichages
                 updateGlobalTopTen(globalData);
@@ -416,6 +465,18 @@ document.addEventListener('DOMContentLoaded', function() {
             if (globalResponse?.ok) {
                 const globalData = await globalResponse.json();
                 console.log("✅ Données du top 10 global chargées avec succès");
+                
+                // Déduplication des données globales
+                if (globalData.daily) {
+                    globalData.daily.best = dedupStocks(globalData.daily.best || []);
+                    globalData.daily.worst = dedupStocks(globalData.daily.worst || []);
+                }
+                
+                if (globalData.ytd) {
+                    globalData.ytd.best = dedupStocks(globalData.ytd.best || []);
+                    globalData.ytd.worst = dedupStocks(globalData.ytd.worst || []);
+                }
+                
                 updateGlobalTopTen(globalData);
                 return;
             } else {
@@ -427,6 +488,30 @@ document.addEventListener('DOMContentLoaded', function() {
             if (listsResponse.ok) {
                 const combinedData = await listsResponse.json();
                 if (combinedData.nasdaq && combinedData.stoxx) {
+                    // Utilisation des données combinées du fichier JSON, avec déduplication
+                    if (combinedData.combined && combinedData.combined.top_performers) {
+                        const combined = combinedData.combined;
+                        
+                        // Déduplication des données combinées
+                        if (combined.top_performers.daily) {
+                            combined.top_performers.daily.best = dedupStocks(combined.top_performers.daily.best || []);
+                            combined.top_performers.daily.worst = dedupStocks(combined.top_performers.daily.worst || []);
+                        }
+                        
+                        if (combined.top_performers.ytd) {
+                            combined.top_performers.ytd.best = dedupStocks(combined.top_performers.ytd.best || []);
+                            combined.top_performers.ytd.worst = dedupStocks(combined.top_performers.ytd.worst || []);
+                        }
+                        
+                        // Utiliser directement les données combinées
+                        updateGlobalTopTen({
+                            daily: combined.top_performers.daily,
+                            ytd: combined.top_performers.ytd
+                        });
+                        return;
+                    }
+                    
+                    // Fallback: construire les données nasdaq et stoxx
                     globalData.nasdaq = {
                         indices: combinedData.nasdaq.indices,
                         top_performers: combinedData.nasdaq.top_performers,
@@ -500,8 +585,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         `;
                         tableBody.appendChild(emptyRow);
                     } else {
+                        // Dédupliquer les stocks
+                        const uniqueStocks = dedupStocks(stocks);
+                        
                         // Trier les actions par nom
-                        const sortedStocks = [...stocks].sort((a, b) => {
+                        const sortedStocks = [...uniqueStocks].sort((a, b) => {
                             return (a.name || "").localeCompare(b.name || "");
                         });
                         
@@ -558,22 +646,26 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Mise à jour du top 10 Hausse quotidienne
         if (topPerformers.daily && topPerformers.daily.best) {
-            renderTopTenCards('top-daily-gainers', topPerformers.daily.best.slice(0, 10), 'change', currentMarket);
+            const uniqueBest = dedupStocks(topPerformers.daily.best);
+            renderTopTenCards('top-daily-gainers', uniqueBest.slice(0, 10), 'change', currentMarket);
         }
         
         // Mise à jour du top 10 Baisse quotidienne
         if (topPerformers.daily && topPerformers.daily.worst) {
-            renderTopTenCards('top-daily-losers', topPerformers.daily.worst.slice(0, 10), 'change', currentMarket);
+            const uniqueWorst = dedupStocks(topPerformers.daily.worst);
+            renderTopTenCards('top-daily-losers', uniqueWorst.slice(0, 10), 'change', currentMarket);
         }
         
         // Mise à jour du top 10 Hausse YTD
         if (topPerformers.ytd && topPerformers.ytd.best) {
-            renderTopTenCards('top-ytd-gainers', topPerformers.ytd.best.slice(0, 10), 'ytd', currentMarket);
+            const uniqueBestYtd = dedupStocks(topPerformers.ytd.best);
+            renderTopTenCards('top-ytd-gainers', uniqueBestYtd.slice(0, 10), 'ytd', currentMarket);
         }
         
         // Mise à jour du top 10 Baisse YTD
         if (topPerformers.ytd && topPerformers.ytd.worst) {
-            renderTopTenCards('top-ytd-losers', topPerformers.ytd.worst.slice(0, 10), 'ytd', currentMarket);
+            const uniqueWorstYtd = dedupStocks(topPerformers.ytd.worst);
+            renderTopTenCards('top-ytd-losers', uniqueWorstYtd.slice(0, 10), 'ytd', currentMarket);
         }
     }
     
@@ -587,19 +679,23 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("✅ Utilisation des données globales pré-combinées");
             
             if (globalData.daily && globalData.daily.best) {
-                renderTopTenCards('top-global-gainers', globalData.daily.best, 'change', 'global');
+                const uniqueGainers = dedupStocks(globalData.daily.best);
+                renderTopTenCards('top-global-gainers', uniqueGainers, 'change', 'global');
             }
             
             if (globalData.daily && globalData.daily.worst) {
-                renderTopTenCards('top-global-losers', globalData.daily.worst, 'change', 'global');
+                const uniqueLosers = dedupStocks(globalData.daily.worst);
+                renderTopTenCards('top-global-losers', uniqueLosers, 'change', 'global');
             }
             
             if (globalData.ytd && globalData.ytd.best) {
-                renderTopTenCards('top-global-ytd-gainers', globalData.ytd.best, 'ytd', 'global');
+                const uniqueYtdGainers = dedupStocks(globalData.ytd.best);
+                renderTopTenCards('top-global-ytd-gainers', uniqueYtdGainers, 'ytd', 'global');
             }
             
             if (globalData.ytd && globalData.ytd.worst) {
-                renderTopTenCards('top-global-ytd-losers', globalData.ytd.worst, 'ytd', 'global');
+                const uniqueYtdLosers = dedupStocks(globalData.ytd.worst);
+                renderTopTenCards('top-global-ytd-losers', uniqueYtdLosers, 'ytd', 'global');
             }
             
             return;
@@ -608,17 +704,17 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log("⚠️ Données globales pré-combinées non disponibles, combinaison manuelle...");
         
         // Sinon, combiner manuellement les données
-        if (!window.globalData && (!globalData || !globalData.nasdaq || !globalData.stoxx)) {
+        if (!window.globalData && (!this.globalData || !this.globalData.nasdaq || !this.globalData.stoxx)) {
             // Si nous n'avons pas de données globales, utiliser les données stockées 
             // dans la variable globalData (scope parent)
-            if (!globalData && !globalData?.nasdaq && !globalData?.stoxx) {
+            if (!this.globalData || !this.globalData.nasdaq || !this.globalData.stoxx) {
                 console.error("Données globales manquantes pour le Top 10 combiné");
                 return;
             }
         }
         
         // À ce stade, nous utilisons soit le globalData passé en paramètre, soit celui du scope parent
-        const data = globalData || window.globalData;
+        const data = globalData || this.globalData;
         
         // S'assurer que les deux sources de données sont disponibles
         if (!data.nasdaq || !data.nasdaq.top_performers || !data.stoxx || !data.stoxx.top_performers) {
@@ -635,13 +731,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Ajouter les données NASDAQ
         if (data.nasdaq.top_performers && data.nasdaq.top_performers.ytd) {
             // Ajouter la source aux données
-            const nasdaqBest = data.nasdaq.top_performers.ytd.best.map(stock => ({
+            const nasdaqBest = (data.nasdaq.top_performers.ytd.best || []).map(stock => ({
                 ...stock,
                 market: 'NASDAQ',
                 marketIcon: '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
             }));
             
-            const nasdaqWorst = data.nasdaq.top_performers.ytd.worst.map(stock => ({
+            const nasdaqWorst = (data.nasdaq.top_performers.ytd.worst || []).map(stock => ({
                 ...stock,
                 market: 'NASDAQ',
                 marketIcon: '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
@@ -654,13 +750,13 @@ document.addEventListener('DOMContentLoaded', function() {
         // Ajouter les données STOXX
         if (data.stoxx.top_performers && data.stoxx.top_performers.ytd) {
             // Ajouter la source aux données
-            const stoxxBest = data.stoxx.top_performers.ytd.best.map(stock => ({
+            const stoxxBest = (data.stoxx.top_performers.ytd.best || []).map(stock => ({
                 ...stock,
                 market: 'STOXX',
                 marketIcon: '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
             }));
             
-            const stoxxWorst = data.stoxx.top_performers.ytd.worst.map(stock => ({
+            const stoxxWorst = (data.stoxx.top_performers.ytd.worst || []).map(stock => ({
                 ...stock,
                 market: 'STOXX',
                 marketIcon: '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
@@ -672,13 +768,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Ajouter les données quotidiennes NASDAQ
         if (data.nasdaq.top_performers && data.nasdaq.top_performers.daily) {
-            const nasdaqDailyBest = data.nasdaq.top_performers.daily.best.map(stock => ({
+            const nasdaqDailyBest = (data.nasdaq.top_performers.daily.best || []).map(stock => ({
                 ...stock,
                 market: 'NASDAQ',
                 marketIcon: '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
             }));
             
-            const nasdaqDailyWorst = data.nasdaq.top_performers.daily.worst.map(stock => ({
+            const nasdaqDailyWorst = (data.nasdaq.top_performers.daily.worst || []).map(stock => ({
                 ...stock,
                 market: 'NASDAQ',
                 marketIcon: '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
@@ -690,13 +786,13 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Ajouter les données quotidiennes STOXX
         if (data.stoxx.top_performers && data.stoxx.top_performers.daily) {
-            const stoxxDailyBest = data.stoxx.top_performers.daily.best.map(stock => ({
+            const stoxxDailyBest = (data.stoxx.top_performers.daily.best || []).map(stock => ({
                 ...stock,
                 market: 'STOXX',
                 marketIcon: '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
             }));
             
-            const stoxxDailyWorst = data.stoxx.top_performers.daily.worst.map(stock => ({
+            const stoxxDailyWorst = (data.stoxx.top_performers.daily.worst || []).map(stock => ({
                 ...stock,
                 market: 'STOXX',
                 marketIcon: '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
@@ -705,6 +801,12 @@ document.addEventListener('DOMContentLoaded', function() {
             combinedDailyGainers = [...combinedDailyGainers, ...stoxxDailyBest];
             combinedDailyLosers = [...combinedDailyLosers, ...stoxxDailyWorst];
         }
+        
+        // Dédupliquer toutes les listes combinées
+        combinedYtdGainers = dedupStocks(combinedYtdGainers);
+        combinedYtdLosers = dedupStocks(combinedYtdLosers);
+        combinedDailyGainers = dedupStocks(combinedDailyGainers);
+        combinedDailyLosers = dedupStocks(combinedDailyLosers);
         
         // Trier et préparer les données YTD
         if (combinedYtdGainers.length > 0) {
@@ -832,14 +934,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Dédupliquer les stocks en conservant l'ordre
-        const seen = new Set();
-        const uniqueStocks = stocks.filter(stock => {
-            const key = stock.name + '|' + stock.symbol;
-            const isDuplicate = seen.has(key);
-            seen.add(key);
-            return !isDuplicate;
-        });
+        // Assurer la déduplication absolue des stocks
+        const uniqueStocks = dedupStocks(stocks);
         
         // Créer les cartes pour chaque action (jusqu'à 10)
         const displayStocks = uniqueStocks.slice(0, 10);
@@ -911,14 +1007,20 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Mettre à jour les top/bottom performers journaliers
         if (topPerformersData.daily) {
-            updateTopPerformersHTML('daily-top', topPerformersData.daily.best, 'change');
-            updateTopPerformersHTML('daily-bottom', topPerformersData.daily.worst, 'change');
+            const uniqueBest = dedupStocks(topPerformersData.daily.best || []);
+            const uniqueWorst = dedupStocks(topPerformersData.daily.worst || []);
+            
+            updateTopPerformersHTML('daily-top', uniqueBest, 'change');
+            updateTopPerformersHTML('daily-bottom', uniqueWorst, 'change');
         }
         
         // Mettre à jour les top/bottom performers YTD
         if (topPerformersData.ytd) {
-            updateTopPerformersHTML('ytd-top', topPerformersData.ytd.best, 'ytd');
-            updateTopPerformersHTML('ytd-bottom', topPerformersData.ytd.worst, 'ytd');
+            const uniqueBestYtd = dedupStocks(topPerformersData.ytd.best || []);
+            const uniqueWorstYtd = dedupStocks(topPerformersData.ytd.worst || []);
+            
+            updateTopPerformersHTML('ytd-top', uniqueBestYtd, 'ytd');
+            updateTopPerformersHTML('ytd-bottom', uniqueWorstYtd, 'ytd');
         }
     }
     
@@ -943,14 +1045,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Dédupliquer les stocks en conservant l'ordre
-        const seen = new Set();
-        const uniqueStocks = stocks.filter(stock => {
-            const key = stock.name + '|' + stock.symbol;
-            const isDuplicate = seen.has(key);
-            seen.add(key);
-            return !isDuplicate;
-        });
+        // Déduplication absolue des stocks
+        const uniqueStocks = dedupStocks(stocks);
         
         // Générer le HTML pour chaque action
         uniqueStocks.forEach((stock, i) => {
