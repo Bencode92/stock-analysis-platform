@@ -10,6 +10,8 @@ IMPORTANT: Ce script met à jour UNIQUEMENT les fichiers suivants:
 - data/lists.json (données NASDAQ et STOXX unifiées)
 - data/update_summary.json (résumé de la mise à jour)
 - data/global_top_performers.json (classement global NASDAQ + STOXX)
+- data/top_nasdaq_performers.json (top performers NASDAQ)
+- data/top_stoxx_performers.json (top performers STOXX)
 
 Il ne modifie PAS le fichier markets.json qui est géré par le script scrape_markets.py
 et le workflow 'Update Markets Data Only'.
@@ -110,27 +112,65 @@ def extract_stock_data(row):
         logger.error(f"Erreur lors de l'extraction des données d'une action: {str(e)}")
         return None
 
-def get_top_performers(stocks, sort_field, reverse=True, limit=10):
-    """Récupère les top/bottom performers basés sur un champ donné"""
-    def extract_value(value_str):
-        if not value_str:
-            return 0
-        # Nettoyer la chaîne pour extraire le nombre
-        cleaned = value_str.replace('%', '').replace(',', '.').replace(' ', '')
-        try:
-            return float(cleaned)
-        except:
-            return 0
+def parse_percentage(value_str):
+    """
+    Convertit une chaîne de pourcentage en valeur numérique
+    Compatible avec différents formats (virgule/point, avec/sans %)
+    """
+    if not value_str or value_str == "-":
+        return 0.0
     
-    # Trier les actions en fonction du champ
-    sorted_stocks = sorted(
-        [s for s in stocks if s.get(sort_field)], 
-        key=lambda x: extract_value(x.get(sort_field, "0")), 
-        reverse=reverse
-    )
+    # Nettoyer la chaîne pour extraire le nombre
+    cleaned = value_str.replace('%', '').replace(',', '.').replace(' ', '')
+    try:
+        return float(cleaned)
+    except:
+        return 0.0
+
+def get_top_performers(stocks, field='change', reverse=True, limit=10):
+    """
+    Récupère les top/bottom performers basés sur un champ donné,
+    avec déduplication stricte basée sur le nom de l'action.
     
-    # Prendre les premiers éléments
-    return sorted_stocks[:limit]
+    Args:
+        stocks (list): Liste d'actions
+        field (str): Champ pour le tri ('change' ou 'ytd')
+        reverse (bool): True pour ordre décroissant, False pour croissant
+        limit (int): Nombre maximum d'éléments à retourner
+        
+    Returns:
+        list: Top performers dédupliqués
+    """
+    try:
+        # Filtrer les actions avec une valeur valide pour le champ spécifié
+        valid_stocks = [s for s in stocks if s.get(field) and s.get(field) != "-" and s.get("name")]
+        
+        # Trier les actions en fonction du champ
+        sorted_stocks = sorted(valid_stocks, key=lambda x: parse_percentage(x.get(field, "0")), reverse=reverse)
+        
+        # Déduplication stricte basée sur le nom
+        unique_stocks = []
+        seen_names = set()
+        
+        for stock in sorted_stocks:
+            name = stock.get("name", "")
+            if name and name not in seen_names:
+                seen_names.add(name)
+                unique_stocks.append(stock)
+                
+                # S'arrêter une fois que nous avons atteint la limite
+                if len(unique_stocks) >= limit:
+                    break
+        
+        # Vérifier si nous avons exactement le nombre demandé
+        if len(unique_stocks) < limit:
+            logger.warning(f"Attention: seulement {len(unique_stocks)}/{limit} actions uniques pour le top {field}, {'hausse' if reverse else 'baisse'}")
+        
+        return unique_stocks
+        
+    except Exception as e:
+        logger.error(f"Erreur lors de l'extraction des top performers: {str(e)}")
+        return []
 
 #
 # Fonctions pour NASDAQ
@@ -445,52 +485,21 @@ def create_global_rankings(nasdaq_stocks, stoxx_result):
         # Combiner toutes les actions
         all_stocks = nasdaq_with_source + stoxx_with_source
         
-        # Fonction pour extraire la valeur numérique d'un pourcentage
-        def parse_percentage(value_str):
-            if not value_str or value_str == "-":
-                return 0.0
-            # Nettoyer la chaîne
-            clean_value = value_str.replace('%', '').replace(',', '.').replace(' ', '')
-            try:
-                return float(clean_value)
-            except:
-                return 0.0
-        
-        # Trier pour le top quotidien (hausse)
-        all_stocks_daily_up = sorted(
-            [s for s in all_stocks if s.get('change')], 
-            key=lambda x: parse_percentage(x.get('change', '0')),
-            reverse=True
-        )
-        
-        # Trier pour le top quotidien (baisse)
-        all_stocks_daily_down = sorted(
-            [s for s in all_stocks if s.get('change')], 
-            key=lambda x: parse_percentage(x.get('change', '0'))
-        )
-        
-        # Trier pour le top YTD (hausse)
-        all_stocks_ytd_up = sorted(
-            [s for s in all_stocks if s.get('ytd')], 
-            key=lambda x: parse_percentage(x.get('ytd', '0')),
-            reverse=True
-        )
-        
-        # Trier pour le top YTD (baisse)
-        all_stocks_ytd_down = sorted(
-            [s for s in all_stocks if s.get('ytd')], 
-            key=lambda x: parse_percentage(x.get('ytd', '0'))
-        )
+        # Utiliser get_top_performers avec la fonction parse_percentage pour déduplication
+        daily_best = get_top_performers(all_stocks, 'change', True, 10)
+        daily_worst = get_top_performers(all_stocks, 'change', False, 10)
+        ytd_best = get_top_performers(all_stocks, 'ytd', True, 10)
+        ytd_worst = get_top_performers(all_stocks, 'ytd', False, 10)
         
         # Créer la structure de données pour le classement global
         global_rankings = {
             "daily": {
-                "best": all_stocks_daily_up[:10],  # Top 10 hausse quotidienne
-                "worst": all_stocks_daily_down[:10]  # Top 10 baisse quotidienne
+                "best": daily_best,
+                "worst": daily_worst
             },
             "ytd": {
-                "best": all_stocks_ytd_up[:10],  # Top 10 hausse YTD
-                "worst": all_stocks_ytd_down[:10]  # Top 10 baisse YTD
+                "best": ytd_best,
+                "worst": ytd_worst
             },
             "meta": {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -510,6 +519,109 @@ def create_global_rankings(nasdaq_stocks, stoxx_result):
     except Exception as e:
         logger.error(f"❌ Erreur lors de la création du classement global: {str(e)}")
         return False
+
+def create_market_top_performers_file(stocks, market_name, timestamp):
+    """
+    Crée un fichier JSON séparé pour les top performers d'un marché spécifique.
+    
+    Args:
+        stocks (list): Liste des actions du marché
+        market_name (str): Nom du marché (NASDAQ ou STOXX)
+        timestamp (str): Horodatage pour les métadonnées
+    """
+    try:
+        # Ajouter/vérifier les indicateurs de marché pour chaque action
+        for stock in stocks:
+            if "market" not in stock:
+                stock["market"] = market_name
+            
+            # Ajouter l'icône du marché si pas déjà présente
+            if "marketIcon" not in stock:
+                if market_name == "NASDAQ":
+                    stock["marketIcon"] = '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
+                else:
+                    stock["marketIcon"] = '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
+        
+        # Récupérer les tops avec notre fonction améliorée de déduplication
+        daily_best = get_top_performers(stocks, 'change', True, 10)
+        daily_worst = get_top_performers(stocks, 'change', False, 10)
+        ytd_best = get_top_performers(stocks, 'ytd', True, 10)
+        ytd_worst = get_top_performers(stocks, 'ytd', False, 10)
+        
+        # Structure du fichier JSON
+        market_tops = {
+            "daily": {
+                "best": daily_best,
+                "worst": daily_worst
+            },
+            "ytd": {
+                "best": ytd_best,
+                "worst": ytd_worst
+            },
+            "meta": {
+                "timestamp": timestamp,
+                "count": len(stocks),
+                "description": f"Top performers du marché {market_name}"
+            }
+        }
+        
+        # Nom du fichier
+        filename = f"top_{market_name.lower()}_performers.json"
+        file_path = os.path.join(CONFIG["stoxx"]["output_dir"], filename)
+        
+        # Écrire le fichier JSON
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(market_tops, f, ensure_ascii=False, indent=2)
+        
+        logger.info(f"✅ Fichier {filename} créé avec succès")
+        
+        # Valider le contenu généré
+        validate_top_performers(market_tops, market_name)
+        
+        return market_tops
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de la création du fichier top performers pour {market_name}: {str(e)}")
+        return None
+
+def validate_top_performers(data, market_name):
+    """
+    Vérifie que les tops performers sont correctement générés
+    
+    Args:
+        data (dict): Données des top performers
+        market_name (str): Nom du marché pour les logs
+        
+    Returns:
+        bool: True si valide, False sinon
+    """
+    validation_issues = []
+    
+    # Vérifier la présence des catégories
+    categories = [("daily", "best"), ("daily", "worst"), ("ytd", "best"), ("ytd", "worst")]
+    for cat1, cat2 in categories:
+        if cat1 not in data or cat2 not in data[cat1]:
+            validation_issues.append(f"Catégorie manquante: {cat1}.{cat2} dans {market_name}")
+            continue
+            
+        # Vérifier le nombre d'éléments (devrait être 10)
+        items = data[cat1][cat2]
+        if len(items) != 10:
+            validation_issues.append(f"Nombre d'éléments incorrect: {len(items)}/10 dans {market_name}.{cat1}.{cat2}")
+        
+        # Vérifier l'unicité des noms
+        names = [item.get("name", "") for item in items]
+        unique_names = set(names)
+        if len(unique_names) != len(names):
+            validation_issues.append(f"Doublons détectés dans {market_name}.{cat1}.{cat2}")
+    
+    # Journaliser les problèmes ou confirmer la validation
+    if validation_issues:
+        for issue in validation_issues:
+            logger.warning(issue)
+        return False
+    else:
+        logger.info(f"✅ Validation des tops performers {market_name} réussie")
+        return True
 
 def ensure_data_directory():
     """S'assure que le répertoire de données existe"""
@@ -635,121 +747,23 @@ def main():
             import traceback
             traceback.print_exc()
 
-        # Créer quand même le classement global pour compatibilité
+        # Créer le classement global pour compatibilité
         if nasdaq_stocks and stoxx_stocks:
             logger.info("📊 Création du classement global NASDAQ + STOXX...")
             create_global_rankings(nasdaq_stocks, stoxx_result)
 
-        # Créer des fichiers séparés pour les top performers de chaque marché de manière indépendante
-        # NOUVELLE IMPLÉMENTATION: Création indépendante des top performers pour chaque marché
+        # Créer des fichiers séparés pour les top performers de chaque marché
+        timestamp_str = datetime.now(timezone.utc).isoformat()
 
-        # Top performers NASDAQ (création indépendante)
+        # Création du fichier top_nasdaq_performers.json
         if nasdaq_stocks:
-            # Fonction pour extraire les valeurs numériques
-            def parse_percentage(value_str):
-                if not value_str or value_str == "-":
-                    return 0.0
-                clean_value = value_str.replace('%', '').replace(',', '.').replace(' ', '')
-                try:
-                    return float(clean_value)
-                except:
-                    return 0.0
-            
-            # Tri pour les tops NASDAQ quotidiens
-            nasdaq_daily_best = sorted(
-                [s for s in nasdaq_stocks if s.get('change') and s.get('change') != '-'], 
-                key=lambda x: parse_percentage(x.get('change', '0')),
-                reverse=True
-            )[:10]
-            
-            nasdaq_daily_worst = sorted(
-                [s for s in nasdaq_stocks if s.get('change') and s.get('change') != '-'], 
-                key=lambda x: parse_percentage(x.get('change', '0'))
-            )[:10]
-            
-            # Tri pour les tops NASDAQ YTD
-            nasdaq_ytd_best = sorted(
-                [s for s in nasdaq_stocks if s.get('ytd') and s.get('ytd') != '-'], 
-                key=lambda x: parse_percentage(x.get('ytd', '0')),
-                reverse=True
-            )[:10]
-            
-            nasdaq_ytd_worst = sorted(
-                [s for s in nasdaq_stocks if s.get('ytd') and s.get('ytd') != '-'], 
-                key=lambda x: parse_percentage(x.get('ytd', '0'))
-            )[:10]
-            
-            # Création de la structure JSON indépendante pour le NASDAQ
-            nasdaq_top_performers = {
-                "daily": {
-                    "best": nasdaq_daily_best,
-                    "worst": nasdaq_daily_worst
-                },
-                "ytd": {
-                    "best": nasdaq_ytd_best,
-                    "worst": nasdaq_ytd_worst
-                },
-                "meta": {
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "count": len(nasdaq_stocks),
-                    "description": "Top performers NASDAQ Composite (États-Unis) - Généré indépendamment"
-                }
-            }
-            
-            # Sauvegarde du fichier NASDAQ indépendant
-            nasdaq_path = os.path.join(CONFIG["stoxx"]["output_dir"], "top_nasdaq_performers.json")
-            with open(nasdaq_path, 'w', encoding='utf-8') as f:
-                json.dump(nasdaq_top_performers, f, ensure_ascii=False, indent=2)
-            logger.info(f"✅ Top performers NASDAQ enregistrés indépendamment dans {nasdaq_path}")
+            logger.info(f"📊 Création du fichier top_nasdaq_performers.json avec déduplication stricte...")
+            create_market_top_performers_file(nasdaq_stocks, "NASDAQ", timestamp_str)
 
-        # Top performers STOXX (création indépendante)
+        # Création du fichier top_stoxx_performers.json
         if stoxx_stocks:
-            # Tri pour les tops STOXX quotidiens
-            stoxx_daily_best = sorted(
-                [s for s in stoxx_stocks if s.get('change') and s.get('change') != '-'], 
-                key=lambda x: parse_percentage(x.get('change', '0')),
-                reverse=True
-            )[:10]
-            
-            stoxx_daily_worst = sorted(
-                [s for s in stoxx_stocks if s.get('change') and s.get('change') != '-'], 
-                key=lambda x: parse_percentage(x.get('change', '0'))
-            )[:10]
-            
-            # Tri pour les tops STOXX YTD
-            stoxx_ytd_best = sorted(
-                [s for s in stoxx_stocks if s.get('ytd') and s.get('ytd') != '-'], 
-                key=lambda x: parse_percentage(x.get('ytd', '0')),
-                reverse=True
-            )[:10]
-            
-            stoxx_ytd_worst = sorted(
-                [s for s in stoxx_stocks if s.get('ytd') and s.get('ytd') != '-'], 
-                key=lambda x: parse_percentage(x.get('ytd', '0'))
-            )[:10]
-            
-            # Création de la structure JSON indépendante pour le STOXX
-            stoxx_top_performers = {
-                "daily": {
-                    "best": stoxx_daily_best,
-                    "worst": stoxx_daily_worst
-                },
-                "ytd": {
-                    "best": stoxx_ytd_best,
-                    "worst": stoxx_ytd_worst
-                },
-                "meta": {
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "count": len(stoxx_stocks),
-                    "description": "Top performers DJ STOXX 600 (Europe) - Généré indépendamment"
-                }
-            }
-            
-            # Sauvegarde du fichier STOXX indépendant
-            stoxx_path = os.path.join(CONFIG["stoxx"]["output_dir"], "top_stoxx_performers.json")
-            with open(stoxx_path, 'w', encoding='utf-8') as f:
-                json.dump(stoxx_top_performers, f, ensure_ascii=False, indent=2)
-            logger.info(f"✅ Top performers STOXX enregistrés indépendamment dans {stoxx_path}")
+            logger.info(f"📊 Création du fichier top_stoxx_performers.json avec déduplication stricte...")
+            create_market_top_performers_file(stoxx_stocks, "STOXX", timestamp_str)
 
         # Résumé de la mise à jour
         result_summary = {
@@ -766,6 +780,10 @@ def main():
             "global_ranking": {
                 "status": "success" if nasdaq_stocks and stoxx_stocks else "error",
                 "file": "global_top_performers.json"
+            },
+            "market_tops": {
+                "nasdaq": "top_nasdaq_performers.json",
+                "stoxx": "top_stoxx_performers.json"
             }
         }
 
