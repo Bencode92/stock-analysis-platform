@@ -250,6 +250,95 @@ def create_top_performers(stocks):
         logger.error(f"Erreur lors de la création des top performers: {e}")
         return {}
 
+def create_market_top_performers_file(stocks, market_name, timestamp):
+    """
+    Crée un fichier JSON séparé pour les top performers d'un marché spécifique.
+    
+    Args:
+        stocks (list): Liste des actions du marché
+        market_name (str): Nom du marché (NASDAQ ou STOXX)
+        timestamp (str): Horodatage pour les métadonnées
+    """
+    try:
+        # Ajouter/vérifier les indicateurs de marché pour chaque action
+        for stock in stocks:
+            if "market" not in stock:
+                stock["market"] = market_name
+            
+            # Ajouter l'icône du marché si pas déjà présente
+            if "marketIcon" not in stock:
+                if market_name == "NASDAQ":
+                    stock["marketIcon"] = '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
+                else:
+                    stock["marketIcon"] = '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
+        
+        # Créer les top performers
+        top_performers = create_top_performers(stocks)
+        
+        # Structure du fichier JSON
+        market_tops = {
+            "daily": top_performers["daily"],
+            "ytd": top_performers["ytd"],
+            "meta": {
+                "timestamp": timestamp,
+                "count": len(stocks),
+                "description": f"Top performers du marché {market_name}"
+            }
+        }
+        
+        # Nom du fichier
+        filename = f"top_{market_name.lower()}_performers.json"
+        file_path = os.path.join(OUTPUT_DIR, filename)
+        
+        # Écrire le fichier JSON
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(market_tops, f, ensure_ascii=False, indent=2)
+        
+        logger.info(f"Fichier {filename} créé avec succès")
+        
+    except Exception as e:
+        logger.error(f"Erreur lors de la création du fichier pour {market_name}: {e}")
+
+def validate_top_performers(data, market_name):
+    """
+    Vérifie que les tops performers sont correctement générés
+    
+    Args:
+        data (dict): Données des top performers
+        market_name (str): Nom du marché pour les logs
+        
+    Returns:
+        bool: True si valide, False sinon
+    """
+    validation_issues = []
+    
+    # Vérifier la présence des catégories
+    categories = [("daily", "best"), ("daily", "worst"), ("ytd", "best"), ("ytd", "worst")]
+    for cat1, cat2 in categories:
+        if cat1 not in data or cat2 not in data[cat1]:
+            validation_issues.append(f"Catégorie manquante: {cat1}.{cat2} dans {market_name}")
+            continue
+            
+        # Vérifier le nombre d'éléments (devrait être 10)
+        items = data[cat1][cat2]
+        if len(items) != 10:
+            validation_issues.append(f"Nombre d'éléments incorrect: {len(items)}/10 dans {market_name}.{cat1}.{cat2}")
+        
+        # Vérifier l'unicité des noms
+        names = [item.get("name", "") for item in items]
+        unique_names = set(names)
+        if len(unique_names) != len(names):
+            validation_issues.append(f"Doublons détectés dans {market_name}.{cat1}.{cat2}")
+    
+    # Journaliser les problèmes ou confirmer la validation
+    if validation_issues:
+        for issue in validation_issues:
+            logger.warning(issue)
+        return False
+    else:
+        logger.info(f"Validation des tops performers {market_name} réussie")
+        return True
+
 def main():
     """Fonction principale du script."""
     try:
@@ -365,7 +454,23 @@ def main():
         with open(global_top_path, 'w', encoding='utf-8') as f:
             json.dump(global_top_performers, f, ensure_ascii=False, indent=2)
         
-        logger.info(f"Fichiers JSON générés avec succès")
+        # NOUVEAU: Créer les fichiers séparés pour les top performers par marché
+        logger.info("Création des fichiers séparés pour les top performers par marché")
+        create_market_top_performers_file(nasdaq_stocks, "NASDAQ", timestamp)
+        create_market_top_performers_file(stoxx_stocks, "STOXX", timestamp)
+        
+        # Valider les données générées
+        logger.info("Validation des top performers générés")
+        if not validate_top_performers(nasdaq_data["top_performers"], "NASDAQ"):
+            logger.warning("Des problèmes ont été détectés dans les top performers NASDAQ")
+            
+        if not validate_top_performers(stoxx_data["top_performers"], "STOXX"):
+            logger.warning("Des problèmes ont été détectés dans les top performers STOXX")
+            
+        if not validate_top_performers(global_top_performers, "GLOBAL"):
+            logger.warning("Des problèmes ont été détectés dans les top performers globaux")
+        
+        logger.info(f"Tous les fichiers JSON générés avec succès")
         
         return 0  # Code de sortie réussi
         
