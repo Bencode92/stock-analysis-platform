@@ -943,6 +943,13 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 - ⚠️ L'IA doit analyser les données de manière **contextuelle et stratégique**, en **croisant toutes les sources** (actualités, marchés, secteurs, performance, ETF filtrés…).
 - La sélection doit refléter une **lecture intelligente des tendances en cours ou en formation**, pas une simple extrapolation du passé.
 
+✅ Voici la phrase à ajouter dans ton prompt pour **forcer cette logique** :
+🧠 **Tu dois justifier chacun des actifs sélectionnés** dans chaque portefeuille (Agressif, Modéré, Stable).
+* Pour chaque actif, explique **clairement et de manière concise** pourquoi il a été choisi, en t'appuyant sur **les données fournies** (actualités, marchés, secteurs, ETF, crypto, etc.).
+* Chaque actif doit avoir une **raison précise et cohérente** d'être inclus, en lien direct avec la stratégie du portefeuille.
+* Ces justifications doivent apparaître **dans la section "Choix des actifs"** du commentaire.
+* Ne laisse **aucun actif sans justification explicite**.
+
 🎯 Le style doit être fluide, professionnel et synthétique.  
 ❌ Aucun biais : ne fais pas d'hypothèse sur les classes d'actifs à privilégier. Base-toi uniquement sur les données fournies.  
 ✅ Le commentaire doit être **adapté au profil de risque** (Agressif / Modéré / Stable) sans forcer une direction (ex: ne dis pas "la techno est à privilégier" sauf si les données le montrent clairement).
