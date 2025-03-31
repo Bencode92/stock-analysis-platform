@@ -51,10 +51,10 @@ CONFIG = {
 }
 
 # Seuils pour les outliers
-MAX_DAILY_GAIN_PERCENTAGE = 100.0  # Hausse journalière maximale autorisée
-MIN_DAILY_LOSS_PERCENTAGE = -100.0  # Baisse journalière minimale autorisée
-MIN_YTD_LOSS_PERCENTAGE = -100.0    # Baisse YTD minimale autorisée
-# Remarque: Pas de limite pour les hausses YTD, car elles peuvent légitimement dépasser 100%
+MAX_DAILY_GAIN_PERCENTAGE = 99.0  # Hausse journalière maximale autorisée
+MIN_DAILY_LOSS_PERCENTAGE = -99.0  # Baisse journalière minimale autorisée
+MIN_YTD_LOSS_PERCENTAGE = -99.0    # Baisse YTD minimale autorisée
+# Remarque: Pas de limite pour les hausses YTD, car elles peuvent légitimement dépasser 99%
 
 def get_headers():
     """Crée des en-têtes HTTP pour éviter la détection de bot"""
