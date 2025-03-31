@@ -205,13 +205,22 @@ def get_top_performers(stocks, field='change', reverse=True):
             reverse=reverse
         )
         
-        # Note: La déduplication est maintenant gérée en amont, nous n'avons plus besoin
-        # de dédupliquer ici. Nous pouvons prendre directement les 10 premiers éléments.
-        top_stocks = sorted_stocks[:10]
+        # SOLUTION: Utiliser un set pour garantir l'unicité des actions dans le top 10
+        unique_stocks = []
+        seen = set()
         
-        logger.info(f"Top performances ({field}, {'hausse' if reverse else 'baisse'}): {len(top_stocks)} actions sélectionnées")
+        for stock in sorted_stocks:
+            name = stock.get("name", "")
+            if name and name not in seen:
+                seen.add(name)
+                unique_stocks.append(stock)
+                # S'arrêter à 10 actions uniques
+                if len(unique_stocks) == 10:
+                    break
         
-        return top_stocks
+        logger.info(f"Top performances ({field}, {'hausse' if reverse else 'baisse'}): {len(unique_stocks)} actions sélectionnées")
+        
+        return unique_stocks
     except Exception as e:
         logger.error(f"Erreur lors de l'extraction des top performers: {e}")
         return []
