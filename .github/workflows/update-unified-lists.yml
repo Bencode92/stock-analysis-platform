@@ -161,17 +161,13 @@ jobs:
           git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
-          # Éviter d'utiliser stash qui peut masquer les changements
-          # git stash -u || true
-          
+          # Afficher l'état actuel des fichiers
           echo "État actuel des fichiers:"
-          git status data/lists.json data/update_summary.json data/global_top_performers.json
+          git status
           
-          # Forcer l'ajout des fichiers (même sans changement détecté)
-          echo "Ajout forcé des fichiers principaux..."
-          git add -f data/lists.json
-          git add -f data/update_summary.json 
-          git add -f data/global_top_performers.json
+          # Ajouter tous les fichiers JSON du dossier data
+          echo "Ajout de tous les fichiers JSON du dossier data..."
+          git add -f data/*.json
           
           # Supprimer les fichiers stoxx_page_*.json du repo s'ils existent
           for file in data/stoxx_page_*.json; do
