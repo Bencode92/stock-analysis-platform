@@ -1,0 +1,350 @@
+/* DYNAMIC ANIMATIONS CSS - Améliorations visuelles pour la plateforme d'analyse boursière */
+
+/* ===== CARTES TOP PERFORMERS ===== */
+.stock-card {
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    transform-origin: center bottom;
+    box-shadow: 0 6px 15px rgba(0, 255, 135, 0.1);
+    border: 1px solid var(--card-border);
+    animation: cardAppear 0.6s forwards;
+}
+
+@keyframes cardAppear {
+    0% { transform: translateY(30px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+}
+
+.stock-card:nth-child(1) { animation-delay: 0.1s; }
+.stock-card:nth-child(2) { animation-delay: 0.15s; }
+.stock-card:nth-child(3) { animation-delay: 0.2s; }
+.stock-card:nth-child(4) { animation-delay: 0.25s; }
+.stock-card:nth-child(5) { animation-delay: 0.3s; }
+.stock-card:nth-child(6) { animation-delay: 0.35s; }
+.stock-card:nth-child(7) { animation-delay: 0.4s; }
+.stock-card:nth-child(8) { animation-delay: 0.45s; }
+.stock-card:nth-child(9) { animation-delay: 0.5s; }
+.stock-card:nth-child(10) { animation-delay: 0.55s; }
+
+.stock-card:hover {
+    transform: translateY(-8px) scale(1.03);
+    box-shadow: 0 15px 25px rgba(0, 255, 135, 0.2);
+    z-index: 10;
+}
+
+.stock-card:nth-child(-n+3) .rank {
+    position: relative;
+    overflow: hidden;
+}
+
+.stock-card:nth-child(-n+3) .rank::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: conic-gradient(transparent, rgba(0, 255, 135, 0.4), transparent);
+    animation: rotateGlow 4s linear infinite;
+}
+
+@keyframes rotateGlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* ===== INDICATEURS DE PERFORMANCE ===== */
+.positive, .negative {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.positive::before {
+    content: '↑';
+    position: absolute;
+    left: -12px;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.negative::before {
+    content: '↓';
+    position: absolute;
+    left: -12px;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.positive:hover::before, .negative:hover::before {
+    opacity: 1;
+    transform: translateX(-3px);
+}
+
+.positive {
+    animation: pulsateGreen 2s infinite;
+}
+
+.negative {
+    animation: pulsateRed 2s infinite;
+}
+
+@keyframes pulsateGreen {
+    0% { text-shadow: 0 0 0 rgba(0, 255, 135, 0); }
+    50% { text-shadow: 0 0 10px rgba(0, 255, 135, 0.5); }
+    100% { text-shadow: 0 0 0 rgba(0, 255, 135, 0); }
+}
+
+@keyframes pulsateRed {
+    0% { text-shadow: 0 0 0 rgba(255, 71, 87, 0); }
+    50% { text-shadow: 0 0 10px rgba(255, 71, 87, 0.5); }
+    100% { text-shadow: 0 0 0 rgba(255, 71, 87, 0); }
+}
+
+/* ===== TABLEAU DYNAMIQUE ===== */
+.data-table td {
+    transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.data-table tr:hover td {
+    background-color: var(--accent-subtle);
+    transform: scale(1.01);
+}
+
+.data-table tr {
+    animation: tableRowFade 0.5s forwards;
+    opacity: 0;
+}
+
+@keyframes tableRowFade {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.data-table tr:nth-child(1) { animation-delay: 0.05s; }
+.data-table tr:nth-child(2) { animation-delay: 0.1s; }
+.data-table tr:nth-child(3) { animation-delay: 0.15s; }
+.data-table tr:nth-child(4) { animation-delay: 0.2s; }
+.data-table tr:nth-child(5) { animation-delay: 0.25s; }
+.data-table tr:nth-child(6) { animation-delay: 0.3s; }
+.data-table tr:nth-child(7) { animation-delay: 0.35s; }
+.data-table tr:nth-child(8) { animation-delay: 0.4s; }
+.data-table tr:nth-child(9) { animation-delay: 0.45s; }
+.data-table tr:nth-child(10) { animation-delay: 0.5s; }
+
+.data-table td:hover {
+    background-color: var(--accent-medium) !important;
+    transform: scale(1.03);
+    z-index: 5;
+}
+
+/* ===== NAVIGATION ALPHABÉTIQUE ===== */
+.region-tab {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.region-tab::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 150px;
+    height: 150px;
+    background: radial-gradient(circle, var(--accent-color) 0%, transparent 70%);
+    border-radius: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+    pointer-events: none;
+}
+
+.region-tab:active::after {
+    animation: rippleEffect 0.5s ease-out;
+}
+
+@keyframes rippleEffect {
+    0% { transform: translate(-50%, -50%) scale(0); opacity: 0.4; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+}
+
+.region-tab.active::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 3px;
+    background: var(--accent-color);
+    transform-origin: center;
+    animation: activateTab 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes activateTab {
+    0% { transform: scaleX(0); }
+    100% { transform: scaleX(1); }
+}
+
+/* ===== BOUTONS DE MARCHÉ ===== */
+.market-btn {
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.market-btn.active {
+    transform: translateY(-3px);
+}
+
+.market-btn.active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+        radial-gradient(circle at 20% 30%, var(--accent-subtle) 0%, transparent 14%),
+        radial-gradient(circle at 50% 80%, var(--accent-subtle) 0%, transparent 15%),
+        radial-gradient(circle at 80% 40%, var(--accent-subtle) 0%, transparent 12%);
+    z-index: -1;
+    animation: particleMove 8s linear infinite;
+}
+
+@keyframes particleMove {
+    0% { background-position: 0% 0%, 0% 0%, 0% 0%; }
+    100% { background-position: 10% 20%, -15% -10%, 20% 10%; }
+}
+
+/* ===== LOADER AMÉLIORÉ ===== */
+.loader {
+    border: 3px solid rgba(0, 255, 135, 0.2);
+    border-top-color: var(--accent-color);
+    animation: spin 1.2s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+    position: relative;
+}
+
+.loader::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: -8px;
+    right: -8px;
+    bottom: -8px;
+    border-radius: 50%;
+    background: radial-gradient(circle, transparent 60%, var(--accent-subtle) 80%, transparent 100%);
+    animation: pulse 2s ease-in-out infinite;
+    z-index: -1;
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.85); opacity: 0.6; }
+    50% { transform: scale(1.05); opacity: 0.3; }
+    100% { transform: scale(0.85); opacity: 0.6; }
+}
+
+/* ===== BARRE DE RECHERCHE ===== */
+.search-wrapper {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.search-wrapper:focus-within {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 25px rgba(0, 255, 135, 0.15);
+}
+
+.search-icon {
+    transition: all 0.3s ease;
+}
+
+.search-wrapper:focus-within .search-icon {
+    color: var(--accent-color) !important;
+    transform: translateY(-50%) scale(1.1);
+}
+
+.search-focus-indicator {
+    position: absolute;
+    bottom: 0;
+    left: 10%;
+    width: 80%;
+    height: 2px;
+    background: var(--accent-color);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+    transform-origin: center;
+}
+
+.search-wrapper:focus-within .search-focus-indicator {
+    transform: scaleX(1);
+}
+
+/* ===== RÉSULTATS DE RECHERCHE ===== */
+.search-highlight {
+    position: relative;
+    animation: highlightPulse 2s infinite;
+}
+
+@keyframes highlightPulse {
+    0% { background-color: var(--accent-subtle); }
+    50% { background-color: var(--accent-medium); }
+    100% { background-color: var(--accent-subtle); }
+}
+
+.search-highlight td {
+    animation: highlightEntrance 0.5s ease forwards;
+}
+
+@keyframes highlightEntrance {
+    0% { 
+        opacity: 0.5;
+        transform: scale(0.98);
+        box-shadow: 0 0 0 rgba(0, 255, 135, 0);
+    }
+    10% {
+        opacity: 1;
+        transform: scale(1.02);
+        box-shadow: 0 0 15px rgba(0, 255, 135, 0.3);
+    }
+    100% { 
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 0 5px rgba(0, 255, 135, 0.1);
+    }
+}
+
+/* ===== HEADER AMÉLIORÉ ===== */
+.main-header {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 5px 30px rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid var(--card-border);
+    animation: headerReveal 0.8s forwards;
+}
+
+@keyframes headerReveal {
+    0% { transform: translateY(-100%); }
+    100% { transform: translateY(0); }
+}
+
+.pulse-dot {
+    position: relative;
+}
+
+.pulse-dot::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 24px;
+    height: 24px;
+    background-color: transparent;
+    border-radius: 50%;
+    border: 2px solid var(--accent-color);
+    transform: translate(-50%, -50%);
+    animation: dotPulse 2s infinite;
+}
+
+@keyframes dotPulse {
+    0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.6; }
+    50% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
+    100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.6; }
+}
