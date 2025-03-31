@@ -640,54 +640,116 @@ def main():
             logger.info("📊 Création du classement global NASDAQ + STOXX...")
             create_global_rankings(nasdaq_stocks, stoxx_result)
 
-        # Créer des fichiers séparés pour les top performers de chaque marché
-        # Ces fichiers seront plus faciles à utiliser par le frontend
+        # Créer des fichiers séparés pour les top performers de chaque marché de manière indépendante
+        # NOUVELLE IMPLÉMENTATION: Création indépendante des top performers pour chaque marché
 
-        # Top performers NASDAQ
-        nasdaq_top_performers = {
-            "daily": {
-                "best": combined_data["nasdaq"]["top_performers"]["daily"]["best"],
-                "worst": combined_data["nasdaq"]["top_performers"]["daily"]["worst"]
-            },
-            "ytd": {
-                "best": combined_data["nasdaq"]["top_performers"]["ytd"]["best"],
-                "worst": combined_data["nasdaq"]["top_performers"]["ytd"]["worst"]
-            },
-            "meta": {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "count": combined_data["nasdaq"]["meta"]["count"],
-                "description": "Top performers NASDAQ Composite (États-Unis)"
+        # Top performers NASDAQ (création indépendante)
+        if nasdaq_stocks:
+            # Fonction pour extraire les valeurs numériques
+            def parse_percentage(value_str):
+                if not value_str or value_str == "-":
+                    return 0.0
+                clean_value = value_str.replace('%', '').replace(',', '.').replace(' ', '')
+                try:
+                    return float(clean_value)
+                except:
+                    return 0.0
+            
+            # Tri pour les tops NASDAQ quotidiens
+            nasdaq_daily_best = sorted(
+                [s for s in nasdaq_stocks if s.get('change') and s.get('change') != '-'], 
+                key=lambda x: parse_percentage(x.get('change', '0')),
+                reverse=True
+            )[:10]
+            
+            nasdaq_daily_worst = sorted(
+                [s for s in nasdaq_stocks if s.get('change') and s.get('change') != '-'], 
+                key=lambda x: parse_percentage(x.get('change', '0'))
+            )[:10]
+            
+            # Tri pour les tops NASDAQ YTD
+            nasdaq_ytd_best = sorted(
+                [s for s in nasdaq_stocks if s.get('ytd') and s.get('ytd') != '-'], 
+                key=lambda x: parse_percentage(x.get('ytd', '0')),
+                reverse=True
+            )[:10]
+            
+            nasdaq_ytd_worst = sorted(
+                [s for s in nasdaq_stocks if s.get('ytd') and s.get('ytd') != '-'], 
+                key=lambda x: parse_percentage(x.get('ytd', '0'))
+            )[:10]
+            
+            # Création de la structure JSON indépendante pour le NASDAQ
+            nasdaq_top_performers = {
+                "daily": {
+                    "best": nasdaq_daily_best,
+                    "worst": nasdaq_daily_worst
+                },
+                "ytd": {
+                    "best": nasdaq_ytd_best,
+                    "worst": nasdaq_ytd_worst
+                },
+                "meta": {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "count": len(nasdaq_stocks),
+                    "description": "Top performers NASDAQ Composite (États-Unis) - Généré indépendamment"
+                }
             }
-        }
+            
+            # Sauvegarde du fichier NASDAQ indépendant
+            nasdaq_path = os.path.join(CONFIG["stoxx"]["output_dir"], "top_nasdaq_performers.json")
+            with open(nasdaq_path, 'w', encoding='utf-8') as f:
+                json.dump(nasdaq_top_performers, f, ensure_ascii=False, indent=2)
+            logger.info(f"✅ Top performers NASDAQ enregistrés indépendamment dans {nasdaq_path}")
 
-        # Top performers STOXX
-        stoxx_top_performers = {
-            "daily": {
-                "best": combined_data["stoxx"]["top_performers"]["daily"]["best"],
-                "worst": combined_data["stoxx"]["top_performers"]["daily"]["worst"]
-            },
-            "ytd": {
-                "best": combined_data["stoxx"]["top_performers"]["ytd"]["best"],
-                "worst": combined_data["stoxx"]["top_performers"]["ytd"]["worst"]
-            },
-            "meta": {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "count": combined_data["stoxx"]["meta"]["count"],
-                "description": "Top performers DJ STOXX 600 (Europe)"
+        # Top performers STOXX (création indépendante)
+        if stoxx_stocks:
+            # Tri pour les tops STOXX quotidiens
+            stoxx_daily_best = sorted(
+                [s for s in stoxx_stocks if s.get('change') and s.get('change') != '-'], 
+                key=lambda x: parse_percentage(x.get('change', '0')),
+                reverse=True
+            )[:10]
+            
+            stoxx_daily_worst = sorted(
+                [s for s in stoxx_stocks if s.get('change') and s.get('change') != '-'], 
+                key=lambda x: parse_percentage(x.get('change', '0'))
+            )[:10]
+            
+            # Tri pour les tops STOXX YTD
+            stoxx_ytd_best = sorted(
+                [s for s in stoxx_stocks if s.get('ytd') and s.get('ytd') != '-'], 
+                key=lambda x: parse_percentage(x.get('ytd', '0')),
+                reverse=True
+            )[:10]
+            
+            stoxx_ytd_worst = sorted(
+                [s for s in stoxx_stocks if s.get('ytd') and s.get('ytd') != '-'], 
+                key=lambda x: parse_percentage(x.get('ytd', '0'))
+            )[:10]
+            
+            # Création de la structure JSON indépendante pour le STOXX
+            stoxx_top_performers = {
+                "daily": {
+                    "best": stoxx_daily_best,
+                    "worst": stoxx_daily_worst
+                },
+                "ytd": {
+                    "best": stoxx_ytd_best,
+                    "worst": stoxx_ytd_worst
+                },
+                "meta": {
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "count": len(stoxx_stocks),
+                    "description": "Top performers DJ STOXX 600 (Europe) - Généré indépendamment"
+                }
             }
-        }
-
-        # Sauvegarder les fichiers séparés
-        nasdaq_path = os.path.join(CONFIG["stoxx"]["output_dir"], "top_nasdaq_performers.json")
-        stoxx_path = os.path.join(CONFIG["stoxx"]["output_dir"], "top_stoxx_performers.json")
-
-        with open(nasdaq_path, 'w', encoding='utf-8') as f:
-            json.dump(nasdaq_top_performers, f, ensure_ascii=False, indent=2)
-        logger.info(f"✅ Top performers NASDAQ enregistrés dans {nasdaq_path}")
-
-        with open(stoxx_path, 'w', encoding='utf-8') as f:
-            json.dump(stoxx_top_performers, f, ensure_ascii=False, indent=2)
-        logger.info(f"✅ Top performers STOXX enregistrés dans {stoxx_path}")
+            
+            # Sauvegarde du fichier STOXX indépendant
+            stoxx_path = os.path.join(CONFIG["stoxx"]["output_dir"], "top_stoxx_performers.json")
+            with open(stoxx_path, 'w', encoding='utf-8') as f:
+                json.dump(stoxx_top_performers, f, ensure_ascii=False, indent=2)
+            logger.info(f"✅ Top performers STOXX enregistrés indépendamment dans {stoxx_path}")
 
         # Résumé de la mise à jour
         result_summary = {
