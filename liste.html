@@ -1139,33 +1139,7 @@
                      </div>
                  </div>
                  
-                 <!-- Sélecteur de marché -->
-                 <div class="market-selector mb-8">
-                     <h2 class="section-title mb-4">Sélectionner un marché</h2>
-                     <div class="market-selector-buttons">
-                         <button id="market-nasdaq" class="market-btn active" data-market="nasdaq">
-                             <i class="fas fa-flag-usa mr-2"></i> NASDAQ Composite (US)
-                         </button>
-                         <button id="market-stoxx" class="market-btn" data-market="stoxx">
-                             <i class="fas fa-globe-europe mr-2"></i> DJ STOXX 600 (Europe)
-                         </button>
-                     </div>
-                 </div>
-                 
-                 <!-- Pagination (pour STOXX 600) -->
-                 <div id="pagination-container" class="pagination-container hidden">
-                     <button id="prev-page" class="pagination-button" disabled>
-                         <i class="fas fa-chevron-left mr-2"></i> Page précédente
-                     </button>
-                     <div class="pagination-info">
-                         Page <span id="current-page">1</span> / <span id="total-pages">1</span>
-                     </div>
-                     <button id="next-page" class="pagination-button">
-                         Page suivante <i class="fas fa-chevron-right ml-2"></i>
-                     </button>
-                 </div>
-                 
-                 <!-- Top 10 Global Redessiné -->
+                 <!-- Top 10 Global Redessiné (PREMIER) -->
                  <div class="top-stocks-container mb-10">
                      <h2 class="section-title mb-4">Top 10 Performance Globale (NASDAQ + STOXX)</h2>
                      
@@ -1219,7 +1193,33 @@
                      </div>
                  </div>
                  
-                 <!-- Top 10 Redessiné -->
+                 <!-- Sélecteur de marché (DEUXIÈME) -->
+                 <div class="market-selector mb-8">
+                     <h2 class="section-title mb-4">Sélectionner un marché</h2>
+                     <div class="market-selector-buttons">
+                         <button id="market-nasdaq" class="market-btn active" data-market="nasdaq">
+                             <i class="fas fa-flag-usa mr-2"></i> NASDAQ Composite (US)
+                         </button>
+                         <button id="market-stoxx" class="market-btn" data-market="stoxx">
+                             <i class="fas fa-globe-europe mr-2"></i> DJ STOXX 600 (Europe)
+                         </button>
+                     </div>
+                 </div>
+                 
+                 <!-- Pagination (pour STOXX 600) - Déplacé sous le sélecteur de marché -->
+                 <div id="pagination-container" class="pagination-container hidden">
+                     <button id="prev-page" class="pagination-button" disabled>
+                         <i class="fas fa-chevron-left mr-2"></i> Page précédente
+                     </button>
+                     <div class="pagination-info">
+                         Page <span id="current-page">1</span> / <span id="total-pages">1</span>
+                     </div>
+                     <button id="next-page" class="pagination-button">
+                         Page suivante <i class="fas fa-chevron-right ml-2"></i>
+                     </button>
+                 </div>
+                 
+                 <!-- Top 10 Redessiné (TROISIÈME) -->
                  <div class="top-stocks-container mb-10">
                      <h2 class="section-title mb-4">Top 10 Performance du <span id="current-market-name">NASDAQ</span></h2>
                      
@@ -1348,7 +1348,7 @@
                      </div>
                  </div>
                  
-                 <!-- Onglets alphabétiques -->
+                 <!-- Onglets alphabétiques (QUATRIÈME) -->
                  <div class="mb-8">
                      <h2 class="section-title mb-6">Actions par lettre</h2>
                      
