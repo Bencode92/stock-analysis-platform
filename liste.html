@@ -1,2080 +1,2059 @@
 <!DOCTYPE html>
- <html lang="fr" class="dark">
- <head>
-     <meta charset="UTF-8">
-     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-     <title>TradePulse - Actions NASDAQ Composite</title>
-     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
-     <script src="https://cdn.tailwindcss.com"></script>
-     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-     <!-- Script de déduplication ajouté pour résoudre le problème des doublons -->
-     <script src="deduplicate-fix.js"></script>
-     <script>
-         tailwind.config = {
-             darkMode: 'class',
-             theme: {
-                 extend: {
-                     colors: {
-                         green: {
-                             400: '#00FF87'
-                         }
-                     }
-                 },
-                 fontFamily: {
-                     sans: ['Inter', 'sans-serif']
-                 }
-             }
-         }
-     </script>
-     <style>
-         :root {
-             --background-color: #0a1929; /* Bleu nuit plus profond */
-             --light-background-color: #f0f5ff;
-             --text-color: #FFFFFF;
-             --light-text-color: #1a202c;
-             --accent-color: #00FF87; /* Vert néon */
-             --accent-subtle: rgba(0, 255, 135, 0.15);
-             --accent-medium: rgba(0, 255, 135, 0.3);
-             --accent-strong: rgba(0, 255, 135, 0.6);
-             --card-bg: rgba(10, 30, 50, 0.6);
-             --card-header: rgba(15, 40, 65, 0.8);
-             --card-border: rgba(0, 255, 135, 0.2);
-             --accent-glow: 0 0 15px rgba(0, 255, 135, 0.2);
-             --accent-glow-strong: 0 0 20px rgba(0, 255, 135, 0.3);
-             --transition-time: 0.3s;
-             --header-height: 70px;
-             --sidebar-width: 80px;
-             --negative-color: #ff4757;
-             --neutral-color: #aaaaaa;
-             --separator-color: rgba(255, 255, 255, 0.07);
-         }
-         
-         body {
-             margin: 0;
-             padding: 0;
-             font-family: 'Inter', sans-serif;
-             transition: background-color 0.3s ease, color 0.3s ease;
-             overflow-x: hidden;
-             letter-spacing: 0.01em;
-             line-height: 1.6;
-         }
-         
-         body.dark {
-             background-color: var(--background-color);
-             background-image: 
-                 radial-gradient(circle at 15% 50%, rgba(0, 255, 135, 0.08) 0%, transparent 25%),
-                 radial-gradient(circle at 85% 30%, rgba(0, 100, 255, 0.05) 0%, transparent 20%);
-             color: var(--text-color);
-         }
-         
-         body.light {
-             background-color: var(--light-background-color);
-             color: var(--light-text-color);
-         }
-         
-         /* Header */
-         .main-header {
-             position: fixed;
-             top: 0;
-             left: var(--sidebar-width);
-             right: 0;
-             height: var(--header-height);
-             backdrop-filter: blur(10px);
-             -webkit-backdrop-filter: blur(10px);
-             display: flex;
-             justify-content: space-between;
-             align-items: center;
-             padding: 0 40px;
-             z-index: 100;
-             transition: all 0.3s ease;
-         }
-         
-         .dark .main-header {
-             background-color: rgba(10, 25, 41, 0.85);
-             border-bottom: 1px solid var(--card-border);
-             box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-         }
-         
-         .light .main-header {
-             background-color: rgba(240, 245, 255, 0.9);
-             border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-         }
-         
-         .header-left {
-             display: flex;
-             align-items: center;
-         }
-         
-         .logo-container {
-             display: flex;
-             align-items: center;
-             font-weight: 900;
-             font-size: 1.5rem;
-             letter-spacing: 1px;
-         }
-         
-         .logo-container a {
-             text-decoration: none;
-             $transition: color 0.3s ease;
-         }
-         
-         .dark .logo-container a {
-             color: var(--text-color);
-             text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
-         }
-         
-         .light .logo-container a {
-             color: var(--light-text-color);
-         }
-         
-         .pulse-dot {
-             width: 12px;
-             height: 12px;
-             background-color: var(--accent-color);
-             border-radius: 50%;
-             margin-right: 10px;
-             box-shadow: 0 0 10px var(--accent-color);
-             animation: pulse 2s infinite;
-         }
-         
-         .main-nav {
-             display: flex;
-             margin-left: 40px;
-         }
-         
-         .main-nav a {
-             margin-right: 30px;
-             padding: 8px 5px;
-             font-weight: 500;
-             position: relative;
-             transition: color 0.3s;
-             text-decoration: none;
-         }
-         
-         .dark .main-nav a {
-             color: rgba(255, 255, 255, 0.8);
-         }
-         
-         .light .main-nav a {
-             color: var(--light-text-color);
-         }
-         
-         .main-nav a::after {
-             content: '';
-             position: absolute;
-             bottom: 0;
-             left: 0;
-             width: 0;
-             height: 2px;
-             background-color: var(--accent-color);
-             transition: width 0.3s;
-         }
-         
-         .main-nav a:hover::after,
-         .main-nav a.active::after {
-             width: 100%;
-         }
-         
-         .main-nav a.active {
-             color: var(--accent-color);
-         }
-         
-         .header-right {
-             display: flex;
-             align-items: center;
-         }
-         
-         .market-status {
-             display: flex;
-             align-items: center;
-             margin-right: 30px;
-             font-size: 0.875rem;
-             transition: color 0.3s ease;
-         }
-         
-         .dark .market-status {
-             color: var(--text-color);
-         }
-         
-         .light .market-status {
-             color: var(--light-text-color);
-         }
-         
-         .market-indicator {
-             width: 10px;
-             height: 10px;
-             border-radius: 50%;
-             margin-right: 8px;
-         }
-         
-         .market-indicator.green {
-             background-color: #4CAF50;
-             box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
-         }
-         
-         .market-time {
-             margin-left: 10px;
-             font-weight: 600;
-             color: var(--accent-color);
-         }
-         
-         .search-button {
-             padding: 10px 20px;
-             border-radius: 8px;
-             display: flex;
-             align-items: center;
-             transition: all 0.3s;
-             text-decoration: none;
-         }
-         
-         .dark .search-button {
-             background-color: var(--accent-subtle);
-             border: 1px solid var(--accent-medium);
-             color: var(--text-color);
-         }
-         
-         .light .search-button {
-             background-color: rgba(0, 210, 110, 0.1);
-             border: 1px solid rgba(0, 210, 110, 0.3);
-             color: var(--light-text-color);
-         }
-         
-         .search-button:hover {
-             transform: translateY(-2px);
-             box-shadow: var(--accent-glow);
-         }
-         
-         .dark .search-button:hover {
-             background-color: var(--accent-medium);
-         }
-         
-         .light .search-button:hover {
-             background-color: rgba(0, 210, 110, 0.2);
-         }
-         
-         .search-button i {
-             margin-right: 8px;
-             color: var(--accent-color);
-         }
-         
-         /* Sidebar de navigation verticale */
-         .sidebar {
-             position: fixed;
-             top: 0;
-             left: 0;
-             width: var(--sidebar-width);
-             height: 100vh;
-             display: flex;
-             flex-direction: column;
-             align-items: center;
-             padding: 20px 0;
-             z-index: 101;
-             transition: background-color 0.3s ease, border-right 0.3s ease, box-shadow 0.3s ease;
-         }
-         
-         .dark .sidebar {
-             background-color: rgba(8, 20, 35, 0.95);
-             border-right: 1px solid var(--card-border);
-             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
-         }
-         
-         .light .sidebar {
-             background-color: rgba(230, 240, 255, 0.95);
-             border-right: 1px solid rgba(0, 0, 0, 0.1);
-             box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
-         }
-         
-         .sidebar-logo {
-             font-size: 1.5rem;
-             font-weight: 900;
-             color: var(--accent-color);
-             margin-bottom: 40px;
-             text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
-         }
-         
-         .sidebar-nav {
-             display: flex;
-             flex-direction: column;
-             align-items: center;
-             flex-grow: 1;
-         }
-         
-         .nav-item {
-             margin-bottom: 24px;
-             width: 42px;
-             height: 42px;
-             display: flex;
-             justify-content: center;
-             align-items: center;
-             border-radius: 10px;
-             transition: all 0.3s;
-             position: relative;
-             text-decoration: none;
-         }
-
-         /* Notification badge for alerts */
-         .notification-badge {
-             position: absolute;
-             top: -5px;
-             right: -5px;
-             width: 10px;
-             height: 10px;
-             background-color: #ff4757;
-             border-radius: 50%;
-             box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
-         }
-         
-         .dark .nav-item {
-             color: rgba(255, 255, 255, 0.7);
-         }
-         
-         .light .nav-item {
-             color: rgba(0, 0, 0, 0.7);
-         }
-         
-         .dark .nav-item:hover, .dark .nav-item.active {
-             background-color: var(--accent-subtle);
-             color: var(--accent-color);
-             box-shadow: var(--accent-glow);
-             transform: translateY(-2px);
-         }
-         
-         .light .nav-item:hover, .light .nav-item.active {
-             background-color: rgba(0, 210, 110, 0.1);
-             color: var(--accent-color);
-         }
-         
-         .nav-item i {
-             font-size: 1.2rem;
-         }
-         
-         /* Mode sombre/clair toggle */
-         .theme-toggle {
-             position: fixed;
-             top: 20px;
-             right: 20px;
-             z-index: 1000;
-         }
-         
-         .theme-toggle-btn {
-             background: none;
-             border: none;
-             cursor: pointer;
-             width: 40px;
-             height: 40px;
-             border-radius: 50%;
-             display: flex;
-             align-items: center;
-             justify-content: center;
-             font-size: 1.2rem;
-             transition: all 0.3s ease;
-         }
-         
-         .dark .theme-toggle-btn {
-             color: var(--text-color);
-             background-color: rgba(255, 255, 255, 0.1);
-         }
-         
-         .light .theme-toggle-btn {
-             color: var(--light-text-color);
-             background-color: rgba(0, 0, 0, 0.1);
-         }
-         
-         .theme-toggle-btn:hover {
-             transform: scale(1.1);
-         }
-         
-         /* Main container */
-         .main-container {
-             margin-left: var(--sidebar-width);
-             margin-top: var(--header-height);
-             padding: 24px;
-             min-height: calc(100vh - var(--header-height));
-             transition: background-color 0.3s ease;
-         }
-
-         /* Glassmorphism cards */
-         .glassmorphism {
-             backdrop-filter: blur(12px);
-             -webkit-backdrop-filter: blur(12px);
-             border: 1px solid var(--card-border);
-             box-shadow: var(--accent-glow);
-             transition: transform 0.3s ease, box-shadow 0.3s ease;
-         }
-         
-         .dark .glassmorphism {
-             background-color: var(--card-bg);
-         }
-         
-         .light .glassmorphism {
-             background-color: rgba(240, 245, 255, 0.8);
-         }
-         
-         .glassmorphism:hover {
-             box-shadow: var(--accent-glow-strong);
-         }
-
-         /* Data table styles */
-         .data-table {
-             width: 100%;
-             border-collapse: separate;
-             border-spacing: 0;
-         }
-         
-         .data-table th {
-             padding: 14px 16px;
-             font-weight: 600;
-             font-size: 0.8rem;
-             text-align: left;
-             border-bottom: 1px solid var(--card-border);
-             text-transform: uppercase;
-             letter-spacing: 0.05em;
-             color: rgba(255, 255, 255, 0.8);
-             background-color: var(--card-header);
-         }
-         
-         .data-table td {
-             padding: 16px;
-             font-size: 0.9rem;
-             border-bottom: 1px solid var(--separator-color);
-         }
-         
-         .data-table tr:last-child td {
-             border-bottom: none;
-         }
-         
-         .data-table tr:hover td {
-             background-color: var(--accent-subtle);
-         }
-
-         /* Positive, negative, and neutral values */
-         .positive {
-             color: var(--accent-color);
-             font-weight: 600;
-         }
-         
-         .negative {
-             color: var(--negative-color);
-             font-weight: 600;
-         }
-         
-         .neutral {
-             color: var(--neutral-color);
-             font-weight: 600;
-         }
-
-         /* Top performers */
-         .top-performers-section {
-             margin-bottom: 2rem;
-         }
-         
-         .top-performers-title {
-             font-size: 1.4rem;
-             font-weight: 700;
-             margin-bottom: 1.5rem;
-             color: white;
-             display: flex;
-             align-items: center;
-         }
-         
-         .top-performers-title::before {
-             content: '';
-             display: inline-block;
-             width: 24px;
-             height: 3px;
-             background-color: var(--accent-color);
-             margin-right: 10px;
-             border-radius: 2px;
-             box-shadow: 0 0 8px var(--accent-color);
-         }
-         
-         .top-performers-grid {
-             display: grid;
-             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-             grid-gap: 20px;
-         }
-         
-         .performer-card {
-             background-color: var(--card-bg);
-             border-radius: 12px;
-             overflow: hidden;
-         }
-         
-         .performer-header {
-             background-color: rgba(25, 45, 70, 0.9);
-             padding: 12px 16px;
-             display: flex;
-             justify-content: space-between;
-             align-items: center;
-             font-weight: 600;
-             color: white;
-             border-bottom: 1px solid var(--card-border);
-         }
-         
-         .performer-row {
-             padding: 12px 16px;
-             border-bottom: 1px solid var(--separator-color);
-             display: flex;
-             justify-content: space-between;
-             transition: background-color 0.2s;
-         }
-         
-         .performer-row:hover {
-             background-color: rgba(15, 40, 70, 0.8);
-         }
-         
-         .performer-row:last-child {
-             border-bottom: none;
-         }
-         
-         .performer-info {
-             flex: 1;
-         }
-         
-         .performer-index {
-             font-weight: 600;
-             font-size: 0.9rem;
-             margin-bottom: 3px;
-             color: rgba(255, 255, 255, 0.9);
-         }
-         
-         .performer-country {
-             font-size: 0.8rem;
-             color: rgba(255, 255, 255, 0.6);
-         }
-         
-         .performer-value {
-             font-weight: 700;
-             text-align: right;
-             min-width: 62px;
-         }
-
-         /* Autres styles */
-         .section-title {
-             font-size: 1.4rem;
-             font-weight: 700;
-             margin-bottom: 1.5rem;
-             color: white;
-             display: flex;
-             align-items: center;
-         }
-         
-         .section-title::before {
-             content: '';
-             display: inline-block;
-             width: 24px;
-             height: 3px;
-             background-color: var(--accent-color);
-             margin-right: 10px;
-             border-radius: 2px;
-             box-shadow: 0 0 8px var(--accent-color);
-         }
-
-         /* Cards with consistent headers */
-         .card-header {
-             padding: 12px 16px;
-             border-bottom: 1px solid var(--card-border);
-             background-color: var(--card-header);
-             border-top-left-radius: 0.5rem;
-             border-top-right-radius: 0.5rem;
-             display: flex;
-             justify-content: space-between;
-             align-items: center;
-         }
-         
-         .card-header h3 {
-             font-weight: 600;
-             font-size: 1rem;
-             color: rgba(255, 255, 255, 0.9);
-         }
-         
-         .card-body {
-             padding: 16px;
-         }
-
-         /* Animations */
-         @keyframes pulse {
-             0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
-             70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
-             100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
-         }
-
-         /* Loader */
-         .loader {
-             display: inline-block;
-             width: 50px;
-             height: 50px;
-             border: 3px solid rgba(0, 255, 135, 0.2);
-             border-radius: 50%;
-             border-top-color: var(--accent-color);
-             animation: spin 1s ease-in-out infinite;
-         }
-
-         @keyframes spin {
-             0% { transform: rotate(0deg); }
-             100% { transform: rotate(360deg); }
-         }
-         
-         /* Alphabet Tabs */
-         .region-tabs {
-             display: flex;
-             flex-wrap: wrap;
-             border-bottom: 1px solid var(--card-border);
-             margin-bottom: 24px;
-             background-color: var(--card-header);
-             border-radius: 8px;
-             overflow: hidden;
-         }
-         
-         .region-tab {
-             padding: 14px;
-             cursor: pointer;
-             position: relative;
-             font-weight: 500;
-             opacity: 0.7;
-             transition: all 0.3s ease;
-             letter-spacing: 0.02em;
-         }
-         
-         .region-tab:hover {
-             background-color: var(--accent-subtle);
-             opacity: 0.9;
-         }
-         
-         .region-tab.active {
-             opacity: 1;
-             color: var(--accent-color);
-             background-color: var(--accent-subtle);
-         }
-         
-         .region-tab::after {
-             content: '';
-             position: absolute;
-             bottom: 0;
-             left: 0;
-             width: 0;
-             height: 3px;
-             background-color: var(--accent-color);
-             transition: width 0.3s ease;
-             box-shadow: 0 0 8px var(--accent-color);
-         }
-         
-         .region-tab.active::after {
-             width: 100%;
-         }
-
-         /* Button styling */
-         .action-button {
-             padding: 6px 14px;
-             border-radius: 6px;
-             font-size: 0.8rem;
-             font-weight: 500;
-             transition: all 0.2s ease;
-             background-color: var(--accent-subtle);
-             color: var(--accent-color);
-             border: 1px solid var(--accent-medium);
-         }
-         
-         .action-button:hover {
-             background-color: var(--accent-medium);
-             transform: translateY(-1px);
-         }
-         
-         /* Market Selector */
-         .market-selector {
-             margin-bottom: 24px;
-         }
-         
-         .market-selector-buttons {
-             display: flex;
-             gap: 16px;
-         }
-         
-         .market-btn {
-             padding: 12px 24px;
-             border-radius: 8px;
-             font-weight: 600;
-             transition: all 0.3s ease;
-             flex-grow: 1;
-             text-align: center;
-             border: 2px solid transparent;
-         }
-         
-         .dark .market-btn {
-             background-color: var(--accent-subtle);
-             color: rgba(255, 255, 255, 0.8);
-         }
-         
-         .light .market-btn {
-             background-color: rgba(0, 210, 110, 0.1);
-             color: var(--light-text-color);
-         }
-         
-         .market-btn.active {
-             border-color: var(--accent-color);
-             color: var(--accent-color);
-             box-shadow: var(--accent-glow);
-         }
-         
-         .market-btn:hover {
-             transform: translateY(-2px);
-         }
-         
-         /* Pagination Styling */
-         .pagination-container {
-             display: flex;
-             align-items: center;
-             justify-content: center;
-             margin-top: 24px;
-             margin-bottom: 24px;
-         }
-         
-         .pagination-button {
-             padding: 8px 16px;
-             border-radius: 6px;
-             transition: all 0.3s ease;
-             display: flex;
-             align-items: center;
-         }
-         
-         .dark .pagination-button {
-             background-color: var(--accent-subtle);
-             color: var(--text-color);
-             border: 1px solid var(--accent-medium);
-         }
-         
-         .light .pagination-button {
-             background-color: rgba(0, 210, 110, 0.1);
-             border: 1px solid rgba(0, 210, 110, 0.3);
-             color: var(--light-text-color);
-         }
-         
-         .pagination-button:not(:disabled):hover {
-             transform: translateY(-2px);
-             box-shadow: var(--accent-glow);
-         }
-         
-         .pagination-button:disabled {
-             opacity: 0.5;
-             cursor: not-allowed;
-         }
-         
-         .pagination-info {
-             margin: 0 16px;
-             font-weight: 500;
-         }
-         
-         /* Styles pour la barre de recherche */
-         .search-container {
-             max-width: 100%;
-             margin-bottom: 24px;
-         }
-         
-         .search-wrapper {
-             max-width: 100%;
-             position: relative;
-         }
-         
-         .dark #stock-search {
-             background-color: rgba(255, 255, 255, 0.07);
-             border-color: var(--card-border);
-             color: var(--text-color);
-         }
-         
-         .light #stock-search {
-             background-color: rgba(0, 0, 0, 0.05);
-             border-color: rgba(0, 0, 0, 0.1);
-             color: var(--light-text-color);
-         }
-         
-         #stock-search:focus {
-             border-color: var(--accent-color);
-             box-shadow: var(--accent-glow);
-         }
-         
-         .dark .search-wrapper i {
-             color: rgba(255, 255, 255, 0.5);
-         }
-         
-         .light .search-wrapper i {
-             color: rgba(0, 0, 0, 0.5);
-         }
-         
-         .clear-btn {
-             cursor: pointer;
-             padding: 5px;
-             font-size: 14px;
-         }
-         
-         .clear-btn:hover {
-             color: var(--accent-color);
-         }
-         
-         /* Styles pour les résultats de recherche */
-         .search-highlight {
-             background-color: var(--accent-subtle);
-             animation: highlight-pulse 2s infinite;
-         }
-         
-         @keyframes highlight-pulse {
-             0% { background-color: var(--accent-subtle); }
-             50% { background-color: var(--accent-medium); }
-             100% { background-color: var(--accent-subtle); }
-         }
-         
-         .no-results {
-             text-align: center;
-             padding: 20px;
-             font-style: italic;
-             color: var(--text-secondary);
-         }
-         
-         /* État actif pour la lettre "Tous" */
-         .region-tab.all-results {
-             font-weight: 600;
-         }
-         
-         .region-tab.all-results.active {
-             color: var(--accent-color);
-         }
-
-         /* Scroll personnalisé pour les cartes top performers */
-         .performers-scroll {
-             max-height: 410px;
-             overflow-y: auto;
-         }
-         
-         .performers-scroll::-webkit-scrollbar {
-             width: 6px;
-         }
-         
-         .performers-scroll::-webkit-scrollbar-track {
-             background: rgba(255, 255, 255, 0.05);
-             border-radius: 3px;
-         }
-         
-         .performers-scroll::-webkit-scrollbar-thumb {
-             background: var(--accent-subtle);
-             border-radius: 3px;
-         }
-         
-         .performers-scroll::-webkit-scrollbar-thumb:hover {
-             background: var(--accent-medium);
-         }
-         
-         /* Styles pour le top 10 redessiné */
-         .top-stocks-container {
-             max-width: 100%;
-             margin-bottom: 2rem;
-         }
-         
-         .index-tabs {
-             display: flex;
-             margin-bottom: 1.5rem;
-             border-bottom: 1px solid var(--card-border);
-             background-color: var(--card-header);
-             border-radius: 8px 8px 0 0;
-             overflow: hidden;
-         }
-         
-         .top-tab-btn {
-             padding: 14px 20px;
-             cursor: pointer;
-             position: relative;
-             font-weight: 500;
-             transition: all 0.3s ease;
-             border: none;
-             background: none;
-             color: var(--text-color);
-             opacity: 0.7;
-         }
-         
-         .top-tab-btn:hover {
-             background-color: var(--accent-subtle);
-             opacity: 0.9;
-         }
-         
-         .top-tab-btn.active {
-             color: var(--accent-color);
-             background-color: var(--accent-subtle);
-             opacity: 1;
-         }
-         
-         .top-tab-btn::after {
-             content: '';
-             position: absolute;
-             bottom: 0;
-             left: 0;
-             width: 0;
-             height: 3px;
-             background-color: var(--accent-color);
-             transition: width 0.3s;
-             box-shadow: 0 0 8px var(--accent-color);
-         }
-         
-         .top-tab-btn.active::after {
-             width: 100%;
-         }
-         
-         .stock-cards-container {
-             display: grid;
-             grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-             gap: 16px;
-         }
-         
-         .stock-card {
-             display: flex;
-             align-items: center;
-             background-color: var(--card-bg);
-             border-radius: 12px;
-             padding: 16px;
-             transition: transform 0.3s ease, box-shadow 0.3s ease;
-             border: 1px solid var(--card-border);
-         }
-         
-         .stock-card:hover {
-             transform: translateY(-3px);
-             box-shadow: var(--accent-glow);
-         }
-         
-         .rank {
-             width: 30px;
-             height: 30px;
-             display: flex;
-             justify-content: center;
-             align-items: center;
-             border-radius: 50%;
-             font-weight: bold;
-             font-size: 0.9rem;
-             margin-right: 16px;
-             background-color: var(--accent-subtle);
-             color: var(--accent-color);
-         }
-         
-         .stock-info {
-             flex-grow: 1;
-         }
-         
-         .stock-name {
-             font-weight: 700;
-             font-size: 1.1rem;
-             margin-bottom: 4px;
-             display: flex;
-             align-items: center;
-         }
-         
-         .stock-fullname {
-             font-size: 0.85rem;
-             opacity: 0.7;
-             white-space: nowrap;
-             overflow: hidden;
-             text-overflow: ellipsis;
-             max-width: 180px;
-         }
-         
-         .stock-performance {
-             padding: 6px 12px;
-             border-radius: 6px;
-             font-weight: 600;
-             margin-left: 10px;
-         }
-         
-         /* Top 3 en évidence */
-         .stock-card:nth-child(-n+3) .rank {
-             background-color: var(--accent-medium);
-             color: white;
-             box-shadow: 0 0 10px rgba(0, 255, 135, 0.4);
-         }
-
-         /* Responsive */
-         @media (max-width: 768px) {
-             .main-header {
-                 left: 0;
-                 padding: 0 20px;
-             }
-             
-             .sidebar {
-                 width: 100%;
-                 height: auto;
-                 flex-direction: row;
-                 padding: 10px 20px;
-                 justify-content: space-between;
-                 position: fixed;
-                 bottom: 0;
-                 top: auto;
-                 border-top: 1px solid var(--card-border);
-                 border-right: none;
-             }
-             
-             .sidebar-logo {
-                 display: none;
-             }
-             
-             .sidebar-nav {
-                 flex-direction: row;
-                 justify-content: space-around;
-                 width: 100%;
-                 margin: 0;
-             }
-             
-             .nav-item {
-                 margin: 0;
-             }
-             
-             .main-container {
-                 margin-left: 0;
-                 margin-top: calc(var(--header-height));
-                 margin-bottom: 60px;
-             }
-             
-             .main-nav {
-                 display: none;
-             }
-             
-             .region-tabs {
-                 overflow-x: auto;
-                 white-space: nowrap;
-             }
-             
-             .top-performers-grid {
-                 grid-template-columns: 1fr;
-                 gap: 12px;
-             }
-             
-             .market-selector-buttons {
-                 flex-direction: column;
-             }
-             
-             .stock-cards-container {
-                 grid-template-columns: 1fr;
-             }
-             
-             .index-tabs {
-                 overflow-x: auto;
-                 flex-wrap: nowrap;
-             }
-         }
-     </style>
- </head>
- <body class="dark">
-     <!-- Bouton du sélecteur de thème -->
-     <div class="theme-toggle">
-         <button id="theme-toggle-btn" class="theme-toggle-btn">
-             <i class="fas fa-moon" id="dark-icon"></i>
-             <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
-         </button>
-     </div>
-
-     <!-- Sidebar de navigation verticale -->
-     <aside class="sidebar">
-         <div class="sidebar-logo">TP</div>
-         <nav class="sidebar-nav">
-             <a href="actualites.html" class="nav-item" title="Actualités">
-                 <i class="fas fa-newspaper"></i>
-             </a>
-             <a href="portefeuille.html" class="nav-item" title="Portefeuilles">
-                 <i class="fas fa-chart-pie"></i>
-             </a>
-             <a href="dashboard.html" class="nav-item" title="Tableau de bord">
-                 <i class="fas fa-tachometer-alt"></i>
-             </a>
-             <a href="marches.html" class="nav-item" title="Marchés">
-                 <i class="fas fa-chart-line"></i>
-             </a>
-             <a href="liste.html" class="nav-item active" title="Liste">
-                 <i class="fas fa-list-ul"></i>
-             </a>
-             <a href="email-preview.html" class="nav-item" title="Alertes">
-                 <i class="fas fa-bell"></i>
-                 <span class="notification-badge"></span>
-             </a>
-             <a href="parametres.html" class="nav-item" title="Paramètres">
-                 <i class="fas fa-cog"></i>
-             </a>
-         </nav>
-     </aside>
-
-     <!-- Header principal -->
-     <header class="main-header">
-         <div class="header-left">
-             <div class="logo-container">
-                 <div class="pulse-dot"></div>
-                 <a href="index.html">TRADEPULSE</a>
-             </div>
-             <nav class="main-nav">
-                 <a href="actualites.html">Actualités</a>
-                 <a href="portefeuille.html">Portefeuilles</a>
-                 <a href="dashboard.html">Tableau de bord</a>
-                 <a href="marches.html">Marchés</a>
-                 <a href="liste.html" class="active">Liste</a>
-             </nav>
-         </div>
-         <div class="header-right">
-             <div class="market-status">
-                 <div class="market-indicator green"></div>
-                 <span>Marché ouvert</span>
-                 <span class="market-time" id="marketTime">09:45:22</span>
-             </div>
-             <a href="recherche.html" class="search-button ripple">
-                 <i class="fas fa-search"></i>
-                 <span>Ma question</span>
-             </a>
-         </div>
-     </header>
-
-     <!-- Container principal -->
-     <main class="main-container">
-         <div class="p-6">
-             <div class="max-w-7xl mx-auto">
-                 <!-- Header avec titre et dernière mise à jour -->
-                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-                     <div>
-                         <h1 class="text-3xl font-bold mb-2" id="market-title">Actions NASDAQ Composite (États-Unis)</h1>
-                         <p class="text-gray-400">
-                            <span id="stocks-count" class="font-semibold">0</span> actions listées | 
-                            Dernière mise à jour: <span id="last-update-time" class="font-medium">Chargement...</span>
-                         </p>
-                     </div>
-                 </div>
-                 
-                 <!-- Top 10 Global Redessiné (PREMIER) -->
-                 <div class="top-stocks-container mb-10">
-                     <h2 class="section-title mb-4">Top 10 Performance Globale (NASDAQ + STOXX)</h2>
-                     
-                     <!-- Onglets pour changer de vue -->
-                     <div class="index-tabs">
-                         <button class="top-tab-btn active" data-index="global-gainers">
-                             <i class="fas fa-arrow-up text-green-400 mr-2"></i> Hausses du jour
-                         </button>
-                         <button class="top-tab-btn" data-index="global-losers">
-                             <i class="fas fa-arrow-down text-red-500 mr-2"></i> Baisses du jour
-                         </button>
-                         <button class="top-tab-btn" data-index="global-ytd-gainers">
-                             <i class="fas fa-calendar-check text-blue-400 mr-2"></i> Hausses YTD
-                         </button>
-                         <button class="top-tab-btn" data-index="global-ytd-losers">
-                             <i class="fas fa-calendar-times text-orange-400 mr-2"></i> Baisses YTD
-                         </button>
-                     </div>
-                     
-                     <!-- Conteneurs pour chaque vue (seul le premier est visible par défaut) -->
-                     <div id="top-global-gainers" class="top-stocks-content">
-                         <div class="stock-cards-container">
-                             <!-- Les cartes seront générées dynamiquement ici -->
-                             <div class="stock-card">
-                                 <div class="rank">#1</div>
-                                 <div class="stock-info">
-                                     <div class="stock-name">Chargement <i class="fas fa-spinner fa-spin ml-1"></i></div>
-                                     <div class="stock-fullname">Récupération des données globales...</div>
-                                 </div>
-                                 <div class="stock-performance positive">-</div>
-                             </div>
-                         </div>
-                     </div>
-                     
-                     <div id="top-global-losers" class="top-stocks-content hidden">
-                         <div class="stock-cards-container">
-                             <!-- Les cartes seront générées dynamiquement ici -->
-                         </div>
-                     </div>
-                     
-                     <div id="top-global-ytd-gainers" class="top-stocks-content hidden">
-                         <div class="stock-cards-container">
-                             <!-- Les cartes seront générées dynamiquement ici -->
-                         </div>
-                     </div>
-                     
-                     <div id="top-global-ytd-losers" class="top-stocks-content hidden">
-                         <div class="stock-cards-container">
-                             <!-- Les cartes seront générées dynamiquement ici -->
-                         </div>
-                     </div>
-                 </div>
-                 
-                 <!-- Sélecteur de marché (DEUXIÈME) -->
-                 <div class="market-selector mb-8">
-                     <h2 class="section-title mb-4">Sélectionner un marché</h2>
-                     <div class="market-selector-buttons">
-                         <button id="market-nasdaq" class="market-btn active" data-market="nasdaq">
-                             <i class="fas fa-flag-usa mr-2"></i> NASDAQ Composite (US)
-                         </button>
-                         <button id="market-stoxx" class="market-btn" data-market="stoxx">
-                             <i class="fas fa-globe-europe mr-2"></i> DJ STOXX 600 (Europe)
-                         </button>
-                     </div>
-                 </div>
-                 
-                 <!-- Pagination (pour STOXX 600) - Déplacé sous le sélecteur de marché -->
-                 <div id="pagination-container" class="pagination-container hidden">
-                     <button id="prev-page" class="pagination-button" disabled>
-                         <i class="fas fa-chevron-left mr-2"></i> Page précédente
-                     </button>
-                     <div class="pagination-info">
-                         Page <span id="current-page">1</span> / <span id="total-pages">1</span>
-                     </div>
-                     <button id="next-page" class="pagination-button">
-                         Page suivante <i class="fas fa-chevron-right ml-2"></i>
-                     </button>
-                 </div>
-                 
-                 <!-- Top 10 Redessiné (TROISIÈME) -->
-                 <div class="top-stocks-container mb-10">
-                     <h2 class="section-title mb-4">Top 10 Performance du <span id="current-market-name">NASDAQ</span></h2>
-                     
-                     <!-- Onglets pour changer de vue -->
-                     <div class="index-tabs">
-                         <button class="top-tab-btn active" data-index="daily-gainers">
-                             <i class="fas fa-arrow-up text-green-400 mr-2"></i> Hausses du jour
-                         </button>
-                         <button class="top-tab-btn" data-index="daily-losers">
-                             <i class="fas fa-arrow-down text-red-500 mr-2"></i> Baisses du jour
-                         </button>
-                         <button class="top-tab-btn" data-index="ytd-gainers">
-                             <i class="fas fa-calendar-check text-blue-400 mr-2"></i> Hausses YTD
-                         </button>
-                         <button class="top-tab-btn" data-index="ytd-losers">
-                             <i class="fas fa-calendar-times text-orange-400 mr-2"></i> Baisses YTD
-                         </button>
-                     </div>
-                     
-                     <!-- Conteneurs pour chaque vue (seul le premier est visible par défaut) -->
-                     <div id="top-daily-gainers" class="top-stocks-content">
-                         <div class="stock-cards-container">
-                             <!-- Les cartes seront générées dynamiquement ici -->
-                             <div class="stock-card">
-                                 <div class="rank">#1</div>
-                                 <div class="stock-info">
-                                     <div class="stock-name">AAPL</div>
-                                     <div class="stock-fullname">Apple Inc.</div>
-                                 </div>
-                                 <div class="stock-performance positive">Chargement...</div>
-                             </div>
-                         </div>
-                     </div>
-                     
-                     <div id="top-daily-losers" class="top-stocks-content hidden">
-                         <div class="stock-cards-container">
-                             <!-- Les cartes seront générées dynamiquement ici -->
-                         </div>
-                     </div>
-                     
-                     <div id="top-ytd-gainers" class="top-stocks-content hidden">
-                         <div class="stock-cards-container">
-                             <!-- Les cartes seront générées dynamiquement ici -->
-                         </div>
-                     </div>
-                     
-                     <div id="top-ytd-losers" class="top-stocks-content hidden">
-                         <div class="stock-cards-container">
-                             <!-- Les cartes seront générées dynamiquement ici -->
-                         </div>
-                     </div>
-                 </div>
-                 
-                 <!-- Top Performers (ancien design, maintenu pour compatibilité) -->
-                 <div class="top-performers-section mb-10 hidden">
-                     <h2 class="top-performers-title mb-6">Top Performers du marché actuel</h2>
-                     
-                     <div class="top-performers-grid">
-                         <!-- Top 10 Hausse Quotidienne -->
-                         <div class="performer-card">
-                             <div class="performer-header">
-                                 <span>Top 10 Hausse (VAR %)</span>
-                                 <span class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
-                             </div>
-                             <div id="daily-top" class="performers-scroll">
-                                 <div class="performer-row">
-                                     <div class="performer-info">
-                                         <div class="performer-index">Chargement...</div>
-                                         <div class="performer-country"></div>
-                                     </div>
-                                     <div class="performer-value positive">-</div>
-                                 </div>
-                             </div>
-                         </div>
-                         
-                         <!-- Top 10 Baisse Quotidienne -->
-                         <div class="performer-card">
-                             <div class="performer-header">
-                                 <span>Top 10 Baisse (VAR %)</span>
-                                 <span class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
-                             </div>
-                             <div id="daily-bottom" class="performers-scroll">
-                                 <div class="performer-row">
-                                     <div class="performer-info">
-                                         <div class="performer-index">Chargement...</div>
-                                         <div class="performer-country"></div>
-                                     </div>
-                                     <div class="performer-value negative">-</div>
-                                 </div>
-                             </div>
-                         </div>
-                         
-                         <!-- Top 10 Hausse YTD -->
-                         <div class="performer-card">
-                             <div class="performer-header">
-                                 <span>Top 10 Hausse (YTD)</span>
-                                 <span class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
-                             </div>
-                             <div id="ytd-top" class="performers-scroll">
-                                 <div class="performer-row">
-                                     <div class="performer-info">
-                                         <div class="performer-index">Chargement...</div>
-                                         <div class="performer-country"></div>
-                                     </div>
-                                     <div class="performer-value positive">-</div>
-                                 </div>
-                             </div>
-                         </div>
-                         
-                         <!-- Top 10 Baisse YTD -->
-                         <div class="performer-card">
-                             <div class="performer-header">
-                                 <span>Top 10 Baisse (YTD)</span>
-                                 <span class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
-                             </div>
-                             <div id="ytd-bottom" class="performers-scroll">
-                                 <div class="performer-row">
-                                     <div class="performer-info">
-                                         <div class="performer-index">Chargement...</div>
-                                         <div class="performer-country"></div>
-                                     </div>
-                                     <div class="performer-value negative">-</div>
-                                 </div>
-                             </div>
-                         </div>
-                     </div>
-                 </div>
-                 
-                 <!-- Onglets alphabétiques (QUATRIÈME) -->
-                 <div class="mb-8">
-                     <h2 class="section-title mb-6">Actions par lettre</h2>
-                     
-                     <!-- Barre de recherche -->
-                     <div class="search-container mb-4">
-                         <div class="search-wrapper relative">
-                             <input type="text" id="stock-search" placeholder="Rechercher une action..." class="w-full py-3 px-12 bg-opacity-10 rounded-lg border border-opacity-30 text-white focus:outline-none focus:border-accent" autocomplete="off">
-                             <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-opacity-70"></i>
-                             <button id="clear-search" class="clear-btn absolute right-4 top-1/2 transform -translate-y-1/2 opacity-0 transition-opacity duration-200">
-                                 <i class="fas fa-times"></i>
-                             </button>
-                         </div>
-                         <div id="search-info" class="mt-2 text-sm opacity-70 hidden">
-                             <span id="search-count">0</span> résultats trouvés
-                         </div>
-                     </div>
-                     
-                     <div class="region-tabs mb-6">
-                         <div class="region-tab all-results" data-region="all">TOUS</div>
-                         <div class="region-tab active" data-region="a">A</div>
-                         <div class="region-tab" data-region="b">B</div>
-                         <div class="region-tab" data-region="c">C</div>
-                         <div class="region-tab" data-region="d">D</div>
-                         <div class="region-tab" data-region="e">E</div>
-                         <div class="region-tab" data-region="f">F</div>
-                         <div class="region-tab" data-region="g">G</div>
-                         <div class="region-tab" data-region="h">H</div>
-                         <div class="region-tab" data-region="i">I</div>
-                         <div class="region-tab" data-region="j">J</div>
-                         <div class="region-tab" data-region="k">K</div>
-                         <div class="region-tab" data-region="l">L</div>
-                         <div class="region-tab" data-region="m">M</div>
-                         <div class="region-tab" data-region="n">N</div>
-                         <div class="region-tab" data-region="o">O</div>
-                         <div class="region-tab" data-region="p">P</div>
-                         <div class="region-tab" data-region="q">Q</div>
-                         <div class="region-tab" data-region="r">R</div>
-                         <div class="region-tab" data-region="s">S</div>
-                         <div class="region-tab" data-region="t">T</div>
-                         <div class="region-tab" data-region="u">U</div>
-                         <div class="region-tab" data-region="v">V</div>
-                         <div class="region-tab" data-region="w">W</div>
-                         <div class="region-tab" data-region="x">X</div>
-                         <div class="region-tab" data-region="y">Y</div>
-                         <div class="region-tab" data-region="z">Z</div>
-                     </div>
-                     
-                     <!-- Conteneur pour le tableau des actions -->
-                     <div class="glassmorphism rounded-lg overflow-hidden">
-                         <div id="indices-loading" class="py-16 flex justify-center">
-                             <div class="loader"></div>
-                         </div>
-                         
-                         <div id="indices-error" class="py-16 text-center hidden">
-                             <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
-                             <p class="text-lg">Impossible de charger les données des actions.</p>
-                             <button id="retry-button" class="mt-4 search-button inline-flex items-center">
-                                 <i class="fas fa-sync-alt mr-2"></i>
-                                 Réessayer
-                             </button>
-                         </div>
-                         
-                         <div id="indices-container" class="hidden">
-                             <!-- Contenu pour chaque lettre -->
-                             <div id="a-indices" class="region-content">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="a-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- B -->
-                             <div id="b-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="b-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- C -->
-                             <div id="c-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="c-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- D -->
-                             <div id="d-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="d-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- E -->
-                             <div id="e-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="e-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- F -->
-                             <div id="f-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="f-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- G -->
-                             <div id="g-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="g-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- H -->
-                             <div id="h-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="h-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- I -->
-                             <div id="i-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="i-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- J -->
-                             <div id="j-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="j-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- K -->
-                             <div id="k-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="k-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- L -->
-                             <div id="l-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="l-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- M -->
-                             <div id="m-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="m-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- N -->
-                             <div id="n-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="n-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- O -->
-                             <div id="o-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="o-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- P -->
-                             <div id="p-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="p-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- Q -->
-                             <div id="q-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="q-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- R -->
-                             <div id="r-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="r-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- S -->
-                             <div id="s-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="s-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- T -->
-                             <div id="t-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="t-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- U -->
-                             <div id="u-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="u-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- V -->
-                             <div id="v-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="v-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- W -->
-                             <div id="w-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="w-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- X -->
-                             <div id="x-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="x-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- Y -->
-                             <div id="y-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="y-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                             
-                             <!-- Z -->
-                             <div id="z-indices" class="region-content hidden">
-                                 <div class="overflow-x-auto">
-                                     <table class="data-table">
-                                         <thead>
-                                             <tr>
-                                                 <th>LIBELLÉ</th>
-                                                 <th>DERNIER</th>
-                                                 <th>VAR %</th>
-                                                 <th>OUVERTURE</th>
-                                                 <th>PLUS HAUT</th>
-                                                 <th>PLUS BAS</th>
-                                                 <th>VAR/1JANV</th>
-                                                 <th>VOLUME</th>
-                                             </tr>
-                                         </thead>
-                                         <tbody id="z-indices-body">
-                                             <!-- Les données seront injectées ici -->
-                                         </tbody>
-                                     </table>
-                                 </div>
-                             </div>
-                         </div>
-                     </div>
-                 </div>
-                 
-                 <!-- Source et avertissement -->
-                 <div class="text-center text-sm text-gray-400 mb-6 p-4 glassmorphism rounded-lg bg-opacity-50">
-                     <p id="source-link">Sources: <a href="https://www.boursorama.com/bourse/actions/cotations/international/?international_quotation_az_filter%5Bcountry%5D=1&international_quotation_az_filter%5Bmarket%5D=%24COMPX" target="_blank" class="text-green-400 hover:underline">Boursorama</a></p>
-                     <p class="mt-2">Les données sont actualisées régulièrement mais peuvent accuser un retard par rapport aux marchés en temps réel.</p>
-                 </div>
-             </div>
-         </div>
-     </main>
-
-     <script src="liste-script.js"></script>
-     
-     <!-- Script pour gérer les onglets du top 10 -->
-     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Gestion des onglets pour le top 10 principal
-            const topTabsButtons = document.querySelectorAll('.top-tab-btn');
-            
-            topTabsButtons.forEach(button => {
-                button.addEventListener('click', function() {
-                    // Identifier le groupe d'onglets (s'il y a plusieurs sections)
-                    const parentContainer = this.closest('.top-stocks-container');
-                    
-                    // Désactiver tous les boutons du même groupe
-                    const buttons = parentContainer.querySelectorAll('.top-tab-btn');
-                    buttons.forEach(btn => btn.classList.remove('active'));
-                    
-                    // Activer le bouton actuel
-                    this.classList.add('active');
-                    
-                    // Récupérer l'identifiant de l'onglet
-                    const tabId = this.getAttribute('data-index');
-                    
-                    // Masquer tous les contenus du même groupe
-                    const contents = parentContainer.querySelectorAll('.top-stocks-content');
-                    contents.forEach(content => content.classList.add('hidden'));
-                    
-                    // Afficher le contenu correspondant
-                    const targetContent = document.getElementById(`top-${tabId}`);
-                    if (targetContent) {
-                        targetContent.classList.remove('hidden');
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradePulse - Actions NASDAQ Composite</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Script de déduplication ajouté pour résoudre le problème des doublons -->
+    <script src="deduplicate-fix.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        green: {
+                            400: '#00FF87'
+                        }
                     }
-                });
-            });
-            
-            // Mettre à jour le nom du marché actuel
-            function updateMarketName() {
-                const marketNameElement = document.getElementById('current-market-name');
-                if (marketNameElement) {
-                    const nasdaqActive = document.getElementById('market-nasdaq')?.classList.contains('active');
-                    marketNameElement.textContent = nasdaqActive ? 'NASDAQ' : 'DJ STOXX';
+                },
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif']
                 }
             }
+        }
+    </script>
+    <style>
+        :root {
+            --background-color: #0a1929; /* Bleu nuit plus profond */
+            --light-background-color: #f0f5ff;
+            --text-color: #FFFFFF;
+            --light-text-color: #1a202c;
+            --accent-color: #00FF87; /* Vert néon */
+            --accent-subtle: rgba(0, 255, 135, 0.15);
+            --accent-medium: rgba(0, 255, 135, 0.3);
+            --accent-strong: rgba(0, 255, 135, 0.6);
+            --card-bg: rgba(10, 30, 50, 0.6);
+            --card-header: rgba(15, 40, 65, 0.8);
+            --card-border: rgba(0, 255, 135, 0.2);
+            --accent-glow: 0 0 15px rgba(0, 255, 135, 0.2);
+            --accent-glow-strong: 0 0 20px rgba(0, 255, 135, 0.3);
+            --transition-time: 0.3s;
+            --header-height: 70px;
+            --sidebar-width: 80px;
+            --negative-color: #ff4757;
+            --neutral-color: #aaaaaa;
+            --separator-color: rgba(255, 255, 255, 0.07);
+        }
+        
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+            letter-spacing: 0.01em;
+            line-height: 1.6;
+        }
+        
+        body.dark {
+            background-color: var(--background-color);
+            background-image: 
+                radial-gradient(circle at 15% 50%, rgba(0, 255, 135, 0.08) 0%, transparent 25%),
+                radial-gradient(circle at 85% 30%, rgba(0, 100, 255, 0.05) 0%, transparent 20%);
+            color: var(--text-color);
+        }
+        
+        body.light {
+            background-color: var(--light-background-color);
+            color: var(--light-text-color);
+        }
+        
+        /* Header */
+        .main-header {
+            position: fixed;
+            top: 0;
+            left: var(--sidebar-width);
+            right: 0;
+            height: var(--header-height);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 40px;
+            z-index: 100;
+            transition: all 0.3s ease;
+        }
+        
+        .dark .main-header {
+            background-color: rgba(10, 25, 41, 0.85);
+            border-bottom: 1px solid var(--card-border);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .light .main-header {
+            background-color: rgba(240, 245, 255, 0.9);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo-container {
+            display: flex;
+            align-items: center;
+            font-weight: 900;
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+        }
+        
+        .logo-container a {
+            text-decoration: none;
+            $transition: color 0.3s ease;
+        }
+        
+        .dark .logo-container a {
+            color: var(--text-color);
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+        }
+        
+        .light .logo-container a {
+            color: var(--light-text-color);
+        }
+        
+        .pulse-dot {
+            width: 12px;
+            height: 12px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 10px var(--accent-color);
+            animation: pulse 2s infinite;
+        }
+        
+        .main-nav {
+            display: flex;
+            margin-left: 40px;
+        }
+        
+        .main-nav a {
+            margin-right: 30px;
+            padding: 8px 5px;
+            font-weight: 500;
+            position: relative;
+            transition: color 0.3s;
+            text-decoration: none;
+        }
+        
+        .dark .main-nav a {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .light .main-nav a {
+            color: var(--light-text-color);
+        }
+        
+        .main-nav a::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background-color: var(--accent-color);
+            transition: width 0.3s;
+        }
+        
+        .main-nav a:hover::after,
+        .main-nav a.active::after {
+            width: 100%;
+        }
+        
+        .main-nav a.active {
+            color: var(--accent-color);
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+        }
+        
+        .market-status {
+            display: flex;
+            align-items: center;
+            margin-right: 30px;
+            font-size: 0.875rem;
+            transition: color 0.3s ease;
+        }
+        
+        .dark .market-status {
+            color: var(--text-color);
+        }
+        
+        .light .market-status {
+            color: var(--light-text-color);
+        }
+        
+        .market-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .market-indicator.green {
+            background-color: #4CAF50;
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+        }
+        
+        .market-time {
+            margin-left: 10px;
+            font-weight: 600;
+            color: var(--accent-color);
+        }
+        
+        .search-button {
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+        
+        .dark .search-button {
+            background-color: var(--accent-subtle);
+            border: 1px solid var(--accent-medium);
+            color: var(--text-color);
+        }
+        
+        .light .search-button {
+            background-color: rgba(0, 210, 110, 0.1);
+            border: 1px solid rgba(0, 210, 110, 0.3);
+            color: var(--light-text-color);
+        }
+        
+        .search-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--accent-glow);
+        }
+        
+        .dark .search-button:hover {
+            background-color: var(--accent-medium);
+        }
+        
+        .light .search-button:hover {
+            background-color: rgba(0, 210, 110, 0.2);
+        }
+        
+        .search-button i {
+            margin-right: 8px;
+            color: var(--accent-color);
+        }
+        
+        /* Sidebar de navigation verticale */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px 0;
+            z-index: 101;
+            transition: background-color 0.3s ease, border-right 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .dark .sidebar {
+            background-color: rgba(8, 20, 35, 0.95);
+            border-right: 1px solid var(--card-border);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .light .sidebar {
+            background-color: rgba(230, 240, 255, 0.95);
+            border-right: 1px solid rgba(0, 0, 0, 0.1);
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .sidebar-logo {
+            font-size: 1.5rem;
+            font-weight: 900;
+            color: var(--accent-color);
+            margin-bottom: 40px;
+            text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
+        }
+        
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+        }
+        
+        .nav-item {
+            margin-bottom: 24px;
+            width: 42px;
+            height: 42px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 10px;
+            transition: all 0.3s;
+            position: relative;
+            text-decoration: none;
+        }
+
+        /* Notification badge for alerts */
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 10px;
+            height: 10px;
+            background-color: #ff4757;
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(255, 71, 87, 0.6);
+        }
+        
+        .dark .nav-item {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .light .nav-item {
+            color: rgba(0, 0, 0, 0.7);
+        }
+        
+        .dark .nav-item:hover, .dark .nav-item.active {
+            background-color: var(--accent-subtle);
+            color: var(--accent-color);
+            box-shadow: var(--accent-glow);
+            transform: translateY(-2px);
+        }
+        
+        .light .nav-item:hover, .light .nav-item.active {
+            background-color: rgba(0, 210, 110, 0.1);
+            color: var(--accent-color);
+        }
+        
+        .nav-item i {
+            font-size: 1.2rem;
+        }
+        
+        /* Mode sombre/clair toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .theme-toggle-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: all 0.3s ease;
+        }
+        
+        .dark .theme-toggle-btn {
+            color: var(--text-color);
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .light .theme-toggle-btn {
+            color: var(--light-text-color);
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+        
+        .theme-toggle-btn:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Main container */
+        .main-container {
+            margin-left: var(--sidebar-width);
+            margin-top: var(--header-height);
+            padding: 24px;
+            min-height: calc(100vh - var(--header-height));
+            transition: background-color 0.3s ease;
+        }
+
+        /* Glassmorphism cards */
+        .glassmorphism {
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--card-border);
+            box-shadow: var(--accent-glow);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .dark .glassmorphism {
+            background-color: var(--card-bg);
+        }
+        
+        .light .glassmorphism {
+            background-color: rgba(240, 245, 255, 0.8);
+        }
+        
+        .glassmorphism:hover {
+            box-shadow: var(--accent-glow-strong);
+        }
+
+        /* Data table styles */
+        .data-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        .data-table th {
+            padding: 14px 16px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-align: left;
+            border-bottom: 1px solid var(--card-border);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: rgba(255, 255, 255, 0.8);
+            background-color: var(--card-header);
+        }
+        
+        .data-table td {
+            padding: 16px;
+            font-size: 0.9rem;
+            border-bottom: 1px solid var(--separator-color);
+        }
+        
+        .data-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .data-table tr:hover td {
+            background-color: var(--accent-subtle);
+        }
+
+        /* Positive, negative, and neutral values */
+        .positive {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+        
+        .negative {
+            color: var(--negative-color);
+            font-weight: 600;
+        }
+        
+        .neutral {
+            color: var(--neutral-color);
+            font-weight: 600;
+        }
+
+        /* Top performers */
+        .top-performers-section {
+            margin-bottom: 2rem;
+        }
+        
+        .top-performers-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: center;
+        }
+        
+        .top-performers-title::before {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 3px;
+            background-color: var(--accent-color);
+            margin-right: 10px;
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+        
+        .top-performers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-gap: 20px;
+        }
+        
+        .performer-card {
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .performer-header {
+            background-color: rgba(25, 45, 70, 0.9);
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 600;
+            color: white;
+            border-bottom: 1px solid var(--card-border);
+        }
+        
+        .performer-row {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--separator-color);
+            display: flex;
+            justify-content: space-between;
+            transition: background-color 0.2s;
+        }
+        
+        .performer-row:hover {
+            background-color: rgba(15, 40, 70, 0.8);
+        }
+        
+        .performer-row:last-child {
+            border-bottom: none;
+        }
+        
+        .performer-info {
+            flex: 1;
+        }
+        
+        .performer-index {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 3px;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .performer-country {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .performer-value {
+            font-weight: 700;
+            text-align: right;
+            min-width: 62px;
+        }
+
+        /* Autres styles */
+        .section-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            color: white;
+            display: flex;
+            align-items: center;
+        }
+        
+        .section-title::before {
+            content: '';
+            display: inline-block;
+            width: 24px;
+            height: 3px;
+            background-color: var(--accent-color);
+            margin-right: 10px;
+            border-radius: 2px;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+
+        /* Cards with consistent headers */
+        .card-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--card-border);
+            background-color: var(--card-header);
+            border-top-left-radius: 0.5rem;
+            border-top-right-radius: 0.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card-header h3 {
+            font-weight: 600;
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .card-body {
+            padding: 16px;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
+        }
+
+        /* Loader */
+        .loader {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 3px solid rgba(0, 255, 135, 0.2);
+            border-radius: 50%;
+            border-top-color: var(--accent-color);
+            border-left-color: var(--accent-color);
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+            box-shadow: 0 0 15px rgba(0, 255, 135, 0.2);
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        /* Alphabet Tabs */
+        .region-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            border-bottom: 1px solid var(--card-border);
+            margin-bottom: 24px;
+            background-color: var(--card-header);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .region-tab {
+            padding: 14px;
+            cursor: pointer;
+            position: relative;
+            font-weight: 500;
+            opacity: 0.7;
+            transition: all 0.3s ease;
+            letter-spacing: 0.02em;
+        }
+        
+        .region-tab:hover {
+            background-color: var(--accent-subtle);
+            opacity: 0.9;
+        }
+        
+        .region-tab.active {
+            opacity: 1;
+            color: var(--accent-color);
+            background-color: var(--accent-subtle);
+        }
+        
+        .region-tab::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 3px;
+            background-color: var(--accent-color);
+            transition: width 0.3s ease;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+        
+        .region-tab.active::after {
+            width: 100%;
+        }
+
+        /* Button styling */
+        .action-button {
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            background-color: var(--accent-subtle);
+            color: var(--accent-color);
+            border: 1px solid var(--accent-medium);
+        }
+        
+        .action-button:hover {
+            background-color: var(--accent-medium);
+            transform: translateY(-1px);
+        }
+        
+        /* Market Selector */
+        .market-selector {
+            margin-bottom: 24px;
+        }
+        
+        .market-selector-buttons {
+            display: flex;
+            gap: 16px;
+        }
+        
+        .market-btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            flex-grow: 1;
+            text-align: center;
+            border: 2px solid transparent;
+        }
+        
+        .dark .market-btn {
+            background-color: var(--accent-subtle);
+            color: rgba(255, 255, 255, 0.8);
+        }
+        
+        .light .market-btn {
+            background-color: rgba(0, 210, 110, 0.1);
+            color: var(--light-text-color);
+        }
+        
+        .market-btn.active {
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+            box-shadow: var(--accent-glow);
+        }
+        
+        .market-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        /* Pagination Styling */
+        .pagination-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .pagination-button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+        
+        .dark .pagination-button {
+            background-color: var(--accent-subtle);
+            color: var(--text-color);
+            border: 1px solid var(--accent-medium);
+        }
+        
+        .light .pagination-button {
+            background-color: rgba(0, 210, 110, 0.1);
+            border: 1px solid rgba(0, 210, 110, 0.3);
+            color: var(--light-text-color);
+        }
+        
+        .pagination-button:not(:disabled):hover {
+            transform: translateY(-2px);
+            box-shadow: var(--accent-glow);
+        }
+        
+        .pagination-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .pagination-info {
+            margin: 0 16px;
+            font-weight: 500;
+        }
+        
+        /* Styles pour la barre de recherche */
+        .search-container {
+            max-width: 100%;
+            margin-bottom: 24px;
+        }
+        
+        .search-wrapper {
+            max-width: 100%;
+            position: relative;
+        }
+        
+        .dark #stock-search {
+            background-color: rgba(255, 255, 255, 0.07);
+            border-color: var(--card-border);
+            color: var(--text-color);
+        }
+        
+        .light #stock-search {
+            background-color: rgba(0, 0, 0, 0.05);
+            border-color: rgba(0, 0, 0, 0.1);
+            color: var(--light-text-color);
+        }
+        
+        #stock-search:focus {
+            border-color: var(--accent-color);
+            box-shadow: var(--accent-glow);
+        }
+        
+        .dark .search-wrapper i {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        
+        .light .search-wrapper i {
+            color: rgba(0, 0, 0, 0.5);
+        }
+        
+        .clear-btn {
+            cursor: pointer;
+            padding: 5px;
+            font-size: 14px;
+        }
+        
+        .clear-btn:hover {
+            color: var(--accent-color);
+        }
+        
+        /* Styles pour les résultats de recherche */
+        .search-highlight {
+            background-color: var(--accent-subtle);
+            animation: highlight-pulse 2s infinite;
+        }
+        
+        @keyframes highlight-pulse {
+            0% { background-color: var(--accent-subtle); }
+            50% { background-color: var(--accent-medium); }
+            100% { background-color: var(--accent-subtle); }
+        }
+        
+        .no-results {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: var(--text-secondary);
+        }
+        
+        /* État actif pour la lettre "Tous" */
+        .region-tab.all-results {
+            font-weight: 600;
+        }
+        
+        .region-tab.all-results.active {
+            color: var(--accent-color);
+        }
+
+        /* Scroll personnalisé pour les cartes top performers */
+        .performers-scroll {
+            max-height: 410px;
+            overflow-y: auto;
+        }
+        
+        .performers-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .performers-scroll::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+        
+        .performers-scroll::-webkit-scrollbar-thumb {
+            background: var(--accent-subtle);
+            border-radius: 3px;
+        }
+        
+        .performers-scroll::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-medium);
+        }
+        
+        /* Styles pour le top 10 redessiné */
+        .top-stocks-container {
+            max-width: 100%;
+            margin-bottom: 2rem;
+        }
+        
+        .index-tabs {
+            display: flex;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px solid var(--card-border);
+            background-color: var(--card-header);
+            border-radius: 8px 8px 0 0;
+            overflow: hidden;
+        }
+        
+        .top-tab-btn {
+            padding: 14px 20px;
+            cursor: pointer;
+            position: relative;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            background: none;
+            color: var(--text-color);
+            opacity: 0.7;
+        }
+        
+        .top-tab-btn:hover {
+            background-color: var(--accent-subtle);
+            opacity: 0.9;
+        }
+        
+        .top-tab-btn.active {
+            color: var(--accent-color);
+            background-color: var(--accent-subtle);
+            opacity: 1;
+        }
+        
+        .top-tab-btn::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 0;
+            height: 3px;
+            background-color: var(--accent-color);
+            transition: width 0.3s;
+            box-shadow: 0 0 8px var(--accent-color);
+        }
+        
+        .top-tab-btn.active::after {
+            width: 100%;
+        }
+        
+        .stock-cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        
+        .stock-card {
+            display: flex;
+            align-items: center;
+            background-color: var(--card-bg);
+            border-radius: 12px;
+            padding: 16px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid var(--card-border);
+        }
+        
+        .stock-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--accent-glow);
+        }
+        
+        .rank {
+            width: 30px;
+            height: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-right: 16px;
+            background-color: var(--accent-subtle);
+            color: var(--accent-color);
+        }
+        
+        .stock-info {
+            flex-grow: 1;
+        }
+        
+        .stock-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .stock-fullname {
+            font-size: 0.85rem;
+            opacity: 0.7;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 180px;
+        }
+        
+        .stock-performance {
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        /* Top 3 en évidence */
+        .stock-card:nth-child(-n+3) .rank {
+            background-color: var(--accent-medium);
+            color: white;
+            box-shadow: 0 0 10px rgba(0, 255, 135, 0.4);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-header {
+                left: 0;
+                padding: 0 20px;
+            }
             
-            // Observer les changements sur les boutons de marché
-            const marketButtons = document.querySelectorAll('.market-btn');
-            marketButtons.forEach(button => {
-                button.addEventListener('click', updateMarketName);
+            .sidebar {
+                width: 100%;
+                height: auto;
+                flex-direction: row;
+                padding: 10px 20px;
+                justify-content: space-between;
+                position: fixed;
+                bottom: 0;
+                top: auto;
+                border-top: 1px solid var(--card-border);
+                border-right: none;
+            }
+            
+            .sidebar-logo {
+                display: none;
+            }
+            
+            .sidebar-nav {
+                flex-direction: row;
+                justify-content: space-around;
+                width: 100%;
+                margin: 0;
+            }
+            
+            .nav-item {
+                margin: 0;
+            }
+            
+            .main-container {
+                margin-left: 0;
+                margin-top: calc(var(--header-height));
+                margin-bottom: 60px;
+            }
+            
+            .main-nav {
+                display: none;
+            }
+            
+            .region-tabs {
+                overflow-x: auto;
+                white-space: nowrap;
+            }
+            
+            .top-performers-grid {
+                grid-template-columns: 1fr;
+                gap: 12px;
+            }
+            
+            .market-selector-buttons {
+                flex-direction: column;
+            }
+            
+            .stock-cards-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .index-tabs {
+                overflow-x: auto;
+                flex-wrap: nowrap;
+            }
+        }
+    </style>
+
+    <!-- NOUVELLES ANIMATIONS INTÉGRÉES -->
+    <style>
+    /* DYNAMIC ANIMATIONS CSS - Améliorations visuelles */
+    /* ===== CARTES TOP PERFORMERS ===== */
+    .stock-card {
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        transform-origin: center bottom;
+        box-shadow: 0 6px 15px rgba(0, 255, 135, 0.1);
+        border: 1px solid var(--card-border);
+        animation: cardAppear 0.6s forwards;
+    }
+
+    @keyframes cardAppear {
+        0% { transform: translateY(30px); opacity: 0; }
+        100% { transform: translateY(0); opacity: 1; }
+    }
+
+    .stock-card:nth-child(1) { animation-delay: 0.1s; }
+    .stock-card:nth-child(2) { animation-delay: 0.15s; }
+    .stock-card:nth-child(3) { animation-delay: 0.2s; }
+    .stock-card:nth-child(4) { animation-delay: 0.25s; }
+    .stock-card:nth-child(5) { animation-delay: 0.3s; }
+    .stock-card:nth-child(6) { animation-delay: 0.35s; }
+    .stock-card:nth-child(7) { animation-delay: 0.4s; }
+    .stock-card:nth-child(8) { animation-delay: 0.45s; }
+    .stock-card:nth-child(9) { animation-delay: 0.5s; }
+    .stock-card:nth-child(10) { animation-delay: 0.55s; }
+
+    .stock-card:hover {
+        transform: translateY(-8px) scale(1.03);
+        box-shadow: 0 15px 25px rgba(0, 255, 135, 0.2);
+        z-index: 10;
+    }
+
+    .stock-card:nth-child(-n+3) .rank {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stock-card:nth-child(-n+3) .rank::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: conic-gradient(transparent, rgba(0, 255, 135, 0.4), transparent);
+        animation: rotateGlow 4s linear infinite;
+    }
+
+    @keyframes rotateGlow {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    /* ===== INDICATEURS DE PERFORMANCE ===== */
+    .positive, .negative {
+        position: relative;
+        transition: all 0.3s ease;
+    }
+
+    .positive::before {
+        content: '↑';
+        position: absolute;
+        left: -12px;
+        opacity: 0;
+        transition: all 0.3s ease;
+    }
+
+    .negative::before {
+        content: '↓';
+        position: absolute;
+        left: -12px;
+        opacity: 0;
+        transition: all 0.3s ease;
+    }
+
+    .positive:hover::before, .negative:hover::before {
+        opacity: 1;
+        transform: translateX(-3px);
+    }
+
+    .positive {
+        animation: pulsateGreen 2s infinite;
+    }
+
+    .negative {
+        animation: pulsateRed 2s infinite;
+    }
+
+    @keyframes pulsateGreen {
+        0% { text-shadow: 0 0 0 rgba(0, 255, 135, 0); }
+        50% { text-shadow: 0 0 10px rgba(0, 255, 135, 0.5); }
+        100% { text-shadow: 0 0 0 rgba(0, 255, 135, 0); }
+    }
+
+    @keyframes pulsateRed {
+        0% { text-shadow: 0 0 0 rgba(255, 71, 87, 0); }
+        50% { text-shadow: 0 0 10px rgba(255, 71, 87, 0.5); }
+        100% { text-shadow: 0 0 0 rgba(255, 71, 87, 0); }
+    }
+
+    /* ===== TABLEAU DYNAMIQUE ===== */
+    .data-table td {
+        transition: background-color 0.3s ease, transform 0.2s ease;
+    }
+
+    .data-table tr:hover td {
+        background-color: var(--accent-subtle);
+        transform: scale(1.01);
+    }
+
+    .data-table tr {
+        animation: tableRowFade 0.5s forwards;
+        opacity: 0;
+    }
+
+    @keyframes tableRowFade {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    .data-table tr:nth-child(1) { animation-delay: 0.05s; }
+    .data-table tr:nth-child(2) { animation-delay: 0.1s; }
+    .data-table tr:nth-child(3) { animation-delay: 0.15s; }
+    .data-table tr:nth-child(4) { animation-delay: 0.2s; }
+    .data-table tr:nth-child(5) { animation-delay: 0.25s; }
+    .data-table tr:nth-child(6) { animation-delay: 0.3s; }
+    .data-table tr:nth-child(7) { animation-delay: 0.35s; }
+    .data-table tr:nth-child(8) { animation-delay: 0.4s; }
+    .data-table tr:nth-child(9) { animation-delay: 0.45s; }
+    .data-table tr:nth-child(10) { animation-delay: 0.5s; }
+
+    .data-table td:hover {
+        background-color: var(--accent-medium) !important;
+        transform: scale(1.03);
+        z-index: 5;
+    }
+
+    /* ===== NAVIGATION ALPHABÉTIQUE ===== */
+    .region-tab {
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .region-tab::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 150px;
+        height: 150px;
+        background: radial-gradient(circle, var(--accent-color) 0%, transparent 70%);
+        border-radius: 50%;
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .region-tab:active::after {
+        animation: rippleEffect 0.5s ease-out;
+    }
+
+    @keyframes rippleEffect {
+        0% { transform: translate(-50%, -50%) scale(0); opacity: 0.4; }
+        100% { transform: translate(-50%, -50%) scale(1); opacity: 0; }
+    }
+
+    .region-tab.active::before {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: var(--accent-color);
+        transform-origin: center;
+        animation: activateTab 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    @keyframes activateTab {
+        0% { transform: scaleX(0); }
+        100% { transform: scaleX(1); }
+    }
+
+    /* ===== BOUTONS DE MARCHÉ ===== */
+    .market-btn {
+        position: relative;
+        overflow: hidden;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .market-btn.active {
+        transform: translateY(-3px);
+    }
+
+    .market-btn.active::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image:
+            radial-gradient(circle at 20% 30%, var(--accent-subtle) 0%, transparent 14%),
+            radial-gradient(circle at 50% 80%, var(--accent-subtle) 0%, transparent 15%),
+            radial-gradient(circle at 80% 40%, var(--accent-subtle) 0%, transparent 12%);
+        z-index: -1;
+        animation: particleMove 8s linear infinite;
+    }
+
+    @keyframes particleMove {
+        0% { background-position: 0% 0%, 0% 0%, 0% 0%; }
+        100% { background-position: 10% 20%, -15% -10%, 20% 10%; }
+    }
+
+    /* ===== LOADER AMÉLIORÉ ===== */
+    .loader {
+        border: 3px solid rgba(0, 255, 135, 0.2);
+        border-top-color: var(--accent-color);
+        animation: spin 1.2s cubic-bezier(0.68, -0.55, 0.27, 1.55) infinite;
+        position: relative;
+    }
+
+    .loader::before {
+        content: '';
+        position: absolute;
+        top: -8px;
+        left: -8px;
+        right: -8px;
+        bottom: -8px;
+        border-radius: 50%;
+        background: radial-gradient(circle, transparent 60%, var(--accent-subtle) 80%, transparent 100%);
+        animation: pulse 2s ease-in-out infinite;
+        z-index: -1;
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(0.85); opacity: 0.6; }
+        50% { transform: scale(1.05); opacity: 0.3; }
+        100% { transform: scale(0.85); opacity: 0.6; }
+    }
+
+    /* ===== BARRE DE RECHERCHE ===== */
+    .search-wrapper {
+        position: relative;
+        transition: all 0.3s ease;
+    }
+
+    .search-wrapper:focus-within {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(0, 255, 135, 0.15);
+    }
+
+    .search-icon {
+        transition: all 0.3s ease;
+    }
+
+    .search-wrapper:focus-within .search-icon {
+        color: var(--accent-color) !important;
+        transform: translateY(-50%) scale(1.1);
+    }
+
+    .search-focus-indicator {
+        position: absolute;
+        bottom: 0;
+        left: 10%;
+        width: 80%;
+        height: 2px;
+        background: var(--accent-color);
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+        transform-origin: center;
+    }
+
+    .search-wrapper:focus-within .search-focus-indicator {
+        transform: scaleX(1);
+    }
+
+    /* ===== RÉSULTATS DE RECHERCHE ===== */
+    .search-highlight {
+        position: relative;
+        animation: highlightPulse 2s infinite;
+    }
+
+    @keyframes highlightPulse {
+        0% { background-color: var(--accent-subtle); }
+        50% { background-color: var(--accent-medium); }
+        100% { background-color: var(--accent-subtle); }
+    }
+
+    .search-highlight td {
+        animation: highlightEntrance 0.5s ease forwards;
+    }
+
+    @keyframes highlightEntrance {
+        0% {
+            opacity: 0.5;
+            transform: scale(0.98);
+            box-shadow: 0 0 0 rgba(0, 255, 135, 0);
+        }
+        10% {
+            opacity: 1;
+            transform: scale(1.02);
+            box-shadow: 0 0 15px rgba(0, 255, 135, 0.3);
+        }
+        100% {
+            opacity: 1;
+            transform: scale(1);
+            box-shadow: 0 0 5px rgba(0, 255, 135, 0.1);
+        }
+    }
+
+    /* ===== HEADER AMÉLIORÉ ===== */
+    .main-header {
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        box-shadow: 0 5px 30px rgba(0, 0, 0, 0.2);
+        border-bottom: 1px solid var(--card-border);
+        animation: headerReveal 0.8s forwards;
+    }
+
+    @keyframes headerReveal {
+        0% { transform: translateY(-100%); }
+        100% { transform: translateY(0); }
+    }
+
+    .pulse-dot {
+        position: relative;
+    }
+
+    .pulse-dot::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 24px;
+        height: 24px;
+        background-color: transparent;
+        border-radius: 50%;
+        border: 2px solid var(--accent-color);
+        transform: translate(-50%, -50%);
+        animation: dotPulse 2s infinite;
+    }
+
+    @keyframes dotPulse {
+        0% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.6; }
+        50% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
+        100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.6; }
+    }
+
+    @keyframes ripple-effect {
+        0% { transform: scale(0); opacity: 1; }
+        100% { transform: scale(4); opacity: 0; }
+    }
+    </style>
+</head>
+<body class="dark">
+    <!-- Bouton du sélecteur de thème -->
+    <div class="theme-toggle">
+        <button id="theme-toggle-btn" class="theme-toggle-btn">
+            <i class="fas fa-moon" id="dark-icon"></i>
+            <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar de navigation verticale -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">TP</div>
+        <nav class="sidebar-nav">
+            <a href="actualites.html" class="nav-item" title="Actualités">
+                <i class="fas fa-newspaper"></i>
+            </a>
+            <a href="portefeuille.html" class="nav-item" title="Portefeuilles">
+                <i class="fas fa-chart-pie"></i>
+            </a>
+            <a href="dashboard.html" class="nav-item" title="Tableau de bord">
+                <i class="fas fa-tachometer-alt"></i>
+            </a>
+            <a href="marches.html" class="nav-item" title="Marchés">
+                <i class="fas fa-chart-line"></i>
+            </a>
+            <a href="liste.html" class="nav-item active" title="Liste">
+                <i class="fas fa-list-ul"></i>
+            </a>
+            <a href="email-preview.html" class="nav-item" title="Alertes">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge"></span>
+            </a>
+            <a href="parametres.html" class="nav-item" title="Paramètres">
+                <i class="fas fa-cog"></i>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Header principal -->
+    <header class="main-header">
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="pulse-dot"></div>
+                <a href="index.html">TRADEPULSE</a>
+            </div>
+            <nav class="main-nav">
+                <a href="actualites.html">Actualités</a>
+                <a href="portefeuille.html">Portefeuilles</a>
+                <a href="dashboard.html">Tableau de bord</a>
+                <a href="marches.html">Marchés</a>
+                <a href="liste.html" class="active">Liste</a>
+            </nav>
+        </div>
+        <div class="header-right">
+            <div class="market-status">
+                <div class="market-indicator green"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time" id="marketTime">09:45:22</span>
+            </div>
+            <a href="recherche.html" class="search-button ripple">
+                <i class="fas fa-search"></i>
+                <span>Ma question</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Container principal -->
+    <main class="main-container">
+        <div class="p-6">
+            <div class="max-w-7xl mx-auto">
+                <!-- Header avec titre et dernière mise à jour -->
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+                    <div>
+                        <h1 class="text-3xl font-bold mb-2" id="market-title">Actions NASDAQ Composite (États-Unis)</h1>
+                        <p class="text-gray-400">
+                           <span id="stocks-count" class="font-semibold">0</span> actions listées | 
+                           Dernière mise à jour: <span id="last-update-time" class="font-medium">Chargement...</span>
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Top 10 Global Redessiné (PREMIER) -->
+                <div class="top-stocks-container mb-10">
+                    <h2 class="section-title mb-4">Top 10 Performance Globale (NASDAQ + STOXX)</h2>
+                    
+                    <!-- Onglets pour changer de vue -->
+                    <div class="index-tabs">
+                        <button class="top-tab-btn active" data-index="global-gainers">
+                            <i class="fas fa-arrow-up text-green-400 mr-2"></i> Hausses du jour
+                        </button>
+                        <button class="top-tab-btn" data-index="global-losers">
+                            <i class="fas fa-arrow-down text-red-500 mr-2"></i> Baisses du jour
+                        </button>
+                        <button class="top-tab-btn" data-index="global-ytd-gainers">
+                            <i class="fas fa-calendar-check text-blue-400 mr-2"></i> Hausses YTD
+                        </button>
+                        <button class="top-tab-btn" data-index="global-ytd-losers">
+                            <i class="fas fa-calendar-times text-orange-400 mr-2"></i> Baisses YTD
+                        </button>
+                    </div>
+                    
+                    <!-- Conteneurs pour chaque vue (seul le premier est visible par défaut) -->
+                    <div id="top-global-gainers" class="top-stocks-content">
+                        <div class="stock-cards-container">
+                            <!-- Les cartes seront générées dynamiquement ici -->
+                            <div class="stock-card">
+                                <div class="rank">#1</div>
+                                <div class="stock-info">
+                                    <div class="stock-name">Chargement <i class="fas fa-spinner fa-spin ml-1"></i></div>
+                                    <div class="stock-fullname">Récupération des données globales...</div>
+                                </div>
+                                <div class="stock-performance positive">-</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="top-global-losers" class="top-stocks-content hidden">
+                        <div class="stock-cards-container">
+                            <!-- Les cartes seront générées dynamiquement ici -->
+                        </div>
+                    </div>
+                    
+                    <div id="top-global-ytd-gainers" class="top-stocks-content hidden">
+                        <div class="stock-cards-container">
+                            <!-- Les cartes seront générées dynamiquement ici -->
+                        </div>
+                    </div>
+                    
+                    <div id="top-global-ytd-losers" class="top-stocks-content hidden">
+                        <div class="stock-cards-container">
+                            <!-- Les cartes seront générées dynamiquement ici -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Sélecteur de marché (DEUXIÈME) -->
+                <div class="market-selector mb-8">
+                    <h2 class="section-title mb-4">Sélectionner un marché</h2>
+                    <div class="market-selector-buttons">
+                        <button id="market-nasdaq" class="market-btn active" data-market="nasdaq">
+                            <i class="fas fa-flag-usa mr-2"></i> NASDAQ Composite (US)
+                        </button>
+                        <button id="market-stoxx" class="market-btn" data-market="stoxx">
+                            <i class="fas fa-globe-europe mr-2"></i> DJ STOXX 600 (Europe)
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Pagination (pour STOXX 600) - Déplacé sous le sélecteur de marché -->
+                <div id="pagination-container" class="pagination-container hidden">
+                    <button id="prev-page" class="pagination-button" disabled>
+                        <i class="fas fa-chevron-left mr-2"></i> Page précédente
+                    </button>
+                    <div class="pagination-info">
+                        Page <span id="current-page">1</span> / <span id="total-pages">1</span>
+                    </div>
+                    <button id="next-page" class="pagination-button">
+                        Page suivante <i class="fas fa-chevron-right ml-2"></i>
+                    </button>
+                </div>
+                
+                <!-- Top 10 Redessiné (TROISIÈME) -->
+                <div class="top-stocks-container mb-10">
+                    <h2 class="section-title mb-4">Top 10 Performance du <span id="current-market-name">NASDAQ</span></h2>
+                    
+                    <!-- Onglets pour changer de vue -->
+                    <div class="index-tabs">
+                        <button class="top-tab-btn active" data-index="daily-gainers">
+                            <i class="fas fa-arrow-up text-green-400 mr-2"></i> Hausses du jour
+                        </button>
+                        <button class="top-tab-btn" data-index="daily-losers">
+                            <i class="fas fa-arrow-down text-red-500 mr-2"></i> Baisses du jour
+                        </button>
+                        <button class="top-tab-btn" data-index="ytd-gainers">
+                            <i class="fas fa-calendar-check text-blue-400 mr-2"></i> Hausses YTD
+                        </button>
+                        <button class="top-tab-btn" data-index="ytd-losers">
+                            <i class="fas fa-calendar-times text-orange-400 mr-2"></i> Baisses YTD
+                        </button>
+                    </div>
+                    
+                    <!-- Conteneurs pour chaque vue (seul le premier est visible par défaut) -->
+                    <div id="top-daily-gainers" class="top-stocks-content">
+                        <div class="stock-cards-container">
+                            <!-- Les cartes seront générées dynamiquement ici -->
+                            <div class="stock-card">
+                                <div class="rank">#1</div>
+                                <div class="stock-info">
+                                    <div class="stock-name">AAPL</div>
+                                    <div class="stock-fullname">Apple Inc.</div>
+                                </div>
+                                <div class="stock-performance positive">Chargement...</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="top-daily-losers" class="top-stocks-content hidden">
+                        <div class="stock-cards-container">
+                            <!-- Les cartes seront générées dynamiquement ici -->
+                        </div>
+                    </div>
+                    
+                    <div id="top-ytd-gainers" class="top-stocks-content hidden">
+                        <div class="stock-cards-container">
+                            <!-- Les cartes seront générées dynamiquement ici -->
+                        </div>
+                    </div>
+                    
+                    <div id="top-ytd-losers" class="top-stocks-content hidden">
+                        <div class="stock-cards-container">
+                            <!-- Les cartes seront générées dynamiquement ici -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Top Performers (ancien design, maintenu pour compatibilité) -->
+                <div class="top-performers-section mb-10 hidden">
+                    <h2 class="top-performers-title mb-6">Top Performers du marché actuel</h2>
+                    
+                    <div class="top-performers-grid">
+                        <!-- Top 10 Hausse Quotidienne -->
+                        <div class="performer-card">
+                            <div class="performer-header">
+                                <span>Top 10 Hausse (VAR %)</span>
+                                <span class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                            </div>
+                            <div id="daily-top" class="performers-scroll">
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">Chargement...</div>
+                                        <div class="performer-country"></div>
+                                    </div>
+                                    <div class="performer-value positive">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Top 10 Baisse Quotidienne -->
+                        <div class="performer-card">
+                            <div class="performer-header">
+                                <span>Top 10 Baisse (VAR %)</span>
+                                <span class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
+                            </div>
+                            <div id="daily-bottom" class="performers-scroll">
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">Chargement...</div>
+                                        <div class="performer-country"></div>
+                                    </div>
+                                    <div class="performer-value negative">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Top 10 Hausse YTD -->
+                        <div class="performer-card">
+                            <div class="performer-header">
+                                <span>Top 10 Hausse (YTD)</span>
+                                <span class="text-sm positive"><i class="fas fa-arrow-up"></i></span>
+                            </div>
+                            <div id="ytd-top" class="performers-scroll">
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">Chargement...</div>
+                                        <div class="performer-country"></div>
+                                    </div>
+                                    <div class="performer-value positive">-</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Top 10 Baisse YTD -->
+                        <div class="performer-card">
+                            <div class="performer-header">
+                                <span>Top 10 Baisse (YTD)</span>
+                                <span class="text-sm negative"><i class="fas fa-arrow-down"></i></span>
+                            </div>
+                            <div id="ytd-bottom" class="performers-scroll">
+                                <div class="performer-row">
+                                    <div class="performer-info">
+                                        <div class="performer-index">Chargement...</div>
+                                        <div class="performer-country"></div>
+                                    </div>
+                                    <div class="performer-value negative">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Onglets alphabétiques (QUATRIÈME) -->
+                <div class="mb-8">
+                    <h2 class="section-title mb-6">Actions par lettre</h2>
+                    
+                    <!-- Barre de recherche -->
+                    <div class="search-container mb-4">
+                        <div class="search-wrapper relative">
+                            <input type="text" id="stock-search" placeholder="Rechercher une action..." class="w-full py-3 px-12 bg-opacity-10 rounded-lg border border-opacity-30 text-white focus:outline-none focus:border-accent" autocomplete="off">
+                            <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-opacity-70"></i>
+                            <button id="clear-search" class="clear-btn absolute right-4 top-1/2 transform -translate-y-1/2 opacity-0 transition-opacity duration-200">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                        <div id="search-info" class="mt-2 text-sm opacity-70 hidden">
+                            <span id="search-count">0</span> résultats trouvés
+                        </div>
+                    </div>
+                    
+                    <div class="region-tabs mb-6">
+                        <div class="region-tab all-results" data-region="all">TOUS</div>
+                        <div class="region-tab active" data-region="a">A</div>
+                        <div class="region-tab" data-region="b">B</div>
+                        <div class="region-tab" data-region="c">C</div>
+                        <div class="region-tab" data-region="d">D</div>
+                        <div class="region-tab" data-region="e">E</div>
+                        <div class="region-tab" data-region="f">F</div>
+                        <div class="region-tab" data-region="g">G</div>
+                        <div class="region-tab" data-region="h">H</div>
+                        <div class="region-tab" data-region="i">I</div>
+                        <div class="region-tab" data-region="j">J</div>
+                        <div class="region-tab" data-region="k">K</div>
+                        <div class="region-tab" data-region="l">L</div>
+                        <div class="region-tab" data-region="m">M</div>
+                        <div class="region-tab" data-region="n">N</div>
+                        <div class="region-tab" data-region="o">O</div>
+                        <div class="region-tab" data-region="p">P</div>
+                        <div class="region-tab" data-region="q">Q</div>
+                        <div class="region-tab" data-region="r">R</div>
+                        <div class="region-tab" data-region="s">S</div>
+                        <div class="region-tab" data-region="t">T</div>
+                        <div class="region-tab" data-region="u">U</div>
+                        <div class="region-tab" data-region="v">V</div>
+                        <div class="region-tab" data-region="w">W</div>
+                        <div class="region-tab" data-region="x">X</div>
+                        <div class="region-tab" data-region="y">Y</div>
+                        <div class="region-tab" data-region="z">Z</div>
+                    </div>
+                    
+                    <!-- Conteneur pour le tableau des actions -->
+                    <div class="glassmorphism rounded-lg overflow-hidden">
+                        <div id="indices-loading" class="py-16 flex justify-center">
+                            <div class="loader"></div>
+                        </div>
+                        
+                        <div id="indices-error" class="py-16 text-center hidden">
+                            <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                            <p class="text-lg">Impossible de charger les données des actions.</p>
+                            <button id="retry-button" class="mt-4 search-button inline-flex items-center">
+                                <i class="fas fa-sync-alt mr-2"></i>
+                                Réessayer
+                            </button>
+                        </div>
+                        
+                        <div id="indices-container" class="hidden">
+                            <!-- Contenu pour chaque lettre -->
+                            <div id="a-indices" class="region-content">
+                                <div class="overflow-x-auto">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>LIBELLÉ</th>
+                                                <th>DERNIER</th>
+                                                <th>VAR %</th>
+                                                <th>OUVERTURE</th>
+                                                <th>PLUS HAUT</th>
+                                                <th>PLUS BAS</th>
+                                                <th>VAR/1JANV</th>
+                                                <th>VOLUME</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="a-indices-body">
+                                            <!-- Les données seront injectées ici -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <!-- B -->
+                            <div id="b-indices" class="region-content hidden">
+                                <div class="overflow-x-auto">
+                                    <table class="data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>LIBELLÉ</th>
+                                                <th>DERNIER</th>
+                                                <th>VAR %</th>
+                                                <th>OUVERTURE</th>
+                                                <th>PLUS HAUT</th>
+                                                <th>PLUS BAS</th>
+                                                <th>VAR/1JANV</th>
+                                                <th>VOLUME</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="b-indices-body">
+                                            <!-- Les données seront injectées ici -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                            
+                            <!-- Les sections C à Z sont similaires à celles ci-dessus, je les ai omises pour la brièveté -->
+                            
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Source et avertissement -->
+                <div class="text-center text-sm text-gray-400 mb-6 p-4 glassmorphism rounded-lg bg-opacity-50">
+                    <p id="source-link">Sources: <a href="https://www.boursorama.com/bourse/actions/cotations/international/?international_quotation_az_filter%5Bcountry%5D=1&international_quotation_az_filter%5Bmarket%5D=%24COMPX" target="_blank" class="text-green-400 hover:underline">Boursorama</a></p>
+                    <p class="mt-2">Les données sont actualisées régulièrement mais peuvent accuser un retard par rapport aux marchés en temps réel.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="liste-script.js"></script>
+    
+    <!-- Script pour gérer les onglets du top 10 -->
+    <script>
+       document.addEventListener('DOMContentLoaded', function() {
+           // Gestion des onglets pour le top 10 principal
+           const topTabsButtons = document.querySelectorAll('.top-tab-btn');
+           
+           topTabsButtons.forEach(button => {
+               button.addEventListener('click', function() {
+                   // Identifier le groupe d'onglets (s'il y a plusieurs sections)
+                   const parentContainer = this.closest('.top-stocks-container');
+                   
+                   // Désactiver tous les boutons du même groupe
+                   const buttons = parentContainer.querySelectorAll('.top-tab-btn');
+                   buttons.forEach(btn => btn.classList.remove('active'));
+                   
+                   // Activer le bouton actuel
+                   this.classList.add('active');
+                   
+                   // Récupérer l'identifiant de l'onglet
+                   const tabId = this.getAttribute('data-index');
+                   
+                   // Masquer tous les contenus du même groupe
+                   const contents = parentContainer.querySelectorAll('.top-stocks-content');
+                   contents.forEach(content => content.classList.add('hidden'));
+                   
+                   // Afficher le contenu correspondant
+                   const targetContent = document.getElementById(`top-${tabId}`);
+                   if (targetContent) {
+                       targetContent.classList.remove('hidden');
+                   }
+               });
+           });
+           
+           // Mettre à jour le nom du marché actuel
+           function updateMarketName() {
+               const marketNameElement = document.getElementById('current-market-name');
+               if (marketNameElement) {
+                   const nasdaqActive = document.getElementById('market-nasdaq')?.classList.contains('active');
+                   marketNameElement.textContent = nasdaqActive ? 'NASDAQ' : 'DJ STOXX';
+               }
+           }
+           
+           // Observer les changements sur les boutons de marché
+           const marketButtons = document.querySelectorAll('.market-btn');
+           marketButtons.forEach(button => {
+               button.addEventListener('click', updateMarketName);
+           });
+           
+           // Initialisation
+           updateMarketName();
+       });
+    </script>
+
+    <!-- NOUVELLES ANIMATIONS JS INTÉGRÉES -->
+    <script>
+    // Script d'animations dynamiques pour améliorer l'interface utilisateur
+    document.addEventListener('DOMContentLoaded', function() {
+        // Améliorer les transitions d'éléments
+        enhanceElementTransitions();
+
+        // Ajouter des effets aux boutons de marché
+        enhanceMarketButtons();
+
+        // Ajouter des effets à la barre de recherche
+        enhanceSearchBar();
+
+        // Ajouter animation d'entrée pour les tableaux
+        animateTableEntrance();
+    });
+
+    /**
+     * Améliore les transitions d'affichage/masquage des éléments
+     */
+    function enhanceElementTransitions() {
+        // Remplacer les fonctions d'origine du script liste-script.js
+        if (window.showElement) {
+            const originalShowElement = window.showElement;
+            window.showElement = function(id) {
+                const element = document.getElementById(id);
+                if (element) {
+                    // D'abord masquer avec opacité 0
+                    element.style.opacity = '0';
+                    element.classList.remove('hidden');
+
+                    // Forcer un reflow
+                    void element.offsetWidth;
+
+                    // Puis animer l'apparition
+                    element.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+                    element.style.transform = 'translateY(20px)';
+
+                    setTimeout(() => {
+                        element.style.opacity = '1';
+                        element.style.transform = 'translateY(0)';
+                    }, 50);
+                } else {
+                    // Fallback sur la fonction originale si l'élément n'est pas trouvé
+                    originalShowElement(id);
+                }
+            };
+        }
+
+        if (window.hideElement) {
+            const originalHideElement = window.hideElement;
+            window.hideElement = function(id) {
+                const element = document.getElementById(id);
+                if (element) {
+                    // Animer la disparition
+                    element.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+                    element.style.opacity = '0';
+                    element.style.transform = 'translateY(-10px)';
+
+                    // Puis masquer complètement
+                    setTimeout(() => {
+                        element.classList.add('hidden');
+                        element.style.transform = '';
+
+                        // Certains éléments nécessitent une réinitialisation complète
+                        if (id === 'indices-container' || id === 'indices-loading') {
+                            setTimeout(() => {
+                                element.style = '';
+                            }, 100);
+                        }
+                    }, 300);
+                } else {
+                    // Fallback sur la fonction originale si l'élément n'est pas trouvé
+                    originalHideElement(id);
+                }
+            };
+        }
+    }
+
+    /**
+     * Ajoute des effets aux boutons de marché
+     */
+    function enhanceMarketButtons() {
+        // Ajouter un effet de pulsation lors du clic
+        const marketButtons = document.querySelectorAll('.market-btn');
+        marketButtons.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Animation de pulsation au clic
+                this.style.animation = 'none';
+                void this.offsetWidth; // Force reflow
+                this.style.animation = 'pulse 0.5s ease-out';
+
+                // Effet d'onde
+                const ripple = document.createElement('span');
+                ripple.classList.add('ripple');
+                ripple.style.position = 'absolute';
+                ripple.style.borderRadius = '50%';
+                ripple.style.backgroundColor = 'rgba(0, 255, 135, 0.2)';
+                ripple.style.transform = 'scale(0)';
+                ripple.style.animation = 'ripple-effect 0.6s linear';
+                ripple.style.width = '100%';
+                ripple.style.height = '100%';
+                ripple.style.left = '0';
+                ripple.style.top = '0';
+
+                this.appendChild(ripple);
+
+                setTimeout(() => {
+                    ripple.remove();
+                }, 700);
             });
-            
-            // Initialisation
-            updateMarketName();
         });
-     </script>
- </body>
- </html>
+    }
+
+    /**
+     * Ajoute des effets à la barre de recherche
+     */
+    function enhanceSearchBar() {
+        const searchInput = document.getElementById('stock-search');
+        const searchWrapper = searchInput?.closest('.search-wrapper');
+
+        if (searchWrapper) {
+            // Ajouter l'indicateur de focus
+            const indicator = document.createElement('div');
+            indicator.classList.add('search-focus-indicator');
+            searchWrapper.appendChild(indicator);
+
+            // Ajouter une classe pour l'icône de recherche
+            const searchIcon = searchWrapper.querySelector('i.fa-search');
+            if (searchIcon) {
+                searchIcon.classList.add('search-icon');
+            }
+        }
+    }
+
+    /**
+     * Anime l'entrée des tableaux
+     */
+    function animateTableEntrance() {
+        // Animer l'entrée des tableaux quand ils deviennent visibles
+        if ('IntersectionObserver' in window) {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const rows = entry.target.querySelectorAll('tr');
+                        rows.forEach((row, index) => {
+                            row.style.animationDelay = `${0.05 * index}s`;
+                        });
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            // Observer tous les tableaux
+            document.querySelectorAll('.data-table').forEach(table => {
+                observer.observe(table);
+            });
+        }
+
+        // Observer l'entrée des cartes
+        const stockCards = document.querySelectorAll('.stock-card');
+        stockCards.forEach((card, index) => {
+            card.style.animationDelay = `${0.05 * index}s`;
+        });
+    }
+    </script>
+</body>
+</html>
