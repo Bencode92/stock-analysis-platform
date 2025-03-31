@@ -348,3 +348,10 @@
     50% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
     100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0.6; }
 }
+
+/* Ajout d'une classe pour les utilisateurs préférant moins d'animations */
+.reduced-motion * {
+    animation: none !important;
+    transition: all 0.1s linear !important;
+    transform: none !important;
+}
