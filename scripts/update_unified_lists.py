@@ -50,6 +50,12 @@ CONFIG = {
     "sleep_time": 1.5  # Délai entre les requêtes pour éviter la détection de bot
 }
 
+# Seuils pour les outliers
+MAX_DAILY_GAIN_PERCENTAGE = 100.0  # Hausse journalière maximale autorisée
+MIN_DAILY_LOSS_PERCENTAGE = -100.0  # Baisse journalière minimale autorisée
+MIN_YTD_LOSS_PERCENTAGE = -100.0    # Baisse YTD minimale autorisée
+# Remarque: Pas de limite pour les hausses YTD, car elles peuvent légitimement dépasser 100%
+
 def get_headers():
     """Crée des en-têtes HTTP pour éviter la détection de bot"""
     return {
@@ -143,16 +149,41 @@ def get_top_performers(stocks, field='change', reverse=True, limit=10):
     """
     try:
         # Filtrer les actions avec une valeur valide pour le champ spécifié
-        valid_stocks = [s for s in stocks if s.get(field) and s.get(field) != "-" and s.get("name")]
+        valid_stocks = []
         
-        # Trier les actions en fonction du champ
-        sorted_stocks = sorted(valid_stocks, key=lambda x: parse_percentage(x.get(field, "0")), reverse=reverse)
+        for stock in stocks:
+            if not stock.get(field) or stock.get(field) == "-" or not stock.get("name"):
+                continue
+                
+            # Convertir le pourcentage en valeur numérique
+            percentage = parse_percentage(stock.get(field, "0"))
+            
+            # Appliquer les filtres selon les critères demandés
+            if field == 'change':  # Variations journalières
+                # Vérifier les seuils pour les variations journalières
+                if reverse and percentage > MAX_DAILY_GAIN_PERCENTAGE:
+                    logger.info(f"Outlier ignoré (hausse journalière > {MAX_DAILY_GAIN_PERCENTAGE}%): {stock['name']} avec {stock[field]}")
+                    continue
+                elif not reverse and percentage < MIN_DAILY_LOSS_PERCENTAGE:
+                    logger.info(f"Outlier ignoré (baisse journalière < {MIN_DAILY_LOSS_PERCENTAGE}%): {stock['name']} avec {stock[field]}")
+                    continue
+            elif field == 'ytd':  # Variations YTD
+                # Pas de limite supérieure pour les hausses YTD
+                if not reverse and percentage < MIN_YTD_LOSS_PERCENTAGE:
+                    logger.info(f"Outlier ignoré (baisse YTD < {MIN_YTD_LOSS_PERCENTAGE}%): {stock['name']} avec {stock[field]}")
+                    continue
+            
+            # Stock passe les filtres, on l'ajoute avec sa valeur numérique
+            valid_stocks.append((stock, percentage))
+        
+        # Trier les actions en fonction de la valeur numérique
+        sorted_stocks = sorted(valid_stocks, key=lambda x: x[1], reverse=reverse)
         
         # Déduplication stricte basée sur le nom
         unique_stocks = []
         seen_names = set()
         
-        for stock in sorted_stocks:
+        for stock, _ in sorted_stocks:
             name = stock.get("name", "")
             if name and name not in seen_names:
                 seen_names.add(name)
