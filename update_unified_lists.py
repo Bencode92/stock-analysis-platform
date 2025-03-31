@@ -54,6 +54,31 @@ def get_page_content(url):
                 logger.error("Nombre maximum de tentatives atteint. Abandon.")
                 raise
 
+def remove_duplicates(stocks):
+    """
+    Déduplique une liste d'actions en utilisant un identifiant unique.
+    Utilise principalement le lien comme identifiant, ou à défaut le nom.
+    
+    Args:
+        stocks (list): Liste d'actions à dédupliquer
+        
+    Returns:
+        list: Liste d'actions sans doublons
+    """
+    seen = set()
+    unique_stocks = []
+    
+    for stock in stocks:
+        # Utiliser le lien comme identifiant principal, sinon le nom
+        identifier = stock.get("link", "") or stock.get("name", "")
+        
+        if identifier and identifier not in seen:
+            seen.add(identifier)
+            unique_stocks.append(stock)
+    
+    logger.info(f"Déduplication: {len(unique_stocks)}/{len(stocks)} actions conservées ({len(stocks) - len(unique_stocks)} doublons supprimés)")
+    return unique_stocks
+
 def parse_stock_data(html_content, market_type):
     """Extrait les données des actions depuis le HTML."""
     logger.info(f"Analyse du HTML pour le marché {market_type}")
@@ -180,22 +205,13 @@ def get_top_performers(stocks, field='change', reverse=True):
             reverse=reverse
         )
         
-        # AMÉLIORATION: Dédupliquer strictement par nom ET symbole
-        seen_identifiers = set()
-        unique_stocks = []
+        # Note: La déduplication est maintenant gérée en amont, nous n'avons plus besoin
+        # de dédupliquer ici. Nous pouvons prendre directement les 10 premiers éléments.
+        top_stocks = sorted_stocks[:10]
         
-        for stock in sorted_stocks:
-            # Créer un identifiant unique combinant nom et symbole
-            identifier = f"{stock.get('name', '')}-{stock.get('symbol', '')}"
-            if identifier and identifier not in seen_identifiers:
-                seen_identifiers.add(identifier)
-                unique_stocks.append(stock)
-                logger.debug(f"Action unique ajoutée: {identifier} avec {field}={stock.get(field, '-')}")
+        logger.info(f"Top performances ({field}, {'hausse' if reverse else 'baisse'}): {len(top_stocks)} actions sélectionnées")
         
-        logger.info(f"Nombre d'actions uniques après déduplication: {len(unique_stocks)} sur {len(sorted_stocks)} triées")
-        
-        # Retourner les 10 premières actions uniques (ou moins si moins disponibles)
-        return unique_stocks[:10]
+        return top_stocks
     except Exception as e:
         logger.error(f"Erreur lors de l'extraction des top performers: {e}")
         return []
@@ -244,6 +260,13 @@ def main():
         stoxx_html = get_page_content(STOXX_URL)
         stoxx_indices, stoxx_stocks = parse_stock_data(stoxx_html, "STOXX")
         
+        # IMPORTANT: Déduplication des données avant traitement
+        logger.info("Déduplication des données NASDAQ")
+        nasdaq_stocks = remove_duplicates(nasdaq_stocks)
+        
+        logger.info("Déduplication des données STOXX")
+        stoxx_stocks = remove_duplicates(stoxx_stocks)
+        
         # Créer un fichier structuré pour les listes.json
         logger.info("Création des structures de données pour les fichiers JSON")
         
@@ -291,6 +314,10 @@ def main():
         if stoxx_stocks:
             all_stocks.extend(stoxx_stocks)
         
+        # Déduplication des données combinées avant création des tops globaux
+        logger.info("Déduplication des données combinées NASDAQ + STOXX")
+        all_stocks = remove_duplicates(all_stocks)
+        
         combined_top_performers = create_top_performers(all_stocks)
         
         # Structure finale pour le fichier lists.json
@@ -317,7 +344,12 @@ def main():
         # Créer également un fichier séparé pour les top performers globaux
         global_top_performers = {
             "daily": combined_top_performers["daily"],
-            "ytd": combined_top_performers["ytd"]
+            "ytd": combined_top_performers["ytd"],
+            "meta": {
+                "timestamp": timestamp,
+                "count": len(all_stocks),
+                "description": "Classement global combiné (NASDAQ + STOXX)"
+            }
         }
         
         global_top_path = os.path.join(OUTPUT_DIR, "global_top_performers.json")
