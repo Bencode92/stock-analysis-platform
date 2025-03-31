@@ -28,6 +28,29 @@ function dedupStocksStrict(stocks) {
 }
 
 /**
+ * Filtre les variations extrêmes (>=100% ou <=-100%)
+ * @param {Array} stocks Liste d'actions
+ * @param {string} field Champ contenant la variation (change ou ytd)
+ * @param {boolean} isGainer Si true, filtre les hausses, sinon les baisses
+ * @returns {Array} Liste filtrée
+ */
+function filterExtremeVariations(stocks, field = 'change', isGainer = true) {
+    if (!stocks || !Array.isArray(stocks)) return [];
+    
+    return stocks.filter(stock => {
+        const value = parsePercentage(stock[field]);
+        
+        if (isGainer) {
+            // Pour les hausses, exclure les valeurs >= 100%
+            return value < 100;
+        } else {
+            // Pour les baisses, exclure les valeurs <= -100%
+            return value > -100;
+        }
+    });
+}
+
+/**
  * S'assure qu'une liste contient exactement 10 éléments
  * Complète avec des éléments supplémentaires si nécessaire
  * @param {Array} stocks Liste d'actions (potentiellement incomplète)
@@ -64,9 +87,16 @@ function ensureTopTen(stocks, allStocks, field, isGainer) {
         };
         
         // Filtrer et trier les stocks additionnels
-        const additionalStocks = allStocks
+        let additionalStocks = allStocks
             .filter(s => !existingNames.has(s.name) && s[field] && s[field] !== '-')
             .map(s => ({...s, sortValue: parsePercentage(s[field])}));
+        
+        // Filtrer les variations extrêmes
+        if (isGainer) {
+            additionalStocks = additionalStocks.filter(s => s.sortValue < 100);
+        } else {
+            additionalStocks = additionalStocks.filter(s => s.sortValue > -100);
+        }
         
         // Trier selon le critère
         if (isGainer) {
@@ -81,6 +111,31 @@ function ensureTopTen(stocks, allStocks, field, isGainer) {
     }
     
     return stocks;
+}
+
+/**
+ * Parser une chaîne de pourcentage en nombre
+ * @param {string} percentStr Chaîne représentant un pourcentage
+ * @returns {number} Valeur numérique
+ */
+function parsePercentage(percentStr) {
+    if (!percentStr || percentStr === '-') return 0;
+    
+    // Remplacer les virgules par des points pour les décimales
+    let cleanStr = percentStr.replace(',', '.');
+    
+    // Supprimer les symboles +, %, etc.
+    cleanStr = cleanStr.replace(/[+%]/g, '');
+    
+    // Gérer les nombres négatifs qui pourraient être entre parenthèses
+    if (cleanStr.includes('(') && cleanStr.includes(')')) {
+        cleanStr = cleanStr.replace(/[\(\)]/g, '');
+        cleanStr = '-' + cleanStr;
+    }
+    
+    // Parser en nombre
+    const value = parseFloat(cleanStr);
+    return isNaN(value) ? 0 : value;
 }
 
 /**
@@ -114,7 +169,8 @@ function generatePlaceholder(index, market, isUp = true) {
 window.dedupFix = {
     dedupStocksStrict,
     ensureTopTen,
-    generatePlaceholder
+    generatePlaceholder,
+    filterExtremeVariations
 };
 
 console.log('Script de déduplication amélioré chargé avec succès');
