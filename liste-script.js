@@ -340,6 +340,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     stocksData.top_performers.daily.best = dedupFunction(stocksData.top_performers.daily.best || []);
                     stocksData.top_performers.daily.worst = dedupFunction(stocksData.top_performers.daily.worst || []);
                     
+                    // Filtrer les variations extrêmes
+                    stocksData.top_performers.daily.best = filterExtremeVariations(stocksData.top_performers.daily.best, 'change', true);
+                    stocksData.top_performers.daily.worst = filterExtremeVariations(stocksData.top_performers.daily.worst, 'change', false);
+                    
                     // Compléter si nécessaire pour avoir 10 éléments
                     ensureAtLeastTenItems(stocksData.top_performers.daily.best, currentMarket);
                     ensureAtLeastTenItems(stocksData.top_performers.daily.worst, currentMarket);
@@ -349,6 +353,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Déduplication stricte basée uniquement sur le nom
                     stocksData.top_performers.ytd.best = dedupFunction(stocksData.top_performers.ytd.best || []);
                     stocksData.top_performers.ytd.worst = dedupFunction(stocksData.top_performers.ytd.worst || []);
+                    
+                    // Filtrer les variations extrêmes
+                    stocksData.top_performers.ytd.best = filterExtremeVariations(stocksData.top_performers.ytd.best, 'ytd', true);
+                    stocksData.top_performers.ytd.worst = filterExtremeVariations(stocksData.top_performers.ytd.worst, 'ytd', false);
                     
                     // Compléter si nécessaire pour avoir 10 éléments
                     ensureAtLeastTenItems(stocksData.top_performers.ytd.best, currentMarket);
@@ -411,6 +419,29 @@ document.addEventListener('DOMContentLoaded', function() {
             // Réinitialiser l'état
             isLoading = false;
         }
+    }
+    
+    /**
+     * Filtre les variations extrêmes (>=+100% ou <=-100%)
+     * @param {Array} stocks 
+     * @param {string} field Le champ contenant la variation ('change' ou 'ytd')
+     * @param {boolean} isGainer Si true, filtre les hausses extrêmes, sinon les baisses extrêmes
+     * @returns {Array} Liste filtrée
+     */
+    function filterExtremeVariations(stocks, field, isGainer) {
+        if (!stocks || !Array.isArray(stocks)) return [];
+        
+        return stocks.filter(stock => {
+            const variationValue = parsePercentage(stock[field]);
+            
+            if (isGainer) {
+                // Pour les hausses, exclure les valeurs >= 100%
+                return variationValue < 100;
+            } else {
+                // Pour les baisses, exclure les valeurs <= -100%
+                return variationValue > -100;
+            }
+        });
     }
     
     /**
@@ -527,11 +558,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (globalData.daily) {
                     globalData.daily.best = dedupFunction(globalData.daily.best || []);
                     globalData.daily.worst = dedupFunction(globalData.daily.worst || []);
+                    
+                    // Filtrer les variations extrêmes
+                    globalData.daily.best = filterExtremeVariations(globalData.daily.best, 'change', true);
+                    globalData.daily.worst = filterExtremeVariations(globalData.daily.worst, 'change', false);
                 }
                 
                 if (globalData.ytd) {
                     globalData.ytd.best = dedupFunction(globalData.ytd.best || []);
                     globalData.ytd.worst = dedupFunction(globalData.ytd.worst || []);
+                    
+                    // Filtrer les variations extrêmes
+                    globalData.ytd.best = filterExtremeVariations(globalData.ytd.best, 'ytd', true);
+                    globalData.ytd.worst = filterExtremeVariations(globalData.ytd.worst, 'ytd', false);
                 }
                 
                 updateGlobalTopTen(globalData);
@@ -556,11 +595,19 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (combined.top_performers.daily) {
                             combined.top_performers.daily.best = dedupFunction(combined.top_performers.daily.best || []);
                             combined.top_performers.daily.worst = dedupFunction(combined.top_performers.daily.worst || []);
+                            
+                            // Filtrer les variations extrêmes
+                            combined.top_performers.daily.best = filterExtremeVariations(combined.top_performers.daily.best, 'change', true);
+                            combined.top_performers.daily.worst = filterExtremeVariations(combined.top_performers.daily.worst, 'change', false);
                         }
                         
                         if (combined.top_performers.ytd) {
                             combined.top_performers.ytd.best = dedupFunction(combined.top_performers.ytd.best || []);
                             combined.top_performers.ytd.worst = dedupFunction(combined.top_performers.ytd.worst || []);
+                            
+                            // Filtrer les variations extrêmes
+                            combined.top_performers.ytd.best = filterExtremeVariations(combined.top_performers.ytd.best, 'ytd', true);
+                            combined.top_performers.ytd.worst = filterExtremeVariations(combined.top_performers.ytd.worst, 'ytd', false);
                         }
                         
                         // Utiliser directement les données combinées
@@ -740,11 +787,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             changeValue: parsePercentage(stock.change)
                         }));
                     
-                    const dailyBest = [...stocksWithChangeValue]
+                    // Filtrer les variations extrêmes
+                    const filteredDailyGainers = stocksWithChangeValue.filter(stock => stock.changeValue < 100);
+                    const filteredDailyLosers = stocksWithChangeValue.filter(stock => stock.changeValue > -100);
+                    
+                    const dailyBest = [...filteredDailyGainers]
                         .sort((a, b) => b.changeValue - a.changeValue)
                         .slice(0, 10);
                     
-                    const dailyWorst = [...stocksWithChangeValue]
+                    const dailyWorst = [...filteredDailyLosers]
                         .sort((a, b) => a.changeValue - b.changeValue)
                         .slice(0, 10);
                     
@@ -756,11 +807,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             ytdValue: parsePercentage(stock.ytd)
                         }));
                     
-                    const ytdBest = [...stocksWithYtdValue]
+                    // Filtrer les variations extrêmes pour YTD
+                    const filteredYtdGainers = stocksWithYtdValue.filter(stock => stock.ytdValue < 100);
+                    const filteredYtdLosers = stocksWithYtdValue.filter(stock => stock.ytdValue > -100);
+                    
+                    const ytdBest = [...filteredYtdGainers]
                         .sort((a, b) => b.ytdValue - a.ytdValue)
                         .slice(0, 10);
                     
-                    const ytdWorst = [...stocksWithYtdValue]
+                    const ytdWorst = [...filteredYtdLosers]
                         .sort((a, b) => a.ytdValue - b.ytdValue)
                         .slice(0, 10);
                     
@@ -796,8 +851,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     : '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
             }));
             
+            // Filtrer les variations extrêmes
+            const filteredBest = filterExtremeVariations(uniqueBest, 'change', true);
+            
             // S'assurer d'avoir 10 éléments
-            const displayStocks = uniqueBest.slice(0, 10);
+            const displayStocks = filteredBest.slice(0, 10);
             ensureAtLeastTenItems(displayStocks, currentMarket, true);
             
             renderTopTenCards('top-daily-gainers', displayStocks, 'change', currentMarket);
@@ -815,8 +873,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     : '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
             }));
             
+            // Filtrer les variations extrêmes
+            const filteredWorst = filterExtremeVariations(uniqueWorst, 'change', false);
+            
             // S'assurer d'avoir 10 éléments
-            const displayStocks = uniqueWorst.slice(0, 10);
+            const displayStocks = filteredWorst.slice(0, 10);
             ensureAtLeastTenItems(displayStocks, currentMarket, false);
             
             renderTopTenCards('top-daily-losers', displayStocks, 'change', currentMarket);
@@ -834,8 +895,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     : '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
             }));
             
+            // Filtrer les variations extrêmes
+            const filteredBestYtd = filterExtremeVariations(uniqueBestYtd, 'ytd', true);
+            
             // S'assurer d'avoir 10 éléments
-            const displayStocks = uniqueBestYtd.slice(0, 10);
+            const displayStocks = filteredBestYtd.slice(0, 10);
             ensureAtLeastTenItems(displayStocks, currentMarket, true);
             
             renderTopTenCards('top-ytd-gainers', displayStocks, 'ytd', currentMarket);
@@ -853,8 +917,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     : '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
             }));
             
+            // Filtrer les variations extrêmes
+            const filteredWorstYtd = filterExtremeVariations(uniqueWorstYtd, 'ytd', false);
+            
             // S'assurer d'avoir 10 éléments
-            const displayStocks = uniqueWorstYtd.slice(0, 10);
+            const displayStocks = filteredWorstYtd.slice(0, 10);
             ensureAtLeastTenItems(displayStocks, currentMarket, false);
             
             renderTopTenCards('top-ytd-losers', displayStocks, 'ytd', currentMarket);
@@ -874,22 +941,30 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (globalData.daily && globalData.daily.best) {
                 const uniqueGainers = dedupFunction(globalData.daily.best);
-                renderTopTenCards('top-global-gainers', uniqueGainers, 'change', 'global');
+                // Filtrer les variations extrêmes
+                const filteredGainers = filterExtremeVariations(uniqueGainers, 'change', true);
+                renderTopTenCards('top-global-gainers', filteredGainers, 'change', 'global');
             }
             
             if (globalData.daily && globalData.daily.worst) {
                 const uniqueLosers = dedupFunction(globalData.daily.worst);
-                renderTopTenCards('top-global-losers', uniqueLosers, 'change', 'global');
+                // Filtrer les variations extrêmes
+                const filteredLosers = filterExtremeVariations(uniqueLosers, 'change', false);
+                renderTopTenCards('top-global-losers', filteredLosers, 'change', 'global');
             }
             
             if (globalData.ytd && globalData.ytd.best) {
                 const uniqueYtdGainers = dedupFunction(globalData.ytd.best);
-                renderTopTenCards('top-global-ytd-gainers', uniqueYtdGainers, 'ytd', 'global');
+                // Filtrer les variations extrêmes
+                const filteredYtdGainers = filterExtremeVariations(uniqueYtdGainers, 'ytd', true);
+                renderTopTenCards('top-global-ytd-gainers', filteredYtdGainers, 'ytd', 'global');
             }
             
             if (globalData.ytd && globalData.ytd.worst) {
                 const uniqueYtdLosers = dedupFunction(globalData.ytd.worst);
-                renderTopTenCards('top-global-ytd-losers', uniqueYtdLosers, 'ytd', 'global');
+                // Filtrer les variations extrêmes
+                const filteredYtdLosers = filterExtremeVariations(uniqueYtdLosers, 'ytd', false);
+                renderTopTenCards('top-global-ytd-losers', filteredYtdLosers, 'ytd', 'global');
             }
             
             return;
@@ -1003,6 +1078,12 @@ document.addEventListener('DOMContentLoaded', function() {
         combinedDailyGainers = dedupFunction(combinedDailyGainers);
         combinedDailyLosers = dedupFunction(combinedDailyLosers);
         
+        // Filtrer les variations extrêmes
+        combinedYtdGainers = filterExtremeVariations(combinedYtdGainers, 'ytd', true);
+        combinedYtdLosers = filterExtremeVariations(combinedYtdLosers, 'ytd', false);
+        combinedDailyGainers = filterExtremeVariations(combinedDailyGainers, 'change', true);
+        combinedDailyLosers = filterExtremeVariations(combinedDailyLosers, 'change', false);
+        
         // Trier et préparer les données YTD
         if (combinedYtdGainers.length > 0) {
             // Convertir les valeurs en nombre pour le tri
@@ -1094,7 +1175,8 @@ document.addEventListener('DOMContentLoaded', function() {
      * Convertit le volume en nombre pour le tri
      */
     function parseVolumeToNumber(volumeStr) {
-        if (!volumeStr || volumeStr === '-') return 0;
+        if (!volumeStr || volumeStr === '-') return
+ 0;
         
         // Supprimer les espaces, les points et les virgules pour normaliser
         const cleanedStr = volumeStr.replace(/\s+/g, '').replace(/\./g, '').replace(/,/g, '');
@@ -1212,8 +1294,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const uniqueBest = dedupFunction(topPerformersData.daily.best || []);
             const uniqueWorst = dedupFunction(topPerformersData.daily.worst || []);
             
-            updateTopPerformersHTML('daily-top', uniqueBest, 'change');
-            updateTopPerformersHTML('daily-bottom', uniqueWorst, 'change');
+            // Filtrer les variations extrêmes
+            const filteredBest = filterExtremeVariations(uniqueBest, 'change', true);
+            const filteredWorst = filterExtremeVariations(uniqueWorst, 'change', false);
+            
+            updateTopPerformersHTML('daily-top', filteredBest, 'change');
+            updateTopPerformersHTML('daily-bottom', filteredWorst, 'change');
         }
         
         // Mettre à jour les top/bottom performers YTD
@@ -1222,8 +1308,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const uniqueBestYtd = dedupFunction(topPerformersData.ytd.best || []);
             const uniqueWorstYtd = dedupFunction(topPerformersData.ytd.worst || []);
             
-            updateTopPerformersHTML('ytd-top', uniqueBestYtd, 'ytd');
-            updateTopPerformersHTML('ytd-bottom', uniqueWorstYtd, 'ytd');
+            // Filtrer les variations extrêmes
+            const filteredBestYtd = filterExtremeVariations(uniqueBestYtd, 'ytd', true);
+            const filteredWorstYtd = filterExtremeVariations(uniqueWorstYtd, 'ytd', false);
+            
+            updateTopPerformersHTML('ytd-top', filteredBestYtd, 'ytd');
+            updateTopPerformersHTML('ytd-bottom', filteredWorstYtd, 'ytd');
         }
     }
     
