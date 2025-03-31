@@ -1,6 +1,7 @@
 /**
  * liste-script.js - Script pour afficher les actions du NASDAQ Composite et DJ STOXX 600
  * Données mises à jour régulièrement par GitHub Actions
+ * Version améliorée avec chargement dynamique des données par marché
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -275,13 +276,14 @@ document.addEventListener('DOMContentLoaded', function() {
         hideElement('indices-container');
         
         try {
-            // Maintenant nous chargeons toujours depuis lists.json
+            // MODIFICATION: Chargement du fichier JSON en fonction du marché sélectionné
+            // Utiliser le fichier complet pour les données principales
             const url = `data/lists.json`;
             
             // Pour éviter le cache du navigateur en cas de forceRefresh
             const cacheBuster = forceRefresh ? `?t=${Date.now()}` : '';
             
-            console.log(`🔍 Chargement des données depuis ${url}${cacheBuster}`);
+            console.log(`🔍 Chargement des données principales depuis ${url}${cacheBuster}`);
             const response = await fetch(`${url}${cacheBuster}`);
             
             if (!response.ok) {
@@ -303,9 +305,30 @@ document.addEventListener('DOMContentLoaded', function() {
             // S'assurer que toutes les régions existent dans les données
             stocksData = {
                 indices: marketData.indices || {},
-                top_performers: marketData.top_performers || null,
                 meta: marketData.meta || {}
             };
+            
+            // Maintenant, charger les top performers spécifiques au marché sélectionné
+            // NOUVELLE FONCTIONNALITÉ: Chargement des top performers depuis un fichier séparé
+            const topPerformersUrl = currentMarket === 'nasdaq' 
+                ? 'data/top_nasdaq_performers.json' 
+                : 'data/top_stoxx_performers.json';
+            
+            console.log(`🔍 Chargement des top performers depuis ${topPerformersUrl}${cacheBuster}`);
+            const topResponse = await fetch(`${topPerformersUrl}${cacheBuster}`);
+            
+            if (topResponse.ok) {
+                const topData = await topResponse.json();
+                stocksData.top_performers = {
+                    daily: topData.daily || {},
+                    ytd: topData.ytd || {}
+                };
+                console.log(`✅ Top performers de ${currentMarket.toUpperCase()} chargés avec succès`);
+            } else {
+                console.warn(`⚠️ Impossible de charger les top performers depuis ${topPerformersUrl}`);
+                // Utiliser les top performers du fichier principal comme fallback
+                stocksData.top_performers = marketData.top_performers || null;
+            }
             
             // DÉDUPLICATION AMÉLIORÉE: Si le top_performers existe, dédupliquer toutes les listes
             if (stocksData.top_performers) {
@@ -477,66 +500,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
-     * Charge les données pour le Top 10 NASDAQ et STOXX
-     */
-    async function loadTopPerformersData() {
-        try {
-            // Tenter de charger les données complètes Top 10
-            const [globalResponse] = await Promise.all([
-                fetch('data/global_top_performers.json').catch(() => null)
-            ]);
-            
-            // Si nous avons le fichier global, l'utiliser
-            if (globalResponse?.ok) {
-                const globalData = await globalResponse.json();
-                
-                // Déduplication des données globales
-                if (globalData.daily) {
-                    globalData.daily.best = dedupStocksByName(globalData.daily.best || []);
-                    globalData.daily.worst = dedupStocksByName(globalData.daily.worst || []);
-                }
-                
-                if (globalData.ytd) {
-                    globalData.ytd.best = dedupStocksByName(globalData.ytd.best || []);
-                    globalData.ytd.worst = dedupStocksByName(globalData.ytd.worst || []);
-                }
-                
-                // Mettre à jour les affichages
-                updateGlobalTopTen(globalData);
-                
-                return true;
-            }
-            
-            // Sinon, fallback sur les données standard
-            const fallbackResponse = await fetch('data/lists.json').catch(() => null);
-            if (fallbackResponse?.ok) {
-                const combinedData = await fallbackResponse.json();
-                
-                // Si nous avons les données combinées dans lists.json
-                if (combinedData.nasdaq && combinedData.stoxx) {
-                    globalData.nasdaq = combinedData.nasdaq;
-                    globalData.stoxx = combinedData.stoxx;
-                    updateGlobalTopTen();
-                    return true;
-                }
-            }
-            
-            return false;
-            
-        } catch (error) {
-            console.error('Erreur lors du chargement des données top performers:', error);
-            return false;
-        }
-    }
-    
-    /**
-     * Charge les données pour le top 10 global
+     * Charge les données pour le Top 10 global
      */
     async function loadGlobalData() {
         try {
-            // Essayer d'abord de charger le fichier global_top_performers.json
-            const globalResponse = await fetch('data/global_top_performers.json').catch(() => null);
-            if (globalResponse?.ok) {
+            // MODIFICATION: Toujours charger directement le fichier global_top_performers.json
+            console.log("🔍 Chargement des données du top 10 global...");
+            const globalResponse = await fetch('data/global_top_performers.json');
+            
+            if (globalResponse.ok) {
                 const globalData = await globalResponse.json();
                 console.log("✅ Données du top 10 global chargées avec succès");
                 
