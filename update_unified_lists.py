@@ -21,6 +21,12 @@ STOXX_URL = "https://www.boursorama.com/bourse/actions/cotations/international/?
 # Répertoire cible pour les fichiers JSON
 OUTPUT_DIR = "data"
 
+# Seuils pour les outliers
+MAX_DAILY_GAIN_PERCENTAGE = 100.0  # Hausse journalière maximale autorisée
+MIN_DAILY_LOSS_PERCENTAGE = -100.0  # Baisse journalière minimale autorisée
+MIN_YTD_LOSS_PERCENTAGE = -100.0    # Baisse YTD minimale autorisée
+# Remarque: Pas de limite pour les hausses YTD, car elles peuvent légitimement dépasser 100%
+
 def ensure_output_dir():
     """Vérifie et crée le répertoire de sortie si nécessaire."""
     if not os.path.exists(OUTPUT_DIR):
@@ -183,7 +189,18 @@ def parse_stock_data(html_content, market_type):
     return indices, all_stocks
 
 def get_top_performers(stocks, field='change', reverse=True):
-    """Extrait les meilleures/pires performances des actions en fonction d'un champ."""
+    """
+    Extrait les meilleures/pires performances des actions en fonction d'un champ,
+    en filtrant les valeurs aberrantes (outliers).
+    
+    Args:
+        stocks (list): Liste d'actions
+        field (str): Champ à utiliser pour le tri ('change' ou 'ytd')
+        reverse (bool): True pour le classement descendant (hausses), False pour le classement ascendant (baisses)
+    
+    Returns:
+        list: Liste des 10 meilleures/pires performances
+    """
     try:
         # Fonction pour convertir la valeur en nombre (gère les formats européens et US)
         def parse_percentage(value):
@@ -198,18 +215,38 @@ def get_top_performers(stocks, field='change', reverse=True):
             except ValueError:
                 return 0
         
-        # Trier les actions en fonction du champ spécifié
-        sorted_stocks = sorted(
-            [s for s in stocks if field in s and s[field] != "-"],
-            key=lambda x: parse_percentage(x[field]),
-            reverse=reverse
-        )
+        # Calculer les valeurs numériques pour chaque action
+        stocks_with_values = []
+        for stock in stocks:
+            if field in stock and stock[field] != "-":
+                percentage = parse_percentage(stock[field])
+                
+                # Appliquer les filtres selon les critères demandés
+                if field == 'change':  # Variations journalières
+                    # Vérifier les seuils pour les variations journalières
+                    if reverse and percentage > MAX_DAILY_GAIN_PERCENTAGE:
+                        logger.info(f"Outlier ignoré (hausse journalière > {MAX_DAILY_GAIN_PERCENTAGE}%): {stock['name']} avec {stock[field]}")
+                        continue
+                    elif not reverse and percentage < MIN_DAILY_LOSS_PERCENTAGE:
+                        logger.info(f"Outlier ignoré (baisse journalière < {MIN_DAILY_LOSS_PERCENTAGE}%): {stock['name']} avec {stock[field]}")
+                        continue
+                elif field == 'ytd':  # Variations YTD
+                    # Pas de limite supérieure pour les hausses YTD
+                    if not reverse and percentage < MIN_YTD_LOSS_PERCENTAGE:
+                        logger.info(f"Outlier ignoré (baisse YTD < {MIN_YTD_LOSS_PERCENTAGE}%): {stock['name']} avec {stock[field]}")
+                        continue
+                
+                # Si on passe les filtres, ajouter l'action avec sa valeur numérique
+                stocks_with_values.append((stock, percentage))
         
-        # SOLUTION: Utiliser un set pour garantir l'unicité des actions dans le top 10
+        # Trier en fonction des valeurs numériques
+        stocks_with_values.sort(key=lambda x: x[1], reverse=reverse)
+        
+        # Utiliser un set pour garantir l'unicité des actions dans le top 10
         unique_stocks = []
         seen = set()
         
-        for stock in sorted_stocks:
+        for stock, _ in stocks_with_values:
             name = stock.get("name", "")
             if name and name not in seen:
                 seen.add(name)
