@@ -936,6 +936,10 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 - Le commentaire ne doit jamais mentionner un secteur, une région ou une dynamique **qui n'est pas représentée** dans les actifs choisis.
 - Chaque portefeuille doit être construit de manière 100% logique à partir des données fournies.
 - Les actifs sélectionnés doivent découler directement des performances réelles, secteurs en croissance, régions dynamiques, et tendances de marché analysées dans les données ci-dessus.
+- **Utilise aussi ton intelligence pour repérer les signaux faibles.** N'accorde pas une importance excessive aux performances passées. Priorise les dynamiques **en formation**, comme les secteurs ou régions **en accélération**, même s'ils ne sont pas encore en haut du classement.
+- Par exemple : si un secteur ou une zone géographique **commence à monter** sur plusieurs indicateurs (marché, secteurs, nouvelles positives), donne-lui une importance plus forte **même si ce n'est pas le top performer absolu.**
+- L'objectif est de capter **les tendances en train d'émerger**, pas seulement les leaders actuels. Préfère un secteur prometteur bien soutenu dans les actualités, les données sectorielles et les tendances, à un actif performant isolé sans contexte.
+- Ne pas inclure un actif uniquement car il a été en forte hausse récemment, **s'il n'est pas soutenu par les données globales.**
 
 🎯 Le style doit être fluide, professionnel et synthétique.  
 ❌ Aucun biais : ne fais pas d'hypothèse sur les classes d'actifs à privilégier. Base-toi uniquement sur les données fournies.  
