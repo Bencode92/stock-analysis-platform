@@ -54,7 +54,7 @@ function ensureTopTen(stocks, allStocks, field, isGainer) {
             
             // Gérer les nombres négatifs qui pourraient être entre parenthèses
             if (cleanStr.includes('(') && cleanStr.includes(')')) {
-                cleanStr = cleanStr.replace(/[\\(\\)]/g, '');
+                cleanStr = cleanStr.replace(/[\(\)]/g, '');
                 cleanStr = '-' + cleanStr;
             }
             
@@ -83,10 +83,38 @@ function ensureTopTen(stocks, allStocks, field, isGainer) {
     return stocks;
 }
 
+/**
+ * Génère un placeholder pour compléter une liste
+ * @param {number} index Numéro du placeholder (pour le nom)
+ * @param {string} market Le marché ('NASDAQ' ou 'STOXX')
+ * @param {boolean} isUp Si true, tendance positive, sinon négative
+ * @returns {Object} Objet placeholder
+ */
+function generatePlaceholder(index, market, isUp = true) {
+    return {
+        symbol: "",
+        name: `Stock Placeholder ${index}`,
+        last: "-",
+        change: isUp ? "+0.00%" : "-0.00%",
+        open: "-",
+        high: "-",
+        low: "-",
+        ytd: isUp ? "+0.00%" : "-0.00%",
+        volume: "0",
+        trend: isUp ? "neutral" : "neutral",
+        link: "#",
+        market: market,
+        marketIcon: market === 'NASDAQ' 
+            ? '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
+            : '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
+    };
+}
+
 // Exporter les fonctions pour qu'elles soient disponibles dans le script principal
 window.dedupFix = {
     dedupStocksStrict,
-    ensureTopTen
+    ensureTopTen,
+    generatePlaceholder
 };
 
-console.log('Script de déduplication chargé avec succès');
+console.log('Script de déduplication amélioré chargé avec succès');
