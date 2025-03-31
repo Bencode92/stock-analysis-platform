@@ -307,17 +307,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 meta: marketData.meta || {}
             };
             
-            // DÉDUPLICATION: Si le top_performers existe, dédupliquer toutes les listes
+            // DÉDUPLICATION AMÉLIORÉE: Si le top_performers existe, dédupliquer toutes les listes
             if (stocksData.top_performers) {
-                // Dédupliquer les listes daily et ytd
+                // Dédupliquer les listes daily et ytd en utilisant le nom comme unique identifiant
                 if (stocksData.top_performers.daily) {
-                    stocksData.top_performers.daily.best = dedupStocksThoroughly(stocksData.top_performers.daily.best || []);
-                    stocksData.top_performers.daily.worst = dedupStocksThoroughly(stocksData.top_performers.daily.worst || []);
+                    // Déduplication stricte basée uniquement sur le nom
+                    stocksData.top_performers.daily.best = dedupStocksByName(stocksData.top_performers.daily.best || []);
+                    stocksData.top_performers.daily.worst = dedupStocksByName(stocksData.top_performers.daily.worst || []);
+                    
+                    // Compléter si nécessaire pour avoir 10 éléments
+                    ensureAtLeastTenItems(stocksData.top_performers.daily.best);
+                    ensureAtLeastTenItems(stocksData.top_performers.daily.worst);
                 }
                 
                 if (stocksData.top_performers.ytd) {
-                    stocksData.top_performers.ytd.best = dedupStocksThoroughly(stocksData.top_performers.ytd.best || []);
-                    stocksData.top_performers.ytd.worst = dedupStocksThoroughly(stocksData.top_performers.ytd.worst || []);
+                    // Déduplication stricte basée uniquement sur le nom
+                    stocksData.top_performers.ytd.best = dedupStocksByName(stocksData.top_performers.ytd.best || []);
+                    stocksData.top_performers.ytd.worst = dedupStocksByName(stocksData.top_performers.ytd.worst || []);
+                    
+                    // Compléter si nécessaire pour avoir 10 éléments
+                    ensureAtLeastTenItems(stocksData.top_performers.ytd.best);
+                    ensureAtLeastTenItems(stocksData.top_performers.ytd.worst);
                 }
             }
             
@@ -379,6 +389,58 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     /**
+     * Déduplique les actions en utilisant uniquement le nom
+     * @param {Array} stocks 
+     * @returns {Array} stocks dédupliqués
+     */
+    function dedupStocksByName(stocks) {
+        if (!stocks || !Array.isArray(stocks)) return [];
+        
+        // Utiliser une Map pour garantir l'unicité par nom
+        const uniqueStocks = new Map();
+        
+        stocks.forEach(stock => {
+            // Utiliser uniquement le nom comme clé
+            const name = stock.name || "";
+            
+            // Ne l'ajouter que s'il n'existe pas déjà
+            if (!uniqueStocks.has(name)) {
+                uniqueStocks.set(name, stock);
+            }
+        });
+        
+        // Convertir la Map en tableau et retourner
+        return Array.from(uniqueStocks.values());
+    }
+    
+    /**
+     * S'assure qu'une liste contient au moins 10 éléments
+     * en complétant avec des placeholders si nécessaire
+     * @param {Array} stocks 
+     */
+    function ensureAtLeastTenItems(stocks) {
+        // Si la liste a déjà 10 éléments ou plus, ne rien faire
+        if (stocks.length >= 10) return;
+        
+        // Générer des placeholders pour compléter jusqu'à 10
+        const missingCount = 10 - stocks.length;
+        for (let i = 0; i < missingCount; i++) {
+            stocks.push({
+                name: `Stock ${stocks.length + 1}`,
+                symbol: "",
+                last: "-",
+                change: "-",
+                open: "-",
+                high: "-",
+                low: "-",
+                ytd: "-",
+                volume: "0",
+                trend: "neutral"
+            });
+        }
+    }
+    
+    /**
      * Déduplique les actions en utilisant le nom et le symbole
      * @param {Array} stocks 
      * @returns {Array} stocks dédupliqués
@@ -410,30 +472,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function dedupStocksThoroughly(stocks) {
         if (!stocks || !Array.isArray(stocks)) return [];
         
-        // D'abord, appliquer la déduplication standard
-        let deduped = dedupStocks(stocks);
-        
-        // Ensuite, déduplication avancée basée sur une comparaison plus stricte
-        const uniqueStocks = new Map();
-        
-        deduped.forEach(stock => {
-            // Utiliser une clé plus complète incluant le nom, le symbole, le dernier cours et la variation
-            const name = stock.name || "";
-            const symbol = stock.symbol || "";
-            const last = stock.last || "";
-            const change = stock.change || "";
-            const ytd = stock.ytd || "";
-            
-            // Créer une clé qui combine plusieurs attributs pour une meilleure unicité
-            const complexKey = `${name}|${symbol}|${last}|${change}|${ytd}`;
-            
-            if (!uniqueStocks.has(complexKey)) {
-                uniqueStocks.set(complexKey, stock);
-            }
-        });
-        
-        // Convertir la Map en tableau et retourner
-        return Array.from(uniqueStocks.values());
+        // Maintenant, nous utilisons directement la déduplication par nom
+        return dedupStocksByName(stocks);
     }
     
     /**
@@ -452,13 +492,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Déduplication des données globales
                 if (globalData.daily) {
-                    globalData.daily.best = dedupStocksThoroughly(globalData.daily.best || []);
-                    globalData.daily.worst = dedupStocksThoroughly(globalData.daily.worst || []);
+                    globalData.daily.best = dedupStocksByName(globalData.daily.best || []);
+                    globalData.daily.worst = dedupStocksByName(globalData.daily.worst || []);
                 }
                 
                 if (globalData.ytd) {
-                    globalData.ytd.best = dedupStocksThoroughly(globalData.ytd.best || []);
-                    globalData.ytd.worst = dedupStocksThoroughly(globalData.ytd.worst || []);
+                    globalData.ytd.best = dedupStocksByName(globalData.ytd.best || []);
+                    globalData.ytd.worst = dedupStocksByName(globalData.ytd.worst || []);
                 }
                 
                 // Mettre à jour les affichages
@@ -502,13 +542,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Déduplication des données globales
                 if (globalData.daily) {
-                    globalData.daily.best = dedupStocksThoroughly(globalData.daily.best || []);
-                    globalData.daily.worst = dedupStocksThoroughly(globalData.daily.worst || []);
+                    globalData.daily.best = dedupStocksByName(globalData.daily.best || []);
+                    globalData.daily.worst = dedupStocksByName(globalData.daily.worst || []);
                 }
                 
                 if (globalData.ytd) {
-                    globalData.ytd.best = dedupStocksThoroughly(globalData.ytd.best || []);
-                    globalData.ytd.worst = dedupStocksThoroughly(globalData.ytd.worst || []);
+                    globalData.ytd.best = dedupStocksByName(globalData.ytd.best || []);
+                    globalData.ytd.worst = dedupStocksByName(globalData.ytd.worst || []);
                 }
                 
                 updateGlobalTopTen(globalData);
@@ -528,13 +568,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         // Déduplication des données combinées
                         if (combined.top_performers.daily) {
-                            combined.top_performers.daily.best = dedupStocksThoroughly(combined.top_performers.daily.best || []);
-                            combined.top_performers.daily.worst = dedupStocksThoroughly(combined.top_performers.daily.worst || []);
+                            combined.top_performers.daily.best = dedupStocksByName(combined.top_performers.daily.best || []);
+                            combined.top_performers.daily.worst = dedupStocksByName(combined.top_performers.daily.worst || []);
                         }
                         
                         if (combined.top_performers.ytd) {
-                            combined.top_performers.ytd.best = dedupStocksThoroughly(combined.top_performers.ytd.best || []);
-                            combined.top_performers.ytd.worst = dedupStocksThoroughly(combined.top_performers.ytd.worst || []);
+                            combined.top_performers.ytd.best = dedupStocksByName(combined.top_performers.ytd.best || []);
+                            combined.top_performers.ytd.worst = dedupStocksByName(combined.top_performers.ytd.worst || []);
                         }
                         
                         // Utiliser directement les données combinées
@@ -619,8 +659,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         `;
                         tableBody.appendChild(emptyRow);
                     } else {
-                        // Dédupliquer les stocks
-                        const uniqueStocks = dedupStocksThoroughly(stocks);
+                        // Dédupliquer les stocks par nom plutôt que par tous les attributs
+                        const uniqueStocks = dedupStocksByName(stocks);
                         
                         // Trier les actions par nom
                         const sortedStocks = [...uniqueStocks].sort((a, b) => {
@@ -674,60 +714,201 @@ document.addEventListener('DOMContentLoaded', function() {
      * Met à jour le top 10 des actions
      */
     function updateTopTenStocks(data) {
-        if (!data || !data.top_performers) return;
+        // Vérifier d'abord si les données et top_performers existent
+        if (!data || !data.top_performers) {
+            console.warn("🔄 Création des top performers depuis les indices...");
+            
+            // Si top_performers n'existe pas, on va les créer à partir des indices
+            if (data && data.indices) {
+                // Récupérer toutes les actions de tous les indices
+                const allStocks = [];
+                Object.values(data.indices).forEach(letterStocks => {
+                    if (Array.isArray(letterStocks)) {
+                        allStocks.push(...letterStocks);
+                    }
+                });
+                
+                // Initialiser les top performers (créer la structure si elle n'existe pas)
+                if (!data.top_performers) {
+                    data.top_performers = {
+                        daily: {
+                            best: [],
+                            worst: []
+                        },
+                        ytd: {
+                            best: [],
+                            worst: []
+                        }
+                    };
+                }
+                
+                // Créer les top performers
+                if (allStocks.length > 0) {
+                    console.log(`📊 Génération des tops à partir de ${allStocks.length} actions`);
+                    
+                    // Trier par performance quotidienne puis prendre les 10 premiers/derniers
+                    const stocksWithChangeValue = allStocks
+                        .filter(stock => stock.change && stock.change !== '-' && !isNaN(parsePercentage(stock.change)))
+                        .map(stock => ({
+                            ...stock,
+                            changeValue: parsePercentage(stock.change)
+                        }));
+                    
+                    const dailyBest = [...stocksWithChangeValue]
+                        .sort((a, b) => b.changeValue - a.changeValue)
+                        .slice(0, 10);
+                    
+                    const dailyWorst = [...stocksWithChangeValue]
+                        .sort((a, b) => a.changeValue - b.changeValue)
+                        .slice(0, 10);
+                    
+                    // Trier par YTD puis prendre les 10 premiers/derniers
+                    const stocksWithYtdValue = allStocks
+                        .filter(stock => stock.ytd && stock.ytd !== '-' && !isNaN(parsePercentage(stock.ytd)))
+                        .map(stock => ({
+                            ...stock,
+                            ytdValue: parsePercentage(stock.ytd)
+                        }));
+                    
+                    const ytdBest = [...stocksWithYtdValue]
+                        .sort((a, b) => b.ytdValue - a.ytdValue)
+                        .slice(0, 10);
+                    
+                    const ytdWorst = [...stocksWithYtdValue]
+                        .sort((a, b) => a.ytdValue - b.ytdValue)
+                        .slice(0, 10);
+                    
+                    // Mettre à jour les listes
+                    data.top_performers.daily.best = dedupStocksByName(dailyBest);
+                    data.top_performers.daily.worst = dedupStocksByName(dailyWorst);
+                    data.top_performers.ytd.best = dedupStocksByName(ytdBest);
+                    data.top_performers.ytd.worst = dedupStocksByName(ytdWorst);
+                }
+            }
+        }
+        
+        // Maintenant on peut essayer de travailler avec les top_performers
+        if (!data || !data.top_performers) {
+            console.error("❌ Impossible de créer ou récupérer les top performers");
+            return;
+        }
         
         const topPerformers = data.top_performers;
         
         // Mise à jour du top 10 Hausse quotidienne
         if (topPerformers.daily && topPerformers.daily.best) {
-            // Ajouter les attributs de marché à chaque action
-            const uniqueBest = dedupStocksThoroughly(topPerformers.daily.best).map(stock => ({
+            // Déduplication par nom et ajout des attributs de marché
+            const uniqueBest = dedupStocksByName(topPerformers.daily.best).map(stock => ({
                 ...stock,
                 market: currentMarket.toUpperCase(),
                 marketIcon: currentMarket === 'nasdaq' 
                     ? '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
                     : '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
             }));
-            renderTopTenCards('top-daily-gainers', uniqueBest.slice(0, 10), 'change', currentMarket);
+            
+            // S'assurer d'avoir 10 éléments
+            const displayStocks = uniqueBest.slice(0, 10);
+            while (displayStocks.length < 10) {
+                displayStocks.push({
+                    name: `Stock ${displayStocks.length + 1}`,
+                    symbol: "",
+                    last: "-",
+                    change: "-",
+                    market: currentMarket.toUpperCase(),
+                    marketIcon: currentMarket === 'nasdaq' 
+                        ? '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
+                        : '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
+                });
+            }
+            
+            renderTopTenCards('top-daily-gainers', displayStocks, 'change', currentMarket);
         }
         
         // Mise à jour du top 10 Baisse quotidienne
         if (topPerformers.daily && topPerformers.daily.worst) {
-            // Ajouter les attributs de marché à chaque action
-            const uniqueWorst = dedupStocksThoroughly(topPerformers.daily.worst).map(stock => ({
+            // Déduplication par nom et ajout des attributs de marché
+            const uniqueWorst = dedupStocksByName(topPerformers.daily.worst).map(stock => ({
                 ...stock,
                 market: currentMarket.toUpperCase(),
                 marketIcon: currentMarket === 'nasdaq' 
                     ? '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
                     : '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
             }));
-            renderTopTenCards('top-daily-losers', uniqueWorst.slice(0, 10), 'change', currentMarket);
+            
+            // S'assurer d'avoir 10 éléments
+            const displayStocks = uniqueWorst.slice(0, 10);
+            while (displayStocks.length < 10) {
+                displayStocks.push({
+                    name: `Stock ${displayStocks.length + 1}`,
+                    symbol: "",
+                    last: "-",
+                    change: "-",
+                    market: currentMarket.toUpperCase(),
+                    marketIcon: currentMarket === 'nasdaq' 
+                        ? '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
+                        : '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
+                });
+            }
+            
+            renderTopTenCards('top-daily-losers', displayStocks, 'change', currentMarket);
         }
         
         // Mise à jour du top 10 Hausse YTD
         if (topPerformers.ytd && topPerformers.ytd.best) {
-            // Ajouter les attributs de marché à chaque action
-            const uniqueBestYtd = dedupStocksThoroughly(topPerformers.ytd.best).map(stock => ({
+            // Déduplication par nom et ajout des attributs de marché
+            const uniqueBestYtd = dedupStocksByName(topPerformers.ytd.best).map(stock => ({
                 ...stock,
                 market: currentMarket.toUpperCase(),
                 marketIcon: currentMarket === 'nasdaq' 
                     ? '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
                     : '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
             }));
-            renderTopTenCards('top-ytd-gainers', uniqueBestYtd.slice(0, 10), 'ytd', currentMarket);
+            
+            // S'assurer d'avoir 10 éléments
+            const displayStocks = uniqueBestYtd.slice(0, 10);
+            while (displayStocks.length < 10) {
+                displayStocks.push({
+                    name: `Stock ${displayStocks.length + 1}`,
+                    symbol: "",
+                    last: "-",
+                    ytd: "-",
+                    market: currentMarket.toUpperCase(),
+                    marketIcon: currentMarket === 'nasdaq' 
+                        ? '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
+                        : '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
+                });
+            }
+            
+            renderTopTenCards('top-ytd-gainers', displayStocks, 'ytd', currentMarket);
         }
         
         // Mise à jour du top 10 Baisse YTD
         if (topPerformers.ytd && topPerformers.ytd.worst) {
-            // Ajouter les attributs de marché à chaque action
-            const uniqueWorstYtd = dedupStocksThoroughly(topPerformers.ytd.worst).map(stock => ({
+            // Déduplication par nom et ajout des attributs de marché
+            const uniqueWorstYtd = dedupStocksByName(topPerformers.ytd.worst).map(stock => ({
                 ...stock,
                 market: currentMarket.toUpperCase(),
                 marketIcon: currentMarket === 'nasdaq' 
                     ? '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
                     : '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
             }));
-            renderTopTenCards('top-ytd-losers', uniqueWorstYtd.slice(0, 10), 'ytd', currentMarket);
+            
+            // S'assurer d'avoir 10 éléments
+            const displayStocks = uniqueWorstYtd.slice(0, 10);
+            while (displayStocks.length < 10) {
+                displayStocks.push({
+                    name: `Stock ${displayStocks.length + 1}`,
+                    symbol: "",
+                    last: "-",
+                    ytd: "-",
+                    market: currentMarket.toUpperCase(),
+                    marketIcon: currentMarket === 'nasdaq' 
+                        ? '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
+                        : '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
+                });
+            }
+            
+            renderTopTenCards('top-ytd-losers', displayStocks, 'ytd', currentMarket);
         }
     }
     
@@ -741,22 +922,22 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log("✅ Utilisation des données globales pré-combinées");
             
             if (globalData.daily && globalData.daily.best) {
-                const uniqueGainers = dedupStocksThoroughly(globalData.daily.best);
+                const uniqueGainers = dedupStocksByName(globalData.daily.best);
                 renderTopTenCards('top-global-gainers', uniqueGainers, 'change', 'global');
             }
             
             if (globalData.daily && globalData.daily.worst) {
-                const uniqueLosers = dedupStocksThoroughly(globalData.daily.worst);
+                const uniqueLosers = dedupStocksByName(globalData.daily.worst);
                 renderTopTenCards('top-global-losers', uniqueLosers, 'change', 'global');
             }
             
             if (globalData.ytd && globalData.ytd.best) {
-                const uniqueYtdGainers = dedupStocksThoroughly(globalData.ytd.best);
+                const uniqueYtdGainers = dedupStocksByName(globalData.ytd.best);
                 renderTopTenCards('top-global-ytd-gainers', uniqueYtdGainers, 'ytd', 'global');
             }
             
             if (globalData.ytd && globalData.ytd.worst) {
-                const uniqueYtdLosers = dedupStocksThoroughly(globalData.ytd.worst);
+                const uniqueYtdLosers = dedupStocksByName(globalData.ytd.worst);
                 renderTopTenCards('top-global-ytd-losers', uniqueYtdLosers, 'ytd', 'global');
             }
             
@@ -864,11 +1045,11 @@ document.addEventListener('DOMContentLoaded', function() {
             combinedDailyLosers = [...combinedDailyLosers, ...stoxxDailyWorst];
         }
         
-        // Dédupliquer toutes les listes combinées
-        combinedYtdGainers = dedupStocksThoroughly(combinedYtdGainers);
-        combinedYtdLosers = dedupStocksThoroughly(combinedYtdLosers);
-        combinedDailyGainers = dedupStocksThoroughly(combinedDailyGainers);
-        combinedDailyLosers = dedupStocksThoroughly(combinedDailyLosers);
+        // Dédupliquer toutes les listes combinées par nom
+        combinedYtdGainers = dedupStocksByName(combinedYtdGainers);
+        combinedYtdLosers = dedupStocksByName(combinedYtdLosers);
+        combinedDailyGainers = dedupStocksByName(combinedDailyGainers);
+        combinedDailyLosers = dedupStocksByName(combinedDailyLosers);
         
         // Trier et préparer les données YTD
         if (combinedYtdGainers.length > 0) {
@@ -996,8 +1177,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Assurer la déduplication absolue des stocks
-        const uniqueStocks = dedupStocksThoroughly(stocks);
+        // Assurer la déduplication absolue des stocks par nom
+        const uniqueStocks = dedupStocksByName(stocks);
         
         // Créer les cartes pour chaque action (jusqu'à 10)
         const displayStocks = uniqueStocks.slice(0, 10);
@@ -1071,8 +1252,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Mettre à jour les top/bottom performers journaliers
         if (topPerformersData.daily) {
-            const uniqueBest = dedupStocksThoroughly(topPerformersData.daily.best || []);
-            const uniqueWorst = dedupStocksThoroughly(topPerformersData.daily.worst || []);
+            const uniqueBest = dedupStocksByName(topPerformersData.daily.best || []);
+            const uniqueWorst = dedupStocksByName(topPerformersData.daily.worst || []);
             
             updateTopPerformersHTML('daily-top', uniqueBest, 'change');
             updateTopPerformersHTML('daily-bottom', uniqueWorst, 'change');
@@ -1080,8 +1261,8 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Mettre à jour les top/bottom performers YTD
         if (topPerformersData.ytd) {
-            const uniqueBestYtd = dedupStocksThoroughly(topPerformersData.ytd.best || []);
-            const uniqueWorstYtd = dedupStocksThoroughly(topPerformersData.ytd.worst || []);
+            const uniqueBestYtd = dedupStocksByName(topPerformersData.ytd.best || []);
+            const uniqueWorstYtd = dedupStocksByName(topPerformersData.ytd.worst || []);
             
             updateTopPerformersHTML('ytd-top', uniqueBestYtd, 'ytd');
             updateTopPerformersHTML('ytd-bottom', uniqueWorstYtd, 'ytd');
@@ -1109,8 +1290,8 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Déduplication absolue des stocks
-        const uniqueStocks = dedupStocksThoroughly(stocks);
+        // Déduplication absolue des stocks par nom
+        const uniqueStocks = dedupStocksByName(stocks);
         
         // Générer le HTML pour chaque action
         uniqueStocks.forEach((stock, i) => {
