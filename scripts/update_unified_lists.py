@@ -640,6 +640,55 @@ def main():
             logger.info("📊 Création du classement global NASDAQ + STOXX...")
             create_global_rankings(nasdaq_stocks, stoxx_result)
 
+        # Créer des fichiers séparés pour les top performers de chaque marché
+        # Ces fichiers seront plus faciles à utiliser par le frontend
+
+        # Top performers NASDAQ
+        nasdaq_top_performers = {
+            "daily": {
+                "best": combined_data["nasdaq"]["top_performers"]["daily"]["best"],
+                "worst": combined_data["nasdaq"]["top_performers"]["daily"]["worst"]
+            },
+            "ytd": {
+                "best": combined_data["nasdaq"]["top_performers"]["ytd"]["best"],
+                "worst": combined_data["nasdaq"]["top_performers"]["ytd"]["worst"]
+            },
+            "meta": {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "count": combined_data["nasdaq"]["meta"]["count"],
+                "description": "Top performers NASDAQ Composite (États-Unis)"
+            }
+        }
+
+        # Top performers STOXX
+        stoxx_top_performers = {
+            "daily": {
+                "best": combined_data["stoxx"]["top_performers"]["daily"]["best"],
+                "worst": combined_data["stoxx"]["top_performers"]["daily"]["worst"]
+            },
+            "ytd": {
+                "best": combined_data["stoxx"]["top_performers"]["ytd"]["best"],
+                "worst": combined_data["stoxx"]["top_performers"]["ytd"]["worst"]
+            },
+            "meta": {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "count": combined_data["stoxx"]["meta"]["count"],
+                "description": "Top performers DJ STOXX 600 (Europe)"
+            }
+        }
+
+        # Sauvegarder les fichiers séparés
+        nasdaq_path = os.path.join(CONFIG["stoxx"]["output_dir"], "top_nasdaq_performers.json")
+        stoxx_path = os.path.join(CONFIG["stoxx"]["output_dir"], "top_stoxx_performers.json")
+
+        with open(nasdaq_path, 'w', encoding='utf-8') as f:
+            json.dump(nasdaq_top_performers, f, ensure_ascii=False, indent=2)
+        logger.info(f"✅ Top performers NASDAQ enregistrés dans {nasdaq_path}")
+
+        with open(stoxx_path, 'w', encoding='utf-8') as f:
+            json.dump(stoxx_top_performers, f, ensure_ascii=False, indent=2)
+        logger.info(f"✅ Top performers STOXX enregistrés dans {stoxx_path}")
+
         # Résumé de la mise à jour
         result_summary = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
