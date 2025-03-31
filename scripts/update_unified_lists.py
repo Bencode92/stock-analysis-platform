@@ -497,6 +497,24 @@ def create_global_rankings(nasdaq_stocks, stoxx_result):
         # Ajouter l'information du marché pour chaque action NASDAQ
         nasdaq_with_source = []
         for stock in nasdaq_stocks:
+            # Filtrer explicitement les valeurs extrêmes pour NASDAQ comme pour STOXX
+            change_value = parse_percentage(stock.get('change', '0'))
+            ytd_value = parse_percentage(stock.get('ytd', '0'))
+            
+            # Appliquer les mêmes filtres que dans get_top_performers
+            if change_value > MAX_DAILY_GAIN_PERCENTAGE:
+                logger.info(f"Outlier NASDAQ ignoré: {stock['name']} avec changement {stock.get('change', '0')} > {MAX_DAILY_GAIN_PERCENTAGE}%")
+                continue
+                
+            if change_value < MIN_DAILY_LOSS_PERCENTAGE:
+                logger.info(f"Outlier NASDAQ ignoré: {stock['name']} avec changement {stock.get('change', '0')} < {MIN_DAILY_LOSS_PERCENTAGE}%")
+                continue
+                
+            # Filtrer aussi pour YTD
+            if ytd_value < MIN_YTD_LOSS_PERCENTAGE:
+                logger.info(f"Outlier NASDAQ YTD ignoré: {stock['name']} avec {stock.get('ytd', '0')} < {MIN_YTD_LOSS_PERCENTAGE}%")
+                continue
+                
             stock_with_source = stock.copy()
             stock_with_source['market'] = 'NASDAQ'
             stock_with_source['marketIcon'] = '<i class="fas fa-flag-usa text-xs ml-1" title="NASDAQ"></i>'
@@ -561,8 +579,34 @@ def create_market_top_performers_file(stocks, market_name, timestamp):
         timestamp (str): Horodatage pour les métadonnées
     """
     try:
+        # Filtrer les valeurs extrêmes pour le marché NASDAQ
+        filtered_stocks = []
+        if market_name == "NASDAQ":
+            for stock in stocks:
+                change_value = parse_percentage(stock.get('change', '0'))
+                ytd_value = parse_percentage(stock.get('ytd', '0'))
+                
+                # Appliquer les mêmes filtres que dans get_top_performers
+                if change_value > MAX_DAILY_GAIN_PERCENTAGE:
+                    logger.info(f"Outlier {market_name} ignoré: {stock['name']} avec changement {stock.get('change', '0')} > {MAX_DAILY_GAIN_PERCENTAGE}%")
+                    continue
+                    
+                if change_value < MIN_DAILY_LOSS_PERCENTAGE:
+                    logger.info(f"Outlier {market_name} ignoré: {stock['name']} avec changement {stock.get('change', '0')} < {MIN_DAILY_LOSS_PERCENTAGE}%")
+                    continue
+                    
+                # Filtrer aussi pour YTD
+                if ytd_value < MIN_YTD_LOSS_PERCENTAGE:
+                    logger.info(f"Outlier {market_name} YTD ignoré: {stock['name']} avec {stock.get('ytd', '0')} < {MIN_YTD_LOSS_PERCENTAGE}%")
+                    continue
+                
+                filtered_stocks.append(stock)
+        else:
+            # Pour STOXX, nous utilisons les stocks tels quels car get_top_performers appliquera le filtrage
+            filtered_stocks = stocks
+        
         # Ajouter/vérifier les indicateurs de marché pour chaque action
-        for stock in stocks:
+        for stock in filtered_stocks:
             if "market" not in stock:
                 stock["market"] = market_name
             
@@ -574,10 +618,10 @@ def create_market_top_performers_file(stocks, market_name, timestamp):
                     stock["marketIcon"] = '<i class="fas fa-globe-europe text-xs ml-1" title="STOXX"></i>'
         
         # Récupérer les tops avec notre fonction améliorée de déduplication
-        daily_best = get_top_performers(stocks, 'change', True, 10)
-        daily_worst = get_top_performers(stocks, 'change', False, 10)
-        ytd_best = get_top_performers(stocks, 'ytd', True, 10)
-        ytd_worst = get_top_performers(stocks, 'ytd', False, 10)
+        daily_best = get_top_performers(filtered_stocks, 'change', True, 10)
+        daily_worst = get_top_performers(filtered_stocks, 'change', False, 10)
+        ytd_best = get_top_performers(filtered_stocks, 'ytd', True, 10)
+        ytd_worst = get_top_performers(filtered_stocks, 'ytd', False, 10)
         
         # Structure du fichier JSON
         market_tops = {
@@ -591,7 +635,7 @@ def create_market_top_performers_file(stocks, market_name, timestamp):
             },
             "meta": {
                 "timestamp": timestamp,
-                "count": len(stocks),
+                "count": len(filtered_stocks),
                 "description": f"Top performers du marché {market_name}"
             }
         }
