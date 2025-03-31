@@ -157,34 +157,30 @@ jobs:
           fi
 
       - name: 💾 Commit and push if changed
-        run: |
-          # Configuration de git avec le token explicite
-          git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          
-          # Éviter d'utiliser stash qui peut masquer les changements
-          # git stash -u || true
-          
-          echo "État actuel des fichiers:"
-          git status data/lists.json data/update_summary.json data/global_top_performers.json
-          
-          # Forcer l'ajout des fichiers (même sans changement détecté)
-          echo "Ajout forcé des fichiers principaux..."
-          git add -f data/lists.json
-          git add -f data/update_summary.json 
-          git add -f data/global_top_performers.json
-          
-          # Supprimer les fichiers stoxx_page_*.json du repo s'ils existent
-          for file in data/stoxx_page_*.json; do
-            if [ -f "$file" ]; then
-              git rm "$file" || true
-            fi
-          done
-          
-          # Créer un commit inconditionnel
-          echo "Création du commit..."
-          git commit -m "📊 Mise à jour forcée des données NASDAQ et STOXX [skip ci]" || echo "Pas de changements à committer"
-          
-          # Push avec force pour éviter les conflits
-          echo "Push des modifications..."
-          git push --force origin HEAD:${GITHUB_REF}
+     run: |
+    # Configuration de git avec le token explicite
+    git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+    git config --local user.name "github-actions[bot]"
+    
+    # Afficher l'état actuel des fichiers
+    echo "État actuel des fichiers:"
+    git status
+    
+    # Ajouter tous les fichiers JSON du dossier data
+    echo "Ajout de tous les fichiers JSON du dossier data..."
+    git add -f data/*.json
+    
+    # Supprimer les fichiers stoxx_page_*.json du repo s'ils existent
+    for file in data/stoxx_page_*.json; do
+      if [ -f "$file" ]; then
+        git rm "$file" || true
+      fi
+    done
+    
+    # Créer un commit inconditionnel
+    echo "Création du commit..."
+    git commit -m "📊 Mise à jour forcée des données NASDAQ et STOXX [skip ci]" || echo "Pas de changements à committer"
+    
+    # Push avec force pour éviter les conflits
+    echo "Push des modifications..."
+    git push --force origin HEAD:${GITHUB_REF}
