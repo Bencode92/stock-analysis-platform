@@ -666,66 +666,95 @@ def filter_etf_data(etfs_data):
     return "\n".join(summary), bond_names  # Retourne le texte filtré et la liste des noms d'ETF obligataires
 
 def filter_crypto_data(crypto_data):
-    """Filtre les crypto-monnaies pour n'inclure que celles avec une performance positive sur 7 jours."""
+    """Filtre les crypto-monnaies incluant celles avec performances positives sur 24h et 7j."""
     if not crypto_data or not isinstance(crypto_data, dict):
         return "Aucune donnée de crypto-monnaie disponible"
     
-    summary = ["🪙 LISTE DES CRYPTO-MONNAIES PERFORMANTES (7j% > 0):"]
+    summary = ["🪙 LISTE COMPLÈTE DES CRYPTO-MONNAIES:"]
     
-    # Liste pour stocker les cryptos à performance positive
-    positive_cryptos = []
+    # Liste pour stocker toutes les cryptos (pas de filtrage)
+    all_cryptos = []
+    cryptos_24h_positive = []
+    cryptos_7d_positive = []
     
     # Traiter la catégorie principale
     main_cryptos = crypto_data.get('categories', {}).get('main', [])
     if main_cryptos:
         for crypto in main_cryptos:
             try:
-                # Extraire la variation sur 7 jours 
-                change_7d = crypto.get('change_7d', '0%')
-                # Nettoyer la valeur
-                change_7d = change_7d.replace('+', '').replace('%', '')
-                change_7d = float(change_7d)
+                name = crypto.get('name', '')
+                symbol = crypto.get('symbol', '')
+                price = crypto.get('price', '')
                 
-                # Vérifier si positive
-                if change_7d > 0:
-                    name = crypto.get('name', '')
-                    symbol = crypto.get('symbol', '')
-                    price = crypto.get('price', '')
-                    
-                    # Vérifier que nous avons les infos de base
-                    if name and symbol:
-                        positive_cryptos.append((name, symbol, change_7d, price))
+                # Extraire les variations sur 24h et 7j
+                change_24h = crypto.get('change_24h', '0%')
+                change_7d = crypto.get('change_7d', '0%')
+                
+                # Nettoyer les valeurs
+                change_24h_value = float(change_24h.replace('+', '').replace('%', ''))
+                change_7d_value = float(change_7d.replace('+', '').replace('%', ''))
+                
+                # Ajouter à toutes les cryptos
+                all_cryptos.append((name, symbol, change_24h_value, change_7d_value, price))
+                
+                # Vérifier si positive sur 24h
+                if change_24h_value > 0:
+                    cryptos_24h_positive.append((name, symbol))
+                
+                # Vérifier si positive sur 7j
+                if change_7d_value > 0:
+                    cryptos_7d_positive.append((name, symbol))
+                
             except (ValueError, TypeError):
                 continue
     
-    # Vérifier aussi les top_gainers_7d si disponibles
+    # Ajouter autres catégories (top_gainers, etc.)
     top_gainers = crypto_data.get('categories', {}).get('top_gainers_7d', [])
     if top_gainers:
         for crypto in top_gainers:
             try:
                 name = crypto.get('name', '')
                 symbol = crypto.get('symbol', '')
-                change_7d = crypto.get('change_7d', '0%')
                 price = crypto.get('price', '')
                 
                 # Éviter les doublons (vérifier si symbole existe déjà)
-                if name and symbol and not any(symbol == c[1] for c in positive_cryptos):
-                    # Nettoyer et convertir la variation
-                    change_value = float(change_7d.replace('+', '').replace('%', ''))
-                    positive_cryptos.append((name, symbol, change_value, price))
+                if name and symbol and not any(symbol == c[1] for c in all_cryptos):
+                    # Extraire les variations sur 24h et 7j
+                    change_24h = crypto.get('change_24h', '0%')
+                    change_7d = crypto.get('change_7d', '0%')
+                    
+                    # Nettoyer les valeurs
+                    change_24h_value = float(change_24h.replace('+', '').replace('%', ''))
+                    change_7d_value = float(change_7d.replace('+', '').replace('%', ''))
+                    
+                    all_cryptos.append((name, symbol, change_24h_value, change_7d_value, price))
+                    
+                    # Vérifier si positive sur 24h/7j
+                    if change_24h_value > 0:
+                        cryptos_24h_positive.append((name, symbol))
+                    if change_7d_value > 0:
+                        cryptos_7d_positive.append((name, symbol))
             except (ValueError, TypeError):
                 continue
     
-    # Trier par performance décroissante
-    positive_cryptos.sort(key=lambda x: x[2], reverse=True)
+    # Ajouter toutes les cryptos à la liste (tri alphabétique)
+    all_cryptos.sort(key=lambda x: x[0])  # Tri alphabétique par nom
     
-    # Ajouter les top 10 cryptos à la liste
-    for name, symbol, change, price in positive_cryptos[:10]:
-        summary.append(f"• {name} ({symbol}): +{change:.2f}% | Prix: {price}")
+    for name, symbol, change_24h, change_7d, price in all_cryptos:
+        status_24h = "+" if change_24h > 0 else ""
+        status_7d = "+" if change_7d > 0 else ""
+        summary.append(f"• {name} ({symbol}): 24h: {status_24h}{change_24h:.2f}% | 7j: {status_7d}{change_7d:.2f}% | Prix: {price}")
     
-    # Si aucune crypto positive n'a été trouvée
-    if len(summary) == 1:
-        summary.append("Aucune crypto-monnaie n'affiche une performance positive sur 7 jours.")
+    # Ajouter des sections distinctes pour les positives
+    summary.append("\n🟢 CRYPTO-MONNAIES POSITIVES SUR 24H:")
+    summary.append(f"Total: {len(cryptos_24h_positive)} cryptos en hausse")
+    for name, symbol in cryptos_24h_positive:
+        summary.append(f"• {name} ({symbol})")
+    
+    summary.append("\n🟢 CRYPTO-MONNAIES POSITIVES SUR 7 JOURS:")
+    summary.append(f"Total: {len(cryptos_7d_positive)} cryptos en hausse")
+    for name, symbol in cryptos_7d_positive:
+        summary.append(f"• {name} ({symbol})")
     
     return "\n".join(summary)
 
