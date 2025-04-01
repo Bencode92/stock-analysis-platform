@@ -119,30 +119,87 @@ SECTOR_DATA = {
 # Liste pour stocker tous les secteurs avant le filtrage (pour calculer les Top 3)
 ALL_SECTORS = []
 
-def get_headers():
-    """Crée des en-têtes HTTP aléatoires pour éviter la détection de bot"""
-    user_agents = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0"
-    ]
+def get_cookies():
+    """Retourne des cookies aléatoires pour simuler un navigateur réel"""
+    # Générer un ID de session aléatoire
+    session_id = ''.join(random.choices('0123456789abcdef', k=32))
+    device_id = ''.join(random.choices('0123456789abcdef', k=32))
     
-    return {
-        "User-Agent": random.choice(user_agents),
+    # Créer des cookies communs
+    cookies = {
+        'sessionid': session_id,
+        'device_id': device_id,
+        'visited': 'true',
+        'consent': 'true',
+        'euconsent': 'BOv_yYiOv_yYiAKAyBFRDP-AAAAwJrv7_77__9_-_f__9uj3Gr_v_f__32ccL59v_h_7v-_7fi_-0nV4u_1vft9yfk1-5ctDztp507iakivXmqdeb9v_nz3_5pxP78k89r7337Ew_v8_v-b7JCON_IA',
+        'tracking_preferences': '{"v":"1.0","p":1}',
+        'locale': 'fr',
+        '_ga': 'GA1.2.1234567890.1643739600',
+        '_gid': 'GA1.2.987654321.1643739600',
+    }
+    
+    return cookies
+
+def get_headers(url):
+    """Crée des en-têtes HTTP réalistes pour éviter la détection de bot"""
+    chrome_versions = ["110.0.0.0", "111.0.0.0", "112.0.0.0", "113.0.0.0", "114.0.0.0", "115.0.0.0", 
+                      "116.0.0.0", "117.0.0.0", "118.0.0.0", "119.0.0.0", "120.0.0.0", "121.0.0.0"]
+    firefox_versions = ["110.0", "111.0", "112.0", "113.0", "114.0", "115.0", 
+                        "116.0", "117.0", "118.0", "119.0", "120.0", "121.0", "122.0"]
+    
+    os_list = ["Windows NT 10.0; Win64; x64", "Macintosh; Intel Mac OS X 10_15_7", 
+               "X11; Linux x86_64", "Windows NT 11.0; Win64; x64"]
+    
+    # Création de User-Agents plus détaillés
+    chrome_ua = f"Mozilla/5.0 ({random.choice(os_list)}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{random.choice(chrome_versions)} Safari/537.36"
+    firefox_ua = f"Mozilla/5.0 ({random.choice(os_list)}; rv:{random.choice(firefox_versions)}) Gecko/20100101 Firefox/{random.choice(firefox_versions)}"
+    safari_ua = f"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Safari/605.1.15"
+    
+    user_agents = [chrome_ua, firefox_ua, safari_ua]
+    selected_ua = random.choice(user_agents)
+    
+    # Déterminer le referer approprié
+    if "lesechos.fr" in url:
+        referer = "https://investir.lesechos.fr/"
+    elif "boursorama.com" in url:
+        referer = "https://www.boursorama.com/bourse/"
+    else:
+        referer = "https://www.google.com/"
+    
+    # En-têtes communs à tous les navigateurs
+    headers = {
+        "User-Agent": selected_ua,
         "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
         "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
         "Accept-Encoding": "gzip, deflate, br",
-        "Cache-Control": "no-cache",
-        "Pragma": "no-cache",
-        "Referer": "https://www.google.com/",
         "Connection": "keep-alive",
         "Upgrade-Insecure-Requests": "1",
         "Sec-Fetch-Dest": "document",
         "Sec-Fetch-Mode": "navigate",
-        "Sec-Fetch-Site": "cross-site",
-        "DNT": "1"
+        "Sec-Fetch-User": "?1",
+        "Sec-Fetch-Site": "same-origin",
+        "Pragma": "no-cache",
+        "Cache-Control": "no-cache",
+        "Referer": referer,
+        "DNT": "1",
+        "Sec-CH-UA": "\" Not A;Brand\";v=\"99\", \"Chromium\";v=\"100\", \"Google Chrome\";v=\"100\"",
+        "Sec-CH-UA-Mobile": "?0",
+        "Sec-CH-UA-Platform": "\"Windows\"",
     }
+    
+    # Ajouter des en-têtes spécifiques au site
+    if "lesechos.fr" in url:
+        headers.update({
+            "Origin": "https://investir.lesechos.fr",
+            "Host": "investir.lesechos.fr",
+        })
+    elif "boursorama.com" in url:
+        headers.update({
+            "Origin": "https://www.boursorama.com",
+            "Host": "www.boursorama.com",
+        })
+    
+    return headers
 
 def determine_category(sector_name):
     """Détermine la catégorie d'un secteur en fonction de son nom"""
@@ -781,18 +838,65 @@ def scrape_sectors_data():
             logger.info(f"Récupération des données depuis {source['name']} ({source['url']})...")
             
             # Récupérer le contenu de la page avec délai pour éviter la détection
-            time.sleep(random.uniform(1, 3))
-            headers = get_headers()
+            time.sleep(random.uniform(2, 5))
+            
+            # Utiliser des en-têtes et cookies réalistes
+            headers = get_headers(source["url"])
+            cookies = get_cookies()
+            
+            # Log les informations importantes
             logger.info(f"Utilisation du User-Agent: {headers['User-Agent']}")
             
-            response = requests.get(source["url"], headers=headers, timeout=30)
+            # Première tentative avec session standard
+            session = requests.Session()
+            for key, value in cookies.items():
+                session.cookies.set(key, value)
+            
+            # Visiter la page d'accueil d'abord
+            if "lesechos.fr" in source["url"]:
+                try:
+                    # Visiter d'abord la page d'accueil pour obtenir des cookies
+                    logger.info("Visite préalable de la page d'accueil de Les Echos...")
+                    home_url = "https://investir.lesechos.fr/"
+                    home_response = session.get(home_url, headers=headers, timeout=30, verify=False)
+                    time.sleep(random.uniform(1, 3))
+                except Exception as e:
+                    logger.warning(f"Erreur lors de la visite préalable: {e}")
+            
+            # Maintenant faire la requête principale
+            response = session.get(source["url"], headers=headers, timeout=30, verify=False)
             
             if response.status_code != 200:
                 logger.warning(f"Erreur {response.status_code} pour {source['name']} - {response.reason}")
-                # Vérifier s'il y a une redirection
-                if response.history:
-                    logger.warning(f"Redirection détectée: {response.url}")
-                continue
+                
+                # Si c'est un problème avec Les Echos, essayer une deuxième méthode
+                if "lesechos.fr" in source["url"] and response.status_code in [403, 404, 500, 502, 503]:
+                    logger.info("⚠️ Tentative alternative avec un autre User-Agent pour Les Echos...")
+                    
+                    # Deuxième tentative avec un autre User-Agent
+                    alt_headers = {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                        "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+                        "Referer": "https://www.google.com/",
+                        "DNT": "1",
+                        "Connection": "keep-alive",
+                        "Upgrade-Insecure-Requests": "1"
+                    }
+                    
+                    try:
+                        # Attendre un peu avant de réessayer
+                        time.sleep(random.uniform(3, 7))
+                        response = requests.get(source["url"], headers=alt_headers, timeout=30, verify=False)
+                        logger.info(f"Tentative alternative: Code {response.status_code}")
+                    except Exception as retry_error:
+                        logger.error(f"Échec de la tentative alternative: {retry_error}")
+                
+                # Si toujours pas de succès, passer à la source suivante
+                if response.status_code != 200:
+                    if response.history:
+                        logger.warning(f"Redirection détectée: {response.url}")
+                    continue
             
             logger.info(f"Réponse HTTP {response.status_code} reçue pour {source['name']}")
             
