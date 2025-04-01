@@ -666,7 +666,7 @@ def filter_etf_data(etfs_data):
     return "\n".join(summary), bond_names  # Retourne le texte filtré et la liste des noms d'ETF obligataires
 
 def filter_crypto_data(crypto_data):
-    """Filtre les crypto-monnaies incluant toutes les cryptos, triées par capitalisation boursière."""
+    """Filtre les crypto-monnaies incluant toutes les cryptos, triées par capitalisation boursière, avec filtre de volatilité."""
     if not crypto_data or not isinstance(crypto_data, dict):
         return "Aucune donnée de crypto-monnaie disponible"
     
@@ -676,6 +676,7 @@ def filter_crypto_data(crypto_data):
     all_cryptos = []
     cryptos_24h_positive = []
     cryptos_7d_positive = []
+    cryptos_filtered_out = []  # Pour tracer les cryptos trop volatiles éliminées
     
     # Traiter la catégorie principale
     main_cryptos = crypto_data.get('categories', {}).get('main', [])
@@ -694,6 +695,12 @@ def filter_crypto_data(crypto_data):
                 # Nettoyer les valeurs
                 change_24h_value = float(change_24h.replace('+', '').replace('%', '').replace(',', '.'))
                 change_7d_value = float(change_7d.replace('+', '').replace('%', '').replace(',', '.'))
+                
+                # ⚠️ Filtrer les cryptos trop volatiles
+                if change_24h_value > 15 and change_24h_value > (change_7d_value * 2):
+                    # Trop volatile, on l'ajoute à la liste des exclues mais on ne l'intègre pas au filtre principal
+                    cryptos_filtered_out.append((name, symbol, change_24h_value, change_7d_value, price))
+                    continue  # Passer à la crypto suivante
                 
                 # Convertir la market cap en nombre si c'est une chaîne
                 if isinstance(market_cap, str):
@@ -743,7 +750,7 @@ def filter_crypto_data(crypto_data):
                 symbol = crypto.get('symbol', '')
                 
                 # Éviter les doublons
-                if name and symbol and not any(symbol == c[1] for c in all_cryptos):
+                if name and symbol and not any(symbol == c[1] for c in all_cryptos) and not any(symbol == c[1] for c in cryptos_filtered_out):
                     price = crypto.get('price', '')
                     change_24h = crypto.get('change_24h', '0%')
                     change_7d = crypto.get('change_7d', '0%')
@@ -752,6 +759,12 @@ def filter_crypto_data(crypto_data):
                     # Nettoyer les valeurs
                     change_24h_value = float(change_24h.replace('+', '').replace('%', '').replace(',', '.'))
                     change_7d_value = float(change_7d.replace('+', '').replace('%', '').replace(',', '.'))
+                    
+                    # ⚠️ Filtrer les cryptos trop volatiles
+                    if change_24h_value > 15 and change_24h_value > (change_7d_value * 2):
+                        # Trop volatile, on l'ajoute à la liste des exclues
+                        cryptos_filtered_out.append((name, symbol, change_24h_value, change_7d_value, price))
+                        continue  # Passer à la crypto suivante
                     
                     # Convertir la market cap
                     if isinstance(market_cap, str):
@@ -825,6 +838,13 @@ def filter_crypto_data(crypto_data):
     summary.append(f"Total: {len(cryptos_7d_positive)} cryptos en hausse")
     for name, symbol in cryptos_7d_positive:
         summary.append(f"• {name} ({symbol})")
+    
+    # Ajouter la section des cryptos écartées pour volatilité excessive
+    if cryptos_filtered_out:
+        summary.append("\n🟠 CRYPTO-MONNAIES ÉCARTÉES POUR VOLATILITÉ EXCESSIVE (24h > 15% ET 24h > 2×7j):")
+        summary.append(f"Total: {len(cryptos_filtered_out)} cryptos trop volatiles")
+        for name, symbol, change_24h, change_7d, price in cryptos_filtered_out:
+            summary.append(f"• {name} ({symbol}): 24h: +{change_24h:.2f}% | 7j: {'+' if change_7d > 0 else ''}{change_7d:.2f}% | Prix: {price}")
     
     return "\n".join(summary)
 
