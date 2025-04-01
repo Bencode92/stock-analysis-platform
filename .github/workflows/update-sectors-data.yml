@@ -3,9 +3,9 @@ name: Update Sector Data
 on:
   # Déclenchement manuel
   workflow_dispatch:
-  # Ajout d'un déclenchement automatique toutes les 30 minutes
+  # Modifié pour s'exécuter toutes les 4 heures au lieu de toutes les 30 minutes
   schedule:
-    - cron: '15,45 * * * *'  # Exécuter à 15e et 45e minute de chaque heure
+    - cron: '15 */4 * * *'  # Exécuter à 00h15, 04h15, 08h15, 12h15, 16h15, 20h15
 
 # Configuration des permissions
 permissions:
