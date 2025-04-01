@@ -684,6 +684,8 @@ def calculate_top_performers():
 def scrape_sectors_data():
     """Récupère et traite les données de tous les secteurs"""
     all_sectors = []
+    europe_success = False
+    us_success = False
     
     # Pour chaque source configurée
     for source in CONFIG["sources"]:
@@ -714,8 +716,18 @@ def scrape_sectors_data():
             # Traiter selon la source
             if "lesechos.fr" in source["url"]:
                 sectors = extract_lesechos_data(html)
+                europe_success = len(sectors) > 0
+                if europe_success:
+                    logger.info(f"✅ {len(sectors)} secteurs européens (STOXX) trouvés avec succès!")
+                else:
+                    logger.warning("⚠️ Aucun secteur européen (STOXX) n'a pu être trouvé.")
             elif "boursorama.com" in source["url"]:
                 sectors = extract_boursorama_data(html)
+                us_success = len(sectors) > 0
+                if us_success:
+                    logger.info(f"✅ {len(sectors)} secteurs américains (NASDAQ) trouvés avec succès!")
+                else:
+                    logger.warning("⚠️ Aucun secteur américain (NASDAQ) n'a pu être trouvé.")
             else:
                 logger.warning(f"Source non reconnue: {source['name']}")
                 continue
@@ -736,7 +748,13 @@ def scrape_sectors_data():
     # Mettre à jour l'horodatage
     SECTOR_DATA["meta"]["lastUpdated"] = datetime.now(timezone.utc).isoformat()
     
-    return len(all_sectors) > 0
+    # Retourner les résultats par région
+    return {
+        "success": len(all_sectors) > 0,
+        "europe_success": europe_success,
+        "us_success": us_success,
+        "total_sectors": len(all_sectors)
+    }
 
 def save_sector_data():
     """Enregistre les données sectorielles dans un fichier JSON"""
@@ -757,7 +775,7 @@ def save_sector_data():
         return False
 
 def check_existing_data():
-    """Vérifier si un fichier de données existe déjà"""
+    """Vérifier si un fichier de données existe déjà et le charger si nécessaire"""
     try:
         if os.path.exists(CONFIG["output_path"]):
             logger.info("📂 Fichier de données sectorielles existant trouvé")
@@ -766,6 +784,17 @@ def check_existing_data():
     except Exception as e:
         logger.error(f"❌ Erreur lors de la vérification du fichier existant: {str(e)}")
         return False
+
+def load_existing_data():
+    """Charge les données existantes du fichier JSON"""
+    try:
+        if os.path.exists(CONFIG["output_path"]):
+            with open(CONFIG["output_path"], 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return None
+    except Exception as e:
+        logger.error(f"❌ Erreur lors du chargement des données existantes: {str(e)}")
+        return None
 
 def main():
     """Point d'entrée principal du script"""
@@ -777,18 +806,78 @@ def main():
         
         # Vérifier si les données existent déjà
         has_existing_data = check_existing_data()
+        old_data = None
+        
+        # Charger les anciennes données si elles existent
+        if has_existing_data:
+            old_data = load_existing_data()
+            if old_data:
+                logger.info("✅ Anciennes données chargées avec succès")
+            else:
+                logger.warning("⚠️ Impossible de charger les anciennes données")
         
         # Récupérer les données sectorielles
-        success = scrape_sectors_data()
+        results = scrape_sectors_data()
         
-        # Si l'extraction échoue mais qu'on a des données existantes, conserver le fichier
-        if not success and has_existing_data:
-            logger.info("⚠️ Utilisation des données existantes car le scraping a échoué")
+        # Si l'extraction échoue complètement mais qu'on a des données existantes, conserver le fichier
+        if not results["success"] and has_existing_data:
+            logger.info("⚠️ Utilisation des données existantes car le scraping a échoué complètement")
             sys.exit(0) # Sortie sans erreur pour ne pas faire échouer le workflow
-        elif not success and not has_existing_data:
+        elif not results["success"] and not has_existing_data:
             logger.error("❌ Aucune donnée existante et échec du scraping")
             sys.exit(1) # Sortie avec erreur car on n'a pas de données
         else:
+            # Récupération partielle réussie - vérifier si les deux régions ont été obtenues
+            if not results["europe_success"] or not results["us_success"]:
+                logger.warning(f"⚠️ Le scraping est partiellement réussi: Europe={results['europe_success']}, US={results['us_success']}")
+                
+                # Si on a des anciennes données, fusionner les régions manquantes
+                if old_data:
+                    # Fusionner les données par région
+                    if not results["europe_success"]:
+                        logger.info("🔄 Recherche de secteurs STOXX Europe 600 dans les anciennes données...")
+                        # Pour chaque catégorie dans les anciennes données
+                        for category in old_data["sectors"]:
+                            # Filtrer pour ne garder que les secteurs européens
+                            european_sectors = [s for s in old_data["sectors"][category] if s.get("region") == "Europe"]
+                            if european_sectors:
+                                logger.info(f"✅ {len(european_sectors)} secteurs STOXX Europe 600 trouvés dans la catégorie '{category}'")
+                                # Les ajouter aux données actuelles
+                                if category in SECTOR_DATA["sectors"]:
+                                    SECTOR_DATA["sectors"][category].extend(european_sectors)
+                                    # Mettre à jour ALL_SECTORS pour les top performers
+                                    ALL_SECTORS.extend(european_sectors)
+                                else:
+                                    SECTOR_DATA["sectors"][category] = european_sectors
+                                    ALL_SECTORS.extend(european_sectors)
+                        
+                        # Recalculer les top performers avec les données fusionnées
+                        calculate_top_performers()
+                    
+                    if not results["us_success"]:
+                        logger.info("🔄 Recherche de secteurs NASDAQ US dans les anciennes données...")
+                        # Pour chaque catégorie dans les anciennes données
+                        for category in old_data["sectors"]:
+                            # Filtrer pour ne garder que les secteurs américains
+                            us_sectors = [s for s in old_data["sectors"][category] if s.get("region") == "US"]
+                            if us_sectors:
+                                logger.info(f"✅ {len(us_sectors)} secteurs NASDAQ US trouvés dans la catégorie '{category}'")
+                                # Les ajouter aux données actuelles
+                                if category in SECTOR_DATA["sectors"]:
+                                    SECTOR_DATA["sectors"][category].extend(us_sectors)
+                                    # Mettre à jour ALL_SECTORS pour les top performers
+                                    ALL_SECTORS.extend(us_sectors)
+                                else:
+                                    SECTOR_DATA["sectors"][category] = us_sectors
+                                    ALL_SECTORS.extend(us_sectors)
+                        
+                        # Recalculer les top performers avec les données fusionnées
+                        calculate_top_performers()
+                    
+                    # Mettre à jour le nombre total de secteurs
+                    SECTOR_DATA["meta"]["count"] = sum(len(sectors) for sectors in SECTOR_DATA["sectors"].values())
+                    logger.info(f"✅ Après fusion: {SECTOR_DATA['meta']['count']} secteurs au total")
+            
             # Enregistrer les données
             if save_sector_data():
                 logger.info("✅ Traitement des données sectorielles terminé avec succès")
