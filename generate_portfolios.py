@@ -666,13 +666,13 @@ def filter_etf_data(etfs_data):
     return "\n".join(summary), bond_names  # Retourne le texte filtré et la liste des noms d'ETF obligataires
 
 def filter_crypto_data(crypto_data):
-    """Filtre les crypto-monnaies incluant celles avec performances positives sur 24h et 7j."""
+    """Filtre les crypto-monnaies incluant toutes les cryptos, triées par capitalisation boursière."""
     if not crypto_data or not isinstance(crypto_data, dict):
         return "Aucune donnée de crypto-monnaie disponible"
     
-    summary = ["🪙 LISTE COMPLÈTE DES CRYPTO-MONNAIES:"]
+    summary = ["🪙 LISTE COMPLÈTE DES CRYPTO-MONNAIES TRIÉES PAR CAPITALISATION:"]
     
-    # Liste pour stocker toutes les cryptos (pas de filtrage)
+    # Liste pour stocker toutes les cryptos avec leur capitalisation boursière
     all_cryptos = []
     cryptos_24h_positive = []
     cryptos_7d_positive = []
@@ -686,50 +686,99 @@ def filter_crypto_data(crypto_data):
                 symbol = crypto.get('symbol', '')
                 price = crypto.get('price', '')
                 
-                # Extraire les variations sur 24h et 7j
+                # Extraire les variations et la capitalisation boursière
                 change_24h = crypto.get('change_24h', '0%')
                 change_7d = crypto.get('change_7d', '0%')
+                market_cap = crypto.get('market_cap', 0)
                 
                 # Nettoyer les valeurs
-                change_24h_value = float(change_24h.replace('+', '').replace('%', ''))
-                change_7d_value = float(change_7d.replace('+', '').replace('%', ''))
+                change_24h_value = float(change_24h.replace('+', '').replace('%', '').replace(',', '.'))
+                change_7d_value = float(change_7d.replace('+', '').replace('%', '').replace(',', '.'))
+                
+                # Convertir la market cap en nombre si c'est une chaîne
+                if isinstance(market_cap, str):
+                    # Nettoyer la chaîne (supprimer symboles, espaces, etc.)
+                    cleaned_cap = re.sub(r'[^\d.,]', '', market_cap.replace(',', '.'))
+                    
+                    # Gérer les formats communs pour les milliards/millions (B, M)
+                    if 'B' in market_cap or 'b' in market_cap:
+                        multiplier = 1_000_000_000
+                    elif 'M' in market_cap or 'm' in market_cap:
+                        multiplier = 1_000_000
+                    else:
+                        multiplier = 1
+                    
+                    try:
+                        market_cap_value = float(cleaned_cap) * multiplier
+                    except (ValueError, TypeError):
+                        # Si la conversion échoue, utilisez un ordre de grandeur basé sur le prix
+                        # (juste comme approximation fallback)
+                        try:
+                            price_value = float(re.sub(r'[^\d.,]', '', str(price).replace(',', '.')))
+                            market_cap_value = price_value * 1_000_000  # estimation grossière
+                        except:
+                            market_cap_value = 0
+                else:
+                    market_cap_value = float(market_cap or 0)
                 
                 # Ajouter à toutes les cryptos
-                all_cryptos.append((name, symbol, change_24h_value, change_7d_value, price))
+                all_cryptos.append((name, symbol, change_24h_value, change_7d_value, price, market_cap_value))
                 
-                # Vérifier si positive sur 24h
+                # Vérifier si positive sur 24h/7j
                 if change_24h_value > 0:
                     cryptos_24h_positive.append((name, symbol))
-                
-                # Vérifier si positive sur 7j
                 if change_7d_value > 0:
                     cryptos_7d_positive.append((name, symbol))
                 
-            except (ValueError, TypeError):
+            except (ValueError, TypeError) as e:
+                print(f"Erreur lors du traitement de la crypto {name}: {str(e)}")
                 continue
     
-    # Ajouter autres catégories (top_gainers, etc.)
+    # Traiter les autres catégories si nécessaire
     top_gainers = crypto_data.get('categories', {}).get('top_gainers_7d', [])
     if top_gainers:
         for crypto in top_gainers:
             try:
                 name = crypto.get('name', '')
                 symbol = crypto.get('symbol', '')
-                price = crypto.get('price', '')
                 
-                # Éviter les doublons (vérifier si symbole existe déjà)
+                # Éviter les doublons
                 if name and symbol and not any(symbol == c[1] for c in all_cryptos):
-                    # Extraire les variations sur 24h et 7j
+                    price = crypto.get('price', '')
                     change_24h = crypto.get('change_24h', '0%')
                     change_7d = crypto.get('change_7d', '0%')
+                    market_cap = crypto.get('market_cap', 0)
                     
                     # Nettoyer les valeurs
-                    change_24h_value = float(change_24h.replace('+', '').replace('%', ''))
-                    change_7d_value = float(change_7d.replace('+', '').replace('%', ''))
+                    change_24h_value = float(change_24h.replace('+', '').replace('%', '').replace(',', '.'))
+                    change_7d_value = float(change_7d.replace('+', '').replace('%', '').replace(',', '.'))
                     
-                    all_cryptos.append((name, symbol, change_24h_value, change_7d_value, price))
+                    # Convertir la market cap
+                    if isinstance(market_cap, str):
+                        cleaned_cap = re.sub(r'[^\d.,]', '', market_cap.replace(',', '.'))
+                        
+                        if 'B' in market_cap or 'b' in market_cap:
+                            multiplier = 1_000_000_000
+                        elif 'M' in market_cap or 'm' in market_cap:
+                            multiplier = 1_000_000
+                        else:
+                            multiplier = 1
+                        
+                        try:
+                            market_cap_value = float(cleaned_cap) * multiplier
+                        except:
+                            try:
+                                price_value = float(re.sub(r'[^\d.,]', '', str(price).replace(',', '.')))
+                                market_cap_value = price_value * 1_000_000
+                            except:
+                                market_cap_value = 0
+                    else:
+                        market_cap_value = float(market_cap or 0)
                     
-                    # Vérifier si positive sur 24h/7j
+                    # Ajouter à la liste
+                    all_cryptos.append((name, symbol, change_24h_value, change_7d_value, price, market_cap_value))
+                    
+                    # Vérifier si positive
                     if change_24h_value > 0:
                         cryptos_24h_positive.append((name, symbol))
                     if change_7d_value > 0:
@@ -737,10 +786,31 @@ def filter_crypto_data(crypto_data):
             except (ValueError, TypeError):
                 continue
     
-    # Ajouter toutes les cryptos à la liste (tri alphabétique)
-    all_cryptos.sort(key=lambda x: x[0])  # Tri alphabétique par nom
+    # Si aucune capitalisation boursière valide n'a été trouvée, utiliser une valeur par défaut basée sur le prix
+    for i, crypto in enumerate(all_cryptos):
+        name, symbol, change_24h, change_7d, price, market_cap = crypto
+        if market_cap <= 0:
+            try:
+                # Essayer d'extraire une valeur numérique du prix
+                price_cleaned = re.sub(r'[^\d.,]', '', str(price).replace(',', '.'))
+                price_value = float(price_cleaned)
+                # Utiliser le prix comme indicateur de l'ordre de grandeur de la capitalisation
+                # Mais ajouter aussi index pour garder l'ordre original si tout échoue
+                all_cryptos[i] = (name, symbol, change_24h, change_7d, price, price_value * 1000000 / (i + 1))
+            except:
+                # Si ça échoue aussi, utiliser juste l'index inversé pour garder un ordre quelconque
+                all_cryptos[i] = (name, symbol, change_24h, change_7d, price, 1000000 / (i + 1))
     
-    for name, symbol, change_24h, change_7d, price in all_cryptos:
+    # Trier par capitalisation boursière (market cap) décroissante
+    all_cryptos.sort(key=lambda x: x[5], reverse=True)
+    
+    # Ajouter un log pour voir les capitalisations triées
+    print(f"🔍 Cryptomonnaies triées par capitalisation boursière:")
+    for i, (name, symbol, _, _, _, cap) in enumerate(all_cryptos[:10]):
+        print(f"  {i+1}. {name} ({symbol}): {cap:,.2f}")
+    
+    # Ajouter toutes les cryptos à la liste
+    for name, symbol, change_24h, change_7d, price, _ in all_cryptos:
         status_24h = "+" if change_24h > 0 else ""
         status_7d = "+" if change_7d > 0 else ""
         summary.append(f"• {name} ({symbol}): 24h: {status_24h}{change_24h:.2f}% | 7j: {status_7d}{change_7d:.2f}% | Prix: {price}")
