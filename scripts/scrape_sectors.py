@@ -80,7 +80,14 @@ CONFIG = {
         "Stoxx Europe 600 Technology",
         "Stoxx Europe 600 Telecommunications",
         "Stoxx Europe 600 Utilities"
-    ]
+    ],
+    # Configuration pour Playwright
+    "use_playwright": True,  # Activer ou désactiver l'utilisation de Playwright
+    "playwright": {
+        "headless": True,      # Mode sans interface graphique
+        "timeout": 60000,      # Timeout en millisecondes
+        "wait_for": 5000       # Temps d'attente supplémentaire en millisecondes
+    }
 }
 
 # Structure pour les données
@@ -196,6 +203,63 @@ def determine_category(sector_name):
     
     # Catégorie par défaut si aucune correspondance n'est trouvée
     return "other"
+
+def extract_lesechos_data_with_playwright():
+    """Extrait les données Les Echos avec Playwright pour gérer le JavaScript"""
+    try:
+        logger.info("🚀 Utilisation de Playwright pour le scraping Les Echos (avec support JavaScript)")
+        
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError:
+            logger.error("❌ Playwright n'est pas installé. Veuillez l'installer avec 'pip install playwright' et 'playwright install'")
+            raise ImportError("Playwright est requis pour cette fonctionnalité")
+        
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=CONFIG["playwright"]["headless"])
+            
+            try:
+                page = browser.new_page()
+                url = CONFIG["sources"][0]["url"]
+                
+                logger.info(f"🌐 Chargement de la page {url} avec Playwright...")
+                page.goto(url, timeout=CONFIG["playwright"]["timeout"])
+                
+                # Attendre que le tableau soit chargé
+                logger.info("⏳ Attente que le contenu JavaScript soit chargé...")
+                page.wait_for_selector('table', timeout=30000)
+                
+                # Attendre un peu plus pour s'assurer que tout est chargé
+                page.wait_for_timeout(CONFIG["playwright"]["wait_for"])
+                
+                # Capturer le HTML complet
+                html = page.content()
+                
+                # Générer un fichier HTML de débogage
+                debug_dir = os.path.dirname(CONFIG["output_path"])
+                if not os.path.exists(debug_dir):
+                    os.makedirs(debug_dir, exist_ok=True)
+                debug_file_path = os.path.join(debug_dir, "debug_lesechos_playwright.html")
+                with open(debug_file_path, 'w', encoding='utf-8') as f:
+                    f.write(html)
+                logger.info(f"📄 HTML Playwright sauvegardé pour débogage dans {debug_file_path}")
+                
+                # Extraire les données du HTML
+                sectors = extract_lesechos_data(html)
+                
+                return sectors
+                
+            finally:
+                browser.close()
+                
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de l'extraction Playwright: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        
+        # Fallback vers l'extraction classique
+        logger.warning("⚠️ Échec de l'extraction Playwright - utilisation des données statiques")
+        return []
 
 def extract_lesechos_data(html):
     """Extraire tous les indices sectoriels STOXX Europe 600 de Les Echos"""
@@ -690,6 +754,14 @@ def scrape_sectors_data():
         try:
             logger.info(f"Récupération des données depuis {source['name']} ({source['url']})...")
             
+            # Si c'est Les Echos et que Playwright est activé, utiliser Playwright
+            if "lesechos.fr" in source["url"] and CONFIG["use_playwright"]:
+                sectors = extract_lesechos_data_with_playwright()
+                if sectors:
+                    all_sectors.extend(sectors)
+                    continue  # Passer à la source suivante
+            
+            # Sinon, continuer avec la méthode standard
             # Récupérer le contenu de la page avec délai pour éviter la détection
             time.sleep(random.uniform(1, 3))
             headers = get_headers()
