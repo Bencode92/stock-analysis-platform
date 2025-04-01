@@ -17,21 +17,23 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 # Mappings des noms de secteurs STOXX Europe 600 vers les symboles TradingView
+# Symboles corrects "FES" fournis par le client
 STOXX_SYMBOL_MAPPING = {
-    "Stoxx Europe 600 Automobiles": "STOXX:SXAP",
-    "Stoxx Europe 600 Basic Resources": "STOXX:SXPP",
-    "Stoxx Europe 600 Chemicals": "STOXX:SX4P",
-    "Stoxx Europe 600 Construction & Materials": "STOXX:SXOP",
-    "Stoxx Europe 600 Financial Services": "STOXX:SXFP",
-    "Stoxx Europe 600 Food & Beverage": "STOXX:SX3P",
-    "Stoxx Europe 600 Health Care": "STOXX:SXDP",
-    "Stoxx Europe 600 Industrial Goods & Services": "STOXX:SXNP",
-    "Stoxx Europe 600 Insurance": "STOXX:SXIP",
-    "Stoxx Europe 600 Media": "STOXX:SXMP",
-    "Stoxx Europe 600 Oil & Gas": "STOXX:SXEP",
-    "Stoxx Europe 600 Technology": "STOXX:SX8P",
-    "Stoxx Europe 600 Telecommunications": "STOXX:SXKP",
-    "Stoxx Europe 600 Utilities": "STOXX:SX6P"
+    "Stoxx Europe 600 Automobiles": "FESA",
+    "Stoxx Europe 600 Banks": "FESB",
+    "Stoxx Europe 600 Basic Resources": "FESS",
+    "Stoxx Europe 600 Chemicals": "FESC",
+    "Stoxx Europe 600 Construction & Materials": "FESN",
+    "Stoxx Europe 600 Financial Services": "FESF",
+    "Stoxx Europe 600 Food & Beverage": "FESO",
+    "Stoxx Europe 600 Health Care": "FESH",
+    "Stoxx Europe 600 Industrial Goods & Services": "FESG",
+    "Stoxx Europe 600 Insurance": "FESI",
+    "Stoxx Europe 600 Media": "FESM",
+    "Stoxx Europe 600 Oil & Gas": "FESE",
+    "Stoxx Europe 600 Technology": "FESY",
+    "Stoxx Europe 600 Telecommunications": "FEST",
+    "Stoxx Europe 600 Utilities": "FESU"
 }
 
 def get_tradingview_headers():
@@ -55,7 +57,9 @@ def get_tradingview_headers():
 
 def fetch_quote(symbol):
     """Récupère les données pour un symbole TradingView"""
-    url = f"https://scanner.tradingview.com/symbol-search/resolve?text={symbol}"
+    # Format complet pour la recherche
+    search_symbol = f"STOXX:{symbol}"
+    url = f"https://scanner.tradingview.com/symbol-search/resolve?text={search_symbol}"
     
     try:
         headers = get_tradingview_headers()
@@ -69,43 +73,68 @@ def fetch_quote(symbol):
         data = response.json()
         if not data or not isinstance(data, list) or len(data) == 0:
             logger.warning(f"Aucune donnée trouvée pour {symbol}")
+            
+            # Essai alternatif sans le préfixe STOXX:
+            alt_url = f"https://scanner.tradingview.com/symbol-search/resolve?text={symbol}"
+            alt_response = requests.get(alt_url, headers=headers, timeout=30)
+            
+            if alt_response.status_code != 200:
+                logger.warning(f"Tentative alternative échouée pour {symbol}")
+                return None
+            
+            data = alt_response.json()
+            if not data or not isinstance(data, list) or len(data) == 0:
+                logger.warning(f"Aucune donnée trouvée pour {symbol} même avec tentative alternative")
+                return None
+        
+        # Trouver l'élément qui correspond au symbole (avec ou sans préfixe)
+        matching_item = None
+        for item in data:
+            item_symbol = item.get("symbol", "")
+            if item_symbol == search_symbol or item_symbol == symbol or item_symbol.endswith(f":{symbol}"):
+                matching_item = item
+                break
+        
+        # Si pas de correspondance exacte, prendre le premier résultat
+        if not matching_item and data:
+            matching_item = data[0]
+            logger.info(f"Utilisation du premier résultat pour {symbol}: {matching_item.get('symbol')}")
+                
+        if not matching_item:
+            logger.warning(f"Aucun élément correspondant pour {symbol}")
             return None
         
-        # Prendre le premier résultat qui correspond au symbole
-        for item in data:
-            if item.get("symbol") == symbol:
-                # Maintenant, récupérons les données de prix actuel et historiques
-                quote_url = f"https://www.tradingview.com/symbols/{symbol}/"
-                quote_headers = get_tradingview_headers()
-                quote_response = requests.get(quote_url, headers=quote_headers, timeout=30)
-                
-                if quote_response.status_code != 200:
-                    logger.warning(f"Impossible de récupérer les données de prix pour {symbol}")
-                    return item
-                
-                # Extraction du prix actuel et des variations avec regex
-                html = quote_response.text
-                
-                # Extraire le prix actuel
-                price_match = re.search(r'"last_price":\s*"([^"]+)"', html)
-                current_price = price_match.group(1) if price_match else "0"
-                
-                # Extraire la variation quotidienne
-                change_match = re.search(r'"change_percent":\s*"([^"]+)"', html)
-                daily_change = change_match.group(1) if change_match else "0,00 %"
-                
-                # Extraire la variation YTD (depuis le début de l'année)
-                ytd_match = re.search(r'"change_ytd":\s*"([^"]+)"', html)
-                ytd_change = ytd_match.group(1) if ytd_match else "0,00 %"
-                
-                # Mettre à jour l'élément avec ces informations
-                item["current_price"] = current_price
-                item["daily_change"] = daily_change
-                item["ytd_change"] = ytd_change
-                
-                return item
+        # Récupérer les données de prix actuelles
+        item_symbol = matching_item.get("symbol", "")
+        quote_url = f"https://www.tradingview.com/symbols/{item_symbol}/"
+        quote_headers = get_tradingview_headers()
+        quote_response = requests.get(quote_url, headers=quote_headers, timeout=30)
         
-        return data[0]  # Si pas de correspondance exacte, prendre le premier
+        if quote_response.status_code != 200:
+            logger.warning(f"Impossible de récupérer les données de prix pour {symbol} ({item_symbol})")
+            return matching_item
+        
+        # Extraction du prix actuel et des variations avec regex
+        html = quote_response.text
+        
+        # Extraire le prix actuel
+        price_match = re.search(r'"last_price":\s*"([^"]+)"', html)
+        current_price = price_match.group(1) if price_match else "0"
+        
+        # Extraire la variation quotidienne
+        change_match = re.search(r'"change_percent":\s*"([^"]+)"', html)
+        daily_change = change_match.group(1) if change_match else "0,00 %"
+        
+        # Extraire la variation YTD (depuis le début de l'année)
+        ytd_match = re.search(r'"change_ytd":\s*"([^"]+)"', html)
+        ytd_change = ytd_match.group(1) if ytd_match else "0,00 %"
+        
+        # Mettre à jour l'élément avec ces informations
+        matching_item["current_price"] = current_price
+        matching_item["daily_change"] = daily_change
+        matching_item["ytd_change"] = ytd_change
+        
+        return matching_item
         
     except Exception as e:
         logger.error(f"Erreur lors de la récupération des données pour {symbol}: {str(e)}")
@@ -147,8 +176,13 @@ def fetch_stoxx_sectors():
             if not ytd_change.endswith("%"):
                 ytd_change = f"{ytd_change} %"
             
+            # Formatage français: transformer les points en virgules
+            price = price.replace(".", ",") if isinstance(price, str) else price
+            daily_change = daily_change.replace(".", ",") if isinstance(daily_change, str) else daily_change
+            ytd_change = ytd_change.replace(".", ",") if isinstance(ytd_change, str) else ytd_change
+            
             # Déterminer la tendance
-            trend = "down" if "-" in daily_change else "up"
+            trend = "down" if "-" in str(daily_change) else "up"
             
             # Créer l'objet secteur
             sector = {
