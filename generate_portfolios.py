@@ -943,6 +943,38 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 - ⚠️ L'IA doit analyser les données de manière **contextuelle et stratégique**, en **croisant toutes les sources** (actualités, marchés, secteurs, performance, ETF filtrés…).
 - La sélection doit refléter une **lecture intelligente des tendances en cours ou en formation**, pas une simple extrapolation du passé.
 
+🚫 Tu NE DOIS PAS prioriser un actif simplement en raison de sa performance récente (ex : +80% YTD). 
+👉 Cette performance passée n'est PAS un indicateur suffisant. Tu dois d'abord évaluer si :
+   - L'actualité valide ou remet en question cette tendance
+   - Le secteur ou la région de l'actif est cohérent avec les dynamiques actuelles
+   - L'actif n'est pas en phase terminale de cycle haussier sans justification macroéconomique
+   Si tu n'as **aucune justification actuelle**, ne sélectionne pas l'actif, même s'il est très performant.
+
+🧩 Chaque actif sélectionné doit résulter d'au moins **deux sources cohérentes** parmi les suivantes :
+   - Actualités macroéconomiques ou sectorielles
+   - Tendances géographiques du marché
+   - Dynamique sectorielle spécifique
+   - Indicateurs de performance récents cohérents avec ces éléments
+   ⚠️ Ne sélectionne **aucun actif** s'il n'est justifié que par sa performance brute.
+
+🔍 Tu dois privilégier les actifs qui présentent des **signaux de potentiel futur cohérents**, même si leur performance passée est modeste, s'ils sont :
+   - Alignés avec des tendances émergentes dans les actualités
+   - Représentatifs d'un secteur ou d'une région en reprise ou en croissance
+   - Soutenus par une dynamique géopolitique, monétaire ou sectorielle
+   ⚠️ Un actif peut être sous-évalué à court terme mais pertinent dans un contexte stratégique.
+
+❌ Tu ne dois **JAMAIS** utiliser de logique par défaut comme "cet actif est performant donc je l'ajoute".
+✅ Chaque choix doit être **contextualisé, stratégique et cohérent avec le profil de risque**.
+
+⚠️ Exemple à NE PAS suivre : "L'action X a pris +90% YTD donc elle est à privilégier".
+👉 Mauvais raisonnement. Ce n'est pas une justification valide. La croissance passée ne garantit **aucune** pertinence actuelle ou future.
+
+📝 Dans la section "Choix des actifs" du commentaire, pour CHAQUE actif sélectionné, tu dois explicitement :
+   1. Identifier la tendance actuelle ou émergente qui justifie sa sélection
+   2. Expliquer pourquoi cet actif est bien positionné pour en bénéficier
+   3. Si l'actif a connu une forte performance passée, préciser les facteurs ACTUELS qui pourraient soutenir sa croissance future
+   4. Si l'actif a connu une performance modeste, expliquer les catalyseurs potentiels qui justifient son inclusion
+
 ✅ Voici la phrase à ajouter dans ton prompt pour **forcer cette logique** :
 🧠 **Tu dois justifier chacun des actifs sélectionnés** dans chaque portefeuille (Agressif, Modéré, Stable).
 * Pour chaque actif, explique **clairement et de manière concise** pourquoi il a été choisi, en t'appuyant sur **les données fournies** (actualités, marchés, secteurs, ETF, crypto, etc.).
