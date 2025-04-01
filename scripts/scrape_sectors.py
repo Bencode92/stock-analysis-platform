@@ -3,8 +3,9 @@
 
 """
 Script d'extraction des données d'indices sectoriels depuis:
-- https://investir.lesechos.fr/cours/indices/sectoriels-stoxx-europe-600 (TOUS les indices STOXX Europe 600)
-- https://www.boursorama.com/bourse/indices/internationaux (indices NASDAQ US sectoriels spécifiques)
+- TradingView (indices STOXX Europe 600) - source principale
+- Les Echos (indices STOXX Europe 600) - source secondaire
+- Boursorama (indices NASDAQ US sectoriels spécifiques)
 """
 
 import os
@@ -17,6 +18,14 @@ import logging
 import time
 import re
 import random
+
+# Importer l'adaptateur TradingView
+try:
+    from tradingview_adapter import fetch_alternative_stoxx_data
+    TRADINGVIEW_AVAILABLE = True
+except ImportError:
+    TRADINGVIEW_AVAILABLE = False
+    print("⚠️ Adaptateur TradingView non disponible. Utilisation des sources alternatives.")
 
 # Configuration du logger
 logging.basicConfig(
@@ -109,7 +118,7 @@ SECTOR_DATA = {
         }
     },
     "meta": {
-        "sources": ["Les Echos", "Boursorama"],
+        "sources": ["TradingView", "Les Echos", "Boursorama"],
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "count": 0,
         "lastUpdated": datetime.now(timezone.utc).isoformat()
@@ -272,6 +281,11 @@ def extract_lesechos_data(html):
     with open(debug_file_path, 'w', encoding='utf-8') as f:
         f.write(html)
     logger.info(f"HTML sauvegardé pour débogage dans {debug_file_path}")
+    
+    # Analyser le contenu de la page
+    content_type = analyze_response_content(html)
+    if content_type != "normal":
+        logger.warning(f"⚠️ La page Les Echos semble être de type: {content_type}. Cela peut affecter l'extraction.")
     
     # NOUVELLE MÉTHODE: Chercher les éléments avec rôle ARIA
     logger.info("🔍 Tentative d'extraction par structure ARIA table...")
@@ -588,11 +602,41 @@ def extract_lesechos_data(html):
     
     # Vérification du nombre de secteurs trouvés
     if sectors:
-        logger.info(f"✅ {len(sectors)} indices STOXX Europe 600 trouvés")
+        logger.info(f"✅ {len(sectors)} indices STOXX Europe 600 trouvés depuis Les Echos")
     else:
-        logger.warning("⚠️ Aucun indice STOXX Europe 600 trouvé!")
+        logger.warning("⚠️ Aucun indice STOXX Europe 600 trouvé depuis Les Echos!")
     
     return sectors
+
+def analyze_response_content(html):
+    """Analyser le contenu de la réponse pour détecter ce que nous recevons"""
+    soup = BeautifulSoup(html, 'html.parser')
+    
+    # Vérifier si c'est une page de captcha
+    captcha_elements = soup.find_all(string=re.compile('captcha|robot|verification', re.IGNORECASE))
+    if captcha_elements:
+        logger.warning("⚠️ Page de CAPTCHA détectée!")
+        return "captcha"
+        
+    # Vérifier si c'est une page de connexion
+    login_elements = soup.find_all(string=re.compile('connexion|login|identifier', re.IGNORECASE))
+    login_form = soup.find('form', id=re.compile('login|signin', re.IGNORECASE))
+    if login_elements or login_form:
+        logger.warning("⚠️ Page de connexion détectée!")
+        return "login"
+    
+    # Vérifier si c'est une page vide ou d'erreur
+    if len(html) < 5000:
+        logger.warning(f"⚠️ Page suspecte (trop courte): {len(html)} caractères")
+        return "empty"
+    
+    # Vérifier si la page est celle que nous attendons
+    expected_elements = soup.find_all(string=re.compile('stoxx europe 600|sectoriels', re.IGNORECASE))
+    if not expected_elements:
+        logger.warning("⚠️ La page ne semble pas contenir de données STOXX Europe 600!")
+        return "wrong_page"
+    
+    return "normal"
 
 def extract_boursorama_data(html):
     """Extraire les données de Boursorama pour les indices NASDAQ US sectoriels spécifiques"""
@@ -745,6 +789,11 @@ def classify_sectors(sectors):
     # Classer chaque secteur
     for sector in sectors:
         category = sector["category"]
+        # Si la catégorie est "unknown", essayer de la déterminer
+        if category == "unknown":
+            category = determine_category(sector["name"])
+            sector["category"] = category
+            
         if category in SECTOR_DATA["sectors"]:
             SECTOR_DATA["sectors"][category].append(sector)
         else:
@@ -832,6 +881,81 @@ def scrape_sectors_data():
     """Récupère et traite les données de tous les secteurs"""
     all_sectors = []
     
+    # NOUVELLE MÉTHODE: Essayer d'abord TradingView si disponible
+    if TRADINGVIEW_AVAILABLE:
+        try:
+            logger.info("🔍 Tentative de récupération des données STOXX Europe 600 depuis TradingView...")
+            tradingview_sectors = fetch_alternative_stoxx_data()
+            
+            if tradingview_sectors and len(tradingview_sectors) > 0:
+                logger.info(f"✅ {len(tradingview_sectors)} secteurs STOXX récupérés depuis TradingView!")
+                
+                # Ajouter à la liste principale
+                all_sectors.extend(tradingview_sectors)
+                ALL_SECTORS.extend(tradingview_sectors)
+                
+                # Si TradingView est disponible et a renvoyé des données, ne pas récupérer Les Echos
+                logger.info("⚠️ Données obtenues depuis TradingView, skipping Les Echos...")
+                
+                # Passer directement à Boursorama pour les données US
+                for source in CONFIG["sources"]:
+                    if "boursorama.com" in source["url"]:
+                        try:
+                            logger.info(f"Récupération des données depuis {source['name']} ({source['url']})...")
+                            
+                            # Récupérer le contenu de la page avec délai pour éviter la détection
+                            time.sleep(random.uniform(2, 5))
+                            
+                            # Utiliser des en-têtes et cookies réalistes
+                            headers = get_headers(source["url"])
+                            cookies = get_cookies()
+                            
+                            # Log les informations importantes
+                            logger.info(f"Utilisation du User-Agent: {headers['User-Agent']}")
+                            
+                            # Faire la requête principale
+                            response = requests.get(source["url"], headers=headers, cookies=cookies, timeout=30, verify=False)
+                            
+                            if response.status_code != 200:
+                                logger.warning(f"Erreur {response.status_code} pour {source['name']} - {response.reason}")
+                                continue
+                            
+                            logger.info(f"Réponse HTTP {response.status_code} reçue pour {source['name']}")
+                            
+                            # Vérifier le contenu de base
+                            html = response.text
+                            if len(html) < 1000:
+                                logger.warning(f"Contenu suspect (trop court): {len(html)} caractères")
+                            
+                            # Extraire les données Boursorama
+                            sectors = extract_boursorama_data(html)
+                            all_sectors.extend(sectors)
+                            
+                        except Exception as e:
+                            logger.error(f"Erreur lors du traitement de {source['name']}: {str(e)}")
+                            import traceback
+                            logger.error(traceback.format_exc())
+                
+                # Classer les secteurs récupérés
+                classify_sectors(all_sectors)
+                
+                # Calculer les top performers
+                calculate_top_performers()
+                
+                # Mettre à jour l'horodatage
+                SECTOR_DATA["meta"]["lastUpdated"] = datetime.now(timezone.utc).isoformat()
+                
+                return len(all_sectors) > 0
+            
+            else:
+                logger.warning("⚠️ Aucune donnée obtenue depuis TradingView, repli sur Les Echos et Boursorama...")
+        
+        except Exception as e:
+            logger.error(f"❌ Erreur lors de la récupération depuis TradingView: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
+    
+    # MÉTHODE TRADITIONNELLE: Récupérer Les Echos & Boursorama si TradingView n'est pas disponible ou a échoué
     # Pour chaque source configurée
     for source in CONFIG["sources"]:
         try:
