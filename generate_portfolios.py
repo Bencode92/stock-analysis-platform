@@ -519,49 +519,49 @@ def filter_sectors_data(sectors_data):
     return "\n".join(summary) if summary else "Aucune donnée sectorielle significative"
 
 def filter_lists_data(lists_data):
-    """Extrait les actifs avec une variation YTD > 10% depuis lists.json."""
+    """Filtre les actifs avec YTD entre -5% et 120%, et Daily > -10% depuis lists.json."""
     if not lists_data or not isinstance(lists_data, dict):
         return "Aucune liste d'actifs disponible"
     
-    assets_summary = []
-    high_performers = []
-    
+    filtered_assets = []
+
     for list_name, list_data in lists_data.items():
         if not isinstance(list_data, dict):
             continue
-            
+
         indices = list_data.get("indices", {})
         for letter, assets in indices.items():
             if not isinstance(assets, list):
                 continue
-                
+
             for asset in assets:
                 if not isinstance(asset, dict):
                     continue
-                    
+
                 name = asset.get("name", "")
                 ytd = asset.get("ytd", "")
-                
-                # Nettoyage et conversion YTD
+                daily = asset.get("change", "")  # Utilisation de la clé "change" pour la variation journalière
+
+                # Nettoyage et conversion
                 try:
                     ytd_value = float(re.sub(r"[^\d\.-]", "", str(ytd).replace(",", ".")))
+                    daily_value = float(re.sub(r"[^\d\.-]", "", str(daily).replace(",", ".")))
                 except (ValueError, AttributeError):
                     continue
-                
-                # Modifié ici : seuil de 10% au lieu de 20%
-                if ytd_value >= 10:
-                    high_performers.append((name, ytd_value))
-    
-    # Trier du plus fort au plus faible YTD
-    high_performers.sort(key=lambda x: x[1], reverse=True)
-    
-    if high_performers:
-        # Modifié pour refléter le nouveau seuil
-        assets_summary.append("📋 Actifs avec YTD > 10% :")
-        for name, ytd_value in high_performers[:10]:  # top 10
-            assets_summary.append(f"• {name}: {ytd_value:.2f}%")
-    
-    return "\n".join(assets_summary) if assets_summary else "Aucune donnée d'actifs significative"
+
+                # Filtre : YTD entre -5% et 120%, et Daily > -10%
+                if -5 <= ytd_value <= 120 and daily_value > -10:
+                    filtered_assets.append((name, ytd_value, daily_value))
+
+    # Trier par YTD décroissant
+    filtered_assets.sort(key=lambda x: x[1], reverse=True)
+
+    # Résumé textuel
+    assets_summary = ["📋 Actifs filtrés (YTD -5% à 120% et Daily > -10%) :"]
+    for name, ytd_value, daily_value in filtered_assets[:15]:  # max 15 visibles
+        assets_summary.append(f"• {name}: YTD {ytd_value:.2f}%, Daily {daily_value:.2f}%")
+
+    return "\n".join(assets_summary) if filtered_assets else "Aucune donnée d'actifs significative"
 
 def filter_etf_data(etfs_data):
     """Filtre les ETF par catégories et critères spécifiques."""
