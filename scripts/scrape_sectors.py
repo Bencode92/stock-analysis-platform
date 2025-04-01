@@ -18,6 +18,15 @@ import time
 import re
 import random
 
+# Importer Playwright pour l'extraction des données dynamiques
+try:
+    from playwright.sync_api import sync_playwright
+    has_playwright = True
+except ImportError:
+    has_playwright = False
+    logging.warning("⚠️ Playwright n'est pas installé. L'extraction des données de Les Echos pourrait échouer.")
+    logging.warning("Pour installer Playwright, exécutez: pip install playwright && playwright install")
+
 # Configuration du logger
 logging.basicConfig(
     level=logging.INFO,
@@ -197,8 +206,150 @@ def determine_category(sector_name):
     # Catégorie par défaut si aucune correspondance n'est trouvée
     return "other"
 
+def extract_lesechos_data_with_playwright():
+    """Extraction des données Les Echos en utilisant Playwright pour gérer le contenu dynamique"""
+    sectors = []
+    logger.info("🌐 Utilisation de Playwright pour extraire les données des Echos")
+    
+    try:
+        with sync_playwright() as p:
+            # Lancer le navigateur en mode headless
+            browser = p.chromium.launch(headless=True)
+            user_agent = get_headers()["User-Agent"]
+            
+            # Créer un contexte avec un user-agent spécifique
+            context = browser.new_context(
+                user_agent=user_agent
+            )
+            
+            page = context.new_page()
+            logger.info(f"🔍 Accès à la page Les Echos avec user-agent: {user_agent}")
+            
+            # Accéder à la page
+            page.goto("https://investir.lesechos.fr/cours/indices/sectoriels-stoxx-europe-600", timeout=60000)
+            
+            # Attendre que le contenu soit chargé (tableau des indices)
+            logger.info("⏳ Attente du chargement du contenu...")
+            page.wait_for_load_state("networkidle")
+            
+            # Prendre une capture d'écran pour débugger
+            debug_dir = os.path.dirname(CONFIG["output_path"])
+            if not os.path.exists(debug_dir):
+                os.makedirs(debug_dir, exist_ok=True)
+            page.screenshot(path=os.path.join(debug_dir, "lesechos_screenshot.png"))
+            
+            # Attendre que les cellules du tableau soient chargées et visibles
+            logger.info("⏳ Recherche des éléments du tableau des indices...")
+            
+            # Vérifier si les éléments sont chargés avec un délai supplémentaire si nécessaire
+            try:
+                page.wait_for_selector('div[role="row"]', timeout=10000)
+            except Exception as e:
+                logger.warning(f"Timeout en attendant les rangs du tableau: {str(e)}")
+                page.wait_for_timeout(5000)  # Attendre un peu plus si nécessaire
+            
+            # Enregistrer le HTML complet pour le débogage
+            html_content = page.content()
+            with open(os.path.join(debug_dir, "debug_lesechos_playwright.html"), "w", encoding="utf-8") as f:
+                f.write(html_content)
+            
+            # Trouver les lignes du tableau
+            rows = page.query_selector_all('div[role="row"]')
+            logger.info(f"Nombre de lignes trouvées: {len(rows)}")
+            
+            # Parcourir les lignes pour extraire les données
+            for row in rows:
+                try:
+                    # Obtenir les cellules de cette ligne
+                    cells = row.query_selector_all('div[role="cell"]')
+                    
+                    if len(cells) < 5:  # Au minimum, on a besoin de Libellé, Cours, Var%
+                        continue
+                    
+                    # Extraire le nom du secteur (première cellule)
+                    name_cell = cells[0]
+                    name = name_cell.inner_text().strip()
+                    
+                    # Ignorer les lignes qui ne concernent pas les indices STOXX Europe 600
+                    if not "stoxx europe 600" in name.lower():
+                        continue
+                    
+                    logger.info(f"🎯 Indice trouvé: {name}")
+                    
+                    # Extraire les autres valeurs (adapter les indices en fonction de la structure)
+                    # Généralement: Cellule 1 = Cours, Cellule ~5 = Var%, Cellule ~6 = Var/1erJanv
+                    cours = cells[1].inner_text().strip() if len(cells) > 1 else "0"
+                    
+                    # Chercher les colonnes avec %
+                    var = "0"
+                    var_janv = "0"
+                    
+                    # Parcourir les cellules pour trouver celles avec des pourcentages
+                    for i, cell in enumerate(cells):
+                        if i == 0:  # Ignorer la cellule de nom
+                            continue
+                            
+                        text = cell.inner_text().strip()
+                        if '%' in text:
+                            # La première colonne avec % est probablement la variation quotidienne
+                            if var == "0":
+                                var = text
+                            # La suivante est probablement la variation depuis le 1er janvier
+                            elif var_janv == "0":
+                                var_janv = text
+                    
+                    logger.info(f"📊 Données extraites: Cours={cours}, Var={var}, Var1erJanv={var_janv}")
+                    
+                    # Déterminer la tendance
+                    trend = "down" if '-' in var else "up"
+                    
+                    # Déterminer la catégorie sectorielle
+                    category = determine_category(name)
+                    
+                    # Créer l'objet secteur
+                    sector = {
+                        "name": name,
+                        "value": cours,
+                        "change": var,
+                        "changePercent": var,
+                        "ytdChange": var_janv,
+                        "trend": trend,
+                        "category": category,
+                        "source": "Les Echos",
+                        "region": "Europe"
+                    }
+                    
+                    sectors.append(sector)
+                    ALL_SECTORS.append(sector)
+                    logger.info(f"✅ Secteur ajouté: {name} (Catégorie: {category})")
+                
+                except Exception as e:
+                    logger.error(f"Erreur lors du traitement d'une ligne: {str(e)}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+            
+            # Fermer le navigateur
+            browser.close()
+    
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de l'extraction avec Playwright: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+    
+    return sectors
+
 def extract_lesechos_data(html):
     """Extraire tous les indices sectoriels STOXX Europe 600 de Les Echos"""
+    # Si Playwright est disponible, l'utiliser en priorité
+    if has_playwright:
+        sectors = extract_lesechos_data_with_playwright()
+        if sectors:
+            logger.info(f"✅ {len(sectors)} indices STOXX Europe 600 extraits avec Playwright")
+            return sectors
+        else:
+            logger.warning("⚠️ Échec de l'extraction avec Playwright, tentative avec méthodes traditionnelles...")
+    
+    # Si Playwright n'est pas disponible ou a échoué, continuer avec les méthodes existantes
     sectors = []
     soup = BeautifulSoup(html, 'html.parser')
     
@@ -540,7 +691,7 @@ def extract_boursorama_data(html):
                         break
                 
                 # Si c'est un indice NASDAQ sectoriel US qui nous intéresse
-                if is_target_index or (("NASDAQ US" in name_text or "Nasdaq US" in name_text) and any(keyword in name_text.lower() for keyword in ["health", "financial", "matls", "oil", "tech", "auto", "telecom"])):
+                if is_target_index or ((("NASDAQ US" in name_text or "Nasdaq US" in name_text) and any(keyword in name_text.lower() for keyword in ["health", "financial", "matls", "oil", "tech", "auto", "telecom"]))):
                     # Nettoyer le nom (supprimer "Cours" s'il est présent)
                     clean_name = name_text.replace("Cours ", "")
                     
