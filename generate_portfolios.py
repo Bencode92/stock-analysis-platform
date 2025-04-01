@@ -677,7 +677,6 @@ def filter_crypto_data(crypto_data):
     cryptos_24h_positive = []
     cryptos_7d_positive = []
     cryptos_filtered_out = []  # Pour tracer les cryptos trop volatiles éliminées
-    cryptos_recommended = []   # NOUVEAU: Liste des cryptos recommandées (24h < 7j)
     
     # Traiter la catégorie principale
     main_cryptos = crypto_data.get('categories', {}).get('main', [])
@@ -702,10 +701,6 @@ def filter_crypto_data(crypto_data):
                     # Trop volatile, on l'ajoute à la liste des exclues mais on ne l'intègre pas au filtre principal
                     cryptos_filtered_out.append((name, symbol, change_24h_value, change_7d_value, price))
                     continue  # Passer à la crypto suivante
-                
-                # NOUVEAU: Identifier les cryptos recommandées (24h < 7j et les deux positifs)
-                if change_24h_value > 0 and change_7d_value > 0 and change_24h_value < change_7d_value:
-                    cryptos_recommended.append((name, symbol, change_24h_value, change_7d_value, price))
                 
                 # Convertir la market cap en nombre si c'est une chaîne
                 if isinstance(market_cap, str):
@@ -771,10 +766,6 @@ def filter_crypto_data(crypto_data):
                         cryptos_filtered_out.append((name, symbol, change_24h_value, change_7d_value, price))
                         continue  # Passer à la crypto suivante
                     
-                    # NOUVEAU: Identifier les cryptos recommandées (24h < 7j et les deux positifs)
-                    if change_24h_value > 0 and change_7d_value > 0 and change_24h_value < change_7d_value:
-                        cryptos_recommended.append((name, symbol, change_24h_value, change_7d_value, price))
-                    
                     # Convertir la market cap
                     if isinstance(market_cap, str):
                         cleaned_cap = re.sub(r'[^\d.,]', '', market_cap.replace(',', '.'))
@@ -826,9 +817,6 @@ def filter_crypto_data(crypto_data):
     # Trier par capitalisation boursière (market cap) décroissante
     all_cryptos.sort(key=lambda x: x[5], reverse=True)
     
-    # Trier les cryptos recommandées par différence entre 7j et 24h (tendance la plus stable en premier)
-    cryptos_recommended.sort(key=lambda x: x[3] - x[2], reverse=True)
-    
     # Ajouter un log pour voir les capitalisations triées
     print(f"🔍 Cryptomonnaies triées par capitalisation boursière:")
     for i, (name, symbol, _, _, _, cap) in enumerate(all_cryptos[:10]):
@@ -839,15 +827,6 @@ def filter_crypto_data(crypto_data):
         status_24h = "+" if change_24h > 0 else ""
         status_7d = "+" if change_7d > 0 else ""
         summary.append(f"• {name} ({symbol}): 24h: {status_24h}{change_24h:.2f}% | 7j: {status_7d}{change_7d:.2f}% | Prix: {price}")
-    
-    # NOUVEAU: Section spéciale pour les cryptos recommandées (24h < 7j)
-    if cryptos_recommended:
-        summary.append("\n🟢🔝 CRYPTO-MONNAIES RECOMMANDÉES (VARIATION 24H < VARIATION 7J):")
-        summary.append(f"Total: {len(cryptos_recommended)} cryptos avec tendance haussière stable")
-        for name, symbol, change_24h, change_7d, price in cryptos_recommended:
-            # Calculer le ratio 24h/7j pour montrer la stabilité
-            stability_ratio = change_24h / change_7d if change_7d != 0 else 0
-            summary.append(f"• {name} ({symbol}): 24h: +{change_24h:.2f}% | 7j: +{change_7d:.2f}% | Ratio stabilité: {stability_ratio:.2f} | Prix: {price}")
     
     # Ajouter des sections distinctes pour les positives
     summary.append("\n🟢 CRYPTO-MONNAIES POSITIVES SUR 24H:")
@@ -1054,10 +1033,10 @@ Utilise ces données filtrées pour générer les portefeuilles :
 
 📌 CONCERNANT LES CRYPTO-MONNAIES :
 
-- Pour les crypto-monnaies, tu dois PRIORITAIREMENT sélectionner parmi celles de la section "CRYPTO-MONNAIES RECOMMANDÉES" qui ont une variation 24H POSITIVE MAIS INFÉRIEURE à la variation 7J
-- Cette règle est CRITIQUE car elle garantit une croissance stable plutôt qu'un pic spéculatif temporaire
+- Tu peux inclure des crypto-monnaies dans les portefeuilles si elles ont une performance positive sur 7 jours (7D%)
 - Les crypto-monnaies sont particulièrement adaptées au portefeuille Agressif, mais peuvent être incluses dans les autres profils avec une allocation plus faible
-- N'inclus PAS de crypto-monnaies si aucune ne présente ces caractéristiques de stabilité
+- Tu dois sélectionner uniquement parmi les crypto-monnaies listées dans la section "Crypto-monnaies performantes"
+- N'inclus PAS de crypto-monnaies si aucune ne présente une performance positive sur 7 jours
 
 {minimum_requirements}
 
@@ -1127,21 +1106,21 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 ✅ Le commentaire doit être **adapté au profil de risque** (Agressif / Modéré / Stable) sans forcer une direction (ex: ne dis pas "la techno est à privilégier" sauf si les données le montrent clairement).
 
 📊 Format JSON requis:
-{
-  "Agressif": {
+{{
+  "Agressif": {{
     "Commentaire": "Texte structuré suivant le format top-down demandé",
-    "Actions": {
+    "Actions": {{
       "Nom Précis de l'Action 1": "X%",
       "Nom Précis de l'Action 2": "Y%",
       ...etc (jusqu'à avoir entre 12-15 actifs au total)
-    },
-    "Crypto": { ... },
-    "ETF": { ... },
-    "Obligations": { ... }
-  },
-  "Modéré": { ... },
-  "Stable": { ... }
-}
+    }},
+    "Crypto": {{ ... }},
+    "ETF": {{ ... }},
+    "Obligations": {{ ... }}
+  }},
+  "Modéré": {{ ... }},
+  "Stable": {{ ... }}
+}}
 
 ⚠️ CRITÈRES DE VALIDATION (ABSOLUMENT REQUIS) :
 - Chaque portefeuille DOIT contenir EXACTEMENT entre 12 et 15 actifs au total, PAS MOINS, PAS PLUS
