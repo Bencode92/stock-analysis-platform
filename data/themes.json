@@ -1,166 +1,760 @@
 {
   "themes": {
     "weekly": {
-      "macroeconomie": [
-        [
-          "inflation",
-          11
-        ],
-        [
-          "politique_monetaire",
-          5
-        ],
-        [
-          "geopolitique",
-          2
-        ],
-        [
-          "recession",
-          1
-        ],
-        [
-          "transition_energetique",
-          1
-        ]
-      ],
-      "secteurs": [
-        [
-          "technologie",
-          16
-        ],
-        [
-          "defense",
-          1
-        ],
-        [
-          "immobilier",
-          1
-        ]
-      ],
-      "regions": [
-        [
-          "usa",
-          6
-        ],
-        [
-          "asie",
-          4
-        ]
-      ]
+      "macroeconomie": {
+        "inflation": {
+          "count": 11,
+          "examples": [
+            "Bitcoin Set for April Price Surge as Fed Signals Monetary Easing",
+            "XRP, BTC, ETH Price Prediction As Inflation Data Sparks Downturn in U.S. Stocks",
+            "Bitcoin (BTC) Loses Crucial 200-Day Moving Average Amid Inflation Report"
+          ],
+          "keywords": {
+            "inflation": {
+              "count": 11,
+              "examples": [
+                "Bitcoin Set for April Price Surge as Fed Signals Monetary Easing",
+                "XRP, BTC, ETH Price Prediction As Inflation Data Sparks Downturn in U.S. Stocks",
+                "Bitcoin (BTC) Loses Crucial 200-Day Moving Average Amid Inflation Report"
+              ]
+            }
+          }
+        },
+        "politique_monetaire": {
+          "count": 5,
+          "examples": [
+            "Bitcoin Set for April Price Surge as Fed Signals Monetary Easing",
+            "Bitcoin Price Wavers, Altcoins Plunge as Inflation Heats Up in February",
+            "Bitcoin Drops Below $85K as Sticky Inflation Clouds Fed Outlook"
+          ],
+          "keywords": {
+            "fed": {
+              "count": 4,
+              "examples": [
+                "Bitcoin Set for April Price Surge as Fed Signals Monetary Easing",
+                "Bitcoin Price Wavers, Altcoins Plunge as Inflation Heats Up in February",
+                "Veteran Trader Peter Brandt Hints At Bitcoin Price Crash To $70K, What's Next?"
+              ]
+            }
+          }
+        },
+        "geopolitique": {
+          "count": 2,
+          "examples": [
+            "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?",
+            "Bitcoin, Crypto Prices Slide as Trade Tariffs and Inflation Risks Grow"
+          ],
+          "keywords": {
+            "taiwan": {
+              "count": 1,
+              "examples": [
+                "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?"
+              ]
+            },
+            "tensions": {
+              "count": 1,
+              "examples": [
+                "Bitcoin, Crypto Prices Slide as Trade Tariffs and Inflation Risks Grow"
+              ]
+            }
+          }
+        },
+        "recession": {
+          "count": 1,
+          "examples": [
+            "Will a Recession Crash Bitcoin? Goldman Sachs Issues Grim 35% Warning"
+          ],
+          "keywords": {}
+        },
+        "transition_energetique": {
+          "count": 1,
+          "examples": [
+            "Ethereum Crashes 74% Against Bitcoin; Is Reversal Imminent?"
+          ],
+          "keywords": {
+            "transition": {
+              "count": 1,
+              "examples": [
+                "Ethereum Crashes 74% Against Bitcoin; Is Reversal Imminent?"
+              ]
+            }
+          }
+        }
+      },
+      "secteurs": {
+        "technologie": {
+          "count": 16,
+          "examples": [
+            "Bitcoin Could Drop Below $60K Amid Economic Headwinds, Warns Hedge Fund CEO",
+            "XRP, BTC, ETH Price Prediction As Inflation Data Sparks Downturn in U.S. Stocks",
+            "Bitcoin (BTC) Eyes $78,500, Bearish Pattern Signals Trouble"
+          ],
+          "keywords": {
+            "ai": {
+              "count": 9,
+              "examples": [
+                "Bitcoin Could Drop Below $60K Amid Economic Headwinds, Warns Hedge Fund CEO",
+                "Bitcoin (BTC) Loses Crucial 200-Day Moving Average Amid Inflation Report",
+                "Bitcoin Drops Below $85K as Sticky Inflation Clouds Fed Outlook"
+              ]
+            },
+            "digital": {
+              "count": 3,
+              "examples": [
+                "XRP, BTC, ETH Price Prediction As Inflation Data Sparks Downturn in U.S. Stocks",
+                "Bitcoin (BTC) Eyes $78,500, Bearish Pattern Signals Trouble",
+                "Bitcoin Falls To $85K, Altcoins Drop Ahead Of Inflation Data; Trump's Tariffs May Raise $800B, But Risks Loom; Tesla Faces EV Incentive Cuts In UK After Canada – Top Headlines While The U.S. Slept"
+              ]
+            },
+            "data": {
+              "count": 8,
+              "examples": [
+                "XRP, BTC, ETH Price Prediction As Inflation Data Sparks Downturn in U.S. Stocks",
+                "Bitcoin (BTC) Loses Crucial 200-Day Moving Average Amid Inflation Report",
+                "Bitcoin price drops 3% on hot US PCE data as analyst says $84K must hold"
+              ]
+            },
+            "tech": {
+              "count": 1,
+              "examples": [
+                "Bitcoin (BTC) Loses Crucial 200-Day Moving Average Amid Inflation Report"
+              ]
+            }
+          }
+        },
+        "defense": {
+          "count": 1,
+          "examples": [
+            "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?"
+          ],
+          "keywords": {
+            "nato": {
+              "count": 1,
+              "examples": [
+                "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?"
+              ]
+            }
+          }
+        },
+        "immobilier": {
+          "count": 1,
+          "examples": [
+            "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?"
+          ],
+          "keywords": {
+            "infrastructure": {
+              "count": 1,
+              "examples": [
+                "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?"
+              ]
+            }
+          }
+        }
+      },
+      "regions": {
+        "usa": {
+          "count": 6,
+          "examples": [
+            "Bitcoin Set for April Price Surge as Fed Signals Monetary Easing",
+            "Bitcoin Price Crash: Will BTC Plummet to $10K If Gold Surpasses $5K?",
+            "Bitcoin Price Wavers, Altcoins Plunge as Inflation Heats Up in February"
+          ],
+          "keywords": {
+            "fed": {
+              "count": 4,
+              "examples": [
+                "Bitcoin Set for April Price Surge as Fed Signals Monetary Easing",
+                "Bitcoin Price Wavers, Altcoins Plunge as Inflation Heats Up in February",
+                "Veteran Trader Peter Brandt Hints At Bitcoin Price Crash To $70K, What's Next?"
+              ]
+            },
+            "s&p": {
+              "count": 1,
+              "examples": [
+                "Bitcoin Price Crash: Will BTC Plummet to $10K If Gold Surpasses $5K?"
+              ]
+            },
+            "usa": {
+              "count": 1,
+              "examples": [
+                "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?"
+              ]
+            }
+          }
+        },
+        "asie": {
+          "count": 4,
+          "examples": [
+            "Bitcoin Could Drop Below $60K Amid Economic Headwinds, Warns Hedge Fund CEO",
+            "Bitcoin Price Crash: Will BTC Plummet to $10K If Gold Surpasses $5K?",
+            "Crypto Bloodbath: Bitcoin (BTC) Dips Under $84K as Market Plummets"
+          ],
+          "keywords": {
+            "inde": {
+              "count": 4,
+              "examples": [
+                "Bitcoin Could Drop Below $60K Amid Economic Headwinds, Warns Hedge Fund CEO",
+                "Bitcoin Price Crash: Will BTC Plummet to $10K If Gold Surpasses $5K?",
+                "Crypto Bloodbath: Bitcoin (BTC) Dips Under $84K as Market Plummets"
+              ]
+            }
+          }
+        }
+      }
     },
     "monthly": {
-      "macroeconomie": [
-        [
-          "inflation",
-          13
-        ],
-        [
-          "politique_monetaire",
-          6
-        ],
-        [
-          "recession",
-          3
-        ],
-        [
-          "geopolitique",
-          3
-        ],
-        [
-          "transition_energetique",
-          3
-        ]
-      ],
-      "secteurs": [
-        [
-          "technologie",
-          30
-        ],
-        [
-          "energie",
-          2
-        ],
-        [
-          "immobilier",
-          2
-        ],
-        [
-          "defense",
-          1
-        ]
-      ],
-      "regions": [
-        [
-          "usa",
-          10
-        ],
-        [
-          "asie",
-          8
-        ],
-        [
-          "global",
-          1
-        ]
-      ]
+      "macroeconomie": {
+        "inflation": {
+          "count": 13,
+          "examples": [
+            "Major Bitcoin Rally Could Be Just Around the Corner - but recession first?",
+            "Bitcoin Set for April Price Surge as Fed Signals Monetary Easing",
+            "XRP, BTC, ETH Price Prediction As Inflation Data Sparks Downturn in U.S. Stocks"
+          ],
+          "keywords": {
+            "inflation": {
+              "count": 13,
+              "examples": [
+                "Major Bitcoin Rally Could Be Just Around the Corner - but recession first?",
+                "Bitcoin Set for April Price Surge as Fed Signals Monetary Easing",
+                "XRP, BTC, ETH Price Prediction As Inflation Data Sparks Downturn in U.S. Stocks"
+              ]
+            }
+          }
+        },
+        "politique_monetaire": {
+          "count": 6,
+          "examples": [
+            "Bitcoin Set for April Price Surge as Fed Signals Monetary Easing",
+            "Bitcoin Price Wavers, Altcoins Plunge as Inflation Heats Up in February",
+            "Bitcoin Drops Below $85K as Sticky Inflation Clouds Fed Outlook"
+          ],
+          "keywords": {
+            "fed": {
+              "count": 4,
+              "examples": [
+                "Bitcoin Set for April Price Surge as Fed Signals Monetary Easing",
+                "Bitcoin Price Wavers, Altcoins Plunge as Inflation Heats Up in February",
+                "Veteran Trader Peter Brandt Hints At Bitcoin Price Crash To $70K, What's Next?"
+              ]
+            }
+          }
+        },
+        "recession": {
+          "count": 3,
+          "examples": [
+            "Major Bitcoin Rally Could Be Just Around the Corner - but recession first?",
+            "Bitcoin (BTC) Price: Hovers at $82k as Markets Await Federal Reserve Meeting",
+            "Will a Recession Crash Bitcoin? Goldman Sachs Issues Grim 35% Warning"
+          ],
+          "keywords": {
+            "recession": {
+              "count": 1,
+              "examples": [
+                "Bitcoin (BTC) Price: Hovers at $82k as Markets Await Federal Reserve Meeting"
+              ]
+            }
+          }
+        },
+        "geopolitique": {
+          "count": 3,
+          "examples": [
+            "Live Nasdaq Coverage: Nasdaq Composite Eyes Correction, TSM Bucks Downward Trend",
+            "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?",
+            "Bitcoin, Crypto Prices Slide as Trade Tariffs and Inflation Risks Grow"
+          ],
+          "keywords": {
+            "taiwan": {
+              "count": 2,
+              "examples": [
+                "Live Nasdaq Coverage: Nasdaq Composite Eyes Correction, TSM Bucks Downward Trend",
+                "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?"
+              ]
+            },
+            "tensions": {
+              "count": 1,
+              "examples": [
+                "Bitcoin, Crypto Prices Slide as Trade Tariffs and Inflation Risks Grow"
+              ]
+            }
+          }
+        },
+        "transition_energetique": {
+          "count": 3,
+          "examples": [
+            "Live Nasdaq Coverage: Nasdaq Composite Eyes Correction, TSM Bucks Downward Trend",
+            "1 Stock-Split AI Giant to Buy Before It Soars 93%, Says Wall Street Analyst",
+            "Ethereum Crashes 74% Against Bitcoin; Is Reversal Imminent?"
+          ],
+          "keywords": {
+            "climat": {
+              "count": 2,
+              "examples": [
+                "Live Nasdaq Coverage: Nasdaq Composite Eyes Correction, TSM Bucks Downward Trend",
+                "1 Stock-Split AI Giant to Buy Before It Soars 93%, Says Wall Street Analyst"
+              ]
+            },
+            "transition": {
+              "count": 1,
+              "examples": [
+                "Ethereum Crashes 74% Against Bitcoin; Is Reversal Imminent?"
+              ]
+            }
+          }
+        }
+      },
+      "secteurs": {
+        "technologie": {
+          "count": 30,
+          "examples": [
+            "Bitcoin Could Drop Below $60K Amid Economic Headwinds, Warns Hedge Fund CEO",
+            "XRP, BTC, ETH Price Prediction As Inflation Data Sparks Downturn in U.S. Stocks",
+            "Bitcoin (BTC) Eyes $78,500, Bearish Pattern Signals Trouble"
+          ],
+          "keywords": {
+            "ai": {
+              "count": 17,
+              "examples": [
+                "Bitcoin Could Drop Below $60K Amid Economic Headwinds, Warns Hedge Fund CEO",
+                "Bitcoin (BTC) Loses Crucial 200-Day Moving Average Amid Inflation Report",
+                "Bitcoin Drops Below $85K as Sticky Inflation Clouds Fed Outlook"
+              ]
+            },
+            "digital": {
+              "count": 4,
+              "examples": [
+                "XRP, BTC, ETH Price Prediction As Inflation Data Sparks Downturn in U.S. Stocks",
+                "Bitcoin (BTC) Eyes $78,500, Bearish Pattern Signals Trouble",
+                "Bitcoin Drops 6% to $84.8K as Trump's Crypto Reserve Lacks Government Buying Power"
+              ]
+            },
+            "data": {
+              "count": 11,
+              "examples": [
+                "XRP, BTC, ETH Price Prediction As Inflation Data Sparks Downturn in U.S. Stocks",
+                "Bitcoin (BTC) Loses Crucial 200-Day Moving Average Amid Inflation Report",
+                "Bitcoin price drops 3% on hot US PCE data as analyst says $84K must hold"
+              ]
+            },
+            "tech": {
+              "count": 6,
+              "examples": [
+                "Bitcoin (BTC) Loses Crucial 200-Day Moving Average Amid Inflation Report",
+                "Bitcoin (BTC) on Verge of $78,000 Crash, Bollinger Bands Flash Warning",
+                "Bitcoin (BTC) Price: Hovers at $82k as Markets Await Federal Reserve Meeting"
+              ]
+            }
+          }
+        },
+        "energie": {
+          "count": 2,
+          "examples": [
+            "Live Nasdaq Coverage: Nasdaq Composite Eyes Correction, TSM Bucks Downward Trend",
+            "The Most Expensive Failed Startups of All Time"
+          ],
+          "keywords": {
+            "oil": {
+              "count": 1,
+              "examples": [
+                "Live Nasdaq Coverage: Nasdaq Composite Eyes Correction, TSM Bucks Downward Trend"
+              ]
+            },
+            "gas": {
+              "count": 1,
+              "examples": [
+                "The Most Expensive Failed Startups of All Time"
+              ]
+            }
+          }
+        },
+        "immobilier": {
+          "count": 2,
+          "examples": [
+            "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?",
+            "The Most Expensive Failed Startups of All Time"
+          ],
+          "keywords": {
+            "infrastructure": {
+              "count": 2,
+              "examples": [
+                "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?",
+                "The Most Expensive Failed Startups of All Time"
+              ]
+            }
+          }
+        },
+        "defense": {
+          "count": 1,
+          "examples": [
+            "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?"
+          ],
+          "keywords": {
+            "nato": {
+              "count": 1,
+              "examples": [
+                "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?"
+              ]
+            }
+          }
+        }
+      },
+      "regions": {
+        "usa": {
+          "count": 10,
+          "examples": [
+            "Bitcoin Set for April Price Surge as Fed Signals Monetary Easing",
+            "Bitcoin Price Crash: Will BTC Plummet to $10K If Gold Surpasses $5K?",
+            "Bitcoin Price Wavers, Altcoins Plunge as Inflation Heats Up in February"
+          ],
+          "keywords": {
+            "fed": {
+              "count": 4,
+              "examples": [
+                "Bitcoin Set for April Price Surge as Fed Signals Monetary Easing",
+                "Bitcoin Price Wavers, Altcoins Plunge as Inflation Heats Up in February",
+                "Veteran Trader Peter Brandt Hints At Bitcoin Price Crash To $70K, What's Next?"
+              ]
+            },
+            "s&p": {
+              "count": 2,
+              "examples": [
+                "Bitcoin Price Crash: Will BTC Plummet to $10K If Gold Surpasses $5K?",
+                "What if the Market Crashes? Bitcoin vs."
+              ]
+            },
+            "nasdaq": {
+              "count": 3,
+              "examples": [
+                "What if the Market Crashes? Bitcoin vs.",
+                "Live Nasdaq Coverage: Nasdaq Composite Eyes Correction, TSM Bucks Downward Trend",
+                "1 Stock-Split AI Giant to Buy Before It Soars 93%, Says Wall Street Analyst"
+              ]
+            },
+            "dow jones": {
+              "count": 1,
+              "examples": [
+                "Live Nasdaq Coverage: Nasdaq Composite Eyes Correction, TSM Bucks Downward Trend"
+              ]
+            },
+            "usa": {
+              "count": 1,
+              "examples": [
+                "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?"
+              ]
+            }
+          }
+        },
+        "asie": {
+          "count": 8,
+          "examples": [
+            "Bitcoin Could Drop Below $60K Amid Economic Headwinds, Warns Hedge Fund CEO",
+            "Bitcoin Price Crash: Will BTC Plummet to $10K If Gold Surpasses $5K?",
+            "CryptoQuant Reports Bitcoin Bull Score Index Hits Two-Year Lows"
+          ],
+          "keywords": {
+            "inde": {
+              "count": 8,
+              "examples": [
+                "Bitcoin Could Drop Below $60K Amid Economic Headwinds, Warns Hedge Fund CEO",
+                "Bitcoin Price Crash: Will BTC Plummet to $10K If Gold Surpasses $5K?",
+                "CryptoQuant Reports Bitcoin Bull Score Index Hits Two-Year Lows"
+              ]
+            }
+          }
+        },
+        "global": {
+          "count": 1,
+          "examples": [
+            "The Most Expensive Failed Startups of All Time"
+          ],
+          "keywords": {
+            "global": {
+              "count": 1,
+              "examples": [
+                "The Most Expensive Failed Startups of All Time"
+              ]
+            }
+          }
+        }
+      }
     },
     "quarterly": {
-      "macroeconomie": [
-        [
-          "inflation",
-          13
-        ],
-        [
-          "politique_monetaire",
-          6
-        ],
-        [
-          "recession",
-          3
-        ],
-        [
-          "geopolitique",
-          3
-        ],
-        [
-          "transition_energetique",
-          3
-        ]
-      ],
-      "secteurs": [
-        [
-          "technologie",
-          30
-        ],
-        [
-          "energie",
-          2
-        ],
-        [
-          "immobilier",
-          2
-        ],
-        [
-          "defense",
-          1
-        ]
-      ],
-      "regions": [
-        [
-          "usa",
-          10
-        ],
-        [
-          "asie",
-          8
-        ],
-        [
-          "global",
-          1
-        ]
-      ]
+      "macroeconomie": {
+        "inflation": {
+          "count": 13,
+          "examples": [
+            "Major Bitcoin Rally Could Be Just Around the Corner - but recession first?",
+            "Bitcoin Set for April Price Surge as Fed Signals Monetary Easing",
+            "XRP, BTC, ETH Price Prediction As Inflation Data Sparks Downturn in U.S. Stocks"
+          ],
+          "keywords": {
+            "inflation": {
+              "count": 13,
+              "examples": [
+                "Major Bitcoin Rally Could Be Just Around the Corner - but recession first?",
+                "Bitcoin Set for April Price Surge as Fed Signals Monetary Easing",
+                "XRP, BTC, ETH Price Prediction As Inflation Data Sparks Downturn in U.S. Stocks"
+              ]
+            }
+          }
+        },
+        "politique_monetaire": {
+          "count": 6,
+          "examples": [
+            "Bitcoin Set for April Price Surge as Fed Signals Monetary Easing",
+            "Bitcoin Price Wavers, Altcoins Plunge as Inflation Heats Up in February",
+            "Bitcoin Drops Below $85K as Sticky Inflation Clouds Fed Outlook"
+          ],
+          "keywords": {
+            "fed": {
+              "count": 4,
+              "examples": [
+                "Bitcoin Set for April Price Surge as Fed Signals Monetary Easing",
+                "Bitcoin Price Wavers, Altcoins Plunge as Inflation Heats Up in February",
+                "Veteran Trader Peter Brandt Hints At Bitcoin Price Crash To $70K, What's Next?"
+              ]
+            }
+          }
+        },
+        "recession": {
+          "count": 3,
+          "examples": [
+            "Major Bitcoin Rally Could Be Just Around the Corner - but recession first?",
+            "Bitcoin (BTC) Price: Hovers at $82k as Markets Await Federal Reserve Meeting",
+            "Will a Recession Crash Bitcoin? Goldman Sachs Issues Grim 35% Warning"
+          ],
+          "keywords": {
+            "recession": {
+              "count": 1,
+              "examples": [
+                "Bitcoin (BTC) Price: Hovers at $82k as Markets Await Federal Reserve Meeting"
+              ]
+            }
+          }
+        },
+        "geopolitique": {
+          "count": 3,
+          "examples": [
+            "Live Nasdaq Coverage: Nasdaq Composite Eyes Correction, TSM Bucks Downward Trend",
+            "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?",
+            "Bitcoin, Crypto Prices Slide as Trade Tariffs and Inflation Risks Grow"
+          ],
+          "keywords": {
+            "taiwan": {
+              "count": 2,
+              "examples": [
+                "Live Nasdaq Coverage: Nasdaq Composite Eyes Correction, TSM Bucks Downward Trend",
+                "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?"
+              ]
+            },
+            "tensions": {
+              "count": 1,
+              "examples": [
+                "Bitcoin, Crypto Prices Slide as Trade Tariffs and Inflation Risks Grow"
+              ]
+            }
+          }
+        },
+        "transition_energetique": {
+          "count": 3,
+          "examples": [
+            "Live Nasdaq Coverage: Nasdaq Composite Eyes Correction, TSM Bucks Downward Trend",
+            "1 Stock-Split AI Giant to Buy Before It Soars 93%, Says Wall Street Analyst",
+            "Ethereum Crashes 74% Against Bitcoin; Is Reversal Imminent?"
+          ],
+          "keywords": {
+            "climat": {
+              "count": 2,
+              "examples": [
+                "Live Nasdaq Coverage: Nasdaq Composite Eyes Correction, TSM Bucks Downward Trend",
+                "1 Stock-Split AI Giant to Buy Before It Soars 93%, Says Wall Street Analyst"
+              ]
+            },
+            "transition": {
+              "count": 1,
+              "examples": [
+                "Ethereum Crashes 74% Against Bitcoin; Is Reversal Imminent?"
+              ]
+            }
+          }
+        }
+      },
+      "secteurs": {
+        "technologie": {
+          "count": 30,
+          "examples": [
+            "Bitcoin Could Drop Below $60K Amid Economic Headwinds, Warns Hedge Fund CEO",
+            "XRP, BTC, ETH Price Prediction As Inflation Data Sparks Downturn in U.S. Stocks",
+            "Bitcoin (BTC) Eyes $78,500, Bearish Pattern Signals Trouble"
+          ],
+          "keywords": {
+            "ai": {
+              "count": 17,
+              "examples": [
+                "Bitcoin Could Drop Below $60K Amid Economic Headwinds, Warns Hedge Fund CEO",
+                "Bitcoin (BTC) Loses Crucial 200-Day Moving Average Amid Inflation Report",
+                "Bitcoin Drops Below $85K as Sticky Inflation Clouds Fed Outlook"
+              ]
+            },
+            "digital": {
+              "count": 4,
+              "examples": [
+                "XRP, BTC, ETH Price Prediction As Inflation Data Sparks Downturn in U.S. Stocks",
+                "Bitcoin (BTC) Eyes $78,500, Bearish Pattern Signals Trouble",
+                "Bitcoin Drops 6% to $84.8K as Trump's Crypto Reserve Lacks Government Buying Power"
+              ]
+            },
+            "data": {
+              "count": 11,
+              "examples": [
+                "XRP, BTC, ETH Price Prediction As Inflation Data Sparks Downturn in U.S. Stocks",
+                "Bitcoin (BTC) Loses Crucial 200-Day Moving Average Amid Inflation Report",
+                "Bitcoin price drops 3% on hot US PCE data as analyst says $84K must hold"
+              ]
+            },
+            "tech": {
+              "count": 6,
+              "examples": [
+                "Bitcoin (BTC) Loses Crucial 200-Day Moving Average Amid Inflation Report",
+                "Bitcoin (BTC) on Verge of $78,000 Crash, Bollinger Bands Flash Warning",
+                "Bitcoin (BTC) Price: Hovers at $82k as Markets Await Federal Reserve Meeting"
+              ]
+            }
+          }
+        },
+        "energie": {
+          "count": 2,
+          "examples": [
+            "Live Nasdaq Coverage: Nasdaq Composite Eyes Correction, TSM Bucks Downward Trend",
+            "The Most Expensive Failed Startups of All Time"
+          ],
+          "keywords": {
+            "oil": {
+              "count": 1,
+              "examples": [
+                "Live Nasdaq Coverage: Nasdaq Composite Eyes Correction, TSM Bucks Downward Trend"
+              ]
+            },
+            "gas": {
+              "count": 1,
+              "examples": [
+                "The Most Expensive Failed Startups of All Time"
+              ]
+            }
+          }
+        },
+        "immobilier": {
+          "count": 2,
+          "examples": [
+            "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?",
+            "The Most Expensive Failed Startups of All Time"
+          ],
+          "keywords": {
+            "infrastructure": {
+              "count": 2,
+              "examples": [
+                "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?",
+                "The Most Expensive Failed Startups of All Time"
+              ]
+            }
+          }
+        },
+        "defense": {
+          "count": 1,
+          "examples": [
+            "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?"
+          ],
+          "keywords": {
+            "nato": {
+              "count": 1,
+              "examples": [
+                "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?"
+              ]
+            }
+          }
+        }
+      },
+      "regions": {
+        "usa": {
+          "count": 10,
+          "examples": [
+            "Bitcoin Set for April Price Surge as Fed Signals Monetary Easing",
+            "Bitcoin Price Crash: Will BTC Plummet to $10K If Gold Surpasses $5K?",
+            "Bitcoin Price Wavers, Altcoins Plunge as Inflation Heats Up in February"
+          ],
+          "keywords": {
+            "fed": {
+              "count": 4,
+              "examples": [
+                "Bitcoin Set for April Price Surge as Fed Signals Monetary Easing",
+                "Bitcoin Price Wavers, Altcoins Plunge as Inflation Heats Up in February",
+                "Veteran Trader Peter Brandt Hints At Bitcoin Price Crash To $70K, What's Next?"
+              ]
+            },
+            "s&p": {
+              "count": 2,
+              "examples": [
+                "Bitcoin Price Crash: Will BTC Plummet to $10K If Gold Surpasses $5K?",
+                "What if the Market Crashes? Bitcoin vs."
+              ]
+            },
+            "nasdaq": {
+              "count": 3,
+              "examples": [
+                "What if the Market Crashes? Bitcoin vs.",
+                "Live Nasdaq Coverage: Nasdaq Composite Eyes Correction, TSM Bucks Downward Trend",
+                "1 Stock-Split AI Giant to Buy Before It Soars 93%, Says Wall Street Analyst"
+              ]
+            },
+            "dow jones": {
+              "count": 1,
+              "examples": [
+                "Live Nasdaq Coverage: Nasdaq Composite Eyes Correction, TSM Bucks Downward Trend"
+              ]
+            },
+            "usa": {
+              "count": 1,
+              "examples": [
+                "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?"
+              ]
+            }
+          }
+        },
+        "asie": {
+          "count": 8,
+          "examples": [
+            "Bitcoin Could Drop Below $60K Amid Economic Headwinds, Warns Hedge Fund CEO",
+            "Bitcoin Price Crash: Will BTC Plummet to $10K If Gold Surpasses $5K?",
+            "CryptoQuant Reports Bitcoin Bull Score Index Hits Two-Year Lows"
+          ],
+          "keywords": {
+            "inde": {
+              "count": 8,
+              "examples": [
+                "Bitcoin Could Drop Below $60K Amid Economic Headwinds, Warns Hedge Fund CEO",
+                "Bitcoin Price Crash: Will BTC Plummet to $10K If Gold Surpasses $5K?",
+                "CryptoQuant Reports Bitcoin Bull Score Index Hits Two-Year Lows"
+              ]
+            }
+          }
+        },
+        "global": {
+          "count": 1,
+          "examples": [
+            "The Most Expensive Failed Startups of All Time"
+          ],
+          "keywords": {
+            "global": {
+              "count": 1,
+              "examples": [
+                "The Most Expensive Failed Startups of All Time"
+              ]
+            }
+          }
+        }
+      }
     }
   },
-  "lastUpdated": "2025-04-02T14:28:44.931275",
+  "lastUpdated": "2025-04-02T15:18:28.046713",
   "analysisCount": 50
 }
