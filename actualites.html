@@ -25,6 +25,8 @@
     <link rel="stylesheet" href="css/news-display-fix.css">
     <!-- Ajout du nouveau CSS pour le filtre d'événements par date -->
     <link rel="stylesheet" href="css/events-date-filter.css">
+    <!-- Ajout du CSS pour les thèmes dominants -->
+    <link rel="stylesheet" href="css/themes-dominant.css">
     <!-- Ajout du script events-loader.js -->
     <script src="events-loader.js"></script>
     <!-- Ajout du nouveau script de redémarrage pour événements -->
@@ -33,6 +35,8 @@
     <script src="events-date-filter.js"></script>
     <!-- Ajout du gestionnaire de date de connexion -->
     <script src="js/connection-date-manager.js"></script>
+    <!-- Ajout du visualiseur de thèmes dominants -->
+    <script src="js/themes-visualizer.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -743,6 +747,78 @@
                     <p class="text-sm text-gray-400" id="currentDate">11 MARS 2025</p>
                 </div>
                 
+                <!-- NOUVELLE SECTION: Thèmes Dominants -->
+                <div class="themes-dominant-container mb-10">
+                    <h2 class="text-blue-400 font-bold text-xl mb-4">
+                        <i class="fas fa-hashtag mr-2"></i>THÈMES DOMINANTS
+                    </h2>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <!-- Macroéconomie -->
+                        <div class="theme-card macroeconomie">
+                            <h3 class="theme-title text-lg font-medium mb-3 flex items-center">
+                                <i class="fas fa-chart-line mr-2"></i>
+                                Macroéconomie
+                            </h3>
+                            <ul id="macroeconomie-themes" class="theme-list">
+                                <!-- Skeleton loading -->
+                                <li class="skeleton-line"></li>
+                                <li class="skeleton-line"></li>
+                                <li class="skeleton-line"></li>
+                                <li class="skeleton-line"></li>
+                                <li class="skeleton-line"></li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Secteurs -->
+                        <div class="theme-card secteurs">
+                            <h3 class="theme-title text-lg font-medium mb-3 flex items-center">
+                                <i class="fas fa-industry mr-2"></i>
+                                Secteurs
+                            </h3>
+                            <ul id="secteurs-themes" class="theme-list">
+                                <!-- Skeleton loading -->
+                                <li class="skeleton-line"></li>
+                                <li class="skeleton-line"></li>
+                                <li class="skeleton-line"></li>
+                                <li class="skeleton-line"></li>
+                                <li class="skeleton-line"></li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Régions -->
+                        <div class="theme-card regions">
+                            <h3 class="theme-title text-lg font-medium mb-3 flex items-center">
+                                <i class="fas fa-globe-americas mr-2"></i>
+                                Régions
+                            </h3>
+                            <ul id="regions-themes" class="theme-list">
+                                <!-- Skeleton loading -->
+                                <li class="skeleton-line"></li>
+                                <li class="skeleton-line"></li>
+                                <li class="skeleton-line"></li>
+                                <li class="skeleton-line"></li>
+                                <li class="skeleton-line"></li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Sélecteur de période et info de mise à jour -->
+                    <div class="flex justify-end mt-2">
+                        <div>
+                            <!-- Sélecteur de période -->
+                            <div class="period-selector flex mb-1">
+                                <button class="period-btn active" data-period="weekly">Hebdo</button>
+                                <button class="period-btn" data-period="monthly">Mensuel</button>
+                                <button class="period-btn" data-period="quarterly">Trimestriel</button>
+                            </div>
+                            <!-- Info de dernière mise à jour -->
+                            <div class="themes-update-info">
+                                Mise à jour: <span id="themes-last-updated">...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Actualités critiques (Breaking News) -->
                 <div class="mb-8">
                     <h2 class="text-red-500 font-bold text-xl mb-4">🚨 ACTUALITÉS CRITIQUES</h2>
@@ -840,18 +916,18 @@
                 </div>
                 
                 <!-- Actualités générales -->
-<div class="mb-8">
-    <h2 class="text-gray-300 font-bold text-xl mb-4">📰 ACTUALITÉS GÉNÉRALES</h2>
-    
-    <!-- Conteneur simplifié sans la classe news-grid pour permettre le formatage uniforme -->
-    <div id="recent-news">
-        <!-- Spinner de chargement -->
-        <div class="loading-state">
-            <div class="loading-spinner"></div>
-            <p>Chargement des actualités récentes...</p>
-        </div>
-    </div>
-</div>
+                <div class="mb-8">
+                    <h2 class="text-gray-300 font-bold text-xl mb-4">📰 ACTUALITÉS GÉNÉRALES</h2>
+                    
+                    <!-- Conteneur simplifié sans la classe news-grid pour permettre le formatage uniforme -->
+                    <div id="recent-news">
+                        <!-- Spinner de chargement -->
+                        <div class="loading-state">
+                            <div class="loading-spinner"></div>
+                            <p>Chargement des actualités récentes...</p>
+                        </div>
+                    </div>
+                </div>
                 
                 <!-- Voir plus d'actualités -->
                 <div class="text-center">
