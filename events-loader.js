@@ -291,7 +291,31 @@ class EventsManager {
       }
     ];
     
-    return [...economicEvents, ...earningsEvents];
+    // Ajouter des IPOs et M&A de secours
+    const ipoMaEvents = [
+      {
+        title: "IPO: Pacer Funds Trust (PEVC)",
+        date: todayStr,
+        time: "09:00",
+        type: "ipo",
+        importance: "medium",
+        category: "ipo",
+        isEssential: false,
+        description: "Introduction en bourse de Pacer Funds Trust. L'IPO est prévue sur le NYSE."
+      },
+      {
+        title: "M&A: NortonLifeLock Inc. acquiert MoneyLion Inc.",
+        date: todayStr,
+        time: "10:00",
+        type: "merger",
+        importance: "medium",
+        category: "merger",
+        isEssential: false,
+        description: "Opération de fusion-acquisition où NortonLifeLock Inc. acquiert MoneyLion Inc., renforçant son offre de services financiers sécurisés."
+      }
+    ];
+    
+    return [...economicEvents, ...earningsEvents, ...ipoMaEvents];
   }
 
   /**
@@ -341,6 +365,19 @@ class EventsManager {
       info.symbol = earningsMatch[1];
       info.forecast = earningsMatch[2];
       info.category = 'earnings';
+    }
+    
+    // Extraction des infos d'IPO
+    const ipoMatch = title.match(/IPO:\s+(.+)\s+\(([A-Z0-9.]+)\)/);
+    if (ipoMatch) {
+      info.symbol = ipoMatch[2];
+      info.category = 'ipo';
+    }
+    
+    // Extraction des infos de M&A
+    const maMatch = title.match(/M&A:\s+(.+)\s+acquiert\s+(.+)/);
+    if (maMatch) {
+      info.category = 'merger';
     }
     
     // Extraction du pays pour les événements économiques
@@ -415,7 +452,10 @@ class EventsManager {
    * @returns {string} Catégorie
    */
   getCategoryFromEvent(event) {
+    // Vérifier le type spécifique d'événement
     if (event.type === 'earnings') return 'earnings';
+    if (event.type === 'ipo') return 'ipo';
+    if (event.type === 'merger') return 'merger';
     
     const title = (event.title || '').toLowerCase();
     
@@ -426,6 +466,8 @@ class EventsManager {
     if (title.includes('pmi') || title.includes('manufacturing') || title.includes('service')) return 'business';
     if (title.includes('retail') || title.includes('consumer')) return 'consumer';
     if (title.includes('trade') || title.includes('export') || title.includes('import')) return 'trade';
+    if (title.includes('ipo:')) return 'ipo';
+    if (title.includes('m&a:')) return 'merger';
     
     return 'other';
   }
@@ -481,7 +523,17 @@ class EventsManager {
       }
     }
     
-    // 4. Événements à importance élevée avec des mots clés spécifiques
+    // 4. IPOs importantes (grandes entreprises)
+    if (type === 'ipo' && importance === 'high') {
+      return true;
+    }
+    
+    // 5. M&A importantes (transactions de grande envergure)
+    if (type === 'merger' && importance === 'high') {
+      return true;
+    }
+    
+    // 6. Événements à importance élevée avec des mots clés spécifiques
     if (importance === 'high' && 
         (title.includes('report') || title.includes('announcement') || 
          title.includes('declaration') || title.includes('decision'))) {
@@ -541,6 +593,28 @@ class EventsManager {
       const symbol = this.parseEventTitle(title).symbol || '';
       
       return `Publication des résultats financiers de ${symbol}. Ces données peuvent influencer significativement le cours de l'action et potentiellement le secteur entier.`;
+    }
+    
+    // Description pour les IPOs
+    if (type === 'ipo') {
+      const ipoMatch = title.match(/IPO:\s+(.+)\s+\(([A-Z0-9.]+)\)/);
+      if (ipoMatch) {
+        const company = ipoMatch[1];
+        const symbol = ipoMatch[2];
+        return `Introduction en bourse de ${company} (${symbol}). Cette IPO pourrait attirer l'attention des investisseurs et avoir un impact sur le secteur.`;
+      }
+      return "Introduction en bourse à venir. Les IPOs représentent souvent des opportunités d'investissement intéressantes mais potentiellement risquées.";
+    }
+    
+    // Description pour les M&A
+    if (type === 'merger') {
+      const maMatch = title.match(/M&A:\s+(.+)\s+acquiert\s+(.+)/);
+      if (maMatch) {
+        const acquirer = maMatch[1];
+        const target = maMatch[2];
+        return `Opération de fusion-acquisition où ${acquirer} rachète ${target}. Cette transaction pourrait modifier l'équilibre du secteur et les valorisations des entreprises concernées.`;
+      }
+      return "Opération de fusion-acquisition pouvant entraîner des changements significatifs pour les entreprises impliquées et leur secteur d'activité.";
     }
     
     // Description par défaut
@@ -714,7 +788,9 @@ class EventsManager {
       'inflation': 'fa-dollar-sign',
       'business': 'fa-industry',
       'consumer': 'fa-shopping-cart',
-      'trade': 'fa-ship'
+      'trade': 'fa-ship',
+      'ipo': 'fa-rocket',
+      'merger': 'fa-handshake'
     };
     
     return icons[category] || 'fa-calendar-day';
