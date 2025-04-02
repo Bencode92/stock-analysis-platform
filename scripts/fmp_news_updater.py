@@ -30,26 +30,27 @@ THEMES_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 CONFIG = {
     "api_key": os.environ.get("FMP_API_KEY", ""),
     "endpoints": {
-        "general_news": "https://financialmodelingprep.com/stable/news/general-latest",
+        "general_news": "https://financialmodelingprep.com/stable/news/general",
         "fmp_articles": "https://financialmodelingprep.com/stable/fmp-articles",
-        "stock_news": "https://financialmodelingprep.com/stable/news/stock-latest",
-        "crypto_news": "https://financialmodelingprep.com/stable/news/crypto-latest", 
-        "press_releases": "https://financialmodelingprep.com/stable/news/press-releases-latest",
+        "stock_news": "https://financialmodelingprep.com/stable/news/stock",
+        "crypto_news": "https://financialmodelingprep.com/stable/news/crypto", 
+        "press_releases": "https://financialmodelingprep.com/stable/news/press-releases",
         "earnings_calendar": "https://financialmodelingprep.com/api/v3/earning_calendar",
         "economic_calendar": "https://financialmodelingprep.com/api/v3/economic_calendar"
     },
     "news_limits": {
-        "general_news": 15,
-        "fmp_articles": 10,
-        "stock_news": 15,
-        "crypto_news": 10,
-        "press_releases": 5
+        "general_news": 50,
+        "fmp_articles": 50,
+        "stock_news": 50,
+        "crypto_news": 50,
+        "press_releases": 20
     },
     "output_limits": {
-        "us": 15,
-        "france": 10
+        "us": 30,
+        "france": 20
     },
-    "days_ahead": 7
+    "days_ahead": 7,
+    "days_back": 30
 }
 
 # Mots-clés pour le score des actualités
@@ -128,7 +129,7 @@ def fetch_api_data(endpoint, params=None):
     params["apikey"] = CONFIG["api_key"]
     
     try:
-        logger.info(f"Récupération des données depuis {endpoint}")
+        logger.info(f"Récupération des données depuis {endpoint} avec params {params}")
         response = requests.get(endpoint, params=params, timeout=30)
         response.raise_for_status()
         data = response.json()
@@ -138,40 +139,95 @@ def fetch_api_data(endpoint, params=None):
         logger.error(f"❌ Erreur lors de la récupération depuis {endpoint}: {str(e)}")
         return []
 
+def fetch_articles_by_period(endpoint, start_date, end_date, days_interval=7, max_pages=5, per_page=50):
+    """
+    Récupère des articles sur une période donnée en découpant la période en intervalles
+    et en utilisant la pagination pour obtenir un maximum d'articles
+    """
+    logger.info(f"Démarrage de l'extraction d'articles de {start_date} à {end_date} par tranches de {days_interval} jours")
+    
+    from_date = datetime.strptime(start_date, "%Y-%m-%d")
+    to_date = datetime.strptime(end_date, "%Y-%m-%d")
+    all_articles = []
+    
+    # Parcourir la période par intervalles
+    current_from = from_date
+    while current_from < to_date:
+        current_to = min(current_from + timedelta(days=days_interval), to_date)
+        
+        logger.info(f"Traitement de la période {current_from.strftime('%Y-%m-%d')} → {current_to.strftime('%Y-%m-%d')}")
+        
+        # Parcourir les pages pour chaque intervalle
+        for page in range(max_pages):
+            params = {
+                "from": current_from.strftime("%Y-%m-%d"),
+                "to": current_to.strftime("%Y-%m-%d"),
+                "page": page,
+                "limit": per_page
+            }
+            
+            articles = fetch_api_data(endpoint, params)
+            
+            if not articles:
+                break  # Plus d'articles pour cette période
+                
+            logger.info(f"  Page {page+1}: {len(articles)} articles récupérés")
+            all_articles.extend(articles)
+            
+            # Si on a récupéré moins d'articles que la limite, on a atteint la fin
+            if len(articles) < per_page:
+                break
+                
+        # Passer à l'intervalle suivant
+        current_from = current_to
+    
+    logger.info(f"Total d'articles récupérés sur la période: {len(all_articles)}")
+    return all_articles
+
 def get_general_news():
     """Récupère les actualités économiques générales"""
-    params = {
-        "limit": CONFIG["news_limits"]["general_news"]
-    }
-    return fetch_api_data(CONFIG["endpoints"]["general_news"], params)
+    # Récupérer les actualités des 30 derniers jours
+    today = datetime.today()
+    start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
+    end_date = today.strftime("%Y-%m-%d")
+    
+    return fetch_articles_by_period(CONFIG["endpoints"]["general_news"], start_date, end_date)
 
 def get_fmp_articles():
     """Récupère les articles rédigés par FMP"""
-    params = {
-        "limit": CONFIG["news_limits"]["fmp_articles"]
-    }
-    return fetch_api_data(CONFIG["endpoints"]["fmp_articles"], params)
+    # Récupérer les articles des 30 derniers jours
+    today = datetime.today()
+    start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
+    end_date = today.strftime("%Y-%m-%d")
+    
+    return fetch_articles_by_period(CONFIG["endpoints"]["fmp_articles"], start_date, end_date)
 
 def get_stock_news():
     """Récupère les actualités des actions"""
-    params = {
-        "limit": CONFIG["news_limits"]["stock_news"]
-    }
-    return fetch_api_data(CONFIG["endpoints"]["stock_news"], params)
+    # Récupérer les actualités des 30 derniers jours
+    today = datetime.today()
+    start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
+    end_date = today.strftime("%Y-%m-%d")
+    
+    return fetch_articles_by_period(CONFIG["endpoints"]["stock_news"], start_date, end_date)
 
 def get_crypto_news():
     """Récupère les actualités des cryptomonnaies"""
-    params = {
-        "limit": CONFIG["news_limits"]["crypto_news"]
-    }
-    return fetch_api_data(CONFIG["endpoints"]["crypto_news"], params)
+    # Récupérer les actualités des 30 derniers jours
+    today = datetime.today()
+    start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
+    end_date = today.strftime("%Y-%m-%d")
+    
+    return fetch_articles_by_period(CONFIG["endpoints"]["crypto_news"], start_date, end_date)
 
 def get_press_releases():
     """Récupère les communiqués de presse"""
-    params = {
-        "limit": CONFIG["news_limits"]["press_releases"]
-    }
-    return fetch_api_data(CONFIG["endpoints"]["press_releases"], params)
+    # Récupérer les communiqués de presse des 30 derniers jours
+    today = datetime.today()
+    start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
+    end_date = today.strftime("%Y-%m-%d")
+    
+    return fetch_articles_by_period(CONFIG["endpoints"]["press_releases"], start_date, end_date)
 
 def get_earnings_calendar():
     """Récupère le calendrier des résultats d'entreprises"""
@@ -538,9 +594,14 @@ def extract_top_themes(news_data, days=30):
         "regions": Counter()
     }
     
+    total_articles = 0
+    processed_articles = 0
+    
     for country_articles in news_data.values():
         if not isinstance(country_articles, list):
             continue
+        
+        total_articles += len(country_articles)
         
         for article in country_articles:
             # Utiliser rawDate si disponible, sinon fallback sur date formatée
@@ -555,14 +616,18 @@ def extract_top_themes(news_data, days=30):
                 if article_date < cutoff_date:
                     continue
                 
+                processed_articles += 1
+                
+                themes = article.get("themes", {})
+                for axe, subthemes in themes.items():
+                    for theme in subthemes:
+                        themes_counter[axe][theme] += 1
+                
             except Exception as e:
                 logger.warning(f"Article ignoré pour date invalide: {article.get('title')} | Erreur: {str(e)}")
                 continue
-            
-            themes = article.get("themes", {})
-            for axe, subthemes in themes.items():
-                for theme in subthemes:
-                    themes_counter[axe][theme] += 1
+    
+    logger.info(f"Analyse des thèmes: {processed_articles}/{total_articles} articles utilisés pour la période de {days} jours")
     
     # On retourne les 5 principaux pour chaque axe
     top_themes = {
@@ -629,8 +694,12 @@ def process_news_data(news_sources):
         # Supprimer les doublons
         formatted_data[country] = remove_duplicates(formatted_data[country])
         
-        # Limiter le nombre d'articles
+        # Limiter le nombre d'articles pour l'interface
         formatted_data[country] = formatted_data[country][:CONFIG["output_limits"][country]]
+    
+    # Statistiques sur les données
+    total_articles = len(formatted_data["us"]) + len(formatted_data["france"])
+    logger.info(f"Total des articles traités et formatés: {total_articles}")
     
     return formatted_data
 
@@ -748,7 +817,7 @@ def main():
         # 0. Lire les données existantes pour fallback
         existing_data = read_existing_news()
         
-        # 1. Récupérer les différentes actualités
+        # 1. Récupérer les différentes actualités (avec la nouvelle approche par période)
         general_news = get_general_news()
         fmp_articles = get_fmp_articles()
         stock_news = get_stock_news()
