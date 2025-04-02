@@ -16,6 +16,7 @@ import requests
 import logging
 from datetime import datetime, timedelta
 import re
+from collections import Counter
 
 # Configuration du logger
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 # Chemins des fichiers
 NEWS_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "news.json")
+THEMES_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "themes.json")
 
 # Configuration
 CONFIG = {
@@ -71,6 +73,32 @@ NEWS_KEYWORDS = {
         "recommandation", "rachat d'actions", "dividende", "annonce", "changement de direction", "prévision",
         "nomination", "produit", "service", "stratégie", "marché", "plan", "mise à jour", "tendance"
     ]
+}
+
+# Structure des thèmes dominants
+THEMES_DOMINANTS = {
+    "macroeconomie": {
+        "inflation": ["inflation", "prix", "CPI", "taux d'intérêt", "interest rate", "yield"],
+        "recession": ["recession", "slowdown", "GDP", "PIB", "croissance", "crise"],
+        "politique_monetaire": ["fed", "bce", "banque centrale", "tapering", "quantitative easing"],
+        "geopolitique": ["conflit", "guerre", "tensions", "ukraine", "israel", "chine", "taiwan"],
+        "transition_energetique": ["climat", "esg", "biodiversité", "net zero", "transition", "durable"]
+    },
+    "secteurs": {
+        "technologie": ["ai", "cloud", "cyber", "tech", "semiconducteur", "digital", "data"],
+        "energie": ["pétrole", "gas", "uranium", "énergie", "baril", "oil", "renouvelable"],
+        "defense": ["défense", "militaire", "armes", "nato", "réarmement"],
+        "finance": ["banques", "assurances", "taux", "obligations", "treasury"],
+        "immobilier": ["real estate", "immobilier", "epra", "infrastructure"],
+        "consommation": ["retail", "consommation", "luxe", "achat", "revenu disponible"]
+    },
+    "regions": {
+        "europe": ["europe", "france", "bce", "allemagne", "italie", "zone euro"],
+        "usa": ["usa", "fed", "s&p", "nasdaq", "dow jones", "états-unis"],
+        "asie": ["chine", "japon", "corée", "inde", "asie", "emerging asia"],
+        "latam": ["brésil", "mexique", "latam", "amérique latine"],
+        "global": ["monde", "acwi", "international", "global", "tous marchés"]
+    }
 }
 
 # Liste des sources importantes
@@ -166,6 +194,18 @@ def get_economic_calendar():
         "to": future
     }
     return fetch_api_data(CONFIG["endpoints"]["economic_calendar"], params)
+
+def extract_themes(article):
+    """Identifie les thèmes dominants à partir du contenu de l'article"""
+    text = (article.get("text", "") + " " + article.get("title", "")).lower()
+    themes_detected = {"macroeconomie": [], "secteurs": [], "regions": []}
+    
+    for axe, groupes in THEMES_DOMINANTS.items():
+        for theme, keywords in groupes.items():
+            if any(kw in text for kw in keywords):
+                themes_detected[axe].append(theme)
+
+    return themes_detected
 
 def determine_category(article, source=None):
     """
@@ -372,7 +412,10 @@ def calculate_news_score(article):
     Calcule un score pour classer l'importance d'une actualité en fonction des mots-clés
     """
     # Créer un texte combiné pour l'analyse
-    content = f"{article.get('title', '')} {article.get('content', '')}".lower()
+    content = f"{article.get('title', '')} {article.get('content', '')}"
+    if not content or not isinstance(content, str):
+        content = ""
+    content = content.lower()
     
     score = 0
     
@@ -486,6 +529,39 @@ def calculate_event_score(event):
     
     return score
 
+def extract_top_themes(news_data, days=30):
+    """Analyse les thèmes dominants sur une période donnée (ex: 30 jours)"""
+    cutoff_date = datetime.now() - timedelta(days=days)
+    themes_counter = {
+        "macroeconomie": Counter(),
+        "secteurs": Counter(),
+        "regions": Counter()
+    }
+    
+    for country_articles in news_data.values():
+        if not isinstance(country_articles, list):
+            continue
+        
+        for article in country_articles:
+            try:
+                article_date = datetime.strptime(article["date"], "%d/%m/%Y")
+            except:
+                continue
+            
+            if article_date < cutoff_date:
+                continue
+            
+            themes = article.get("themes", {})
+            for axe, subthemes in themes.items():
+                for theme in subthemes:
+                    themes_counter[axe][theme] += 1
+    
+    # On retourne les 5 principaux pour chaque axe
+    top_themes = {
+        axe: themes_counter[axe].most_common(5) for axe in themes_counter
+    }
+    return top_themes
+
 def process_news_data(news_sources):
     """Traite et formate les actualités FMP pour correspondre au format TradePulse"""
     formatted_data = {
@@ -518,7 +594,8 @@ def process_news_data(news_sources):
                 "category": determine_category(normalized, source_type),
                 "impact": determine_impact(normalized),
                 "country": determine_country(normalized),
-                "url": normalized.get("url", "")
+                "url": normalized.get("url", ""),
+                "themes": extract_themes(normalized)
             }
             
             # Ajouter à la section par pays
@@ -620,6 +697,42 @@ def update_news_json_file(news_data, events):
         logger.error(f"❌ Erreur lors de la mise à jour du fichier: {str(e)}")
         return False
 
+def generate_themes_json(news_data):
+    """Génère un fichier JSON avec les thèmes dominants sur différentes périodes"""
+    
+    # Définir les périodes d'analyse
+    periods = {
+        "weekly": 7,
+        "monthly": 30,
+        "quarterly": 90
+    }
+    
+    # Extraire les thèmes dominants pour chaque période
+    themes_data = {
+        period: extract_top_themes(news_data, days=days) 
+        for period, days in periods.items()
+    }
+    
+    # Ajouter des métadonnées
+    themes_output = {
+        "themes": themes_data,
+        "lastUpdated": datetime.now().isoformat(),
+        "analysisCount": sum(len(articles) for articles in news_data.values() if isinstance(articles, list))
+    }
+    
+    # Créer le dossier data s'il n'existe pas
+    os.makedirs(os.path.dirname(THEMES_JSON_PATH), exist_ok=True)
+    
+    # Écrire dans le fichier
+    try:
+        with open(THEMES_JSON_PATH, 'w', encoding='utf-8') as f:
+            json.dump(themes_output, f, ensure_ascii=False, indent=2)
+        logger.info(f"✅ Fichier themes.json mis à jour avec succès")
+        return True
+    except Exception as e:
+        logger.error(f"❌ Erreur lors de la mise à jour du fichier themes.json: {str(e)}")
+        return False
+
 def main():
     """Fonction principale d'exécution"""
     try:
@@ -660,10 +773,19 @@ def main():
         news_data = process_news_data(news_sources)
         events = process_events_data(earnings, economic)
         
-        # 5. Mettre à jour le fichier JSON
-        success = update_news_json_file(news_data, events)
+        # 5. Mettre à jour le fichier JSON des actualités
+        success_news = update_news_json_file(news_data, events)
         
-        return success
+        # 6. Générer le fichier des thèmes dominants
+        success_themes = generate_themes_json(news_data)
+        
+        # 7. Afficher les thèmes dominants sur 30 jours (pour le log)
+        top_themes = extract_top_themes(news_data, days=30)
+        logger.info("🎯 Thèmes dominants sur 30 jours:")
+        for axe, themes in top_themes.items():
+            logger.info(f"  {axe.capitalize()}: {[f'{theme} ({count})' for theme, count in themes]}")
+        
+        return success_news and success_themes
     except Exception as e:
         logger.error(f"❌ Erreur dans l'exécution du script: {str(e)}")
         import traceback
