@@ -197,40 +197,20 @@ def extract_stoxx_com_data(html, index_name, category):
     soup = BeautifulSoup(html, 'html.parser')
 
     try:
-        # 🔹 Valeur actuelle (cours) - Stratégie améliorée 
-        # Tentative principale: utiliser le sélecteur CSS spécifique qui contient le cours
-        value_span = soup.select_one("span.overview-last-value")
+        # 🔹 Valeur actuelle (cours) - Utilisation du sélecteur ID précis
+        value_span = soup.select_one("span#overview-last-value")
         if value_span:
-            logger.info(f"Élément trouvé avec span.overview-last-value: {value_span}")
-            value = value_span.text.strip()
-            logger.info(f"Valeur extraite avec overview-last-value: '{value}'")
+            value = value_span.text.strip() or "0"
+            logger.info(f"✅ Valeur extraite avec #overview-last-value: '{value}'")
         else:
-            # Tentative secondaire: rechercher dans la div parent qui contient le prix actuel
-            price_container = soup.select_one("div.price-container")
-            if price_container:
-                # Chercher tous les spans numériques dans le conteneur de prix
-                potential_values = [span.text.strip() for span in price_container.select("span") if re.match(r'^[\d\.,]+$', span.text.strip())]
-                if potential_values:
-                    value = potential_values[0]
-                    logger.info(f"Valeur extraite du conteneur de prix: '{value}'")
-                else:
-                    logger.warning(f"Aucun span numérique trouvé dans le conteneur de prix")
-                    value = "0"
+            # Fallback: chercher par classe si l'ID n'est pas trouvé
+            value_span = soup.select_one("span.overview-last-value")
+            if value_span:
+                value = value_span.text.strip() or "0"
+                logger.info(f"Valeur extraite avec .overview-last-value: '{value}'")
             else:
-                # Fallback: chercher dans le champ de détails qui pourrait contenir la valeur actuelle
-                current_price_elem = soup.find("span", class_="current-price") or soup.find("div", class_="price-value")
-                if current_price_elem:
-                    value = current_price_elem.text.strip()
-                    logger.info(f"Valeur extraite du fallback: '{value}'")
-                else:
-                    # Dernière tentative: chercher tout élément contenant "overview-last-value" n'importe où dans l'attribut classe
-                    elements_with_value = soup.find_all(lambda tag: tag.name and tag.get('class') and 'overview-last-value' in ' '.join(tag.get('class')))
-                    if elements_with_value:
-                        value = elements_with_value[0].text.strip()
-                        logger.info(f"Valeur extraite par recherche directe: '{value}'")
-                    else:
-                        logger.warning(f"Aucune valeur trouvée pour {index_name}")
-                        value = "0"
+                logger.warning(f"Aucun élément span.overview-last-value ou span#overview-last-value trouvé pour {index_name}")
+                value = "0"
 
         # 🔹 Variation journalière en %
         change_percent_span = soup.find("span", class_="data-daily-change-percent")
