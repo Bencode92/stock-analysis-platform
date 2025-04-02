@@ -609,13 +609,22 @@ def calculate_event_score(event):
     
     return score
 
-def extract_top_themes(news_data, days=30):
-    """Analyse les thèmes dominants sur une période donnée (ex: 30 jours)"""
+def extract_top_themes(news_data, days=30, max_examples=3):
+    """Analyse les thèmes dominants sur une période donnée (ex: 30 jours) avec analyse détaillée des mots-clés"""
     cutoff_date = datetime.now() - timedelta(days=days)
+    
+    # Compteur simple pour les 5 thèmes les plus fréquents
     themes_counter = {
         "macroeconomie": Counter(),
         "secteurs": Counter(),
         "regions": Counter()
+    }
+    
+    # Structure avancée pour stocker les détails de chaque thème
+    themes_details = {
+        "macroeconomie": {},
+        "secteurs": {},
+        "regions": {}
     }
     
     total_articles = 0
@@ -645,7 +654,45 @@ def extract_top_themes(news_data, days=30):
                 themes = article.get("themes", {})
                 for axe, subthemes in themes.items():
                     for theme in subthemes:
+                        # Mettre à jour le compteur simple
                         themes_counter[axe][theme] += 1
+                        
+                        # Initialiser la structure détaillée si elle n'existe pas encore
+                        if theme not in themes_details[axe]:
+                            themes_details[axe][theme] = {
+                                "count": 0,
+                                "examples": [],
+                                "keywords": {}
+                            }
+                        
+                        # Incrémenter le compteur dans la structure détaillée
+                        themes_details[axe][theme]["count"] += 1
+                        
+                        # Ajouter l'exemple (limité à max_examples)
+                        title = article.get("title", "")
+                        if (len(themes_details[axe][theme]["examples"]) < max_examples and 
+                            title not in themes_details[axe][theme]["examples"]):
+                            themes_details[axe][theme]["examples"].append(title)
+                        
+                        # Analyser les mots-clés spécifiques
+                        text = (article.get("content", "") or article.get("text", "") + " " + title).lower()
+                        
+                        # Récupérer la liste des mots-clés pour ce thème
+                        if axe in THEMES_DOMINANTS and theme in THEMES_DOMINANTS[axe]:
+                            keywords = THEMES_DOMINANTS[axe][theme]
+                            for keyword in keywords:
+                                if keyword.lower() in text:
+                                    if keyword not in themes_details[axe][theme]["keywords"]:
+                                        themes_details[axe][theme]["keywords"][keyword] = {
+                                            "count": 0,
+                                            "examples": []
+                                        }
+                                    # Incrémenter le compteur du mot-clé
+                                    themes_details[axe][theme]["keywords"][keyword]["count"] += 1
+                                    # Ajouter l'exemple pour ce mot-clé spécifique
+                                    if (len(themes_details[axe][theme]["keywords"][keyword]["examples"]) < max_examples and
+                                        title not in themes_details[axe][theme]["keywords"][keyword]["examples"]):
+                                        themes_details[axe][theme]["keywords"][keyword]["examples"].append(title)
                 
             except Exception as e:
                 logger.warning(f"Article ignoré pour date invalide: {article.get('title')} | Erreur: {str(e)}")
@@ -653,11 +700,15 @@ def extract_top_themes(news_data, days=30):
     
     logger.info(f"Analyse des thèmes: {processed_articles}/{total_articles} articles utilisés pour la période de {days} jours")
     
-    # On retourne les 5 principaux pour chaque axe
-    top_themes = {
-        axe: themes_counter[axe].most_common(5) for axe in themes_counter
-    }
-    return top_themes
+    # Obtenir les 5 thèmes principaux pour chaque axe avec leurs détails
+    top_themes_with_details = {}
+    for axe in themes_counter:
+        top_themes = themes_counter[axe].most_common(5)
+        top_themes_with_details[axe] = {}
+        for theme, count in top_themes:
+            top_themes_with_details[axe][theme] = themes_details[axe].get(theme, {"count": count, "examples": []})
+    
+    return top_themes_with_details
 
 def process_news_data(news_sources):
     """Traite et formate les actualités FMP pour correspondre au format TradePulse"""
@@ -938,7 +989,12 @@ def main():
         top_themes = extract_top_themes(news_data, days=30)
         logger.info("🎯 Thèmes dominants sur 30 jours:")
         for axe, themes in top_themes.items():
-            logger.info(f"  {axe.capitalize()}: {[f'{theme} ({count})' for theme, count in themes]}")
+            logger.info(f"  {axe.capitalize()}:")
+            for theme, details in themes.items():
+                logger.info(f"    {theme} ({details['count']})")
+                if "keywords" in details and details["keywords"]:
+                    for keyword, kw_details in details["keywords"].items():
+                        logger.info(f"      - {keyword} ({kw_details['count']})")
         
         return success_news and success_themes
     except Exception as e:
