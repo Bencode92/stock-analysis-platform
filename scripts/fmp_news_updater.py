@@ -543,12 +543,20 @@ def extract_top_themes(news_data, days=30):
             continue
         
         for article in country_articles:
+            # Utiliser rawDate si disponible, sinon fallback sur date formatée
             try:
-                article_date = datetime.strptime(article["date"], "%d/%m/%Y")
-            except:
-                continue
-            
-            if article_date < cutoff_date:
+                if "rawDate" in article:
+                    # Format YYYY-MM-DD HH:MM:SS
+                    article_date = datetime.strptime(article["rawDate"].split(" ")[0], "%Y-%m-%d")
+                else:
+                    # Format DD/MM/YYYY (pour compatibilité avec anciennes données)
+                    article_date = datetime.strptime(article["date"], "%d/%m/%Y")
+                
+                if article_date < cutoff_date:
+                    continue
+                
+            except Exception as e:
+                logger.warning(f"Article ignoré pour date invalide: {article.get('title')} | Erreur: {str(e)}")
                 continue
             
             themes = article.get("themes", {})
@@ -589,6 +597,7 @@ def process_news_data(news_sources):
                 "title": normalized["title"],
                 "content": normalized["text"],
                 "source": normalized["site"],
+                "rawDate": normalized["publishedDate"],  # Conserver la date brute pour le filtrage
                 "date": format_date(normalized["publishedDate"]),
                 "time": format_time(normalized["publishedDate"]),
                 "category": determine_category(normalized, source_type),
