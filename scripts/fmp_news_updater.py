@@ -8,6 +8,8 @@ Script d'extraction des actualités et événements depuis Financial Modeling Pr
 - Crypto News API: Pour les cryptomonnaies
 - Press Releases API: Pour les communiqués de presse des entreprises
 - FMP Articles API: Pour les articles rédigés par FMP
+- IPOs Calendar: Pour les introductions en bourse à venir
+- Mergers & Acquisitions: Pour les opérations de fusion/acquisition
 """
 
 import os
@@ -36,7 +38,9 @@ CONFIG = {
         "crypto_news": "https://financialmodelingprep.com/stable/news/crypto", 
         "press_releases": "https://financialmodelingprep.com/stable/news/press-releases",
         "earnings_calendar": "https://financialmodelingprep.com/api/v3/earning_calendar",
-        "economic_calendar": "https://financialmodelingprep.com/api/v3/economic_calendar"
+        "economic_calendar": "https://financialmodelingprep.com/api/v3/economic_calendar",
+        "ipos_calendar": "https://financialmodelingprep.com/stable/ipos-calendar",
+        "mergers_acquisitions": "https://financialmodelingprep.com/stable/mergers-acquisitions-latest"
     },
     "news_limits": {
         "general_news": 50,
@@ -250,6 +254,26 @@ def get_economic_calendar():
         "to": future
     }
     return fetch_api_data(CONFIG["endpoints"]["economic_calendar"], params)
+
+def get_ipos_calendar():
+    """Récupère les introductions en bourse à venir"""
+    today = datetime.now().strftime("%Y-%m-%d")
+    future = (datetime.now() + timedelta(days=CONFIG["days_ahead"])).strftime("%Y-%m-%d")
+
+    params = {
+        "from": today,
+        "to": future
+    }
+
+    return fetch_api_data(CONFIG["endpoints"]["ipos_calendar"], params)
+
+def get_mergers_acquisitions(limit=100):
+    """Récupère les dernières opérations de fusion/acquisition"""
+    params = {
+        "page": 0,
+        "limit": limit
+    }
+    return fetch_api_data(CONFIG["endpoints"]["mergers_acquisitions"], params)
 
 def extract_themes(article):
     """Identifie les thèmes dominants à partir du contenu de l'article"""
@@ -753,6 +777,47 @@ def process_events_data(earnings, economic):
     # Limiter à 10 événements maximum
     return events[:10]
 
+def process_ipos_data(ipos):
+    """Formate les données d'IPO pour affichage"""
+    formatted_ipos = []
+    for ipo in ipos:
+        try:
+            formatted_ipos.append({
+                "title": f"IPO: {ipo.get('company')} ({ipo.get('symbol')})",
+                "date": format_date(ipo.get("date")),
+                "time": "09:00",
+                "type": "ipo",
+                "importance": "medium",
+                "score": 5,
+                "exchange": ipo.get("exchange", ""),
+                "priceRange": ipo.get("priceRange", ""),
+                "marketCap": ipo.get("marketCap", ""),
+                "status": ipo.get("actions", "Expected")
+            })
+        except Exception as e:
+            logger.warning(f"Erreur lors du traitement d'une IPO: {str(e)}")
+    return formatted_ipos
+
+def process_ma_data(ma_list):
+    """Formate les données de fusions/acquisitions"""
+    formatted_ma = []
+    for ma in ma_list:
+        try:
+            formatted_ma.append({
+                "title": f"M&A: {ma.get('companyName')} acquiert {ma.get('targetedCompanyName')}",
+                "date": format_date(ma.get("transactionDate")),
+                "time": "10:00",
+                "type": "merger",
+                "importance": "medium",
+                "score": 6,
+                "source": ma.get("link", ""),
+                "symbol": ma.get("symbol", ""),
+                "targetedSymbol": ma.get("targetedSymbol", "")
+            })
+        except Exception as e:
+            logger.warning(f"Erreur lors du traitement M&A: {str(e)}")
+    return formatted_ma
+
 def update_news_json_file(news_data, events):
     """Met à jour le fichier news.json avec les données formatées"""
     try:
@@ -828,6 +893,10 @@ def main():
         earnings = get_earnings_calendar()
         economic = get_economic_calendar()
         
+        # 2.b Récupérer les IPOs et M&A
+        ipos = get_ipos_calendar()
+        mergers = get_mergers_acquisitions()
+        
         # 3. Organiser les sources d'actualités
         news_sources = {
             "general_news": general_news,
@@ -850,6 +919,14 @@ def main():
         # 4. Traiter et formater les données
         news_data = process_news_data(news_sources)
         events = process_events_data(earnings, economic)
+        
+        # 4.b Traiter les données IPO et M&A
+        ipos_events = process_ipos_data(ipos)
+        ma_events = process_ma_data(mergers)
+        
+        # Fusionner avec les autres événements
+        events.extend(ipos_events)
+        events.extend(ma_events)
         
         # 5. Mettre à jour le fichier JSON des actualités
         success_news = update_news_json_file(news_data, events)
