@@ -341,7 +341,10 @@ def extract_boursorama_data(html):
                         break
                 
                 # Si c'est un indice NASDAQ sectoriel US qui nous intéresse
-                if is_target_index or (((("NASDAQ US" in name_text or "Nasdaq US" in name_text) and any(keyword in name_text.lower() for keyword in ["health", "financial", "matls", "oil", "tech", "auto", "telecom"]))))):
+                is_nasdaq_index = "NASDAQ US" in name_text or "Nasdaq US" in name_text
+                contains_keywords = any(keyword in name_text.lower() for keyword in ["health", "financial", "matls", "oil", "tech", "auto", "telecom"])
+                
+                if is_target_index or (is_nasdaq_index and contains_keywords):
                     # Nettoyer le nom (supprimer "Cours" s'il est présent)
                     clean_name = name_text.replace("Cours ", "")
                     
