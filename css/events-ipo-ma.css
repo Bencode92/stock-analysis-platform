@@ -1,0 +1,160 @@
+/* Styles spécifiques pour les événements IPO et M&A */
+
+/* Styles pour les événements IPO */
+.event-card[data-event-type="ipo"] {
+  border-left: 3px solid #7e57c2 !important;
+  background: linear-gradient(135deg, rgba(126, 87, 194, 0.1), rgba(1, 22, 39, 0.7)) !important;
+}
+
+.event-card[data-event-type="ipo"] h3 {
+  color: #bb86fc !important;
+}
+
+.event-card[data-event-type="ipo"] .category-icon {
+  background-color: rgba(126, 87, 194, 0.2) !important;
+  color: #bb86fc !important;
+}
+
+/* Animation de fusion pour les IPO */
+.event-card[data-event-type="ipo"]:hover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: radial-gradient(circle at center, rgba(187, 134, 252, 0.15), transparent 70%);
+  opacity: 0;
+  animation: pulse-ipo 2s infinite ease-in-out;
+  pointer-events: none;
+  border-radius: 0.5rem;
+}
+
+@keyframes pulse-ipo {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Styles pour les événements M&A */
+.event-card[data-event-type="merger"] {
+  border-left: 3px solid #43a047 !important;
+  background: linear-gradient(135deg, rgba(67, 160, 71, 0.1), rgba(1, 22, 39, 0.7)) !important;
+}
+
+.event-card[data-event-type="merger"] h3 {
+  color: #81c784 !important;
+}
+
+.event-card[data-event-type="merger"] .category-icon {
+  background-color: rgba(67, 160, 71, 0.2) !important;
+  color: #81c784 !important;
+}
+
+/* Animation de fusion pour les M&A */
+.event-card[data-event-type="merger"]:hover::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: linear-gradient(45deg, rgba(129, 199, 132, 0.1), transparent 60%);
+  opacity: 0;
+  animation: pulse-merger 3s infinite ease-in-out;
+  pointer-events: none;
+  border-radius: 0.5rem;
+}
+
+@keyframes pulse-merger {
+  0% { opacity: 0; }
+  50% { opacity: 0.7; }
+  100% { opacity: 0; }
+}
+
+/* Badge pour les nouveaux événements IPO/M&A */
+.new-event-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 64, 129, 0.2);
+  color: #ff4081;
+  padding: 3px 6px;
+  font-size: 0.65rem;
+  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  box-shadow: 0 0 12px rgba(255, 64, 129, 0.3);
+  animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+  0% { box-shadow: 0 0 0 0 rgba(255, 64, 129, 0.4); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 64, 129, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 64, 129, 0); }
+}
+
+/* Filtre type d'événements */
+.events-type-filter {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.event-type-button {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  background-color: rgba(30, 41, 59, 0.8);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+}
+
+.event-type-button i {
+  margin-right: 0.25rem;
+  font-size: 0.6rem;
+}
+
+.event-type-button.active {
+  background-color: rgba(0, 255, 135, 0.1);
+  color: #00ff87;
+  border-color: rgba(0, 255, 135, 0.3);
+}
+
+.event-type-button:hover:not(.active) {
+  background-color: rgba(30, 41, 59, 1);
+  transform: translateY(-1px);
+}
+
+.event-type-button[data-type="economic"] {
+  border-color: rgba(3, 169, 244, 0.3);
+  color: #03a9f4;
+}
+
+.event-type-button[data-type="earnings"] {
+  border-color: rgba(255, 193, 7, 0.3);
+  color: #ffc107;
+}
+
+.event-type-button[data-type="ipo"] {
+  border-color: rgba(187, 134, 252, 0.3);
+  color: #bb86fc;
+}
+
+.event-type-button[data-type="merger"] {
+  border-color: rgba(129, 199, 132, 0.3);
+  color: #81c784;
+}
+
+.event-type-button.active[data-type="economic"],
+.event-type-button.active[data-type="earnings"],
+.event-type-button.active[data-type="ipo"],
+.event-type-button.active[data-type="merger"] {
+  background-color: rgba(0, 0, 0, 0.2);
+}
