@@ -710,6 +710,26 @@ def extract_top_themes(news_data, days=30, max_examples=3):
     
     return top_themes_with_details
 
+def build_theme_summary(theme_name, theme_data):
+    """Génère automatiquement un résumé texte simple pour un thème"""
+    count = theme_data.get("count", 0)
+    examples = theme_data.get("examples", [])
+    keywords = theme_data.get("keywords", {})
+
+    keywords_list = sorted(keywords.items(), key=lambda x: x[1]["count"], reverse=True)
+    keywords_str = ", ".join([f"{kw} ({info['count']})" for kw, info in keywords_list[:5]])
+
+    if not examples:
+        return f"Le thème '{theme_name}' est apparu dans {count} articles récemment."
+
+    return (
+        f"📰 Le thème **{theme_name}** a été détecté dans **{count} articles** "
+        f"au cours de la période, principalement à travers des sujets comme : {keywords_str}. "
+        f"Exemples d'articles : « {examples[0]} »"
+        + (f", « {examples[1]} »" if len(examples) > 1 else "")
+        + (f", « {examples[2]} »" if len(examples) > 2 else "") + "."
+    )
+
 def process_news_data(news_sources):
     """Traite et formate les actualités FMP pour correspondre au format TradePulse"""
     formatted_data = {
@@ -906,6 +926,13 @@ def generate_themes_json(news_data):
         period: extract_top_themes(news_data, days=days) 
         for period, days in periods.items()
     }
+    
+    # Ajouter un résumé automatique GPT-like à chaque thème
+    for period, axes in themes_data.items():
+        for axe, themes in axes.items():
+            for theme_name, theme_data in themes.items():
+                summary = build_theme_summary(theme_name, theme_data)
+                themes_data[period][axe][theme_name]["gpt_summary"] = summary
     
     # Ajouter des métadonnées
     themes_output = {
