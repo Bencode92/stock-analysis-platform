@@ -197,39 +197,44 @@ def extract_stoxx_com_data(html, index_name, category):
     soup = BeautifulSoup(html, 'html.parser')
 
     try:
-        # Valeur actuelle
-        value_div = soup.find('div', class_='details-value')
-        value = value_div.text.strip() if value_div else "0"
+        # 🔹 Valeur actuelle (cours)
+        value_span = soup.find("span", class_="current-price")
+        value = value_span.text.strip() if value_span else "0"
+        
+        # Fallback si current-price est manquant
+        if value == "0":
+            alt_price_elem = soup.find("div", class_="price-value") or soup.find("div", class_="details-value")
+            value = alt_price_elem.text.strip() if alt_price_elem else "0"
 
-        # Pourcentage de variation journalière (souvent dans un span ou à côté de la valeur)
-        change_span = value_div.find_next_sibling('span') if value_div else None
-        change = change_span.text.strip() if change_span else "0"
+        # 🔹 Variation journalière en %
+        change_percent_span = soup.find("span", class_="data-daily-change-percent")
+        change_percent = change_percent_span.text.strip() if change_percent_span else "0"
 
-        # YTD : chercher un élément contenant "Year to Date Change"
-        ytd_label = soup.find(text=re.compile(r"Year to Date Change", re.I))
+        # 🔹 YTD
         ytdChange = "0"
+        ytd_label = soup.find(string=re.compile(r"Year to Date Change", re.I))
         if ytd_label:
             ytd_parent_row = ytd_label.find_parent("div").find_parent("div")
-            ytd_value_div = ytd_parent_row.find_all("div")[-1]  # dernière colonne
+            ytd_value_div = ytd_parent_row.find_all("div")[-1]
             ytdChange = ytd_value_div.text.strip()
 
-        # Si on n'a pas trouvé de YTD, chercher "52 Week Change" comme alternative
+        # 🔹 Fallback : 52 Week Change si YTD introuvable
         if ytdChange == "0":
-            week52_label = soup.find(text=re.compile(r"52 Week Change", re.I))
+            week52_label = soup.find(string=re.compile(r"52 Week Change", re.I))
             if week52_label:
                 week52_parent_row = week52_label.find_parent("div").find_parent("div")
                 week52_value_div = week52_parent_row.find_all("div")[-1]
                 ytdChange = week52_value_div.text.strip()
 
-        trend = "down" if "-" in change else "up"
+        trend = "down" if "-" in change_percent else "up"
 
-        logger.info(f"📊 Données extraites pour {index_name}: Valeur={value}, Change={change}, YTD={ytdChange}")
+        logger.info(f"📊 Données extraites pour {index_name}: Valeur={value}, %={change_percent}, YTD={ytdChange}")
 
         return {
             "name": index_name,
             "value": value,
-            "change": change,
-            "changePercent": change,
+            "change": change_percent,  # utilisé comme change aussi
+            "changePercent": change_percent,
             "ytdChange": ytdChange,
             "trend": trend,
             "category": category,
@@ -336,7 +341,7 @@ def extract_boursorama_data(html):
                         break
                 
                 # Si c'est un indice NASDAQ sectoriel US qui nous intéresse
-                if is_target_index or ((("NASDAQ US" in name_text or "Nasdaq US" in name_text) and any(keyword in name_text.lower() for keyword in ["health", "financial", "matls", "oil", "tech", "auto", "telecom"]))):
+                if is_target_index or (((("NASDAQ US" in name_text or "Nasdaq US" in name_text) and any(keyword in name_text.lower() for keyword in ["health", "financial", "matls", "oil", "tech", "auto", "telecom"]))))):
                     # Nettoyer le nom (supprimer "Cours" s'il est présent)
                     clean_name = name_text.replace("Cours ", "")
                     
@@ -411,7 +416,7 @@ def parse_percentage(percent_str):
     # Supprimer les caractères non numériques sauf le point décimal et le signe moins
     # Pour le format français: remplacer la virgule par un point et supprimer l'espace avant %
     clean_str = percent_str.replace(',', '.').replace(' %', '%').replace('%', '')
-    clean_str = re.sub(r'[^0-9\\.\\-]', '', clean_str)
+    clean_str = re.sub(r'[^0-9\\\\.\\\\-]', '', clean_str)
     
     try:
         return float(clean_str)
