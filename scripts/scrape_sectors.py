@@ -197,14 +197,19 @@ def extract_stoxx_com_data(html, index_name, category):
     soup = BeautifulSoup(html, 'html.parser')
 
     try:
-        # 🔹 Valeur actuelle (cours)
-        value_span = soup.find("span", class_="current-price")
+        # 🔹 Valeur actuelle (cours) - Utiliser le bon sélecteur comme suggéré par l'expert
+        value_span = soup.select_one("span.overview-last-value")
         value = value_span.text.strip() if value_span else "0"
         
-        # Fallback si current-price est manquant
+        # Fallback si overview-last-value est manquant
         if value == "0":
-            alt_price_elem = soup.find("div", class_="price-value") or soup.find("div", class_="details-value")
-            value = alt_price_elem.text.strip() if alt_price_elem else "0"
+            value_span = soup.find("span", class_="current-price")
+            value = value_span.text.strip() if value_span else "0"
+            
+            # Second fallback
+            if value == "0":
+                alt_price_elem = soup.find("div", class_="price-value") or soup.find("div", class_="details-value")
+                value = alt_price_elem.text.strip() if alt_price_elem else "0"
 
         # 🔹 Variation journalière en %
         change_percent_span = soup.find("span", class_="data-daily-change-percent")
