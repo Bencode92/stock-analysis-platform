@@ -45,6 +45,9 @@ function addEventFilters() {
     </div>
   `;
   
+  // Suppression de la création des filtres par type (première ligne de filtres)
+  // La section ci-dessous a été supprimée pour ne conserver que la seconde ligne dans le HTML
+  /*
   // Créer la section de filtres par type
   const typeFiltersContainer = document.createElement('div');
   typeFiltersContainer.className = 'mt-3 mb-4';
@@ -70,6 +73,7 @@ function addEventFilters() {
   
   // Insérer les filtres par type après le header
   headerSection.parentNode.insertBefore(typeFiltersContainer, headerSection.nextSibling);
+  */
   
   // Ajouter les écouteurs d'événements
   setupFilterListeners();
@@ -95,6 +99,9 @@ function setupFilterListeners() {
     });
   }
   
+  // Les écouteurs pour les filtres de type ne sont plus nécessaires
+  // puisque nous avons supprimé ces filtres
+  /*
   // Écouteurs pour les filtres de type
   const typeButtons = document.querySelectorAll('.event-type-button');
   typeButtons.forEach(button => {
@@ -103,6 +110,7 @@ function setupFilterListeners() {
       filterEventsByType(this.getAttribute('data-type'));
     });
   });
+  */
   
   // Déclencher le filtre "Aujourd'hui" par défaut
   if (todayBtn) {
@@ -136,6 +144,7 @@ function setActiveDateFilter(activeButton) {
 
 /**
  * Active le bouton de filtre de type sélectionné
+ * Fonction conservée pour compatibilité mais ne sera plus utilisée
  */
 function setActiveTypeFilter(activeButton) {
   const typeButtons = document.querySelectorAll('.event-type-button');
@@ -230,15 +239,20 @@ function filterEventsByDate(dateFilter) {
     document.body.classList.add('week-filter-active');
   }
   
+  // Nous n'avons plus besoin de réappliquer le filtre par type
+  // puisque nous avons supprimé ces filtres
+  /*
   // Réappliquer le filtre par type actif
   const activeTypeFilter = document.querySelector('.event-type-button.active');
   if (activeTypeFilter) {
     filterEventsByType(activeTypeFilter.getAttribute('data-type'));
   }
+  */
 }
 
 /**
  * Filtre les événements par type
+ * Fonction conservée pour compatibilité mais ne sera plus utilisée directement
  */
 function filterEventsByType(type) {
   // Ajouter des marqueurs de type aux cartes qui n'en ont pas
