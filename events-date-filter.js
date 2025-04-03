@@ -285,7 +285,7 @@ function forceShowAllEvents() {
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     // Afficher uniquement les événements de demain jusqu'à la fin de la semaine
-    if (diffDays > 0 && diffDays <= 6) {
+    if (diffDays >= 1 && eventDate <= endOfWeek) {
       card.style.display = '';
       card.setAttribute('data-hidden', "false");
       eventFound = true;
@@ -293,7 +293,7 @@ function forceShowAllEvents() {
     } else {
       card.style.display = 'none';
       card.setAttribute('data-hidden', "true");
-      console.log(`Événement masqué: ${formattedEventDate} (aujourd'hui ou passé)`);
+      console.log(`Événement masqué: ${formattedEventDate} (aujourd'hui, passé ou trop lointain)`);
     }
   });
   
