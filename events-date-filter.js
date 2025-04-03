@@ -1,7 +1,7 @@
 /**
  * events-date-filter.js
  * Ajoute un filtre temporel pour les événements basé sur la date de connexion
- * Version optimisée avec UI améliorée
+ * Version optimisée avec filtres catégorie conservés
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -15,16 +15,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // 1. Remplacer les filtres existants par date uniquement (Aujourd'hui/Cette semaine)
     replaceFiltersWithDateOnly();
     
-    // 2. Ajouter les filtres par type d'événement (Tous, Économie, Résultats, IPO, M&A)
-    addEventTypeFilters();
-    
-    // 3. Supprimer les badges "ESSENTIEL" des événements
+    // 2. Supprimer les badges "ESSENTIEL" des événements
     removeEssentialBadges();
     
-    // 4. Surcharger la méthode de rendu des événements pour appliquer les modifications
+    // 3. Surcharger la méthode de rendu des événements pour appliquer les modifications
     overrideEventRendering();
     
-    // 5. Appliquer le filtre par défaut (aujourd'hui)
+    // 4. Appliquer le filtre par défaut (aujourd'hui)
     const todayButton = document.getElementById('today-filter');
     if (todayButton) {
       // Simuler un clic sur "Aujourd'hui"
@@ -82,6 +79,9 @@ function replaceFiltersWithDateOnly() {
       console.log("Filtre 'Cette semaine' appliqué");
     });
   }
+  
+  // Ajouter les filtres par type après le header
+  addEventTypeFilters();
 }
 
 /**
@@ -115,12 +115,18 @@ function addEventTypeFilters() {
     </div>
   `;
   
-  // Insérer après le titre
-  const titleContainer = eventsSection.querySelector('.flex.justify-between.items-center');
+  // Trouver le header des événements
+  const titleContainer = eventsSection.querySelector('.flex.justify-between.items-center, .events-header');
   if (titleContainer) {
     titleContainer.insertAdjacentElement('afterend', typeFiltersContainer);
   } else {
-    eventsSection.prepend(typeFiltersContainer);
+    // Fallback si on ne trouve pas le header
+    const eventsContainer = document.getElementById('events-container');
+    if (eventsContainer) {
+      eventsContainer.insertAdjacentElement('beforebegin', typeFiltersContainer);
+    } else {
+      eventsSection.appendChild(typeFiltersContainer);
+    }
   }
   
   // Ajouter les écouteurs d'événements
@@ -229,6 +235,12 @@ function forceHideAllEvents() {
   // Classe pour indiquer le mode filtrage actif
   document.body.classList.add('today-filter-active');
   document.body.classList.remove('week-filter-active');
+  
+  // Réappliquer le filtre par type actif
+  const activeTypeFilter = document.querySelector('.filter-pill.active');
+  if (activeTypeFilter) {
+    filterEventsByType(activeTypeFilter.dataset.type);
+  }
 }
 
 /**
@@ -309,7 +321,7 @@ function forceShowAllEvents() {
   document.body.classList.remove('today-filter-active');
   document.body.classList.add('week-filter-active');
   
-  // Réappliquer le filtre par type
+  // Réappliquer le filtre par type actif
   const activeTypeFilter = document.querySelector('.filter-pill.active');
   if (activeTypeFilter) {
     filterEventsByType(activeTypeFilter.dataset.type);
@@ -392,12 +404,16 @@ function overrideEventRendering() {
           const cardContent = card.textContent.toLowerCase();
           const cardTitle = card.querySelector('h3')?.textContent.toLowerCase() || '';
           
-          if (cardTitle.includes('ipo:')) {
+          // Vérifier le type de l'événement
+          if (cardTitle.includes('ipo:') || cardTitle.includes('introduction en bourse')) {
             eventType = 'ipo';
-          } else if (cardTitle.includes('m&a:')) {
+          } else if (cardTitle.includes('m&a:') || cardTitle.includes('fusion') || cardTitle.includes('acquisition')) {
             eventType = 'merger';
-          } else if (cardTitle.includes('résultats')) {
+          } else if (cardTitle.includes('résultats') || cardTitle.includes('earnings') || cardTitle.includes('trimestre')) {
             eventType = 'earnings';
+          } else if (cardContent.includes('fed') || cardContent.includes('bce') || cardContent.includes('inflation') || 
+                    cardContent.includes('taux') || cardContent.includes('pib') || cardContent.includes('emploi')) {
+            eventType = 'economic';
           }
           
           // Ajouter l'attribut data-event-type pour les filtres
@@ -422,12 +438,6 @@ function overrideEventRendering() {
         } else {
           // Par défaut, masquer tous les événements
           forceHideAllEvents();
-        }
-        
-        // Appliquer le filtre par type actif
-        const activeTypeFilter = document.querySelector('.filter-pill.active');
-        if (activeTypeFilter) {
-          filterEventsByType(activeTypeFilter.dataset.type);
         }
       }, 100);
     };
