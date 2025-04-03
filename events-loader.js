@@ -1,7 +1,7 @@
 /**
  * events-loader.js
  * Gestionnaire d'événements économiques et financiers amélioré
- * S'intègre avec le fichier classified_news.json généré par GitHub Action
+ * S'intègre avec le fichier news.json généré par GitHub Action
  */
 
 class EventsManager {
@@ -85,12 +85,12 @@ class EventsManager {
   }
 
   /**
-   * Charge les événements depuis classified_news.json
+   * Charge les événements depuis news.json
    */
   async loadEvents() {
     try {
-      // Utiliser le fichier classified_news.json existant
-      const response = await fetch('data/classified_news.json');
+      // Utiliser le fichier news.json existant
+      const response = await fetch('data/news.json');
       if (!response.ok) throw new Error('Erreur lors du chargement des événements');
       
       const data = await response.json();
