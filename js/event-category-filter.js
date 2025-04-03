@@ -4,8 +4,11 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Attendre que la page soit complètement chargée pour éviter les conflits avec d'autres scripts
-    setTimeout(initCategoryFilters, 1500);
+    // Exécuter immédiatement pour un effet visuel rapide
+    initCategoryFilters();
+    
+    // Puis réexécuter après un délai pour s'assurer que tous les événements sont chargés
+    setTimeout(initCategoryFilters, 1000);
 });
 
 /**
@@ -19,21 +22,43 @@ function initCategoryFilters() {
     
     // Ajouter l'écouteur d'événement à chaque bouton
     filterButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            // Définir ce bouton comme actif et désactiver les autres
-            setActiveFilter(this);
-            
-            // Filtrer les événements selon la catégorie sélectionnée
-            const category = this.getAttribute('data-category');
-            filterEventsByCategory(category);
-        });
+        // Supprimer les écouteurs précédents pour éviter les doublons
+        button.removeEventListener('click', handleFilterClick);
+        // Ajouter le nouvel écouteur
+        button.addEventListener('click', handleFilterClick);
     });
     
     // Activer le filtre "TOUS" par défaut
     const allFilterButton = document.querySelector('#event-category-filters button[data-category="all"]');
     if (allFilterButton) {
-        allFilterButton.click();
+        // Définir comme actif sans déclencher le filtrage (qui sera fait ensuite)
+        setActiveFilter(allFilterButton);
     }
+    
+    // Ajouter des attributs data-category à tous les événements
+    addCategoryAttributes();
+    
+    // Appliquer le filtre actif (s'il y en a un)
+    const activeFilter = document.querySelector('#event-category-filters button.filter-active');
+    if (activeFilter) {
+        const category = activeFilter.getAttribute('data-category');
+        filterEventsByCategory(category);
+    } else if (allFilterButton) {
+        // Sinon utiliser le filtre "Tous"
+        filterEventsByCategory('all');
+    }
+}
+
+/**
+ * Gestionnaire d'événement pour les clics sur les boutons de filtre
+ */
+function handleFilterClick() {
+    // Définir ce bouton comme actif
+    setActiveFilter(this);
+    
+    // Filtrer les événements selon la catégorie sélectionnée
+    const category = this.getAttribute('data-category');
+    filterEventsByCategory(category);
 }
 
 /**
@@ -77,18 +102,13 @@ function setActiveFilter(activeButton) {
 function filterEventsByCategory(category) {
     console.log(`Filtrage des événements par catégorie: ${category}`);
     
-    // Sélectionner toutes les cartes d'événements
-    const eventCards = document.querySelectorAll('#events-container .event-card');
+    // Sélectionner toutes les cartes d'événements 
+    const eventCards = document.querySelectorAll('.event-card');
     
     // Si aucun événement n'est trouvé, arrêter ici
     if (!eventCards.length) {
         console.warn('Aucune carte d\'événement trouvée');
         return;
-    }
-    
-    // Si c'est le premier filtrage, ajouter des attributs data-category aux cartes
-    if (!eventCards[0].hasAttribute('data-category')) {
-        addCategoryAttributes(eventCards);
     }
     
     // Filtrer les événements
@@ -111,99 +131,127 @@ function filterEventsByCategory(category) {
 
 /**
  * Ajoute des attributs data-category aux cartes d'événements
- * @param {NodeList} eventCards - Liste des cartes d'événements
  */
-function addCategoryAttributes(eventCards) {
+function addCategoryAttributes() {
     console.log('Ajout des attributs de catégorie aux cartes d\'événements');
     
+    // Sélectionner toutes les cartes d'événements
+    const eventCards = document.querySelectorAll('.event-card');
+    
     eventCards.forEach(card => {
-        // Déterminer la catégorie en fonction du contenu
-        const cardText = card.textContent.toLowerCase();
-        let category = 'economic'; // Catégorie par défaut
+        // Si la carte a déjà un attribut data-category, on le garde
+        if (card.hasAttribute('data-category')) {
+            return;
+        }
         
-        // Vérifier si la carte contient des indicateurs de pays ou de type
-        if (cardText.includes('us') || cardText.includes('états-unis') || cardText.includes('fed') || 
-            cardText.includes('dollar') || cardText.includes('nasdaq') || cardText.includes('dow jones')) {
-            category = 'US';
-        } else if (cardText.includes('cn') || cardText.includes('chine') || cardText.includes('chinois') || 
-                 cardText.includes('shanghai') || cardText.includes('pboc')) {
-            category = 'CN';
-        } else if (cardText.includes('ipo') || cardText.includes('introduction en bourse')) {
-            category = 'ipo';
-        } else if (cardText.includes('merger') || cardText.includes('m&a') || 
-                 cardText.includes('fusion') || cardText.includes('acquisition')) {
-            category = 'merger';
-        } else if (cardText.includes('pib') || cardText.includes('gdp') || 
-                 cardText.includes('inflation') || cardText.includes('chômage') || 
-                 cardText.includes('taux') || cardText.includes('économique')) {
-            category = 'economic';
+        // D'abord, chercher des badges ou boutons explicites dans la carte
+        let category = findCategoryFromBadges(card);
+        
+        // Si aucun badge n'est trouvé, déterminer en fonction du titre et du contenu
+        if (!category) {
+            category = determineCategoryFromContent(card);
         }
         
         // Ajouter l'attribut à la carte
         card.setAttribute('data-category', category);
         
-        // Ajouter un indicateur visuel si nécessaire
-        if (!card.querySelector('.category-indicator')) {
-            const indicator = document.createElement('span');
-            indicator.classList.add('category-indicator', category.toLowerCase());
-            
-            // Style CSS pour l'indicateur selon la catégorie
-            let indicatorColor;
-            switch (category) {
-                case 'US':
-                    indicatorColor = '#3b82f6'; // Bleu
-                    break;
-                case 'CN':
-                    indicatorColor = '#ef4444'; // Rouge
-                    break;
-                case 'ipo':
-                    indicatorColor = '#8b5cf6'; // Violet
-                    break;
-                case 'merger':
-                    indicatorColor = '#10b981'; // Vert
-                    break;
-                case 'economic':
-                    indicatorColor = '#f59e0b'; // Orange
-                    break;
-                default:
-                    indicatorColor = '#6b7280'; // Gris
-            }
-            
-            indicator.style.backgroundColor = indicatorColor;
-            card.appendChild(indicator);
-        }
+        // Ajouter une classe pour le style (optionnel)
+        card.classList.add(`category-${category}`);
     });
-    
-    // Ajouter du CSS pour les indicateurs si nécessaire
-    addIndicatorStyles();
 }
 
 /**
- * Ajoute des styles CSS pour les indicateurs de catégorie
+ * Trouve la catégorie en fonction des badges ou boutons dans la carte
+ * @param {HTMLElement} card - La carte d'événement
+ * @returns {string} La catégorie trouvée ou null
  */
-function addIndicatorStyles() {
-    // Vérifier si les styles sont déjà ajoutés
-    if (document.getElementById('category-indicator-styles')) {
-        return;
+function findCategoryFromBadges(card) {
+    // Chercher les badges ou boutons visibles dans la carte
+    const badgeElements = card.querySelectorAll('span, button, a, div');
+    
+    for (const badge of badgeElements) {
+        const badgeText = badge.textContent.trim().toLowerCase();
+        const badgeClasses = badge.className.toLowerCase();
+        
+        // Vérifier si c'est un badge ou bouton visible contenant les catégories
+        if (badgeText === 'ipo' || badgeClasses.includes('ipo')) {
+            return 'ipo';
+        }
+        if (badgeText === 'us' || badgeClasses.includes('us')) {
+            return 'US';
+        }
+        if (badgeText === 'economic' || badgeClasses.includes('economic')) {
+            return 'economic';
+        }
+        if (badgeText === 'merger' || badgeClasses.includes('merger')) {
+            return 'merger';
+        }
+        if (badgeText === 'cn' || badgeClasses.includes('cn')) {
+            return 'CN';
+        }
     }
     
-    // Créer l'élément style
-    const style = document.createElement('style');
-    style.id = 'category-indicator-styles';
-    style.textContent = `
-        .category-indicator {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            opacity: 0.7;
-        }
-    `;
+    return null;
+}
+
+/**
+ * Détermine la catégorie en fonction du contenu de la carte
+ * @param {HTMLElement} card - La carte d'événement
+ * @returns {string} La catégorie déterminée
+ */
+function determineCategoryFromContent(card) {
+    const cardText = card.textContent.toLowerCase();
+    const cardTitle = card.querySelector('h3')?.textContent.toLowerCase() || '';
     
-    // Ajouter le style à la page
-    document.head.appendChild(style);
+    // Vérifier le titre en priorité - souvent plus précis
+    if (cardTitle.startsWith('ipo:')) {
+        return 'ipo';
+    }
+    
+    // Chercher des indicateurs clairs dans le titre et le contenu
+    if (cardText.includes('ipo:') || cardText.includes('introduction en bourse')) {
+        return 'ipo';
+    }
+    
+    if (cardText.includes('m&a:') || 
+        cardText.includes('merger') || 
+        cardText.includes('acquisition') || 
+        cardText.includes('fusion')) {
+        return 'merger';
+    }
+    
+    // Catégories géographiques
+    if (cardText.includes('fed') || 
+        cardText.includes('états-unis') || 
+        cardText.includes('us treasury') || 
+        cardText.includes('dollar') ||
+        cardText.includes('nasdaq') ||
+        cardText.includes('dow jones') ||
+        cardText.includes('s&p 500')) {
+        return 'US';
+    }
+    
+    if (cardText.includes('chine') || 
+        cardText.includes('beijing') || 
+        cardText.includes('pboc') || 
+        cardText.includes('shanghai')) {
+        return 'CN';
+    }
+    
+    // Catégorie économique
+    if (cardText.includes('taux') || 
+        cardText.includes('inflation') || 
+        cardText.includes('gdp') || 
+        cardText.includes('pib') || 
+        cardText.includes('banque centrale') ||
+        cardText.includes('monetary') ||
+        cardText.includes('economic') ||
+        cardText.includes('économique')) {
+        return 'economic';
+    }
+    
+    // Par défaut, on considère que c'est économique
+    return 'economic';
 }
 
 /**
@@ -215,7 +263,7 @@ function checkVisibleEvents() {
     if (!eventsContainer) return;
     
     // Compter les événements visibles
-    const visibleEvents = Array.from(document.querySelectorAll('#events-container .event-card')).filter(
+    const visibleEvents = Array.from(document.querySelectorAll('.event-card')).filter(
         card => card.style.display !== 'none'
     );
     
@@ -237,4 +285,26 @@ function checkVisibleEvents() {
         
         eventsContainer.appendChild(messageEl);
     }
+}
+
+// MÉTHODE DE DÉTECTION ALTERNATIVE
+// Cette fonction cherche spécifiquement les badges IPO visibles dans les cartes
+function detectVisibleBadges() {
+    // Trouver tous les badges visibles
+    const ipoBadges = document.querySelectorAll('.event-card .ipo, .event-card span:contains("ipo")');
+    const mergerBadges = document.querySelectorAll('.event-card .merger, .event-card span:contains("merger")');
+    const usBadges = document.querySelectorAll('.event-card .us, .event-card span:contains("us")');
+    const cnBadges = document.querySelectorAll('.event-card .cn, .event-card span:contains("cn")');
+    
+    console.log(`Badges trouvés: ${ipoBadges.length} IPO, ${mergerBadges.length} Merger, ${usBadges.length} US, ${cnBadges.length} CN`);
+}
+
+// Exécuter l'initialisation au chargement de la page
+if (document.readyState === 'complete') {
+    initCategoryFilters();
+} else {
+    window.addEventListener('load', function() {
+        // Exécuter après le chargement complet
+        setTimeout(initCategoryFilters, 500);
+    });
 }
