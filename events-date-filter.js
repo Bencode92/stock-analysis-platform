@@ -12,8 +12,38 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Supprimer les badges "ESSENTIEL"
     removeEssentialBadges();
+    
+    // NOUVELLE FONCTION: Activer les filtres de catégories
+    enableCategoryFilters();
   }, 1000); // Attendre 1 seconde pour être sûr que tout est chargé
 });
+
+/**
+ * Active les filtres de catégorie qui étaient précédemment désactivés
+ */
+function enableCategoryFilters() {
+  const categoryButtons = document.querySelectorAll('#event-category-filters button');
+  categoryButtons.forEach(button => {
+    // Supprimer les attributs qui désactivent les boutons
+    button.style.pointerEvents = '';
+    button.removeAttribute('title');
+    
+    // Ajouter un effet de survol
+    button.addEventListener('mouseenter', function() {
+      if (!this.classList.contains('filter-active')) {
+        this.style.transform = 'translateY(-1px)';
+        this.style.boxShadow = '0 2px 8px rgba(0, 255, 135, 0.2)';
+      }
+    });
+    
+    button.addEventListener('mouseleave', function() {
+      if (!this.classList.contains('filter-active')) {
+        this.style.transform = '';
+        this.style.boxShadow = '';
+      }
+    });
+  });
+}
 
 /**
  * Ajoute les filtres de date et de type aux événements
@@ -45,36 +75,6 @@ function addEventFilters() {
     </div>
   `;
   
-  // Suppression de la création des filtres par type (première ligne de filtres)
-  // La section ci-dessous a été supprimée pour ne conserver que la seconde ligne dans le HTML
-  /*
-  // Créer la section de filtres par type
-  const typeFiltersContainer = document.createElement('div');
-  typeFiltersContainer.className = 'mt-3 mb-4';
-  typeFiltersContainer.innerHTML = `
-    <div class="flex flex-wrap gap-2">
-      <button class="text-xs px-3 py-1.5 bg-green-400 bg-opacity-10 text-green-400 border border-green-400 border-opacity-30 rounded-full font-medium event-type-button active" data-type="all">
-        <i class="fas fa-filter mr-1"></i> Tous
-      </button>
-      <button class="text-xs px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium event-type-button" data-type="economic">
-        <i class="fas fa-chart-line mr-1"></i> Économie
-      </button>
-      <button class="text-xs px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium event-type-button" data-type="earnings">
-        <i class="fas fa-chart-pie mr-1"></i> Résultats
-      </button>
-      <button class="text-xs px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium event-type-button" data-type="ipo">
-        <i class="fas fa-rocket mr-1"></i> IPO
-      </button>
-      <button class="text-xs px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium event-type-button" data-type="merger">
-        <i class="fas fa-handshake mr-1"></i> M&A
-      </button>
-    </div>
-  `;
-  
-  // Insérer les filtres par type après le header
-  headerSection.parentNode.insertBefore(typeFiltersContainer, headerSection.nextSibling);
-  */
-  
   // Ajouter les écouteurs d'événements
   setupFilterListeners();
 }
@@ -98,19 +98,6 @@ function setupFilterListeners() {
       filterEventsByDate('week');
     });
   }
-  
-  // Les écouteurs pour les filtres de type ne sont plus nécessaires
-  // puisque nous avons supprimé ces filtres
-  /*
-  // Écouteurs pour les filtres de type
-  const typeButtons = document.querySelectorAll('.event-type-button');
-  typeButtons.forEach(button => {
-    button.addEventListener('click', function() {
-      setActiveTypeFilter(this);
-      filterEventsByType(this.getAttribute('data-type'));
-    });
-  });
-  */
   
   // Déclencher le filtre "Aujourd'hui" par défaut
   if (todayBtn) {
@@ -239,15 +226,14 @@ function filterEventsByDate(dateFilter) {
     document.body.classList.add('week-filter-active');
   }
   
-  // Nous n'avons plus besoin de réappliquer le filtre par type
-  // puisque nous avons supprimé ces filtres
-  /*
   // Réappliquer le filtre par type actif
-  const activeTypeFilter = document.querySelector('.event-type-button.active');
+  const activeTypeFilter = document.querySelector('#event-category-filters button.filter-active');
   if (activeTypeFilter) {
-    filterEventsByType(activeTypeFilter.getAttribute('data-type'));
+    const category = activeTypeFilter.getAttribute('data-category');
+    if (category && typeof filterEventsByCategory === 'function') {
+      filterEventsByCategory(category);
+    }
   }
-  */
 }
 
 /**
