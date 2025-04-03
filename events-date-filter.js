@@ -162,31 +162,51 @@ function filterEventsByType(type) {
  * Approche directe et robuste
  */
 function forceHideAllEvents() {
+  // Obtenir la date d'aujourd'hui au format DD/MM/YYYY
+  const today = new Date();
+  const formattedToday = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+  
+  console.log("Date du jour:", formattedToday);
+  
   // Sélection de toutes les cartes d'événements
   const eventCards = document.querySelectorAll('.event-card');
+  let eventFound = false;
   
-  // Masquer tous les événements sans exception
+  // Masquer les événements qui ne sont pas d'aujourd'hui
   eventCards.forEach(card => {
-    card.style.display = 'none';
+    // Extraire la date de l'événement depuis le contenu de la carte
+    const dateText = card.textContent.match(/\d{2}\/\d{2}\/\d{4}/);
+    const eventDate = dateText ? dateText[0] : null;
+    
+    console.log("Date de l'événement:", eventDate);
+    
+    if (eventDate === formattedToday) {
+      card.style.display = ''; // Afficher l'événement
+      eventFound = true;
+    } else {
+      card.style.display = 'none'; // Masquer l'événement
+    }
   });
   
-  // Masquer également le message "Aucun événement ne correspond à votre sélection"
-  const noEventsMessage = document.querySelector('.no-events-message');
-  if (noEventsMessage) {
-    noEventsMessage.remove();
+  // Si aucun événement trouvé pour aujourd'hui, afficher un message
+  const eventsContainer = document.getElementById('events-container');
+  if (!eventFound && eventsContainer) {
+    if (!document.querySelector('.no-events-message')) {
+      const noEventsMessage = document.createElement('div');
+      noEventsMessage.className = 'no-events-message col-span-3 flex flex-col items-center justify-center p-6 text-center';
+      noEventsMessage.innerHTML = `
+        <i class="fas fa-calendar-times text-gray-600 text-3xl mb-3"></i>
+        <p class="text-gray-400">
+          Aucun événement prévu pour aujourd'hui
+        </p>
+      `;
+      eventsContainer.appendChild(noEventsMessage);
+    }
   }
   
-  // Ajouter une classe spécifique au corps pour identifier le mode "Aujourd'hui"
+  // Classe pour indiquer le mode filtrage actif
   document.body.classList.add('today-filter-active');
   document.body.classList.remove('week-filter-active');
-  
-  // Réappliquer le filtre par type
-  const activeTypeFilter = document.querySelector('.event-type-button.active');
-  if (activeTypeFilter) {
-    filterEventsByType(activeTypeFilter.dataset.type);
-  }
-  
-  console.log("Tous les événements ont été masqués (filtre Aujourd'hui)");
 }
 
 /**
@@ -268,10 +288,10 @@ function removeEssentialBadges() {
       background: none !important;
     }
     
-    /* Masquer automatiquement tous les événements quand le filtre "Aujourd'hui" est actif */
-    body.today-filter-active .event-card {
+    /* Ne pas masquer automatiquement tous les événements - nous utiliserons une logique de filtrage plus précise */
+    /* body.today-filter-active .event-card {
       display: none !important;
-    }
+    } */
   `;
   document.head.appendChild(style);
 }
