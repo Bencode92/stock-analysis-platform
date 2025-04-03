@@ -38,6 +38,9 @@ function initCategoryFilters() {
     // Ajouter des attributs data-category à tous les événements
     addCategoryAttributes();
     
+    // Détection spéciale des IPO (cette fonction est cruciale pour détecter les badges IPO)
+    detectSpecificBadges();
+    
     // Appliquer le filtre actif (s'il y en a un)
     const activeFilter = document.querySelector('#event-category-filters button.filter-active');
     if (activeFilter) {
@@ -130,6 +133,21 @@ function filterEventsByCategory(category) {
                 card.setAttribute('data-category', cardCategory);
             }
             
+            // Vérifier aussi les badges directement dans la carte (pour les IPO notamment)
+            if (cardCategory !== category) {
+                // Seconde chance pour les IPO, vérifier les badges directement
+                if (category === 'ipo' && hasIPOBadge(card)) {
+                    card.setAttribute('data-category', 'ipo');
+                    cardCategory = 'ipo';
+                }
+                // Seconde chance pour US
+                else if (category === 'US' && hasUSBadge(card)) {
+                    card.setAttribute('data-category', 'US');
+                    cardCategory = 'US';
+                }
+                // Et ainsi de suite pour les autres catégories
+            }
+            
             // Afficher ou masquer selon la catégorie
             card.style.display = (cardCategory === category) ? '' : 'none';
         });
@@ -137,6 +155,44 @@ function filterEventsByCategory(category) {
     
     // Vérifier s'il y a des événements visibles
     checkVisibleEvents();
+}
+
+/**
+ * Vérifie si une carte contient un badge IPO
+ * @param {HTMLElement} card - La carte d'événement
+ * @returns {boolean} Vrai si un badge IPO est trouvé
+ */
+function hasIPOBadge(card) {
+    // 1. Chercher directement des éléments avec le texte "ipo"
+    const elements = Array.from(card.querySelectorAll('*'));
+    for (const el of elements) {
+        if (el.textContent.trim().toLowerCase() === 'ipo') {
+            return true;
+        }
+    }
+    
+    // 2. Vérifier si le titre commence par "IPO:"
+    const title = card.querySelector('h3');
+    if (title && title.textContent.trim().startsWith('IPO:')) {
+        return true;
+    }
+    
+    return false;
+}
+
+/**
+ * Vérifie si une carte contient un badge US
+ * @param {HTMLElement} card - La carte d'événement
+ * @returns {boolean} Vrai si un badge US est trouvé
+ */
+function hasUSBadge(card) {
+    const elements = Array.from(card.querySelectorAll('*'));
+    for (const el of elements) {
+        if (el.textContent.trim().toLowerCase() === 'us') {
+            return true;
+        }
+    }
+    return false;
 }
 
 /**
@@ -222,10 +278,6 @@ function addCategoryAttributes() {
     
     // Sélectionner toutes les cartes d'événements
     const eventCards = document.querySelectorAll('.event-card');
-    
-    // Vérifier directement les badges ipo visible en utilisant plusieurs sélecteurs
-    const cardsWithIpoBadges = document.querySelectorAll('.event-card .ipo, .event-card [class*="ipo"]');
-    console.log(`Cartes avec badges IPO détectés: ${cardsWithIpoBadges.length}`);
     
     eventCards.forEach(card => {
         // Si la carte a déjà un attribut data-category, on le garde
@@ -393,64 +445,105 @@ function checkVisibleEvents() {
     }
 }
 
-// MÉTHODE DE DÉTECTION SPÉCIALE IPO
-// Cette fonction est spécifiquement conçue pour détecter les IPO sur la page
-function detectIPOEvents() {
-    console.log("Détection spéciale des IPO...");
+/**
+ * DÉTECTION SPÉCIALE DES BADGES
+ * Cette fonction utilise une approche spécifique pour détecter les petits badges dans les cards
+ */
+function detectSpecificBadges() {
+    console.log("Détection des badges spécifiques...");
     
-    // 1. Chercher par titre commençant par IPO:
-    const ipoTitles = Array.from(document.querySelectorAll('h3')).filter(
-        title => title.textContent.trim().startsWith('IPO:')
-    );
-    console.log(`Titres IPO détectés: ${ipoTitles.length}`);
+    // Sélectionner toutes les cartes d'événements
+    const eventCards = document.querySelectorAll('.event-card');
     
-    // 2. Chercher par badge
-    const ipoBadges = document.querySelectorAll('[class*="ipo"], .ipo');
-    console.log(`Badges IPO détectés: ${ipoBadges.length}`);
-    
-    // 3. Chercher par bouton avec texte "ipo"
-    const ipoButtons = Array.from(document.querySelectorAll('button, .btn, span.badge')).filter(
-        btn => btn.textContent.trim().toLowerCase() === 'ipo'
-    );
-    console.log(`Boutons IPO détectés: ${ipoButtons.length}`);
-    
-    // Marquer tous les événements IPO trouvés
-    ipoTitles.forEach(title => {
-        const card = title.closest('.event-card');
-        if (card) {
-            card.setAttribute('data-category', 'ipo');
-            console.log("IPO détecté par titre:", title.textContent);
+    eventCards.forEach(card => {
+        // Rechercher tous les éléments avec des classes/styles qui pourraient indiquer un badge
+        const possibleBadges = card.querySelectorAll('span, button, div, a');
+        
+        possibleBadges.forEach(badge => {
+            const badgeText = badge.textContent.trim().toLowerCase();
+            
+            // Détection des badges IPO (prioritaire)
+            if (badgeText === 'ipo') {
+                console.log("Badge IPO trouvé!");
+                card.setAttribute('data-category', 'ipo');
+            }
+            // Badges US
+            else if (badgeText === 'us') {
+                console.log("Badge US trouvé!");
+                card.setAttribute('data-category', 'US');
+            }
+            // Badges CN
+            else if (badgeText === 'cn') {
+                console.log("Badge CN trouvé!");
+                card.setAttribute('data-category', 'CN');
+            }
+            // Badges merger
+            else if (badgeText === 'merger') {
+                console.log("Badge merger trouvé!");
+                card.setAttribute('data-category', 'merger');
+            }
+            // Badges economic
+            else if (badgeText === 'economic') {
+                console.log("Badge economic trouvé!");
+                card.setAttribute('data-category', 'economic');
+            }
+        });
+        
+        // Si aucun badge n'a été trouvé, essayer avec le titre
+        if (!card.hasAttribute('data-category')) {
+            const title = card.querySelector('h3')?.textContent || '';
+            if (title.startsWith('IPO:')) {
+                console.log("IPO trouvé par titre:", title);
+                card.setAttribute('data-category', 'ipo');
+            }
         }
     });
     
-    ipoBadges.forEach(badge => {
-        const card = badge.closest('.event-card');
-        if (card) {
-            card.setAttribute('data-category', 'ipo');
-            console.log("IPO détecté par badge");
-        }
-    });
-    
-    ipoButtons.forEach(button => {
-        const card = button.closest('.event-card');
-        if (card) {
-            card.setAttribute('data-category', 'ipo');
-            console.log("IPO détecté par bouton:", button.textContent);
-        }
-    });
+    // Ajout d'un système de fallback pour les petits badges ipo spécifiques à votre design
+    try {
+        // Rechercher tous les petits spans qui pourraient être des badges ipo
+        document.querySelectorAll('.event-card').forEach(card => {
+            if (!card.hasAttribute('data-category')) {
+                // Approche 1: Chercher des éléments qui SONT des badges
+                const smallBadges = card.querySelectorAll('span[class*="badge"], .badge, [class*="tag"], .tag');
+                
+                smallBadges.forEach(badge => {
+                    const badgeText = badge.textContent.trim().toLowerCase();
+                    if (badgeText === 'ipo') {
+                        card.setAttribute('data-category', 'ipo');
+                        console.log("IPO trouvé via petit badge:", badgeText);
+                    }
+                });
+                
+                // Approche 2: Recherche directe des textes 'ipo' courts et isolés
+                const allElements = card.querySelectorAll('*');
+                allElements.forEach(el => {
+                    // Si c'est un élément avec uniquement le texte 'ipo' et rien d'autre
+                    if (el.childNodes.length === 1 && 
+                        el.childNodes[0].nodeType === Node.TEXT_NODE && 
+                        el.textContent.trim().toLowerCase() === 'ipo') {
+                        card.setAttribute('data-category', 'ipo');
+                        console.log("IPO trouvé via texte isolé");
+                    }
+                });
+            }
+        });
+    } catch (e) {
+        console.error("Erreur lors de la détection de badges spécifiques:", e);
+    }
 }
 
 // Exécuter l'initialisation au chargement de la page
 if (document.readyState === 'complete') {
     initCategoryFilters();
     // Détection spéciale des IPO
-    setTimeout(detectIPOEvents, 1500);
+    setTimeout(detectSpecificBadges, 1500);
 } else {
     window.addEventListener('load', function() {
         // Exécuter après le chargement complet
         setTimeout(function() {
             initCategoryFilters();
-            detectIPOEvents();
+            detectSpecificBadges();
         }, 1000);
     });
 }
