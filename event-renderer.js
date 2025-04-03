@@ -193,6 +193,8 @@ function filterEventsByCategory(category) {
     return;
   }
   
+  console.log('Cartes trouvées:', eventCards.length);
+  
   // Pour chaque carte d'événement
   eventCards.forEach(card => {
     if (category === 'all') {
@@ -300,19 +302,20 @@ function filterEventsByCategory(category) {
           showCard = true;
         }
         
-        // Vérifie les badges "merger"
+        // Vérifie les badges "merger" ou "m&a"
         if (!showCard) {
-          const mergerBadge = card.querySelector('.merger, [class*="merger"]');
+          const mergerBadge = card.querySelector('.merger, .m\\&a, [class*="merger"], [class*="m&a"]');
           if (mergerBadge) {
             showCard = true;
           }
         }
         
-        // Recherche spécifique de "merger" dans les badges
+        // Recherche spécifique de "merger" ou "m&a" dans les badges
         if (!showCard) {
           const badges = card.querySelectorAll('span');
           for (const badge of badges) {
-            if (badge.textContent.trim().toLowerCase() === 'merger') {
+            const badgeText = badge.textContent.trim().toLowerCase();
+            if (badgeText === 'merger' || badgeText === 'm&a') {
               showCard = true;
               break;
             }
@@ -324,7 +327,8 @@ function filterEventsByCategory(category) {
           const content = card.textContent.toLowerCase();
           if (content.includes('merger') || 
               content.includes('acquisition') || 
-              content.includes('fusion')) {
+              content.includes('fusion') ||
+              content.includes('m&a')) {
             showCard = true;
           }
         }
