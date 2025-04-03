@@ -244,25 +244,82 @@ function forceHideAllEvents() {
 }
 
 /**
- * Force l'affichage de tous les événements (pour le filtre Cette semaine)
+ * Force l'affichage des événements à venir dans la semaine (sans aujourd'hui ni le passé)
  */
 function forceShowAllEvents() {
+  // Obtenir la date d'aujourd'hui
+  const today = new Date();
+  const formattedToday = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
+  
+  // Calcul du début et de la fin de la semaine
+  const endOfWeek = new Date(today);
+  endOfWeek.setDate(today.getDate() + 6); // 6 jours après aujourd'hui = fin de la semaine
+
+  console.log("Filtre semaine - Aujourd'hui:", formattedToday);
+  console.log("Filtre semaine - Fin de semaine:", `${String(endOfWeek.getDate()).padStart(2, '0')}/${String(endOfWeek.getMonth() + 1).padStart(2, '0')}/${endOfWeek.getFullYear()}`);
+  
   // Sélection de toutes les cartes d'événements
   const eventCards = document.querySelectorAll('.event-card');
+  let eventFound = false;
   
-  // Afficher tous les événements sans exception
+  // Afficher uniquement les événements entre demain et fin de semaine
   eventCards.forEach(card => {
-    card.style.display = '';
-    card.setAttribute('data-hidden', "false");
+    // Extraire la date de l'événement
+    const dateText = card.textContent.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+    
+    if (!dateText) {
+      card.style.display = 'none';
+      card.setAttribute('data-hidden', "true");
+      return;
+    }
+    
+    // Convertir en objet Date
+    const eventDate = new Date(`${dateText[3]}-${dateText[2]}-${dateText[1]}`);
+    const formattedEventDate = dateText[0];
+    
+    // Marquer la carte pour faciliter le débogage
+    card.setAttribute('data-date', formattedEventDate);
+    
+    // Différence en jours
+    const diffTime = eventDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    // Afficher uniquement les événements de demain jusqu'à la fin de la semaine
+    if (diffDays > 0 && diffDays <= 6) {
+      card.style.display = '';
+      card.setAttribute('data-hidden', "false");
+      eventFound = true;
+      console.log(`Événement affiché: ${formattedEventDate} (dans ${diffDays} jours)`);
+    } else {
+      card.style.display = 'none';
+      card.setAttribute('data-hidden', "true");
+      console.log(`Événement masqué: ${formattedEventDate} (aujourd'hui ou passé)`);
+    }
   });
   
-  // Masquer le message "Aucun événement" s'il existe
-  const noEventsMessage = document.querySelector('.no-events-message');
-  if (noEventsMessage) {
-    noEventsMessage.remove();
+  // Afficher un message si aucun événement trouvé
+  const eventsContainer = document.getElementById('events-container');
+  if (!eventFound && eventsContainer) {
+    if (!document.querySelector('.no-events-message')) {
+      const noEventsMessage = document.createElement('div');
+      noEventsMessage.className = 'no-events-message col-span-3 flex flex-col items-center justify-center p-6 text-center';
+      noEventsMessage.innerHTML = `
+        <i class="fas fa-calendar-times text-gray-600 text-3xl mb-3"></i>
+        <p class="text-gray-400">
+          Aucun événement prévu pour le reste de la semaine
+        </p>
+      `;
+      eventsContainer.appendChild(noEventsMessage);
+    }
+  } else {
+    // S'il y a des événements, supprimer le message "Aucun événement"
+    const noEventsMessage = document.querySelector('.no-events-message');
+    if (noEventsMessage) {
+      noEventsMessage.remove();
+    }
   }
   
-  // Ajouter une classe spécifique au corps pour identifier le mode "Cette semaine"
+  // Classe pour indiquer le mode filtrage actif
   document.body.classList.remove('today-filter-active');
   document.body.classList.add('week-filter-active');
   
@@ -272,7 +329,7 @@ function forceShowAllEvents() {
     filterEventsByType(activeTypeFilter.dataset.type);
   }
   
-  console.log("Tous les événements ont été affichés (filtre Cette semaine)");
+  console.log("Événements à venir dans la semaine affichés (sans aujourd'hui)");
 }
 
 /**
