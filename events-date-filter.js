@@ -34,6 +34,9 @@ document.addEventListener('DOMContentLoaded', function() {
       // Appliquer directement le filtre si le bouton n'existe pas encore
       forceHideAllEvents();
     }
+
+    // Ajouter un indicateur de débogage
+    console.log("Initialisation des filtres de date d'événements terminée");
   }, 1000);
 });
 
@@ -61,12 +64,16 @@ function replaceFiltersWithDateOnly() {
       <button id="week-filter" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded filter-button">
         Cette semaine
       </button>
+      <button id="reset-date" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded filter-button">
+        Réinitialiser date
+      </button>
     </div>
   `;
   
   // Ajouter les écouteurs d'événements
   const todayBtn = document.getElementById('today-filter');
   const weekBtn = document.getElementById('week-filter');
+  const resetBtn = document.getElementById('reset-date');
   
   if (todayBtn && weekBtn) {
     todayBtn.addEventListener('click', () => {
@@ -77,7 +84,15 @@ function replaceFiltersWithDateOnly() {
     weekBtn.addEventListener('click', () => {
       setActiveFilter(weekBtn);
       forceShowAllEvents();
+      console.log("Filtre 'Cette semaine' appliqué");
     });
+    
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        // Réinitialise la date aux événements actuels
+        location.reload();
+      });
+    }
   }
 }
 
@@ -140,10 +155,16 @@ function filterEventsByType(type) {
   const eventCards = document.querySelectorAll('.event-card');
   
   eventCards.forEach(card => {
-    // Restaurer d'abord l'affichage selon le filtre de date actif
+    // Par défaut, on réinitialise l'affichage en fonction du filtre de date actif
     if (document.body.classList.contains('today-filter-active')) {
-      card.style.display = 'none';
+      // En mode "Aujourd'hui", respecter les attributs data-hidden
+      if (card.getAttribute('data-hidden') === "true") {
+        card.style.display = 'none';
+      } else {
+        card.style.display = '';
+      }
     } else {
+      // En mode "Cette semaine", tout afficher d'abord
       card.style.display = '';
     }
     
@@ -155,6 +176,8 @@ function filterEventsByType(type) {
       }
     }
   });
+
+  console.log(`Filtre par type appliqué: ${type}`);
 }
 
 /**
@@ -304,6 +327,16 @@ function removeEssentialBadges() {
     body.today-filter-active .event-card[data-hidden="true"] {
       display: none !important;
     }
+
+    /* S'assurer que les événements avec data-hidden="false" sont visibles en mode "Aujourd'hui" */
+    body.today-filter-active .event-card[data-hidden="false"] {
+      display: flex !important;
+    }
+
+    /* S'assurer que TOUS les événements sont visibles en mode "Cette semaine" */
+    body.week-filter-active .event-card {
+      display: flex !important;
+    }
   `;
   document.head.appendChild(style);
 }
@@ -377,21 +410,41 @@ function overrideEventRendering() {
 
 // Ajouter un écouteur global pour intercepter tout clic sur le document
 document.addEventListener('click', function(event) {
-  // Si le filtre "Aujourd'hui" est actif, masquer tous les événements qui pourraient être ajoutés dynamiquement
-  if (document.body.classList.contains('today-filter-active')) {
-    setTimeout(() => {
+  // Attendre un instant puis vérifier quel filtre est actif
+  setTimeout(() => {
+    if (document.body.classList.contains('today-filter-active')) {
       forceHideAllEvents();
-    }, 100);
-  }
+    } else if (document.body.classList.contains('week-filter-active')) {
+      forceShowAllEvents();
+    }
+  }, 100);
 }, true);
 
 // Observer les changements dans le DOM pour appliquer le filtre en continu
 if (window.MutationObserver) {
-  const observer = new MutationObserver(function() {
-    if (document.body.classList.contains('today-filter-active')) {
-      setTimeout(() => {
-        forceHideAllEvents();
-      }, 50);
+  const observer = new MutationObserver(function(mutations) {
+    // Vérifier si des cartes d'événements ont été ajoutées
+    let hasNewEvents = false;
+    
+    mutations.forEach(mutation => {
+      if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+        // Vérifier si des événements ont été ajoutés
+        mutation.addedNodes.forEach(node => {
+          if (node.classList && node.classList.contains('event-card')) {
+            hasNewEvents = true;
+          }
+        });
+      }
+    });
+    
+    if (hasNewEvents) {
+      console.log("Nouveaux événements détectés - réapplication des filtres");
+      // Réappliquer le filtre actif
+      if (document.body.classList.contains('today-filter-active')) {
+        setTimeout(() => forceHideAllEvents(), 50);
+      } else if (document.body.classList.contains('week-filter-active')) {
+        setTimeout(() => forceShowAllEvents(), 50);
+      }
     }
   });
   
