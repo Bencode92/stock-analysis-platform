@@ -875,8 +875,8 @@
                         <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="ipo" onclick="filterEvents('ipo')">
                             <i class="fas fa-rocket mr-1"></i> ipo
                         </button>
-                        <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="merger" onclick="filterEvents('merger')">
-                            <i class="fas fa-handshake mr-1"></i> merger
+                        <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="m&a" onclick="filterEvents('m&a')">
+                            <i class="fas fa-handshake mr-1"></i> m&a
                         </button>
                         <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="CN" onclick="filterEvents('CN')">
                             <i class="fas fa-flag mr-1"></i> CN
@@ -1257,11 +1257,14 @@
                                          cardText.includes('pib') || cardText.includes('gdp');
                                 break;
                             case 'ipo':
-                                matches = title.startsWith('ipo:') || cardText.includes('introduction en bourse');
+                                matches = title.startsWith('IPO:') || title.startsWith('ipo:') || 
+                                         cardText.includes('introduction en bourse');
                                 break;
+                            case 'm&a':
                             case 'merger':
-                                matches = title.startsWith('m&a:') || cardText.includes('merger') || 
-                                         cardText.includes('acquisition') || cardText.includes('fusion');
+                                matches = title.startsWith('M&A:') || title.startsWith('m&a:') || 
+                                         cardText.includes('merger') || cardText.includes('acquisition') || 
+                                         cardText.includes('fusion');
                                 break;
                             case 'CN':
                                 matches = cardText.includes('chine') || cardText.includes('beijing') || 
