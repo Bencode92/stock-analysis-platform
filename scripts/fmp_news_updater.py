@@ -43,7 +43,7 @@ CONFIG = {
         "mergers_acquisitions": "https://financialmodelingprep.com/stable/mergers-acquisitions-latest"
     },
     "news_limits": {
-        "general_news": 50,
+        "general_news": 20,
         "fmp_articles": 1,
         "stock_news": 50,
         "crypto_news": 20,
