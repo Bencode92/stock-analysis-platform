@@ -134,6 +134,19 @@ function injectPriorityStyles() {
       border-color: #00ff87 !important;
       font-weight: 600 !important;
     }
+    
+    /* Styles pour le message d'événements vides */
+    #no-events-message {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      margin: 2rem 0;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 0.5rem;
+      color: #999;
+      font-style: italic;
+    }
   `;
   
   document.head.appendChild(styleEl);
@@ -391,26 +404,40 @@ function filterEventsByCategory(category) {
   // Vérifier s'il y a des événements visibles
   const visibleEvents = Array.from(eventCards).filter(card => card.style.display !== 'none');
   if (visibleEvents.length === 0) {
-    // Afficher un message si aucun événement n'est visible
-    const eventsContainer = document.getElementById('events-container');
-    
-    // Supprimer l'ancien message s'il existe
-    const oldMessage = document.getElementById('no-category-events');
-    if (oldMessage) {
-      oldMessage.remove();
+    // Utiliser le message d'événement vide existant s'il existe
+    const existingMessage = document.getElementById('no-events-message');
+    if (existingMessage) {
+      existingMessage.style.display = 'flex';
+      if (existingMessage.querySelector('span')) {
+        existingMessage.querySelector('span').textContent = `Aucun événement dans cette catégorie`;
+      }
+    } else {
+      // Afficher un message si aucun événement n'est visible
+      const eventsContainer = document.getElementById('events-container');
+      
+      // Supprimer l'ancien message s'il existe
+      const oldMessage = document.getElementById('no-category-events');
+      if (oldMessage) {
+        oldMessage.remove();
+      }
+      
+      const messageEl = document.createElement('div');
+      messageEl.id = 'no-category-events';
+      messageEl.className = 'col-span-3 flex flex-col items-center justify-center p-6 text-center';
+      messageEl.innerHTML = `
+        <i class="fas fa-filter text-gray-600 text-3xl mb-3"></i>
+        <p class="text-gray-400">Aucun événement dans cette catégorie</p>
+      `;
+      
+      eventsContainer.appendChild(messageEl);
+    }
+  } else {
+    // Masquer les messages "aucun événement"
+    const noEventsMessage = document.getElementById('no-events-message');
+    if (noEventsMessage) {
+      noEventsMessage.style.display = 'none';
     }
     
-    const messageEl = document.createElement('div');
-    messageEl.id = 'no-category-events';
-    messageEl.className = 'col-span-3 flex flex-col items-center justify-center p-6 text-center';
-    messageEl.innerHTML = `
-      <i class="fas fa-filter text-gray-600 text-3xl mb-3"></i>
-      <p class="text-gray-400">Aucun événement dans cette catégorie</p>
-    `;
-    
-    eventsContainer.appendChild(messageEl);
-  } else {
-    // Supprimer le message "aucun événement" si nécessaire
     const oldMessage = document.getElementById('no-category-events');
     if (oldMessage) {
       oldMessage.remove();
