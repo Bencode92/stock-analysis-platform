@@ -878,7 +878,7 @@ def process_ma_data(ma_list):
                 "title": f"M&A: {ma.get('companyName')} acquiert {ma.get('targetedCompanyName')}",
                 "date": format_date(ma.get("transactionDate")),
                 "time": "10:00",
-                "type": "merger",
+                "type": "m&a",
                 "importance": "medium",
                 "score": 6,
                 "source": ma.get("link", ""),
