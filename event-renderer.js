@@ -146,6 +146,14 @@ function injectPriorityStyles() {
 function initializeCategoryFilters() {
   console.log('Initialisation des filtres de catégorie...');
   
+  // CORRECTION ICI: Suppression de la ligne qui désactive les boutons de filtres
+  // -------------------------------------------------------------
+  // SUPPRIMER: document.querySelectorAll('#event-category-filters button').forEach(btn => {
+  // SUPPRIMER:   btn.style.pointerEvents = 'none'; // Désactiver les clics
+  // SUPPRIMER:   btn.title = "Filtrage temporairement désactivé";
+  // SUPPRIMER: });
+  // -------------------------------------------------------------
+  
   const filterButtons = document.querySelectorAll('#event-category-filters button');
   
   filterButtons.forEach(button => {
@@ -201,166 +209,176 @@ function filterEventsByCategory(category) {
       // Afficher tous les événements
       card.style.display = '';
     } else {
+      // CORRECTION ICI: Utiliser d'abord l'attribut data-type s'il existe
+      // -------------------------------------------------------------
+      const cardType = card.getAttribute('data-type');
       let showCard = false;
       
-      // 1. FILTRE IPO: Recherche directe des badges "ipo" ou du texte "IPO:" dans le titre
-      if (category === 'ipo') {
-        // Vérifie le titre pour "IPO:"
-        const title = card.querySelector('h3')?.textContent || '';
-        if (title.startsWith('IPO:')) {
-          showCard = true;
-        }
-        
-        // Vérifie les badges "ipo"
-        if (!showCard) {
-          const ipoBadge = card.querySelector('.ipo, span:contains("ipo")');
-          if (ipoBadge || card.querySelector('[class*="ipo"]')) {
+      // Si l'attribut data-type existe et correspond à la catégorie, montrer la carte
+      if (cardType && (cardType === category)) {
+        showCard = true;
+      } 
+      // Sinon, utiliser la détection plus complexe par contenu
+      else {
+        // 1. FILTRE IPO: Recherche directe des badges "ipo" ou du texte "IPO:" dans le titre
+        if (category === 'ipo') {
+          // Vérifie le titre pour "IPO:"
+          const title = card.querySelector('h3')?.textContent || '';
+          if (title.startsWith('IPO:')) {
             showCard = true;
           }
-        }
-        
-        // Recherche spécifique d'un badge ipo dans les éléments de la carte
-        if (!showCard) {
-          const badges = card.querySelectorAll('span, button, div.text-xs');
-          for (const badge of badges) {
-            if (badge.textContent.trim().toLowerCase() === 'ipo') {
+          
+          // Vérifie les badges "ipo"
+          if (!showCard) {
+            const ipoBadge = card.querySelector('.ipo, span:contains("ipo")');
+            if (ipoBadge || card.querySelector('[class*="ipo"]')) {
               showCard = true;
-              break;
             }
           }
-        }
-      }
-      
-      // 2. FILTRE US: Recherche des badges "US" ou du contenu lié aux États-Unis
-      else if (category === 'US') {
-        // Vérifie les badges "US"
-        const usBadge = card.querySelector('.us, [class*="us"]');
-        if (usBadge) {
-          showCard = true;
-        }
-        
-        // Recherche spécifique de "US" dans les badges
-        if (!showCard) {
-          const badges = card.querySelectorAll('span');
-          for (const badge of badges) {
-            if (badge.textContent.trim().toLowerCase() === 'us') {
-              showCard = true;
-              break;
+          
+          // Recherche spécifique d'un badge ipo dans les éléments de la carte
+          if (!showCard) {
+            const badges = card.querySelectorAll('span, button, div.text-xs');
+            for (const badge of badges) {
+              if (badge.textContent.trim().toLowerCase() === 'ipo') {
+                showCard = true;
+                break;
+              }
             }
           }
         }
         
-        // Recherche dans le contenu pour des mentions des États-Unis
-        if (!showCard) {
-          const content = card.textContent.toLowerCase();
-          if (content.includes('fed ') || 
-              content.includes('états-unis') || 
-              content.includes('fed)') ||
-              content.includes('us treasury')) {
+        // 2. FILTRE US: Recherche des badges "US" ou du contenu lié aux États-Unis
+        else if (category === 'US') {
+          // Vérifie les badges "US"
+          const usBadge = card.querySelector('.us, [class*="us"]');
+          if (usBadge) {
             showCard = true;
           }
-        }
-      }
-      
-      // 3. FILTRE ECONOMIC: Recherche des indicateurs économiques
-      else if (category === 'economic') {
-        // Vérifie les badges "economic"
-        const econBadge = card.querySelector('.economic, [class*="economic"]');
-        if (econBadge) {
-          showCard = true;
-        }
-        
-        // Recherche spécifique de "economic" dans les badges
-        if (!showCard) {
-          const badges = card.querySelectorAll('span');
-          for (const badge of badges) {
-            if (badge.textContent.trim().toLowerCase() === 'economic') {
+          
+          // Recherche spécifique de "US" dans les badges
+          if (!showCard) {
+            const badges = card.querySelectorAll('span');
+            for (const badge of badges) {
+              if (badge.textContent.trim().toLowerCase() === 'us') {
+                showCard = true;
+                break;
+              }
+            }
+          }
+          
+          // Recherche dans le contenu pour des mentions des États-Unis
+          if (!showCard) {
+            const content = card.textContent.toLowerCase();
+            if (content.includes('fed ') || 
+                content.includes('états-unis') || 
+                content.includes('fed)') ||
+                content.includes('us treasury')) {
               showCard = true;
-              break;
             }
           }
         }
         
-        // Recherche dans le contenu pour des mentions économiques
-        if (!showCard) {
-          const content = card.textContent.toLowerCase();
-          if (content.includes('taux') || 
-              content.includes('inflation') || 
-              content.includes('pib') ||
-              content.includes('gdp') ||
-              content.includes('banque centrale')) {
+        // 3. FILTRE ECONOMIC: Recherche des indicateurs économiques
+        else if (category === 'economic') {
+          // Vérifie les badges "economic"
+          const econBadge = card.querySelector('.economic, [class*="economic"]');
+          if (econBadge) {
             showCard = true;
           }
-        }
-      }
-      
-      // 4. FILTRE M&A: Recherche des fusions et acquisitions
-      else if (category === 'm&a') {
-        // Vérifie le titre pour "M&A:"
-        const title = card.querySelector('h3')?.textContent || '';
-        if (title.startsWith('M&A:')) {
-          showCard = true;
-        }
-        
-        // Vérifie les badges "merger" ou "m&a"
-        if (!showCard) {
-          const mergerBadge = card.querySelector('.merger, .m\\&a, [class*="merger"], [class*="m&a"]');
-          if (mergerBadge) {
-            showCard = true;
+          
+          // Recherche spécifique de "economic" dans les badges
+          if (!showCard) {
+            const badges = card.querySelectorAll('span');
+            for (const badge of badges) {
+              if (badge.textContent.trim().toLowerCase() === 'economic') {
+                showCard = true;
+                break;
+              }
+            }
           }
-        }
-        
-        // Recherche spécifique de "merger" ou "m&a" dans les badges
-        if (!showCard) {
-          const badges = card.querySelectorAll('span');
-          for (const badge of badges) {
-            const badgeText = badge.textContent.trim().toLowerCase();
-            if (badgeText === 'merger' || badgeText === 'm&a') {
+          
+          // Recherche dans le contenu pour des mentions économiques
+          if (!showCard) {
+            const content = card.textContent.toLowerCase();
+            if (content.includes('taux') || 
+                content.includes('inflation') || 
+                content.includes('pib') ||
+                content.includes('gdp') ||
+                content.includes('banque centrale')) {
               showCard = true;
-              break;
             }
           }
         }
         
-        // Recherche dans le contenu pour des mentions de fusion/acquisition
-        if (!showCard) {
-          const content = card.textContent.toLowerCase();
-          if (content.includes('merger') || 
-              content.includes('acquisition') || 
-              content.includes('fusion') ||
-              content.includes('m&a')) {
+        // 4. FILTRE M&A: Recherche des fusions et acquisitions
+        else if (category === 'm&a') {
+          // Vérifie le titre pour "M&A:"
+          const title = card.querySelector('h3')?.textContent || '';
+          if (title.startsWith('M&A:')) {
             showCard = true;
           }
-        }
-      }
-      
-      // 5. FILTRE CN: Recherche de contenu lié à la Chine
-      else if (category === 'CN') {
-        // Vérifie les badges "CN"
-        const cnBadge = card.querySelector('.cn, [class*="cn"]');
-        if (cnBadge) {
-          showCard = true;
-        }
-        
-        // Recherche spécifique de "CN" dans les badges
-        if (!showCard) {
-          const badges = card.querySelectorAll('span');
-          for (const badge of badges) {
-            if (badge.textContent.trim().toLowerCase() === 'cn') {
+          
+          // Vérifie les badges "merger" ou "m&a"
+          if (!showCard) {
+            const mergerBadge = card.querySelector('.merger, .m\\&a, [class*="merger"], [class*="m&a"]');
+            if (mergerBadge) {
               showCard = true;
-              break;
+            }
+          }
+          
+          // Recherche spécifique de "merger" ou "m&a" dans les badges
+          if (!showCard) {
+            const badges = card.querySelectorAll('span');
+            for (const badge of badges) {
+              const badgeText = badge.textContent.trim().toLowerCase();
+              if (badgeText === 'merger' || badgeText === 'm&a') {
+                showCard = true;
+                break;
+              }
+            }
+          }
+          
+          // Recherche dans le contenu pour des mentions de fusion/acquisition
+          if (!showCard) {
+            const content = card.textContent.toLowerCase();
+            if (content.includes('merger') || 
+                content.includes('acquisition') || 
+                content.includes('fusion') ||
+                content.includes('m&a')) {
+              showCard = true;
             }
           }
         }
         
-        // Recherche dans le contenu pour des mentions de la Chine
-        if (!showCard) {
-          const content = card.textContent.toLowerCase();
-          if (content.includes('china') || 
-              content.includes('chinese') || 
-              content.includes('beijing') ||
-              content.includes('pboc')) {
+        // 5. FILTRE CN: Recherche de contenu lié à la Chine
+        else if (category === 'CN') {
+          // Vérifie les badges "CN"
+          const cnBadge = card.querySelector('.cn, [class*="cn"]');
+          if (cnBadge) {
             showCard = true;
+          }
+          
+          // Recherche spécifique de "CN" dans les badges
+          if (!showCard) {
+            const badges = card.querySelectorAll('span');
+            for (const badge of badges) {
+              if (badge.textContent.trim().toLowerCase() === 'cn') {
+                showCard = true;
+                break;
+              }
+            }
+          }
+          
+          // Recherche dans le contenu pour des mentions de la Chine
+          if (!showCard) {
+            const content = card.textContent.toLowerCase();
+            if (content.includes('china') || 
+                content.includes('chinese') || 
+                content.includes('beijing') ||
+                content.includes('pboc')) {
+              showCard = true;
+            }
           }
         }
       }
@@ -433,6 +451,27 @@ function initializeEventsManager() {
   window.eventsManager.renderEvents = function() {
     // Appeler la méthode originale
     originalRenderEvents.call(this);
+    
+    // CORRECTION: Ajouter l'attribut data-type à chaque carte d'événement
+    // -------------------------------------------------------------
+    const eventCards = document.querySelectorAll('.event-card');
+    eventCards.forEach((card, index) => {
+      if (!card.hasAttribute('data-type') && this.events && this.events[index]) {
+        // Obtenir le type d'événement à partir des données
+        const eventType = this.events[index].type || 'economic';
+        
+        // Harmoniser les types pour les filtres
+        let normalizedType = eventType.toLowerCase();
+        if (normalizedType === 'merger') normalizedType = 'm&a';
+        if (normalizedType === 'economic' && this.events[index].country === 'US') {
+          card.setAttribute('data-country', 'US');
+        }
+        
+        // Appliquer l'attribut data-type
+        card.setAttribute('data-type', normalizedType);
+      }
+    });
+    // -------------------------------------------------------------
     
     // Après le rendu, appliquer le filtre actif
     setTimeout(() => {
@@ -534,10 +573,10 @@ document.addEventListener('DOMContentLoaded', function() {
   Element.prototype.querySelector = function(selector) {
     // Si le sélecteur contient :contains(), utiliser notre logique personnalisée
     if (selector.includes(':contains(')) {
-      const match = selector.match(/:contains\(\"?([^\"]*)\"?\)/);
+      const match = selector.match(/:contains\(\"?([^\"]*)\\"?\)/);
       if (match) {
         const content = match[1].toLowerCase();
-        const baseSelector = selector.replace(/:contains\(\"?[^\"]*\"?\)/, '');
+        const baseSelector = selector.replace(/:contains\(\"?[^\"]*\\"?\)/, '');
         
         // Sélectionner tous les éléments correspondant au sélecteur de base
         const elements = this.querySelectorAll(baseSelector || '*');
