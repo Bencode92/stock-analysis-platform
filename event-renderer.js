@@ -25,6 +25,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialiser un nouveau gestionnaire d'événements unifié
     initializeEventsManager();
+    
+    // Initialiser les filtres de catégorie
+    initializeCategoryFilters();
   }, 800);
 });
 
@@ -123,10 +126,166 @@ function injectPriorityStyles() {
       transform: translateY(-1px) !important;
       box-shadow: 0 2px 8px rgba(0, 255, 135, 0.2) !important;
     }
+    
+    /* Styles pour les filtres de catégorie */
+    #event-category-filters button.filter-active {
+      background-color: rgba(0, 255, 135, 0.2) !important;
+      color: #00ff87 !important;
+      border-color: #00ff87 !important;
+      font-weight: 600 !important;
+    }
   `;
   
   document.head.appendChild(styleEl);
   console.log('Styles prioritaires injectés avec succès');
+}
+
+/**
+ * Initialise les filtres de catégorie pour les événements
+ */
+function initializeCategoryFilters() {
+  const filterButtons = document.querySelectorAll('#event-category-filters button');
+  
+  filterButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      // Supprimer la classe active de tous les boutons
+      filterButtons.forEach(btn => {
+        btn.classList.remove('filter-active');
+        btn.classList.remove('bg-green-400');
+        btn.classList.remove('bg-opacity-10');
+        btn.classList.remove('text-green-400');
+        btn.classList.remove('border-green-400');
+        btn.classList.remove('border-opacity-30');
+        btn.classList.add('text-gray-400');
+        btn.classList.add('border-gray-700');
+      });
+      
+      // Ajouter la classe active au bouton cliqué
+      this.classList.add('filter-active');
+      this.classList.add('bg-green-400');
+      this.classList.add('bg-opacity-10');
+      this.classList.add('text-green-400');
+      this.classList.add('border-green-400');
+      this.classList.add('border-opacity-30');
+      this.classList.remove('text-gray-400');
+      this.classList.remove('border-gray-700');
+      
+      // Filtrer les événements selon la catégorie
+      const category = this.getAttribute('data-category');
+      filterEventsByCategory(category);
+    });
+  });
+}
+
+/**
+ * Filtre les événements par catégorie
+ * @param {string} category Catégorie d'événement ('all', 'ipo', 'economic', etc.)
+ */
+function filterEventsByCategory(category) {
+  console.log(`Filtrage par catégorie: ${category}`);
+  
+  const eventCards = document.querySelectorAll('.event-card');
+  if (!eventCards.length) {
+    console.warn('Aucune carte d\'événement trouvée');
+    return;
+  }
+  
+  // Pour chaque carte d'événement
+  eventCards.forEach(card => {
+    if (category === 'all') {
+      // Afficher tous les événements
+      card.style.display = '';
+    } else {
+      // Vérifier si cette carte correspond à la catégorie
+      let matchesCategory = false;
+      
+      // 1. Vérifier l'attribut data-event-type
+      if (card.getAttribute('data-event-type') === category) {
+        matchesCategory = true;
+      }
+      
+      // 2. Vérifier les badges spécifiques à chaque catégorie
+      if (!matchesCategory) {
+        // Pour IPO
+        if (category === 'ipo') {
+          if (card.querySelector('.text-xs span i.fa-rocket') || 
+              card.textContent.toLowerCase().includes('ipo:')) {
+            matchesCategory = true;
+            card.setAttribute('data-event-type', 'ipo');
+          }
+        }
+        
+        // Pour Economic
+        else if (category === 'economic') {
+          if (card.querySelector('.text-xs span i.fa-chart-line') || 
+              card.textContent.toLowerCase().includes('economic')) {
+            matchesCategory = true;
+            card.setAttribute('data-event-type', 'economic');
+          }
+        }
+        
+        // Pour US
+        else if (category === 'US') {
+          if (card.querySelector('.text-xs span i.fa-flag-usa') || 
+              card.textContent.toLowerCase().includes('us')) {
+            matchesCategory = true;
+            card.setAttribute('data-event-type', 'US');
+          }
+        }
+        
+        // Pour Merger
+        else if (category === 'merger') {
+          if (card.querySelector('.text-xs span i.fa-handshake') || 
+              card.textContent.toLowerCase().includes('m&a:')) {
+            matchesCategory = true;
+            card.setAttribute('data-event-type', 'merger');
+          }
+        }
+        
+        // Pour CN
+        else if (category === 'CN') {
+          if (card.querySelector('.text-xs span i.fa-flag') || 
+              card.textContent.toLowerCase().includes('china') ||
+              card.textContent.toLowerCase().includes('chinese')) {
+            matchesCategory = true;
+            card.setAttribute('data-event-type', 'CN');
+          }
+        }
+      }
+      
+      // Afficher ou masquer selon le résultat
+      card.style.display = matchesCategory ? '' : 'none';
+    }
+  });
+  
+  // Vérifier s'il y a des événements visibles
+  const visibleEvents = Array.from(eventCards).filter(card => card.style.display !== 'none');
+  if (visibleEvents.length === 0) {
+    // Afficher un message si aucun événement n'est visible
+    const eventsContainer = document.getElementById('events-container');
+    
+    // Supprimer les anciens messages
+    const oldMessage = document.getElementById('no-category-events');
+    if (oldMessage) {
+      oldMessage.remove();
+    }
+    
+    const messageEl = document.createElement('div');
+    messageEl.id = 'no-category-events';
+    messageEl.className = 'col-span-3 flex flex-col items-center justify-center p-6 text-center';
+    messageEl.innerHTML = `
+      <i class="fas fa-filter text-gray-600 text-3xl mb-3"></i>
+      <p class="text-gray-400">Aucun événement dans cette catégorie</p>
+    `;
+    
+    eventsContainer.appendChild(messageEl);
+  } else {
+    // Supprimer le message "aucun événement" si nécessaire
+    const oldMessage = document.getElementById('no-category-events');
+    if (oldMessage) {
+      oldMessage.remove();
+    }
+  }
 }
 
 /**
@@ -157,7 +316,41 @@ function initializeEventsManager() {
   // Créer une nouvelle instance unique du gestionnaire d'événements
   window.eventsManager = new EventsManager();
   
-  // Surcharger la méthode filterEvents pour trier les événements essentiels en premier
+  // Surcharger la méthode renderEvents pour ajouter des attributs de type d'événement
+  const originalRenderEvents = window.eventsManager.renderEvents;
+  window.eventsManager.renderEvents = function() {
+    // Appeler la méthode originale
+    originalRenderEvents.call(this);
+    
+    // Ajouter des attributs data-event-type à chaque carte
+    setTimeout(() => {
+      const eventCards = document.querySelectorAll('.event-card');
+      eventCards.forEach((card, index) => {
+        // Obtenir l'événement correspondant
+        const event = this.filterEvents()[index];
+        if (!event) return;
+        
+        // Déterminer le type d'événement
+        let eventType = 'economic'; // Type par défaut
+        
+        // Type basé sur l'événement
+        if (event.type === 'ipo') {
+          eventType = 'ipo';
+        } else if (event.type === 'merger') {
+          eventType = 'merger';
+        } else if (event.country === 'US') {
+          eventType = 'US';
+        } else if (event.country === 'CN') {
+          eventType = 'CN';
+        }
+        
+        // Ajouter l'attribut
+        card.setAttribute('data-event-type', eventType);
+      });
+    }, 200);
+  };
+  
+  // Améliorer la méthode filterEvents pour trier les événements essentiels en premier
   const originalFilterEvents = window.eventsManager.filterEvents;
   window.eventsManager.filterEvents = function() {
     const filteredEvents = originalFilterEvents.call(this);
@@ -179,26 +372,6 @@ function initializeEventsManager() {
       const timeB = b.time || '00:00';
       return timeA.localeCompare(timeB);
     });
-  };
-  
-  // Améliorer la méthode renderEvents pour appliquer des classes supplémentaires
-  const originalRenderEvents = window.eventsManager.renderEvents;
-  window.eventsManager.renderEvents = function() {
-    // Appeler la méthode originale
-    originalRenderEvents.call(this);
-    
-    // Ajouter des améliorations après le rendu
-    setTimeout(() => {
-      const eventCards = document.querySelectorAll('.event-card');
-      eventCards.forEach(card => {
-        // Appliquer une hauteur fixe pour uniformité
-        card.style.height = '180px';
-        // Ajouter un effet de survol spécial pour les événements essentiels
-        if (card.innerHTML.includes('essential-badge')) {
-          card.classList.add('essential-event');
-        }
-      });
-    }, 200);
   };
   
   // Améliorer les boutons de filtre
@@ -253,6 +426,7 @@ window.addEventListener('pageshow', function(event) {
       if (!window.eventInitialized) {
         window.eventInitialized = true;
         initializeEventsManager();
+        initializeCategoryFilters();
       }
     }, 500);
   }
