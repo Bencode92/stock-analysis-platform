@@ -180,11 +180,16 @@ function forceHideAllEvents() {
     
     console.log("Date de l'événement:", eventDate);
     
+    // Marquer la carte pour faciliter le débogage
+    card.setAttribute('data-date', eventDate || 'no-date');
+    
     if (eventDate === formattedToday) {
       card.style.display = ''; // Afficher l'événement
+      card.setAttribute('data-hidden', "false");
       eventFound = true;
     } else {
       card.style.display = 'none'; // Masquer l'événement
+      card.setAttribute('data-hidden', "true");
     }
   });
   
@@ -201,6 +206,12 @@ function forceHideAllEvents() {
         </p>
       `;
       eventsContainer.appendChild(noEventsMessage);
+    }
+  } else {
+    // S'il y a des événements, supprimer le message "Aucun événement"
+    const noEventsMessage = document.querySelector('.no-events-message');
+    if (noEventsMessage) {
+      noEventsMessage.remove();
     }
   }
   
@@ -219,6 +230,7 @@ function forceShowAllEvents() {
   // Afficher tous les événements sans exception
   eventCards.forEach(card => {
     card.style.display = '';
+    card.setAttribute('data-hidden', "false");
   });
   
   // Masquer le message "Aucun événement" s'il existe
@@ -288,10 +300,10 @@ function removeEssentialBadges() {
       background: none !important;
     }
     
-    /* Ne pas masquer automatiquement tous les événements - nous utiliserons une logique de filtrage plus précise */
-    /* body.today-filter-active .event-card {
+    /* Style modifié pour ne masquer que les événements marqués comme data-hidden="true" */
+    body.today-filter-active .event-card[data-hidden="true"] {
       display: none !important;
-    } */
+    }
   `;
   document.head.appendChild(style);
 }
