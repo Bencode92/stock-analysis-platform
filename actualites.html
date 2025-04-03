@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr" class="dark">
+<!-- Code HTML conservé, seule la section des filtres est modifiée -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -37,8 +38,6 @@
     <script src="event-renderer.js"></script>
     <!-- Ajout du script de filtre par date pour les événements -->
     <script src="events-date-filter.js"></script>
-    <!-- Ajout du script de filtre par catégorie pour les événements -->
-    <script src="js/event-category-filter.js"></script>
     <!-- Ajout du gestionnaire de date de connexion -->
     <script src="js/connection-date-manager.js"></script>
     <!-- Ajout du visualiseur de thèmes dominants -->
@@ -60,6 +59,7 @@
             }
         }
     </script>
+    <!-- Styles CSS restants conservés -->
     <style>
         /* Variables et reset */
         :root {
@@ -855,7 +855,7 @@
                         <h2 class="text-lg font-semibold text-green-400">
                             <i class="fas fa-calendar-alt mr-2"></i>ÉVÉNEMENTS À VENIR
                         </h2>
-                        <!-- Cette div sera remplacée par le script events-date-filter.js -->
+                        <!-- Filtres de date -->
                         <div class="flex gap-2">
                             <button id="today-filter" class="text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded filter-button active">
                                 Aujourd'hui
@@ -866,24 +866,24 @@
                         </div>
                     </div>
                     
-                    <!-- Nouveaux filtres de catégorie pour les événements -->
+                    <!-- Filtres de catégorie pour les événements - uniquement visuels sans fonction -->
                     <div class="flex flex-wrap gap-2 mb-4" id="event-category-filters">
-                        <button class="text-xs md:text-sm px-3 py-1.5 bg-green-400 bg-opacity-10 text-green-400 border border-green-400 border-opacity-30 rounded-full font-medium filter-active" data-category="all" onclick="filterEvents('all')">
+                        <button class="text-xs md:text-sm px-3 py-1.5 bg-green-400 bg-opacity-10 text-green-400 border border-green-400 border-opacity-30 rounded-full font-medium filter-active" data-category="all">
                             <i class="fas fa-filter mr-1"></i> TOUS
                         </button>
-                        <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="US" onclick="filterEvents('US')">
+                        <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="US">
                             <i class="fas fa-flag-usa mr-1"></i> US
                         </button>
-                        <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="economic" onclick="filterEvents('economic')">
+                        <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="economic">
                             <i class="fas fa-chart-line mr-1"></i> economic
                         </button>
-                        <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="ipo" onclick="filterEvents('ipo')">
+                        <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="ipo">
                             <i class="fas fa-rocket mr-1"></i> ipo
                         </button>
-                        <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="m&a" onclick="filterEvents('m&a')">
+                        <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="m&a">
                             <i class="fas fa-handshake mr-1"></i> m&a
                         </button>
-                        <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="CN" onclick="filterEvents('CN')">
+                        <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="CN">
                             <i class="fas fa-flag mr-1"></i> CN
                         </button>
                     </div>
@@ -1197,65 +1197,13 @@
                     window.MLNewsIntegrator.initMLFeedback();
                 }, 1500);
             }
-        });
-    </script>
-
-    <!-- Remplacer l'ancienne fonction de filtrage par une fonction de redirection vers le nouveau script -->
-    <script>
-        // Fonction de filtrage d'événements améliorée avec débogage
-        function filterEvents(category) {
-            console.log(`Filtrage par catégorie: ${category}`);
-            console.log('Cartes trouvées:', document.querySelectorAll('#events-container .event-card').length);
             
-            // Si le nouveau script est chargé, il prendra le relais
-            if (typeof enhanceEventFiltering === 'function') {
-                return; // Le nouveau script s'occupe du filtrage
-            }
-            
-            // Code de fallback si le nouveau script n'est pas chargé
-            const buttons = document.querySelectorAll('#event-category-filters button');
-            buttons.forEach(btn => {
-                if (btn.getAttribute('data-category') === category) {
-                    btn.classList.add('filter-active', 'bg-green-400', 'bg-opacity-10', 'text-green-400', 'border-green-400', 'border-opacity-30');
-                    btn.classList.remove('text-gray-400', 'border-gray-700');
-                } else {
-                    btn.classList.remove('filter-active', 'bg-green-400', 'bg-opacity-10', 'text-green-400', 'border-green-400', 'border-opacity-30');
-                    btn.classList.add('text-gray-400', 'border-gray-700');
-                }
+            // Désactiver les filtres qui ne fonctionnent pas
+            document.querySelectorAll('#event-category-filters button').forEach(btn => {
+                btn.style.pointerEvents = 'none'; // Désactiver les clics
+                btn.title = "Filtrage temporairement désactivé";
             });
-            
-            const events = document.querySelectorAll('#events-container .event-card');
-            if (category === 'all') {
-                events.forEach(card => card.style.display = '');
-            } else {
-                events.forEach(card => {
-                    const cardText = card.textContent.toLowerCase();
-                    let matches = false;
-                    
-                    // Recherche selon la catégorie
-                    switch(category) {
-                        case 'US':
-                            matches = cardText.includes('fed') || cardText.includes('états-unis');
-                            break;
-                        case 'economic':
-                            matches = cardText.includes('inflation') || cardText.includes('taux');
-                            break;
-                        case 'ipo':
-                            matches = cardText.includes('ipo:') || cardText.includes('introduction en bourse');
-                            break;
-                        case 'm&a':
-                            matches = cardText.includes('m&a:') || cardText.includes('fusion') || 
-                                    cardText.includes('acquisition');
-                            break;
-                        case 'CN':
-                            matches = cardText.includes('chine') || cardText.includes('beijing');
-                            break;
-                    }
-                    
-                    card.style.display = matches ? '' : 'none';
-                });
-            }
-        }
+        });
     </script>
 </body>
 </html>
