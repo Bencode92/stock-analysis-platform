@@ -120,13 +120,98 @@ function filterEventsByCategory(category) {
     } else {
         // Afficher uniquement les événements de la catégorie sélectionnée
         eventCards.forEach(card => {
-            const cardCategory = card.getAttribute('data-category') || '';
+            // Vérifier d'abord si la carte a un attribut data-category
+            let cardCategory = card.getAttribute('data-category');
+            
+            // Si pas d'attribut, déterminer la catégorie en temps réel (pour chaque filtre)
+            if (!cardCategory) {
+                cardCategory = determineCardCategory(card, category);
+                // Stocker la catégorie pour les prochaines fois
+                card.setAttribute('data-category', cardCategory);
+            }
+            
+            // Afficher ou masquer selon la catégorie
             card.style.display = (cardCategory === category) ? '' : 'none';
         });
     }
     
     // Vérifier s'il y a des événements visibles
     checkVisibleEvents();
+}
+
+/**
+ * Détermine de manière ciblée si une carte correspond à la catégorie recherchée
+ * @param {HTMLElement} card - La carte d'événement
+ * @param {string} targetCategory - La catégorie à vérifier
+ * @returns {string} La catégorie déterminée
+ */
+function determineCardCategory(card, targetCategory) {
+    // Pour les cartes IPO, vérifier les badges ipo et le titre
+    if (targetCategory === 'ipo') {
+        // 1. Vérifier si un badge ou bouton ipo est présent
+        const ipoBadge = card.querySelector('.ipo, [class*="ipo"]');
+        if (ipoBadge) return 'ipo';
+        
+        // 2. Vérifier le contenu pour "IPO:"
+        const cardTitle = card.querySelector('h3')?.textContent || '';
+        if (cardTitle.includes('IPO:')) return 'ipo';
+        
+        // 3. Chercher dans tout le texte
+        if (card.textContent.toLowerCase().includes('ipo')) return 'ipo';
+    }
+    
+    // Pour US, merger, etc. faire des vérifications similaires
+    if (targetCategory === 'US') {
+        const usBadge = card.querySelector('.us, [class*="us"]');
+        if (usBadge) return 'US';
+        
+        if (card.textContent.toLowerCase().includes('états-unis') || 
+            card.textContent.toLowerCase().includes('fed') ||
+            card.textContent.toLowerCase().includes('us treasury')) {
+            return 'US';
+        }
+    }
+    
+    if (targetCategory === 'CN') {
+        const cnBadge = card.querySelector('.cn, [class*="cn"]');
+        if (cnBadge) return 'CN';
+        
+        if (card.textContent.toLowerCase().includes('chine') || 
+            card.textContent.toLowerCase().includes('beijing') ||
+            card.textContent.toLowerCase().includes('shanghai')) {
+            return 'CN';
+        }
+    }
+    
+    if (targetCategory === 'merger') {
+        const mergerBadge = card.querySelector('.merger, [class*="merger"]');
+        if (mergerBadge) return 'merger';
+        
+        const cardTitle = card.querySelector('h3')?.textContent || '';
+        if (cardTitle.includes('M&A:')) return 'merger';
+        
+        if (card.textContent.toLowerCase().includes('merger') || 
+            card.textContent.toLowerCase().includes('acquisition') ||
+            card.textContent.toLowerCase().includes('fusion')) {
+            return 'merger';
+        }
+    }
+    
+    if (targetCategory === 'economic') {
+        const economicBadge = card.querySelector('.economic, [class*="economic"]');
+        if (economicBadge) return 'economic';
+        
+        if (card.textContent.toLowerCase().includes('economic') || 
+            card.textContent.toLowerCase().includes('taux') ||
+            card.textContent.toLowerCase().includes('inflation') ||
+            card.textContent.toLowerCase().includes('gdp') ||
+            card.textContent.toLowerCase().includes('pib')) {
+            return 'economic';
+        }
+    }
+    
+    // Si aucune correspondance n'est trouvée, retourner une catégorie différente
+    return 'other';
 }
 
 /**
@@ -138,60 +223,81 @@ function addCategoryAttributes() {
     // Sélectionner toutes les cartes d'événements
     const eventCards = document.querySelectorAll('.event-card');
     
+    // Vérifier directement les badges ipo visible en utilisant plusieurs sélecteurs
+    const cardsWithIpoBadges = document.querySelectorAll('.event-card .ipo, .event-card [class*="ipo"]');
+    console.log(`Cartes avec badges IPO détectés: ${cardsWithIpoBadges.length}`);
+    
     eventCards.forEach(card => {
         // Si la carte a déjà un attribut data-category, on le garde
         if (card.hasAttribute('data-category')) {
             return;
         }
         
-        // D'abord, chercher des badges ou boutons explicites dans la carte
-        let category = findCategoryFromBadges(card);
+        // MÉTHODE DIRECTE: Vérifier le contenu des boutons et badges
+        // Cette méthode est plus fiable pour détecter le type d'événement
         
-        // Si aucun badge n'est trouvé, déterminer en fonction du titre et du contenu
-        if (!category) {
-            category = determineCategoryFromContent(card);
+        // 1. Vérifier si des badges ipo sont présents dans la carte
+        const ipoBadges = card.querySelectorAll('button, span, .badge, [class*="ipo"]');
+        for (const badge of ipoBadges) {
+            if (badge.textContent.trim().toLowerCase() === 'ipo') {
+                card.setAttribute('data-category', 'ipo');
+                return;
+            }
         }
         
-        // Ajouter l'attribut à la carte
+        // 2. Vérifier le titre pour "IPO:" (méthode très fiable)
+        const cardTitle = card.querySelector('h3')?.textContent || '';
+        if (cardTitle.startsWith('IPO:')) {
+            card.setAttribute('data-category', 'ipo');
+            return;
+        }
+        
+        // 3. Vérifier pour d'autres types d'événements
+        if (cardTitle.startsWith('M&A:')) {
+            card.setAttribute('data-category', 'merger');
+            return;
+        }
+        
+        // 4. Vérifier les badges US
+        const usBadges = card.querySelectorAll('button, span, .badge, .us, [class*="us"]');
+        for (const badge of usBadges) {
+            if (badge.textContent.trim().toLowerCase() === 'us') {
+                card.setAttribute('data-category', 'US');
+                return;
+            }
+        }
+        
+        // 5. Vérifier les badges CN
+        const cnBadges = card.querySelectorAll('button, span, .badge, .cn, [class*="cn"]');
+        for (const badge of cnBadges) {
+            if (badge.textContent.trim().toLowerCase() === 'cn') {
+                card.setAttribute('data-category', 'CN');
+                return;
+            }
+        }
+        
+        // 6. Vérifier les badges economic
+        const economicBadges = card.querySelectorAll('button, span, .badge, .economic, [class*="economic"]');
+        for (const badge of economicBadges) {
+            if (badge.textContent.trim().toLowerCase() === 'economic') {
+                card.setAttribute('data-category', 'economic');
+                return;
+            }
+        }
+        
+        // 7. Vérifier les badges merger
+        const mergerBadges = card.querySelectorAll('button, span, .badge, .merger, [class*="merger"]');
+        for (const badge of mergerBadges) {
+            if (badge.textContent.trim().toLowerCase() === 'merger') {
+                card.setAttribute('data-category', 'merger');
+                return;
+            }
+        }
+        
+        // MÉTHODE DE SECOURS: Analyse du contenu textuel
+        const category = determineCategoryFromContent(card);
         card.setAttribute('data-category', category);
-        
-        // Ajouter une classe pour le style (optionnel)
-        card.classList.add(`category-${category}`);
     });
-}
-
-/**
- * Trouve la catégorie en fonction des badges ou boutons dans la carte
- * @param {HTMLElement} card - La carte d'événement
- * @returns {string} La catégorie trouvée ou null
- */
-function findCategoryFromBadges(card) {
-    // Chercher les badges ou boutons visibles dans la carte
-    const badgeElements = card.querySelectorAll('span, button, a, div');
-    
-    for (const badge of badgeElements) {
-        const badgeText = badge.textContent.trim().toLowerCase();
-        const badgeClasses = badge.className.toLowerCase();
-        
-        // Vérifier si c'est un badge ou bouton visible contenant les catégories
-        if (badgeText === 'ipo' || badgeClasses.includes('ipo')) {
-            return 'ipo';
-        }
-        if (badgeText === 'us' || badgeClasses.includes('us')) {
-            return 'US';
-        }
-        if (badgeText === 'economic' || badgeClasses.includes('economic')) {
-            return 'economic';
-        }
-        if (badgeText === 'merger' || badgeClasses.includes('merger')) {
-            return 'merger';
-        }
-        if (badgeText === 'cn' || badgeClasses.includes('cn')) {
-            return 'CN';
-        }
-    }
-    
-    return null;
 }
 
 /**
@@ -213,7 +319,7 @@ function determineCategoryFromContent(card) {
         return 'ipo';
     }
     
-    if (cardText.includes('m&a:') || 
+    if (cardTitle.startsWith('m&a:') || 
         cardText.includes('merger') || 
         cardText.includes('acquisition') || 
         cardText.includes('fusion')) {
@@ -287,24 +393,64 @@ function checkVisibleEvents() {
     }
 }
 
-// MÉTHODE DE DÉTECTION ALTERNATIVE
-// Cette fonction cherche spécifiquement les badges IPO visibles dans les cartes
-function detectVisibleBadges() {
-    // Trouver tous les badges visibles
-    const ipoBadges = document.querySelectorAll('.event-card .ipo, .event-card span:contains("ipo")');
-    const mergerBadges = document.querySelectorAll('.event-card .merger, .event-card span:contains("merger")');
-    const usBadges = document.querySelectorAll('.event-card .us, .event-card span:contains("us")');
-    const cnBadges = document.querySelectorAll('.event-card .cn, .event-card span:contains("cn")');
+// MÉTHODE DE DÉTECTION SPÉCIALE IPO
+// Cette fonction est spécifiquement conçue pour détecter les IPO sur la page
+function detectIPOEvents() {
+    console.log("Détection spéciale des IPO...");
     
-    console.log(`Badges trouvés: ${ipoBadges.length} IPO, ${mergerBadges.length} Merger, ${usBadges.length} US, ${cnBadges.length} CN`);
+    // 1. Chercher par titre commençant par IPO:
+    const ipoTitles = Array.from(document.querySelectorAll('h3')).filter(
+        title => title.textContent.trim().startsWith('IPO:')
+    );
+    console.log(`Titres IPO détectés: ${ipoTitles.length}`);
+    
+    // 2. Chercher par badge
+    const ipoBadges = document.querySelectorAll('[class*="ipo"], .ipo');
+    console.log(`Badges IPO détectés: ${ipoBadges.length}`);
+    
+    // 3. Chercher par bouton avec texte "ipo"
+    const ipoButtons = Array.from(document.querySelectorAll('button, .btn, span.badge')).filter(
+        btn => btn.textContent.trim().toLowerCase() === 'ipo'
+    );
+    console.log(`Boutons IPO détectés: ${ipoButtons.length}`);
+    
+    // Marquer tous les événements IPO trouvés
+    ipoTitles.forEach(title => {
+        const card = title.closest('.event-card');
+        if (card) {
+            card.setAttribute('data-category', 'ipo');
+            console.log("IPO détecté par titre:", title.textContent);
+        }
+    });
+    
+    ipoBadges.forEach(badge => {
+        const card = badge.closest('.event-card');
+        if (card) {
+            card.setAttribute('data-category', 'ipo');
+            console.log("IPO détecté par badge");
+        }
+    });
+    
+    ipoButtons.forEach(button => {
+        const card = button.closest('.event-card');
+        if (card) {
+            card.setAttribute('data-category', 'ipo');
+            console.log("IPO détecté par bouton:", button.textContent);
+        }
+    });
 }
 
 // Exécuter l'initialisation au chargement de la page
 if (document.readyState === 'complete') {
     initCategoryFilters();
+    // Détection spéciale des IPO
+    setTimeout(detectIPOEvents, 1500);
 } else {
     window.addEventListener('load', function() {
         // Exécuter après le chargement complet
-        setTimeout(initCategoryFilters, 500);
+        setTimeout(function() {
+            initCategoryFilters();
+            detectIPOEvents();
+        }, 1000);
     });
 }
