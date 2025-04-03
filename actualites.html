@@ -27,6 +27,8 @@
     <link rel="stylesheet" href="css/events-date-filter.css">
     <!-- Ajout du CSS pour les thèmes dominants -->
     <link rel="stylesheet" href="css/themes-dominant.css">
+    <!-- Ajout du nouveau CSS pour les filtres d'événements -->
+    <link rel="stylesheet" href="css/event-filters.css">
     <!-- Ajout du script events-loader.js -->
     <script src="events-loader.js"></script>
     <!-- Ajout du nouveau script de redémarrage pour événements -->
@@ -845,13 +847,13 @@
                 
                 <!-- Section Événements (améliorée) -->
                 <div class="mb-10 p-4 glassmorphism rounded-xl" id="events-section">
-                    <div class="flex justify-between items-center mb-4">
-                        <h2 class="text-lg font-semibold text-green-400">
+                    <div class="events-header">
+                        <h2 class="events-title">
                             <i class="fas fa-calendar-alt mr-2"></i>ÉVÉNEMENTS À VENIR
                         </h2>
-                        <!-- Cette div sera remplacée par le script events-date-filter.js -->
-                        <div class="flex gap-2">
-                            <!-- Ces boutons seront remplacés par Aujourd'hui/Cette semaine -->
+                        <div class="date-filters">
+                            <button id="today-filter" class="date-button active">Aujourd'hui</button>
+                            <button id="week-filter" class="date-button">Cette semaine</button>
                         </div>
                     </div>
                     
