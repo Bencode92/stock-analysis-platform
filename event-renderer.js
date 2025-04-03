@@ -292,8 +292,8 @@ function filterEventsByCategory(category) {
         }
       }
       
-      // 4. FILTRE MERGER: Recherche des fusions et acquisitions
-      else if (category === 'merger') {
+      // 4. FILTRE M&A: Recherche des fusions et acquisitions
+      else if (category === 'm&a') {
         // Vérifie le titre pour "M&A:"
         const title = card.querySelector('h3')?.textContent || '';
         if (title.startsWith('M&A:')) {
@@ -530,10 +530,10 @@ document.addEventListener('DOMContentLoaded', function() {
   Element.prototype.querySelector = function(selector) {
     // Si le sélecteur contient :contains(), utiliser notre logique personnalisée
     if (selector.includes(':contains(')) {
-      const match = selector.match(/:contains\("?([^"]*)"?\)/);
+      const match = selector.match(/:contains\(\"?([^\"]*)\"?\)/);
       if (match) {
         const content = match[1].toLowerCase();
-        const baseSelector = selector.replace(/:contains\("?[^"]*"?\)/, '');
+        const baseSelector = selector.replace(/:contains\(\"?[^\"]*\"?\)/, '');
         
         // Sélectionner tous les éléments correspondant au sélecteur de base
         const elements = this.querySelectorAll(baseSelector || '*');
