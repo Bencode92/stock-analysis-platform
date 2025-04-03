@@ -95,6 +95,13 @@ function filterEventsByCategory(category) {
       card.style.display = 'none'; // Masquer
     }
   });
+  
+  // Vérifier si aucun événement n'est visible après filtrage
+  const anyVisible = Array.from(eventCards).some(card => card.style.display !== 'none');
+  const noEventsMsg = document.getElementById('no-events-message');
+  if (noEventsMsg) {
+    noEventsMsg.style.display = anyVisible ? 'none' : 'block';
+  }
 }
 
 /**
@@ -108,20 +115,20 @@ function addEventFilters() {
   // Trouver le header existant
   const headerSection = eventsSection.querySelector('.flex.justify-between.items-center');
   if (!headerSection) {
-    console.error(\"Header des événements non trouvé\");
+    console.error("Header des événements non trouvé");
     return;
   }
   
   // Remplacer le contenu du header
   headerSection.innerHTML = `
-    <h2 class=\"text-lg font-semibold text-green-400\">
-      <i class=\"fas fa-calendar-alt mr-2\"></i>ÉVÉNEMENTS À VENIR
+    <h2 class="text-lg font-semibold text-green-400">
+      <i class="fas fa-calendar-alt mr-2"></i>ÉVÉNEMENTS À VENIR
     </h2>
-    <div class=\"flex gap-2\">
-      <button id=\"today-filter\" class=\"text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded filter-button active\">
+    <div class="flex gap-2">
+      <button id="today-filter" class="text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded filter-button active">
         Aujourd'hui
       </button>
-      <button id=\"week-filter\" class=\"text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded filter-button\">
+      <button id="week-filter" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded filter-button">
         Cette semaine
       </button>
     </div>
@@ -129,6 +136,37 @@ function addEventFilters() {
   
   // Ajouter les écouteurs d'événements
   setupFilterListeners();
+  
+  // Ajouter une zone pour le message "aucun événement"
+  const noEventsMsg = document.createElement('div');
+  noEventsMsg.id = 'no-events-message';
+  noEventsMsg.className = 'empty-state-message';
+  noEventsMsg.innerHTML = '<i class="fas fa-calendar-xmark mr-2"></i><span>Aucun événement à afficher.</span>';
+  noEventsMsg.style.display = 'none';
+  eventsSection.appendChild(noEventsMsg);
+  
+  // Ajouter du CSS pour le message vide
+  const style = document.createElement('style');
+  style.textContent = `
+    .empty-state-message {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      margin: 2rem 0;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 0.5rem;
+      color: #999;
+      font-style: italic;
+    }
+
+    .empty-state-message i {
+      margin-right: 0.5rem;
+      color: var(--accent-color);
+      opacity: 0.4;
+    }
+  `;
+  document.head.appendChild(style);
 }
 
 /**
@@ -211,7 +249,21 @@ function setActiveTypeFilter(activeButton) {
 }
 
 /**
- * Filtre les événements par date - CORRIGÉ
+ * Fonction utilitaire pour récupérer le message approprié selon le type de filtre
+ */
+function getNoEventsMessage(filterType) {
+  switch(filterType) {
+    case 'today':
+      return 'Aucun événement prévu aujourd\'hui.';
+    case 'week':
+      return 'Aucun événement à venir cette semaine.';
+    default:
+      return 'Aucun événement à afficher.';
+  }
+}
+
+/**
+ * Filtre les événements par date - AMÉLIORÉ
  */
 function filterEventsByDate(dateFilter) {
   // Obtenir la date d'aujourd'hui au format DD/MM/YYYY
@@ -220,16 +272,11 @@ function filterEventsByDate(dateFilter) {
   
   const formattedToday = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
   
-  // Calcul de la fin de la semaine (aujourd'hui + 6 jours)
-  const endOfWeek = new Date(today);
-  endOfWeek.setDate(today.getDate() + 6);
-  
   // Sélection de toutes les cartes d'événements
   const eventCards = document.querySelectorAll('.event-card');
   
   console.log(`Filtrage des événements par date: ${dateFilter}`);
   console.log(`Date d'aujourd'hui: ${formattedToday}`);
-  console.log(`Fin de semaine: ${endOfWeek.toLocaleDateString('fr-FR')}`);
   
   if (dateFilter === 'today') {
     // Masquer les événements qui ne sont pas d'aujourd'hui
@@ -241,54 +288,91 @@ function filterEventsByDate(dateFilter) {
       
       if (eventDate === formattedToday) {
         card.style.display = ''; // Afficher l'événement
-        card.setAttribute('data-hidden-by-date', \"false\");
+        card.setAttribute('data-hidden-by-date', "false");
       } else {
         card.style.display = 'none'; // Masquer l'événement
-        card.setAttribute('data-hidden-by-date', \"true\");
+        card.setAttribute('data-hidden-by-date', "true");
       }
     });
+    
+    // Vérifier s'il y a au moins un événement affiché
+    const anyVisible = Array.from(eventCards).some(card => card.style.display !== 'none');
+    const noEventsMsg = document.getElementById('no-events-message');
+    if (noEventsMsg) {
+      noEventsMsg.style.display = anyVisible ? 'none' : 'block';
+      noEventsMsg.querySelector('span').textContent = getNoEventsMessage('today');
+    }
     
     // Classe pour indiquer le mode filtrage actif
     document.body.classList.add('today-filter-active');
     document.body.classList.remove('week-filter-active');
   } else if (dateFilter === 'week') {
-    // Afficher tous les événements de la semaine à venir (y compris aujourd'hui)
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate()); // aujourd'hui 00:00
+    const dayOfWeek = today.getDay(); // 0 = dimanche, 1 = lundi, ..., 6 = samedi
+    const daysUntilSunday = 7 - dayOfWeek; // combien de jours jusqu'à dimanche
+
+    // Si on est dimanche, il reste 0 jour → donc rien à afficher
+    if (daysUntilSunday === 0) {
+      eventCards.forEach(card => {
+        card.style.display = 'none';
+        card.setAttribute('data-hidden-by-date', "true");
+      });
+
+      const noEventsMsg = document.getElementById('no-events-message');
+      if (noEventsMsg) {
+        noEventsMsg.style.display = 'block';
+        noEventsMsg.querySelector('span').textContent = getNoEventsMessage('week');
+      }
+
+      // Classe pour indiquer le mode filtrage actif
+      document.body.classList.remove('today-filter-active');
+      document.body.classList.add('week-filter-active');
+      
+      return;
+    }
+
+    const tomorrowMidnight = new Date(todayMidnight);
+    tomorrowMidnight.setDate(todayMidnight.getDate() + 1);
+
+    const endOfWeek = new Date(todayMidnight);
+    endOfWeek.setDate(todayMidnight.getDate() + daysUntilSunday);
+    
+    console.log(`Filtrage semaine: de demain ${tomorrowMidnight.toLocaleDateString('fr-FR')} à ${endOfWeek.toLocaleDateString('fr-FR')}`);
+
     eventCards.forEach(card => {
       const dateText = card.textContent.match(/(\\d{2})\\/(\\d{2})\\/(\\d{4})/);
-      
+
       if (!dateText) {
         card.style.display = 'none';
-        card.setAttribute('data-hidden-by-date', \"true\");
+        card.setAttribute('data-hidden-by-date', "true");
         return;
       }
-      
+
       try {
-        // Convertir en objet Date (format français DD/MM/YYYY)
-        const day = parseInt(dateText[1]);
-        const month = parseInt(dateText[2]) - 1; // Mois commence à 0 en JS
-        const year = parseInt(dateText[3]);
-        
-        const eventDate = new Date(year, month, day);
-        eventDate.setHours(0, 0, 0, 0); // Réinitialiser l'heure à minuit
-        
-        console.log(`Événement ${card.querySelector('h3')?.textContent}: ${eventDate.toLocaleDateString('fr-FR')}`);
-        console.log(`Comparaison: >= ${today.toLocaleDateString('fr-FR')} et <= ${endOfWeek.toLocaleDateString('fr-FR')}`);
-        console.log(`Résultat: ${eventDate >= today && eventDate <= endOfWeek}`);
-        
-        // Afficher uniquement les événements entre aujourd'hui et fin de semaine
-        if (eventDate >= today && eventDate <= endOfWeek) {
-          card.style.display = ''; // Afficher l'événement
-          card.setAttribute('data-hidden-by-date', \"false\");
+        const eventDate = new Date(`${dateText[3]}-${dateText[2]}-${dateText[1]}`);
+        const eventDateMidnight = new Date(eventDate.getFullYear(), eventDate.getMonth(), eventDate.getDate());
+
+        if (eventDateMidnight >= tomorrowMidnight && eventDateMidnight < endOfWeek) {
+          card.style.display = '';
+          card.setAttribute('data-hidden-by-date', "false");
         } else {
-          card.style.display = 'none'; // Masquer l'événement
-          card.setAttribute('data-hidden-by-date', \"true\");
+          card.style.display = 'none';
+          card.setAttribute('data-hidden-by-date', "true");
         }
       } catch (error) {
-        console.error(\"Erreur lors de l'analyse de la date:\", error);
-        card.style.display = ''; // En cas d'erreur, afficher l'événement
-        card.setAttribute('data-hidden-by-date', \"false\");
+        console.error("Erreur lors de l'analyse de la date:", error);
+        card.style.display = '';
+        card.setAttribute('data-hidden-by-date', "false");
       }
     });
+    
+    // Vérifier s'il y a au moins un événement affiché
+    const anyVisible = Array.from(eventCards).some(card => card.style.display !== 'none');
+    const noEventsMsg = document.getElementById('no-events-message');
+    if (noEventsMsg) {
+      noEventsMsg.style.display = anyVisible ? 'none' : 'block';
+      noEventsMsg.querySelector('span').textContent = getNoEventsMessage('week');
+    }
     
     // Classe pour indiquer le mode filtrage actif
     document.body.classList.remove('today-filter-active');
@@ -316,7 +400,7 @@ function filterEventsByType(type) {
   if (type === 'all') {
     // Afficher tous les événements qui sont déjà filtrés par date
     document.querySelectorAll('.event-card').forEach(card => {
-      if (card.getAttribute('data-hidden-by-date') === \"true\") {
+      if (card.getAttribute('data-hidden-by-date') === "true") {
         card.style.display = 'none';
       } else {
         card.style.display = '';
@@ -331,7 +415,7 @@ function filterEventsByType(type) {
   // Filtrer les événements par type
   eventCards.forEach(card => {
     // Si déjà masqué par le filtre de date, continuer à le masquer
-    if (card.getAttribute('data-hidden-by-date') === \"true\") {
+    if (card.getAttribute('data-hidden-by-date') === "true") {
       card.style.display = 'none';
       return;
     }
@@ -431,6 +515,4 @@ function removeEssentialBadges() {
     }
   `;
   document.head.appendChild(style);
-}`,
-  `message`: `Fix: Correction du filtrage des événements par date`
 }
