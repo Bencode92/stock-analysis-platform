@@ -307,9 +307,9 @@ class EventsManager {
         title: "M&A: NortonLifeLock Inc. acquiert MoneyLion Inc.",
         date: todayStr,
         time: "10:00",
-        type: "merger",
+        type: "m&a", // Modifier "merger" en "m&a" pour cohérence avec les filtres
         importance: "medium",
-        category: "merger",
+        category: "m&a", // Modifier "merger" en "m&a" pour cohérence avec les filtres
         isEssential: false,
         description: "Opération de fusion-acquisition où NortonLifeLock Inc. acquiert MoneyLion Inc., renforçant son offre de services financiers sécurisés."
       }
@@ -331,9 +331,13 @@ class EventsManager {
       // Déterminer si l'événement est essentiel
       const isEssential = this.isEssentialEvent(event);
       
+      // CORRECTION: Harmoniser le type pour correspondre aux filtres
+      let normalizedType = event.type || 'economic';
+      if (normalizedType === 'merger') normalizedType = 'm&a';
+      
       return {
         ...event,
-        type: event.type || 'economic', // utiliser la valeur existante ou par défaut
+        type: normalizedType, // Type normalisé pour correspondre aux filtres
         symbol: eventInfo.symbol,
         forecast: eventInfo.forecast,
         country: eventInfo.country || this.extractCountryFromTitle(event.title),
@@ -377,7 +381,7 @@ class EventsManager {
     // Extraction des infos de M&A
     const maMatch = title.match(/M&A:\s+(.+)\s+acquiert\s+(.+)/);
     if (maMatch) {
-      info.category = 'merger';
+      info.category = 'm&a'; // Modifier "merger" en "m&a" pour correspondre aux filtres
     }
     
     // Extraction du pays pour les événements économiques
@@ -455,7 +459,7 @@ class EventsManager {
     // Vérifier le type spécifique d'événement
     if (event.type === 'earnings') return 'earnings';
     if (event.type === 'ipo') return 'ipo';
-    if (event.type === 'merger') return 'merger';
+    if (event.type === 'm&a' || event.type === 'merger') return 'm&a'; // Modifier "merger" en "m&a"
     
     const title = (event.title || '').toLowerCase();
     
@@ -467,7 +471,7 @@ class EventsManager {
     if (title.includes('retail') || title.includes('consumer')) return 'consumer';
     if (title.includes('trade') || title.includes('export') || title.includes('import')) return 'trade';
     if (title.includes('ipo:')) return 'ipo';
-    if (title.includes('m&a:')) return 'merger';
+    if (title.includes('m&a:')) return 'm&a'; // Modifier "merger" en "m&a"
     
     return 'other';
   }
@@ -529,7 +533,7 @@ class EventsManager {
     }
     
     // 5. M&A importantes (transactions de grande envergure)
-    if (type === 'merger' && importance === 'high') {
+    if ((type === 'm&a' || type === 'merger') && importance === 'high') {
       return true;
     }
     
@@ -607,7 +611,7 @@ class EventsManager {
     }
     
     // Description pour les M&A
-    if (type === 'merger') {
+    if (type === 'm&a' || type === 'merger') {
       const maMatch = title.match(/M&A:\s+(.+)\s+acquiert\s+(.+)/);
       if (maMatch) {
         const acquirer = maMatch[1];
@@ -790,7 +794,7 @@ class EventsManager {
       'consumer': 'fa-shopping-cart',
       'trade': 'fa-ship',
       'ipo': 'fa-rocket',
-      'merger': 'fa-handshake'
+      'm&a': 'fa-handshake'  // Modifier "merger" en "m&a"
     };
     
     return icons[category] || 'fa-calendar-day';
@@ -827,9 +831,15 @@ class EventsManager {
       // Obtenir l'icône de catégorie
       const categoryIcon = this.getCategoryIcon(event.category);
       
+      // CORRECTION: Assurer la cohérence du type d'événement pour le filtre
+      let eventType = event.type || 'economic';
+      if (eventType === 'merger') eventType = 'm&a';
+      
       // Générer le HTML
       eventsHTML += `
-        <div class="event-card bg-gray-800 bg-opacity-70 rounded-lg p-4 fade-in ${importanceClass}" data-event-index="${index}">
+        <div class="event-card bg-gray-800 bg-opacity-70 rounded-lg p-4 fade-in ${importanceClass}" 
+             data-event-index="${index}" 
+             data-type="${eventType}">
           ${event.isEssential ? '<div class="essential-badge">Essentiel</div>' : ''}
           
           <div class="mb-3 flex justify-between items-start">
@@ -853,7 +863,7 @@ class EventsManager {
           <div class="flex items-center mb-3">
             <span class="text-xs text-gray-300 bg-gray-700 px-2 py-1 rounded flex items-center">
               <i class="fas ${categoryIcon} mr-1"></i>
-              ${event.country || event.type || 'economic'}
+              ${event.country || eventType || 'economic'}
             </span>
           </div>
           
