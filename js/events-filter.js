@@ -1,296 +1,153 @@
 /**
  * events-filter.js
  * Gestion des filtres pour les événements économiques
- * Version améliorée avec filtre par catégorie
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialisation: ajouter des écouteurs d'événements aux boutons de filtre par catégorie
-    initializeCategoryFilters();
-    
-    // Initialiser les filtres par date
-    initializeDateFilters();
-});
-
-/**
- * Initialise les filtres par catégorie
- */
-function initializeCategoryFilters() {
-    // Sélectionner tous les boutons de filtre par catégorie
-    const categoryButtons = document.querySelectorAll('#event-category-filters button');
-    
-    // Ajouter des écouteurs d'événements à chaque bouton
-    categoryButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            // Récupérer la catégorie du bouton
-            const category = this.getAttribute('data-category');
-            
-            // Mettre à jour l'apparence des boutons
-            updateCategoryButtonStyles(this);
-            
-            // Filtrer les événements par catégorie
-            filterEventsByCategory(category);
-        });
-    });
-}
-
-/**
- * Met à jour les styles des boutons de catégorie
- */
-function updateCategoryButtonStyles(activeButton) {
-    // Sélectionner tous les boutons de catégorie
-    const categoryButtons = document.querySelectorAll('#event-category-filters button');
-    
-    // Mettre à jour les styles de tous les boutons
-    categoryButtons.forEach(button => {
-        if (button === activeButton) {
-            // Style du bouton actif
-            button.classList.add('filter-active', 'bg-green-400', 'bg-opacity-10', 'text-green-400', 'border-green-400', 'border-opacity-30');
-            button.classList.remove('text-gray-400', 'border-gray-700', 'bg-transparent');
-        } else {
-            // Style des boutons inactifs
-            button.classList.remove('filter-active', 'bg-green-400', 'bg-opacity-10', 'text-green-400', 'border-green-400', 'border-opacity-30');
-            button.classList.add('text-gray-400', 'border-gray-700', 'bg-transparent');
-        }
-    });
-}
-
-/**
- * Filtre les événements par catégorie
- */
-function filterEventsByCategory(category) {
-    console.log(`Filtrage des événements par catégorie: ${category}`);
-    
-    // Sélectionner toutes les cartes d'événements
-    const eventCards = document.querySelectorAll('#events-container .event-card');
-    
-    if (category === 'all') {
-        // Afficher tous les événements visibles par filtrage de date
-        eventCards.forEach(card => {
-            if (card.getAttribute('data-hidden-by-date') !== 'true') {
-                card.style.display = '';
-            }
-        });
-        return;
-    }
-    
-    // Filtrer les événements par catégorie
-    eventCards.forEach(card => {
-        // Si l'événement est déjà caché par le filtre de date, le maintenir caché
-        if (card.getAttribute('data-hidden-by-date') === 'true') {
-            card.style.display = 'none';
-            return;
-        }
-        
-        // Récupérer le contenu de la carte pour rechercher la catégorie
-        const cardContent = card.textContent.toLowerCase();
-        let cardCategory = '';
-        
-        // Logique de détermination de catégorie basée sur le contenu
-        if (category === 'US' && (cardContent.includes('us') || cardContent.includes('états-unis') || cardContent.includes('fed'))) {
-            cardCategory = 'US';
-        } else if (category === 'economic' && (cardContent.includes('inflation') || cardContent.includes('pib') || cardContent.includes('gdp') || cardContent.includes('économique'))) {
-            cardCategory = 'economic';
-        } else if (category === 'ipo' && cardContent.includes('ipo')) {
-            cardCategory = 'ipo';
-        } else if (category === 'm&a' && (cardContent.includes('fusion') || cardContent.includes('acquisition') || cardContent.includes('m&a'))) {
-            cardCategory = 'm&a';
-        } else if (category === 'CN' && (cardContent.includes('chine') || cardContent.includes('cn') || cardContent.includes('beijing'))) {
-            cardCategory = 'CN';
-        }
-        
-        // Afficher ou masquer la carte en fonction de la catégorie
-        if (cardCategory === category || category === 'all') {
-            card.style.display = ''; // Afficher
-            console.log(`Événement affiché: ${card.querySelector('h3')?.textContent}`);
-        } else {
-            card.style.display = 'none'; // Masquer
-            console.log(`Événement masqué: ${card.querySelector('h3')?.textContent}`);
-        }
-    });
-    
-    // Vérifier s'il y a des événements visibles
-    checkVisibleEvents();
-}
-
-/**
- * Initialise les filtres par date
- */
-function initializeDateFilters() {
-    // Récupérer les boutons de filtre par date
-    const todayButton = document.getElementById('today-filter');
-    const weekButton = document.getElementById('week-filter');
+    // Récupérer les boutons de filtre
+    const todayBtn = document.getElementById('today-btn');
+    const weekBtn = document.getElementById('week-btn');
+    const essentialBtn = document.getElementById('essential-btn');
+    const allEventsBtn = document.getElementById('all-events-btn');
     
     // Vérifier si les boutons existent
-    if (todayButton && weekButton) {
-        // Ajouter des écouteurs d'événements
-        todayButton.addEventListener('click', function() {
-            updateDateButtonStyles(this);
-            filterEventsByDate('today');
+    if (todayBtn && weekBtn && essentialBtn) {
+        // Filtres par période
+        todayBtn.addEventListener('click', function() {
+            toggleActiveFilter(this);
+            filterEventsByPeriod('today');
         });
         
-        weekButton.addEventListener('click', function() {
-            updateDateButtonStyles(this);
-            filterEventsByDate('week');
+        weekBtn.addEventListener('click', function() {
+            toggleActiveFilter(this);
+            filterEventsByPeriod('week');
         });
         
-        // Déclencher le filtre par défaut (aujourd'hui)
-        todayButton.click();
+        essentialBtn.addEventListener('click', function() {
+            toggleActiveFilter(this);
+            filterEventsByImportance('high');
+        });
+        
+        if (allEventsBtn) {
+            allEventsBtn.addEventListener('click', function() {
+                toggleActiveFilter(this);
+                showAllEvents();
+            });
+        }
     }
-}
-
-/**
- * Met à jour les styles des boutons de date
- */
-function updateDateButtonStyles(activeButton) {
-    // Sélectionner tous les boutons de date
-    const dateButtons = document.querySelectorAll('.filter-button');
     
-    // Mettre à jour les styles de tous les boutons
-    dateButtons.forEach(button => {
-        if (button === activeButton) {
-            // Style du bouton actif
-            button.classList.add('active', 'text-green-400', 'border-green-400', 'border-opacity-30');
-            button.classList.remove('text-gray-400', 'border-gray-700');
+    // Fonction pour filtrer les événements par période
+    function filterEventsByPeriod(period) {
+        const eventElements = document.querySelectorAll('#events-container .event-card');
+        const today = new Date();
+        const todayStr = formatDate(today);
+        
+        eventElements.forEach(element => {
+            const eventDate = element.dataset.date;
+            
+            if (period === 'today') {
+                // Afficher uniquement les événements d'aujourd'hui
+                element.style.display = (eventDate === todayStr) ? 'flex' : 'none';
+            } else if (period === 'week') {
+                // Afficher les événements de la semaine (7 prochains jours)
+                const eventDateObj = parseDate(eventDate);
+                const weekLater = new Date(today);
+                weekLater.setDate(today.getDate() + 7);
+                
+                element.style.display = (eventDateObj >= today && eventDateObj <= weekLater) ? 'flex' : 'none';
+            }
+        });
+        
+        // Afficher un message si aucun événement n'est visible
+        checkNoVisibleEvents();
+    }
+    
+    // Fonction pour filtrer les événements par importance
+    function filterEventsByImportance(importance) {
+        const eventElements = document.querySelectorAll('#events-container .event-card');
+        
+        eventElements.forEach(element => {
+            const eventImportance = element.dataset.importance || '';
+            element.style.display = (eventImportance === importance) ? 'flex' : 'none';
+        });
+        
+        // Afficher un message si aucun événement n'est visible
+        checkNoVisibleEvents();
+    }
+    
+    // Afficher tous les événements
+    function showAllEvents() {
+        const eventElements = document.querySelectorAll('#events-container .event-card');
+        
+        eventElements.forEach(element => {
+            element.style.display = 'flex';
+        });
+        
+        // Vérifier s'il y a des événements
+        checkNoVisibleEvents();
+    }
+    
+    // Vérifier s'il n'y a pas d'événements visibles et afficher un message
+    function checkNoVisibleEvents() {
+        const eventsContainer = document.getElementById('events-container');
+        const visibleEvents = document.querySelectorAll('#events-container .event-card[style="display: flex;"]');
+        
+        // Supprimer l'ancien message s'il existe
+        const oldMessage = document.getElementById('no-events-message');
+        if (oldMessage) {
+            oldMessage.remove();
+        }
+        
+        // Ajouter un message si aucun événement n'est visible
+        if (visibleEvents.length === 0) {
+            const noEventsMessage = document.createElement('div');
+            noEventsMessage.id = 'no-events-message';
+            noEventsMessage.className = 'col-span-3 text-center p-8';
+            noEventsMessage.innerHTML = `
+                <div class="flex flex-col items-center">
+                    <i class="fas fa-calendar-times text-4xl mb-4 text-gray-500"></i>
+                    <p class="text-gray-400">Aucun événement économique prévu pour cette période</p>
+                </div>
+            `;
+            eventsContainer.appendChild(noEventsMessage);
+        }
+    }
+    
+    // Fonction pour basculer la classe active entre les filtres
+    function toggleActiveFilter(button) {
+        // Retirer la classe active de tous les boutons
+        document.querySelectorAll('.filter-active').forEach(el => {
+            el.classList.remove('filter-active');
+        });
+        // Ajouter la classe active au bouton cliqué
+        button.classList.add('filter-active');
+    }
+    
+    // Fonction pour formater une date au format DD/MM/YYYY
+    function formatDate(date) {
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        return `${day}/${month}/${year}`;
+    }
+    
+    // Fonction pour parser une date au format DD/MM/YYYY
+    function parseDate(dateStr) {
+        const parts = dateStr.split('/');
+        return new Date(parts[2], parts[1] - 1, parts[0]);
+    }
+    
+    // Initialisation : filtrer les événements d'aujourd'hui par défaut
+    const defaultFilter = document.querySelector('.filter-active');
+    if (defaultFilter) {
+        if (defaultFilter.id === 'today-btn') {
+            filterEventsByPeriod('today');
+        } else if (defaultFilter.id === 'week-btn') {
+            filterEventsByPeriod('week');
+        } else if (defaultFilter.id === 'essential-btn') {
+            filterEventsByImportance('high');
         } else {
-            // Style des boutons inactifs
-            button.classList.remove('active', 'text-green-400', 'border-green-400', 'border-opacity-30');
-            button.classList.add('text-gray-400', 'border-gray-700');
+            showAllEvents();
         }
-    });
-}
-
-/**
- * Filtre les événements par date
- */
-function filterEventsByDate(dateFilter) {
-    console.log(`Filtrage des événements par date: ${dateFilter}`);
-    
-    // Obtenir la date d'aujourd'hui
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Réinitialiser l'heure à minuit
-    
-    // Calculer la date de fin de la semaine
-    const endOfWeek = new Date(today);
-    endOfWeek.setDate(today.getDate() + 6);
-    
-    // Formater la date d'aujourd'hui au format DD/MM/YYYY
-    const formattedToday = formatDate(today);
-    
-    console.log(`Date d'aujourd'hui: ${formattedToday}`);
-    console.log(`Fin de semaine: ${formatDate(endOfWeek)}`);
-    
-    // Sélectionner toutes les cartes d'événements
-    const eventCards = document.querySelectorAll('#events-container .event-card');
-    
-    // Filtrer les événements par date
-    eventCards.forEach(card => {
-        // Extraire la date de l'événement du texte
-        const dateMatch = card.textContent.match(/(\\d{2})\\/(\\d{2})\\/(\\d{4})/);
-        
-        if (!dateMatch) {
-            // Si la date n'est pas trouvée, masquer l'événement
-            card.style.display = 'none';
-            card.setAttribute('data-hidden-by-date', 'true');
-            return;
-        }
-        
-        // Extraire le jour, le mois et l'année
-        const day = parseInt(dateMatch[1]);
-        const month = parseInt(dateMatch[2]) - 1; // JavaScript commence les mois à 0
-        const year = parseInt(dateMatch[3]);
-        
-        // Créer un objet Date
-        const eventDate = new Date(year, month, day);
-        eventDate.setHours(0, 0, 0, 0); // Réinitialiser l'heure à minuit
-        
-        // Formater la date de l'événement
-        const formattedEventDate = formatDate(eventDate);
-        
-        console.log(`Événement: ${card.querySelector('h3')?.textContent}, Date: ${formattedEventDate}`);
-        
-        // Filtrer selon le mode sélectionné
-        if (dateFilter === 'today') {
-            // Afficher uniquement les événements d'aujourd'hui
-            if (formattedEventDate === formattedToday) {
-                card.style.display = ''; // Afficher
-                card.setAttribute('data-hidden-by-date', 'false');
-                console.log(`Événement d'aujourd'hui affiché: ${card.querySelector('h3')?.textContent}`);
-            } else {
-                card.style.display = 'none'; // Masquer
-                card.setAttribute('data-hidden-by-date', 'true');
-                console.log(`Événement masqué (pas aujourd'hui): ${card.querySelector('h3')?.textContent}`);
-            }
-        } else if (dateFilter === 'week') {
-            // Afficher les événements de la semaine à venir
-            if (eventDate >= today && eventDate <= endOfWeek) {
-                card.style.display = ''; // Afficher
-                card.setAttribute('data-hidden-by-date', 'false');
-                console.log(`Événement de la semaine affiché: ${card.querySelector('h3')?.textContent}`);
-            } else {
-                card.style.display = 'none'; // Masquer
-                card.setAttribute('data-hidden-by-date', 'true');
-                console.log(`Événement masqué (pas cette semaine): ${card.querySelector('h3')?.textContent}`);
-            }
-        }
-    });
-    
-    // Réappliquer le filtre par catégorie actif
-    const activeCategoryButton = document.querySelector('#event-category-filters button.filter-active');
-    if (activeCategoryButton && activeCategoryButton.getAttribute('data-category') !== 'all') {
-        const category = activeCategoryButton.getAttribute('data-category');
-        filterEventsByCategory(category);
     }
-    
-    // Vérifier s'il y a des événements visibles
-    checkVisibleEvents();
-}
-
-/**
- * Vérifie s'il y a des événements visibles et affiche un message si nécessaire
- */
-function checkVisibleEvents() {
-    // Sélectionner le conteneur d'événements
-    const eventsContainer = document.getElementById('events-container');
-    
-    // Compter les événements visibles
-    const visibleEvents = document.querySelectorAll('#events-container .event-card[style=\"display: \"]');
-    const visibleCount = visibleEvents.length;
-    
-    console.log(`Nombre d'événements visibles: ${visibleCount}`);
-    
-    // Supprimer l'ancien message s'il existe
-    const oldMessage = document.getElementById('no-events-message');
-    if (oldMessage) {
-        oldMessage.remove();
-    }
-    
-    // Si aucun événement n'est visible, afficher un message
-    if (visibleCount === 0) {
-        // Créer un message
-        const noEventsMessage = document.createElement('div');
-        noEventsMessage.id = 'no-events-message';
-        noEventsMessage.className = 'col-span-3 text-center p-8';
-        noEventsMessage.innerHTML = `
-            <div class=\"flex flex-col items-center\">
-                <i class=\"fas fa-calendar-times text-4xl mb-4 text-gray-500\"></i>
-                <p class=\"text-gray-400\">Aucun événement ne correspond aux critères sélectionnés</p>
-            </div>
-        `;
-        
-        // Ajouter le message au conteneur
-        eventsContainer.appendChild(noEventsMessage);
-    }
-}
-
-/**
- * Formate une date au format DD/MM/YYYY
- */
-function formatDate(date) {
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
-}`,
-  `message`: `Fix: Amélioration du filtrage par catégorie d'événements`
-}
+});
