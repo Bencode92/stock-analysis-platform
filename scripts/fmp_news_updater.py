@@ -44,10 +44,10 @@ CONFIG = {
     },
     "news_limits": {
         "general_news": 50,
-        "fmp_articles": 20,
+        "fmp_articles": 1,
         "stock_news": 50,
         "crypto_news": 20,
-        "press_releases": 20
+        "press_releases": 1
     },
     "output_limits": {
         "us": 30,
