@@ -1,0 +1,105 @@
+/* 
+ * event-filters.css
+ * Styles pour les filtres d'événements améliorés
+ */
+
+/* Styles pour le header d'événements */
+.events-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.events-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--accent-color);
+  margin: 0;
+}
+
+.date-filters {
+  display: flex;
+  gap: 8px;
+}
+
+.date-button {
+  background-color: rgba(0, 255, 135, 0.1);
+  border: 1px solid rgba(0, 255, 135, 0.3);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.date-button:hover, .date-button.active {
+  background-color: rgba(0, 255, 135, 0.2);
+  transform: translateY(-1px);
+}
+
+/* Styles pour les filtres par catégorie */
+.category-filters {
+  margin-top: 12px;
+  margin-bottom: 15px;
+}
+
+.filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-pill {
+  padding: 5px 12px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-pill.active {
+  background-color: var(--accent-color);
+  color: #011627;
+  border-color: var(--accent-color);
+}
+
+.filter-pill:hover:not(.active) {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+/* Masquer le bouton réinitialiser date */
+#reset-date-btn, #reset-date {
+  display: none !important;
+}
+
+/* Style d'indicateur d'événement */
+.event-indicator {
+  width: 3px;
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 3px 0 0 3px;
+}
+
+.event-indicator.economic {
+  background: linear-gradient(to bottom, #00c6ff, #0072ff);
+}
+
+.event-indicator.earnings {
+  background: linear-gradient(to bottom, #ff9966, #ff5e62);
+}
+
+.event-indicator.ipo {
+  background: linear-gradient(to bottom, #a770ef, #cf8bf3);
+}
+
+.event-indicator.merger {
+  background: linear-gradient(to bottom, #56ab2f, #a8e063);
+}
