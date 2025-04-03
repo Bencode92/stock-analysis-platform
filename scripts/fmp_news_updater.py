@@ -44,9 +44,9 @@ CONFIG = {
     },
     "news_limits": {
         "general_news": 50,
-        "fmp_articles": 50,
+        "fmp_articles": 20,
         "stock_news": 50,
-        "crypto_news": 50,
+        "crypto_news": 20,
         "press_releases": 20
     },
     "output_limits": {
