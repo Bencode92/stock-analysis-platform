@@ -839,7 +839,8 @@ class EventsManager {
       eventsHTML += `
         <div class="event-card bg-gray-800 bg-opacity-70 rounded-lg p-4 fade-in ${importanceClass}" 
              data-event-index="${index}" 
-             data-type="${eventType}">
+             data-type="${eventType}"
+             data-date="${event.date}">
           ${event.isEssential ? '<div class="essential-badge">Essentiel</div>' : ''}
           
           <div class="mb-3 flex justify-between items-start">
