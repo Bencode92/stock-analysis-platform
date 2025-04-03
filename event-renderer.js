@@ -144,36 +144,123 @@ function injectPriorityStyles() {
  * Initialise les filtres de catégorie pour les événements
  */
 function initializeCategoryFilters() {
-  const filterButtons = document.querySelectorAll('#event-category-filters button');
+  console.log('Initialisation des filtres de catégorie...');
   
-  filterButtons.forEach(button => {
-    button.addEventListener('click', function() {
-      // Supprimer la classe active de tous les boutons
-      filterButtons.forEach(btn => {
-        btn.classList.remove('filter-active');
-        btn.classList.remove('bg-green-400');
-        btn.classList.remove('bg-opacity-10');
-        btn.classList.remove('text-green-400');
-        btn.classList.remove('border-green-400');
-        btn.classList.remove('border-opacity-30');
-        btn.classList.add('text-gray-400');
-        btn.classList.add('border-gray-700');
+  // Attendre un peu pour que les événements soient chargés
+  setTimeout(() => {
+    // Analyser toutes les cartes d'événements et ajouter les marqueurs de type
+    preAnalyzeEventCards();
+    
+    // Ajouter les écouteurs d'événements aux boutons de filtre
+    const filterButtons = document.querySelectorAll('#event-category-filters button');
+  
+    filterButtons.forEach(button => {
+      button.addEventListener('click', function() {
+        // Supprimer la classe active de tous les boutons
+        filterButtons.forEach(btn => {
+          btn.classList.remove('filter-active');
+          btn.classList.remove('bg-green-400');
+          btn.classList.remove('bg-opacity-10');
+          btn.classList.remove('text-green-400');
+          btn.classList.remove('border-green-400');
+          btn.classList.remove('border-opacity-30');
+          btn.classList.add('text-gray-400');
+          btn.classList.add('border-gray-700');
+        });
+        
+        // Ajouter la classe active au bouton cliqué
+        this.classList.add('filter-active');
+        this.classList.add('bg-green-400');
+        this.classList.add('bg-opacity-10');
+        this.classList.add('text-green-400');
+        this.classList.add('border-green-400');
+        this.classList.add('border-opacity-30');
+        this.classList.remove('text-gray-400');
+        this.classList.remove('border-gray-700');
+        
+        // Filtrer les événements selon la catégorie
+        const category = this.getAttribute('data-category');
+        filterEventsByCategory(category);
       });
-      
-      // Ajouter la classe active au bouton cliqué
-      this.classList.add('filter-active');
-      this.classList.add('bg-green-400');
-      this.classList.add('bg-opacity-10');
-      this.classList.add('text-green-400');
-      this.classList.add('border-green-400');
-      this.classList.add('border-opacity-30');
-      this.classList.remove('text-gray-400');
-      this.classList.remove('border-gray-700');
-      
-      // Filtrer les événements selon la catégorie
-      const category = this.getAttribute('data-category');
-      filterEventsByCategory(category);
     });
+  }, 1500); // Attendre 1.5 secondes pour s'assurer que tous les événements sont chargés
+}
+
+/**
+ * Pré-analyse toutes les cartes d'événements et ajoute des attributs data-categories
+ */
+function preAnalyzeEventCards() {
+  console.log('Pré-analyse des cartes d\'événements...');
+  
+  const eventCards = document.querySelectorAll('.event-card');
+  
+  eventCards.forEach(card => {
+    // Créer un ensemble pour stocker toutes les catégories détectées
+    const categories = new Set();
+    
+    // Vérifier par titre pour IPO
+    if (card.querySelector('h3')?.textContent.includes('IPO:')) {
+      categories.add('ipo');
+    }
+    
+    // Vérifier les badges ipo
+    if (card.querySelector('.text-xs span i.fa-rocket')) {
+      categories.add('ipo');
+    }
+    
+    // Vérifier les badges US
+    if (card.querySelector('.text-xs span i.fa-flag-usa') || 
+        card.textContent.toLowerCase().includes('us treasury') ||
+        card.textContent.toLowerCase().includes('fed ') || 
+        card.textContent.toLowerCase().includes('états-unis')) {
+      categories.add('US');
+    }
+    
+    // Vérifier les badges economic
+    if (card.querySelector('.text-xs span i.fa-chart-line') || 
+        card.textContent.toLowerCase().includes('taux') ||
+        card.textContent.toLowerCase().includes('inflation') ||
+        card.textContent.toLowerCase().includes('pib')) {
+      categories.add('economic');
+    }
+    
+    // Vérifier les badges merger
+    if (card.querySelector('.text-xs span i.fa-handshake') || 
+        card.textContent.toLowerCase().includes('m&a:')) {
+      categories.add('merger');
+    }
+    
+    // Vérifier les badges CN
+    if (card.textContent.toLowerCase().includes('china') || 
+        card.textContent.toLowerCase().includes('chinese') || 
+        card.textContent.toLowerCase().includes('beijing')) {
+      categories.add('CN');
+    }
+    
+    // Stocker toutes les catégories détectées comme un attribut data-categories
+    card.setAttribute('data-categories', Array.from(categories).join(' '));
+    
+    // Stocker également la catégorie principale comme data-primary-category pour des recherches plus rapides
+    if (categories.has('US')) {
+      card.setAttribute('data-primary-category', 'US');
+    } else if (categories.has('economic')) {
+      card.setAttribute('data-primary-category', 'economic');
+    } else if (categories.has('ipo')) {
+      card.setAttribute('data-primary-category', 'ipo');
+    } else if (categories.has('merger')) {
+      card.setAttribute('data-primary-category', 'merger');
+    } else if (categories.has('CN')) {
+      card.setAttribute('data-primary-category', 'CN');
+    } else {
+      // Par défaut, considérer comme ipo si le titre commence par IPO:
+      if (card.querySelector('h3')?.textContent.startsWith('IPO:')) {
+        card.setAttribute('data-primary-category', 'ipo');
+      } else {
+        card.setAttribute('data-primary-category', 'other');
+      }
+    }
+    
+    console.log(`Carte analysée: ${card.querySelector('h3')?.textContent} - Catégories: ${Array.from(categories).join(', ')}`);
   });
 }
 
@@ -196,62 +283,12 @@ function filterEventsByCategory(category) {
       // Afficher tous les événements
       card.style.display = '';
     } else {
-      // Vérifier si cette carte correspond à la catégorie
-      let matchesCategory = false;
+      // Vérifier si cette carte correspond à la catégorie demandée
+      const primaryCategory = card.getAttribute('data-primary-category');
+      const allCategories = card.getAttribute('data-categories')?.split(' ') || [];
       
-      // 1. Vérifier l'attribut data-event-type
-      if (card.getAttribute('data-event-type') === category) {
-        matchesCategory = true;
-      }
-      
-      // 2. Vérifier les badges spécifiques à chaque catégorie
-      if (!matchesCategory) {
-        // Pour IPO
-        if (category === 'ipo') {
-          if (card.querySelector('.text-xs span i.fa-rocket') || 
-              card.textContent.toLowerCase().includes('ipo:')) {
-            matchesCategory = true;
-            card.setAttribute('data-event-type', 'ipo');
-          }
-        }
-        
-        // Pour Economic
-        else if (category === 'economic') {
-          if (card.querySelector('.text-xs span i.fa-chart-line') || 
-              card.textContent.toLowerCase().includes('economic')) {
-            matchesCategory = true;
-            card.setAttribute('data-event-type', 'economic');
-          }
-        }
-        
-        // Pour US
-        else if (category === 'US') {
-          if (card.querySelector('.text-xs span i.fa-flag-usa') || 
-              card.textContent.toLowerCase().includes('us')) {
-            matchesCategory = true;
-            card.setAttribute('data-event-type', 'US');
-          }
-        }
-        
-        // Pour Merger
-        else if (category === 'merger') {
-          if (card.querySelector('.text-xs span i.fa-handshake') || 
-              card.textContent.toLowerCase().includes('m&a:')) {
-            matchesCategory = true;
-            card.setAttribute('data-event-type', 'merger');
-          }
-        }
-        
-        // Pour CN
-        else if (category === 'CN') {
-          if (card.querySelector('.text-xs span i.fa-flag') || 
-              card.textContent.toLowerCase().includes('china') ||
-              card.textContent.toLowerCase().includes('chinese')) {
-            matchesCategory = true;
-            card.setAttribute('data-event-type', 'CN');
-          }
-        }
-      }
+      // Une carte correspond si sa catégorie principale correspond OU si elle a cette catégorie dans sa liste de catégories
+      const matchesCategory = (primaryCategory === category) || allCategories.includes(category);
       
       // Afficher ou masquer selon le résultat
       card.style.display = matchesCategory ? '' : 'none';
@@ -324,29 +361,15 @@ function initializeEventsManager() {
     
     // Ajouter des attributs data-event-type à chaque carte
     setTimeout(() => {
-      const eventCards = document.querySelectorAll('.event-card');
-      eventCards.forEach((card, index) => {
-        // Obtenir l'événement correspondant
-        const event = this.filterEvents()[index];
-        if (!event) return;
-        
-        // Déterminer le type d'événement
-        let eventType = 'economic'; // Type par défaut
-        
-        // Type basé sur l'événement
-        if (event.type === 'ipo') {
-          eventType = 'ipo';
-        } else if (event.type === 'merger') {
-          eventType = 'merger';
-        } else if (event.country === 'US') {
-          eventType = 'US';
-        } else if (event.country === 'CN') {
-          eventType = 'CN';
-        }
-        
-        // Ajouter l'attribut
-        card.setAttribute('data-event-type', eventType);
-      });
+      // Relancer l'analyse des cartes d'événements après le rendu
+      preAnalyzeEventCards();
+    
+      // Appliquer le filtre actif si nécessaire
+      const activeFilter = document.querySelector('#event-category-filters button.filter-active');
+      if (activeFilter) {
+        const category = activeFilter.getAttribute('data-category');
+        filterEventsByCategory(category);
+      }
     }, 200);
   };
   
@@ -431,3 +454,27 @@ window.addEventListener('pageshow', function(event) {
     }, 500);
   }
 });
+
+// Ajouter une analyse à toutes les 3 secondes pendant le chargement initial
+// pour s'assurer que les filtres fonctionnent même si le chargement est lent
+let analysisCount = 0;
+const analysisInterval = setInterval(() => {
+  analysisCount++;
+  if (analysisCount > 5) {
+    clearInterval(analysisInterval);
+    return;
+  }
+  
+  const eventCards = document.querySelectorAll('.event-card');
+  if (eventCards.length > 0) {
+    console.log(`Analyse périodique des événements (${analysisCount}/5) - ${eventCards.length} cartes trouvées`);
+    preAnalyzeEventCards();
+    
+    // Appliquer le filtre actif
+    const activeFilter = document.querySelector('#event-category-filters button.filter-active');
+    if (activeFilter) {
+      const category = activeFilter.getAttribute('data-category');
+      filterEventsByCategory(category);
+    }
+  }
+}, 3000);
