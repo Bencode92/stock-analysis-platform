@@ -1,8 +1,7 @@
 /**
  * events-date-filter.js
  * Ajoute un filtre temporel pour les événements basé sur la date de connexion
- * Version optimisée - suppression du bouton "Réinitialiser date"
- * Ajout de la prise en charge des IPO et M&A
+ * Version optimisée avec UI améliorée
  */
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -36,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Ajouter un indicateur de débogage
-    console.log("Initialisation des filtres de date d'événements terminée");
+    console.log("Initialisation des filtres d'événements terminée");
   }, 1000);
 });
 
@@ -52,20 +51,17 @@ function replaceFiltersWithDateOnly() {
     return;
   }
   
-  // Reconstruire la barre de filtres uniquement avec Aujourd'hui et Cette semaine
+  // Reconstruire la barre de filtres avec un design plus élégant
   filterContainer.innerHTML = `
     <h2 class="text-lg font-semibold text-green-400">
       <i class="fas fa-calendar-alt mr-2"></i>ÉVÉNEMENTS À VENIR
     </h2>
-    <div class="flex gap-2">
-      <button id="today-filter" class="text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded filter-button active">
+    <div class="date-filters">
+      <button id="today-filter" class="date-button active">
         Aujourd'hui
       </button>
-      <button id="week-filter" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded filter-button">
+      <button id="week-filter" class="date-button">
         Cette semaine
-      </button>
-      <button id="reset-date" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded filter-button">
-        Réinitialiser date
       </button>
     </div>
   `;
@@ -73,7 +69,6 @@ function replaceFiltersWithDateOnly() {
   // Ajouter les écouteurs d'événements
   const todayBtn = document.getElementById('today-filter');
   const weekBtn = document.getElementById('week-filter');
-  const resetBtn = document.getElementById('reset-date');
   
   if (todayBtn && weekBtn) {
     todayBtn.addEventListener('click', () => {
@@ -86,13 +81,6 @@ function replaceFiltersWithDateOnly() {
       forceShowAllEvents();
       console.log("Filtre 'Cette semaine' appliqué");
     });
-    
-    if (resetBtn) {
-      resetBtn.addEventListener('click', () => {
-        // Réinitialise la date aux événements actuels
-        location.reload();
-      });
-    }
   }
 }
 
@@ -106,23 +94,25 @@ function addEventTypeFilters() {
   
   // Créer un conteneur pour les filtres par type
   const typeFiltersContainer = document.createElement('div');
-  typeFiltersContainer.className = 'events-type-filter';
+  typeFiltersContainer.className = 'category-filters';
   typeFiltersContainer.innerHTML = `
-    <button class="event-type-button active" data-type="all">
-      <i class="fas fa-filter"></i> Tous
-    </button>
-    <button class="event-type-button" data-type="economic">
-      <i class="fas fa-chart-line"></i> Économie
-    </button>
-    <button class="event-type-button" data-type="earnings">
-      <i class="fas fa-chart-pie"></i> Résultats
-    </button>
-    <button class="event-type-button" data-type="ipo">
-      <i class="fas fa-rocket"></i> IPO
-    </button>
-    <button class="event-type-button" data-type="merger">
-      <i class="fas fa-handshake"></i> M&A
-    </button>
+    <div class="filter-pills">
+      <button class="filter-pill active" data-type="all">
+        <i class="fas fa-filter mr-1"></i> Tous
+      </button>
+      <button class="filter-pill" data-type="economic">
+        <i class="fas fa-chart-line mr-1"></i> Économie
+      </button>
+      <button class="filter-pill" data-type="earnings">
+        <i class="fas fa-chart-pie mr-1"></i> Résultats
+      </button>
+      <button class="filter-pill" data-type="ipo">
+        <i class="fas fa-rocket mr-1"></i> IPO
+      </button>
+      <button class="filter-pill" data-type="merger">
+        <i class="fas fa-handshake mr-1"></i> M&A
+      </button>
+    </div>
   `;
   
   // Insérer après le titre
@@ -134,7 +124,7 @@ function addEventTypeFilters() {
   }
   
   // Ajouter les écouteurs d'événements
-  const typeButtons = typeFiltersContainer.querySelectorAll('.event-type-button');
+  const typeButtons = typeFiltersContainer.querySelectorAll('.filter-pill');
   typeButtons.forEach(button => {
     button.addEventListener('click', () => {
       // Activer le bouton cliqué et désactiver les autres
@@ -198,10 +188,8 @@ function forceHideAllEvents() {
   // Masquer les événements qui ne sont pas d'aujourd'hui
   eventCards.forEach(card => {
     // Extraire la date de l'événement depuis le contenu de la carte
-    const dateText = card.textContent.match(/\d{2}\/\d{2}\/\d{4}/);
+    const dateText = card.textContent.match(/\\d{2}\\/\\d{2}\\/\\d{4}/);
     const eventDate = dateText ? dateText[0] : null;
-    
-    console.log("Date de l'événement:", eventDate);
     
     // Marquer la carte pour faciliter le débogage
     card.setAttribute('data-date', eventDate || 'no-date');
@@ -265,7 +253,7 @@ function forceShowAllEvents() {
   // Afficher uniquement les événements entre demain et fin de semaine
   eventCards.forEach(card => {
     // Extraire la date de l'événement
-    const dateText = card.textContent.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+    const dateText = card.textContent.match(/(\\d{2})\\/(\\d{2})\\/(\\d{4})/);
     
     if (!dateText) {
       card.style.display = 'none';
@@ -289,11 +277,9 @@ function forceShowAllEvents() {
       card.style.display = '';
       card.setAttribute('data-hidden', "false");
       eventFound = true;
-      console.log(`Événement affiché: ${formattedEventDate} (dans ${diffDays} jours)`);
     } else {
       card.style.display = 'none';
       card.setAttribute('data-hidden', "true");
-      console.log(`Événement masqué: ${formattedEventDate} (aujourd'hui, passé ou trop lointain)`);
     }
   });
   
@@ -324,38 +310,22 @@ function forceShowAllEvents() {
   document.body.classList.add('week-filter-active');
   
   // Réappliquer le filtre par type
-  const activeTypeFilter = document.querySelector('.event-type-button.active');
+  const activeTypeFilter = document.querySelector('.filter-pill.active');
   if (activeTypeFilter) {
     filterEventsByType(activeTypeFilter.dataset.type);
   }
-  
-  console.log("Événements à venir dans la semaine affichés (sans aujourd'hui)");
 }
 
 /**
  * Active le bouton de filtre sélectionné
  */
 function setActiveFilter(activeButton) {
-  const filterButtons = document.querySelectorAll('.filter-button');
+  const filterButtons = document.querySelectorAll('.date-button');
   filterButtons.forEach(btn => {
     if (btn === activeButton) {
       btn.classList.add('active');
-      btn.classList.remove('text-gray-400');
-      btn.classList.add('text-green-400');
-      btn.classList.remove('border-gray-700');
-      btn.classList.add('border-green-400');
-      btn.classList.add('border-opacity-30');
-      btn.classList.add('bg-green-400');
-      btn.classList.add('bg-opacity-10');
     } else {
       btn.classList.remove('active');
-      btn.classList.remove('text-green-400');
-      btn.classList.add('text-gray-400');
-      btn.classList.remove('border-green-400');
-      btn.classList.add('border-gray-700');
-      btn.classList.remove('border-opacity-30');
-      btn.classList.remove('bg-green-400');
-      btn.classList.remove('bg-opacity-10');
     }
   });
 }
@@ -433,17 +403,16 @@ function overrideEventRendering() {
           // Ajouter l'attribut data-event-type pour les filtres
           card.setAttribute('data-event-type', eventType);
           
-          // Ajouter un indicateur "Nouveau" pour les événements IPO et M&A
-          if ((eventType === 'ipo' || eventType === 'merger') && !card.querySelector('.new-event-badge')) {
-            const badge = document.createElement('div');
-            badge.className = 'new-event-badge';
-            badge.textContent = 'Nouveau';
-            card.appendChild(badge);
+          // Ajouter un indicateur visuel pour le type d'événement
+          if (!card.querySelector('.event-indicator')) {
+            const indicator = document.createElement('div');
+            indicator.className = `event-indicator ${eventType}`;
+            card.appendChild(indicator);
           }
         });
         
         // Appliquer le filtre actif
-        const activeFilter = document.querySelector('.filter-button.active');
+        const activeFilter = document.querySelector('.date-button.active');
         if (activeFilter) {
           if (activeFilter.id === 'today-filter') {
             forceHideAllEvents();
@@ -456,7 +425,7 @@ function overrideEventRendering() {
         }
         
         // Appliquer le filtre par type actif
-        const activeTypeFilter = document.querySelector('.event-type-button.active');
+        const activeTypeFilter = document.querySelector('.filter-pill.active');
         if (activeTypeFilter) {
           filterEventsByType(activeTypeFilter.dataset.type);
         }
@@ -464,18 +433,6 @@ function overrideEventRendering() {
     };
   }
 }
-
-// Ajouter un écouteur global pour intercepter tout clic sur le document
-document.addEventListener('click', function(event) {
-  // Attendre un instant puis vérifier quel filtre est actif
-  setTimeout(() => {
-    if (document.body.classList.contains('today-filter-active')) {
-      forceHideAllEvents();
-    } else if (document.body.classList.contains('week-filter-active')) {
-      forceShowAllEvents();
-    }
-  }, 100);
-}, true);
 
 // Observer les changements dans le DOM pour appliquer le filtre en continu
 if (window.MutationObserver) {
