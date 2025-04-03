@@ -98,9 +98,14 @@
   background-color: rgba(0, 255, 135, 0.15);
 }
 
-/* RÈGLE CRITIQUE : Masquer tous les événements lorsque le filtre "Aujourd'hui" est actif */
-body.today-filter-active .event-card {
+/* RÈGLE CORRIGÉE : Ne masquer que les événements marqués comme hidden lorsque le filtre "Aujourd'hui" est actif */
+body.today-filter-active .event-card[data-hidden="true"] {
   display: none !important;
+}
+
+/* Afficher les événements marqués comme non cachés même quand le filtre "Aujourd'hui" est actif */
+body.today-filter-active .event-card[data-hidden="false"] {
+  display: flex !important;
 }
 
 /* Lorsque le filtre "Cette semaine" est actif, s'assurer que tous les événements sont visibles */
