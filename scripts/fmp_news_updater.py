@@ -351,8 +351,8 @@ def get_mergers_acquisitions(limit=100):
     return fetch_api_data(CONFIG["endpoints"]["mergers_acquisitions"], params)
 
 def extract_themes(article):
-    """Identifie les thèmes dominants à partir du contenu de l'article"""
-    text = (article.get("text", "") + " " + article.get("title", "")).lower()
+    """Identifie les thèmes dominants à partir du contenu du titre"""
+    text = article.get("title", "").lower()
     themes_detected = {"macroeconomie": [], "secteurs": [], "regions": []}
     
     for axe, groupes in THEMES_DOMINANTS.items():
