@@ -1,237 +1,250 @@
-/* Styles pour les thèmes dominants */
+/* Style amélioré pour les thèmes dominants */
+
+/* Conteneur global */
 .themes-dominant-container {
-    background: rgba(1, 22, 39, 0.5);
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-    border: 1px solid rgba(0, 255, 135, 0.1);
+    margin-bottom: 2rem;
 }
 
+/* Cartes de thèmes */
 .theme-card {
-    background: rgba(1, 30, 52, 0.6);
-    border-radius: 0.5rem;
-    padding: 1rem;
-    border: 1px solid rgba(0, 255, 135, 0.2);
+    padding: 1.5rem;
+    border-radius: 0.75rem;
+    background-color: rgba(1, 22, 39, 0.7);
+    border: 1px solid rgba(0, 255, 135, 0.1);
+    transition: all 0.3s ease;
 }
 
+.theme-card:hover {
+    box-shadow: 0 0 15px rgba(0, 255, 135, 0.2);
+}
+
+/* Titre des axes de thèmes */
 .theme-title {
-    color: #00FF87;
-    display: flex;
-    align-items: center;
+    color: var(--accent-color);
+    margin-bottom: 1rem;
+    font-weight: 600;
 }
 
+/* Liste des thèmes */
 .theme-list {
     list-style: none;
     padding: 0;
     margin: 0;
 }
 
+/* Éléments individuels des thèmes */
 .theme-item {
+    margin-bottom: 1rem;
     position: relative;
-    margin-bottom: 0.75rem;
-    cursor: pointer;
-    transition: transform 0.2s ease;
 }
 
-.theme-item:hover {
-    transform: translateX(3px);
-}
-
-.theme-item:hover .theme-tooltip {
-    display: block;
-    animation: fadeIn 0.3s ease-in-out;
-}
-
+/* En-tête de thème (nom + compteur) */
 .theme-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
 }
 
+/* Nom du thème */
 .theme-name {
-    flex-grow: 1;
-    font-size: 0.875rem;
-    color: rgba(255, 255, 255, 0.9);
+    font-weight: 500;
 }
 
+/* Compteur de thème */
 .theme-count {
-    font-size: 0.75rem;
-    font-weight: bold;
-    color: #00FF87;
-    min-width: 1.5rem;
-    text-align: right;
+    background: rgba(0, 255, 135, 0.1);
+    color: var(--accent-color);
+    padding: 0.15rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.8rem;
+    font-weight: 600;
 }
 
+/* Barre de progression */
 .theme-bar {
-    height: 4px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 2px;
+    height: 6px;
+    width: 100%;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
     overflow: hidden;
 }
 
 .theme-progress {
     height: 100%;
-    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-/* Couleur par axe */
-.macroeconomie .theme-progress {
-    background: linear-gradient(90deg, #0088FF, #00BFFF);
-}
-
-.secteurs .theme-progress {
-    background: linear-gradient(90deg, #00CC88, #00FF87);
-}
-
-.regions .theme-progress {
-    background: linear-gradient(90deg, #FF8800, #FFA500);
+    background: linear-gradient(90deg, #00c9ff 0%, #00ff87 100%);
+    border-radius: 3px;
+    transition: width 0.5s ease;
 }
 
 /* Indicateurs de sentiment */
 .sentiment-indicator {
-    width: 8px;
-    height: 8px;
+    width: 10px;
+    height: 10px;
     border-radius: 50%;
-    margin: 0 0.5rem;
-    position: relative;
-}
-
-.sentiment-indicator:after {
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
-    border-radius: 50%;
-    animation: pulse 2s infinite;
-    opacity: 0;
+    margin-left: 8px;
 }
 
 .sentiment-indicator.positive {
-    background-color: #00FF87;
-    box-shadow: 0 0 5px rgba(0, 255, 135, 0.8);
-}
-
-.sentiment-indicator.positive:after {
-    border: 1px solid rgba(0, 255, 135, 0.5);
+    background-color: #4caf50;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
 }
 
 .sentiment-indicator.negative {
-    background-color: #FF4757;
-    box-shadow: 0 0 5px rgba(255, 71, 87, 0.8);
-}
-
-.sentiment-indicator.negative:after {
-    border: 1px solid rgba(255, 71, 87, 0.5);
+    background-color: #f44336;
+    box-shadow: 0 0 8px rgba(244, 67, 54, 0.6);
 }
 
 .sentiment-indicator.neutral {
-    background-color: #FFC107;
-    box-shadow: 0 0 5px rgba(255, 193, 7, 0.8);
+    background-color: #ff9800;
+    box-shadow: 0 0 8px rgba(255, 152, 0, 0.6);
 }
 
-.sentiment-indicator.neutral:after {
-    border: 1px solid rgba(255, 193, 7, 0.5);
+/* Skeleton loading */
+.skeleton-line {
+    height: 1.5rem;
+    margin-bottom: 1rem;
+    background: linear-gradient(90deg, rgba(255, 255, 255, 0.05) 0%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.05) 100%);
+    border-radius: 3px;
+    animation: skeleton-loading 1.5s infinite;
 }
 
-/* Infobulle thème */
-.theme-tooltip {
-    display: none;
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 300px;
-    background: rgba(1, 30, 52, 0.95);
-    border: 1px solid rgba(0, 255, 135, 0.3);
-    border-radius: 0.5rem;
-    padding: 0.75rem;
-    z-index: 10;
-    font-size: 0.75rem;
-    color: rgba(255, 255, 255, 0.8);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    backdrop-filter: blur(4px);
-}
-
-.theme-tooltip p {
-    margin-top: 0;
-    margin-bottom: 0.5rem;
-}
-
-/* Distribution de sentiment */
-.sentiment-distribution {
-    height: 4px;
-    display: flex;
-    border-radius: 2px;
-    overflow: hidden;
-}
-
-.sentiment-distribution .positive {
-    background-color: #00FF87;
-    height: 100%;
-}
-
-.sentiment-distribution .neutral {
-    background-color: #FFC107;
-    height: 100%;
-}
-
-.sentiment-distribution .negative {
-    background-color: #FF4757;
-    height: 100%;
+@keyframes skeleton-loading {
+    0% { opacity: 0.6; }
+    50% { opacity: 0.8; }
+    100% { opacity: 0.6; }
 }
 
 /* Sélecteur de période */
 .period-selector {
     display: flex;
-    gap: 0.5rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
 }
 
 .period-btn {
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: none;
+    border: 1px solid rgba(0, 255, 135, 0.3);
     color: rgba(255, 255, 255, 0.6);
-    border-radius: 0.25rem;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.75rem;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.8rem;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
 }
 
-.period-btn.active, .period-btn:hover {
-    background: rgba(0, 255, 135, 0.1);
-    border-color: rgba(0, 255, 135, 0.3);
-    color: #00FF87;
+.period-btn:first-child {
+    border-radius: 0.25rem 0 0 0.25rem;
 }
 
+.period-btn:last-child {
+    border-radius: 0 0.25rem 0.25rem 0;
+}
+
+.period-btn.active {
+    background-color: rgba(0, 255, 135, 0.2);
+    color: var(--accent-color);
+    font-weight: 600;
+}
+
+/* Info de mise à jour */
 .themes-update-info {
-    font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.75rem;
     text-align: right;
+    margin-top: 0.25rem;
 }
 
-/* Animation de chargement */
-.skeleton-line {
-    height: 1.5rem;
-    margin-bottom: 0.75rem;
-    background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
-    background-size: 200% 100%;
-    animation: loading 1.5s infinite;
-    border-radius: 0.25rem;
+/* Bulle d'information améliorée */
+.theme-tooltip {
+    position: absolute;
+    top: calc(100% + 10px);
+    left: 0;
+    width: 100%;
+    padding: 1rem;
+    background-color: rgba(5, 30, 52, 0.95);
+    border: 1px solid rgba(0, 255, 135, 0.3);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), 0 0 15px rgba(0, 255, 135, 0.2);
+    z-index: 100;
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.9);
+    max-width: 350px;
+    min-width: 250px;
 }
 
-@keyframes loading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+/* Amélioration: ajout d'une flèche pour la bulle */
+.theme-tooltip::before {
+    content: '';
+    position: absolute;
+    top: -8px;
+    left: 20px;
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-bottom: 8px solid rgba(0, 255, 135, 0.3);
 }
 
-@keyframes pulse {
-    0% { transform: scale(1); opacity: 0.7; }
-    50% { transform: scale(1.5); opacity: 0.2; }
-    100% { transform: scale(1); opacity: 0; }
+.theme-tooltip::after {
+    content: '';
+    position: absolute;
+    top: -7px;
+    left: 21px;
+    width: 0;
+    height: 0;
+    border-left: 7px solid transparent;
+    border-right: 7px solid transparent;
+    border-bottom: 7px solid rgba(5, 30, 52, 0.95);
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(5px); }
-    to { opacity: 1; transform: translateY(0); }
+/* Afficher la bulle au survol ou au clic */
+.theme-item:hover .theme-tooltip,
+.theme-item.active .theme-tooltip {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+/* Distribution des sentiments dans la bulle */
+.sentiment-distribution {
+    display: flex;
+    height: 6px;
+    width: 100%;
+    margin-top: 0.75rem;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.sentiment-distribution .positive {
+    background-color: #4caf50;
+    height: 100%;
+}
+
+.sentiment-distribution .neutral {
+    background-color: #ff9800;
+    height: 100%;
+}
+
+.sentiment-distribution .negative {
+    background-color: #f44336;
+    height: 100%;
+}
+
+/* Pour les écrans plus petits */
+@media (max-width: 768px) {
+    .theme-card {
+        padding: 1rem;
+    }
+    
+    .theme-tooltip {
+        position: fixed;
+        left: 10%;
+        width: 80%;
+        max-width: none;
+    }
 }
