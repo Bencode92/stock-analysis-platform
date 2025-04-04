@@ -883,18 +883,17 @@ def extract_top_themes(news_data, days=30, max_examples=3):
                         if theme not in themes_details[axe]:
                             themes_details[axe][theme] = {
                                 "count": 0,
-                                "examples": [],
+                                "articles": [],
                                 "keywords": {}
                             }
                         
                         # Incrémenter le compteur dans la structure détaillée
                         themes_details[axe][theme]["count"] += 1
                         
-                        # Ajouter l'exemple (limité à max_examples)
+                        # Ajouter TOUS les titres associés au thème
                         title = article.get("title", "")
-                        if (len(themes_details[axe][theme]["examples"]) < max_examples and 
-                            title not in themes_details[axe][theme]["examples"]):
-                            themes_details[axe][theme]["examples"].append(title)
+                        if title and title not in themes_details[axe][theme]["articles"]:
+                            themes_details[axe][theme]["articles"].append(title)
                         
                         # Analyser les mots-clés spécifiques
                         text = (article.get("content", "") or article.get("text", "") + " " + title).lower()
@@ -935,21 +934,21 @@ def extract_top_themes(news_data, days=30, max_examples=3):
         top_themes = themes_counter[axe].most_common(5)
         top_themes_with_details[axe] = {}
         for theme, count in top_themes:
-            top_themes_with_details[axe][theme] = themes_details[axe].get(theme, {"count": count, "examples": []})
+            top_themes_with_details[axe][theme] = themes_details[axe].get(theme, {"count": count, "articles": []})
     
     return top_themes_with_details
 
 def build_theme_summary(theme_name, theme_data):
     """Génère automatiquement un résumé texte simple pour un thème"""
     count = theme_data.get("count", 0)
-    examples = theme_data.get("examples", [])
+    articles = theme_data.get("articles", [])
     keywords = theme_data.get("keywords", {})
     sentiment_distribution = theme_data.get("sentiment_distribution", {})
 
     keywords_list = sorted(keywords.items(), key=lambda x: x[1]["count"], reverse=True)
     keywords_str = ", ".join([f"{kw} ({info['count']})" for kw, info in keywords_list[:5]])
 
-    if not examples:
+    if not articles:
         return f"Le thème '{theme_name}' est apparu dans {count} articles récemment."
 
     sentiment_info = ""
@@ -967,9 +966,9 @@ def build_theme_summary(theme_name, theme_data):
         f"📰 Le thème **{theme_name}** a été détecté dans **{count} articles** "
         f"au cours de la période, principalement à travers des sujets comme : {keywords_str}."
         f"{sentiment_info} "
-        f"Exemples d'articles : « {examples[0]} »"
-        + (f", « {examples[1]} »" if len(examples) > 1 else "")
-        + (f", « {examples[2]} »" if len(examples) > 2 else "") + "."
+        f"Exemples d'articles : « {articles[0]} »"
+        + (f", « {articles[1]} »" if len(articles) > 1 else "")
+        + (f", « {articles[2]} »" if len(articles) > 2 else "") + "."
     )
 
 def process_news_data(news_sources):
