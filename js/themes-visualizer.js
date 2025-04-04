@@ -59,8 +59,8 @@ const ThemesVisualizer = {
         console.log(`Rendu des thèmes pour la période ${this.activePeriod}:`, themes);
         
         // Rendu pour chaque axe
-        this.renderThemeAxis('macroeconomie', themes.macroeconomie);
-        this.renderThemeAxis('secteurs', themes.secteurs);
+        this.renderThemeAxis('macroeconomie', themes.macroeconomics);
+        this.renderThemeAxis('secteurs', themes.sectors);
         this.renderThemeAxis('regions', themes.regions);
     },
 
