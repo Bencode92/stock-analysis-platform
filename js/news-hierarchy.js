@@ -46,16 +46,16 @@ async function initializeNewsData() {
         
         let data;
         
-        // CORRECTION: Revenir à classified_news.json pour les données hiérarchisées
-        console.log('📊 Chargement des données classifiées depuis classified_news.json');
-        const response = await fetch('data/classified_news.json');
+        // MODIFICATION: Utiliser directement news.json au lieu de classified_news.json
+        console.log('📊 Chargement des données depuis news.json');
+        const response = await fetch('data/news.json');
         
         if (!response.ok) {
             throw new Error('Impossible de charger les données');
         }
         
         data = await response.json();
-        console.log('✅ Données classifiées chargées avec succès');
+        console.log('✅ Données chargées avec succès');
         
         window.NewsSystem.data = data;
         
@@ -86,37 +86,39 @@ function distributeNewsByImportance(newsData) {
         return;
     }
 
-    // Fusionner les actualités US et France
-    const allNews = [...(newsData.us || []), ...(newsData.france || [])];
+    // Fusionner toutes les actualités disponibles dans les différentes régions
+    let allNews = [];
+    
+    // Parcourir toutes les clés qui pourraient contenir des articles (us, france, uk, etc.)
+    Object.keys(newsData).forEach(key => {
+        if (Array.isArray(newsData[key])) {
+            allNews = allNews.concat(newsData[key]);
+        }
+    });
 
-    // S'assurer que tous les champs ML sont présents
+    // S'assurer que tous les champs nécessaires sont présents
     allNews.forEach(news => {
-        // Utiliser les attributs existants ou les calculer si non présents
+        // Déterminer l'impact en se basant sur le contenu
+        if (!news.impact) {
+            news.impact = determineImpact(news);
+        }
+        
+        // Déterminer le sentiment (souvent lié à l'impact)
         if (!news.sentiment) {
-            news.sentiment = news.impact || 'neutral';
+            news.sentiment = news.impact;
         }
         
-        if (typeof news.confidence === 'undefined') {
-            news.confidence = news.feedback_confidence || 0.8;
-        }
-        
+        // Calculer un score d'importance
         if (typeof news.score === 'undefined') {
             news.score = calculateNewsScore(news);
         }
         
-        // CORRECTION: S'assurer que impact est toujours défini correctement
-        if (!news.impact || news.impact === 'general') {
-            // Si pas d'impact ou si 'general', utiliser le sentiment comme base
-            if (news.sentiment === 'positive') {
-                news.impact = 'positive';
-            } else if (news.sentiment === 'negative') {
-                news.impact = 'negative';
-            } else {
-                news.impact = 'neutral';
-            }
+        // Standardiser le champ catégorie
+        if (!news.category) {
+            news.category = (news.category || news.type || 'general').toLowerCase();
         }
         
-        // Utiliser hierarchy si présent, sinon dériver du score
+        // Déterminer la hiérarchie (critical, important, normal) en fonction du score
         if (!news.hierarchy) {
             if (news.score >= 15) {
                 news.hierarchy = 'critical';
@@ -126,9 +128,14 @@ function distributeNewsByImportance(newsData) {
                 news.hierarchy = 'normal';
             }
         }
+        
+        // Ajouter une valeur de confiance par défaut
+        if (typeof news.confidence === 'undefined') {
+            news.confidence = 0.8;
+        }
     });
 
-    // Filtrer les actualités par hiérarchie (préférer hierarchy sur score si disponible)
+    // Filtrer les actualités par hiérarchie
     const criticalNews = allNews.filter(news => 
         news.hierarchy === 'critical' || (!news.hierarchy && news.score >= 15)
     );
@@ -141,9 +148,8 @@ function distributeNewsByImportance(newsData) {
         news.hierarchy === 'normal' || (!news.hierarchy && news.score < 8)
     );
     
-    // AMÉLIORATION: Tri par score ML décroissant à l'intérieur de chaque catégorie
+    // Tri par score décroissant à l'intérieur de chaque catégorie
     criticalNews.sort((a, b) => {
-        // Priorité au score ML, puis à la confiance en cas d'égalité
         if (b.score !== a.score) return b.score - a.score;
         return b.confidence - a.confidence;
     });
@@ -165,12 +171,12 @@ function distributeNewsByImportance(newsData) {
         regular: regularNews
     };
 
-    // NOUVEAU: Logs de débogage pour vérifier les nombres d'actualités par catégorie
+    // Logs de débogage
     console.log(`Actualités critiques: ${criticalNews.length}`);
     console.log(`Actualités importantes: ${importantNews.length}`);
     console.log(`Actualités générales: ${regularNews.length}`);
 
-    // NOUVEAU: Logs de débogage pour vérifier la répartition des sentiments
+    // Logs sur les sentiments 
     const positiveCount = allNews.filter(n => n.sentiment === 'positive').length;
     const negativeCount = allNews.filter(n => n.sentiment === 'negative').length;
     const neutralCount = allNews.filter(n => n.sentiment === 'neutral' || !n.sentiment).length;
@@ -182,6 +188,42 @@ function distributeNewsByImportance(newsData) {
     displayRecentNews(regularNews);
 
     console.log(`Actualités distribuées: ${criticalNews.length} critiques, ${importantNews.length} importantes, ${regularNews.length} régulières`);
+}
+
+/**
+ * Détermine l'impact d'une actualité (positive/negative/neutral)
+ * @param {Object} news - Article d'actualité
+ * @returns {string} - Impact déterminé
+ */
+function determineImpact(news) {
+    const text = `${news.title} ${news.content || ''}`.toLowerCase();
+    
+    // Mots clés positifs
+    const positiveWords = [
+        'hausse', 'croissance', 'augmentation', 'optimiste', 'positif', 'profit', 'gain',
+        'progression', 'amélioration', 'succès', 'record', 'opportunité', 'avantage',
+        'relance', 'rebond', 'surperformance'
+    ];
+    
+    // Mots clés négatifs
+    const negativeWords = [
+        'baisse', 'chute', 'diminution', 'pessimiste', 'négatif', 'perte', 'crise',
+        'effondrement', 'récession', 'ralentissement', 'risque', 'tension', 'conflit',
+        'déficit', 'licenciement', 'inquiétude', 'préoccupation'
+    ];
+    
+    // Compter les occurrences
+    const positiveCount = positiveWords.filter(word => text.includes(word)).length;
+    const negativeCount = negativeWords.filter(word => text.includes(word)).length;
+    
+    // Déterminer l'impact
+    if (positiveCount > negativeCount) {
+        return 'positive';
+    } else if (negativeCount > positiveCount) {
+        return 'negative';
+    } else {
+        return 'neutral';
+    }
 }
 
 /**
@@ -338,19 +380,19 @@ function displayCriticalNews(news) {
             <div class="p-4">
                 <div class="mb-2">
                     <span class="impact-indicator ${impactIndicatorClass}">${impactText}</span>
-                    <span class="impact-indicator">${item.category.toUpperCase() || 'GENERAL'}</span>
+                    <span class="impact-indicator">${(item.category || 'GENERAL').toUpperCase()}</span>
                     <span class="sentiment-indicator ${sentimentClass}">
                         ${sentimentIcon}
                         ${scoreDisplay}
                     </span>
                 </div>
                 <h3 class="text-lg font-bold">${item.title}</h3>
-                <p class="text-sm mt-2">${item.content}</p>
+                <p class="text-sm mt-2">${item.content || ''}</p>
                 <div class="news-meta">
-                    <span class="source">${item.source}</span>
+                    <span class="source">${item.source || 'Financial Data'}</span>
                     <div class="date-time">
                         <i class="fas fa-clock mr-1"></i>
-                        ${item.date} ${item.time}
+                        ${item.date || ''} ${item.time || ''}
                     </div>
                     ${item.url ? '<div class="read-more"><i class="fas fa-external-link-alt mr-1"></i> Lire l\'article</div>' : ''}
                 </div>
@@ -448,19 +490,19 @@ function displayImportantNews(news) {
             <div class="p-4">
                 <div class="mb-2">
                     <span class="impact-indicator ${impactIndicatorClass}">${impactText}</span>
-                    <span class="impact-indicator">${item.category.toUpperCase() || 'GENERAL'}</span>
+                    <span class="impact-indicator">${(item.category || 'GENERAL').toUpperCase()}</span>
                     <span class="sentiment-indicator ${sentimentClass}">
                         ${sentimentIcon}
                         ${scoreDisplay}
                     </span>
                 </div>
                 <h3 class="text-md font-semibold">${item.title}</h3>
-                <p class="text-sm mt-2">${item.content}</p>
+                <p class="text-sm mt-2">${item.content || ''}</p>
                 <div class="news-meta">
-                    <span class="source">${item.source}</span>
+                    <span class="source">${item.source || 'Financial Data'}</span>
                     <div class="date-time">
                         <i class="fas fa-clock mr-1"></i>
-                        ${item.date} ${item.time}
+                        ${item.date || ''} ${item.time || ''}
                     </div>
                     ${item.url ? '<div class="read-more"><i class="fas fa-external-link-alt mr-1"></i> Lire l\'article</div>' : ''}
                 </div>
@@ -570,7 +612,7 @@ function displayRecentNews(news) {
             <div class="p-4">
                 <div class="mb-2">
                     <span class="impact-indicator ${impactIndicatorClass}">${impactText}</span>
-                    <span class="impact-indicator">${item.category.toUpperCase() || 'GENERAL'}</span>
+                    <span class="impact-indicator">${(item.category || 'GENERAL').toUpperCase()}</span>
                     <span class="sentiment-indicator ${sentimentClass}">
                         ${sentimentIcon}
                         ${scoreDisplay}
