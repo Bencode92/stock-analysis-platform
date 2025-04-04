@@ -1,172 +1,218 @@
 /**
- * Gestionnaire de filtres d'événements unifié
- * Combine les fonctionnalités de events-date-filter.js et events-filter.js
- * avec la logique améliorée pour afficher le reste de la semaine
+ * Gestionnaire unifié des filtres d'événements
+ * Gère la filtration des événements par date et catégorie
  */
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Référence aux conteneurs et boutons (support multiples IDs pour compatibilité)
-    const eventsContainer = document.getElementById('events-container');
-    const todayBtn = document.getElementById('today-filter') || document.getElementById('today-btn');
-    const weekBtn = document.getElementById('week-filter') || document.getElementById('week-btn');
+const UnifiedEventFilters = {
+    // Configuration
+    config: {
+        dateFilters: {
+            selector: '.filter-button',
+            activeClass: 'active',
+            todaySelector: '#today-filter',
+            weekSelector: '#week-filter'
+        },
+        categoryFilters: {
+            selector: '#event-category-filters button',
+            activeClass: 'filter-active',
+            allSelector: '[data-category="all"]'
+        },
+        eventContainers: {
+            main: '#events-container',
+            itemClass: '.event-card'
+        }
+    },
     
-    // Initialiser l'état des boutons si présents
-    if (todayBtn && weekBtn) {
-        todayBtn.classList.add('filter-active', 'active');
-        todayBtn.classList.add('text-green-400', 'border-green-400', 'border-opacity-30');
-        todayBtn.classList.remove('text-gray-400', 'border-gray-700');
-        
-        weekBtn.classList.remove('filter-active', 'active');
-        weekBtn.classList.remove('text-green-400', 'border-green-400', 'border-opacity-30');
-        weekBtn.classList.add('text-gray-400', 'border-gray-700');
-    }
+    // État actuel des filtres
+    state: {
+        dateFilter: 'today', // 'today' ou 'week'
+        categoryFilter: 'all' // 'all', 'US', 'economic', 'ipo', 'm&a', etc.
+    },
     
-    /**
-     * Fonction utilitaire pour analyser les dates au format DD/MM/YYYY
-     */
-    function parseDate(dateStr) {
-        if (!dateStr) return null;
-        
-        const parts = dateStr.split('/');
-        if (parts.length !== 3) return null;
-        
-        // Format: DD/MM/YYYY
-        return new Date(parts[2], parts[1] - 1, parts[0]);
-    }
+    // Initialisation
+    init: function() {
+        this.setupEventListeners();
+        // Appliquer les filtres initiaux
+        this.applyFilters();
+    },
     
-    /**
-     * Fonction de filtrage principale
-     * @param {string} period - 'today' ou 'week'
-     */
-    function filterEventsByPeriod(period) {
-        // Date d'aujourd'hui à minuit pour comparaison précise
-        const today = new Date();
-        const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    // Configuration des écouteurs d'événements
+    setupEventListeners: function() {
+        // Écouteurs pour les filtres de date
+        const dateFilters = document.querySelectorAll(this.config.dateFilters.selector);
+        dateFilters.forEach(filter => {
+            filter.addEventListener('click', (e) => {
+                // Déterminer quel filtre a été cliqué
+                if (e.currentTarget.id === 'today-filter') {
+                    this.setDateFilter('today');
+                } else if (e.currentTarget.id === 'week-filter') {
+                    this.setDateFilter('week');
+                }
+            });
+        });
         
-        // Compteur pour savoir si des événements sont visibles
-        let visibleCount = 0;
-        
-        // Récupérer tous les événements
-        const eventElements = document.querySelectorAll('.event-card');
-        
-        // Traiter chaque événement
-        eventElements.forEach(element => {
-            // Récupérer la date de l'événement (attribut data-date)
-            const eventDate = element.getAttribute('data-date') || element.dataset.date;
-            const eventDateObj = parseDate(eventDate);
+        // Écouteurs pour les filtres de catégorie
+        const categoryFilters = document.querySelectorAll(this.config.categoryFilters.selector);
+        categoryFilters.forEach(filter => {
+            filter.addEventListener('click', (e) => {
+                const category = e.currentTarget.dataset.category;
+                this.setCategoryFilter(category);
+            });
+        });
+    },
+    
+    // Définir le filtre de date
+    setDateFilter: function(filterType) {
+        if (filterType !== this.state.dateFilter) {
+            this.state.dateFilter = filterType;
             
-            // Ignorer les événements sans date valide
-            if (!eventDateObj) {
-                element.style.display = 'none';
-                return;
+            // Mettre à jour l'UI
+            this.updateDateFilterUI();
+            
+            // Appliquer les filtres
+            this.applyFilters();
+        }
+    },
+    
+    // Définir le filtre de catégorie
+    setCategoryFilter: function(category) {
+        if (category !== this.state.categoryFilter) {
+            this.state.categoryFilter = category;
+            
+            // Mettre à jour l'UI
+            this.updateCategoryFilterUI();
+            
+            // Appliquer les filtres
+            this.applyFilters();
+        }
+    },
+    
+    // Mettre à jour l'interface utilisateur pour les filtres de date
+    updateDateFilterUI: function() {
+        const todayFilter = document.querySelector(this.config.dateFilters.todaySelector);
+        const weekFilter = document.querySelector(this.config.dateFilters.weekSelector);
+        
+        if (todayFilter && weekFilter) {
+            // Réinitialiser les classes
+            todayFilter.classList.remove(this.config.dateFilters.activeClass);
+            weekFilter.classList.remove(this.config.dateFilters.activeClass);
+            
+            // Ajouter la classe active au filtre sélectionné
+            if (this.state.dateFilter === 'today') {
+                todayFilter.classList.add(this.config.dateFilters.activeClass);
+                todayFilter.classList.remove('text-gray-400');
+                todayFilter.classList.add('text-green-400');
+                weekFilter.classList.remove('text-green-400');
+                weekFilter.classList.add('text-gray-400');
+            } else {
+                weekFilter.classList.add(this.config.dateFilters.activeClass);
+                weekFilter.classList.remove('text-gray-400');
+                weekFilter.classList.add('text-green-400');
+                todayFilter.classList.remove('text-green-400');
+                todayFilter.classList.add('text-gray-400');
             }
+        }
+    },
+    
+    // Mettre à jour l'interface utilisateur pour les filtres de catégorie
+    updateCategoryFilterUI: function() {
+        const categoryFilters = document.querySelectorAll(this.config.categoryFilters.selector);
+        
+        categoryFilters.forEach(filter => {
+            // Réinitialiser les classes
+            filter.classList.remove(this.config.categoryFilters.activeClass);
+            filter.classList.remove('bg-green-400', 'bg-opacity-10', 'text-green-400', 'border-green-400', 'border-opacity-30');
+            filter.classList.add('bg-transparent', 'text-gray-400', 'border-gray-700');
             
-            if (period === 'today') {
-                // Filtre "Aujourd'hui": afficher uniquement les événements d'aujourd'hui
-                element.style.display = (eventDateObj.toDateString() === todayMidnight.toDateString()) ? 'flex' : 'none';
-            } else if (period === 'week') {
-                // Filtre "Cette semaine": afficher les événements entre demain et dimanche
-                
-                // Calculer la date de demain à minuit
-                const tomorrowMidnight = new Date(todayMidnight);
-                tomorrowMidnight.setDate(todayMidnight.getDate() + 1);
-                
-                // Trouver le prochain dimanche (fin de la semaine)
-                const dayOfWeek = today.getDay(); // 0 (dimanche) à 6 (samedi)
-                const daysUntilSunday = dayOfWeek === 0 ? 7 : 7 - dayOfWeek; // Si on est dimanche, aller au prochain dimanche
-                const endOfWeek = new Date(todayMidnight);
-                endOfWeek.setDate(todayMidnight.getDate() + daysUntilSunday);
-                
-                // Afficher uniquement les événements entre demain et dimanche (inclus)
-                element.style.display = (eventDateObj >= tomorrowMidnight && eventDateObj < endOfWeek) ? 'flex' : 'none';
+            // Ajouter la classe active au filtre sélectionné
+            if (filter.dataset.category === this.state.categoryFilter) {
+                filter.classList.add(this.config.categoryFilters.activeClass);
+                filter.classList.remove('bg-transparent', 'text-gray-400', 'border-gray-700');
+                filter.classList.add('bg-green-400', 'bg-opacity-10', 'text-green-400', 'border-green-400', 'border-opacity-30');
             }
+        });
+    },
+    
+    // Appliquer les filtres aux événements
+    applyFilters: function() {
+        const eventsContainer = document.querySelector(this.config.eventContainers.main);
+        if (!eventsContainer) return;
+        
+        const events = eventsContainer.querySelectorAll(this.config.eventContainers.itemClass);
+        
+        events.forEach(event => {
+            const matchesDate = this.matchesDateFilter(event);
+            const matchesCategory = this.matchesCategoryFilter(event);
             
-            // Incrémenter le compteur si l'événement est visible
-            if (element.style.display !== 'none') {
-                visibleCount++;
+            // Afficher uniquement si les deux filtres correspondent
+            if (matchesDate && matchesCategory) {
+                event.style.display = '';
+                event.classList.add('animate-fadeIn');
+            } else {
+                event.style.display = 'none';
+                event.classList.remove('animate-fadeIn');
             }
         });
         
-        // Gérer l'affichage du message "Aucun événement..."
-        handleNoEventsMessage(visibleCount, period);
-    }
+        // Vérifier s'il y a des événements visibles
+        this.checkForEmptyResults(eventsContainer);
+    },
     
-    /**
-     * Gère l'affichage du message quand aucun événement n'est présent
-     */
-    function handleNoEventsMessage(visibleCount, period) {
-        // Chercher un message existant
-        let noEventsMessage = document.querySelector('.no-events-message') || 
-                             document.getElementById('no-events-message');
+    // Vérifier si un événement correspond au filtre de date
+    matchesDateFilter: function(eventElement) {
+        if (this.state.dateFilter === 'today') {
+            // Vérifier si l'événement est pour aujourd'hui
+            return eventElement.classList.contains('event-today');
+        } else if (this.state.dateFilter === 'week') {
+            // Pour la semaine, tous les événements sont inclus
+            return true;
+        }
+        return true; // Par défaut, accepter tous les événements
+    },
+    
+    // Vérifier si un événement correspond au filtre de catégorie
+    matchesCategoryFilter: function(eventElement) {
+        if (this.state.categoryFilter === 'all') {
+            return true; // Accepter toutes les catégories
+        }
         
-        if (visibleCount === 0) {
-            // Aucun événement visible - afficher un message
-            const messageText = period === 'today' 
-                ? "Aucun événement prévu aujourd'hui" 
-                : "Aucun événement prévu pour le reste de la semaine";
-            
-            if (noEventsMessage) {
-                // Mettre à jour un message existant
-                noEventsMessage.textContent = messageText;
-                noEventsMessage.style.display = 'block';
-            } else {
-                // Créer un nouveau message
-                noEventsMessage = document.createElement('p');
-                noEventsMessage.id = 'no-events-message';
-                noEventsMessage.className = 'no-events-message text-center text-gray-400 py-6 col-span-3';
-                noEventsMessage.textContent = messageText;
-                
-                // Ajouter au conteneur d'événements
-                if (eventsContainer) {
-                    eventsContainer.appendChild(noEventsMessage);
-                }
+        // Vérifier si l'événement a la catégorie recherchée
+        return eventElement.dataset.category === this.state.categoryFilter;
+    },
+    
+    // Vérifier s'il n'y a pas de résultats et afficher un message
+    checkForEmptyResults: function(container) {
+        let visibleEvents = 0;
+        const events = container.querySelectorAll(this.config.eventContainers.itemClass);
+        
+        events.forEach(event => {
+            if (event.style.display !== 'none') {
+                visibleEvents++;
             }
-        } else if (noEventsMessage) {
-            // Des événements sont visibles - cacher le message
-            noEventsMessage.style.display = 'none';
+        });
+        
+        // S'il n'y a pas d'événements visibles, afficher un message
+        let emptyMessage = container.querySelector('.no-events-message');
+        
+        if (visibleEvents === 0) {
+            if (!emptyMessage) {
+                emptyMessage = document.createElement('div');
+                emptyMessage.className = 'no-events-message col-span-3 text-center py-6';
+                emptyMessage.innerHTML = `
+                    <i class="fas fa-calendar-times text-gray-400 text-4xl mb-2"></i>
+                    <p class="text-gray-400">Aucun événement ne correspond aux filtres sélectionnés</p>
+                `;
+                container.appendChild(emptyMessage);
+            }
+        } else {
+            // Supprimer le message s'il existe
+            if (emptyMessage) {
+                emptyMessage.remove();
+            }
         }
     }
-    
-    // Configuration des gestionnaires d'événements pour les boutons
-    if (todayBtn) {
-        todayBtn.addEventListener('click', function() {
-            // Mise à jour visuelle
-            todayBtn.classList.add('filter-active', 'active');
-            todayBtn.classList.add('text-green-400', 'border-green-400', 'border-opacity-30');
-            todayBtn.classList.remove('text-gray-400', 'border-gray-700');
-            
-            if (weekBtn) {
-                weekBtn.classList.remove('filter-active', 'active');
-                weekBtn.classList.remove('text-green-400', 'border-green-400', 'border-opacity-30');
-                weekBtn.classList.add('text-gray-400', 'border-gray-700');
-            }
-            
-            // Appliquer le filtre
-            filterEventsByPeriod('today');
-        });
-    }
-    
-    if (weekBtn) {
-        weekBtn.addEventListener('click', function() {
-            // Mise à jour visuelle
-            weekBtn.classList.add('filter-active', 'active');
-            weekBtn.classList.add('text-green-400', 'border-green-400', 'border-opacity-30');
-            weekBtn.classList.remove('text-gray-400', 'border-gray-700');
-            
-            if (todayBtn) {
-                todayBtn.classList.remove('filter-active', 'active');
-                todayBtn.classList.remove('text-green-400', 'border-green-400', 'border-opacity-30');
-                todayBtn.classList.add('text-gray-400', 'border-gray-700');
-            }
-            
-            // Appliquer le filtre
-            filterEventsByPeriod('week');
-        });
-    }
-    
-    // Appliquer le filtre par défaut au chargement de la page
-    filterEventsByPeriod('today');
-    
-    // Pour debug et tests
-    console.log('✅ Gestionnaire de filtres d\'événements unifié chargé');
+};
+
+// Initialisation au chargement du DOM
+document.addEventListener('DOMContentLoaded', function() {
+    UnifiedEventFilters.init();
 });
