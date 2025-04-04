@@ -61,7 +61,7 @@ CONFIG = {
     },
     # Nouvelle configuration pour limiter les articles crypto
     "category_limits": {
-        "crypto": 10  # Maximum 10 articles crypto au total
+        "crypto": 8  # Maximum 8 articles crypto au total (réduit de 10)
     },
     "max_total_articles": 150,  # Maximum total number of articles to keep
     "days_ahead": 7,
@@ -631,30 +631,39 @@ def compute_importance_score(article, category):
     # Combination of title and text for analysis
     content = f"{article.get('title', '')} {article.get('content', '')}".lower()
     
-    # 1. Score based on high importance keywords (max 40 points)
+    # 1. Score based on high importance keywords (max 40 points, reduced for crypto)
     high_keywords = HIGH_IMPORTANCE_KEYWORDS.get(category, [])
     matched_high_keywords = set()
     for keyword in high_keywords:
         if keyword in content:
             matched_high_keywords.add(keyword)
     
-    high_keyword_score = min(40, len(matched_high_keywords) * 5)
+    # Réduit le score maximum pour la crypto
+    if category == "crypto_news":
+        high_keyword_score = min(20, len(matched_high_keywords) * 2)
+    else:
+        high_keyword_score = min(40, len(matched_high_keywords) * 5)
     
-    # 2. Score based on medium importance keywords (max 20 points)
+    # 2. Score based on medium importance keywords (max 20 points, reduced for crypto)
     medium_keywords = MEDIUM_IMPORTANCE_KEYWORDS.get(category, [])
     matched_medium_keywords = set()
     for keyword in medium_keywords:
         if keyword in content:
             matched_medium_keywords.add(keyword)
     
-    medium_keyword_score = min(20, len(matched_medium_keywords) * 2.5)
+    # Réduit le score maximum pour la crypto
+    if category == "crypto_news":
+        medium_keyword_score = min(10, len(matched_medium_keywords) * 1.5)
+    else:
+        medium_keyword_score = min(20, len(matched_medium_keywords) * 2.5)
     
-    # 3. Score based on source (max 20 points)
+    # 3. Score based on source (max 20 points, reduced for crypto)
     source_score = 0
     article_source = article.get("source", "").lower()
     for important_source in IMPORTANT_SOURCES.get(category, []):
         if important_source.lower() in article_source:
-            source_score = 20
+            # Réduit le score pour les sources crypto
+            source_score = 10 if category == "crypto_news" else 20
             break
     
     # 4. Score based on title and content length (max 10 points)
@@ -664,21 +673,33 @@ def compute_importance_score(article, category):
     title_score = min(5, title_length / 20)  # 5 points max for a title of 100 characters or more
     text_score = min(5, text_length / 500)   # 5 points max for a text of 2500 characters or more
     
-    # 5. Score based on impact (max 10 points)
-    impact_score = 0
+    # 5. Score based on impact (max 10 points, reduced for crypto)
     impact = article.get("impact", "neutral")
-    if impact == "negative":
-        impact_score = 10  # Negative news often has more impact
-    elif impact == "positive":
-        impact_score = 8
+    
+    if category == "crypto_news":
+        if impact == "negative":
+            impact_score = 5  # Réduit par rapport aux 10 pour les autres catégories
+        elif impact == "positive":
+            impact_score = 4  # Réduit par rapport aux 8 pour les autres catégories
+        else:
+            impact_score = 3  # Réduit par rapport aux 5 pour les autres catégories
     else:
-        impact_score = 5
+        if impact == "negative":
+            impact_score = 10  # Negative news often has more impact
+        elif impact == "positive":
+            impact_score = 8
+        else:
+            impact_score = 5
     
     # Calculate total score
     total_score = high_keyword_score + medium_keyword_score + source_score + title_score + text_score + impact_score
     
     # Normalize between 0 and 100
     normalized_score = min(100, total_score)
+    
+    # Appliquer une pénalité globale pour la crypto
+    if category == "crypto_news":
+        normalized_score = normalized_score * 0.9  # 10% de pénalité
     
     return normalized_score
 
@@ -1230,8 +1251,8 @@ def generate_themes_json(news_data):
     # Extract dominant themes for each period
     themes_data = {}
     for period, days in periods.items():
-        # MODIFICATION: Exclure crypto des thèmes dominants sauf pour weekly
-        exclude_themes = {"sectors": ["crypto"]} if period != "weekly" else None
+        # MODIFICATION: Exclure crypto des thèmes dominants pour toutes les périodes
+        exclude_themes = {"sectors": ["crypto"]}
         themes_data[period] = extract_top_themes(news_data, days=days, exclude_themes=exclude_themes)
     
     # Add automated GPT-like summary to each theme
