@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# !/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 """
@@ -98,17 +98,25 @@ THEMES_DOMINANTS = {
     },
     "secteurs": {
         "technologie": ["ai", "cloud", "cyber", "tech", "semiconducteur", "digital", "data"],
-        "energie": ["pétrole", "gas", "uranium", "énergie", "baril", "oil", "renouvelable"],
-        "defense": ["défense", "militaire", "armes", "nato", "réarmement"],
+        "énergie": ["pétrole", "gas", "uranium", "énergie", "baril", "oil", "renouvelable"],
+        "défense": ["défense", "militaire", "armes", "nato", "réarmement"],
         "finance": ["banques", "assurances", "taux", "obligations", "treasury"],
         "immobilier": ["real estate", "immobilier", "epra", "infrastructure"],
-        "consommation": ["retail", "consommation", "luxe", "achat", "revenu disponible"]
+        "consommation": ["retail", "consommation", "luxe", "achat", "revenu disponible"],
+        "santé": ["santé", "biotech", "pharma", "vaccin", "fda", "clinical trial", "médicament"],
+        "industrie": ["industrie", "manufacturing", "usine", "production", "automation", "supply chain"],
+        "transport": ["logistique", "transport", "shipping", "camion", "port", "airline"],
+        "agriculture": ["wheat", "corn", "cacao", "agriculture", "engrais", "fertilizer", "commodities"]
     },
     "regions": {
-        "europe": ["europe", "france", "bce", "allemagne", "italie", "zone euro"],
+        "europe": ["europe", "france", "bce", "allemagne", "italie", "zone euro", "ue", "union européenne"],
         "usa": ["usa", "fed", "s&p", "nasdaq", "dow jones", "états-unis"],
         "asie": ["chine", "japon", "corée", "inde", "asie", "emerging asia"],
         "latam": ["brésil", "mexique", "latam", "amérique latine"],
+        "canada": ["canada", "ottawa", "toronto", "quebec"],
+        "australie": ["australie", "sydney", "aussie", "asx"],
+        "afrique": ["nigeria", "afrique", "south africa", "johannesburg", "kenya", "lagos"],
+        "blocs": ["asean", "ocde", "brics", "opep", "nato", "g7", "g20"],
         "global": ["monde", "acwi", "international", "global", "tous marchés"]
     }
 }
