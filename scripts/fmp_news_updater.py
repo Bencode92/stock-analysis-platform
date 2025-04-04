@@ -57,10 +57,7 @@ CONFIG = {
         "china": 15,
         "japan": 10,
         "emerging_markets": 15,
-        "global": 20,
-        "canada": 10,
-        "australie": 10,
-        "afrique": 10
+        "global": 20
     },
     "max_total_articles": 150,  # Nombre maximum total d'articles à conserver
     "days_ahead": 7,
@@ -101,25 +98,17 @@ THEMES_DOMINANTS = {
     },
     "secteurs": {
         "technologie": ["ai", "cloud", "cyber", "tech", "semiconducteur", "digital", "data"],
-        "énergie": ["pétrole", "gas", "uranium", "énergie", "baril", "oil", "renouvelable"],
-        "défense": ["défense", "militaire", "armes", "nato", "réarmement"],
+        "energie": ["pétrole", "gas", "uranium", "énergie", "baril", "oil", "renouvelable"],
+        "defense": ["défense", "militaire", "armes", "nato", "réarmement"],
         "finance": ["banques", "assurances", "taux", "obligations", "treasury"],
         "immobilier": ["real estate", "immobilier", "epra", "infrastructure"],
-        "consommation": ["retail", "consommation", "luxe", "achat", "revenu disponible"],
-        "santé": ["santé", "biotech", "pharma", "vaccin", "fda", "clinical trial", "médicament"],
-        "industrie": ["industrie", "manufacturing", "usine", "production", "automation", "supply chain"],
-        "transport": ["logistique", "transport", "shipping", "camion", "port", "airline"],
-        "agriculture": ["wheat", "corn", "cacao", "agriculture", "engrais", "fertilizer", "commodities"]
+        "consommation": ["retail", "consommation", "luxe", "achat", "revenu disponible"]
     },
     "regions": {
-        "europe": ["europe", "france", "bce", "allemagne", "italie", "zone euro", "ue", "union européenne"],
+        "europe": ["europe", "france", "bce", "allemagne", "italie", "zone euro"],
         "usa": ["usa", "fed", "s&p", "nasdaq", "dow jones", "états-unis"],
         "asie": ["chine", "japon", "corée", "inde", "asie", "emerging asia"],
         "latam": ["brésil", "mexique", "latam", "amérique latine"],
-        "canada": ["canada", "ottawa", "toronto", "quebec"],
-        "australie": ["australie", "sydney", "aussie", "asx"],
-        "afrique": ["nigeria", "afrique", "south africa", "johannesburg", "kenya", "lagos"],
-        "blocs": ["asean", "ocde", "brics", "opep", "nato", "g7", "g20"],
         "global": ["monde", "acwi", "international", "global", "tous marchés"]
     }
 }
@@ -457,10 +446,6 @@ def determine_country(article):
             return "china"
         elif any(suffix in str(symbol) for suffix in [".T", ".JP"]):
             return "japan"
-        elif any(suffix in str(symbol) for suffix in [".TO", ".V"]):
-            return "canada"
-        elif any(suffix in str(symbol) for suffix in [".AX"]):
-            return "australie"
     
     # Analyse du texte pour une détection plus précise
     text = (article.get("text", "") + " " + article.get("title", "")).lower()
@@ -486,18 +471,6 @@ def determine_country(article):
         "japan": [
             "japan", "japanese", "tokyo", "nikkei", "yen", "bank of japan", "boj", "abenomics", 
             "japon", "japonais", "kishida", "abe", "jpx"
-        ],
-        "canada": [
-            "canada", "canadian", "toronto", "vancouver", "montreal", "ottawa", "tsx", 
-            "bank of canada", "quebec", "alberta", "ontario", "canadien", "dollar canadien"
-        ],
-        "australie": [
-            "australia", "australian", "sydney", "melbourne", "rba", "aussie", "asx", 
-            "reserve bank of australia", "australien", "dollar australien"
-        ],
-        "afrique": [
-            "africa", "african", "south africa", "nigeria", "kenya", "morocco", "egypt", 
-            "johannesburg", "cairo", "african market", "lagos"
         ],
         "emerging_markets": [
             "emerging markets", "emerging economies", "brics", "brazil", "russia", "india", 
@@ -838,7 +811,7 @@ def calculate_event_score(event):
     
     return score
 
-def extract_top_themes(news_data, days=30, max_examples=3, min_score=60):
+def extract_top_themes(news_data, days=30, max_examples=3):
     """Analyse les thèmes dominants sur une période donnée (ex: 30 jours) avec analyse détaillée des mots-clés"""
     cutoff_date = datetime.now() - timedelta(days=days)
     
@@ -941,29 +914,20 @@ def extract_top_themes(news_data, days=30, max_examples=3, min_score=60):
     
     logger.info(f"Analyse des thèmes: {processed_articles}/{total_articles} articles utilisés pour la période de {days} jours")
     
-    # Ajouter les stats de sentiment dans les détails et calculer le score moyen
+    # Ajouter les stats de sentiment dans les détails
     for axe, theme_dict in theme_articles.items():
         for theme, articles in theme_dict.items():
             sentiment_stats = compute_sentiment_distribution(articles)
-            avg_score = round(sum(a.get("importance_score", 0) for a in articles) / len(articles), 2)
-            
             if theme in themes_details[axe]:
                 themes_details[axe][theme]["sentiment_distribution"] = sentiment_stats
-                themes_details[axe][theme]["average_score"] = avg_score
     
-    # Obtenir les 5 thèmes principaux avec les meilleurs scores moyens
+    # Obtenir les 5 thèmes principaux pour chaque axe avec leurs détails
     top_themes_with_details = {}
     for axe in themes_counter:
-        # Filtrer les thèmes avec suffisamment de mentions
-        filtered_themes = {
-            theme: details for theme, details in themes_details[axe].items()
-            if details.get("count", 0) >= 2 and details.get("average_score", 0) >= min_score
-        }
-
-        # Trier par score moyen
-        top_scored_themes = sorted(filtered_themes.items(), key=lambda x: x[1]["average_score"], reverse=True)[:5]
-        
-        top_themes_with_details[axe] = {theme: data for theme, data in top_scored_themes}
+        top_themes = themes_counter[axe].most_common(5)
+        top_themes_with_details[axe] = {}
+        for theme, count in top_themes:
+            top_themes_with_details[axe][theme] = themes_details[axe].get(theme, {"count": count, "examples": []})
     
     return top_themes_with_details
 
@@ -973,7 +937,6 @@ def build_theme_summary(theme_name, theme_data):
     examples = theme_data.get("examples", [])
     keywords = theme_data.get("keywords", {})
     sentiment_distribution = theme_data.get("sentiment_distribution", {})
-    avg_score = theme_data.get("average_score", 0)
 
     keywords_list = sorted(keywords.items(), key=lambda x: x[1]["count"], reverse=True)
     keywords_str = ", ".join([f"{kw} ({info['count']})" for kw, info in keywords_list[:5]])
@@ -992,12 +955,10 @@ def build_theme_summary(theme_name, theme_data):
         else:
             sentiment_info = f" Le sentiment est mitigé ({pos}% positif, {neg}% négatif)."
 
-    score_info = f" Score moyen d'importance: {avg_score}/100."
-
     return (
         f"📰 Le thème **{theme_name}** a été détecté dans **{count} articles** "
         f"au cours de la période, principalement à travers des sujets comme : {keywords_str}."
-        f"{sentiment_info}{score_info} "
+        f"{sentiment_info} "
         f"Exemples d'articles : « {examples[0]} »"
         + (f", « {examples[1]} »" if len(examples) > 1 else "")
         + (f", « {examples[2]} »" if len(examples) > 2 else "") + "."
@@ -1310,7 +1271,7 @@ def main():
         for axe, themes in top_themes.items():
             logger.info(f"  {axe.capitalize()}:")
             for theme, details in themes.items():
-                logger.info(f"    {theme} ({details['count']}) - Score moyen: {details.get('average_score', 0)}")
+                logger.info(f"    {theme} ({details['count']})")
                 # Afficher la distribution des sentiments si disponible
                 if "sentiment_distribution" in details:
                     sentiment = details["sentiment_distribution"]
