@@ -928,10 +928,11 @@ def extract_top_themes(news_data, days=30, max_examples=3):
             if theme in themes_details[axe]:
                 themes_details[axe][theme]["sentiment_distribution"] = sentiment_stats
     
-    # Obtenir les 5 thèmes principaux pour chaque axe avec leurs détails
+    # Obtenir les thèmes principaux pour chaque axe avec leurs détails
+    # CORRECTION: Utiliser most_common(15) au lieu de most_common(5) pour afficher plus de thèmes
     top_themes_with_details = {}
     for axe in themes_counter:
-        top_themes = themes_counter[axe].most_common(5)
+        top_themes = themes_counter[axe].most_common(15)  # Affiche les 15 premiers thèmes au lieu de 5
         top_themes_with_details[axe] = {}
         for theme, count in top_themes:
             top_themes_with_details[axe][theme] = themes_details[axe].get(theme, {"count": count, "articles": []})
