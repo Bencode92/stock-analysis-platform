@@ -110,6 +110,9 @@ const ThemesVisualizer = {
             const sentiment = this.getDominantSentiment(sentimentDist);
             const summary = isFullObject && 'gpt_summary' in themeData ? themeData.gpt_summary : null;
             
+            // Hack pour garantir que articles existe
+            const articles = isFullObject && Array.isArray(themeData.articles) ? themeData.articles : [];
+            
             // Créer l'élément de la liste
             const themeElement = document.createElement('li');
             themeElement.className = 'theme-item';
