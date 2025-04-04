@@ -51,8 +51,15 @@ CONFIG = {
     },
     "output_limits": {
         "us": 30,
-        "france": 20
+        "france": 20,
+        "uk": 15,
+        "germany": 15,
+        "china": 15,
+        "japan": 10,
+        "emerging_markets": 15,
+        "global": 20
     },
+    "max_total_articles": 150,  # Nombre maximum total d'articles à conserver
     "days_ahead": 7,
     "days_back": 30
 }
@@ -106,12 +113,197 @@ THEMES_DOMINANTS = {
     }
 }
 
-# Liste des sources importantes
-IMPORTANT_SOURCES = [
-    "Bloomberg", "Reuters", "WSJ", "FT", "CNBC", "Financial Times", "Wall Street Journal", 
-    "Les Échos", "La Tribune", "Le Figaro", "Le Monde", "Le Revenu", "BFM Business", 
-    "L'AGEFI", "Investir", "Capital"
-]
+# Sources importantes par catégorie (pour le calcul du score)
+IMPORTANT_SOURCES = {
+    "general_news": [
+        "Bloomberg", "Reuters", "Financial Times", "Wall Street Journal", "CNBC", 
+        "BBC", "New York Times", "The Economist", "Les Echos", "Le Monde", "La Tribune"
+    ],
+    "stock_news": [
+        "Bloomberg", "Reuters", "CNBC", "MarketWatch", "Seeking Alpha", "Barron's", 
+        "Investor's Business Daily", "Motley Fool", "Morningstar", "Yahoo Finance"
+    ],
+    "crypto_news": [
+        "CoinDesk", "Cointelegraph", "The Block", "Decrypt", "Bitcoin Magazine", 
+        "CryptoSlate", "Bitcoinist", "CoinMarketCap", "Crypto Briefing"
+    ],
+    "press_releases": [
+        "PR Newswire", "Business Wire", "Globe Newswire", "MarketWatch", "Yahoo Finance",
+        "Company Website", "SEC Filing", "Investor Relations"
+    ]
+}
+
+# Mots-clés importants par catégorie (pour le calcul du score)
+HIGH_IMPORTANCE_KEYWORDS = {
+    "general_news": [
+        "recession", "inflation", "fed", "central bank", "interest rate", "gdp", 
+        "unemployment", "market crash", "crisis", "economic growth", "federal reserve",
+        "treasury", "ecb", "bce", "default", "geopolitical", "war", "conflict"
+    ],
+    "stock_news": [
+        "earnings", "beat", "miss", "guidance", "outlook", "upgrade", "downgrade", 
+        "acquisition", "merger", "ipo", "buyback", "dividend", "profit", "loss",
+        "revenue", "forecast", "ceo", "executive", "lawsuit", "regulation"
+    ],
+    "crypto_news": [
+        "bitcoin", "ethereum", "blockchain", "altcoin", "defi", "nft", "regulation", 
+        "adoption", "halving", "mining", "exchange", "wallet", "staking", "sec", 
+        "token", "smart contract", "dao", "hack", "security", "volatile"
+    ],
+    "press_releases": [
+        "announce", "launch", "partnership", "collaboration", "expansion", 
+        "appointment", "award", "contract", "patent", "breakthrough", "milestone", 
+        "revenue", "financial results", "quarterly", "annual report"
+    ]
+}
+
+# Mots-clés d'importance moyenne par catégorie
+MEDIUM_IMPORTANCE_KEYWORDS = {
+    "general_news": [
+        "policy", "regulation", "trade", "budget", "deficit", "surplus", "consumer", 
+        "confidence", "retail", "manufacturing", "services", "housing", "real estate"
+    ],
+    "stock_news": [
+        "stock", "shares", "investor", "market", "trading", "performance", "index", 
+        "sector", "industry", "competition", "strategy", "launch", "product", "service"
+    ],
+    "crypto_news": [
+        "crypto", "digital asset", "coin", "market cap", "investment", "analyst", 
+        "prediction", "whale", "memecoin", "correction", "rally", "bullish", "bearish"
+    ],
+    "press_releases": [
+        "report", "update", "invest", "development", "growth", "statement", 
+        "comment", "response", "release", "event", "conference", "meeting"
+    ]
+}
+
+def compute_importance_score(article, category):
+    """
+    Calcule un score d'importance pour un article en fonction de sa catégorie et de son contenu.
+    
+    Args:
+        article (dict): L'article contenant title, content, source, etc.
+        category (str): La catégorie de l'article (general_news, stock_news, crypto_news, press_releases)
+    
+    Returns:
+        float: Score d'importance entre 0 et 100
+    """
+    score = 0
+    
+    # Combinaison du titre et du texte pour analyse
+    content = f"{article.get('title', '')} {article.get('content', '')}".lower()
+    
+    # 1. Score basé sur les mots-clés de haute importance (max 40 points)
+    high_keywords = HIGH_IMPORTANCE_KEYWORDS.get(category, [])
+    matched_high_keywords = set()
+    for keyword in high_keywords:
+        if keyword in content:
+            matched_high_keywords.add(keyword)
+    
+    high_keyword_score = min(40, len(matched_high_keywords) * 5)
+    
+    # 2. Score basé sur les mots-clés d'importance moyenne (max 20 points)
+    medium_keywords = MEDIUM_IMPORTANCE_KEYWORDS.get(category, [])
+    matched_medium_keywords = set()
+    for keyword in medium_keywords:
+        if keyword in content:
+            matched_medium_keywords.add(keyword)
+    
+    medium_keyword_score = min(20, len(matched_medium_keywords) * 2.5)
+    
+    # 3. Score basé sur la source (max 20 points)
+    source_score = 0
+    article_source = article.get("source", "").lower()
+    for important_source in IMPORTANT_SOURCES.get(category, []):
+        if important_source.lower() in article_source:
+            source_score = 20
+            break
+    
+    # 4. Score basé sur la longueur du titre et du contenu (max 10 points)
+    title_length = len(article.get("title", ""))
+    text_length = len(article.get("content", ""))
+    
+    title_score = min(5, title_length / 20)  # 5 points max pour un titre de 100 caractères ou plus
+    text_score = min(5, text_length / 500)   # 5 points max pour un texte de 2500 caractères ou plus
+    
+    # 5. Score basé sur l'impact (max 10 points)
+    impact_score = 0
+    impact = article.get("impact", "neutral")
+    if impact == "negative":
+        impact_score = 10  # Les actualités négatives sont souvent plus impactantes
+    elif impact == "positive":
+        impact_score = 8
+    else:
+        impact_score = 5
+    
+    # Calcul du score total
+    total_score = high_keyword_score + medium_keyword_score + source_score + title_score + text_score + impact_score
+    
+    # Normalisation entre 0 et 100
+    normalized_score = min(100, total_score)
+    
+    return normalized_score
+
+def calculate_output_limits(articles_by_country, max_total=150):
+    """
+    Calcule les limites de sortie pour chaque pays/région en fonction des articles disponibles
+    et de leur importance.
+    
+    Args:
+        articles_by_country (dict): Dictionnaire des articles par pays
+        max_total (int): Nombre maximum total d'articles à conserver
+    
+    Returns:
+        dict: Limites pour chaque pays/région
+    """
+    # Configuration de base des limites par pays/région
+    base_limits = CONFIG["output_limits"]
+    
+    # Compter les articles par pays
+    country_counts = {country: len(articles) for country, articles in articles_by_country.items()}
+    
+    # Ajuster les limites en fonction des articles disponibles
+    adjusted_limits = {}
+    remaining_quota = max_total
+    
+    # Première passe : attribuer un minimum pour chaque pays qui a des articles
+    for country, count in country_counts.items():
+        # Si pays non défini dans base_limits, le considérer comme global
+        if country not in base_limits:
+            if "global" not in country_counts:
+                country_counts["global"] = 0
+            country_counts["global"] += count
+            continue
+            
+        min_limit = min(count, max(5, base_limits.get(country, 10) // 2))
+        adjusted_limits[country] = min_limit
+        remaining_quota -= min_limit
+    
+    # Assurer que global est pris en compte même s'il n'a pas d'articles
+    if "global" not in adjusted_limits and "global" in base_limits:
+        adjusted_limits["global"] = 0
+    
+    # Deuxième passe : distribuer le quota restant proportionnellement
+    if remaining_quota > 0:
+        # Calculer le total des limites de base pour les pays avec des articles
+        total_base = sum(base_limits.get(country, 10) for country in adjusted_limits.keys())
+        
+        # Distribuer proportionnellement
+        for country in list(adjusted_limits.keys()):  # Utiliser une copie des clés
+            if total_base > 0:
+                country_ratio = base_limits.get(country, 10) / total_base
+                additional = int(remaining_quota * country_ratio)
+                adjusted_limits[country] += additional
+                remaining_quota -= additional
+        
+        # Attribuer tout quota restant à global ou au premier pays si global n'existe pas
+        if "global" in adjusted_limits:
+            adjusted_limits["global"] += remaining_quota
+        elif adjusted_limits:
+            first_country = next(iter(adjusted_limits))
+            adjusted_limits[first_country] += remaining_quota
+    
+    return adjusted_limits
 
 def read_existing_news():
     """Lit le fichier JSON existant comme fallback"""
@@ -143,12 +335,15 @@ def fetch_api_data(endpoint, params=None):
         logger.error(f"❌ Erreur lors de la récupération depuis {endpoint}: {str(e)}")
         return []
 
-def fetch_articles_by_period(endpoint, start_date, end_date, days_interval=7, max_pages=5, per_page=50):
+def fetch_articles_by_period(endpoint, start_date, end_date, source_type=None, days_interval=7, max_pages=5):
     """
     Récupère des articles sur une période donnée en découpant la période en intervalles
     et en utilisant la pagination pour obtenir un maximum d'articles
     """
     logger.info(f"Démarrage de l'extraction d'articles de {start_date} à {end_date} par tranches de {days_interval} jours")
+    
+    # Utiliser la limite spécifique à la source ou 50 par défaut
+    per_page = CONFIG["news_limits"].get(source_type, 50) if source_type else 50
     
     from_date = datetime.strptime(start_date, "%Y-%m-%d")
     to_date = datetime.strptime(end_date, "%Y-%m-%d")
@@ -195,7 +390,7 @@ def get_general_news():
     start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
     end_date = today.strftime("%Y-%m-%d")
     
-    return fetch_articles_by_period(CONFIG["endpoints"]["general_news"], start_date, end_date)
+    return fetch_articles_by_period(CONFIG["endpoints"]["general_news"], start_date, end_date, "general_news")
 
 def get_fmp_articles():
     """Récupère les articles rédigés par FMP"""
@@ -204,7 +399,7 @@ def get_fmp_articles():
     start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
     end_date = today.strftime("%Y-%m-%d")
     
-    return fetch_articles_by_period(CONFIG["endpoints"]["fmp_articles"], start_date, end_date)
+    return fetch_articles_by_period(CONFIG["endpoints"]["fmp_articles"], start_date, end_date, "fmp_articles")
 
 def get_stock_news():
     """Récupère les actualités des actions"""
@@ -213,7 +408,7 @@ def get_stock_news():
     start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
     end_date = today.strftime("%Y-%m-%d")
     
-    return fetch_articles_by_period(CONFIG["endpoints"]["stock_news"], start_date, end_date)
+    return fetch_articles_by_period(CONFIG["endpoints"]["stock_news"], start_date, end_date, "stock_news")
 
 def get_crypto_news():
     """Récupère les actualités des cryptomonnaies"""
@@ -222,7 +417,7 @@ def get_crypto_news():
     start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
     end_date = today.strftime("%Y-%m-%d")
     
-    return fetch_articles_by_period(CONFIG["endpoints"]["crypto_news"], start_date, end_date)
+    return fetch_articles_by_period(CONFIG["endpoints"]["crypto_news"], start_date, end_date, "crypto_news")
 
 def get_press_releases():
     """Récupère les communiqués de presse"""
@@ -231,7 +426,7 @@ def get_press_releases():
     start_date = (today - timedelta(days=CONFIG["days_back"])).strftime("%Y-%m-%d")
     end_date = today.strftime("%Y-%m-%d")
     
-    return fetch_articles_by_period(CONFIG["endpoints"]["press_releases"], start_date, end_date)
+    return fetch_articles_by_period(CONFIG["endpoints"]["press_releases"], start_date, end_date, "press_releases")
 
 def get_earnings_calendar():
     """Récupère le calendrier des résultats d'entreprises"""
@@ -348,33 +543,67 @@ def determine_category(article, source=None):
     return "entreprises"
 
 def determine_country(article):
-    """Détermine le pays de l'actualité (france/us)"""
-    # Par défaut aux États-Unis
-    country = "us"
+    """
+    Détermine le pays/région de l'actualité en utilisant une analyse plus détaillée
+    pour détecter davantage de pays que juste france/us
+    """
+    # Vérifier le symbole pour information initiale
+    symbol = article.get("symbol", "")
+    if symbol:
+        if any(suffix in str(symbol) for suffix in [".PA", ".PAR"]):
+            return "france"
+        elif any(suffix in str(symbol) for suffix in [".L", ".LON"]):
+            return "uk"
+        elif any(suffix in str(symbol) for suffix in [".DE", ".FRA", ".XE"]):
+            return "germany"
+        elif any(suffix in str(symbol) for suffix in [".SS", ".SZ", ".HK"]):
+            return "china"
+        elif any(suffix in str(symbol) for suffix in [".T", ".JP"]):
+            return "japan"
     
-    # Vérifier si c'est français
-    if article.get("symbol") and any(suffix in str(article.get("symbol")) for suffix in [".PA", ".PAR"]):
-        country = "france"
-    
+    # Analyse du texte pour une détection plus précise
     text = (article.get("text", "") + " " + article.get("title", "")).lower()
-    french_keywords = [
-        "france", "français", "paris", "cac", "bourse de paris", "euronext",
-        "amf", "autorité des marchés", "bercy", "matignon", "elysée", "bpifrance",
-        "française", "hexagone"
-    ]
     
-    european_keywords = [
-        "europe", "eurozone", "euro", "european", "européen", "bruxelles",
-        "allemagne", "italie", "espagne", "bce", "ecb", "ue", "eu", "commission européenne"
-    ]
+    # Keywords pour différents pays/régions
+    country_keywords = {
+        "france": [
+            "france", "français", "paris", "cac", "bourse de paris", "euronext", "amf", 
+            "autorité des marchés", "bercy", "matignon", "elysée", "bpifrance", "française", "hexagone"
+        ],
+        "uk": [
+            "uk", "united kingdom", "britain", "british", "london", "ftse", "bank of england", 
+            "pound sterling", "gbp", "boe", "royal", "london stock exchange", "britain"
+        ],
+        "germany": [
+            "germany", "allemagne", "berlin", "frankfurt", "dax", "deutsche", "euro", "ecb", 
+            "bundesbank", "merkel", "scholz", "german", "allemand"
+        ],
+        "china": [
+            "china", "chinese", "beijing", "shanghai", "hong kong", "shenzhen", "yuan", "renminbi", 
+            "pboc", "ccp", "xi jinping", "chinois", "chine"
+        ],
+        "japan": [
+            "japan", "japanese", "tokyo", "nikkei", "yen", "bank of japan", "boj", "abenomics", 
+            "japon", "japonais", "kishida", "abe", "jpx"
+        ],
+        "emerging_markets": [
+            "emerging markets", "emerging economies", "brics", "brazil", "russia", "india", 
+            "south africa", "indonesia", "turkey", "mexico", "thailand", "vietnam", 
+            "manila", "mumbai", "bovespa", "sensex", "micex"
+        ],
+        "global": [
+            "global", "world", "international", "worldwide", "global economy", "global markets",
+            "mondial", "monde", "international", "all markets", "across markets"
+        ]
+    }
     
-    if any(keyword in text for keyword in french_keywords):
-        country = "france"
-    elif any(keyword in text for keyword in european_keywords) and country != "france":
-        # Marquer européen comme français si pas déjà identifié comme français
-        country = "france"
-        
-    return country
+    # Vérifier chaque pays/région par ordre de priorité
+    for country, keywords in country_keywords.items():
+        if any(keyword in text for keyword in keywords):
+            return country
+    
+    # Par défaut: "us" (marché le plus important globalement)
+    return "us"
 
 def determine_impact(article):
     """Détermine l'impact de l'actualité (positive/negative/neutral)"""
@@ -486,47 +715,6 @@ def remove_duplicates(news_list):
             unique_news.append(item)
     
     return unique_news
-
-def calculate_news_score(article):
-    """
-    Calcule un score pour classer l'importance d'une actualité en fonction des mots-clés
-    """
-    # Créer un texte combiné pour l'analyse
-    content = f"{article.get('title', '')} {article.get('content', '')}"
-    if not content or not isinstance(content, str):
-        content = ""
-    content = content.lower()
-    
-    score = 0
-    
-    # Ajouter des points selon les occurrences de mots-clés
-    for word in NEWS_KEYWORDS["high_impact"]:
-        if word in content:
-            score += 10
-    
-    for word in NEWS_KEYWORDS["medium_impact"]:
-        if word in content:
-            score += 5
-    
-    for word in NEWS_KEYWORDS["low_impact"]:
-        if word in content:
-            score += 2
-    
-    # Ajustement basé sur la source
-    if any(source in article.get("source", "") for source in IMPORTANT_SOURCES):
-        score += 5
-    
-    # Bonus pour les actualités négatives (souvent plus impactantes)
-    if article.get("impact") == "negative":
-        score += 3
-    
-    # Bonus pour certaines catégories généralement plus importantes
-    if article.get("category") == "economie":
-        score += 3
-    elif article.get("category") == "marches":
-        score += 2
-    
-    return score
 
 def determine_event_impact(event):
     """Détermine le niveau d'impact d'un événement économique"""
@@ -732,11 +920,16 @@ def build_theme_summary(theme_name, theme_data):
 
 def process_news_data(news_sources):
     """Traite et formate les actualités FMP pour correspondre au format TradePulse"""
+    # Initialiser la structure pour tous les pays/régions possibles
     formatted_data = {
-        "us": [],
-        "france": [],
         "lastUpdated": datetime.now().isoformat()
     }
+    
+    for country in CONFIG["output_limits"].keys():
+        formatted_data[country] = []
+    
+    # Liste de tous les articles avant la séparation par pays
+    all_articles = []
     
     # Traiter chaque source d'actualités
     for source_type, articles in news_sources.items():
@@ -752,6 +945,11 @@ def process_news_data(news_sources):
             if len(normalized["text"]) < 50:
                 continue
             
+            # Déterminer la catégorie et le pays
+            category = determine_category(normalized, source_type)
+            country = determine_country(normalized)
+            impact = determine_impact(normalized)
+            
             # Données essentielles
             news_item = {
                 "title": normalized["title"],
@@ -760,40 +958,52 @@ def process_news_data(news_sources):
                 "rawDate": normalized["publishedDate"],  # Conserver la date brute pour le filtrage
                 "date": format_date(normalized["publishedDate"]),
                 "time": format_time(normalized["publishedDate"]),
-                "category": determine_category(normalized, source_type),
-                "impact": determine_impact(normalized),
-                "country": determine_country(normalized),
+                "category": category,
+                "impact": impact,
+                "country": country,
                 "url": normalized.get("url", ""),
-                "themes": extract_themes(normalized)
+                "themes": extract_themes(normalized),
+                "source_type": source_type
             }
             
-            # Ajouter à la section par pays
-            if news_item["country"] == "france":
-                formatted_data["france"].append(news_item)
-            else:
-                formatted_data["us"].append(news_item)
+            # Calculer le score d'importance
+            news_item["importance_score"] = compute_importance_score(news_item, source_type)
+            
+            # Ajouter à la liste globale
+            all_articles.append(news_item)
     
-    # Ajouter un score à chaque actualité
-    for country in ["us", "france"]:
-        for article in formatted_data[country]:
-            article["score"] = calculate_news_score(article)
+    # Supprimer les doublons
+    all_articles = remove_duplicates(all_articles)
     
-    # Trier chaque catégorie par score (plus élevé en premier), puis par date (plus récent en premier)
-    for country in ["us", "france"]:
-        formatted_data[country] = sorted(
-            formatted_data[country], 
-            key=lambda x: (x["score"], x["date"], x["time"]), 
-            reverse=True
-        )
-        
-        # Supprimer les doublons
-        formatted_data[country] = remove_duplicates(formatted_data[country])
-        
-        # Limiter le nombre d'articles pour l'interface
-        formatted_data[country] = formatted_data[country][:CONFIG["output_limits"][country]]
+    # Trier par score d'importance
+    all_articles.sort(key=lambda x: x["importance_score"], reverse=True)
+    
+    # Répartir par pays
+    articles_by_country = {}
+    for article in all_articles:
+        country = article["country"]
+        if country not in articles_by_country:
+            articles_by_country[country] = []
+        articles_by_country[country].append(article)
+    
+    # Calculer les limites appropriées pour chaque pays
+    adjusted_limits = calculate_output_limits(articles_by_country, CONFIG["max_total_articles"])
+    
+    # Appliquer les limites par pays
+    for country, articles in articles_by_country.items():
+        limit = adjusted_limits.get(country, 10)
+        # Si le pays existe dans formatted_data
+        if country in formatted_data:
+            formatted_data[country] = articles[:limit]
+        else:
+            # Sinon, ajouter au global
+            if "global" not in formatted_data:
+                formatted_data["global"] = []
+            formatted_data["global"].extend(articles[:limit])
+            logger.info(f"Pays {country} non géré, {len(articles[:limit])} articles ajoutés à 'global'")
     
     # Statistiques sur les données
-    total_articles = len(formatted_data["us"]) + len(formatted_data["france"])
+    total_articles = sum(len(articles) for articles in formatted_data.values() if isinstance(articles, list))
     logger.info(f"Total des articles traités et formatés: {total_articles}")
     
     return formatted_data
@@ -845,8 +1055,8 @@ def process_events_data(earnings, economic):
     # Trier les événements par score puis par date
     events.sort(key=lambda x: (x["score"], x["date"]), reverse=True)
     
-    # Limiter à 10 événements maximum
-    return events[:10]
+    # Limiter à 15 événements maximum
+    return events[:15]
 
 def process_ipos_data(ipos):
     """Formate les données d'IPO pour affichage"""
@@ -892,12 +1102,9 @@ def process_ma_data(ma_list):
 def update_news_json_file(news_data, events):
     """Met à jour le fichier news.json avec les données formatées"""
     try:
-        output_data = {
-            "us": news_data["us"],
-            "france": news_data["france"],
-            "events": events,
-            "lastUpdated": datetime.now().isoformat()
-        }
+        # Créer une copie pour ne pas modifier l'original
+        output_data = {k: v for k, v in news_data.items()}
+        output_data["events"] = events
         
         # Créer le dossier data s'il n'existe pas
         os.makedirs(os.path.dirname(NEWS_JSON_PATH), exist_ok=True)
@@ -994,7 +1201,7 @@ def main():
             if existing_data:
                 return True
         
-        # 4. Traiter et formater les données
+        # 4. Traiter et formater les données avec le nouveau système de scoring
         news_data = process_news_data(news_sources)
         events = process_events_data(earnings, economic)
         
