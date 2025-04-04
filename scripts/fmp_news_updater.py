@@ -32,7 +32,7 @@ THEMES_JSON_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 CONFIG = {
     "api_key": os.environ.get("FMP_API_KEY", ""),
     "endpoints": {
-        "general_news": "https://financialmodelingprep.com/stable/news/general",
+        "general_news": "https://financialmodelingprep.com/stable/news/general-latest",
         "fmp_articles": "https://financialmodelingprep.com/stable/fmp-articles",
         "stock_news": "https://financialmodelingprep.com/stable/news/stock",
         "crypto_news": "https://financialmodelingprep.com/stable/news/crypto", 
