@@ -1,58 +1,24 @@
-/**
- * themes-dominant.css
- * Styles pour l'affichage des thèmes dominants
- */
-
-/* Structure de base des thèmes */
+/* Styles pour les thèmes dominants */
 .themes-dominant-container {
-    background-color: rgba(0, 20, 40, 0.3);
-    border: 1px solid rgba(0, 170, 255, 0.1);
-    border-radius: 10px;
-    padding: 20px;
-    backdrop-filter: blur(8px);
+    background: rgba(1, 22, 39, 0.5);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    border: 1px solid rgba(0, 255, 135, 0.1);
 }
 
 .theme-card {
-    background-color: rgba(0, 25, 50, 0.5);
-    border-radius: 6px;
-    padding: 15px;
-    border: 1px solid rgba(100, 100, 100, 0.2);
-    transition: all 0.3s ease;
+    background: rgba(1, 30, 52, 0.6);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    border: 1px solid rgba(0, 255, 135, 0.2);
 }
 
-/* Cartes par type de thème */
-.theme-card.macroeconomie {
-    border-left: 3px solid #00c8ff;
-}
-.theme-card.secteurs {
-    border-left: 3px solid #00ffb3;
-}
-.theme-card.regions {
-    border-left: 3px solid #ff9f00;
-}
-
-/* Titres de thèmes */
 .theme-title {
-    margin-bottom: 10px;
+    color: #00FF87;
     display: flex;
     align-items: center;
 }
 
-.theme-title i {
-    margin-right: 8px;
-}
-
-.macroeconomie .theme-title i {
-    color: #00c8ff;
-}
-.secteurs .theme-title i {
-    color: #00ffb3;
-}
-.regions .theme-title i {
-    color: #ff9f00;
-}
-
-/* Liste des thèmes */
 .theme-list {
     list-style: none;
     padding: 0;
@@ -60,132 +26,212 @@
 }
 
 .theme-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-    transition: background-color 0.2s ease;
-}
-
-.theme-item:last-child {
-    border-bottom: none;
+    position: relative;
+    margin-bottom: 0.75rem;
+    cursor: pointer;
+    transition: transform 0.2s ease;
 }
 
 .theme-item:hover {
-    background-color: rgba(255, 255, 255, 0.05);
-    border-radius: 4px;
-    cursor: pointer;
+    transform: translateX(3px);
 }
 
-.theme-item .info-icon {
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
+.theme-item:hover .theme-tooltip {
+    display: block;
+    animation: fadeIn 0.3s ease-in-out;
 }
 
-.theme-item:hover .info-icon {
-    opacity: 1;
+.theme-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.25rem;
 }
 
-/* Période et mise à jour */
+.theme-name {
+    flex-grow: 1;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.theme-count {
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: #00FF87;
+    min-width: 1.5rem;
+    text-align: right;
+}
+
+.theme-bar {
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.theme-progress {
+    height: 100%;
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Couleur par axe */
+.macroeconomie .theme-progress {
+    background: linear-gradient(90deg, #0088FF, #00BFFF);
+}
+
+.secteurs .theme-progress {
+    background: linear-gradient(90deg, #00CC88, #00FF87);
+}
+
+.regions .theme-progress {
+    background: linear-gradient(90deg, #FF8800, #FFA500);
+}
+
+/* Indicateurs de sentiment */
+.sentiment-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin: 0 0.5rem;
+    position: relative;
+}
+
+.sentiment-indicator:after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+    opacity: 0;
+}
+
+.sentiment-indicator.positive {
+    background-color: #00FF87;
+    box-shadow: 0 0 5px rgba(0, 255, 135, 0.8);
+}
+
+.sentiment-indicator.positive:after {
+    border: 1px solid rgba(0, 255, 135, 0.5);
+}
+
+.sentiment-indicator.negative {
+    background-color: #FF4757;
+    box-shadow: 0 0 5px rgba(255, 71, 87, 0.8);
+}
+
+.sentiment-indicator.negative:after {
+    border: 1px solid rgba(255, 71, 87, 0.5);
+}
+
+.sentiment-indicator.neutral {
+    background-color: #FFC107;
+    box-shadow: 0 0 5px rgba(255, 193, 7, 0.8);
+}
+
+.sentiment-indicator.neutral:after {
+    border: 1px solid rgba(255, 193, 7, 0.5);
+}
+
+/* Infobulle thème */
+.theme-tooltip {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 300px;
+    background: rgba(1, 30, 52, 0.95);
+    border: 1px solid rgba(0, 255, 135, 0.3);
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    z-index: 10;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(4px);
+}
+
+.theme-tooltip p {
+    margin-top: 0;
+    margin-bottom: 0.5rem;
+}
+
+/* Distribution de sentiment */
+.sentiment-distribution {
+    height: 4px;
+    display: flex;
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.sentiment-distribution .positive {
+    background-color: #00FF87;
+    height: 100%;
+}
+
+.sentiment-distribution .neutral {
+    background-color: #FFC107;
+    height: 100%;
+}
+
+.sentiment-distribution .negative {
+    background-color: #FF4757;
+    height: 100%;
+}
+
+/* Sélecteur de période */
 .period-selector {
     display: flex;
-    justify-content: flex-end;
-    margin-top: 10px;
+    gap: 0.5rem;
 }
 
 .period-btn {
-    margin-left: 8px;
-    padding: 2px 8px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    background-color: rgba(0, 0, 0, 0.3);
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     color: rgba(255, 255, 255, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
-.period-btn:hover {
-    background-color: rgba(0, 0, 0, 0.5);
-    color: rgba(255, 255, 255, 0.8);
-}
-
-.period-btn.active {
-    background-color: rgba(0, 200, 255, 0.2);
-    color: #00c8ff;
-    border-color: rgba(0, 200, 255, 0.4);
-    font-weight: 500;
+.period-btn.active, .period-btn:hover {
+    background: rgba(0, 255, 135, 0.1);
+    border-color: rgba(0, 255, 135, 0.3);
+    color: #00FF87;
 }
 
 .themes-update-info {
     font-size: 0.7rem;
     color: rgba(255, 255, 255, 0.5);
     text-align: right;
-    margin-top: 2px;
 }
 
-/* Skeleton loading */
+/* Animation de chargement */
 .skeleton-line {
-    height: 12px;
-    margin: 8px 0;
-    animation: pulse 1.5s infinite;
-    background: linear-gradient(90deg, 
-        rgba(255, 255, 255, 0.05) 0%, 
-        rgba(255, 255, 255, 0.1) 50%, 
-        rgba(255, 255, 255, 0.05) 100%);
+    height: 1.5rem;
+    margin-bottom: 0.75rem;
+    background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
     background-size: 200% 100%;
-    border-radius: 4px;
+    animation: loading 1.5s infinite;
+    border-radius: 0.25rem;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
 }
 
 @keyframes pulse {
-    0% { background-position: 0% 0%; }
-    100% { background-position: -200% 0%; }
-}
-
-/* Popup de détail */
-.theme-detail-popup {
-    animation: fadeIn 0.3s ease;
-}
-
-.theme-detail-popup .prose {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 0.95rem;
-    line-height: 1.6;
-}
-
-.theme-detail-popup .prose strong {
-    color: white;
-    font-weight: 600;
-}
-
-.theme-detail-popup ul {
-    list-style-type: disc;
-    padding-left: 1.5rem;
-    margin-top: 0.5rem;
-}
-
-.theme-detail-popup li {
-    margin-bottom: 0.25rem;
+    0% { transform: scale(1); opacity: 0.7; }
+    50% { transform: scale(1.5); opacity: 0.2; }
+    100% { transform: scale(1); opacity: 0; }
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
+    from { opacity: 0; transform: translateY(5px); }
     to { opacity: 1; transform: translateY(0); }
-}
-
-/* Thème Sombre */
-.dark .theme-card {
-    background-color: rgba(10, 25, 40, 0.4);
-}
-
-/* Responsive */
-@media (max-width: 768px) {
-    .themes-dominant-container {
-        padding: 15px;
-    }
-    
-    .theme-card {
-        margin-bottom: 15px;
-    }
 }
