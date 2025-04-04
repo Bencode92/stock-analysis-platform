@@ -177,134 +177,6 @@ MEDIUM_IMPORTANCE_KEYWORDS = {
     ]
 }
 
-def compute_importance_score(article, category):
-    """
-    Calcule un score d'importance pour un article en fonction de sa catégorie et de son contenu.
-    
-    Args:
-        article (dict): L'article contenant title, content, source, etc.
-        category (str): La catégorie de l'article (general_news, stock_news, crypto_news, press_releases)
-    
-    Returns:
-        float: Score d'importance entre 0 et 100
-    """
-    score = 0
-    
-    # Combinaison du titre et du texte pour analyse
-    content = f"{article.get('title', '')} {article.get('content', '')}".lower()
-    
-    # 1. Score basé sur les mots-clés de haute importance (max 40 points)
-    high_keywords = HIGH_IMPORTANCE_KEYWORDS.get(category, [])
-    matched_high_keywords = set()
-    for keyword in high_keywords:
-        if keyword in content:
-            matched_high_keywords.add(keyword)
-    
-    high_keyword_score = min(40, len(matched_high_keywords) * 5)
-    
-    # 2. Score basé sur les mots-clés d'importance moyenne (max 20 points)
-    medium_keywords = MEDIUM_IMPORTANCE_KEYWORDS.get(category, [])
-    matched_medium_keywords = set()
-    for keyword in medium_keywords:
-        if keyword in content:
-            matched_medium_keywords.add(keyword)
-    
-    medium_keyword_score = min(20, len(matched_medium_keywords) * 2.5)
-    
-    # 3. Score basé sur la source (max 20 points)
-    source_score = 0
-    article_source = article.get("source", "").lower()
-    for important_source in IMPORTANT_SOURCES.get(category, []):
-        if important_source.lower() in article_source:
-            source_score = 20
-            break
-    
-    # 4. Score basé sur la longueur du titre et du contenu (max 10 points)
-    title_length = len(article.get("title", ""))
-    text_length = len(article.get("content", ""))
-    
-    title_score = min(5, title_length / 20)  # 5 points max pour un titre de 100 caractères ou plus
-    text_score = min(5, text_length / 500)   # 5 points max pour un texte de 2500 caractères ou plus
-    
-    # 5. Score basé sur l'impact (max 10 points)
-    impact_score = 0
-    impact = article.get("impact", "neutral")
-    if impact == "negative":
-        impact_score = 10  # Les actualités négatives sont souvent plus impactantes
-    elif impact == "positive":
-        impact_score = 8
-    else:
-        impact_score = 5
-    
-    # Calcul du score total
-    total_score = high_keyword_score + medium_keyword_score + source_score + title_score + text_score + impact_score
-    
-    # Normalisation entre 0 et 100
-    normalized_score = min(100, total_score)
-    
-    return normalized_score
-
-def calculate_output_limits(articles_by_country, max_total=150):
-    """
-    Calcule les limites de sortie pour chaque pays/région en fonction des articles disponibles
-    et de leur importance.
-    
-    Args:
-        articles_by_country (dict): Dictionnaire des articles par pays
-        max_total (int): Nombre maximum total d'articles à conserver
-    
-    Returns:
-        dict: Limites pour chaque pays/région
-    """
-    # Configuration de base des limites par pays/région
-    base_limits = CONFIG["output_limits"]
-    
-    # Compter les articles par pays
-    country_counts = {country: len(articles) for country, articles in articles_by_country.items()}
-    
-    # Ajuster les limites en fonction des articles disponibles
-    adjusted_limits = {}
-    remaining_quota = max_total
-    
-    # Première passe : attribuer un minimum pour chaque pays qui a des articles
-    for country, count in country_counts.items():
-        # Si pays non défini dans base_limits, le considérer comme global
-        if country not in base_limits:
-            if "global" not in country_counts:
-                country_counts["global"] = 0
-            country_counts["global"] += count
-            continue
-            
-        min_limit = min(count, max(5, base_limits.get(country, 10) // 2))
-        adjusted_limits[country] = min_limit
-        remaining_quota -= min_limit
-    
-    # Assurer que global est pris en compte même s'il n'a pas d'articles
-    if "global" not in adjusted_limits and "global" in base_limits:
-        adjusted_limits["global"] = 0
-    
-    # Deuxième passe : distribuer le quota restant proportionnellement
-    if remaining_quota > 0:
-        # Calculer le total des limites de base pour les pays avec des articles
-        total_base = sum(base_limits.get(country, 10) for country in adjusted_limits.keys())
-        
-        # Distribuer proportionnellement
-        for country in list(adjusted_limits.keys()):  # Utiliser une copie des clés
-            if total_base > 0:
-                country_ratio = base_limits.get(country, 10) / total_base
-                additional = int(remaining_quota * country_ratio)
-                adjusted_limits[country] += additional
-                remaining_quota -= additional
-        
-        # Attribuer tout quota restant à global ou au premier pays si global n'existe pas
-        if "global" in adjusted_limits:
-            adjusted_limits["global"] += remaining_quota
-        elif adjusted_limits:
-            first_country = next(iter(adjusted_limits))
-            adjusted_limits[first_country] += remaining_quota
-    
-    return adjusted_limits
-
 def read_existing_news():
     """Lit le fichier JSON existant comme fallback"""
     try:
@@ -481,6 +353,20 @@ def extract_themes(article):
                 themes_detected[axe].append(theme)
 
     return themes_detected
+
+def compute_sentiment_distribution(articles):
+    """Calcule la distribution des sentiments pour un ensemble d'articles"""
+    sentiment_counts = Counter(article["impact"] for article in articles if "impact" in article)
+    total = sum(sentiment_counts.values())
+
+    if total == 0:
+        return {"positive": 0.0, "neutral": 0.0, "negative": 0.0}
+
+    return {
+        "positive": round(sentiment_counts["positive"] / total * 100, 1),
+        "neutral": round(sentiment_counts["neutral"] / total * 100, 1),
+        "negative": round(sentiment_counts["negative"] / total * 100, 1)
+    }
 
 def determine_category(article, source=None):
     """
@@ -716,6 +602,134 @@ def remove_duplicates(news_list):
     
     return unique_news
 
+def compute_importance_score(article, category):
+    """
+    Calcule un score d'importance pour un article en fonction de sa catégorie et de son contenu.
+    
+    Args:
+        article (dict): L'article contenant title, content, source, etc.
+        category (str): La catégorie de l'article (general_news, stock_news, crypto_news, press_releases)
+    
+    Returns:
+        float: Score d'importance entre 0 et 100
+    """
+    score = 0
+    
+    # Combinaison du titre et du texte pour analyse
+    content = f"{article.get('title', '')} {article.get('content', '')}".lower()
+    
+    # 1. Score basé sur les mots-clés de haute importance (max 40 points)
+    high_keywords = HIGH_IMPORTANCE_KEYWORDS.get(category, [])
+    matched_high_keywords = set()
+    for keyword in high_keywords:
+        if keyword in content:
+            matched_high_keywords.add(keyword)
+    
+    high_keyword_score = min(40, len(matched_high_keywords) * 5)
+    
+    # 2. Score basé sur les mots-clés d'importance moyenne (max 20 points)
+    medium_keywords = MEDIUM_IMPORTANCE_KEYWORDS.get(category, [])
+    matched_medium_keywords = set()
+    for keyword in medium_keywords:
+        if keyword in content:
+            matched_medium_keywords.add(keyword)
+    
+    medium_keyword_score = min(20, len(matched_medium_keywords) * 2.5)
+    
+    # 3. Score basé sur la source (max 20 points)
+    source_score = 0
+    article_source = article.get("source", "").lower()
+    for important_source in IMPORTANT_SOURCES.get(category, []):
+        if important_source.lower() in article_source:
+            source_score = 20
+            break
+    
+    # 4. Score basé sur la longueur du titre et du contenu (max 10 points)
+    title_length = len(article.get("title", ""))
+    text_length = len(article.get("content", ""))
+    
+    title_score = min(5, title_length / 20)  # 5 points max pour un titre de 100 caractères ou plus
+    text_score = min(5, text_length / 500)   # 5 points max pour un texte de 2500 caractères ou plus
+    
+    # 5. Score basé sur l'impact (max 10 points)
+    impact_score = 0
+    impact = article.get("impact", "neutral")
+    if impact == "negative":
+        impact_score = 10  # Les actualités négatives sont souvent plus impactantes
+    elif impact == "positive":
+        impact_score = 8
+    else:
+        impact_score = 5
+    
+    # Calcul du score total
+    total_score = high_keyword_score + medium_keyword_score + source_score + title_score + text_score + impact_score
+    
+    # Normalisation entre 0 et 100
+    normalized_score = min(100, total_score)
+    
+    return normalized_score
+
+def calculate_output_limits(articles_by_country, max_total=150):
+    """
+    Calcule les limites de sortie pour chaque pays/région en fonction des articles disponibles
+    et de leur importance.
+    
+    Args:
+        articles_by_country (dict): Dictionnaire des articles par pays
+        max_total (int): Nombre maximum total d'articles à conserver
+    
+    Returns:
+        dict: Limites pour chaque pays/région
+    """
+    # Configuration de base des limites par pays/région
+    base_limits = CONFIG["output_limits"]
+    
+    # Compter les articles par pays
+    country_counts = {country: len(articles) for country, articles in articles_by_country.items()}
+    
+    # Ajuster les limites en fonction des articles disponibles
+    adjusted_limits = {}
+    remaining_quota = max_total
+    
+    # Première passe : attribuer un minimum pour chaque pays qui a des articles
+    for country, count in country_counts.items():
+        # Si pays non défini dans base_limits, le considérer comme global
+        if country not in base_limits:
+            if "global" not in country_counts:
+                country_counts["global"] = 0
+            country_counts["global"] += count
+            continue
+            
+        min_limit = min(count, max(5, base_limits.get(country, 10) // 2))
+        adjusted_limits[country] = min_limit
+        remaining_quota -= min_limit
+    
+    # Assurer que global est pris en compte même s'il n'a pas d'articles
+    if "global" not in adjusted_limits and "global" in base_limits:
+        adjusted_limits["global"] = 0
+    
+    # Deuxième passe : distribuer le quota restant proportionnellement
+    if remaining_quota > 0:
+        # Calculer le total des limites de base pour les pays avec des articles
+        total_base = sum(base_limits.get(country, 10) for country in adjusted_limits.keys())
+        
+        # Distribuer proportionnellement
+        for country in list(adjusted_limits.keys()):  # Utiliser une copie des clés
+            if total_base > 0:
+                country_ratio = base_limits.get(country, 10) / total_base
+                additional = int(remaining_quota * country_ratio)
+                adjusted_limits[country] += additional
+                remaining_quota -= additional
+        
+        # Attribuer tout quota restant à global ou au premier pays si global n'existe pas
+        if "global" in adjusted_limits:
+            adjusted_limits["global"] += remaining_quota
+        elif adjusted_limits:
+            first_country = next(iter(adjusted_limits))
+            adjusted_limits[first_country] += remaining_quota
+    
+    return adjusted_limits
+
 def determine_event_impact(event):
     """Détermine le niveau d'impact d'un événement économique"""
     # Événements à fort impact
@@ -815,6 +829,13 @@ def extract_top_themes(news_data, days=30, max_examples=3):
         "regions": {}
     }
     
+    # Collection d'articles par thème pour calculer la distribution des sentiments
+    theme_articles = {
+        "macroeconomie": {},
+        "secteurs": {},
+        "regions": {}
+    }
+    
     total_articles = 0
     processed_articles = 0
     
@@ -842,6 +863,11 @@ def extract_top_themes(news_data, days=30, max_examples=3):
                 themes = article.get("themes", {})
                 for axe, subthemes in themes.items():
                     for theme in subthemes:
+                        # Collecte pour le calcul des sentiments plus tard
+                        if theme not in theme_articles[axe]:
+                            theme_articles[axe][theme] = []
+                        theme_articles[axe][theme].append(article)
+                        
                         # Mettre à jour le compteur simple
                         themes_counter[axe][theme] += 1
                         
@@ -888,6 +914,13 @@ def extract_top_themes(news_data, days=30, max_examples=3):
     
     logger.info(f"Analyse des thèmes: {processed_articles}/{total_articles} articles utilisés pour la période de {days} jours")
     
+    # Ajouter les stats de sentiment dans les détails
+    for axe, theme_dict in theme_articles.items():
+        for theme, articles in theme_dict.items():
+            sentiment_stats = compute_sentiment_distribution(articles)
+            if theme in themes_details[axe]:
+                themes_details[axe][theme]["sentiment_distribution"] = sentiment_stats
+    
     # Obtenir les 5 thèmes principaux pour chaque axe avec leurs détails
     top_themes_with_details = {}
     for axe in themes_counter:
@@ -903,6 +936,7 @@ def build_theme_summary(theme_name, theme_data):
     count = theme_data.get("count", 0)
     examples = theme_data.get("examples", [])
     keywords = theme_data.get("keywords", {})
+    sentiment_distribution = theme_data.get("sentiment_distribution", {})
 
     keywords_list = sorted(keywords.items(), key=lambda x: x[1]["count"], reverse=True)
     keywords_str = ", ".join([f"{kw} ({info['count']})" for kw, info in keywords_list[:5]])
@@ -910,9 +944,21 @@ def build_theme_summary(theme_name, theme_data):
     if not examples:
         return f"Le thème '{theme_name}' est apparu dans {count} articles récemment."
 
+    sentiment_info = ""
+    if sentiment_distribution:
+        pos = sentiment_distribution.get("positive", 0)
+        neg = sentiment_distribution.get("negative", 0)
+        if pos > neg + 20:
+            sentiment_info = f" Le sentiment est majoritairement positif ({pos}% vs {neg}% négatif)."
+        elif neg > pos + 20:
+            sentiment_info = f" Le sentiment est majoritairement négatif ({neg}% vs {pos}% positif)."
+        else:
+            sentiment_info = f" Le sentiment est mitigé ({pos}% positif, {neg}% négatif)."
+
     return (
         f"📰 Le thème **{theme_name}** a été détecté dans **{count} articles** "
-        f"au cours de la période, principalement à travers des sujets comme : {keywords_str}. "
+        f"au cours de la période, principalement à travers des sujets comme : {keywords_str}."
+        f"{sentiment_info} "
         f"Exemples d'articles : « {examples[0]} »"
         + (f", « {examples[1]} »" if len(examples) > 1 else "")
         + (f", « {examples[2]} »" if len(examples) > 2 else "") + "."
@@ -1226,6 +1272,10 @@ def main():
             logger.info(f"  {axe.capitalize()}:")
             for theme, details in themes.items():
                 logger.info(f"    {theme} ({details['count']})")
+                # Afficher la distribution des sentiments si disponible
+                if "sentiment_distribution" in details:
+                    sentiment = details["sentiment_distribution"]
+                    logger.info(f"      Sentiment: {sentiment['positive']}% positif, {sentiment['negative']}% négatif, {sentiment['neutral']}% neutre")
                 if "keywords" in details and details["keywords"]:
                     for keyword, kw_details in details["keywords"].items():
                         logger.info(f"      - {keyword} ({kw_details['count']})")
