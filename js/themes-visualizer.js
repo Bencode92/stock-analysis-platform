@@ -16,6 +16,7 @@ const ThemesVisualizer = {
         fetch('data/themes.json')
             .then(response => response.json())
             .then(data => {
+                console.log("Données de thèmes chargées:", data);
                 this.themesData = data;
                 this.renderThemes();
                 this.updateLastUpdated();
@@ -55,6 +56,7 @@ const ThemesVisualizer = {
         if (!this.themesData) return;
         
         const themes = this.themesData.themes[this.activePeriod];
+        console.log(`Rendu des thèmes pour la période ${this.activePeriod}:`, themes);
         
         // Rendu pour chaque axe
         this.renderThemeAxis('macroeconomie', themes.macroeconomie);
@@ -69,36 +71,82 @@ const ThemesVisualizer = {
         
         container.innerHTML = '';
         
+        // Vérifier si axisThemes est défini
+        if (!axisThemes) {
+            console.warn(`Aucun thème trouvé pour l'axe ${axis}`);
+            return;
+        }
+        
         // Tri des thèmes par nombre d'occurrences
         const sortedThemes = Object.entries(axisThemes)
-            .sort(([,a], [,b]) => b.count - a.count)
-            .slice(0, 5); // Limiter aux 5 premiers
+            .sort(([,a], [,b]) => {
+                // Comparer les comptes qu'ils soient sous forme de nombre ou d'objet
+                const countA = typeof a === 'object' && 'count' in a ? a.count : (typeof a === 'number' ? a : 0);
+                const countB = typeof b === 'object' && 'count' in b ? b.count : (typeof b === 'number' ? b : 0);
+                return countB - countA;
+            });
+            // Ne pas limiter le nombre de thèmes
         
-        sortedThemes.forEach(([themeName, themeData]) => {
-            // Calculer le sentiment dominant
-            const sentiment = this.getDominantSentiment(themeData.sentiment_distribution);
+        // Afficher tous les thèmes avec un compteur > 0
+        const displayableThemes = sortedThemes.filter(([,themeData]) => {
+            const count = typeof themeData === 'object' && 'count' in themeData ? 
+                themeData.count : (typeof themeData === 'number' ? themeData : 0);
+            return count > 0;
+        });
+        
+        console.log(`Thèmes à afficher pour ${axis}:`, displayableThemes.length);
+        
+        // Trouver le compte maximum pour l'échelle des barres
+        const maxCount = displayableThemes.length > 0 ? 
+            (typeof displayableThemes[0][1] === 'object' && 'count' in displayableThemes[0][1] ? 
+                displayableThemes[0][1].count : 
+                (typeof displayableThemes[0][1] === 'number' ? displayableThemes[0][1] : 0)) : 0;
+        
+        displayableThemes.forEach(([themeName, themeData]) => {
+            // Extraire les données selon la structure (objet complet ou juste un nombre)
+            const isFullObject = typeof themeData === 'object' && themeData !== null;
+            const count = isFullObject && 'count' in themeData ? themeData.count : (typeof themeData === 'number' ? themeData : 0);
+            const sentimentDist = isFullObject && 'sentiment_distribution' in themeData ? themeData.sentiment_distribution : null;
+            const sentiment = this.getDominantSentiment(sentimentDist);
+            const summary = isFullObject && 'gpt_summary' in themeData ? themeData.gpt_summary : null;
             
             // Créer l'élément de la liste
             const themeElement = document.createElement('li');
             themeElement.className = 'theme-item';
-            themeElement.innerHTML = `
+            
+            // Créer le contenu de base (qui est toujours présent)
+            let html = `
                 <div class="theme-header">
                     <span class="theme-name">${this.capitalizeFirstLetter(themeName)}</span>
                     <span class="sentiment-indicator ${sentiment}"></span>
-                    <span class="theme-count">${themeData.count}</span>
+                    <span class="theme-count">${count}</span>
                 </div>
                 <div class="theme-bar">
-                    <div class="theme-progress" style="width: ${this.calculateProgressWidth(themeData.count, sortedThemes[0][1].count)}%"></div>
-                </div>
-                <div class="theme-tooltip">
-                    <p>${themeData.gpt_summary || `Thème lié à ${themeName} avec ${themeData.count} mentions.`}</p>
-                    <div class="sentiment-distribution">
-                        <span class="positive" style="width:${themeData.sentiment_distribution?.positive || 0}%"></span>
-                        <span class="neutral" style="width:${themeData.sentiment_distribution?.neutral || 0}%"></span>
-                        <span class="negative" style="width:${themeData.sentiment_distribution?.negative || 0}%"></span>
-                    </div>
+                    <div class="theme-progress" style="width: ${this.calculateProgressWidth(count, maxCount)}%"></div>
                 </div>
             `;
+            
+            // Ajouter l'infobulle si disponible
+            if (isFullObject) {
+                html += `
+                    <div class="theme-tooltip">
+                        <p>${summary || `Thème lié à ${themeName} avec ${count} mentions.`}</p>
+                `;
+                
+                if (sentimentDist) {
+                    html += `
+                        <div class="sentiment-distribution">
+                            <span class="positive" style="width:${sentimentDist.positive || 0}%"></span>
+                            <span class="neutral" style="width:${sentimentDist.neutral || 0}%"></span>
+                            <span class="negative" style="width:${sentimentDist.negative || 0}%"></span>
+                        </div>
+                    `;
+                }
+                
+                html += `</div>`;
+            }
+            
+            themeElement.innerHTML = html;
             
             // Ajouter l'élément au conteneur
             container.appendChild(themeElement);
@@ -107,6 +155,7 @@ const ThemesVisualizer = {
 
     // Calcul de la largeur de la barre de progression proportionnelle
     calculateProgressWidth: function(count, maxCount) {
+        if (maxCount <= 0) return 0;
         return Math.max(5, Math.round((count / maxCount) * 100));
     },
 
