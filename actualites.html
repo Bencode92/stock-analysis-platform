@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="fr" class="dark">
-<!-- Code HTML conservé, seule la section des filtres est modifiée -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -32,16 +31,37 @@
     <link rel="stylesheet" href="css/event-filters.css">
     <!-- Ajout du CSS pour les filtres par catégorie d'événements -->
     <link rel="stylesheet" href="css/event-category-filters.css">
-    <!-- Ajout du script events-loader.js -->
-    <script src="events-loader.js"></script>
-    <!-- Ajout du nouveau script de redémarrage pour événements -->
-    <script src="event-renderer.js"></script>
-    <!-- Ajout du script unifié pour les filtres d'événements -->
-    <script src="js/unified-event-filters.js"></script>
-    <!-- Ajout du gestionnaire de date de connexion -->
-    <script src="js/connection-date-manager.js"></script>
-    <!-- Ajout du visualiseur de thèmes dominants -->
-    <script src="js/themes-visualizer.js"></script>
+    <!-- Animation pour l'affichage des éléments -->
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fadeIn {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        /* Style pour les nouvelles actualités */
+        .new-content {
+            position: relative;
+        }
+        
+        .new-content::after {
+            content: 'NOUVEAU';
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: var(--accent-color);
+            color: #000;
+            font-size: 9px;
+            font-weight: bold;
+            padding: 2px 5px;
+            border-radius: 2px;
+            z-index: 1;
+            animation: pulse 2s infinite;
+        }
+    </style>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -866,7 +886,7 @@
                         </div>
                     </div>
                     
-                    <!-- Filtres de catégorie pour les événements - uniquement visuels sans fonction -->
+                    <!-- Filtres de catégorie pour les événements -->
                     <div class="flex flex-wrap gap-2 mb-4" id="event-category-filters">
                         <button class="text-xs md:text-sm px-3 py-1.5 bg-green-400 bg-opacity-10 text-green-400 border border-green-400 border-opacity-30 rounded-full font-medium filter-active" data-category="all">
                             <i class="fas fa-filter mr-1"></i> TOUS
@@ -975,7 +995,7 @@
     <footer class="page-footer">
         <div class="data-source-info">
             <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel</p>
-            <p><i class="fas fa-robot"></i> Analyses sectorielles et actualités fournies par Perplexity Sonar</p>
+            <p><i class="fas fa-database"></i> Actualités et événements fournis par Financial Modeling Prep</p>
             <p><i class="fas fa-brain"></i> Classification automatique par machine learning</p>
             <p><i class="fas fa-flask"></i> Système de feedback ML pour amélioration continue</p>
             <p><i class="fas fa-clock"></i> Dernière mise à jour: <span class="update-time" id="updateTime">09/03/2025 10:15:53</span></p>
@@ -995,18 +1015,16 @@
     <!-- Script de mise à jour en temps réel des classifications -->
     <script src="js/news-updates.js"></script>
     
-    <!-- Nouveau script pour corriger les problèmes d'affichage des actualités -->
+    <!-- Scripts pour les thèmes et les événements -->
     <script src="js/news-display-fix.js"></script>
+    <script src="events-loader.js"></script>
+    <script src="event-renderer.js"></script>
+    <script src="js/connection-date-manager.js"></script>
+    <script src="js/themes-visualizer.js"></script>
+    <script src="js/unified-event-filters.js"></script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Stocker la date de connexion au chargement de la page
-            if (!localStorage.getItem('userConnectionDate')) {
-                const connectionDate = new Date();
-                localStorage.setItem('userConnectionDate', connectionDate.toISOString());
-                console.log("Date de connexion enregistrée: " + connectionDate.toLocaleString());
-            }
-            
+        document.addEventListener('DOMContentLoaded', function() {            
             // Créer un réseau de fond
             const networkBackground = document.getElementById('network-background');
             createNetworkBackground();
@@ -1092,18 +1110,6 @@
             window.addEventListener('resize', () => {
                 createNetworkBackground();
             });
-            
-            // Mettre à jour la date du jour
-            const now = new Date();
-            const day = String(now.getDate()).padStart(2, '0');
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const year = now.getFullYear();
-            const formattedDate = `${day}.${month}.${year}`;
-            
-            document.getElementById('formatted-date').textContent = formattedDate;
-            
-            const options = { day: 'numeric', month: 'long', year: 'numeric' };
-            document.getElementById('currentDate').textContent = now.toLocaleDateString('fr-FR', options).toUpperCase();
             
             // Initialisation du thème
             initTheme();
@@ -1196,12 +1202,6 @@
                     window.MLNewsIntegrator.initMLFeedback();
                 }, 1500);
             }
-            
-            // Désactiver les filtres qui ne fonctionnent pas
-            document.querySelectorAll('#event-category-filters button').forEach(btn => {
-                btn.style.pointerEvents = 'none'; // Désactiver les clics
-                btn.title = "Filtrage temporairement désactivé";
-            });
         });
     </script>
 </body>
