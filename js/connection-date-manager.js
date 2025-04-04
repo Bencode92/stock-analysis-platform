@@ -1,101 +1,94 @@
 /**
- * connection-date-manager.js
- * Gère la date de connexion pour les événements et ajoute un bouton de réinitialisation
+ * Gestionnaire de date de connexion
+ * Permet de stocker et récupérer la date de connexion de l'utilisateur
+ * Utile pour filtrer les nouvelles actualités par rapport à la dernière visite
  */
-
-document.addEventListener('DOMContentLoaded', function() {
-    // Attendre que la page soit chargée
-    setTimeout(() => {
-        // Initialiser la date de connexion si elle n'existe pas
-        initConnectionDate();
-        
-        // Ajouter le bouton de réinitialisation si nous sommes sur la page d'actualités
-        if (window.location.href.includes('actualites.html')) {
-            addResetDateButton();
+const ConnectionDateManager = {
+    // Clé de stockage LocalStorage
+    STORAGE_KEY: 'userConnectionDate',
+    
+    // Initialisation - à appeler au chargement de la page
+    init: function() {
+        // Stocker la date actuelle comme date de connexion si elle n'existe pas
+        if (!this.getConnectionDate()) {
+            this.setConnectionDate(new Date());
         }
-    }, 1500);
+        
+        // Afficher la date formatée dans l'élément approprié
+        this.displayFormattedDate();
+    },
+    
+    // Définir la date de connexion
+    setConnectionDate: function(date) {
+        localStorage.setItem(this.STORAGE_KEY, date.toISOString());
+        console.log("Date de connexion enregistrée: " + date.toLocaleString());
+    },
+    
+    // Récupérer la date de connexion
+    getConnectionDate: function() {
+        const storedDate = localStorage.getItem(this.STORAGE_KEY);
+        return storedDate ? new Date(storedDate) : null;
+    },
+    
+    // Obtenir la date formatée pour l'affichage
+    getFormattedDate: function() {
+        const date = this.getConnectionDate();
+        if (!date) return '';
+        
+        return date.toLocaleDateString('fr-FR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    },
+    
+    // Afficher la date formatée dans l'élément DOM
+    displayFormattedDate: function() {
+        const formattedDateEl = document.getElementById('formatted-date');
+        if (formattedDateEl) {
+            const formattedDate = this.getFormattedDate();
+            formattedDateEl.textContent = formattedDate.replace(/\//g, '.');
+        }
+        
+        const currentDateEl = document.getElementById('currentDate');
+        if (currentDateEl) {
+            const now = new Date();
+            const options = { day: 'numeric', month: 'long', year: 'numeric' };
+            currentDateEl.textContent = now.toLocaleDateString('fr-FR', options).toUpperCase();
+        }
+    },
+    
+    // Vérifier si une date est plus récente que la date de connexion
+    isNewerThanConnectionDate: function(dateStr) {
+        const connectionDate = this.getConnectionDate();
+        if (!connectionDate) return false;
+        
+        try {
+            // Convertir la chaîne de date en objet Date
+            // Format attendu: DD/MM/YYYY ou YYYY-MM-DD
+            let checkDate;
+            
+            if (dateStr.includes('/')) {
+                // Format DD/MM/YYYY
+                const parts = dateStr.split('/');
+                checkDate = new Date(parts[2], parts[1] - 1, parts[0]);
+            } else if (dateStr.includes('-')) {
+                // Format YYYY-MM-DD
+                checkDate = new Date(dateStr);
+            } else {
+                return false;
+            }
+            
+            // Comparer les dates (sans l'heure)
+            return checkDate > connectionDate;
+        } catch (e) {
+            console.error('Erreur lors de la comparaison des dates:', e);
+            return false;
+        }
+    }
+};
+
+// Initialisation au chargement du DOM
+document.addEventListener('DOMContentLoaded', function() {
+    ConnectionDateManager.init();
 });
-
-/**
- * Initialise la date de connexion si elle n'existe pas déjà
- */
-function initConnectionDate() {
-    if (!localStorage.getItem('userConnectionDate')) {
-        const connectionDate = new Date();
-        localStorage.setItem('userConnectionDate', connectionDate.toISOString());
-        console.log("Date de connexion initialisée: " + connectionDate.toLocaleString());
-    } else {
-        const savedDate = new Date(localStorage.getItem('userConnectionDate'));
-        console.log("Date de connexion existante: " + savedDate.toLocaleString());
-    }
-}
-
-/**
- * Ajoute un bouton pour réinitialiser la date de connexion
- */
-function addResetDateButton() {
-    // Trouver le conteneur des filtres d'événements
-    const filterContainer = document.querySelector('#events-section .flex.justify-between.items-center .flex.gap-2');
-    
-    if (!filterContainer) {
-        console.error("Conteneur de filtres non trouvé pour ajouter le bouton de réinitialisation");
-        return;
-    }
-    
-    // Ajouter le bouton de réinitialisation
-    const resetButton = document.createElement('button');
-    resetButton.id = 'reset-connection-date';
-    resetButton.className = 'ml-2 text-xs';
-    resetButton.innerHTML = '<i class="fas fa-sync-alt mr-1"></i>Réinitialiser date';
-    
-    filterContainer.appendChild(resetButton);
-    
-    // Ajouter l'écouteur d'événement
-    resetButton.addEventListener('click', function() {
-        resetConnectionDate();
-        showConfirmationToast("Date de référence mise à jour");
-    });
-}
-
-/**
- * Réinitialise la date de connexion
- */
-function resetConnectionDate() {
-    const newDate = new Date();
-    localStorage.setItem('userConnectionDate', newDate.toISOString());
-    console.log("Date de connexion réinitialisée: " + newDate.toLocaleString());
-    
-    // Appliquer à nouveau le filtre actif via la fonction exportée
-    if (window.resetConnectionDate && typeof window.resetConnectionDate === 'function') {
-        window.resetConnectionDate();
-    } else {
-        // Rafraîchir la page si la fonction n'est pas disponible
-        window.location.reload();
-    }
-}
-
-/**
- * Affiche un message toast de confirmation
- */
-function showConfirmationToast(message) {
-    // Supprimer tout toast existant
-    const existingToast = document.querySelector('.confirmation-toast');
-    if (existingToast) {
-        existingToast.remove();
-    }
-    
-    // Créer le nouveau toast
-    const toast = document.createElement('div');
-    toast.className = 'confirmation-toast';
-    toast.innerHTML = `<i class="fas fa-check-circle"></i>${message}`;
-    document.body.appendChild(toast);
-    
-    // Animer l'apparition
-    setTimeout(() => toast.classList.add('show'), 100);
-    
-    // Disparition automatique
-    setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 500);
-    }, 3000);
-}
