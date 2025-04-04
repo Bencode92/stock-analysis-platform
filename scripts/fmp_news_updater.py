@@ -150,6 +150,9 @@ IMPORTANT_SOURCES = {
     ]
 }
 
+# Premium sources that get extra points
+PREMIUM_SOURCES = ["bloomberg", "financial times", "wall street journal", "reuters"]
+
 # High importance keywords by category (for score calculation)
 HIGH_IMPORTANCE_KEYWORDS = {
     "general_news": [
@@ -626,70 +629,103 @@ def compute_importance_score(article, category):
     Returns:
         float: Importance score between 0 and 100
     """
-    score = 0
+    # For debug logging of intermediate scores
+    debug_scores = {}
     
     # Combination of title and text for analysis
     content = f"{article.get('title', '')} {article.get('content', '')}".lower()
+    title = article.get('title', '').lower()
+    article_source = article.get("source", "").lower()
     
-    # 1. Score based on high importance keywords (max 40 points, reduced for crypto)
+    # 1. Score based on high importance keywords (varying by category)
     high_keywords = HIGH_IMPORTANCE_KEYWORDS.get(category, [])
     matched_high_keywords = set()
     for keyword in high_keywords:
         if keyword in content:
             matched_high_keywords.add(keyword)
     
-    # Réduit le score maximum pour la crypto
+    # Vary the maximum score by category
     if category == "crypto_news":
         high_keyword_score = min(20, len(matched_high_keywords) * 2)
-    else:
+    elif category == "general_news":
         high_keyword_score = min(40, len(matched_high_keywords) * 5)
+    elif category == "stock_news":
+        high_keyword_score = min(35, len(matched_high_keywords) * 4.5)
+    elif category == "press_releases":
+        high_keyword_score = min(30, len(matched_high_keywords) * 4)
+    else:
+        high_keyword_score = min(30, len(matched_high_keywords) * 4)
     
-    # 2. Score based on medium importance keywords (max 20 points, reduced for crypto)
+    debug_scores["high_keywords"] = high_keyword_score
+    
+    # 2. Score based on medium importance keywords (max 20 points, adjusted by category)
     medium_keywords = MEDIUM_IMPORTANCE_KEYWORDS.get(category, [])
     matched_medium_keywords = set()
     for keyword in medium_keywords:
         if keyword in content:
             matched_medium_keywords.add(keyword)
     
-    # Réduit le score maximum pour la crypto
+    # Adjust medium importance by category
     if category == "crypto_news":
         medium_keyword_score = min(10, len(matched_medium_keywords) * 1.5)
+    elif category == "press_releases":
+        medium_keyword_score = min(15, len(matched_medium_keywords) * 2.0)  # 0.8 factor applied
     else:
         medium_keyword_score = min(20, len(matched_medium_keywords) * 2.5)
     
-    # 3. Score based on source (max 20 points, reduced for crypto)
+    debug_scores["medium_keywords"] = medium_keyword_score
+    
+    # 3. Score based on source (max 20 points, adjusted by category)
     source_score = 0
-    article_source = article.get("source", "").lower()
     for important_source in IMPORTANT_SOURCES.get(category, []):
         if important_source.lower() in article_source:
-            # Réduit le score pour les sources crypto
-            source_score = 10 if category == "crypto_news" else 20
+            # Adjust score based on category
+            if category == "crypto_news":
+                source_score = 10
+            elif category == "press_releases":
+                source_score = 15
+            else:
+                source_score = 20
             break
     
-    # 4. Score based on title and content length (max 10 points)
+    # Extra points for premium sources
+    if any(premium in article_source for premium in PREMIUM_SOURCES):
+        source_score = min(25, source_score + 5)  # +5 points for premium sources, max 25
+    
+    debug_scores["source"] = source_score
+    
+    # 4. Score based on title and content length (rebalanced to 3 + 7 points)
     title_length = len(article.get("title", ""))
     text_length = len(article.get("content", ""))
     
-    title_score = min(5, title_length / 20)  # 5 points max for a title of 100 characters or more
-    text_score = min(5, text_length / 500)   # 5 points max for a text of 2500 characters or more
+    # 3 points max for title
+    title_score = min(3, title_length / 33)  # 3 points max for a title of 100 characters
     
-    # 5. Score based on impact (max 10 points, reduced for crypto)
+    # 7 points max for content
+    text_score = min(7, text_length / 360)   # 7 points max for a text of ~2500 characters
+    
+    debug_scores["title_length"] = title_score
+    debug_scores["content_length"] = text_score
+    
+    # 5. Score based on impact (max 10 points, adjusted for crypto and by sentiment value)
     impact = article.get("impact", "neutral")
     
     if category == "crypto_news":
         if impact == "negative":
-            impact_score = 5  # Réduit par rapport aux 10 pour les autres catégories
+            impact_score = 5  # Reduced from 10
         elif impact == "positive":
-            impact_score = 4  # Réduit par rapport aux 8 pour les autres catégories
+            impact_score = 4  # Reduced from 7
         else:
-            impact_score = 3  # Réduit par rapport aux 5 pour les autres catégories
+            impact_score = 3  # Reduced from 5
     else:
         if impact == "negative":
             impact_score = 10  # Negative news often has more impact
         elif impact == "positive":
-            impact_score = 8
+            impact_score = 7   # Reduced from 8
         else:
             impact_score = 5
+    
+    debug_scores["impact"] = impact_score
     
     # Calculate total score
     total_score = high_keyword_score + medium_keyword_score + source_score + title_score + text_score + impact_score
@@ -697,9 +733,15 @@ def compute_importance_score(article, category):
     # Normalize between 0 and 100
     normalized_score = min(100, total_score)
     
-    # Appliquer une pénalité globale pour la crypto
+    # Apply category-specific adjustments
     if category == "crypto_news":
-        normalized_score = normalized_score * 0.9  # 10% de pénalité
+        normalized_score = normalized_score * 0.9  # 10% de pénalité pour crypto
+    
+    # Add debug logging if needed
+    if logger.level <= logging.DEBUG:
+        title_snippet = article.get('title', '')[:30] + ('...' if len(article.get('title', '')) > 30 else '')
+        logger.debug(f"Article: '{title_snippet}' | Category: {category} | Total: {normalized_score:.1f}")
+        logger.debug(f"  Scores: {debug_scores}")
     
     return normalized_score
 
