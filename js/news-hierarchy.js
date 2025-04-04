@@ -46,7 +46,7 @@ async function initializeNewsData() {
         
         let data;
         
-        // MODIFICATION: Utiliser directement news.json au lieu de classified_news.json
+        // Utiliser directement news.json
         console.log('📊 Chargement des données depuis news.json');
         const response = await fetch('data/news.json');
         
@@ -81,7 +81,7 @@ async function initializeNewsData() {
  */
 function distributeNewsByImportance(newsData) {
     // Vérification des données
-    if (!newsData || (!newsData.us && !newsData.france)) {
+    if (!newsData) {
         console.error("Données d'actualités non disponibles");
         return;
     }
@@ -96,73 +96,50 @@ function distributeNewsByImportance(newsData) {
         }
     });
 
-    // S'assurer que tous les champs nécessaires sont présents
+    // Vérifier que tous les champs nécessaires sont présents
     allNews.forEach(news => {
-        // Déterminer l'impact en se basant sur le contenu
-        if (!news.impact) {
-            news.impact = determineImpact(news);
-        }
+        // Valeurs par défaut si elles sont manquantes
+        news.impact = news.impact || 'neutral';
+        news.sentiment = news.sentiment || news.impact;
+        news.category = news.category || 'general';
+        news.country = news.country || 'other';
         
-        // Déterminer le sentiment (souvent lié à l'impact)
-        if (!news.sentiment) {
-            news.sentiment = news.impact;
-        }
-        
-        // Calculer un score d'importance
-        if (typeof news.score === 'undefined') {
-            news.score = calculateNewsScore(news);
-        }
-        
-        // Standardiser le champ catégorie
-        if (!news.category) {
-            news.category = (news.category || news.type || 'general').toLowerCase();
-        }
-        
-        // Déterminer la hiérarchie (critical, important, normal) en fonction du score
+        // Simple hiérarchisation basée sur les données existantes
+        // Vérifier si hierarchy existe déjà, sinon l'attribuer en fonction de l'importance
         if (!news.hierarchy) {
-            if (news.score >= 15) {
+            if (news.importance === 'high' || news.impact === 'negative') {
                 news.hierarchy = 'critical';
-            } else if (news.score >= 8) {
+            } else if (news.importance === 'medium' || news.impact === 'positive') {
                 news.hierarchy = 'important';
             } else {
                 news.hierarchy = 'normal';
             }
         }
-        
-        // Ajouter une valeur de confiance par défaut
-        if (typeof news.confidence === 'undefined') {
-            news.confidence = 0.8;
-        }
     });
 
     // Filtrer les actualités par hiérarchie
     const criticalNews = allNews.filter(news => 
-        news.hierarchy === 'critical' || (!news.hierarchy && news.score >= 15)
+        news.hierarchy === 'critical'
     );
     
     const importantNews = allNews.filter(news => 
-        news.hierarchy === 'important' || (!news.hierarchy && news.score >= 8 && news.score < 15)
+        news.hierarchy === 'important'
     );
     
     const regularNews = allNews.filter(news => 
-        news.hierarchy === 'normal' || (!news.hierarchy && news.score < 8)
+        news.hierarchy === 'normal'
     );
     
-    // Tri par score décroissant à l'intérieur de chaque catégorie
-    criticalNews.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        return b.confidence - a.confidence;
-    });
+    // Tri par date (les plus récentes en premier)
+    const sortByDate = (a, b) => {
+        const dateA = a.rawDate || a.date;
+        const dateB = b.rawDate || b.date;
+        return dateB > dateA ? 1 : -1;
+    };
     
-    importantNews.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        return b.confidence - a.confidence;
-    });
-    
-    regularNews.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        return b.confidence - a.confidence;
-    });
+    criticalNews.sort(sortByDate);
+    importantNews.sort(sortByDate);
+    regularNews.sort(sortByDate);
 
     // Stocker les actualités catégorisées
     window.NewsSystem.categorizedNews = {
@@ -176,120 +153,12 @@ function distributeNewsByImportance(newsData) {
     console.log(`Actualités importantes: ${importantNews.length}`);
     console.log(`Actualités générales: ${regularNews.length}`);
 
-    // Logs sur les sentiments 
-    const positiveCount = allNews.filter(n => n.sentiment === 'positive').length;
-    const negativeCount = allNews.filter(n => n.sentiment === 'negative').length;
-    const neutralCount = allNews.filter(n => n.sentiment === 'neutral' || !n.sentiment).length;
-    console.log(`Sentiments: ${positiveCount} positifs, ${negativeCount} négatifs, ${neutralCount} neutres`);
-
     // Afficher dans les sections correspondantes
     displayCriticalNews(criticalNews);
     displayImportantNews(importantNews);
     displayRecentNews(regularNews);
 
     console.log(`Actualités distribuées: ${criticalNews.length} critiques, ${importantNews.length} importantes, ${regularNews.length} régulières`);
-}
-
-/**
- * Détermine l'impact d'une actualité (positive/negative/neutral)
- * @param {Object} news - Article d'actualité
- * @returns {string} - Impact déterminé
- */
-function determineImpact(news) {
-    const text = `${news.title} ${news.content || ''}`.toLowerCase();
-    
-    // Mots clés positifs
-    const positiveWords = [
-        'hausse', 'croissance', 'augmentation', 'optimiste', 'positif', 'profit', 'gain',
-        'progression', 'amélioration', 'succès', 'record', 'opportunité', 'avantage',
-        'relance', 'rebond', 'surperformance'
-    ];
-    
-    // Mots clés négatifs
-    const negativeWords = [
-        'baisse', 'chute', 'diminution', 'pessimiste', 'négatif', 'perte', 'crise',
-        'effondrement', 'récession', 'ralentissement', 'risque', 'tension', 'conflit',
-        'déficit', 'licenciement', 'inquiétude', 'préoccupation'
-    ];
-    
-    // Compter les occurrences
-    const positiveCount = positiveWords.filter(word => text.includes(word)).length;
-    const negativeCount = negativeWords.filter(word => text.includes(word)).length;
-    
-    // Déterminer l'impact
-    if (positiveCount > negativeCount) {
-        return 'positive';
-    } else if (negativeCount > positiveCount) {
-        return 'negative';
-    } else {
-        return 'neutral';
-    }
-}
-
-/**
- * Calcule un score pour classer l'importance d'une actualité
- * @param {Object} item - Élément d'actualité
- * @returns {number} - Score d'importance
- */
-function calculateNewsScore(item) {
-    const content = `${item.title} ${item.content || ''}`.toLowerCase();
-
-    const keywords = {
-        "high_impact": [
-            "crash", "collapse", "crise", "recession", "fail", "bankruptcy", "récession", "banque centrale", 
-            "inflation", "hike", "drop", "plunge", "default", "fitch downgrade", "downgrade", "hausse des taux", 
-            "bond yield", "yield curve", "sell-off", "bear market", "effondrement", "chute", "krach",
-            "dégringolade", "catastrophe", "urgence", "alerte", "défaut", "risque", "choc", "contagion"
-        ],
-        "medium_impact": [
-            "growth", "expansion", "job report", "fed decision", "quarterly earnings", "acquisition", 
-            "ipo", "merger", "partnership", "profit warning", "bond issuance", "croissance", "emploi", 
-            "rapport", "BCE", "FED", "résultats trimestriels", "fusion", "acquisition", "partenariat"
-        ],
-        "low_impact": [
-            "recommendation", "stock buyback", "dividend", "announcement", "management change", "forecast",
-            "recommandation", "rachat d'actions", "dividende", "annonce", "changement de direction", "prévision"
-        ]
-    };
-
-    let score = 0;
-
-    // Ajouter des points selon les occurrences de mots-clés
-    for (const word of keywords.high_impact) {
-        if (content.includes(word)) score += 10;
-    }
-    
-    for (const word of keywords.medium_impact) {
-        if (content.includes(word)) score += 5;
-    }
-    
-    for (const word of keywords.low_impact) {
-        if (content.includes(word)) score += 2;
-    }
-
-    // Ajustement basé sur la source
-    const importantSources = [
-        "Bloomberg", "Reuters", "WSJ", "FT", "CNBC", "Financial Times", 
-        "Wall Street Journal", "seekingalpha.com", "news.bitcoin.com"
-    ];
-    
-    if (importantSources.some(source => (item.source || '').includes(source))) {
-        score += 5;
-    }
-
-    // Bonus pour les actualités négatives
-    if (item.sentiment === 'negative' || item.impact === 'negative') {
-        score += 3;
-    }
-
-    // Bonus pour certaines catégories
-    if (item.category === 'economie') {
-        score += 3;
-    } else if (item.category === 'marches') {
-        score += 2;
-    }
-
-    return score;
 }
 
 /**
@@ -325,40 +194,24 @@ function displayCriticalNews(news) {
         // Classe de l'indicateur d'impact
         const impactIndicatorClass = `impact-${item.impact}`;
         
-        // Classification ML - SIMPLIFIER L'AFFICHAGE
+        // Icône pour le sentiment
         const sentimentClass = `sentiment-${item.sentiment || 'neutral'}`;
-        // Remplacer le texte long par une simple icône
         const sentimentIcon = item.sentiment === 'positive' ? '<i class="fas fa-arrow-up"></i>' : 
                              item.sentiment === 'negative' ? '<i class="fas fa-arrow-down"></i>' : 
                              '<i class="fas fa-minus"></i>';
-        
-        // Badge de confiance
-        const confidenceValue = item.confidence || 0.8;
-        const confidenceClass = confidenceValue > 0.8 ? 'confidence-high' : 
-                               confidenceValue > 0.6 ? 'confidence-medium' : 'confidence-low';
-        const confidencePercent = Math.round(confidenceValue * 100);
-        
-        // AMÉLIORATION: Affichage du score ML
-        const scoreDisplay = `<span class="ml-score-badge">${item.score || 0}</span>`;
 
         const newsCard = document.createElement('div');
         newsCard.className = `news-card glassmorphism ${impactClass}`;
         newsCard.style.animationDelay = `${index * 0.1}s`;
         
-        // Ajouter les attributs pour le ML et le filtrage
+        // Ajouter les attributs pour le filtrage
         newsCard.setAttribute('data-category', item.category || 'general');
         newsCard.setAttribute('data-impact', item.impact || 'neutral');
         newsCard.setAttribute('data-sentiment', item.sentiment || item.impact || 'neutral');
         newsCard.setAttribute('data-news-id', `news-critical-${index}`);
         newsCard.setAttribute('data-country', item.country || 'other');
-        if (item.confidence) {
-            newsCard.setAttribute('data-confidence', item.confidence);
-        }
-        if (item.score) {
-            newsCard.setAttribute('data-score', item.score);
-        }
         
-        // NOUVEAU: Ajouter l'URL de l'article comme attribut
+        // Ajouter l'URL de l'article comme attribut
         if (item.url) {
             newsCard.setAttribute('data-url', item.url);
             newsCard.style.cursor = 'pointer';
@@ -383,7 +236,6 @@ function displayCriticalNews(news) {
                     <span class="impact-indicator">${(item.category || 'GENERAL').toUpperCase()}</span>
                     <span class="sentiment-indicator ${sentimentClass}">
                         ${sentimentIcon}
-                        ${scoreDisplay}
                     </span>
                 </div>
                 <h3 class="text-lg font-bold">${item.title}</h3>
@@ -436,40 +288,24 @@ function displayImportantNews(news) {
         // Classe de l'indicateur d'impact
         const impactIndicatorClass = `impact-${item.impact}`;
         
-        // Classification ML - SIMPLIFIER L'AFFICHAGE
+        // Icône pour le sentiment
         const sentimentClass = `sentiment-${item.sentiment || 'neutral'}`;
-        // Remplacer le texte long par une simple icône
         const sentimentIcon = item.sentiment === 'positive' ? '<i class="fas fa-arrow-up"></i>' : 
                              item.sentiment === 'negative' ? '<i class="fas fa-arrow-down"></i>' : 
                              '<i class="fas fa-minus"></i>';
-        
-        // Badge de confiance
-        const confidenceValue = item.confidence || 0.8;
-        const confidenceClass = confidenceValue > 0.8 ? 'confidence-high' : 
-                               confidenceValue > 0.6 ? 'confidence-medium' : 'confidence-low';
-        const confidencePercent = Math.round(confidenceValue * 100);
-        
-        // AMÉLIORATION: Affichage du score ML
-        const scoreDisplay = `<span class="ml-score-badge">${item.score || 0}</span>`;
 
         const newsCard = document.createElement('div');
         newsCard.className = `news-card glassmorphism ${impactClass}`;
         newsCard.style.animationDelay = `${index * 0.1}s`;
         
-        // Ajouter les attributs pour le ML et le filtrage
+        // Ajouter les attributs pour le filtrage
         newsCard.setAttribute('data-category', item.category || 'general');
         newsCard.setAttribute('data-impact', item.impact || 'neutral');
         newsCard.setAttribute('data-sentiment', item.sentiment || item.impact || 'neutral');
         newsCard.setAttribute('data-news-id', `news-important-${index}`);
         newsCard.setAttribute('data-country', item.country || 'other');
-        if (item.confidence) {
-            newsCard.setAttribute('data-confidence', item.confidence);
-        }
-        if (item.score) {
-            newsCard.setAttribute('data-score', item.score);
-        }
         
-        // NOUVEAU: Ajouter l'URL de l'article comme attribut
+        // Ajouter l'URL de l'article comme attribut
         if (item.url) {
             newsCard.setAttribute('data-url', item.url);
             newsCard.style.cursor = 'pointer';
@@ -493,7 +329,6 @@ function displayImportantNews(news) {
                     <span class="impact-indicator">${(item.category || 'GENERAL').toUpperCase()}</span>
                     <span class="sentiment-indicator ${sentimentClass}">
                         ${sentimentIcon}
-                        ${scoreDisplay}
                     </span>
                 </div>
                 <h3 class="text-md font-semibold">${item.title}</h3>
@@ -514,7 +349,7 @@ function displayImportantNews(news) {
 }
 
 /**
- * Fonction pour afficher les actualités régulières (MODIFIÉE POUR HARMONISER LE FORMAT)
+ * Fonction pour afficher les actualités régulières
  * @param {Array} news - Actualités régulières
  */
 function displayRecentNews(news) {
@@ -532,7 +367,7 @@ function displayRecentNews(news) {
         return;
     }
 
-    // CORRECTION: Vérifier si le conteneur est déjà une news-grid ou s'il faut en créer une
+    // Vérifier si le conteneur est déjà une news-grid ou s'il faut en créer une
     let newsGrid;
     if (container.classList.contains('news-grid')) {
         // Si le conteneur est déjà une news-grid, l'utiliser directement
@@ -544,9 +379,9 @@ function displayRecentNews(news) {
         container.appendChild(newsGrid);
     }
 
-    // Créer les cartes d'actualités régulières avec le même format que les actualités importantes
+    // Créer les cartes d'actualités régulières
     news.forEach((item, index) => {
-        // Détermine la classe CSS basée sur l'impact (même style que les actualités importantes)
+        // Détermine la classe CSS basée sur l'impact
         const impactClass = item.impact === 'negative' ? 'bg-red-700 bg-opacity-10 border-red-600' : 
                             item.impact === 'positive' ? 'bg-green-700 bg-opacity-10 border-green-600' : 
                             'bg-yellow-700 bg-opacity-10 border-yellow-600';
@@ -558,39 +393,23 @@ function displayRecentNews(news) {
         // Classe de l'indicateur d'impact
         const impactIndicatorClass = `impact-${item.impact}`;
         
-        // Classification ML - SIMPLIFIER L'AFFICHAGE
+        // Icône pour le sentiment
         const sentimentClass = `sentiment-${item.sentiment || 'neutral'}`;
-        // Remplacer le texte long par une simple icône
         const sentimentIcon = item.sentiment === 'positive' ? '<i class="fas fa-arrow-up"></i>' : 
                              item.sentiment === 'negative' ? '<i class="fas fa-arrow-down"></i>' : 
                              '<i class="fas fa-minus"></i>';
-        
-        // Badge de confiance
-        const confidenceValue = item.confidence || 0.8;
-        const confidenceClass = confidenceValue > 0.8 ? 'confidence-high' : 
-                               confidenceValue > 0.6 ? 'confidence-medium' : 'confidence-low';
-        const confidencePercent = Math.round(confidenceValue * 100);
-        
-        // AMÉLIORATION: Affichage du score ML
-        const scoreDisplay = `<span class="ml-score-badge">${item.score || 0}</span>`;
 
         const newsCard = document.createElement('div');
-        newsCard.className = `news-card glassmorphism ${impactClass}`; // Ajout de glassmorphism pour uniformiser
+        newsCard.className = `news-card glassmorphism ${impactClass}`;
         
-        // Ajouter les attributs pour le ML et le filtrage
+        // Ajouter les attributs pour le filtrage
         newsCard.setAttribute('data-category', item.category || 'general');
         newsCard.setAttribute('data-impact', item.impact || 'neutral');
         newsCard.setAttribute('data-sentiment', item.sentiment || item.impact || 'neutral');
         newsCard.setAttribute('data-news-id', `news-regular-${index}`);
         newsCard.setAttribute('data-country', item.country || 'other');
-        if (item.confidence) {
-            newsCard.setAttribute('data-confidence', item.confidence);
-        }
-        if (item.score) {
-            newsCard.setAttribute('data-score', item.score);
-        }
         
-        // NOUVEAU: Ajouter l'URL de l'article comme attribut
+        // Ajouter l'URL de l'article comme attribut
         if (item.url) {
             newsCard.setAttribute('data-url', item.url);
             newsCard.style.cursor = 'pointer';
@@ -607,7 +426,6 @@ function displayRecentNews(news) {
             newsCard.classList.add('clickable-news');
         }
 
-        // MODIFICATION: Utiliser le même format HTML que pour les actualités importantes
         newsCard.innerHTML = `
             <div class="p-4">
                 <div class="mb-2">
@@ -615,7 +433,6 @@ function displayRecentNews(news) {
                     <span class="impact-indicator">${(item.category || 'GENERAL').toUpperCase()}</span>
                     <span class="sentiment-indicator ${sentimentClass}">
                         ${sentimentIcon}
-                        ${scoreDisplay}
                     </span>
                 </div>
                 <h3 class="text-md font-semibold">${item.title}</h3>
@@ -678,118 +495,6 @@ function displayFallbackData() {
     });
 }
 
-// AMÉLIORATION: Fonction pour mettre à jour visuellement une actualité après modification
-function updateNewsClassificationUI(newsId, newClassification) {
-    // Trouver toutes les cartes avec cet ID (peut y en avoir plusieurs en cas de duplication)
-    const cards = document.querySelectorAll(`[data-news-id="${newsId}"]`);
-    
-    if (cards.length === 0) {
-        console.warn(`Actualité ${newsId} non trouvée dans le DOM`);
-        return false;
-    }
-    
-    // Mettre à jour chaque carte
-    cards.forEach(card => {
-        // Mettre à jour les attributs de données
-        if (newClassification.category) {
-            card.setAttribute('data-category', newClassification.category);
-        }
-        
-        if (newClassification.impact) {
-            card.setAttribute('data-impact', newClassification.impact);
-        }
-        
-        if (newClassification.sentiment) {
-            card.setAttribute('data-sentiment', newClassification.sentiment);
-        }
-        
-        // Mettre à jour visuellement les éléments
-        
-        // 1. Mise à jour de la catégorie
-        if (newClassification.category) {
-            const categoryEl = card.querySelector('.impact-indicator:nth-child(2)');
-            if (categoryEl) {
-                categoryEl.textContent = newClassification.category.toUpperCase();
-            }
-        }
-        
-        // 2. Mise à jour de l'impact
-        if (newClassification.impact) {
-            const impactEl = card.querySelector('.impact-indicator:first-child');
-            if (impactEl) {
-                // Mettre à jour le texte
-                const impactText = getImpactText(newClassification.impact);
-                impactEl.textContent = impactText;
-                
-                // Mettre à jour les classes CSS
-                impactEl.className = `impact-indicator impact-${newClassification.impact}`;
-            }
-        }
-        
-        // 3. Mise à jour du sentiment
-        if (newClassification.sentiment) {
-            const sentimentEl = card.querySelector('.sentiment-indicator');
-            if (sentimentEl) {
-                // Conserver les éléments existants
-                const scoreDisplay = sentimentEl.querySelector('.ml-score-badge');
-                
-                // Mettre à jour l'icône et la classe
-                const sentimentIcon = newClassification.sentiment === 'positive' ? '<i class="fas fa-arrow-up"></i>' : 
-                                      newClassification.sentiment === 'negative' ? '<i class="fas fa-arrow-down"></i>' : 
-                                      '<i class="fas fa-minus"></i>';
-                
-                sentimentEl.innerHTML = sentimentIcon;
-                sentimentEl.className = `sentiment-indicator sentiment-${newClassification.sentiment}`;
-                
-                // Réinsérer le score
-                if (scoreDisplay) sentimentEl.appendChild(scoreDisplay);
-            }
-        }
-        
-        // 4. Ajouter une animation pour indiquer le changement
-        card.classList.add('classification-updated');
-        setTimeout(() => {
-            card.classList.remove('classification-updated');
-        }, 1500);
-    });
-    
-    // Appliquer les filtres actuels pour masquer/afficher les cartes selon les nouveaux critères
-    window.NewsSystem.applyCurrentFilters();
-    
-    // Afficher une notification temporaire
-    showUpdateNotification('Classification mise à jour avec succès');
-    
-    return true;
-}
-
-/**
- * Affiche une notification temporaire
- * @param {string} message - Message à afficher
- */
-function showUpdateNotification(message) {
-    // Vérifier si une notification existe déjà
-    let notification = document.getElementById('update-notification');
-    
-    if (!notification) {
-        // Créer un nouvel élément de notification
-        notification = document.createElement('div');
-        notification.id = 'update-notification';
-        notification.className = 'update-notification';
-        document.body.appendChild(notification);
-    }
-    
-    // Mettre à jour le contenu
-    notification.textContent = message;
-    
-    // Afficher la notification
-    notification.classList.add('visible');
-    
-    // Masquer après un délai
-    setTimeout(() => {
-        notification.classList.remove('visible');
-    }, 3000);
-}
-
 /**
  * Fonctions utilitaires pour les textes
  */
@@ -810,7 +515,6 @@ function getSentimentText(sentiment) {
 // Exposer les fonctions nécessaires pour l'interopérabilité avec actualites.js
 window.NewsSystem.initializeNewsData = initializeNewsData;
 window.NewsSystem.filterNews = filterNews;
-window.NewsSystem.updateNewsClassificationUI = updateNewsClassificationUI;
 window.NewsSystem.applyCurrentFilters = function() {
     // Récupérer les filtres actifs
     const activeCategory = document.querySelector('#category-filters .filter-active')?.getAttribute('data-category') || 'all';
