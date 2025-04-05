@@ -6,9 +6,9 @@
           "count": 8,
           "articles": [
             "Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout",
-            "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth",
-            "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation Slower Growth",
+            "Fed's Powell warns tariffs fallout likely ‘significantly larger than expected'",
             "Trump Auto Tariffs: Escalating Trade War in No One's Interest, Europe Lobby Group Chief Says",
+            "China to impose 34% retaliatory tariff on all goods imported from the U.S.",
             "The geopolitical risk premium is likely to come back into the market, says Rapidan CEO Bob McNally",
             "Market warning lights flash amber after Trump tariff shock",
             "Trump Tariffs Smash Asia. How a Global Trade War Will Hurt U.S. Stock Markets.",
@@ -16,11 +16,11 @@
           ],
           "keywords": {
             "war": {
-              "count": 3,
+              "count": 4,
               "examples": [
                 "Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout",
-                "Market warning lights flash amber after Trump tariff shock",
-                "IMF warns of ‘significant risk' to global economy from Trump tariffs as markets slide"
+                "Fed's Powell warns tariffs fallout likely ‘significantly larger than expected'",
+                "Market warning lights flash amber after Trump tariff shock"
               ]
             },
             "russia": {
@@ -31,18 +31,17 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 25.0,
-            "neutral": 12.5,
-            "negative": 62.5
+            "positive": 0.0,
+            "neutral": 25.0,
+            "negative": 75.0
           },
-          "gpt_summary": "📰 The theme **geopolitics** was detected in **8 articles** during the period, mainly through topics like: war (3), russia (1). Sentiment is mostly negative (62.5% vs 25.0% positive). Examples of articles: « Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout », « Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth », « Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation Slower Growth »."
+          "gpt_summary": "📰 The theme **geopolitics** was detected in **8 articles** during the period, mainly through topics like: war (4), russia (1). Sentiment is mostly negative (75.0% vs 0.0% positive). Examples of articles: « Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout », « Fed's Powell warns tariffs fallout likely ‘significantly larger than expected' », « Trump Auto Tariffs: Escalating Trade War in No One's Interest, Europe Lobby Group Chief Says »."
         },
         "recession": {
-          "count": 7,
+          "count": 6,
           "articles": [
-            "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth",
-            "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation Slower Growth",
             "Global rout in bank shares intensifies as recession fears mount",
+            "US tariffs threaten growth shock, Goldman Sachs says",
             "El-Erian says U.S. recession risks are now 'uncomfortably high'",
             "Recession Risks Rise as Stocks Selloff on Tariffs",
             "These 2 Vanguard ETFs Have Over 10% of Assets in Nvidia Stock. Here's Why Both Growth Funds Are Great Buys Now.",
@@ -57,13 +56,14 @@
                 "Recession Risks Rise as Stocks Selloff on Tariffs"
               ]
             },
-            "slowdown": {
-              "count": 1,
+            "growth": {
+              "count": 2,
               "examples": [
+                "US tariffs threaten growth shock, Goldman Sachs says",
                 "These 2 Vanguard ETFs Have Over 10% of Assets in Nvidia Stock. Here's Why Both Growth Funds Are Great Buys Now."
               ]
             },
-            "growth": {
+            "slowdown": {
               "count": 1,
               "examples": [
                 "These 2 Vanguard ETFs Have Over 10% of Assets in Nvidia Stock. Here's Why Both Growth Funds Are Great Buys Now."
@@ -71,27 +71,55 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 28.6,
-            "neutral": 0.0,
-            "negative": 71.4
+            "positive": 0.0,
+            "neutral": 16.7,
+            "negative": 83.3
           },
-          "gpt_summary": "📰 The theme **recession** was detected in **7 articles** during the period, mainly through topics like: recession (3), slowdown (1), growth (1). Sentiment is mostly negative (71.4% vs 28.6% positive). Examples of articles: « Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth », « Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation Slower Growth », « Global rout in bank shares intensifies as recession fears mount »."
+          "gpt_summary": "📰 The theme **recession** was detected in **6 articles** during the period, mainly through topics like: recession (3), growth (2), slowdown (1). Sentiment is mostly negative (83.3% vs 0.0% positive). Examples of articles: « Global rout in bank shares intensifies as recession fears mount », « US tariffs threaten growth shock, Goldman Sachs says », « El-Erian says U.S. recession risks are now 'uncomfortably high' »."
         },
-        "inflation": {
+        "monetary_policy": {
           "count": 4,
           "articles": [
+            "Fed's Powell warns tariffs fallout likely ‘significantly larger than expected'",
             "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
-            "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth",
-            "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation Slower Growth",
+            "Fed Chair Powell speaks at the Society for Advancing Business Editing and Writing",
+            "Fed's Powell Says Tariff Impact May Be Larger Than Expected"
+          ],
+          "keywords": {
+            "fed": {
+              "count": 4,
+              "examples": [
+                "Fed's Powell warns tariffs fallout likely ‘significantly larger than expected'",
+                "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
+                "Fed Chair Powell speaks at the Society for Advancing Business Editing and Writing"
+              ]
+            },
+            "central bank": {
+              "count": 1,
+              "examples": [
+                "Powell sees tariffs raising inflation and says Fed will wait before further rate moves"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 50.0,
+            "neutral": 25.0,
+            "negative": 25.0
+          },
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **4 articles** during the period, mainly through topics like: fed (4), central bank (1). Sentiment is mostly positive (50.0% vs 25.0% negative). Examples of articles: « Fed's Powell warns tariffs fallout likely ‘significantly larger than expected' », « Powell sees tariffs raising inflation and says Fed will wait before further rate moves », « Fed Chair Powell speaks at the Society for Advancing Business Editing and Writing »."
+        },
+        "inflation": {
+          "count": 2,
+          "articles": [
+            "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
             "March Euro Area Inflation: Cool Report Shows Welcome Progress On Services Inflation"
           ],
           "keywords": {
             "inflation": {
-              "count": 4,
+              "count": 2,
               "examples": [
                 "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
-                "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth",
-                "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation Slower Growth"
+                "March Euro Area Inflation: Cool Report Shows Welcome Progress On Services Inflation"
               ]
             },
             "interest rate": {
@@ -101,10 +129,8 @@
               ]
             },
             "price": {
-              "count": 3,
+              "count": 1,
               "examples": [
-                "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth",
-                "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation Slower Growth",
                 "March Euro Area Inflation: Cool Report Shows Welcome Progress On Services Inflation"
               ]
             },
@@ -120,35 +146,7 @@
             "neutral": 0.0,
             "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **inflation** was detected in **4 articles** during the period, mainly through topics like: inflation (4), price (3), interest rate (1), prices (1). Sentiment is mostly positive (100.0% vs 0.0% negative). Examples of articles: « Powell sees tariffs raising inflation and says Fed will wait before further rate moves », « Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth », « Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation Slower Growth »."
-        },
-        "monetary_policy": {
-          "count": 2,
-          "articles": [
-            "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
-            "Fed's Powell Says Tariff Impact May Be Larger Than Expected"
-          ],
-          "keywords": {
-            "fed": {
-              "count": 2,
-              "examples": [
-                "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
-                "Fed's Powell Says Tariff Impact May Be Larger Than Expected"
-              ]
-            },
-            "central bank": {
-              "count": 1,
-              "examples": [
-                "Powell sees tariffs raising inflation and says Fed will wait before further rate moves"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 100.0,
-            "neutral": 0.0,
-            "negative": 0.0
-          },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **2 articles** during the period, mainly through topics like: fed (2), central bank (1). Sentiment is mostly positive (100.0% vs 0.0% negative). Examples of articles: « Powell sees tariffs raising inflation and says Fed will wait before further rate moves », « Fed's Powell Says Tariff Impact May Be Larger Than Expected »."
+          "gpt_summary": "📰 The theme **inflation** was detected in **2 articles** during the period, mainly through topics like: inflation (2), interest rate (1), price (1), prices (1). Sentiment is mostly positive (100.0% vs 0.0% negative). Examples of articles: « Powell sees tariffs raising inflation and says Fed will wait before further rate moves », « March Euro Area Inflation: Cool Report Shows Welcome Progress On Services Inflation »."
         }
       },
       "sectors": {
@@ -160,8 +158,8 @@
             "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
             "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?",
             "Trump tariffs, economic uncertainty fuel more settlements between CEOs and activists",
-            "Apple: 6 Reasons To Consider Buying Amid Tariff Uncertainty",
             "Japan says it is leaving all options open against Trump's tariffs",
+            "Fed Chair Powell speaks at the Society for Advancing Business Editing and Writing",
             "Trump tariffs poised to exacerbate woes of ailing petchems sector",
             "Tech stocks sink after Trump tariff rollout — Apple heads for worst drop in 5 years",
             "How Cheap Are Big Tech Stocks?",
@@ -178,7 +176,7 @@
               ]
             },
             "ai": {
-              "count": 6,
+              "count": 7,
               "examples": [
                 "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
                 "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?",
@@ -196,20 +194,27 @@
               "examples": [
                 "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?"
               ]
+            },
+            "data": {
+              "count": 1,
+              "examples": [
+                "Fed Chair Powell speaks at the Society for Advancing Business Editing and Writing"
+              ]
             }
           },
           "sentiment_distribution": {
             "positive": 33.3,
-            "neutral": 16.7,
-            "negative": 50.0
+            "neutral": 25.0,
+            "negative": 41.7
           },
-          "gpt_summary": "📰 The theme **technology** was detected in **12 articles** during the period, mainly through topics like: ai (6), tech (3), artificial intelligence (1), semiconductor (1). Sentiment is mixed (33.3% positive, 50.0% negative). Examples of articles: « Mag 7 relinquishes more than $800 billion as tech drives stock market nosedive », « Apple leads drop in tech stocks after Trump tariff announcement », « Powell sees tariffs raising inflation and says Fed will wait before further rate moves »."
+          "gpt_summary": "📰 The theme **technology** was detected in **12 articles** during the period, mainly through topics like: ai (7), tech (3), artificial intelligence (1), semiconductor (1), data (1). Sentiment is mixed (33.3% positive, 41.7% negative). Examples of articles: « Mag 7 relinquishes more than $800 billion as tech drives stock market nosedive », « Apple leads drop in tech stocks after Trump tariff announcement », « Powell sees tariffs raising inflation and says Fed will wait before further rate moves »."
         },
         "transport": {
-          "count": 4,
+          "count": 5,
           "articles": [
             "Visa bids $100 million to replace Mastercard as Apple's new credit card partner, WSJ reports",
             "March Euro Area Inflation: Cool Report Shows Welcome Progress On Services Inflation",
+            "China to impose 34% retaliatory tariff on all goods imported from the U.S.",
             "Japan's Rapidus in talks with Apple, Google to mass-produce chips, Nikkei reports",
             "Markets Face Uncertainty as Tariffs Rise—Experts Weigh Risks & Opportunities"
           ],
@@ -223,38 +228,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 25.0,
-            "neutral": 75.0,
+            "positive": 20.0,
+            "neutral": 80.0,
             "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **transport** was detected in **4 articles** during the period, mainly through topics like: port (2). Sentiment is mostly positive (25.0% vs 0.0% negative). Examples of articles: « Visa bids $100 million to replace Mastercard as Apple's new credit card partner, WSJ reports », « March Euro Area Inflation: Cool Report Shows Welcome Progress On Services Inflation », « Japan's Rapidus in talks with Apple, Google to mass-produce chips, Nikkei reports »."
-        },
-        "energy": {
-          "count": 2,
-          "articles": [
-            "Oil sinks nearly 3% after Trump announces sweeping new tariffs",
-            "Wall Street plunges as Trump tariffs spur global turmoil"
-          ],
-          "keywords": {
-            "oil": {
-              "count": 1,
-              "examples": [
-                "Oil sinks nearly 3% after Trump announces sweeping new tariffs"
-              ]
-            },
-            "crude": {
-              "count": 1,
-              "examples": [
-                "Oil sinks nearly 3% after Trump announces sweeping new tariffs"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 0.0,
-            "negative": 100.0
-          },
-          "gpt_summary": "📰 The theme **energy** was detected in **2 articles** during the period, mainly through topics like: oil (1), crude (1). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « Oil sinks nearly 3% after Trump announces sweeping new tariffs », « Wall Street plunges as Trump tariffs spur global turmoil »."
+          "gpt_summary": "📰 The theme **transport** was detected in **5 articles** during the period, mainly through topics like: port (2). Sentiment is mixed (20.0% positive, 0.0% negative). Examples of articles: « Visa bids $100 million to replace Mastercard as Apple's new credit card partner, WSJ reports », « March Euro Area Inflation: Cool Report Shows Welcome Progress On Services Inflation », « China to impose 34% retaliatory tariff on all goods imported from the U.S. »."
         },
         "healthcare": {
           "count": 1,
@@ -275,6 +253,32 @@
             "negative": 100.0
           },
           "gpt_summary": "📰 The theme **healthcare** was detected in **1 articles** during the period, mainly through topics like: pharma (1). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « Indian pharma stocks defy market slump on US tariffs exemption »."
+        },
+        "energy": {
+          "count": 1,
+          "articles": [
+            "Oil sinks nearly 3% after Trump announces sweeping new tariffs"
+          ],
+          "keywords": {
+            "oil": {
+              "count": 1,
+              "examples": [
+                "Oil sinks nearly 3% after Trump announces sweeping new tariffs"
+              ]
+            },
+            "crude": {
+              "count": 1,
+              "examples": [
+                "Oil sinks nearly 3% after Trump announces sweeping new tariffs"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 0.0,
+            "neutral": 0.0,
+            "negative": 100.0
+          },
+          "gpt_summary": "📰 The theme **energy** was detected in **1 articles** during the period, mainly through topics like: oil (1), crude (1). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « Oil sinks nearly 3% after Trump announces sweeping new tariffs »."
         },
         "finance": {
           "count": 1,
@@ -364,77 +368,22 @@
           },
           "gpt_summary": "📰 The theme **europe** was detected in **7 articles** during the period, mainly through topics like: france (5), eu (5), europe (1), germany (1), italy (1). Sentiment is mixed (14.3% positive, 28.6% negative). Examples of articles: « France fines Apple €150 million over app tracking violations, EU probes follow », « French antitrust regulator fines Apple 150 million euros over privacy tool », « Apple Fined $162 Million in France Over App Tracking Transparency »."
         },
-        "global": {
-          "count": 7,
-          "articles": [
-            "Global rout in bank shares intensifies as recession fears mount",
-            "Trump Tariffs Smash Asia. How a Global Trade War Will Hurt U.S. Stock Markets.",
-            "IMF warns of ‘significant risk' to global economy from Trump tariffs as markets slide",
-            "Global Stocks Plunge on Larger-Than-Expected US Tariffs",
-            "Tariffs could be a major rewiring of the domestic and global economy, says Mohamed El-Erian",
-            "Wall Street plunges as Trump tariffs spur global turmoil",
-            "Crossmark Global CEO: Investors should pay attention to technicals"
-          ],
-          "keywords": {
-            "global": {
-              "count": 4,
-              "examples": [
-                "Global rout in bank shares intensifies as recession fears mount",
-                "Global Stocks Plunge on Larger-Than-Expected US Tariffs",
-                "Wall Street plunges as Trump tariffs spur global turmoil"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 0.0,
-            "negative": 100.0
-          },
-          "gpt_summary": "📰 The theme **global** was detected in **7 articles** during the period, mainly through topics like: global (4). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « Global rout in bank shares intensifies as recession fears mount », « Trump Tariffs Smash Asia. How a Global Trade War Will Hurt U.S. Stock Markets. », « IMF warns of ‘significant risk' to global economy from Trump tariffs as markets slide »."
-        },
-        "asia": {
-          "count": 4,
-          "articles": [
-            "Japan's Rapidus in talks with Apple, Google to mass-produce chips, Nikkei reports",
-            "Japan says it is leaving all options open against Trump's tariffs",
-            "Indian pharma stocks defy market slump on US tariffs exemption",
-            "Trump Tariffs Smash Asia. How a Global Trade War Will Hurt U.S. Stock Markets."
-          ],
-          "keywords": {
-            "japan": {
-              "count": 2,
-              "examples": [
-                "Japan's Rapidus in talks with Apple, Google to mass-produce chips, Nikkei reports",
-                "Japan says it is leaving all options open against Trump's tariffs"
-              ]
-            },
-            "india": {
-              "count": 1,
-              "examples": [
-                "Indian pharma stocks defy market slump on US tariffs exemption"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 25.0,
-            "neutral": 25.0,
-            "negative": 50.0
-          },
-          "gpt_summary": "📰 The theme **asia** was detected in **4 articles** during the period, mainly through topics like: japan (2), india (1). Sentiment is mostly negative (50.0% vs 25.0% positive). Examples of articles: « Japan's Rapidus in talks with Apple, Google to mass-produce chips, Nikkei reports », « Japan says it is leaving all options open against Trump's tariffs », « Indian pharma stocks defy market slump on US tariffs exemption »."
-        },
         "usa": {
-          "count": 3,
+          "count": 5,
           "articles": [
+            "Fed's Powell warns tariffs fallout likely ‘significantly larger than expected'",
             "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
+            "Fed Chair Powell speaks at the Society for Advancing Business Editing and Writing",
             "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink",
             "Fed's Powell Says Tariff Impact May Be Larger Than Expected"
           ],
           "keywords": {
             "fed": {
-              "count": 2,
+              "count": 4,
               "examples": [
+                "Fed's Powell warns tariffs fallout likely ‘significantly larger than expected'",
                 "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
-                "Fed's Powell Says Tariff Impact May Be Larger Than Expected"
+                "Fed Chair Powell speaks at the Society for Advancing Business Editing and Writing"
               ]
             },
             "nasdaq": {
@@ -457,11 +406,73 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 66.7,
-            "neutral": 0.0,
-            "negative": 33.3
+            "positive": 40.0,
+            "neutral": 20.0,
+            "negative": 40.0
           },
-          "gpt_summary": "📰 The theme **usa** was detected in **3 articles** during the period, mainly through topics like: fed (2), nasdaq (1), dow jones (1), united states (1). Sentiment is mostly positive (66.7% vs 33.3% negative). Examples of articles: « Powell sees tariffs raising inflation and says Fed will wait before further rate moves », « Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink », « Fed's Powell Says Tariff Impact May Be Larger Than Expected »."
+          "gpt_summary": "📰 The theme **usa** was detected in **5 articles** during the period, mainly through topics like: fed (4), nasdaq (1), dow jones (1), united states (1). Sentiment is mixed (40.0% positive, 40.0% negative). Examples of articles: « Fed's Powell warns tariffs fallout likely ‘significantly larger than expected' », « Powell sees tariffs raising inflation and says Fed will wait before further rate moves », « Fed Chair Powell speaks at the Society for Advancing Business Editing and Writing »."
+        },
+        "global": {
+          "count": 5,
+          "articles": [
+            "Global rout in bank shares intensifies as recession fears mount",
+            "Trump Tariffs Smash Asia. How a Global Trade War Will Hurt U.S. Stock Markets.",
+            "IMF warns of ‘significant risk' to global economy from Trump tariffs as markets slide",
+            "Tariffs could be a major rewiring of the domestic and global economy, says Mohamed El-Erian",
+            "Crossmark Global CEO: Investors should pay attention to technicals"
+          ],
+          "keywords": {
+            "global": {
+              "count": 2,
+              "examples": [
+                "Global rout in bank shares intensifies as recession fears mount",
+                "Crossmark Global CEO: Investors should pay attention to technicals"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 0.0,
+            "neutral": 0.0,
+            "negative": 100.0
+          },
+          "gpt_summary": "📰 The theme **global** was detected in **5 articles** during the period, mainly through topics like: global (2). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « Global rout in bank shares intensifies as recession fears mount », « Trump Tariffs Smash Asia. How a Global Trade War Will Hurt U.S. Stock Markets. », « IMF warns of ‘significant risk' to global economy from Trump tariffs as markets slide »."
+        },
+        "asia": {
+          "count": 5,
+          "articles": [
+            "China to impose 34% retaliatory tariff on all goods imported from the U.S.",
+            "Japan's Rapidus in talks with Apple, Google to mass-produce chips, Nikkei reports",
+            "Japan says it is leaving all options open against Trump's tariffs",
+            "Indian pharma stocks defy market slump on US tariffs exemption",
+            "Trump Tariffs Smash Asia. How a Global Trade War Will Hurt U.S. Stock Markets."
+          ],
+          "keywords": {
+            "beijing": {
+              "count": 1,
+              "examples": [
+                "China to impose 34% retaliatory tariff on all goods imported from the U.S."
+              ]
+            },
+            "japan": {
+              "count": 2,
+              "examples": [
+                "Japan's Rapidus in talks with Apple, Google to mass-produce chips, Nikkei reports",
+                "Japan says it is leaving all options open against Trump's tariffs"
+              ]
+            },
+            "india": {
+              "count": 1,
+              "examples": [
+                "Indian pharma stocks defy market slump on US tariffs exemption"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 20.0,
+            "neutral": 40.0,
+            "negative": 40.0
+          },
+          "gpt_summary": "📰 The theme **asia** was detected in **5 articles** during the period, mainly through topics like: japan (2), beijing (1), india (1). Sentiment is mixed (20.0% positive, 40.0% negative). Examples of articles: « China to impose 34% retaliatory tariff on all goods imported from the U.S. », « Japan's Rapidus in talks with Apple, Google to mass-produce chips, Nikkei reports », « Japan says it is leaving all options open against Trump's tariffs »."
         },
         "africa": {
           "count": 1,
@@ -499,8 +510,7 @@
             "Fed rate cuts could ward off a serious recession, Jim Cramer says",
             "Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook",
             "Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout",
-            "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth",
-            "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation Slower Growth",
+            "Fed's Powell warns tariffs fallout likely ‘significantly larger than expected'",
             "Trump economic advisor Kevin Hassett warns of more uncertainty over tariffs",
             "Apple preparing for a major software overhaul, Bloomberg News reports",
             "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)",
@@ -510,6 +520,7 @@
             "China's consumer inflation turns negative for the first time in 13 months",
             "Apple is welcome to expand investment in China, commerce minister tells CEO",
             "Apple announces $99 million new clean energy fund in China",
+            "China to impose 34% retaliatory tariff on all goods imported from the U.S.",
             "Apple Just Gave Taiwan Semiconductor Investors Great News",
             "The geopolitical risk premium is likely to come back into the market, says Rapidan CEO Bob McNally",
             "'Volatility and conflict': Business leaders sound warnings over Trump's tariffs",
@@ -520,11 +531,11 @@
           ],
           "keywords": {
             "war": {
-              "count": 10,
+              "count": 11,
               "examples": [
                 "Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook",
                 "Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout",
-                "Trump economic advisor Kevin Hassett warns of more uncertainty over tariffs"
+                "Fed's Powell warns tariffs fallout likely ‘significantly larger than expected'"
               ]
             },
             "geopolitical": {
@@ -555,14 +566,70 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 19.0,
-            "neutral": 33.3,
-            "negative": 47.6
+            "positive": 9.5,
+            "neutral": 38.1,
+            "negative": 52.4
           },
-          "gpt_summary": "📰 The theme **geopolitics** was detected in **21 articles** during the period, mainly through topics like: war (10), china (5), geopolitical (1), taiwan (1), russia (1). Sentiment is mostly negative (47.6% vs 19.0% positive). Examples of articles: « Fed rate cuts could ward off a serious recession, Jim Cramer says », « Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook », « Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout »."
+          "gpt_summary": "📰 The theme **geopolitics** was detected in **21 articles** during the period, mainly through topics like: war (11), china (5), geopolitical (1), taiwan (1), russia (1). Sentiment is mostly negative (52.4% vs 9.5% positive). Examples of articles: « Fed rate cuts could ward off a serious recession, Jim Cramer says », « Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook », « Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout »."
+        },
+        "monetary_policy": {
+          "count": 15,
+          "articles": [
+            "Fed rate cuts could ward off a serious recession, Jim Cramer says",
+            "CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves",
+            "Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook",
+            "Fed's Powell warns tariffs fallout likely ‘significantly larger than expected'",
+            "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
+            "Fed will likely cut rates this year: Economist",
+            "Fed's March dot plot: What FOMC members are forecasting",
+            "S&P 500 Rises as Boeing Soars, Apple and Google Face EU Scrutiny Ahead of Fed Decision",
+            "Exclusive: Some European officials weigh if they can rely on Fed for dollars under Trump",
+            "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan",
+            "Fed Chair Powell speaks at the Society for Advancing Business Editing and Writing",
+            "India's inflation rate dips to cooler-than-expected 3.61% in February, below central bank's target",
+            "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts",
+            "Fed's Bostic on Inflation, Rate Cuts and Tariffs",
+            "Fed's Powell Says Tariff Impact May Be Larger Than Expected"
+          ],
+          "keywords": {
+            "fed": {
+              "count": 13,
+              "examples": [
+                "Fed rate cuts could ward off a serious recession, Jim Cramer says",
+                "CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves",
+                "Fed's Powell warns tariffs fallout likely ‘significantly larger than expected'"
+              ]
+            },
+            "central bank": {
+              "count": 3,
+              "examples": [
+                "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
+                "Fed's March dot plot: What FOMC members are forecasting",
+                "Exclusive: Some European officials weigh if they can rely on Fed for dollars under Trump"
+              ]
+            },
+            "rate cut": {
+              "count": 1,
+              "examples": [
+                "Fed's March dot plot: What FOMC members are forecasting"
+              ]
+            },
+            "monetary": {
+              "count": 1,
+              "examples": [
+                "Fed's Bostic on Inflation, Rate Cuts and Tariffs"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 20.0,
+            "neutral": 26.7,
+            "negative": 53.3
+          },
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **15 articles** during the period, mainly through topics like: fed (13), central bank (3), rate cut (1), monetary (1). Sentiment is mostly negative (53.3% vs 20.0% positive). Examples of articles: « Fed rate cuts could ward off a serious recession, Jim Cramer says », « CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves », « Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook »."
         },
         "inflation": {
-          "count": 16,
+          "count": 14,
           "articles": [
             "U.S. households are running out of emergency funds as pandemic cash runs out, inflation takes its toll",
             "CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves",
@@ -571,8 +638,6 @@
             "Trump tells NBC he 'couldn't care less' if car makers hike prices due to tariffs",
             "Inflation rate hits 2.8% in February, less than expected",
             "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
-            "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth",
-            "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation Slower Growth",
             "March BoE Meeting: Balancing Inflation And Growth Risks",
             "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)",
             "March Euro Area Inflation: Cool Report Shows Welcome Progress On Services Inflation",
@@ -590,11 +655,11 @@
               ]
             },
             "price": {
-              "count": 7,
+              "count": 5,
               "examples": [
                 "Trump tells NBC he 'couldn't care less' if car makers hike prices due to tariffs",
                 "Inflation rate hits 2.8% in February, less than expected",
-                "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth"
+                "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)"
               ]
             },
             "prices": {
@@ -613,11 +678,11 @@
               ]
             },
             "inflation": {
-              "count": 7,
+              "count": 5,
               "examples": [
                 "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
-                "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth",
-                "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation Slower Growth"
+                "March BoE Meeting: Balancing Inflation And Growth Risks",
+                "March Euro Area Inflation: Cool Report Shows Welcome Progress On Services Inflation"
               ]
             },
             "CPI": {
@@ -629,66 +694,20 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 43.8,
-            "neutral": 25.0,
-            "negative": 31.2
+            "positive": 35.7,
+            "neutral": 28.6,
+            "negative": 35.7
           },
-          "gpt_summary": "📰 The theme **inflation** was detected in **16 articles** during the period, mainly through topics like: price (7), inflation (7), prices (3), interest rate (2), consumer price (2). Sentiment is mixed (43.8% positive, 31.2% negative). Examples of articles: « U.S. households are running out of emergency funds as pandemic cash runs out, inflation takes its toll », « CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves », « Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook »."
-        },
-        "monetary_policy": {
-          "count": 11,
-          "articles": [
-            "Fed rate cuts could ward off a serious recession, Jim Cramer says",
-            "CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves",
-            "Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook",
-            "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
-            "S&P 500 Rises as Boeing Soars, Apple and Google Face EU Scrutiny Ahead of Fed Decision",
-            "Exclusive: Some European officials weigh if they can rely on Fed for dollars under Trump",
-            "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan",
-            "India's inflation rate dips to cooler-than-expected 3.61% in February, below central bank's target",
-            "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts",
-            "Fed's Bostic on Inflation, Rate Cuts and Tariffs",
-            "Fed's Powell Says Tariff Impact May Be Larger Than Expected"
-          ],
-          "keywords": {
-            "fed": {
-              "count": 9,
-              "examples": [
-                "Fed rate cuts could ward off a serious recession, Jim Cramer says",
-                "CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves",
-                "Powell sees tariffs raising inflation and says Fed will wait before further rate moves"
-              ]
-            },
-            "central bank": {
-              "count": 2,
-              "examples": [
-                "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
-                "Exclusive: Some European officials weigh if they can rely on Fed for dollars under Trump"
-              ]
-            },
-            "monetary": {
-              "count": 1,
-              "examples": [
-                "Fed's Bostic on Inflation, Rate Cuts and Tariffs"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 27.3,
-            "neutral": 27.3,
-            "negative": 45.5
-          },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **11 articles** during the period, mainly through topics like: fed (9), central bank (2), monetary (1). Sentiment is mixed (27.3% positive, 45.5% negative). Examples of articles: « Fed rate cuts could ward off a serious recession, Jim Cramer says », « CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves », « Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook »."
+          "gpt_summary": "📰 The theme **inflation** was detected in **14 articles** during the period, mainly through topics like: price (5), inflation (5), prices (3), interest rate (2), consumer price (2). Sentiment is mixed (35.7% positive, 35.7% negative). Examples of articles: « U.S. households are running out of emergency funds as pandemic cash runs out, inflation takes its toll », « CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves », « Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook »."
         },
         "recession": {
-          "count": 10,
+          "count": 9,
           "articles": [
             "Fed rate cuts could ward off a serious recession, Jim Cramer says",
             "Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook",
-            "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth",
-            "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation Slower Growth",
             "March BoE Meeting: Balancing Inflation And Growth Risks",
             "Global rout in bank shares intensifies as recession fears mount",
+            "US tariffs threaten growth shock, Goldman Sachs says",
             "El-Erian says U.S. recession risks are now 'uncomfortably high'",
             "Recession Risks Rise as Stocks Selloff on Tariffs",
             "These 2 Vanguard ETFs Have Over 10% of Assets in Nvidia Stock. Here's Why Both Growth Funds Are Great Buys Now.",
@@ -703,13 +722,14 @@
                 "Global rout in bank shares intensifies as recession fears mount"
               ]
             },
-            "slowdown": {
-              "count": 1,
+            "growth": {
+              "count": 2,
               "examples": [
+                "US tariffs threaten growth shock, Goldman Sachs says",
                 "These 2 Vanguard ETFs Have Over 10% of Assets in Nvidia Stock. Here's Why Both Growth Funds Are Great Buys Now."
               ]
             },
-            "growth": {
+            "slowdown": {
               "count": 1,
               "examples": [
                 "These 2 Vanguard ETFs Have Over 10% of Assets in Nvidia Stock. Here's Why Both Growth Funds Are Great Buys Now."
@@ -717,11 +737,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 20.0,
-            "neutral": 0.0,
-            "negative": 80.0
+            "positive": 0.0,
+            "neutral": 11.1,
+            "negative": 88.9
           },
-          "gpt_summary": "📰 The theme **recession** was detected in **10 articles** during the period, mainly through topics like: recession (5), slowdown (1), growth (1). Sentiment is mostly negative (80.0% vs 20.0% positive). Examples of articles: « Fed rate cuts could ward off a serious recession, Jim Cramer says », « Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook », « Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth »."
+          "gpt_summary": "📰 The theme **recession** was detected in **9 articles** during the period, mainly through topics like: recession (5), growth (2), slowdown (1). Sentiment is mostly negative (88.9% vs 0.0% positive). Examples of articles: « Fed rate cuts could ward off a serious recession, Jim Cramer says », « Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook », « March BoE Meeting: Balancing Inflation And Growth Risks »."
         }
       },
       "sectors": {
@@ -738,9 +758,9 @@
             "Apple loses appeal against Germany's special abuse control for Big Tech",
             "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?",
             "Trump tariffs, economic uncertainty fuel more settlements between CEOs and activists",
-            "Apple: 6 Reasons To Consider Buying Amid Tariff Uncertainty",
             "Japan says it is leaving all options open against Trump's tariffs",
             "Apple Just Gave Taiwan Semiconductor Investors Great News",
+            "Fed Chair Powell speaks at the Society for Advancing Business Editing and Writing",
             "Apple says iPhone 16 series to be available in Indonesia from April 11",
             "Trump tariffs poised to exacerbate woes of ailing petchems sector",
             "Tech stocks sink after Trump tariff rollout — Apple heads for worst drop in 5 years",
@@ -759,7 +779,7 @@
               ]
             },
             "ai": {
-              "count": 12,
+              "count": 13,
               "examples": [
                 "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
                 "Trump economic advisor Kevin Hassett warns of more uncertainty over tariffs",
@@ -782,9 +802,10 @@
               ]
             },
             "data": {
-              "count": 1,
+              "count": 2,
               "examples": [
-                "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)"
+                "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)",
+                "Fed Chair Powell speaks at the Society for Advancing Business Editing and Writing"
               ]
             },
             "computing": {
@@ -802,17 +823,18 @@
           },
           "sentiment_distribution": {
             "positive": 30.0,
-            "neutral": 30.0,
-            "negative": 40.0
+            "neutral": 35.0,
+            "negative": 35.0
           },
-          "gpt_summary": "📰 The theme **technology** was detected in **20 articles** during the period, mainly through topics like: ai (12), tech (6), artificial intelligence (3), semiconductor (2), data (1). Sentiment is mixed (30.0% positive, 40.0% negative). Examples of articles: « CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves », « Mag 7 relinquishes more than $800 billion as tech drives stock market nosedive », « Apple leads drop in tech stocks after Trump tariff announcement »."
+          "gpt_summary": "📰 The theme **technology** was detected in **20 articles** during the period, mainly through topics like: ai (13), tech (6), artificial intelligence (3), semiconductor (2), data (2). Sentiment is mixed (30.0% positive, 35.0% negative). Examples of articles: « CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves », « Mag 7 relinquishes more than $800 billion as tech drives stock market nosedive », « Apple leads drop in tech stocks after Trump tariff announcement »."
         },
         "transport": {
-          "count": 6,
+          "count": 7,
           "articles": [
             "Visa bids $100 million to replace Mastercard as Apple's new credit card partner, WSJ reports",
             "Apple preparing for a major software overhaul, Bloomberg News reports",
             "March Euro Area Inflation: Cool Report Shows Welcome Progress On Services Inflation",
+            "China to impose 34% retaliatory tariff on all goods imported from the U.S.",
             "Japan's Rapidus in talks with Apple, Google to mass-produce chips, Nikkei reports",
             "Auto industry rocked by Trump's 25% tariffs on US imports",
             "Markets Face Uncertainty as Tariffs Rise—Experts Weigh Risks & Opportunities"
@@ -828,20 +850,19 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 16.7,
-            "neutral": 83.3,
+            "positive": 14.3,
+            "neutral": 85.7,
             "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **transport** was detected in **6 articles** during the period, mainly through topics like: port (4). Sentiment is mixed (16.7% positive, 0.0% negative). Examples of articles: « Visa bids $100 million to replace Mastercard as Apple's new credit card partner, WSJ reports », « Apple preparing for a major software overhaul, Bloomberg News reports », « March Euro Area Inflation: Cool Report Shows Welcome Progress On Services Inflation »."
+          "gpt_summary": "📰 The theme **transport** was detected in **7 articles** during the period, mainly through topics like: port (4). Sentiment is mixed (14.3% positive, 0.0% negative). Examples of articles: « Visa bids $100 million to replace Mastercard as Apple's new credit card partner, WSJ reports », « Apple preparing for a major software overhaul, Bloomberg News reports », « March Euro Area Inflation: Cool Report Shows Welcome Progress On Services Inflation »."
         },
         "energy": {
-          "count": 5,
+          "count": 4,
           "articles": [
             "Apple announces $99 million new clean energy fund in China",
             "Trump tariffs on Venezuela crude buyers are a potent new tool of US pressure",
             "Oil sinks nearly 3% after Trump announces sweeping new tariffs",
-            "Trump widens trade war as he targets Venezuela's energy sector, eyes sectoral tariffs soon",
-            "Wall Street plunges as Trump tariffs spur global turmoil"
+            "Trump widens trade war as he targets Venezuela's energy sector, eyes sectoral tariffs soon"
           ],
           "keywords": {
             "energy": {
@@ -873,14 +894,15 @@
           },
           "sentiment_distribution": {
             "positive": 0.0,
-            "neutral": 60.0,
-            "negative": 40.0
+            "neutral": 75.0,
+            "negative": 25.0
           },
-          "gpt_summary": "📰 The theme **energy** was detected in **5 articles** during the period, mainly through topics like: oil (3), energy (1), crude (1), gas (1). Sentiment is mostly negative (40.0% vs 0.0% positive). Examples of articles: « Apple announces $99 million new clean energy fund in China », « Trump tariffs on Venezuela crude buyers are a potent new tool of US pressure », « Oil sinks nearly 3% after Trump announces sweeping new tariffs »."
+          "gpt_summary": "📰 The theme **energy** was detected in **4 articles** during the period, mainly through topics like: oil (3), energy (1), crude (1), gas (1). Sentiment is mostly negative (25.0% vs 0.0% positive). Examples of articles: « Apple announces $99 million new clean energy fund in China », « Trump tariffs on Venezuela crude buyers are a potent new tool of US pressure », « Oil sinks nearly 3% after Trump announces sweeping new tariffs »."
         },
         "finance": {
-          "count": 2,
+          "count": 3,
           "articles": [
+            "Fed will likely cut rates this year: Economist",
             "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan",
             "Pimco Sees Bonds as Source of Stability Amid Recession Risk"
           ],
@@ -903,7 +925,7 @@
             "neutral": 0.0,
             "negative": 100.0
           },
-          "gpt_summary": "📰 The theme **finance** was detected in **2 articles** during the period, mainly through topics like: rates (1), bonds (1). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan », « Pimco Sees Bonds as Source of Stability Amid Recession Risk »."
+          "gpt_summary": "📰 The theme **finance** was detected in **3 articles** during the period, mainly through topics like: rates (1), bonds (1). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « Fed will likely cut rates this year: Economist », « China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan », « Pimco Sees Bonds as Source of Stability Amid Recession Risk »."
         },
         "healthcare": {
           "count": 2,
@@ -967,6 +989,70 @@
         }
       },
       "regions": {
+        "usa": {
+          "count": 16,
+          "articles": [
+            "Fed rate cuts could ward off a serious recession, Jim Cramer says",
+            "Live Nasdaq Composite: NVDA, TSLA Rise as Markets Lick Wounds",
+            "CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves",
+            "Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook",
+            "Fed's Powell warns tariffs fallout likely ‘significantly larger than expected'",
+            "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
+            "Fed will likely cut rates this year: Economist",
+            "Fed's March dot plot: What FOMC members are forecasting",
+            "S&P 500 Rises as Boeing Soars, Apple and Google Face EU Scrutiny Ahead of Fed Decision",
+            "Exclusive: Some European officials weigh if they can rely on Fed for dollars under Trump",
+            "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan",
+            "Fed Chair Powell speaks at the Society for Advancing Business Editing and Writing",
+            "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink",
+            "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts",
+            "Fed's Bostic on Inflation, Rate Cuts and Tariffs",
+            "Fed's Powell Says Tariff Impact May Be Larger Than Expected"
+          ],
+          "keywords": {
+            "fed": {
+              "count": 13,
+              "examples": [
+                "Fed rate cuts could ward off a serious recession, Jim Cramer says",
+                "CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves",
+                "Fed's Powell warns tariffs fallout likely ‘significantly larger than expected'"
+              ]
+            },
+            "nasdaq": {
+              "count": 3,
+              "examples": [
+                "Live Nasdaq Composite: NVDA, TSLA Rise as Markets Lick Wounds",
+                "S&P 500 Rises as Boeing Soars, Apple and Google Face EU Scrutiny Ahead of Fed Decision",
+                "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink"
+              ]
+            },
+            "dow jones": {
+              "count": 2,
+              "examples": [
+                "Live Nasdaq Composite: NVDA, TSLA Rise as Markets Lick Wounds",
+                "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink"
+              ]
+            },
+            "s&p": {
+              "count": 1,
+              "examples": [
+                "S&P 500 Rises as Boeing Soars, Apple and Google Face EU Scrutiny Ahead of Fed Decision"
+              ]
+            },
+            "united states": {
+              "count": 1,
+              "examples": [
+                "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 25.0,
+            "neutral": 25.0,
+            "negative": 50.0
+          },
+          "gpt_summary": "📰 The theme **usa** was detected in **16 articles** during the period, mainly through topics like: fed (13), nasdaq (3), dow jones (2), s&p (1), united states (1). Sentiment is mostly negative (50.0% vs 25.0% positive). Examples of articles: « Fed rate cuts could ward off a serious recession, Jim Cramer says », « Live Nasdaq Composite: NVDA, TSLA Rise as Markets Lick Wounds », « CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves »."
+        },
         "europe": {
           "count": 13,
           "articles": [
@@ -1043,73 +1129,14 @@
           },
           "gpt_summary": "📰 The theme **europe** was detected in **13 articles** during the period, mainly through topics like: eu (11), france (5), europe (4), germany (2), european union (2). Sentiment is mixed (23.1% positive, 23.1% negative). Examples of articles: « Exclusive: EU likely to impose modest fines on Apple, Meta over DMA breaches, sources say », « Exclusive: EU set to close investigation into Apple's browser options, sources say », « France fines Apple €150 million over app tracking violations, EU probes follow »."
         },
-        "usa": {
-          "count": 12,
-          "articles": [
-            "Fed rate cuts could ward off a serious recession, Jim Cramer says",
-            "Live Nasdaq Composite: NVDA, TSLA Rise as Markets Lick Wounds",
-            "CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves",
-            "Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook",
-            "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
-            "S&P 500 Rises as Boeing Soars, Apple and Google Face EU Scrutiny Ahead of Fed Decision",
-            "Exclusive: Some European officials weigh if they can rely on Fed for dollars under Trump",
-            "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan",
-            "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink",
-            "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts",
-            "Fed's Bostic on Inflation, Rate Cuts and Tariffs",
-            "Fed's Powell Says Tariff Impact May Be Larger Than Expected"
-          ],
-          "keywords": {
-            "fed": {
-              "count": 9,
-              "examples": [
-                "Fed rate cuts could ward off a serious recession, Jim Cramer says",
-                "CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves",
-                "Powell sees tariffs raising inflation and says Fed will wait before further rate moves"
-              ]
-            },
-            "nasdaq": {
-              "count": 3,
-              "examples": [
-                "Live Nasdaq Composite: NVDA, TSLA Rise as Markets Lick Wounds",
-                "S&P 500 Rises as Boeing Soars, Apple and Google Face EU Scrutiny Ahead of Fed Decision",
-                "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink"
-              ]
-            },
-            "dow jones": {
-              "count": 2,
-              "examples": [
-                "Live Nasdaq Composite: NVDA, TSLA Rise as Markets Lick Wounds",
-                "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink"
-              ]
-            },
-            "s&p": {
-              "count": 1,
-              "examples": [
-                "S&P 500 Rises as Boeing Soars, Apple and Google Face EU Scrutiny Ahead of Fed Decision"
-              ]
-            },
-            "united states": {
-              "count": 1,
-              "examples": [
-                "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 33.3,
-            "neutral": 25.0,
-            "negative": 41.7
-          },
-          "gpt_summary": "📰 The theme **usa** was detected in **12 articles** during the period, mainly through topics like: fed (9), nasdaq (3), dow jones (2), s&p (1), united states (1). Sentiment is mixed (33.3% positive, 41.7% negative). Examples of articles: « Fed rate cuts could ward off a serious recession, Jim Cramer says », « Live Nasdaq Composite: NVDA, TSLA Rise as Markets Lick Wounds », « CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves »."
-        },
         "asia": {
-          "count": 10,
+          "count": 11,
           "articles": [
             "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan",
             "China's consumer inflation turns negative for the first time in 13 months",
             "Apple is welcome to expand investment in China, commerce minister tells CEO",
             "Apple announces $99 million new clean energy fund in China",
+            "China to impose 34% retaliatory tariff on all goods imported from the U.S.",
             "Japan's Rapidus in talks with Apple, Google to mass-produce chips, Nikkei reports",
             "Japan says it is leaving all options open against Trump's tariffs",
             "India's inflation rate dips to cooler-than-expected 3.61% in February, below central bank's target",
@@ -1127,10 +1154,11 @@
               ]
             },
             "beijing": {
-              "count": 2,
+              "count": 3,
               "examples": [
                 "China's consumer inflation turns negative for the first time in 13 months",
-                "Apple announces $99 million new clean energy fund in China"
+                "Apple announces $99 million new clean energy fund in China",
+                "China to impose 34% retaliatory tariff on all goods imported from the U.S."
               ]
             },
             "japan": {
@@ -1150,32 +1178,29 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 20.0,
-            "neutral": 30.0,
-            "negative": 50.0
+            "positive": 18.2,
+            "neutral": 36.4,
+            "negative": 45.5
           },
-          "gpt_summary": "📰 The theme **asia** was detected in **10 articles** during the period, mainly through topics like: china (4), india (3), beijing (2), japan (2). Sentiment is mostly negative (50.0% vs 20.0% positive). Examples of articles: « China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan », « China's consumer inflation turns negative for the first time in 13 months », « Apple is welcome to expand investment in China, commerce minister tells CEO »."
+          "gpt_summary": "📰 The theme **asia** was detected in **11 articles** during the period, mainly through topics like: china (4), beijing (3), india (3), japan (2). Sentiment is mostly negative (45.5% vs 18.2% positive). Examples of articles: « China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan », « China's consumer inflation turns negative for the first time in 13 months », « Apple is welcome to expand investment in China, commerce minister tells CEO »."
         },
         "global": {
-          "count": 9,
+          "count": 7,
           "articles": [
             "Global rout in bank shares intensifies as recession fears mount",
             "Apple to hold Worldwide Developers Conference from June 9",
             "Trump Tariffs Smash Asia. How a Global Trade War Will Hurt U.S. Stock Markets.",
             "IMF warns of ‘significant risk' to global economy from Trump tariffs as markets slide",
-            "Global Stocks Plunge on Larger-Than-Expected US Tariffs",
             "This agentic AI play's stock is falling after it called out ‘increasing global macroeconomic uncertainty'",
             "Tariffs could be a major rewiring of the domestic and global economy, says Mohamed El-Erian",
-            "Wall Street plunges as Trump tariffs spur global turmoil",
             "Crossmark Global CEO: Investors should pay attention to technicals"
           ],
           "keywords": {
             "global": {
-              "count": 4,
+              "count": 2,
               "examples": [
                 "Global rout in bank shares intensifies as recession fears mount",
-                "Global Stocks Plunge on Larger-Than-Expected US Tariffs",
-                "Wall Street plunges as Trump tariffs spur global turmoil"
+                "Crossmark Global CEO: Investors should pay attention to technicals"
               ]
             },
             "world": {
@@ -1193,10 +1218,10 @@
           },
           "sentiment_distribution": {
             "positive": 0.0,
-            "neutral": 11.1,
-            "negative": 88.9
+            "neutral": 14.3,
+            "negative": 85.7
           },
-          "gpt_summary": "📰 The theme **global** was detected in **9 articles** during the period, mainly through topics like: global (4), world (1), worldwide (1). Sentiment is mostly negative (88.9% vs 0.0% positive). Examples of articles: « Global rout in bank shares intensifies as recession fears mount », « Apple to hold Worldwide Developers Conference from June 9 », « Trump Tariffs Smash Asia. How a Global Trade War Will Hurt U.S. Stock Markets. »."
+          "gpt_summary": "📰 The theme **global** was detected in **7 articles** during the period, mainly through topics like: global (2), world (1), worldwide (1). Sentiment is mostly negative (85.7% vs 0.0% positive). Examples of articles: « Global rout in bank shares intensifies as recession fears mount », « Apple to hold Worldwide Developers Conference from June 9 », « Trump Tariffs Smash Asia. How a Global Trade War Will Hurt U.S. Stock Markets. »."
         },
         "canada": {
           "count": 2,
@@ -1262,8 +1287,7 @@
             "Fed rate cuts could ward off a serious recession, Jim Cramer says",
             "Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook",
             "Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout",
-            "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth",
-            "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation Slower Growth",
+            "Fed's Powell warns tariffs fallout likely ‘significantly larger than expected'",
             "Trump economic advisor Kevin Hassett warns of more uncertainty over tariffs",
             "Apple preparing for a major software overhaul, Bloomberg News reports",
             "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)",
@@ -1273,6 +1297,7 @@
             "China's consumer inflation turns negative for the first time in 13 months",
             "Apple is welcome to expand investment in China, commerce minister tells CEO",
             "Apple announces $99 million new clean energy fund in China",
+            "China to impose 34% retaliatory tariff on all goods imported from the U.S.",
             "Apple Just Gave Taiwan Semiconductor Investors Great News",
             "The geopolitical risk premium is likely to come back into the market, says Rapidan CEO Bob McNally",
             "'Volatility and conflict': Business leaders sound warnings over Trump's tariffs",
@@ -1283,11 +1308,11 @@
           ],
           "keywords": {
             "war": {
-              "count": 10,
+              "count": 11,
               "examples": [
                 "Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook",
                 "Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout",
-                "Trump economic advisor Kevin Hassett warns of more uncertainty over tariffs"
+                "Fed's Powell warns tariffs fallout likely ‘significantly larger than expected'"
               ]
             },
             "geopolitical": {
@@ -1318,14 +1343,70 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 19.0,
-            "neutral": 33.3,
-            "negative": 47.6
+            "positive": 9.5,
+            "neutral": 38.1,
+            "negative": 52.4
           },
-          "gpt_summary": "📰 The theme **geopolitics** was detected in **21 articles** during the period, mainly through topics like: war (10), china (5), geopolitical (1), taiwan (1), russia (1). Sentiment is mostly negative (47.6% vs 19.0% positive). Examples of articles: « Fed rate cuts could ward off a serious recession, Jim Cramer says », « Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook », « Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout »."
+          "gpt_summary": "📰 The theme **geopolitics** was detected in **21 articles** during the period, mainly through topics like: war (11), china (5), geopolitical (1), taiwan (1), russia (1). Sentiment is mostly negative (52.4% vs 9.5% positive). Examples of articles: « Fed rate cuts could ward off a serious recession, Jim Cramer says », « Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook », « Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout »."
+        },
+        "monetary_policy": {
+          "count": 15,
+          "articles": [
+            "Fed rate cuts could ward off a serious recession, Jim Cramer says",
+            "CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves",
+            "Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook",
+            "Fed's Powell warns tariffs fallout likely ‘significantly larger than expected'",
+            "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
+            "Fed will likely cut rates this year: Economist",
+            "Fed's March dot plot: What FOMC members are forecasting",
+            "S&P 500 Rises as Boeing Soars, Apple and Google Face EU Scrutiny Ahead of Fed Decision",
+            "Exclusive: Some European officials weigh if they can rely on Fed for dollars under Trump",
+            "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan",
+            "Fed Chair Powell speaks at the Society for Advancing Business Editing and Writing",
+            "India's inflation rate dips to cooler-than-expected 3.61% in February, below central bank's target",
+            "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts",
+            "Fed's Bostic on Inflation, Rate Cuts and Tariffs",
+            "Fed's Powell Says Tariff Impact May Be Larger Than Expected"
+          ],
+          "keywords": {
+            "fed": {
+              "count": 13,
+              "examples": [
+                "Fed rate cuts could ward off a serious recession, Jim Cramer says",
+                "CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves",
+                "Fed's Powell warns tariffs fallout likely ‘significantly larger than expected'"
+              ]
+            },
+            "central bank": {
+              "count": 3,
+              "examples": [
+                "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
+                "Fed's March dot plot: What FOMC members are forecasting",
+                "Exclusive: Some European officials weigh if they can rely on Fed for dollars under Trump"
+              ]
+            },
+            "rate cut": {
+              "count": 1,
+              "examples": [
+                "Fed's March dot plot: What FOMC members are forecasting"
+              ]
+            },
+            "monetary": {
+              "count": 1,
+              "examples": [
+                "Fed's Bostic on Inflation, Rate Cuts and Tariffs"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 20.0,
+            "neutral": 26.7,
+            "negative": 53.3
+          },
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **15 articles** during the period, mainly through topics like: fed (13), central bank (3), rate cut (1), monetary (1). Sentiment is mostly negative (53.3% vs 20.0% positive). Examples of articles: « Fed rate cuts could ward off a serious recession, Jim Cramer says », « CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves », « Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook »."
         },
         "inflation": {
-          "count": 16,
+          "count": 14,
           "articles": [
             "U.S. households are running out of emergency funds as pandemic cash runs out, inflation takes its toll",
             "CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves",
@@ -1334,8 +1415,6 @@
             "Trump tells NBC he 'couldn't care less' if car makers hike prices due to tariffs",
             "Inflation rate hits 2.8% in February, less than expected",
             "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
-            "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth",
-            "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation Slower Growth",
             "March BoE Meeting: Balancing Inflation And Growth Risks",
             "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)",
             "March Euro Area Inflation: Cool Report Shows Welcome Progress On Services Inflation",
@@ -1353,11 +1432,11 @@
               ]
             },
             "price": {
-              "count": 7,
+              "count": 5,
               "examples": [
                 "Trump tells NBC he 'couldn't care less' if car makers hike prices due to tariffs",
                 "Inflation rate hits 2.8% in February, less than expected",
-                "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth"
+                "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)"
               ]
             },
             "prices": {
@@ -1376,11 +1455,11 @@
               ]
             },
             "inflation": {
-              "count": 7,
+              "count": 5,
               "examples": [
                 "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
-                "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth",
-                "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation Slower Growth"
+                "March BoE Meeting: Balancing Inflation And Growth Risks",
+                "March Euro Area Inflation: Cool Report Shows Welcome Progress On Services Inflation"
               ]
             },
             "CPI": {
@@ -1392,66 +1471,20 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 43.8,
-            "neutral": 25.0,
-            "negative": 31.2
+            "positive": 35.7,
+            "neutral": 28.6,
+            "negative": 35.7
           },
-          "gpt_summary": "📰 The theme **inflation** was detected in **16 articles** during the period, mainly through topics like: price (7), inflation (7), prices (3), interest rate (2), consumer price (2). Sentiment is mixed (43.8% positive, 31.2% negative). Examples of articles: « U.S. households are running out of emergency funds as pandemic cash runs out, inflation takes its toll », « CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves », « Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook »."
-        },
-        "monetary_policy": {
-          "count": 11,
-          "articles": [
-            "Fed rate cuts could ward off a serious recession, Jim Cramer says",
-            "CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves",
-            "Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook",
-            "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
-            "S&P 500 Rises as Boeing Soars, Apple and Google Face EU Scrutiny Ahead of Fed Decision",
-            "Exclusive: Some European officials weigh if they can rely on Fed for dollars under Trump",
-            "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan",
-            "India's inflation rate dips to cooler-than-expected 3.61% in February, below central bank's target",
-            "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts",
-            "Fed's Bostic on Inflation, Rate Cuts and Tariffs",
-            "Fed's Powell Says Tariff Impact May Be Larger Than Expected"
-          ],
-          "keywords": {
-            "fed": {
-              "count": 9,
-              "examples": [
-                "Fed rate cuts could ward off a serious recession, Jim Cramer says",
-                "CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves",
-                "Powell sees tariffs raising inflation and says Fed will wait before further rate moves"
-              ]
-            },
-            "central bank": {
-              "count": 2,
-              "examples": [
-                "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
-                "Exclusive: Some European officials weigh if they can rely on Fed for dollars under Trump"
-              ]
-            },
-            "monetary": {
-              "count": 1,
-              "examples": [
-                "Fed's Bostic on Inflation, Rate Cuts and Tariffs"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 27.3,
-            "neutral": 27.3,
-            "negative": 45.5
-          },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **11 articles** during the period, mainly through topics like: fed (9), central bank (2), monetary (1). Sentiment is mixed (27.3% positive, 45.5% negative). Examples of articles: « Fed rate cuts could ward off a serious recession, Jim Cramer says », « CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves », « Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook »."
+          "gpt_summary": "📰 The theme **inflation** was detected in **14 articles** during the period, mainly through topics like: price (5), inflation (5), prices (3), interest rate (2), consumer price (2). Sentiment is mixed (35.7% positive, 35.7% negative). Examples of articles: « U.S. households are running out of emergency funds as pandemic cash runs out, inflation takes its toll », « CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves », « Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook »."
         },
         "recession": {
-          "count": 10,
+          "count": 9,
           "articles": [
             "Fed rate cuts could ward off a serious recession, Jim Cramer says",
             "Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook",
-            "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth",
-            "Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation Slower Growth",
             "March BoE Meeting: Balancing Inflation And Growth Risks",
             "Global rout in bank shares intensifies as recession fears mount",
+            "US tariffs threaten growth shock, Goldman Sachs says",
             "El-Erian says U.S. recession risks are now 'uncomfortably high'",
             "Recession Risks Rise as Stocks Selloff on Tariffs",
             "These 2 Vanguard ETFs Have Over 10% of Assets in Nvidia Stock. Here's Why Both Growth Funds Are Great Buys Now.",
@@ -1466,13 +1499,14 @@
                 "Global rout in bank shares intensifies as recession fears mount"
               ]
             },
-            "slowdown": {
-              "count": 1,
+            "growth": {
+              "count": 2,
               "examples": [
+                "US tariffs threaten growth shock, Goldman Sachs says",
                 "These 2 Vanguard ETFs Have Over 10% of Assets in Nvidia Stock. Here's Why Both Growth Funds Are Great Buys Now."
               ]
             },
-            "growth": {
+            "slowdown": {
               "count": 1,
               "examples": [
                 "These 2 Vanguard ETFs Have Over 10% of Assets in Nvidia Stock. Here's Why Both Growth Funds Are Great Buys Now."
@@ -1480,11 +1514,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 20.0,
-            "neutral": 0.0,
-            "negative": 80.0
+            "positive": 0.0,
+            "neutral": 11.1,
+            "negative": 88.9
           },
-          "gpt_summary": "📰 The theme **recession** was detected in **10 articles** during the period, mainly through topics like: recession (5), slowdown (1), growth (1). Sentiment is mostly negative (80.0% vs 20.0% positive). Examples of articles: « Fed rate cuts could ward off a serious recession, Jim Cramer says », « Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook », « Powell Warns Trump's Tariffs Risk Stoking Even Higher Inflation and Slower Growth »."
+          "gpt_summary": "📰 The theme **recession** was detected in **9 articles** during the period, mainly through topics like: recession (5), growth (2), slowdown (1). Sentiment is mostly negative (88.9% vs 0.0% positive). Examples of articles: « Fed rate cuts could ward off a serious recession, Jim Cramer says », « Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook », « March BoE Meeting: Balancing Inflation And Growth Risks »."
         }
       },
       "sectors": {
@@ -1501,9 +1535,9 @@
             "Apple loses appeal against Germany's special abuse control for Big Tech",
             "Donald Trump Campaigned on Cutting Corporate Taxes – Where Does That Promise Stand Today?",
             "Trump tariffs, economic uncertainty fuel more settlements between CEOs and activists",
-            "Apple: 6 Reasons To Consider Buying Amid Tariff Uncertainty",
             "Japan says it is leaving all options open against Trump's tariffs",
             "Apple Just Gave Taiwan Semiconductor Investors Great News",
+            "Fed Chair Powell speaks at the Society for Advancing Business Editing and Writing",
             "Apple says iPhone 16 series to be available in Indonesia from April 11",
             "Trump tariffs poised to exacerbate woes of ailing petchems sector",
             "Tech stocks sink after Trump tariff rollout — Apple heads for worst drop in 5 years",
@@ -1522,7 +1556,7 @@
               ]
             },
             "ai": {
-              "count": 12,
+              "count": 13,
               "examples": [
                 "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
                 "Trump economic advisor Kevin Hassett warns of more uncertainty over tariffs",
@@ -1545,9 +1579,10 @@
               ]
             },
             "data": {
-              "count": 1,
+              "count": 2,
               "examples": [
-                "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)"
+                "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)",
+                "Fed Chair Powell speaks at the Society for Advancing Business Editing and Writing"
               ]
             },
             "computing": {
@@ -1565,17 +1600,18 @@
           },
           "sentiment_distribution": {
             "positive": 30.0,
-            "neutral": 30.0,
-            "negative": 40.0
+            "neutral": 35.0,
+            "negative": 35.0
           },
-          "gpt_summary": "📰 The theme **technology** was detected in **20 articles** during the period, mainly through topics like: ai (12), tech (6), artificial intelligence (3), semiconductor (2), data (1). Sentiment is mixed (30.0% positive, 40.0% negative). Examples of articles: « CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves », « Mag 7 relinquishes more than $800 billion as tech drives stock market nosedive », « Apple leads drop in tech stocks after Trump tariff announcement »."
+          "gpt_summary": "📰 The theme **technology** was detected in **20 articles** during the period, mainly through topics like: ai (13), tech (6), artificial intelligence (3), semiconductor (2), data (2). Sentiment is mixed (30.0% positive, 35.0% negative). Examples of articles: « CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves », « Mag 7 relinquishes more than $800 billion as tech drives stock market nosedive », « Apple leads drop in tech stocks after Trump tariff announcement »."
         },
         "transport": {
-          "count": 6,
+          "count": 7,
           "articles": [
             "Visa bids $100 million to replace Mastercard as Apple's new credit card partner, WSJ reports",
             "Apple preparing for a major software overhaul, Bloomberg News reports",
             "March Euro Area Inflation: Cool Report Shows Welcome Progress On Services Inflation",
+            "China to impose 34% retaliatory tariff on all goods imported from the U.S.",
             "Japan's Rapidus in talks with Apple, Google to mass-produce chips, Nikkei reports",
             "Auto industry rocked by Trump's 25% tariffs on US imports",
             "Markets Face Uncertainty as Tariffs Rise—Experts Weigh Risks & Opportunities"
@@ -1591,20 +1627,19 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 16.7,
-            "neutral": 83.3,
+            "positive": 14.3,
+            "neutral": 85.7,
             "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **transport** was detected in **6 articles** during the period, mainly through topics like: port (4). Sentiment is mixed (16.7% positive, 0.0% negative). Examples of articles: « Visa bids $100 million to replace Mastercard as Apple's new credit card partner, WSJ reports », « Apple preparing for a major software overhaul, Bloomberg News reports », « March Euro Area Inflation: Cool Report Shows Welcome Progress On Services Inflation »."
+          "gpt_summary": "📰 The theme **transport** was detected in **7 articles** during the period, mainly through topics like: port (4). Sentiment is mixed (14.3% positive, 0.0% negative). Examples of articles: « Visa bids $100 million to replace Mastercard as Apple's new credit card partner, WSJ reports », « Apple preparing for a major software overhaul, Bloomberg News reports », « March Euro Area Inflation: Cool Report Shows Welcome Progress On Services Inflation »."
         },
         "energy": {
-          "count": 5,
+          "count": 4,
           "articles": [
             "Apple announces $99 million new clean energy fund in China",
             "Trump tariffs on Venezuela crude buyers are a potent new tool of US pressure",
             "Oil sinks nearly 3% after Trump announces sweeping new tariffs",
-            "Trump widens trade war as he targets Venezuela's energy sector, eyes sectoral tariffs soon",
-            "Wall Street plunges as Trump tariffs spur global turmoil"
+            "Trump widens trade war as he targets Venezuela's energy sector, eyes sectoral tariffs soon"
           ],
           "keywords": {
             "energy": {
@@ -1636,14 +1671,15 @@
           },
           "sentiment_distribution": {
             "positive": 0.0,
-            "neutral": 60.0,
-            "negative": 40.0
+            "neutral": 75.0,
+            "negative": 25.0
           },
-          "gpt_summary": "📰 The theme **energy** was detected in **5 articles** during the period, mainly through topics like: oil (3), energy (1), crude (1), gas (1). Sentiment is mostly negative (40.0% vs 0.0% positive). Examples of articles: « Apple announces $99 million new clean energy fund in China », « Trump tariffs on Venezuela crude buyers are a potent new tool of US pressure », « Oil sinks nearly 3% after Trump announces sweeping new tariffs »."
+          "gpt_summary": "📰 The theme **energy** was detected in **4 articles** during the period, mainly through topics like: oil (3), energy (1), crude (1), gas (1). Sentiment is mostly negative (25.0% vs 0.0% positive). Examples of articles: « Apple announces $99 million new clean energy fund in China », « Trump tariffs on Venezuela crude buyers are a potent new tool of US pressure », « Oil sinks nearly 3% after Trump announces sweeping new tariffs »."
         },
         "finance": {
-          "count": 2,
+          "count": 3,
           "articles": [
+            "Fed will likely cut rates this year: Economist",
             "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan",
             "Pimco Sees Bonds as Source of Stability Amid Recession Risk"
           ],
@@ -1666,7 +1702,7 @@
             "neutral": 0.0,
             "negative": 100.0
           },
-          "gpt_summary": "📰 The theme **finance** was detected in **2 articles** during the period, mainly through topics like: rates (1), bonds (1). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan », « Pimco Sees Bonds as Source of Stability Amid Recession Risk »."
+          "gpt_summary": "📰 The theme **finance** was detected in **3 articles** during the period, mainly through topics like: rates (1), bonds (1). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « Fed will likely cut rates this year: Economist », « China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan », « Pimco Sees Bonds as Source of Stability Amid Recession Risk »."
         },
         "healthcare": {
           "count": 2,
@@ -1730,6 +1766,70 @@
         }
       },
       "regions": {
+        "usa": {
+          "count": 16,
+          "articles": [
+            "Fed rate cuts could ward off a serious recession, Jim Cramer says",
+            "Live Nasdaq Composite: NVDA, TSLA Rise as Markets Lick Wounds",
+            "CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves",
+            "Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook",
+            "Fed's Powell warns tariffs fallout likely ‘significantly larger than expected'",
+            "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
+            "Fed will likely cut rates this year: Economist",
+            "Fed's March dot plot: What FOMC members are forecasting",
+            "S&P 500 Rises as Boeing Soars, Apple and Google Face EU Scrutiny Ahead of Fed Decision",
+            "Exclusive: Some European officials weigh if they can rely on Fed for dollars under Trump",
+            "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan",
+            "Fed Chair Powell speaks at the Society for Advancing Business Editing and Writing",
+            "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink",
+            "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts",
+            "Fed's Bostic on Inflation, Rate Cuts and Tariffs",
+            "Fed's Powell Says Tariff Impact May Be Larger Than Expected"
+          ],
+          "keywords": {
+            "fed": {
+              "count": 13,
+              "examples": [
+                "Fed rate cuts could ward off a serious recession, Jim Cramer says",
+                "CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves",
+                "Fed's Powell warns tariffs fallout likely ‘significantly larger than expected'"
+              ]
+            },
+            "nasdaq": {
+              "count": 3,
+              "examples": [
+                "Live Nasdaq Composite: NVDA, TSLA Rise as Markets Lick Wounds",
+                "S&P 500 Rises as Boeing Soars, Apple and Google Face EU Scrutiny Ahead of Fed Decision",
+                "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink"
+              ]
+            },
+            "dow jones": {
+              "count": 2,
+              "examples": [
+                "Live Nasdaq Composite: NVDA, TSLA Rise as Markets Lick Wounds",
+                "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink"
+              ]
+            },
+            "s&p": {
+              "count": 1,
+              "examples": [
+                "S&P 500 Rises as Boeing Soars, Apple and Google Face EU Scrutiny Ahead of Fed Decision"
+              ]
+            },
+            "united states": {
+              "count": 1,
+              "examples": [
+                "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 25.0,
+            "neutral": 25.0,
+            "negative": 50.0
+          },
+          "gpt_summary": "📰 The theme **usa** was detected in **16 articles** during the period, mainly through topics like: fed (13), nasdaq (3), dow jones (2), s&p (1), united states (1). Sentiment is mostly negative (50.0% vs 25.0% positive). Examples of articles: « Fed rate cuts could ward off a serious recession, Jim Cramer says », « Live Nasdaq Composite: NVDA, TSLA Rise as Markets Lick Wounds », « CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves »."
+        },
         "europe": {
           "count": 13,
           "articles": [
@@ -1806,73 +1906,14 @@
           },
           "gpt_summary": "📰 The theme **europe** was detected in **13 articles** during the period, mainly through topics like: eu (11), france (5), europe (4), germany (2), european union (2). Sentiment is mixed (23.1% positive, 23.1% negative). Examples of articles: « Exclusive: EU likely to impose modest fines on Apple, Meta over DMA breaches, sources say », « Exclusive: EU set to close investigation into Apple's browser options, sources say », « France fines Apple €150 million over app tracking violations, EU probes follow »."
         },
-        "usa": {
-          "count": 12,
-          "articles": [
-            "Fed rate cuts could ward off a serious recession, Jim Cramer says",
-            "Live Nasdaq Composite: NVDA, TSLA Rise as Markets Lick Wounds",
-            "CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves",
-            "Summers on Recession Risks, Inflation, Trade War, Tariffs, Fed Outlook",
-            "Powell sees tariffs raising inflation and says Fed will wait before further rate moves",
-            "S&P 500 Rises as Boeing Soars, Apple and Google Face EU Scrutiny Ahead of Fed Decision",
-            "Exclusive: Some European officials weigh if they can rely on Fed for dollars under Trump",
-            "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan",
-            "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink",
-            "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts",
-            "Fed's Bostic on Inflation, Rate Cuts and Tariffs",
-            "Fed's Powell Says Tariff Impact May Be Larger Than Expected"
-          ],
-          "keywords": {
-            "fed": {
-              "count": 9,
-              "examples": [
-                "Fed rate cuts could ward off a serious recession, Jim Cramer says",
-                "CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves",
-                "Powell sees tariffs raising inflation and says Fed will wait before further rate moves"
-              ]
-            },
-            "nasdaq": {
-              "count": 3,
-              "examples": [
-                "Live Nasdaq Composite: NVDA, TSLA Rise as Markets Lick Wounds",
-                "S&P 500 Rises as Boeing Soars, Apple and Google Face EU Scrutiny Ahead of Fed Decision",
-                "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink"
-              ]
-            },
-            "dow jones": {
-              "count": 2,
-              "examples": [
-                "Live Nasdaq Composite: NVDA, TSLA Rise as Markets Lick Wounds",
-                "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink"
-              ]
-            },
-            "s&p": {
-              "count": 1,
-              "examples": [
-                "S&P 500 Rises as Boeing Soars, Apple and Google Face EU Scrutiny Ahead of Fed Decision"
-              ]
-            },
-            "united states": {
-              "count": 1,
-              "examples": [
-                "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 33.3,
-            "neutral": 25.0,
-            "negative": 41.7
-          },
-          "gpt_summary": "📰 The theme **usa** was detected in **12 articles** during the period, mainly through topics like: fed (9), nasdaq (3), dow jones (2), s&p (1), united states (1). Sentiment is mixed (33.3% positive, 41.7% negative). Examples of articles: « Fed rate cuts could ward off a serious recession, Jim Cramer says », « Live Nasdaq Composite: NVDA, TSLA Rise as Markets Lick Wounds », « CNBC Daily Open: The effect of Trump policies will sway Fed's interest rate moves »."
-        },
         "asia": {
-          "count": 10,
+          "count": 11,
           "articles": [
             "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan",
             "China's consumer inflation turns negative for the first time in 13 months",
             "Apple is welcome to expand investment in China, commerce minister tells CEO",
             "Apple announces $99 million new clean energy fund in China",
+            "China to impose 34% retaliatory tariff on all goods imported from the U.S.",
             "Japan's Rapidus in talks with Apple, Google to mass-produce chips, Nikkei reports",
             "Japan says it is leaving all options open against Trump's tariffs",
             "India's inflation rate dips to cooler-than-expected 3.61% in February, below central bank's target",
@@ -1890,10 +1931,11 @@
               ]
             },
             "beijing": {
-              "count": 2,
+              "count": 3,
               "examples": [
                 "China's consumer inflation turns negative for the first time in 13 months",
-                "Apple announces $99 million new clean energy fund in China"
+                "Apple announces $99 million new clean energy fund in China",
+                "China to impose 34% retaliatory tariff on all goods imported from the U.S."
               ]
             },
             "japan": {
@@ -1913,32 +1955,29 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 20.0,
-            "neutral": 30.0,
-            "negative": 50.0
+            "positive": 18.2,
+            "neutral": 36.4,
+            "negative": 45.5
           },
-          "gpt_summary": "📰 The theme **asia** was detected in **10 articles** during the period, mainly through topics like: china (4), india (3), beijing (2), japan (2). Sentiment is mostly negative (50.0% vs 20.0% positive). Examples of articles: « China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan », « China's consumer inflation turns negative for the first time in 13 months », « Apple is welcome to expand investment in China, commerce minister tells CEO »."
+          "gpt_summary": "📰 The theme **asia** was detected in **11 articles** during the period, mainly through topics like: china (4), beijing (3), india (3), japan (2). Sentiment is mostly negative (45.5% vs 18.2% positive). Examples of articles: « China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan », « China's consumer inflation turns negative for the first time in 13 months », « Apple is welcome to expand investment in China, commerce minister tells CEO »."
         },
         "global": {
-          "count": 9,
+          "count": 7,
           "articles": [
             "Global rout in bank shares intensifies as recession fears mount",
             "Apple to hold Worldwide Developers Conference from June 9",
             "Trump Tariffs Smash Asia. How a Global Trade War Will Hurt U.S. Stock Markets.",
             "IMF warns of ‘significant risk' to global economy from Trump tariffs as markets slide",
-            "Global Stocks Plunge on Larger-Than-Expected US Tariffs",
             "This agentic AI play's stock is falling after it called out ‘increasing global macroeconomic uncertainty'",
             "Tariffs could be a major rewiring of the domestic and global economy, says Mohamed El-Erian",
-            "Wall Street plunges as Trump tariffs spur global turmoil",
             "Crossmark Global CEO: Investors should pay attention to technicals"
           ],
           "keywords": {
             "global": {
-              "count": 4,
+              "count": 2,
               "examples": [
                 "Global rout in bank shares intensifies as recession fears mount",
-                "Global Stocks Plunge on Larger-Than-Expected US Tariffs",
-                "Wall Street plunges as Trump tariffs spur global turmoil"
+                "Crossmark Global CEO: Investors should pay attention to technicals"
               ]
             },
             "world": {
@@ -1956,10 +1995,10 @@
           },
           "sentiment_distribution": {
             "positive": 0.0,
-            "neutral": 11.1,
-            "negative": 88.9
+            "neutral": 14.3,
+            "negative": 85.7
           },
-          "gpt_summary": "📰 The theme **global** was detected in **9 articles** during the period, mainly through topics like: global (4), world (1), worldwide (1). Sentiment is mostly negative (88.9% vs 0.0% positive). Examples of articles: « Global rout in bank shares intensifies as recession fears mount », « Apple to hold Worldwide Developers Conference from June 9 », « Trump Tariffs Smash Asia. How a Global Trade War Will Hurt U.S. Stock Markets. »."
+          "gpt_summary": "📰 The theme **global** was detected in **7 articles** during the period, mainly through topics like: global (2), world (1), worldwide (1). Sentiment is mostly negative (85.7% vs 0.0% positive). Examples of articles: « Global rout in bank shares intensifies as recession fears mount », « Apple to hold Worldwide Developers Conference from June 9 », « Trump Tariffs Smash Asia. How a Global Trade War Will Hurt U.S. Stock Markets. »."
         },
         "canada": {
           "count": 2,
@@ -2018,6 +2057,6 @@
       }
     }
   },
-  "lastUpdated": "2025-04-05T01:13:47.515887",
-  "analysisCount": 107
+  "lastUpdated": "2025-04-05T04:14:17.642688",
+  "analysisCount": 105
 }
