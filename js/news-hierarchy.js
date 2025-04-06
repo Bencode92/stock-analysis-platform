@@ -101,21 +101,16 @@ function distributeNewsByImportance(newsData) {
         }
     });
 
-    // Liste des mots-clés et catégories à exclure
-    const excludedKeywords = ['ipo', 'acquisition', 'merger', 'event', 'earnings', 'dividend', 'buyback', 'm&a'];
+    // Liste des types à exclure
+    const excludedTypes = ['economic', 'ipo', 'm&a'];
 
-    // Filtre des actualités non désirées
+    // Filtre des actualités par type exact
     allNews = allNews.filter(news => {
-        const title = (news.title || '').toLowerCase();
-        const category = (news.category || '').toLowerCase();
         const type = (news.type || '').toLowerCase();
-        
-        return !excludedKeywords.some(keyword => 
-            title.includes(keyword) || category.includes(keyword) || type.includes(keyword)
-        );
+        return !excludedTypes.includes(type);
     });
 
-    console.log(`Après filtrage des événements, IPO, M&A, etc.: ${allNews.length} actualités restantes`);
+    console.log(`Après filtrage des types exclus: ${allNews.length} actualités restantes`);
 
     // Vérifier que tous les champs nécessaires sont présents
     allNews.forEach(news => {
