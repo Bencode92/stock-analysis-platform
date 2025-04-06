@@ -1,6 +1,7 @@
 /**
  * Gestionnaire unifié des filtres d'événements
  * Gère la filtration des événements par date et catégorie
+ * Version améliorée avec persistance des préférences et vérification du format de date
  */
 const UnifiedEventFilters = {
     // Configuration
@@ -19,20 +20,53 @@ const UnifiedEventFilters = {
         eventContainers: {
             main: '#events-container',
             itemClass: '.event-card'
+        },
+        storage: {
+            dateFilterKey: 'eventDateFilter',
+            categoryFilterKey: 'eventCategoryFilter'
         }
     },
     
     // État actuel des filtres
     state: {
         dateFilter: 'today', // 'today' ou 'week'
-        categoryFilter: 'all' // 'all', 'US', 'economic', 'ipo', 'm&a', etc.
+        categoryFilter: 'all' // 'all', 'economic', 'ipo', 'm&a', etc.
     },
     
     // Initialisation
     init: function() {
+        // Charger les préférences sauvegardées
+        this.loadSavedPreferences();
+        
+        // Configurer les écouteurs d'événements
         this.setupEventListeners();
-        // Appliquer les filtres initiaux
-        this.applyFilters();
+        
+        // Vérifier le format de date au démarrage
+        setTimeout(() => {
+            this.checkDateFormat();
+            
+            // Mettre à jour l'UI des filtres
+            this.updateDateFilterUI();
+            this.updateCategoryFilterUI();
+            
+            // Appliquer les filtres initiaux
+            this.applyFilters();
+        }, 500); // Délai pour permettre le chargement des événements
+    },
+    
+    // Chargement des préférences
+    loadSavedPreferences: function() {
+        // Charger le filtre de date
+        const savedDateFilter = localStorage.getItem(this.config.storage.dateFilterKey);
+        if (savedDateFilter && (savedDateFilter === 'today' || savedDateFilter === 'week')) {
+            this.state.dateFilter = savedDateFilter;
+        }
+        
+        // Charger le filtre de catégorie
+        const savedCategoryFilter = localStorage.getItem(this.config.storage.categoryFilterKey);
+        if (savedCategoryFilter) {
+            this.state.categoryFilter = savedCategoryFilter;
+        }
     },
     
     // Configuration des écouteurs d'événements
@@ -65,6 +99,9 @@ const UnifiedEventFilters = {
         if (filterType !== this.state.dateFilter) {
             this.state.dateFilter = filterType;
             
+            // Sauvegarder la préférence
+            localStorage.setItem(this.config.storage.dateFilterKey, filterType);
+            
             // Mettre à jour l'UI
             this.updateDateFilterUI();
             
@@ -77,6 +114,9 @@ const UnifiedEventFilters = {
     setCategoryFilter: function(category) {
         if (category !== this.state.categoryFilter) {
             this.state.categoryFilter = category;
+            
+            // Sauvegarder la préférence
+            localStorage.setItem(this.config.storage.categoryFilterKey, category);
             
             // Mettre à jour l'UI
             this.updateCategoryFilterUI();
@@ -95,20 +135,20 @@ const UnifiedEventFilters = {
             // Réinitialiser les classes
             todayFilter.classList.remove(this.config.dateFilters.activeClass);
             weekFilter.classList.remove(this.config.dateFilters.activeClass);
+            todayFilter.classList.remove('text-green-400', 'border-green-400', 'border-opacity-30');
+            weekFilter.classList.remove('text-green-400', 'border-green-400', 'border-opacity-30');
+            todayFilter.classList.add('text-gray-400', 'border-gray-700');
+            weekFilter.classList.add('text-gray-400', 'border-gray-700');
             
             // Ajouter la classe active au filtre sélectionné
             if (this.state.dateFilter === 'today') {
                 todayFilter.classList.add(this.config.dateFilters.activeClass);
-                todayFilter.classList.remove('text-gray-400');
-                todayFilter.classList.add('text-green-400');
-                weekFilter.classList.remove('text-green-400');
-                weekFilter.classList.add('text-gray-400');
+                todayFilter.classList.remove('text-gray-400', 'border-gray-700');
+                todayFilter.classList.add('text-green-400', 'border-green-400', 'border-opacity-30');
             } else {
                 weekFilter.classList.add(this.config.dateFilters.activeClass);
-                weekFilter.classList.remove('text-gray-400');
-                weekFilter.classList.add('text-green-400');
-                todayFilter.classList.remove('text-green-400');
-                todayFilter.classList.add('text-gray-400');
+                weekFilter.classList.remove('text-gray-400', 'border-gray-700');
+                weekFilter.classList.add('text-green-400', 'border-green-400', 'border-opacity-30');
             }
         }
     },
@@ -160,13 +200,49 @@ const UnifiedEventFilters = {
     // Vérifier si un événement correspond au filtre de date
     matchesDateFilter: function(eventElement) {
         if (this.state.dateFilter === 'today') {
-            // Vérifier si l'événement est pour aujourd'hui
+            // Obtenir la date actuelle au format jj/mm/aaaa
+            const today = new Date().toLocaleDateString('fr-FR');
+            
+            // Trouver le conteneur de date dans l'événement
+            const dateElement = eventElement.querySelector('.event-date');
+            if (dateElement) {
+                const eventDate = dateElement.textContent.trim();
+                return eventDate === today;
+            }
+            
+            // Fallback à l'ancienne méthode si .event-date n'existe pas
             return eventElement.classList.contains('event-today');
         } else if (this.state.dateFilter === 'week') {
-            // Pour la semaine, tous les événements sont inclus
+            // Obtenir les 7 prochains jours
+            const weekDates = this.getWeekDates();
+            
+            // Trouver le conteneur de date dans l'événement
+            const dateElement = eventElement.querySelector('.event-date');
+            if (dateElement) {
+                const eventDate = dateElement.textContent.trim();
+                return weekDates.includes(eventDate);
+            }
+            
+            // Pour la semaine, tous les événements sont inclus par défaut
             return true;
         }
+        
         return true; // Par défaut, accepter tous les événements
+    },
+    
+    // Obtenir les dates des 7 prochains jours
+    getWeekDates: function() {
+        const today = new Date();
+        const dates = [];
+        
+        // Ajouter les 7 prochains jours
+        for (let i = 0; i < 7; i++) {
+            const date = new Date();
+            date.setDate(today.getDate() + i);
+            dates.push(date.toLocaleDateString('fr-FR'));
+        }
+        
+        return dates;
     },
     
     // Vérifier si un événement correspond au filtre de catégorie
@@ -176,7 +252,7 @@ const UnifiedEventFilters = {
         }
         
         // Vérifier si l'événement a la catégorie recherchée
-        return eventElement.dataset.category === this.state.categoryFilter;
+        return eventElement.getAttribute('data-type') === this.state.categoryFilter;
     },
     
     // Vérifier s'il n'y a pas de résultats et afficher un message
@@ -209,10 +285,42 @@ const UnifiedEventFilters = {
                 emptyMessage.remove();
             }
         }
+    },
+    
+    // Vérification du format de date
+    checkDateFormat: function() {
+        const eventsContainer = document.querySelector(this.config.eventContainers.main);
+        if (!eventsContainer) return;
+        
+        const events = eventsContainer.querySelectorAll(this.config.eventContainers.itemClass);
+        const dateFormat = /^\d{2}\/\d{2}\/\d{4}$/; // Format fr-FR: jj/mm/aaaa
+        
+        let formatCorrect = true;
+        let firstDate = '';
+        
+        events.forEach(event => {
+            const dateElement = event.querySelector('.event-date');
+            if (dateElement) {
+                const dateText = dateElement.textContent.trim();
+                if (!firstDate) firstDate = dateText;
+                
+                if (!dateFormat.test(dateText)) {
+                    console.warn('Format de date incorrect détecté:', dateText);
+                    formatCorrect = false;
+                }
+            }
+        });
+        
+        if (!formatCorrect) {
+            console.warn(`⚠️ Attention: certaines dates ne sont pas au format jj/mm/aaaa. Premier exemple trouvé: ${firstDate}`);
+        }
     }
 };
 
 // Initialisation au chargement du DOM
 document.addEventListener('DOMContentLoaded', function() {
-    UnifiedEventFilters.init();
+    // Attendre un peu pour s'assurer que tous les éléments sont chargés
+    setTimeout(() => {
+        UnifiedEventFilters.init();
+    }, 300);
 });
