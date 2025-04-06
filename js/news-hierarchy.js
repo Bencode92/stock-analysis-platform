@@ -17,6 +17,11 @@ window.NewsSystem = {
     dataReadyEvent: new CustomEvent('newsDataReady')
 };
 
+// Constantes pour limiter le nombre d'actualités par catégorie
+const MAX_CRITICAL_NEWS = 5;
+const MAX_IMPORTANT_NEWS = 8;
+const MAX_REGULAR_NEWS = 12;
+
 // Initialisation: ajouter cette fonction au chargement de la page
 document.addEventListener('DOMContentLoaded', function() {
     // Vérifier si nous sommes sur la page des actualités
@@ -120,9 +125,19 @@ function distributeNewsByImportance(newsData) {
         news.category = news.category || 'general';
         news.country = news.country || 'other';
         
-        // Simple hiérarchisation basée sur les données existantes
-        // Vérifier si hierarchy existe déjà, sinon l'attribuer en fonction de l'importance
-        if (!news.hierarchy) {
+        // Hiérarchisation basée sur le score si disponible, sinon utiliser l'ancienne méthode
+        if (!news.hierarchy && news.score !== undefined) {
+            const score = parseFloat(news.score);
+            
+            if (score >= 45) {
+                news.hierarchy = 'critical';
+            } else if (score >= 38) {
+                news.hierarchy = 'important';
+            } else {
+                news.hierarchy = 'normal';
+            }
+        } else if (!news.hierarchy) {
+            // Ancienne méthode si pas de score
             if (news.importance === 'high' || news.impact === 'negative') {
                 news.hierarchy = 'critical';
             } else if (news.importance === 'medium' || news.impact === 'positive') {
@@ -197,7 +212,7 @@ function displayCriticalNews(news) {
     }
 
     // Créer les cartes d'actualités critiques
-    news.forEach((item, index) => {
+    news.slice(0, MAX_CRITICAL_NEWS).forEach((item, index) => {
         // Détermine la classe CSS basée sur l'impact
         const impactClass = item.impact === 'negative' ? 'bg-red-800 bg-opacity-20 border-red-700' : 
                             item.impact === 'positive' ? 'bg-green-800 bg-opacity-20 border-green-700' : 
@@ -226,6 +241,7 @@ function displayCriticalNews(news) {
         newsCard.setAttribute('data-sentiment', item.sentiment || item.impact || 'neutral');
         newsCard.setAttribute('data-news-id', `news-critical-${index}`);
         newsCard.setAttribute('data-country', item.country || 'other');
+        newsCard.setAttribute('data-score', item.score || '0');
         
         // Ajouter l'URL de l'article comme attribut
         if (item.url) {
@@ -291,7 +307,7 @@ function displayImportantNews(news) {
     }
 
     // Créer les cartes d'actualités importantes
-    news.forEach((item, index) => {
+    news.slice(0, MAX_IMPORTANT_NEWS).forEach((item, index) => {
         // Détermine la classe CSS basée sur l'impact
         const impactClass = item.impact === 'negative' ? 'bg-red-700 bg-opacity-10 border-red-600' : 
                             item.impact === 'positive' ? 'bg-green-700 bg-opacity-10 border-green-600' : 
@@ -320,6 +336,7 @@ function displayImportantNews(news) {
         newsCard.setAttribute('data-sentiment', item.sentiment || item.impact || 'neutral');
         newsCard.setAttribute('data-news-id', `news-important-${index}`);
         newsCard.setAttribute('data-country', item.country || 'other');
+        newsCard.setAttribute('data-score', item.score || '0');
         
         // Ajouter l'URL de l'article comme attribut
         if (item.url) {
@@ -396,7 +413,7 @@ function displayRecentNews(news) {
     }
 
     // Créer les cartes d'actualités régulières
-    news.forEach((item, index) => {
+    news.slice(0, MAX_REGULAR_NEWS).forEach((item, index) => {
         // Détermine la classe CSS basée sur l'impact
         const impactClass = item.impact === 'negative' ? 'bg-red-700 bg-opacity-10 border-red-600' : 
                             item.impact === 'positive' ? 'bg-green-700 bg-opacity-10 border-green-600' : 
@@ -424,6 +441,7 @@ function displayRecentNews(news) {
         newsCard.setAttribute('data-sentiment', item.sentiment || item.impact || 'neutral');
         newsCard.setAttribute('data-news-id', `news-regular-${index}`);
         newsCard.setAttribute('data-country', item.country || 'other');
+        newsCard.setAttribute('data-score', item.score || '0');
         
         // Ajouter l'URL de l'article comme attribut
         if (item.url) {
