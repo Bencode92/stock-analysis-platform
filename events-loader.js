@@ -518,7 +518,7 @@ class EventsManager {
       
       // Aussi considérer les résultats avec des prévisions importantes 
       // (changements > 10% par action)
-      const forecastMatch = title.match(/prévision:\s*([-+]?\d+(\.\d+)?)\$/i);
+      const forecastMatch = title.match(/prévision:\s*([-+]?\d+(\.?\d+)?)?\$/i);
       if (forecastMatch) {
         const forecast = parseFloat(forecastMatch[1]);
         if (Math.abs(forecast) > 1.0) {
@@ -835,17 +835,20 @@ class EventsManager {
       let eventType = event.type || 'economic';
       if (eventType === 'merger') eventType = 'm&a';
       
+      // Ajouter un log pour le débogage
+      console.log(`Événement #${index}: type=${eventType}, titre=${event.title}`);
+      
       // Générer le HTML
       eventsHTML += `
         <div class="event-card bg-gray-800 bg-opacity-70 rounded-lg p-4 fade-in ${importanceClass}" 
              data-event-index="${index}" 
-             data-type="${eventType}"
+             data-type="${eventType.toLowerCase()}"
              data-date="${event.date}">
           ${event.isEssential ? '<div class="essential-badge">Essentiel</div>' : ''}
           
           <div class="mb-3 flex justify-between items-start">
             <div class="text-sm">
-              <span class="text-xs text-white bg-gray-700 px-2 py-1 rounded mr-2">${event.date || '--/--'}</span>
+              <span class="text-xs text-white bg-gray-700 px-2 py-1 rounded mr-2 event-date">${event.date || '--/--'}</span>
               <span class="text-gray-400">${event.time || '00:00'}</span>
             </div>
             <div class="flex items-center">
