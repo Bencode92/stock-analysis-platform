@@ -980,6 +980,12 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
     
     # Générer un fichier HTML plus lisible
     html_file = f"{debug_dir}/prompt_{timestamp}.html"
+    
+    # Préparer le contenu HTML avec les variables préparées à l'avance
+    # pour éviter l'imbrication excessive dans les f-strings
+    prompt_length = len(prompt)
+    escaped_prompt = prompt.replace('<', '&lt;').replace('>', '&gt;')
+    
     html_content = f"""
     <!DOCTYPE html>
     <html>
@@ -1000,10 +1006,10 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
         <h1>TradePulse - Debug de Prompt ChatGPT</h1>
         <div class="info">
             <p>Timestamp: {timestamp}</p>
-            <p>Taille totale du prompt: {len(prompt)} caractères</p>
+            <p>Taille totale du prompt: {prompt_length} caractères</p>
         </div>
         <h2>Contenu du prompt envoyé à ChatGPT :</h2>
-        <pre>{prompt.replace('<', '&lt;').replace('>', '&gt;')}</pre>
+        <pre>{escaped_prompt}</pre>
     </body>
     </html>
     """
@@ -1012,7 +1018,6 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
         f.write(html_content)
     
     # Créer également un fichier JavaScript pour enregistrer le debug dans localStorage
-    # (pour l'intégration avec l'interface web)
     js_debug_path = "debug/prompts/debug_data.js"
     with open(js_debug_path, 'w', encoding='utf-8') as f:
         f.write(f"""
@@ -1022,7 +1027,7 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
 // Enregistrer les infos de ce debug
 if (window.recordDebugFile) {{
     window.recordDebugFile('{timestamp}', {{
-        prompt_length: {len(prompt)},
+        prompt_length: {prompt_length},
         prompt_path: '{debug_file}',
         html_path: '{html_file}'
     }});
