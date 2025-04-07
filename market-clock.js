@@ -88,6 +88,9 @@ const marketExchanges = [
 
 class MarketClock {
   constructor() {
+    // Désactiver le mode débogage/inspecteur
+    this.debugMode = false;
+    
     this.markets = marketExchanges;
     this.leftContainer = document.getElementById('market-clock-left');
     this.rightContainer = document.getElementById('market-clock-right');
@@ -234,7 +237,7 @@ class MarketClock {
    */
   parseMarketTime(timeString, timezone) {
     // Extraire les composants de l'heure
-    const regex = /(\d{2}):(\d{2}) (AM|PM) ([+-]\d{2}):(\d{2})/;
+    const regex = /(\\d{2}):(\\d{2}) (AM|PM) ([+-]\\d{2}):(\\d{2})/;
     const match = timeString.match(regex);
     
     if (!match) {
@@ -626,6 +629,9 @@ class MarketClock {
 
 // Initialiser l'horloge lorsque le DOM est chargé
 document.addEventListener('DOMContentLoaded', function() {
+  // Désactiver tout inspecteur automatique
+  window.debugMode = false;
+  
   // Attendre que tous les éléments de la page soient chargés
   setTimeout(() => {
     const marketClock = new MarketClock();
