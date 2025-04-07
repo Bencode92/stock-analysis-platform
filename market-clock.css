@@ -1,99 +1,179 @@
 /**
  * market-clock.css
- * Styles pour l'horloge des marchés financiers
+ * Styles améliorés pour l'horloge des marchés financiers - Version 2.0
  */
 
 /* Conteneurs d'horloges */
 .market-clock-container {
   position: fixed;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 80px; /* Positionné juste en-dessous du header */
+  height: calc(100vh - 100px);
   width: 220px;
-  max-height: 80vh;
-  overflow-y: auto;
-  background-color: rgba(1, 22, 39, 0.85);
-  backdrop-filter: blur(10px);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  padding: 15px;
+  background: rgba(1, 22, 39, 0.3);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: none;
   z-index: 90;
-  transition: all 0.3s ease;
-  border: 1px solid rgba(0, 255, 135, 0.2);
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 255, 135, 0.3) rgba(1, 22, 39, 0.4);
+  transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  scrollbar-width: none;
+}
+
+.market-clock-container::-webkit-scrollbar {
+  display: none;
 }
 
 /* Variation pour la position gauche et droite */
 .market-clock-container.left {
-  left: 20px;
-  border-left: 3px solid rgba(0, 255, 135, 0.4);
+  left: 80px; /* Positionné juste à côté de la sidebar */
+  border-radius: 0 20px 20px 0;
+  border-right: 1px solid rgba(0, 255, 135, 0.15);
+  box-shadow: inset -10px 0 30px rgba(0, 255, 135, 0.03), 
+              10px 0 30px rgba(0, 0, 0, 0.2);
 }
 
 .market-clock-container.right {
-  right: 20px;
-  border-right: 3px solid rgba(0, 255, 135, 0.4);
+  right: 0;
+  border-radius: 20px 0 0 20px;
+  border-left: 1px solid rgba(0, 255, 135, 0.15);
+  box-shadow: inset 10px 0 30px rgba(0, 255, 135, 0.03), 
+              -10px 0 30px rgba(0, 0, 0, 0.2);
 }
 
-/* Style de la barre de défilement */
-.market-clock-container::-webkit-scrollbar {
-  width: 5px;
-}
-
-.market-clock-container::-webkit-scrollbar-track {
-  background: rgba(1, 22, 39, 0.4);
-  border-radius: 10px;
-}
-
-.market-clock-container::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 255, 135, 0.3);
-  border-radius: 10px;
+/* Header des horloges avec dégradé */
+.market-clock-header {
+  background: linear-gradient(180deg, rgba(0, 255, 135, 0.1) 0%, rgba(0, 255, 135, 0) 100%);
+  padding: 15px;
+  border-bottom: 1px solid rgba(0, 255, 135, 0.1);
 }
 
 /* Titre des horloges */
 .market-clock-title {
-  color: #fff;
-  font-size: 16px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
   font-weight: 700;
   text-align: center;
-  margin-bottom: 15px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(0, 255, 135, 0.2);
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 2px;
+  margin-bottom: 0;
+  padding: 15px 0;
+  border-radius: 30px;
+  background: rgba(1, 22, 39, 0.5);
+  border: 1px solid rgba(0, 255, 135, 0.1);
+  text-shadow: 0 0 10px rgba(0, 255, 135, 0.5);
 }
 
 .market-clock-title span {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--accent-color);
   font-weight: 500;
   opacity: 0.8;
-  letter-spacing: normal;
+  letter-spacing: 1px;
+  margin-top: 3px;
+}
+
+/* Conteneur du contenu avec défilement */
+.market-clock-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 15px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 255, 135, 0.3) rgba(1, 22, 39, 0.4);
+}
+
+.market-clock-content::-webkit-scrollbar {
+  width: 3px;
+}
+
+.market-clock-content::-webkit-scrollbar-track {
+  background: rgba(1, 22, 39, 0.4);
+}
+
+.market-clock-content::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 255, 135, 0.3);
+  border-radius: 3px;
 }
 
 /* Éléments de marché */
 .market-item {
-  background: rgba(1, 30, 52, 0.6);
+  background: rgba(1, 22, 39, 0.7);
   margin-bottom: 10px;
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 12px;
   transition: all 0.3s ease;
-  border-left: 3px solid transparent;
+  border: 1px solid rgba(0, 255, 135, 0.05);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(4px);
+}
+
+/* Effet de lueur sur les côtés pour les marchés ouverts */
+.market-item.open::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(to bottom, #4CAF50, rgba(76, 175, 80, 0.3));
+  box-shadow: 0 0 15px rgba(76, 175, 80, 0.7);
+}
+
+.market-item.closed::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(to bottom, #F44336, rgba(244, 67, 54, 0.3));
+}
+
+.market-item.lunch::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 3px;
+  height: 100%;
+  background: linear-gradient(to bottom, #FFC107, rgba(255, 193, 7, 0.3));
+}
+
+/* Effet de dégradé horizontal subtil */
+.market-item::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    rgba(0, 255, 135, 0.03) 0%, 
+    rgba(0, 255, 135, 0) 50%, 
+    rgba(0, 255, 135, 0.03) 100%);
+  pointer-events: none;
+  z-index: -1;
 }
 
 /* États des marchés */
 .market-item.open {
-  border-left-color: #4CAF50;
-  box-shadow: 0 0 15px rgba(76, 175, 80, 0.15);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2), 0 0 3px rgba(76, 175, 80, 0.3);
+  border-left: none;
+  margin-left: 1px;
 }
 
 .market-item.closed {
-  border-left-color: #F44336;
-  opacity: 0.7;
+  opacity: 0.6;
+  border-left: none;
+  margin-left: 1px;
 }
 
 .market-item.lunch {
-  border-left-color: #FFC107;
+  border-left: none;
+  margin-left: 1px;
 }
 
 /* En-tête du marché */
@@ -102,26 +182,33 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 6px;
+  position: relative;
 }
 
 .market-name {
   font-weight: 700;
   color: #fff;
-  font-size: 14px;
+  font-size: 16px;
+  letter-spacing: 1px;
+  padding-left: 5px;
 }
 
 /* Indicateur de statut */
 .market-status-indicator {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background-color: #F44336;
+  position: relative;
 }
 
 .market-item.open .market-status-indicator {
   background-color: #4CAF50;
   box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
   animation: pulse 2s infinite;
+}
+
+.market-item.closed .market-status-indicator {
+  background-color: #F44336;
 }
 
 .market-item.lunch .market-status-indicator {
@@ -131,31 +218,60 @@
 
 /* Détails du marché */
 .market-details {
+  padding-left: 5px;
   font-size: 12px;
+  margin-top: 8px;
+  position: relative;
+  z-index: 2;
 }
 
 .market-full-name {
   color: rgba(255, 255, 255, 0.7);
   margin-bottom: 4px;
-  font-weight: 500;
+  font-weight: 400;
   font-size: 11px;
+  letter-spacing: 0.3px;
 }
 
 .market-schedule {
   color: var(--accent-color);
   font-weight: 600;
+  font-size: 13px;
+  position: relative;
+  display: inline-block;
+}
+
+.market-schedule::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    var(--accent-color) 0%, 
+    rgba(0, 255, 135, 0.3) 70%, 
+    rgba(0, 255, 135, 0) 100%);
 }
 
 .market-schedule.additional {
   color: rgba(255, 255, 255, 0.5);
   font-size: 10px;
-  margin-top: 2px;
+  margin-top: 4px;
+}
+
+.market-schedule.additional::after {
+  background: linear-gradient(90deg, 
+    rgba(255, 255, 255, 0.5) 0%, 
+    rgba(255, 255, 255, 0.1) 70%, 
+    rgba(255, 255, 255, 0) 100%);
 }
 
 /* Effets au survol */
 .market-item:hover {
   transform: translateY(-2px);
   background: rgba(1, 35, 60, 0.8);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
 }
 
 /* Animation de pulsation */
@@ -166,25 +282,25 @@
 }
 
 /* États cachés/visibles des horloges */
-.market-clock-container.hidden {
+.market-clock-container.hidden.left {
+  transform: translateX(-100%);
   opacity: 0;
-  transform: translateY(-50%) translateX(-100%);
-  pointer-events: none;
 }
 
-.market-clock-container.right.hidden {
-  transform: translateY(-50%) translateX(100%);
+.market-clock-container.hidden.right {
+  transform: translateX(100%);
+  opacity: 0;
 }
 
 /* Boutons de basculement */
 .market-clock-toggle {
   position: fixed;
   top: 50%;
-  width: 24px;
-  height: 60px;
-  background-color: rgba(1, 22, 39, 0.9);
-  border: 1px solid rgba(0, 255, 135, 0.3);
-  border-radius: 0 6px 6px 0;
+  width: 22px;
+  height: 70px;
+  background-color: rgba(1, 22, 39, 0.7);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 255, 135, 0.15);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -195,34 +311,171 @@
 }
 
 .market-clock-toggle:hover {
-  background-color: rgba(0, 255, 135, 0.2);
+  background-color: rgba(0, 255, 135, 0.15);
 }
 
 .market-clock-toggle.left {
-  left: 0;
+  left: 300px; /* Position initiale à droite du conteneur */
+  border-radius: 0 6px 6px 0;
   border-left: none;
 }
 
 .market-clock-toggle.right {
-  right: 0;
-  border-right: none;
+  right: 220px; /* Position initiale à gauche du conteneur */
   border-radius: 6px 0 0 6px;
+  border-right: none;
+}
+
+/* Quand les conteneurs sont cachés, positionner les boutons de toggle à côté de la sidebar/en bordure d'écran */
+.market-clock-container.hidden ~ .market-clock-toggle.left {
+  left: 80px;
+}
+
+.market-clock-container.hidden ~ .market-clock-toggle.right {
+  right: 0;
 }
 
 .market-clock-toggle i {
   color: var(--accent-color);
-  font-size: 14px;
+  font-size: 12px;
+  text-shadow: 0 0 5px rgba(0, 255, 135, 0.5);
+}
+
+/* Effet de lueur sur le bouton quand le conteneur est caché */
+.market-clock-container.hidden ~ .market-clock-toggle {
+  box-shadow: 0 0 15px rgba(0, 255, 135, 0.2);
+}
+
+/* Animation des flèches des boutons de toggle */
+@keyframes arrowPulse {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(-3px); }
+}
+
+.market-clock-toggle.left i {
+  animation: arrowPulse 2s ease-in-out infinite;
+}
+
+@keyframes arrowPulseRight {
+  0%, 100% { transform: translateX(0); }
+  50% { transform: translateX(3px); }
+}
+
+.market-clock-toggle.right i {
+  animation: arrowPulseRight 2s ease-in-out infinite;
+}
+
+/* Divider pour les sections */
+.market-divider {
+  height: 1px;
+  background: linear-gradient(90deg, 
+    rgba(0, 255, 135, 0) 0%, 
+    rgba(0, 255, 135, 0.2) 50%, 
+    rgba(0, 255, 135, 0) 100%);
+  margin: 15px 0;
+  position: relative;
+}
+
+.market-divider::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  background-color: var(--accent-color);
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(0, 255, 135, 0.8);
+}
+
+/* Bandeau de statut récapitulatif */
+.market-status-summary {
+  background: rgba(1, 30, 52, 0.7);
+  padding: 12px;
+  border-radius: 10px;
+  margin: 10px 0 20px;
+  text-align: center;
+  border: 1px solid rgba(0, 255, 135, 0.1);
+}
+
+.market-summary-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 8px;
+}
+
+.market-summary-counts {
+  display: flex;
+  justify-content: space-around;
+}
+
+.market-summary-count {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.count-value {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.count-value.open {
+  color: #4CAF50;
+}
+
+.count-value.closed {
+  color: #F44336;
+}
+
+.count-value.lunch {
+  color: #FFC107;
+}
+
+.count-label {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* Effet de lueur dynamique au bas du conteneur */
+.market-clock-container::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 80px;
+  background: linear-gradient(to top, 
+    rgba(0, 255, 135, 0.05) 0%, 
+    rgba(0, 255, 135, 0) 100%);
+  pointer-events: none;
 }
 
 /* Version responsive */
 @media (max-width: 1200px) {
   .market-clock-container {
-    width: 180px;
+    width: 200px;
+  }
+  
+  .market-clock-toggle.left {
+    left: 280px;
+  }
+  
+  .market-name {
+    font-size: 14px;
   }
 }
 
 @media (max-width: 992px) {
   .market-clock-container {
+    display: none;
+  }
+  
+  .market-clock-toggle {
     display: none;
   }
   
@@ -234,17 +487,25 @@
     width: 50px;
     height: 50px;
     border-radius: 50%;
-    background-color: var(--accent-color);
-    color: #011627;
+    background-color: rgba(0, 255, 135, 0.1);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(0, 255, 135, 0.3);
     display: flex;
     justify-content: center;
     align-items: center;
     z-index: 100;
-    box-shadow: 0 4px 12px rgba(0, 255, 135, 0.4);
+    box-shadow: 0 0 15px rgba(0, 0, 0, 0.4), 0 0 30px rgba(0, 255, 135, 0.1);
     cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .market-clock-mobile-btn:hover {
+    transform: scale(1.05);
+    background-color: rgba(0, 255, 135, 0.2);
   }
   
   .market-clock-mobile-btn i {
+    color: var(--accent-color);
     font-size: 20px;
   }
   
@@ -256,6 +517,7 @@
     width: 100%;
     height: 100%;
     background-color: rgba(1, 22, 39, 0.95);
+    backdrop-filter: blur(10px);
     z-index: 1000;
     display: none;
     flex-direction: column;
@@ -272,18 +534,34 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid rgba(0, 255, 135, 0.2);
   }
   
   .market-clock-modal-title {
-    color: #fff;
+    color: var(--accent-color);
     font-size: 18px;
     font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
   }
   
   .market-clock-modal-close {
-    color: var(--accent-color);
+    color: rgba(255, 255, 255, 0.7);
     font-size: 24px;
     cursor: pointer;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+  }
+  
+  .market-clock-modal-close:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
   }
   
   .market-clock-modal-content {
