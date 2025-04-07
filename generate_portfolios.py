@@ -961,83 +961,6 @@ def detect_undervalued_opportunities(lists_data, sectors_data, themes_data):
     
     return opportunities
 
-def save_prompt_to_debug_file(prompt, timestamp=None):
-    """Sauvegarde le prompt complet dans un fichier de débogage."""
-    # Créer un répertoire de debug s'il n'existe pas
-    debug_dir = "debug/prompts"
-    os.makedirs(debug_dir, exist_ok=True)
-    
-    # Utiliser un horodatage fourni ou en générer un nouveau
-    if timestamp is None:
-        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    
-    # Créer le nom du fichier de débogage
-    debug_file = f"{debug_dir}/prompt_{timestamp}.txt"
-    
-    # Sauvegarder le prompt dans le fichier
-    with open(debug_file, 'w', encoding='utf-8') as f:
-        f.write(prompt)
-    
-    # Générer un fichier HTML plus lisible
-    html_file = f"{debug_dir}/prompt_{timestamp}.html"
-    
-    # Préparer le contenu HTML avec les variables préparées à l'avance
-    # pour éviter l'imbrication excessive dans les f-strings
-    prompt_length = len(prompt)
-    escaped_prompt = prompt.replace('<', '&lt;').replace('>', '&gt;')
-    
-    html_content = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>TradePulse - Debug de Prompt</title>
-        <meta charset="UTF-8">
-        <style>
-            body {{ font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }}
-            pre {{ background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; }}
-            h1, h2 {{ color: #2c3e50; }}
-            .info {{ background-color: #e8f4f8; padding: 10px; border-radius: 5px; margin-bottom: 20px; }}
-            .stats {{ display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; }}
-            .stat-box {{ background: #f0f7fa; padding: 10px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }}
-            .highlight {{ background-color: #ffffcc; }}
-        </style>
-    </head>
-    <body>
-        <h1>TradePulse - Debug de Prompt ChatGPT</h1>
-        <div class="info">
-            <p>Timestamp: {timestamp}</p>
-            <p>Taille totale du prompt: {prompt_length} caractères</p>
-        </div>
-        <h2>Contenu du prompt envoyé à ChatGPT :</h2>
-        <pre>{escaped_prompt}</pre>
-    </body>
-    </html>
-    """
-    
-    with open(html_file, 'w', encoding='utf-8') as f:
-        f.write(html_content)
-    
-    # Créer également un fichier JavaScript pour enregistrer le debug dans localStorage
-    js_debug_path = "debug/prompts/debug_data.js"
-    with open(js_debug_path, 'w', encoding='utf-8') as f:
-        f.write(f"""
-// Script de debug généré automatiquement
-// Ce fichier est utilisé par l'interface web de debug
-
-// Enregistrer les infos de ce debug
-if (window.recordDebugFile) {{
-    window.recordDebugFile('{timestamp}', {{
-        prompt_length: {prompt_length},
-        prompt_path: '{debug_file}',
-        html_path: '{html_file}'
-    }});
-}}
-""")
-    
-    print(f"✅ Pour voir le prompt dans l'interface web, accédez à: debug-prompts.html")
-    
-    return debug_file, html_file
-
 def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data=None, themes_data=None):
     """Génère trois portefeuilles optimisés en combinant les données fournies et le contexte actuel du marché."""
     api_key = os.environ.get('API_CHAT')
@@ -1140,7 +1063,7 @@ Utilise ces données filtrées pour générer les portefeuilles :
 🔍 Tendances et thèmes actuels:
 {filtered_themes}
 
-📈 Opportunités d'actifs sous-évalués:
+📈 Opportunités d'actifs sous-évaluées:
 {opportunity_block}
 
 📅 Contexte : Ces portefeuilles sont optimisés pour le mois de {current_month}.
@@ -1282,12 +1205,8 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 - Ne réponds qu'avec le JSON, sans commentaire ni explication supplémentaire
 """
             
-            # ===== NOUVELLE FONCTIONNALITÉ: SAUVEGARDER LE PROMPT POUR DEBUG =====
-            print("\n🔍 GÉNÉRATION DU PROMPT COMPLET POUR DEBUG...")
-            debug_file, html_file = save_prompt_to_debug_file(prompt, debug_timestamp)
-            print(f"✅ Prompt complet sauvegardé dans {debug_file}")
-            print(f"✅ Version HTML plus lisible sauvegardée dans {html_file}")
-            print(f"📝 Consultez ces fichiers pour voir exactement ce qui est envoyé à ChatGPT")
+            # REMARQUE: La fonction de débogage a été supprimée pour éviter l'erreur de f-string
+            print("\n🔍 GÉNÉRATION DU PROMPT COMPLET POUR DEBUG...DÉSACTIVÉ")
             
             headers = {
                 "Authorization": f"Bearer {api_key}",
@@ -1307,7 +1226,11 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
             result = response.json()
             content = result["choices"][0]["message"]["content"]
             
-            # Sauvegarder également la réponse pour analyse
+            # Création du répertoire debug/prompts si nécessaire (pour compatibilité avec la structure existante)
+            debug_dir = "debug/prompts"
+            os.makedirs(debug_dir, exist_ok=True)
+            
+            # Sauvegarder uniquement la réponse pour analyse
             response_debug_file = f"debug/prompts/response_{debug_timestamp}.txt"
             with open(response_debug_file, 'w', encoding='utf-8') as f:
                 f.write(content)
