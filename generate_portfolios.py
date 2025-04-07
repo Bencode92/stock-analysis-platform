@@ -961,6 +961,26 @@ def detect_undervalued_opportunities(lists_data, sectors_data, themes_data):
     
     return opportunities
 
+# Fonction de sauvegarde simplifiée - sans f-string complexe
+def save_prompt_to_debug_file(prompt, timestamp=None):
+    """Version simplifiée qui sauvegarde seulement le prompt dans un fichier texte."""
+    # Créer un répertoire de debug s'il n'existe pas
+    debug_dir = "debug/prompts"
+    os.makedirs(debug_dir, exist_ok=True)
+    
+    # Utiliser un horodatage fourni ou en générer un nouveau
+    if timestamp is None:
+        timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    
+    # Créer le nom du fichier de débogage
+    debug_file = f"{debug_dir}/prompt_{timestamp}.txt"
+    
+    # Sauvegarder le prompt dans le fichier
+    with open(debug_file, 'w', encoding='utf-8') as f:
+        f.write(prompt)
+    
+    return debug_file, None  # Retourne seulement le fichier texte, pas de HTML
+
 def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data=None, themes_data=None):
     """Génère trois portefeuilles optimisés en combinant les données fournies et le contexte actuel du marché."""
     api_key = os.environ.get('API_CHAT')
@@ -1036,41 +1056,28 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
             # Obtenir les exigences minimales pour les portefeuilles
             minimum_requirements = get_portfolio_prompt_additions()
             
-            # Construire un prompt avec la whitelist d'ETF obligataires explicite
-            prompt = f"""
+            # Construire le prompt - SANS f-string multi-lignes complexe
+            # Formation des parties du prompt séparément
+            header_part = """
 Tu es un expert en gestion de portefeuille. Tu dois IMPÉRATIVEMENT créer TROIS portefeuilles contenant EXACTEMENT entre 12 et 15 actifs CHACUN.
 
 Utilise ces données filtrées pour générer les portefeuilles :
 
-📰 Actualités financières récentes: 
-{filtered_news}
-
-📈 Tendances du marché: 
-{filtered_markets}
-
-🏭 Analyse sectorielle: 
-{filtered_sectors}
-
-📋 Listes d'actifs surveillés: 
-{filtered_lists}
-
-📊 Analyse des ETF: 
-{filtered_etfs}
-
-🪙 Crypto-monnaies performantes:
-{filtered_crypto}
-
-🔍 Tendances et thèmes actuels:
-{filtered_themes}
-
-📈 Opportunités d'actifs sous-évaluées:
-{opportunity_block}
-
-📅 Contexte : Ces portefeuilles sont optimisés pour le mois de {current_month}.
-
-🛡️ LISTE DES SEULS ETF OBLIGATAIRES AUTORISÉS (TOP BOND ETFs) :
-{bond_etf_list}
-
+"""
+            news_part = f"📰 Actualités financières récentes: \n{filtered_news}\n\n"
+            markets_part = f"📈 Tendances du marché: \n{filtered_markets}\n\n"
+            sectors_part = f"🏭 Analyse sectorielle: \n{filtered_sectors}\n\n"
+            lists_part = f"📋 Listes d'actifs surveillés: \n{filtered_lists}\n\n"
+            etfs_part = f"📊 Analyse des ETF: \n{filtered_etfs}\n\n"
+            crypto_part = f"🪙 Crypto-monnaies performantes:\n{filtered_crypto}\n\n"
+            themes_part = f"🔍 Tendances et thèmes actuels:\n{filtered_themes}\n\n"
+            opportunities_part = f"📈 Opportunités d'actifs sous-évalués:\n{opportunity_block}\n\n"
+            
+            context_part = f"📅 Contexte : Ces portefeuilles sont optimisés pour le mois de {current_month}.\n\n"
+            
+            bond_etf_list_part = f"🛡️ LISTE DES SEULS ETF OBLIGATAIRES AUTORISÉS (TOP BOND ETFs) :\n{bond_etf_list}\n\n"
+            
+            instructions_part = """
 🎯 INSTRUCTIONS TRÈS PRÉCISES (À RESPECTER ABSOLUMENT) :
 
 1. Tu dois générer trois portefeuilles :
@@ -1080,6 +1087,9 @@ Utilise ces données filtrées pour générer les portefeuilles :
 
 2. Pour les obligations : Tu dois piocher UNIQUEMENT dans la **liste ci-dessus des ETF obligataires autorisés**. Tu ne dois JAMAIS inventer ou utiliser d'autres noms. 
 
+"""
+
+            rules_part = f"""
 🛡️ RÈGLES DE CATÉGORISATION STRICTES (À RESPECTER IMPÉRATIVEMENT) :
 
 1. Catégorie "ETF" : Utilise UNIQUEMENT les ETF provenant des sections "TOP ETF STANDARDS 2025" et "ETF COURT TERME"
@@ -1090,6 +1100,9 @@ Utilise ces données filtrées pour générer les portefeuilles :
    * Ces ETF obligataires doivent UNIQUEMENT apparaître dans la catégorie "Obligations"
    * Ne les place JAMAIS dans la catégorie "ETF"
 
+"""
+
+            crypto_rules_part = """
 📌 CONCERNANT LES CRYPTO-MONNAIES :
 
 - Tu peux inclure des crypto-monnaies dans les portefeuilles si elles ont une performance positive sur 7 jours (7D%)
@@ -1097,8 +1110,11 @@ Utilise ces données filtrées pour générer les portefeuilles :
 - Tu dois sélectionner uniquement parmi les crypto-monnaies listées dans la section "Crypto-monnaies performantes"
 - N'inclus PAS de crypto-monnaies si aucune ne présente une performance positive sur 7 jours
 
-{minimum_requirements}
+"""
 
+            min_requirements_part = f"{minimum_requirements}\n\n"
+            
+            comment_structure_part = """
 3. Pour chaque portefeuille (Agressif, Modéré, Stable), tu dois générer un **commentaire unique** qui suit une structure **top-down** claire et logique.
 
 Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
@@ -1108,6 +1124,9 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 🏭 **Secteurs** — Détaille les secteurs les plus dynamiques ou les plus en retrait selon les données récentes, sans orientation personnelle.  
 📊 **Choix des actifs** — Explique les allocations choisies dans le portefeuille en cohérence avec le profil (Agressif / Modéré / Stable), en s'appuyant uniquement sur les données fournies (ETF, actions, obligations, crypto...).
 
+"""
+            
+            coherence_part = """
 📌 COHÉRENCE ET LOGIQUE DANS LA CONSTRUCTION DES PORTEFEUILLES :
 - Tous les actifs sélectionnés doivent refléter une **analyse rationnelle** basée sur les données fournies.
 - Il est strictement interdit de choisir des actifs par défaut, sans lien évident avec les tendances économiques, géographiques ou sectorielles.
@@ -1115,6 +1134,9 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 - Chaque portefeuille doit être construit de manière 100% logique à partir des données fournies.
 - Les actifs sélectionnés doivent découler directement des performances réelles, secteurs en croissance, régions dynamiques, et tendances de marché analysées dans les données ci-dessus.
 
+"""
+
+            justification_part = """
 ⚠️ Règle absolue: chaque actif sélectionné doit être JUSTIFIÉ par AU MOINS **deux sources différentes** parmi:
 - 📰 Actualités financières récentes (spécifiques et pertinentes)
 - 🏭 Tendance sectorielle identifiée dans l'analyse sectorielle
@@ -1129,6 +1151,9 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 - ET apparaît dans les "Signaux d'opportunités sous-évaluées"
 - OU est mentionné positivement dans les actualités récentes
 
+"""
+
+            selection_logic_part = """
 - Ne sélectionne **jamais** un actif uniquement parce qu'il a une **forte performance récente** (ex: YTD élevé). Cela ne garantit **ni la pertinence actuelle, ni la performance future**.
 - Inversement, **n'exclus pas automatiquement** un actif ou un secteur en baisse (ex: -8% YTD) : une **reprise sectorielle, une amélioration du contexte macroéconomique, ou des signaux positifs** dans les actualités ou marchés peuvent justifier sa présence.
 - Le but est d'**anticiper intelligemment** : un actif faiblement valorisé mais soutenu par **des données cohérentes et des dynamiques récentes** peut offrir **plus de potentiel** qu'un actif déjà en haut du cycle.
@@ -1142,6 +1167,9 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
    - L'actif n'est pas en phase terminale de cycle haussier sans justification macroéconomique
    Si tu n'as **aucune justification actuelle**, ne sélectionne pas l'actif, même s'il est très performant.
 
+"""
+
+            asset_selection_part = """
 🧩 Chaque actif sélectionné doit résulter d'au moins **deux sources cohérentes** parmi les suivantes :
    - Actualités macroéconomiques ou sectorielles
    - Tendances géographiques du marché
@@ -1163,6 +1191,9 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 ⚠️ Exemple à NE PAS suivre : "L'action X a pris +90% YTD donc elle est à privilégier".
 👉 Mauvais raisonnement. Ce n'est pas une justification valide. La croissance passée ne garantit **aucune** pertinence actuelle ou future.
 
+"""
+
+            detailed_justification_part = """
 📝 Dans la section "Choix des actifs" du commentaire, pour CHAQUE actif sélectionné, tu dois explicitement :
    1. Identifier la tendance actuelle ou émergente qui justifie sa sélection
    2. Expliquer pourquoi cet actif est bien positionné pour en bénéficier
@@ -1180,6 +1211,9 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 ❌ Aucun biais : ne fais pas d'hypothèse sur les classes d'actifs à privilégier. Base-toi uniquement sur les données fournies.  
 ✅ Le commentaire doit être **adapté au profil de risque** (Agressif / Modéré / Stable) sans forcer une direction (ex: ne dis pas "la techno est à privilégier" sauf si les données le montrent clairement).
 
+"""
+
+            json_format_part = """
 📊 Format JSON requis:
 {
   "Agressif": {
@@ -1197,6 +1231,9 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
   "Stable": { ... }
 }
 
+"""
+
+            validation_criteria_part = """
 ⚠️ CRITÈRES DE VALIDATION (ABSOLUMENT REQUIS) :
 - Chaque portefeuille DOIT contenir EXACTEMENT entre 12 et 15 actifs au total, PAS MOINS, PAS PLUS
 - La somme des allocations de chaque portefeuille DOIT être EXACTEMENT 100%
@@ -1204,9 +1241,22 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 - Chaque actif doit avoir un nom SPÉCIFIQUE et PRÉCIS, PAS de noms génériques
 - Ne réponds qu'avec le JSON, sans commentaire ni explication supplémentaire
 """
+
+            # Assembler toutes les parties du prompt sans utiliser de f-string complexe
+            prompt = (header_part + news_part + markets_part + sectors_part + lists_part + 
+                     etfs_part + crypto_part + themes_part + opportunities_part + context_part + 
+                     bond_etf_list_part + instructions_part + rules_part + crypto_rules_part + 
+                     min_requirements_part + comment_structure_part + coherence_part + 
+                     justification_part + selection_logic_part + asset_selection_part + 
+                     detailed_justification_part + json_format_part + validation_criteria_part)
             
-            # REMARQUE: La fonction de débogage a été supprimée pour éviter l'erreur de f-string
+            # ===== NOUVELLE FONCTIONNALITÉ: SAUVEGARDE DU PROMPT POUR DEBUG =====
+            # Utiliser la version simplifiée qui ne cause pas l'erreur f-string
             print("\n🔍 GÉNÉRATION DU PROMPT COMPLET POUR DEBUG...DÉSACTIVÉ")
+            # debug_file, html_file = save_prompt_to_debug_file(prompt, debug_timestamp)
+            # print(f"✅ Prompt complet sauvegardé dans {debug_file}")
+            # print(f"✅ Version HTML plus lisible sauvegardée dans {html_file}")
+            # print(f"📝 Consultez ces fichiers pour voir exactement ce qui est envoyé à ChatGPT")
             
             headers = {
                 "Authorization": f"Bearer {api_key}",
@@ -1226,11 +1276,7 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
             result = response.json()
             content = result["choices"][0]["message"]["content"]
             
-            # Création du répertoire debug/prompts si nécessaire (pour compatibilité avec la structure existante)
-            debug_dir = "debug/prompts"
-            os.makedirs(debug_dir, exist_ok=True)
-            
-            # Sauvegarder uniquement la réponse pour analyse
+            # Sauvegarder également la réponse pour analyse
             response_debug_file = f"debug/prompts/response_{debug_timestamp}.txt"
             with open(response_debug_file, 'w', encoding='utf-8') as f:
                 f.write(content)
