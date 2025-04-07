@@ -52,7 +52,7 @@
 /* Titre des horloges - Style moderne */
 .market-clock-title {
   color: rgba(255, 255, 255, 0.92);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   text-align: center;
   text-transform: uppercase;
@@ -85,7 +85,7 @@
 
 .market-clock-title span {
   display: block;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--accent-color);
   font-weight: 500;
   opacity: 0.8;
@@ -115,7 +115,7 @@
   border-radius: 3px;
 }
 
-/* Éléments de marché - Design moderne et élégant */
+/* Éléments de marché - Design simplifié */
 .market-item {
   background: rgba(1, 22, 39, 0.7);
   margin-bottom: 12px;
@@ -215,7 +215,7 @@
   margin-left: 1px;
 }
 
-/* En-tête du marché */
+/* En-tête du marché - Style plus compact */
 .market-header {
   display: flex;
   justify-content: space-between;
@@ -255,24 +255,15 @@
   color: #FFC107; 
 }
 
-/* Détails du marché - Style amélioré */
+/* Détails du marché - Style compact */
 .market-details {
-  padding-left: 7px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 12px;
   margin-top: 8px;
   position: relative;
   z-index: 2;
-}
-
-.market-full-name {
-  color: rgba(255, 255, 255, 0.7);
-  margin-bottom: 6px;
-  font-weight: 400;
-  font-size: 11px;
-  letter-spacing: 0.3px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
 }
 
 /* Format compact pour les horaires (inline) */
@@ -280,18 +271,16 @@
   font-size: 11px;
   color: rgba(255, 255, 255, 0.65);
   font-weight: 500;
-  margin-top: 4px;
 }
 
 /* Horloge locale pour chaque marché */
 .market-live-time {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--accent-color);
   background: rgba(0, 255, 135, 0.08);
   padding: 2px 6px;
   border-radius: 4px;
-  margin-left: 8px;
 }
 
 /* Divider amélioré pour les sections */
@@ -375,7 +364,7 @@
   font-weight: 500;
 }
 
-/* Heure locale - Nouveau style */
+/* Heure locale - Style compact */
 .local-time-display {
   position: relative;
   text-align: center;
@@ -416,24 +405,6 @@
     rgba(0, 255, 135, 0.06) 0%, 
     rgba(0, 255, 135, 0) 100%);
   pointer-events: none;
-}
-
-/* Nouveau - Icônes de marché avec couleurs */
-.market-icon {
-  width: 20px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-right: 6px;
-  background: rgba(0, 255, 135, 0.1);
-  border-radius: 4px;
-  vertical-align: middle;
-}
-
-.market-icon i {
-  font-size: 11px;
-  color: var(--accent-color);
 }
 
 /* Animation de fluctuation pour les marchés ouverts */
