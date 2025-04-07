@@ -13,9 +13,7 @@ const marketExchanges = [
     closingHour: "04:00 PM +11:00",
     timezone: "Australia/Sydney",
     region: "Asie-Pacifique",
-    icon: "fa-globe-asia",
-    flag: "au",
-    country: "Australie"
+    icon: "fa-globe-asia"
   },
   {
     exchange: "TSE",
@@ -26,9 +24,7 @@ const marketExchanges = [
     closingAdditional: "03:00 PM +09:00",
     timezone: "Asia/Tokyo",
     region: "Asie-Pacifique",
-    icon: "fa-yen-sign",
-    flag: "jp",
-    country: "Japon"
+    icon: "fa-yen-sign"
   },
   {
     exchange: "HKSE",
@@ -39,9 +35,7 @@ const marketExchanges = [
     closingAdditional: "04:00 PM +08:00",
     timezone: "Asia/Hong_Kong",
     region: "Asie-Pacifique",
-    icon: "fa-landmark",
-    flag: "hk",
-    country: "Hong Kong"
+    icon: "fa-landmark"
   },
   {
     exchange: "SSE",
@@ -52,9 +46,7 @@ const marketExchanges = [
     closingAdditional: "03:00 PM +08:00",
     timezone: "Asia/Shanghai",
     region: "Asie-Pacifique",
-    icon: "fa-yuan-sign",
-    flag: "cn",
-    country: "Chine"
+    icon: "fa-yuan-sign"
   },
   {
     exchange: "LSE",
@@ -63,9 +55,7 @@ const marketExchanges = [
     closingHour: "04:30 PM +01:00",
     timezone: "Europe/London",
     region: "Europe",
-    icon: "fa-pound-sign",
-    flag: "gb",
-    country: "Royaume-Uni"
+    icon: "fa-pound-sign"
   },
   {
     exchange: "EURONEXT",
@@ -74,9 +64,7 @@ const marketExchanges = [
     closingHour: "05:30 PM +02:00",
     timezone: "Europe/Paris",
     region: "Europe",
-    icon: "fa-euro-sign",
-    flag: "fr",
-    country: "France"
+    icon: "fa-euro-sign"
   },
   {
     exchange: "NYSE",
@@ -85,9 +73,7 @@ const marketExchanges = [
     closingHour: "04:00 PM -04:00",
     timezone: "America/New_York",
     region: "Amériques",
-    icon: "fa-dollar-sign",
-    flag: "us",
-    country: "États-Unis"
+    icon: "fa-dollar-sign"
   },
   {
     exchange: "NASDAQ",
@@ -96,9 +82,7 @@ const marketExchanges = [
     closingHour: "04:00 PM -04:00",
     timezone: "America/New_York",
     region: "Amériques",
-    icon: "fa-chart-line",
-    flag: "us",
-    country: "États-Unis"
+    icon: "fa-chart-line"
   }
 ];
 
@@ -110,7 +94,6 @@ class MarketClock {
     this.mobileModal = document.getElementById('market-clock-modal');
     this.mobileLeftColumn = document.getElementById('modal-left-column');
     this.mobileRightColumn = document.getElementById('modal-right-column');
-    this.flagsBasePath = '/flags/'; // Chemin de base vers les images de drapeaux
     this.initializeContainers();
     this.setupEventListeners();
   }
@@ -251,7 +234,6 @@ class MarketClock {
    */
   parseMarketTime(timeString, timezone) {
     // Extraire les composants de l'heure
-    // Correction de la regex pour éviter les backslashes échappés
     const regex = /(\d{2}):(\d{2}) (AM|PM) ([+-]\d{2}):(\d{2})/;
     const match = timeString.match(regex);
     
@@ -410,20 +392,16 @@ class MarketClock {
     // Obtenir l'heure locale du marché
     const marketLocalTime = this.getLocalTime(market.timezone);
     
-    // Structure HTML améliorée avec les nouvelles fonctionnalités
+    // Structure HTML simplifiée sans les drapeaux et avec juste le code de la bourse
     element.innerHTML = `
       <div class="market-header">
         <div class="market-name">
-          <img src="${this.flagsBasePath}${market.flag}.png" class="market-flag" alt="${market.country}" />
           ${market.exchange}
         </div>
         <div class="market-tag ${status}">${this.getMarketStatusText(status)}</div>
       </div>
       <div class="market-details">
-        <div class="market-full-name">
-          ${market.name}
-          <div class="market-live-time" data-timezone="${market.timezone}">${marketLocalTime}</div>
-        </div>
+        <div class="market-live-time" data-timezone="${market.timezone}">${marketLocalTime}</div>
         <div class="market-schedule-inline">${scheduleDisplay}</div>
       </div>
     `;
@@ -541,14 +519,14 @@ class MarketClock {
     if (this.leftContainer) {
       const leftTitle = document.createElement('div');
       leftTitle.className = 'market-clock-title';
-      leftTitle.innerHTML = 'Marchés <span>Asie-Pacifique</span>';
+      leftTitle.innerHTML = 'MARCHÉS <span>ASIE-PACIFIQUE</span>';
       this.leftContainer.appendChild(leftTitle);
     }
     
     if (this.rightContainer) {
       const rightTitle = document.createElement('div');
       rightTitle.className = 'market-clock-title';
-      rightTitle.innerHTML = 'Marchés <span>Europe & Amériques</span>';
+      rightTitle.innerHTML = 'MARCHÉS <span>EUROPE & AMÉRIQUES</span>';
       this.rightContainer.appendChild(rightTitle);
     }
     
@@ -630,30 +608,9 @@ class MarketClock {
   }
 
   /**
-   * Vérifie si les images de drapeaux sont disponibles, sinon utilise les icônes de pays
-   */
-  checkFlagsAvailability() {
-    // Essayer de charger une image de drapeau
-    const testImage = new Image();
-    testImage.onload = () => {
-      console.log('Drapeaux disponibles, utilisation des images');
-      this.useFallbackIcons = false;
-    };
-    testImage.onerror = () => {
-      console.warn('Drapeaux non disponibles, utilisation des icônes de repli');
-      this.useFallbackIcons = true;
-      this.flagsBasePath = '';
-    };
-    testImage.src = `${this.flagsBasePath}us.png`;
-  }
-
-  /**
    * Démarre la mise à jour régulière des horloges
    */
   start() {
-    // Vérifier la disponibilité des drapeaux
-    this.checkFlagsAvailability();
-    
     // Première mise à jour immédiate
     this.renderMarketClocks();
     
