@@ -306,17 +306,6 @@ def get_current_month_fr():
     # Obtenir le mois en français
     return datetime.datetime.now().strftime('%B').lower()
 
-def safe_parse_float(val):
-    """Nettoie proprement une chaîne de type '+23 233,33%' et retourne un float"""
-    if val is None:
-        return None
-    try:
-        val_clean = re.sub(r"[^\d\-.,]", "", str(val))  # garde seulement chiffres, -, . et ,
-        val_clean = val_clean.replace(',', '.').replace('\u202f', '')  # , → . et espace insécable
-        return float(val_clean)
-    except (ValueError, TypeError):
-        return None
-
 def filter_news_data(news_data):
     """Filtre les données d'actualités pour n'inclure que les plus pertinentes."""
     if not news_data or not isinstance(news_data, dict):
@@ -553,15 +542,16 @@ def filter_lists_data(lists_data):
                 ytd = asset.get("ytd", "")
                 daily = asset.get("change", "")  # Utilisation de la clé "change" pour la variation journalière
 
-                # Utilisation de la nouvelle fonction safe_parse_float
-                ytd_value = safe_parse_float(ytd)
-                daily_value = safe_parse_float(daily)
+                # Nettoyage et conversion
+                try:
+                    ytd_value = float(re.sub(r"[^\d\.-]", "", str(ytd).replace(",", ".")))
+                    daily_value = float(re.sub(r"[^\d\.-]", "", str(daily).replace(",", ".")))
+                except (ValueError, AttributeError):
+                    continue
 
-                # Vérifier que les valeurs ont été converties correctement
-                if ytd_value is not None and daily_value is not None:
-                    # Filtre : YTD entre -5% et 120%, et Daily > -10%
-                    if -5 <= ytd_value <= 120 and daily_value > -10:
-                        filtered_assets.append((name, ytd_value, daily_value))
+                # Filtre : YTD entre -5% et 120%, et Daily > -10%
+                if -5 <= ytd_value <= 120 and daily_value > -10:
+                    filtered_assets.append((name, ytd_value, daily_value))
 
     # Trier par YTD décroissant
     filtered_assets.sort(key=lambda x: x[1], reverse=True)
@@ -624,8 +614,8 @@ def filter_etf_data(etfs_data):
     selected_sector_etfs = []
     for etf in sector_etfs:
         try:
-            ytd = safe_parse_float(etf.get("ytd", "0"))
-            if ytd is not None and ytd > 5:  # Seuil de 5% pour les ETF sectoriels
+            ytd = float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.'))
+            if ytd > 5:  # Seuil de 5% pour les ETF sectoriels
                 selected_sector_etfs.append(f"{etf['name']} : {etf['ytd']}")
         except:
             continue
@@ -638,10 +628,9 @@ def filter_etf_data(etfs_data):
     selected_emerging = []
     for etf in emerging_etfs:
         try:
-            ytd = safe_parse_float(etf.get("ytd", "0"))
-            if ytd is not None:
-                # Sélectionner tous, avec priorité aux performances positives
-                selected_emerging.append((etf['name'], ytd, f"{etf['name']} : {etf['ytd']}"))
+            ytd = float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.'))
+            # Sélectionner tous, avec priorité aux performances positives
+            selected_emerging.append((etf['name'], ytd, f"{etf['name']} : {etf['ytd']}"))
         except:
             continue
     if selected_emerging:
@@ -703,12 +692,9 @@ def filter_crypto_data(crypto_data):
                 change_7d = crypto.get('change_7d', '0%')
                 market_cap = crypto.get('market_cap', 0)
                 
-                # Nettoyer les valeurs avec safe_parse_float
-                change_24h_value = safe_parse_float(change_24h)
-                change_7d_value = safe_parse_float(change_7d)
-                
-                if change_24h_value is None or change_7d_value is None:
-                    continue
+                # Nettoyer les valeurs
+                change_24h_value = float(change_24h.replace('+', '').replace('%', '').replace(',', '.'))
+                change_7d_value = float(change_7d.replace('+', '').replace('%', '').replace(',', '.'))
                 
                 # ⚠️ Filtrer les cryptos trop volatiles
                 if change_24h_value > 15 and change_24h_value > (change_7d_value * 2):
@@ -717,25 +703,30 @@ def filter_crypto_data(crypto_data):
                     continue  # Passer à la crypto suivante
                 
                 # Convertir la market cap en nombre si c'est une chaîne
-                market_cap_value = 0
                 if isinstance(market_cap, str):
-                    # Analyse différente formats possibles (notation avec B/M, espace insécable, etc.)
+                    # Nettoyer la chaîne (supprimer symboles, espaces, etc.)
+                    cleaned_cap = re.sub(r'[^\d.,]', '', market_cap.replace(',', '.'))
+                    
+                    # Gérer les formats communs pour les milliards/millions (B, M)
                     if 'B' in market_cap or 'b' in market_cap:
                         multiplier = 1_000_000_000
-                        market_cap_value = safe_parse_float(market_cap) * multiplier if safe_parse_float(market_cap) else 0
                     elif 'M' in market_cap or 'm' in market_cap:
                         multiplier = 1_000_000
-                        market_cap_value = safe_parse_float(market_cap) * multiplier if safe_parse_float(market_cap) else 0
                     else:
-                        market_cap_value = safe_parse_float(market_cap) or 0
+                        multiplier = 1
+                    
+                    try:
+                        market_cap_value = float(cleaned_cap) * multiplier
+                    except (ValueError, TypeError):
+                        # Si la conversion échoue, utilisez un ordre de grandeur basé sur le prix
+                        # (juste comme approximation fallback)
+                        try:
+                            price_value = float(re.sub(r'[^\d.,]', '', str(price).replace(',', '.')))
+                            market_cap_value = price_value * 1_000_000  # estimation grossière
+                        except:
+                            market_cap_value = 0
                 else:
                     market_cap_value = float(market_cap or 0)
-                
-                # Si market_cap échoue, utiliser price comme approximation
-                if market_cap_value <= 0:
-                    price_value = safe_parse_float(price)
-                    if price_value:
-                        market_cap_value = price_value * 1_000_000  # estimation grossière
                 
                 # Ajouter à toutes les cryptos
                 all_cryptos.append((name, symbol, change_24h_value, change_7d_value, price, market_cap_value))
@@ -765,12 +756,9 @@ def filter_crypto_data(crypto_data):
                     change_7d = crypto.get('change_7d', '0%')
                     market_cap = crypto.get('market_cap', 0)
                     
-                    # Nettoyer les valeurs avec safe_parse_float
-                    change_24h_value = safe_parse_float(change_24h)
-                    change_7d_value = safe_parse_float(change_7d)
-                    
-                    if change_24h_value is None or change_7d_value is None:
-                        continue
+                    # Nettoyer les valeurs
+                    change_24h_value = float(change_24h.replace('+', '').replace('%', '').replace(',', '.'))
+                    change_7d_value = float(change_7d.replace('+', '').replace('%', '').replace(',', '.'))
                     
                     # ⚠️ Filtrer les cryptos trop volatiles
                     if change_24h_value > 15 and change_24h_value > (change_7d_value * 2):
@@ -778,25 +766,27 @@ def filter_crypto_data(crypto_data):
                         cryptos_filtered_out.append((name, symbol, change_24h_value, change_7d_value, price))
                         continue  # Passer à la crypto suivante
                     
-                    # Convertir la market cap avec méthode sécurisée
-                    market_cap_value = 0
+                    # Convertir la market cap
                     if isinstance(market_cap, str):
+                        cleaned_cap = re.sub(r'[^\d.,]', '', market_cap.replace(',', '.'))
+                        
                         if 'B' in market_cap or 'b' in market_cap:
                             multiplier = 1_000_000_000
-                            market_cap_value = safe_parse_float(market_cap) * multiplier if safe_parse_float(market_cap) else 0
                         elif 'M' in market_cap or 'm' in market_cap:
                             multiplier = 1_000_000
-                            market_cap_value = safe_parse_float(market_cap) * multiplier if safe_parse_float(market_cap) else 0
                         else:
-                            market_cap_value = safe_parse_float(market_cap) or 0
+                            multiplier = 1
+                        
+                        try:
+                            market_cap_value = float(cleaned_cap) * multiplier
+                        except:
+                            try:
+                                price_value = float(re.sub(r'[^\d.,]', '', str(price).replace(',', '.')))
+                                market_cap_value = price_value * 1_000_000
+                            except:
+                                market_cap_value = 0
                     else:
                         market_cap_value = float(market_cap or 0)
-                    
-                    # Si market_cap échoue, utiliser price comme approximation
-                    if market_cap_value <= 0:
-                        price_value = safe_parse_float(price)
-                        if price_value:
-                            market_cap_value = price_value * 1_000_000  # estimation grossière
                     
                     # Ajouter à la liste
                     all_cryptos.append((name, symbol, change_24h_value, change_7d_value, price, market_cap_value))
@@ -815,14 +805,11 @@ def filter_crypto_data(crypto_data):
         if market_cap <= 0:
             try:
                 # Essayer d'extraire une valeur numérique du prix
-                price_value = safe_parse_float(price)
-                if price_value:
-                    # Utiliser le prix comme indicateur de l'ordre de grandeur de la capitalisation
-                    # Mais ajouter aussi index pour garder l'ordre original si tout échoue
-                    all_cryptos[i] = (name, symbol, change_24h, change_7d, price, price_value * 1000000 / (i + 1))
-                else:
-                    # Si ça échoue aussi, utiliser juste l'index inversé pour garder un ordre quelconque
-                    all_cryptos[i] = (name, symbol, change_24h, change_7d, price, 1000000 / (i + 1))
+                price_cleaned = re.sub(r'[^\d.,]', '', str(price).replace(',', '.'))
+                price_value = float(price_cleaned)
+                # Utiliser le prix comme indicateur de l'ordre de grandeur de la capitalisation
+                # Mais ajouter aussi index pour garder l'ordre original si tout échoue
+                all_cryptos[i] = (name, symbol, change_24h, change_7d, price, price_value * 1000000 / (i + 1))
             except:
                 # Si ça échoue aussi, utiliser juste l'index inversé pour garder un ordre quelconque
                 all_cryptos[i] = (name, symbol, change_24h, change_7d, price, 1000000 / (i + 1))
@@ -902,82 +889,8 @@ def filter_themes_data(themes_data):
     
     return "\n".join(summary)
 
-# Nouvelle fonction pour détecter les opportunités sous-évaluées
-def detect_undervalued_opportunities(lists_data, sectors_data, themes_data):
-    """Détecte les actifs potentiellement sous-évalués mais prometteurs basés sur des secteurs ou thèmes favorables."""
-    opportunities = []
-    
-    # Extraire les secteurs haussiers (YTD > 2%)
-    good_sectors = set()
-    for region, sector_list in sectors_data.get("sectors", {}).items():
-        for sec in sector_list:
-            if not isinstance(sec, dict):
-                continue
-            try:
-                ytd_value = safe_parse_float(sec.get("ytd", "0"))
-                if ytd_value is not None and ytd_value > 2:
-                    sector_name = sec.get("name", "").strip().lower()
-                    if sector_name:
-                        good_sectors.add(sector_name)
-            except (ValueError, TypeError):
-                continue
-
-    # Extraire les thèmes haussiers
-    bullish_themes = set()
-    for theme in themes_data.get("bullish", []):
-        if isinstance(theme, dict) and theme.get("name"):
-            bullish_themes.add(theme.get("name", "").strip().lower())
-
-    # Scanner les actifs: YTD modeste mais secteur ou thème favorable
-    for list_name, list_data in lists_data.items():
-        if not isinstance(list_data, dict):
-            continue
-        
-        indices = list_data.get("indices", {})
-        for letter, assets in indices.items():
-            if not isinstance(assets, list):
-                continue
-                
-            for asset in assets:
-                if not isinstance(asset, dict):
-                    continue
-                    
-                try:
-                    name = asset.get("name", "")
-                    if not name:
-                        continue
-                        
-                    # Nettoyer et convertir YTD avec la fonction safe_parse_float
-                    ytd = safe_parse_float(asset.get("ytd", "0"))
-                    if ytd is None:
-                        continue
-                    
-                    # Obtenir le secteur s'il existe
-                    sector = asset.get("sector", "").strip().lower()
-                    
-                    # Vérifier si l'actif correspond à nos critères
-                    matches_theme = any(theme in name.lower() for theme in bullish_themes)
-                    in_good_sector = sector in good_sectors
-                    
-                    if -5 < ytd < 10 and (in_good_sector or matches_theme):
-                        reason = []
-                        if in_good_sector:
-                            reason.append(f"secteur favorable: {sector}")
-                        if matches_theme:
-                            matching_themes = [theme for theme in bullish_themes if theme in name.lower()]
-                            if matching_themes:
-                                reason.append(f"aligné avec thème(s): {', '.join(matching_themes)}")
-                        
-                        opportunities.append(f"• {name}: YTD {ytd:.1f}% – {' & '.join(reason)}")
-                except (ValueError, TypeError) as e:
-                    print(f"Erreur lors de l'analyse de l'actif {asset.get('name', 'inconnu')}: {str(e)}")
-                    continue
-    
-    return opportunities
-
-# Fonction de sauvegarde simplifiée - sans f-string complexe
 def save_prompt_to_debug_file(prompt, timestamp=None):
-    """Version simplifiée qui sauvegarde seulement le prompt dans un fichier texte."""
+    """Sauvegarde le prompt complet dans un fichier de débogage."""
     # Créer un répertoire de debug s'il n'existe pas
     debug_dir = "debug/prompts"
     os.makedirs(debug_dir, exist_ok=True)
@@ -993,7 +906,60 @@ def save_prompt_to_debug_file(prompt, timestamp=None):
     with open(debug_file, 'w', encoding='utf-8') as f:
         f.write(prompt)
     
-    return debug_file, None  # Retourne seulement le fichier texte, pas de HTML
+    # Générer un fichier HTML plus lisible
+    html_file = f"{debug_dir}/prompt_{timestamp}.html"
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>TradePulse - Debug de Prompt</title>
+        <meta charset="UTF-8">
+        <style>
+            body {{ font-family: Arial, sans-serif; margin: 20px; line-height: 1.6; }}
+            pre {{ background-color: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; white-space: pre-wrap; }}
+            h1, h2 {{ color: #2c3e50; }}
+            .info {{ background-color: #e8f4f8; padding: 10px; border-radius: 5px; margin-bottom: 20px; }}
+            .stats {{ display: flex; flex-wrap: wrap; gap: 10px; margin: 20px 0; }}
+            .stat-box {{ background: #f0f7fa; padding: 10px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }}
+            .highlight {{ background-color: #ffffcc; }}
+        </style>
+    </head>
+    <body>
+        <h1>TradePulse - Debug de Prompt ChatGPT</h1>
+        <div class="info">
+            <p>Timestamp: {timestamp}</p>
+            <p>Taille totale du prompt: {len(prompt)} caractères</p>
+        </div>
+        <h2>Contenu du prompt envoyé à ChatGPT :</h2>
+        <pre>{prompt.replace('<', '&lt;').replace('>', '&gt;')}</pre>
+    </body>
+    </html>
+    """
+    
+    with open(html_file, 'w', encoding='utf-8') as f:
+        f.write(html_content)
+    
+    # Créer également un fichier JavaScript pour enregistrer le debug dans localStorage
+    # (pour l'intégration avec l'interface web)
+    js_debug_path = "debug/prompts/debug_data.js"
+    with open(js_debug_path, 'w', encoding='utf-8') as f:
+        f.write(f"""
+// Script de debug généré automatiquement
+// Ce fichier est utilisé par l'interface web de debug
+
+// Enregistrer les infos de ce debug
+if (window.recordDebugFile) {{
+    window.recordDebugFile('{timestamp}', {{
+        prompt_length: {len(prompt)},
+        prompt_path: '{debug_file}',
+        html_path: '{html_file}'
+    }});
+}}
+""")
+    
+    print(f"✅ Pour voir le prompt dans l'interface web, accédez à: debug-prompts.html")
+    
+    return debug_file, html_file
 
 def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data=None, themes_data=None):
     """Génère trois portefeuilles optimisés en combinant les données fournies et le contexte actuel du marché."""
@@ -1015,10 +981,6 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     # Ajouter le filtrage des tendances thématiques
     filtered_themes = filter_themes_data(themes_data) if themes_data else "Aucune donnée de tendances thématiques disponible"
     
-    # Détecter les opportunités sous-évaluées
-    undervalued_opportunities = detect_undervalued_opportunities(lists_data, sectors_data, themes_data)
-    opportunity_block = "🔍 SIGNAUX D'OPPORTUNITÉS SOUS-ÉVALUÉES:\n" + "\n".join(undervalued_opportunities[:10]) if undervalued_opportunities else "🔍 Aucun actif sous-évalué avec potentiel détecté actuellement."
-    
     # Formater la liste des ETF obligataires pour le prompt
     bond_etf_list = "\n".join([f"- {name}" for name in bond_etf_names])
     
@@ -1031,7 +993,6 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     print(f"  📊 ETFs: {len(filtered_etfs)} caractères")
     print(f"  🪙 Cryptos: {len(filtered_crypto)} caractères")
     print(f"  🔍 Thèmes: {len(filtered_themes)} caractères")
-    print(f"  🔎 Opportunités: {len(opportunity_block)} caractères")
     
     # Afficher les données filtrées pour vérification
     print("\n===== APERÇU DES DONNÉES FILTRÉES =====")
@@ -1049,8 +1010,6 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     print(filtered_crypto[:200] + "..." if len(filtered_crypto) > 200 else filtered_crypto)
     print("\n----- THÈMES (données filtrées) -----")
     print(filtered_themes[:200] + "..." if len(filtered_themes) > 200 else filtered_themes)
-    print("\n----- OPPORTUNITÉS SOUS-ÉVALUÉES -----")
-    print(opportunity_block[:200] + "..." if len(opportunity_block) > 200 else opportunity_block)
     print("\n===========================================")
     
     # Afficher la liste des ETF obligataires trouvés
@@ -1070,28 +1029,38 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
             # Obtenir les exigences minimales pour les portefeuilles
             minimum_requirements = get_portfolio_prompt_additions()
             
-            # Construire le prompt - SANS f-string multi-lignes complexe
-            # Formation des parties du prompt séparément
-            header_part = """
+            # Construire un prompt avec la whitelist d'ETF obligataires explicite
+            prompt = f"""
 Tu es un expert en gestion de portefeuille. Tu dois IMPÉRATIVEMENT créer TROIS portefeuilles contenant EXACTEMENT entre 12 et 15 actifs CHACUN.
 
 Utilise ces données filtrées pour générer les portefeuilles :
 
-"""
-            news_part = f"📰 Actualités financières récentes: \n{filtered_news}\n\n"
-            markets_part = f"📈 Tendances du marché: \n{filtered_markets}\n\n"
-            sectors_part = f"🏭 Analyse sectorielle: \n{filtered_sectors}\n\n"
-            lists_part = f"📋 Listes d'actifs surveillés: \n{filtered_lists}\n\n"
-            etfs_part = f"📊 Analyse des ETF: \n{filtered_etfs}\n\n"
-            crypto_part = f"🪙 Crypto-monnaies performantes:\n{filtered_crypto}\n\n"
-            themes_part = f"🔍 Tendances et thèmes actuels:\n{filtered_themes}\n\n"
-            opportunities_part = f"📈 Opportunités d'actifs sous-évalués:\n{opportunity_block}\n\n"
-            
-            context_part = f"📅 Contexte : Ces portefeuilles sont optimisés pour le mois de {current_month}.\n\n"
-            
-            bond_etf_list_part = f"🛡️ LISTE DES SEULS ETF OBLIGATAIRES AUTORISÉS (TOP BOND ETFs) :\n{bond_etf_list}\n\n"
-            
-            instructions_part = """
+📰 Actualités financières récentes: 
+{filtered_news}
+
+📈 Tendances du marché: 
+{filtered_markets}
+
+🏭 Analyse sectorielle: 
+{filtered_sectors}
+
+📋 Listes d'actifs surveillés: 
+{filtered_lists}
+
+📊 Analyse des ETF: 
+{filtered_etfs}
+
+🪙 Crypto-monnaies performantes:
+{filtered_crypto}
+
+🔍 Tendances et thèmes actuels:
+{filtered_themes}
+
+📅 Contexte : Ces portefeuilles sont optimisés pour le mois de {current_month}.
+
+🛡️ LISTE DES SEULS ETF OBLIGATAIRES AUTORISÉS (TOP BOND ETFs) :
+{bond_etf_list}
+
 🎯 INSTRUCTIONS TRÈS PRÉCISES (À RESPECTER ABSOLUMENT) :
 
 1. Tu dois générer trois portefeuilles :
@@ -1101,9 +1070,6 @@ Utilise ces données filtrées pour générer les portefeuilles :
 
 2. Pour les obligations : Tu dois piocher UNIQUEMENT dans la **liste ci-dessus des ETF obligataires autorisés**. Tu ne dois JAMAIS inventer ou utiliser d'autres noms. 
 
-"""
-
-            rules_part = f"""
 🛡️ RÈGLES DE CATÉGORISATION STRICTES (À RESPECTER IMPÉRATIVEMENT) :
 
 1. Catégorie "ETF" : Utilise UNIQUEMENT les ETF provenant des sections "TOP ETF STANDARDS 2025" et "ETF COURT TERME"
@@ -1114,9 +1080,6 @@ Utilise ces données filtrées pour générer les portefeuilles :
    * Ces ETF obligataires doivent UNIQUEMENT apparaître dans la catégorie "Obligations"
    * Ne les place JAMAIS dans la catégorie "ETF"
 
-"""
-
-            crypto_rules_part = """
 📌 CONCERNANT LES CRYPTO-MONNAIES :
 
 - Tu peux inclure des crypto-monnaies dans les portefeuilles si elles ont une performance positive sur 7 jours (7D%)
@@ -1124,11 +1087,8 @@ Utilise ces données filtrées pour générer les portefeuilles :
 - Tu dois sélectionner uniquement parmi les crypto-monnaies listées dans la section "Crypto-monnaies performantes"
 - N'inclus PAS de crypto-monnaies si aucune ne présente une performance positive sur 7 jours
 
-"""
+{minimum_requirements}
 
-            min_requirements_part = f"{minimum_requirements}\n\n"
-            
-            comment_structure_part = """
 3. Pour chaque portefeuille (Agressif, Modéré, Stable), tu dois générer un **commentaire unique** qui suit une structure **top-down** claire et logique.
 
 Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
@@ -1138,9 +1098,6 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 🏭 **Secteurs** — Détaille les secteurs les plus dynamiques ou les plus en retrait selon les données récentes, sans orientation personnelle.  
 📊 **Choix des actifs** — Explique les allocations choisies dans le portefeuille en cohérence avec le profil (Agressif / Modéré / Stable), en s'appuyant uniquement sur les données fournies (ETF, actions, obligations, crypto...).
 
-"""
-            
-            coherence_part = """
 📌 COHÉRENCE ET LOGIQUE DANS LA CONSTRUCTION DES PORTEFEUILLES :
 - Tous les actifs sélectionnés doivent refléter une **analyse rationnelle** basée sur les données fournies.
 - Il est strictement interdit de choisir des actifs par défaut, sans lien évident avec les tendances économiques, géographiques ou sectorielles.
@@ -1148,26 +1105,6 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 - Chaque portefeuille doit être construit de manière 100% logique à partir des données fournies.
 - Les actifs sélectionnés doivent découler directement des performances réelles, secteurs en croissance, régions dynamiques, et tendances de marché analysées dans les données ci-dessus.
 
-"""
-
-            justification_part = """
-⚠️ Règle absolue: chaque actif sélectionné doit être JUSTIFIÉ par AU MOINS **deux sources différentes** parmi:
-- 📰 Actualités financières récentes (spécifiques et pertinentes)
-- 🏭 Tendance sectorielle identifiée dans l'analyse sectorielle
-- 🌍 Dynamique régionale documentée dans les tendances du marché
-- 📊 Thème haussier identifié dans les tendances thématiques
-- 🔍 Signal d'opportunité sous-évaluée dans la section dédiée
-
-❌ Un actif à forte performance YTD (>30%) **non justifié** par au moins deux des éléments ci-dessus doit être **absolument exclu** du portefeuille.
-
-✅ Un actif à performance modeste peut être **prioritairement inclus** s'il est soutenu par:
-- Un secteur ou un thème haussier documenté dans les données
-- ET apparaît dans les "Signaux d'opportunités sous-évaluées"
-- OU est mentionné positivement dans les actualités récentes
-
-"""
-
-            selection_logic_part = """
 - Ne sélectionne **jamais** un actif uniquement parce qu'il a une **forte performance récente** (ex: YTD élevé). Cela ne garantit **ni la pertinence actuelle, ni la performance future**.
 - Inversement, **n'exclus pas automatiquement** un actif ou un secteur en baisse (ex: -8% YTD) : une **reprise sectorielle, une amélioration du contexte macroéconomique, ou des signaux positifs** dans les actualités ou marchés peuvent justifier sa présence.
 - Le but est d'**anticiper intelligemment** : un actif faiblement valorisé mais soutenu par **des données cohérentes et des dynamiques récentes** peut offrir **plus de potentiel** qu'un actif déjà en haut du cycle.
@@ -1181,9 +1118,6 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
    - L'actif n'est pas en phase terminale de cycle haussier sans justification macroéconomique
    Si tu n'as **aucune justification actuelle**, ne sélectionne pas l'actif, même s'il est très performant.
 
-"""
-
-            asset_selection_part = """
 🧩 Chaque actif sélectionné doit résulter d'au moins **deux sources cohérentes** parmi les suivantes :
    - Actualités macroéconomiques ou sectorielles
    - Tendances géographiques du marché
@@ -1205,9 +1139,6 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 ⚠️ Exemple à NE PAS suivre : "L'action X a pris +90% YTD donc elle est à privilégier".
 👉 Mauvais raisonnement. Ce n'est pas une justification valide. La croissance passée ne garantit **aucune** pertinence actuelle ou future.
 
-"""
-
-            detailed_justification_part = """
 📝 Dans la section "Choix des actifs" du commentaire, pour CHAQUE actif sélectionné, tu dois explicitement :
    1. Identifier la tendance actuelle ou émergente qui justifie sa sélection
    2. Expliquer pourquoi cet actif est bien positionné pour en bénéficier
@@ -1225,29 +1156,23 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 ❌ Aucun biais : ne fais pas d'hypothèse sur les classes d'actifs à privilégier. Base-toi uniquement sur les données fournies.  
 ✅ Le commentaire doit être **adapté au profil de risque** (Agressif / Modéré / Stable) sans forcer une direction (ex: ne dis pas "la techno est à privilégier" sauf si les données le montrent clairement).
 
-"""
-
-            json_format_part = """
 📊 Format JSON requis:
-{
-  "Agressif": {
+{{
+  "Agressif": {{
     "Commentaire": "Texte structuré suivant le format top-down demandé",
-    "Actions": {
+    "Actions": {{
       "Nom Précis de l'Action 1": "X%",
       "Nom Précis de l'Action 2": "Y%",
       ...etc (jusqu'à avoir entre 12-15 actifs au total)
-    },
-    "Crypto": { ... },
-    "ETF": { ... },
-    "Obligations": { ... }
-  },
-  "Modéré": { ... },
-  "Stable": { ... }
-}
+    }},
+    "Crypto": {{ ... }},
+    "ETF": {{ ... }},
+    "Obligations": {{ ... }}
+  }},
+  "Modéré": {{ ... }},
+  "Stable": {{ ... }}
+}}
 
-"""
-
-            validation_criteria_part = """
 ⚠️ CRITÈRES DE VALIDATION (ABSOLUMENT REQUIS) :
 - Chaque portefeuille DOIT contenir EXACTEMENT entre 12 et 15 actifs au total, PAS MOINS, PAS PLUS
 - La somme des allocations de chaque portefeuille DOIT être EXACTEMENT 100%
@@ -1255,22 +1180,13 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 - Chaque actif doit avoir un nom SPÉCIFIQUE et PRÉCIS, PAS de noms génériques
 - Ne réponds qu'avec le JSON, sans commentaire ni explication supplémentaire
 """
-
-            # Assembler toutes les parties du prompt sans utiliser de f-string complexe
-            prompt = (header_part + news_part + markets_part + sectors_part + lists_part + 
-                     etfs_part + crypto_part + themes_part + opportunities_part + context_part + 
-                     bond_etf_list_part + instructions_part + rules_part + crypto_rules_part + 
-                     min_requirements_part + comment_structure_part + coherence_part + 
-                     justification_part + selection_logic_part + asset_selection_part + 
-                     detailed_justification_part + json_format_part + validation_criteria_part)
             
-            # ===== NOUVELLE FONCTIONNALITÉ: SAUVEGARDE DU PROMPT POUR DEBUG =====
-            # Utiliser la version simplifiée qui ne cause pas l'erreur f-string
-            print("\n🔍 GÉNÉRATION DU PROMPT COMPLET POUR DEBUG...DÉSACTIVÉ")
-            # debug_file, html_file = save_prompt_to_debug_file(prompt, debug_timestamp)
-            # print(f"✅ Prompt complet sauvegardé dans {debug_file}")
-            # print(f"✅ Version HTML plus lisible sauvegardée dans {html_file}")
-            # print(f"📝 Consultez ces fichiers pour voir exactement ce qui est envoyé à ChatGPT")
+            # ===== NOUVELLE FONCTIONNALITÉ: SAUVEGARDER LE PROMPT POUR DEBUG =====
+            print("\n🔍 GÉNÉRATION DU PROMPT COMPLET POUR DEBUG...")
+            debug_file, html_file = save_prompt_to_debug_file(prompt, debug_timestamp)
+            print(f"✅ Prompt complet sauvegardé dans {debug_file}")
+            print(f"✅ Version HTML plus lisible sauvegardée dans {html_file}")
+            print(f"📝 Consultez ces fichiers pour voir exactement ce qui est envoyé à ChatGPT")
             
             headers = {
                 "Authorization": f"Bearer {api_key}",
