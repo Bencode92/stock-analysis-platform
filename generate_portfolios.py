@@ -889,6 +889,78 @@ def filter_themes_data(themes_data):
     
     return "\n".join(summary)
 
+# Nouvelle fonction pour détecter les opportunités sous-évaluées
+def detect_undervalued_opportunities(lists_data, sectors_data, themes_data):
+    """Détecte les actifs potentiellement sous-évalués mais prometteurs basés sur des secteurs ou thèmes favorables."""
+    opportunities = []
+    
+    # Extraire les secteurs haussiers (YTD > 2%)
+    good_sectors = set()
+    for region, sector_list in sectors_data.get("sectors", {}).items():
+        for sec in sector_list:
+            if not isinstance(sec, dict):
+                continue
+            try:
+                ytd_value = float(str(sec.get("ytd", "0")).replace("%", "").replace(",", "."))
+                if ytd_value > 2:
+                    sector_name = sec.get("name", "").strip().lower()
+                    if sector_name:
+                        good_sectors.add(sector_name)
+            except (ValueError, TypeError):
+                continue
+
+    # Extraire les thèmes haussiers
+    bullish_themes = set()
+    for theme in themes_data.get("bullish", []):
+        if isinstance(theme, dict) and theme.get("name"):
+            bullish_themes.add(theme.get("name", "").strip().lower())
+
+    # Scanner les actifs: YTD modeste mais secteur ou thème favorable
+    for list_name, list_data in lists_data.items():
+        if not isinstance(list_data, dict):
+            continue
+        
+        indices = list_data.get("indices", {})
+        for letter, assets in indices.items():
+            if not isinstance(assets, list):
+                continue
+                
+            for asset in assets:
+                if not isinstance(asset, dict):
+                    continue
+                    
+                try:
+                    name = asset.get("name", "")
+                    if not name:
+                        continue
+                        
+                    # Nettoyer et convertir YTD
+                    ytd_str = str(asset.get("ytd", "0"))
+                    ytd = float(ytd_str.replace('%', '').replace(',', '.'))
+                    
+                    # Obtenir le secteur s'il existe
+                    sector = asset.get("sector", "").strip().lower()
+                    
+                    # Vérifier si l'actif correspond à nos critères
+                    matches_theme = any(theme in name.lower() for theme in bullish_themes)
+                    in_good_sector = sector in good_sectors
+                    
+                    if -5 < ytd < 10 and (in_good_sector or matches_theme):
+                        reason = []
+                        if in_good_sector:
+                            reason.append(f"secteur favorable: {sector}")
+                        if matches_theme:
+                            matching_themes = [theme for theme in bullish_themes if theme in name.lower()]
+                            if matching_themes:
+                                reason.append(f"aligné avec thème(s): {', '.join(matching_themes)}")
+                        
+                        opportunities.append(f"• {name}: YTD {ytd:.1f}% – {' & '.join(reason)}")
+                except (ValueError, TypeError) as e:
+                    print(f"Erreur lors de l'analyse de l'actif {asset.get('name', 'inconnu')}: {str(e)}")
+                    continue
+    
+    return opportunities
+
 def save_prompt_to_debug_file(prompt, timestamp=None):
     """Sauvegarde le prompt complet dans un fichier de débogage."""
     # Créer un répertoire de debug s'il n'existe pas
@@ -981,6 +1053,10 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     # Ajouter le filtrage des tendances thématiques
     filtered_themes = filter_themes_data(themes_data) if themes_data else "Aucune donnée de tendances thématiques disponible"
     
+    # Détecter les opportunités sous-évaluées
+    undervalued_opportunities = detect_undervalued_opportunities(lists_data, sectors_data, themes_data)
+    opportunity_block = "🔍 SIGNAUX D'OPPORTUNITÉS SOUS-ÉVALUÉES:\n" + "\n".join(undervalued_opportunities[:10]) if undervalued_opportunities else "🔍 Aucun actif sous-évalué avec potentiel détecté actuellement."
+    
     # Formater la liste des ETF obligataires pour le prompt
     bond_etf_list = "\n".join([f"- {name}" for name in bond_etf_names])
     
@@ -993,6 +1069,7 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     print(f"  📊 ETFs: {len(filtered_etfs)} caractères")
     print(f"  🪙 Cryptos: {len(filtered_crypto)} caractères")
     print(f"  🔍 Thèmes: {len(filtered_themes)} caractères")
+    print(f"  🔎 Opportunités: {len(opportunity_block)} caractères")
     
     # Afficher les données filtrées pour vérification
     print("\n===== APERÇU DES DONNÉES FILTRÉES =====")
@@ -1010,6 +1087,8 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     print(filtered_crypto[:200] + "..." if len(filtered_crypto) > 200 else filtered_crypto)
     print("\n----- THÈMES (données filtrées) -----")
     print(filtered_themes[:200] + "..." if len(filtered_themes) > 200 else filtered_themes)
+    print("\n----- OPPORTUNITÉS SOUS-ÉVALUÉES -----")
+    print(opportunity_block[:200] + "..." if len(opportunity_block) > 200 else opportunity_block)
     print("\n===========================================")
     
     # Afficher la liste des ETF obligataires trouvés
@@ -1055,6 +1134,9 @@ Utilise ces données filtrées pour générer les portefeuilles :
 
 🔍 Tendances et thèmes actuels:
 {filtered_themes}
+
+📈 Opportunités d'actifs sous-évalués:
+{opportunity_block}
 
 📅 Contexte : Ces portefeuilles sont optimisés pour le mois de {current_month}.
 
@@ -1104,6 +1186,20 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 - Le commentaire ne doit jamais mentionner un secteur, une région ou une dynamique **qui n'est pas représentée** dans les actifs choisis.
 - Chaque portefeuille doit être construit de manière 100% logique à partir des données fournies.
 - Les actifs sélectionnés doivent découler directement des performances réelles, secteurs en croissance, régions dynamiques, et tendances de marché analysées dans les données ci-dessus.
+
+⚠️ Règle absolue: chaque actif sélectionné doit être JUSTIFIÉ par AU MOINS **deux sources différentes** parmi:
+- 📰 Actualités financières récentes (spécifiques et pertinentes)
+- 🏭 Tendance sectorielle identifiée dans l'analyse sectorielle
+- 🌍 Dynamique régionale documentée dans les tendances du marché
+- 📊 Thème haussier identifié dans les tendances thématiques
+- 🔍 Signal d'opportunité sous-évaluée dans la section dédiée
+
+❌ Un actif à forte performance YTD (>30%) **non justifié** par au moins deux des éléments ci-dessus doit être **absolument exclu** du portefeuille.
+
+✅ Un actif à performance modeste peut être **prioritairement inclus** s'il est soutenu par:
+- Un secteur ou un thème haussier documenté dans les données
+- ET apparaît dans les "Signaux d'opportunités sous-évaluées"
+- OU est mentionné positivement dans les actualités récentes
 
 - Ne sélectionne **jamais** un actif uniquement parce qu'il a une **forte performance récente** (ex: YTD élevé). Cela ne garantit **ni la pertinence actuelle, ni la performance future**.
 - Inversement, **n'exclus pas automatiquement** un actif ou un secteur en baisse (ex: -8% YTD) : une **reprise sectorielle, une amélioration du contexte macroéconomique, ou des signaux positifs** dans les actualités ou marchés peuvent justifier sa présence.
@@ -1157,21 +1253,21 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 ✅ Le commentaire doit être **adapté au profil de risque** (Agressif / Modéré / Stable) sans forcer une direction (ex: ne dis pas "la techno est à privilégier" sauf si les données le montrent clairement).
 
 📊 Format JSON requis:
-{{
-  "Agressif": {{
+{
+  "Agressif": {
     "Commentaire": "Texte structuré suivant le format top-down demandé",
-    "Actions": {{
+    "Actions": {
       "Nom Précis de l'Action 1": "X%",
       "Nom Précis de l'Action 2": "Y%",
       ...etc (jusqu'à avoir entre 12-15 actifs au total)
-    }},
-    "Crypto": {{ ... }},
-    "ETF": {{ ... }},
-    "Obligations": {{ ... }}
-  }},
-  "Modéré": {{ ... }},
-  "Stable": {{ ... }}
-}}
+    },
+    "Crypto": { ... },
+    "ETF": { ... },
+    "Obligations": { ... }
+  },
+  "Modéré": { ... },
+  "Stable": { ... }
+}
 
 ⚠️ CRITÈRES DE VALIDATION (ABSOLUMENT REQUIS) :
 - Chaque portefeuille DOIT contenir EXACTEMENT entre 12 et 15 actifs au total, PAS MOINS, PAS PLUS
