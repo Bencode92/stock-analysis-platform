@@ -256,12 +256,12 @@ class MarketClock {
     // Ajouter des titres
     const leftTitle = document.createElement('div');
     leftTitle.className = 'market-clock-title';
-    leftTitle.innerHTML = 'Marchés <span>Asie & Europe</span>';
+    leftTitle.innerHTML = 'Marchés <span>GLOBALE</span>';
     this.leftContainer.appendChild(leftTitle);
     
     const rightTitle = document.createElement('div');
     rightTitle.className = 'market-clock-title';
-    rightTitle.innerHTML = 'Marchés <span>Amériques</span>';
+    rightTitle.innerHTML = 'Marchés <span>EUROPE et AMERIQUE</span>';
     this.rightContainer.appendChild(rightTitle);
     
     // Ajouter les marchés à gauche
