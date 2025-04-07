@@ -848,6 +848,47 @@ def filter_crypto_data(crypto_data):
     
     return "\n".join(summary)
 
+def filter_themes_data(themes_data):
+    """Filtre les données de thèmes et tendances pour les intégrer au prompt."""
+    if not themes_data or not isinstance(themes_data, dict):
+        return "Aucune donnée de tendances thématiques disponible"
+    
+    summary = ["📊 TENDANCES THÉMATIQUES ACTUELLES:"]
+    
+    # Traiter les tendances haussières
+    if "bullish" in themes_data and isinstance(themes_data["bullish"], list):
+        summary.append("🔼 THÈMES HAUSSIERS:")
+        for theme in themes_data["bullish"]:
+            if isinstance(theme, dict):
+                name = theme.get("name", "")
+                reason = theme.get("reason", "")
+                score = theme.get("score", "")
+                if name:
+                    summary.append(f"• {name}: {reason} (Score: {score})")
+    
+    # Traiter les tendances baissières
+    if "bearish" in themes_data and isinstance(themes_data["bearish"], list):
+        summary.append("🔽 THÈMES BAISSIERS:")
+        for theme in themes_data["bearish"]:
+            if isinstance(theme, dict):
+                name = theme.get("name", "")
+                reason = theme.get("reason", "")
+                score = theme.get("score", "")
+                if name:
+                    summary.append(f"• {name}: {reason} (Score: {score})")
+    
+    # Traiter les tendances neutres ou émergentes si elles existent
+    if "emerging" in themes_data and isinstance(themes_data["emerging"], list):
+        summary.append("🔄 THÈMES ÉMERGENTS:")
+        for theme in themes_data["emerging"]:
+            if isinstance(theme, dict):
+                name = theme.get("name", "")
+                description = theme.get("description", "")
+                if name:
+                    summary.append(f"• {name}: {description}")
+    
+    return "\n".join(summary)
+
 def save_prompt_to_debug_file(prompt, timestamp=None):
     """Sauvegarde le prompt complet dans un fichier de débogage."""
     # Créer un répertoire de debug s'il n'existe pas
@@ -920,7 +961,7 @@ if (window.recordDebugFile) {{
     
     return debug_file, html_file
 
-def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data=None):
+def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data=None, themes_data=None):
     """Génère trois portefeuilles optimisés en combinant les données fournies et le contexte actuel du marché."""
     api_key = os.environ.get('API_CHAT')
     if not api_key:
@@ -937,6 +978,8 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     filtered_lists = filter_lists_data(lists_data)
     filtered_etfs, bond_etf_names = filter_etf_data(etfs_data)  # Récupère aussi la liste des noms d'ETF obligataires
     filtered_crypto = filter_crypto_data(crypto_data) if crypto_data else "Aucune donnée de crypto-monnaie disponible"
+    # Ajouter le filtrage des tendances thématiques
+    filtered_themes = filter_themes_data(themes_data) if themes_data else "Aucune donnée de tendances thématiques disponible"
     
     # Formater la liste des ETF obligataires pour le prompt
     bond_etf_list = "\n".join([f"- {name}" for name in bond_etf_names])
@@ -949,6 +992,7 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     print(f"  📋 Listes: {len(filtered_lists)} caractères")
     print(f"  📊 ETFs: {len(filtered_etfs)} caractères")
     print(f"  🪙 Cryptos: {len(filtered_crypto)} caractères")
+    print(f"  🔍 Thèmes: {len(filtered_themes)} caractères")
     
     # Afficher les données filtrées pour vérification
     print("\n===== APERÇU DES DONNÉES FILTRÉES =====")
@@ -964,6 +1008,8 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     print(filtered_etfs[:200] + "..." if len(filtered_etfs) > 200 else filtered_etfs)
     print("\n----- CRYPTO (données filtrées) -----")
     print(filtered_crypto[:200] + "..." if len(filtered_crypto) > 200 else filtered_crypto)
+    print("\n----- THÈMES (données filtrées) -----")
+    print(filtered_themes[:200] + "..." if len(filtered_themes) > 200 else filtered_themes)
     print("\n===========================================")
     
     # Afficher la liste des ETF obligataires trouvés
@@ -1006,6 +1052,9 @@ Utilise ces données filtrées pour générer les portefeuilles :
 
 🪙 Crypto-monnaies performantes:
 {filtered_crypto}
+
+🔍 Tendances et thèmes actuels:
+{filtered_themes}
 
 📅 Contexte : Ces portefeuilles sont optimisés pour le mois de {current_month}.
 
@@ -1074,12 +1123,14 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
    - Tendances géographiques du marché
    - Dynamique sectorielle spécifique
    - Indicateurs de performance récents cohérents avec ces éléments
+   - Thèmes émergents identifiés dans les données de tendances
    ⚠️ Ne sélectionne **aucun actif** s'il n'est justifié que par sa performance brute.
 
 🔍 Tu dois privilégier les actifs qui présentent des **signaux de potentiel futur cohérents**, même si leur performance passée est modeste, s'ils sont :
    - Alignés avec des tendances émergentes dans les actualités
    - Représentatifs d'un secteur ou d'une région en reprise ou en croissance
    - Soutenus par une dynamique géopolitique, monétaire ou sectorielle
+   - En phase avec les thèmes haussiers identifiés dans les données de tendances
    ⚠️ Un actif peut être sous-évalué à court terme mais pertinent dans un contexte stratégique.
 
 ❌ Tu ne dois **JAMAIS** utiliser de logique par défaut comme "cet actif est performant donc je l'ajoute".
@@ -1096,7 +1147,7 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 
 ✅ Voici la phrase à ajouter dans ton prompt pour **forcer cette logique** :
 🧠 **Tu dois justifier chacun des actifs sélectionnés** dans chaque portefeuille (Agressif, Modéré, Stable).
-* Pour chaque actif, explique **clairement et de manière concise** pourquoi il a été choisi, en t'appuyant sur **les données fournies** (actualités, marchés, secteurs, ETF, crypto, etc.).
+* Pour chaque actif, explique **clairement et de manière concise** pourquoi il a été choisi, en t'appuyant sur **les données fournies** (actualités, marchés, secteurs, ETF, crypto, tendances thématiques, etc.).
 * Chaque actif doit avoir une **raison précise et cohérente** d'être inclus, en lien direct avec la stratégie du portefeuille.
 * Ces justifications doivent apparaître **dans la section "Choix des actifs"** du commentaire.
 * Ne laisse **aucun actif sans justification explicite**.
@@ -1277,10 +1328,12 @@ def main():
     sectors_data = load_json_data('data/sectors.json')
     lists_data = load_json_data('data/lists.json')
     etfs_data = load_json_data('data/etf.json')
-    crypto_data = load_json_data('data/crypto_lists.json')  # Nouveau fichier à charger
+    crypto_data = load_json_data('data/crypto_lists.json')
+    # Ajouter le chargement des tendances thématiques
+    themes_data = load_json_data('data/them.json')
     
     print("🧠 Génération des portefeuilles optimisés...")
-    portfolios = generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data)
+    portfolios = generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data, themes_data)
     
     print("💾 Sauvegarde des portefeuilles...")
     save_portfolios(portfolios)
