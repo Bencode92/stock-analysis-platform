@@ -1011,37 +1011,41 @@
         </div>
     </footer>
 
-    <!-- CORRECTION: Changement de l'ordre des scripts pour éviter les conflits de filtres -->
-    <!-- 1. Scripts de base et utilitaires -->
+    <!-- CORRECTION: Ordre optimisé des scripts pour garantir une initialisation correcte -->
+    
+    <!-- 1. Modules de base -->
     <script src="actualites.js"></script>
     <script src="js/news-hierarchy.js"></script>
     <script src="js/news-filters.js"></script>
     
-    <!-- 2. Scripts ML -->
+    <!-- 2. Modules de normalisation des données -->
+    <script src="js/date-normalizer.js"></script>
+    <script src="js/connection-date-manager.js"></script>
+    
+    <!-- 3. Modules ML et classification -->
     <script src="js/ml-feedback.js"></script>
     <script src="js/ml-news-integrator.js"></script>
     <script src="js/classification-editor.js"></script>
     
-    <!-- 3. Scripts d'actualisation et de correctifs -->
+    <!-- 4. Modules de correction d'affichage -->
     <script src="js/news-updates.js"></script>
     <script src="js/news-display-fix.js"></script>
     
-    <!-- 4. Scripts de thèmes et utilitaires de date -->
+    <!-- 5. Module des thèmes -->
     <script src="js/themes-visualizer.js"></script>
-    <script src="js/connection-date-manager.js"></script>
     
-    <!-- 5. Scripts pour les événements dans le bon ordre -->
-    <!-- D'abord le chargeur d'événements (class de base) -->
+    <!-- 6. Modules des événements dans l'ordre correct -->
+    <!-- D'abord la classe de base qui définit EventsManager -->
     <script src="events-loader.js"></script>
-    
-    <!-- Ensuite les outils de débogage avancés -->
+    <!-- Ensuite les outils de débogage -->
     <script src="js/event-debug.js"></script>
-    
-    <!-- Puis le gestionnaire de rendu d'événements -->
+    <!-- Puis le gestionnaire d'événements qui crée l'instance et ajoute les attributs -->
     <script src="event-renderer.js"></script>
-    
-    <!-- Enfin le système de filtrage unifié -->
+    <!-- Enfin le système de filtrage qui utilise les événements rendus -->
     <script src="js/unified-event-filters.js"></script>
+    
+    <!-- 7. Module de test automatisé -->
+    <script src="js/event-test.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
@@ -1223,26 +1227,55 @@
                 }, 1500);
             }
             
-            // NOUVELLE FONCTION: Correction automatique des filtres après le chargement complet
-            function fixEventFiltersOnLoad() {
-                console.log('🔧 Vérification automatique des filtres d\'événements...');
+            // NOUVELLE FONCTION: Test complet du système d'événements
+            function runCompleteEventTest() {
+                console.group('🧪 DÉMARRAGE DU TEST DU SYSTÈME D\'ÉVÉNEMENTS');
+                
+                // S'assurer que tous les scripts sont chargés
+                const requiredScripts = [
+                    'events-loader.js',
+                    'event-renderer.js',
+                    'unified-event-filters.js',
+                    'date-normalizer.js',
+                    'event-test.js'
+                ];
+                
+                // Vérifier si les scripts sont chargés
+                const loadedScripts = Array.from(document.scripts).map(s => {
+                    const src = s.src;
+                    const parts = src.split('/');
+                    return parts[parts.length - 1];
+                });
+                
+                const missingScripts = requiredScripts.filter(script => 
+                    !loadedScripts.some(loaded => loaded.includes(script))
+                );
+                
+                if (missingScripts.length > 0) {
+                    console.warn(`⚠️ Scripts manquants: ${missingScripts.join(', ')}`);
+                }
+                
+                // Étape 1: Forcer une réinitialisation pour un état propre
                 setTimeout(() => {
-                    if (window.fixAllFilters) {
-                        console.log('🔄 Initialisation complète des filtres...');
-                        window.fixAllFilters();
+                    if (window.reinitializeEvents) {
+                        window.reinitializeEvents().then(() => {
+                            // Étape 2: Lancer des tests de filtre
+                            if (window.testEvents) {
+                                window.testEvents();
+                            }
+                        });
+                    } else if (window.testEvents) {
+                        window.testEvents();
                     } else {
-                        console.log('⚠️ Fonction fixAllFilters non disponible, utilisation de fixEvents si possible');
-                        if (window.fixEvents) {
-                            window.fixEvents();
-                        }
+                        console.warn('⚠️ Script de test non disponible');
                     }
-                    
-                    console.log('✅ Filtres d\'événements initialisés');
                 }, 2000);
+                
+                console.groupEnd();
             }
             
-            // Exécuter la correction automatique
-            fixEventFiltersOnLoad();
+            // Lancer le test après un délai raisonnable
+            setTimeout(runCompleteEventTest, 4000);
         });
     </script>
 </body>
