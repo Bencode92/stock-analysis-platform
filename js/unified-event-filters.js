@@ -30,7 +30,11 @@ const UnifiedEventFilters = {
     state: {
         dateFilter: 'today', // 'today' ou 'week'
         categoryFilter: 'all', // 'all', 'economic', 'ipo', 'm&a', etc.
-        initialized: false // Tracker si déjà initialisé
+        initialized: false, // Tracker si déjà initialisé
+        lastFilterTime: null, // Horodatage du dernier filtrage
+        filterCount: 0, // Nombre de filtrages effectués
+        eventCount: 0, // Nombre total d'événements
+        visibleCount: 0 // Nombre d'événements visibles
     },
     
     // Initialisation
@@ -57,10 +61,15 @@ const UnifiedEventFilters = {
         this.updateCategoryFilterUI();
         console.log('🔄 Interface utilisateur mise à jour');
         
+        // CORRECTION: Assurer la cohérence des attributs data-type
+        this.ensureDataTypeAttributes();
+        
         // Écouter l'événement custom pour savoir quand les événements sont prêts
         document.addEventListener('events-ready', (e) => {
             console.log(`🎯 Événement 'events-ready' reçu avec ${e.detail.count} événements`);
+            // CORRECTION: Utiliser setTimeout pour être sûr que les attributs sont présents
             setTimeout(() => {
+                this.ensureDataTypeAttributes(); // S'assurer que tous les événements ont des attributs corrects
                 this.applyFilters();
             }, 100);
         });
@@ -68,12 +77,137 @@ const UnifiedEventFilters = {
         // Attendre que tout soit chargé, puis appliquer les filtres
         setTimeout(() => {
             this.checkDateFormat();
+            // CORRECTION: Assurer la cohérence des attributs avant le filtrage
+            this.ensureDataTypeAttributes();
             this.applyFilters();
             console.log('✅ Filtres initiaux appliqués');
             
             // Exposer l'instance globalement pour le débogage
             window.EventFilters = this;
+            
+            // AJOUT: Afficher un résumé des métriques après initialisation
+            this.logFilteringMetrics();
         }, 1000);
+    },
+    
+    // AJOUT: Fonction pour afficher les métriques de filtrage
+    logFilteringMetrics: function() {
+        console.log(`📊 Métriques de filtrage: ${this.state.filterCount} filtrages effectués, ${this.state.visibleCount}/${this.state.eventCount} événements visibles`);
+        
+        // Mise à jour de l'indicateur d'événements (s'il existe)
+        const eventsInfoEl = document.getElementById('events-info');
+        if (eventsInfoEl) {
+            eventsInfoEl.textContent = `${this.state.visibleCount} événements affichés`;
+            eventsInfoEl.title = `Filtre: ${this.state.categoryFilter === 'all' ? 'Tous' : this.state.categoryFilter} / ${this.state.dateFilter === 'today' ? 'Aujourd\'hui' : 'Cette semaine'}`;
+        } else {
+            // Créer l'élément s'il n'existe pas
+            this.createEventsInfoIndicator();
+        }
+    },
+    
+    // AJOUT: Création d'un indicateur pour afficher le nombre d'événements
+    createEventsInfoIndicator: function() {
+        const eventsSection = document.getElementById('events-section');
+        if (!eventsSection) return;
+        
+        // Vérifier si l'élément existe déjà
+        if (document.getElementById('events-info')) return;
+        
+        // Créer l'élément d'info
+        const infoEl = document.createElement('div');
+        infoEl.id = 'events-info';
+        infoEl.className = 'text-xs text-gray-400 mt-2 text-right';
+        infoEl.textContent = `${this.state.visibleCount} événements affichés`;
+        infoEl.title = `Filtre: ${this.state.categoryFilter === 'all' ? 'Tous' : this.state.categoryFilter} / ${this.state.dateFilter === 'today' ? 'Aujourd\'hui' : 'Cette semaine'}`;
+        
+        // Ajouter après le conteneur d'événements
+        const eventsContainer = document.getElementById('events-container');
+        if (eventsContainer) {
+            eventsContainer.after(infoEl);
+        } else {
+            eventsSection.appendChild(infoEl);
+        }
+    },
+    
+    // NOUVELLE FONCTION: S'assurer que tous les événements ont des attributs data-type
+    ensureDataTypeAttributes: function() {
+        const eventsContainer = document.querySelector(this.config.eventContainers.main);
+        if (!eventsContainer) return;
+        
+        const events = eventsContainer.querySelectorAll(this.config.eventContainers.itemClass);
+        console.log(`🔄 Vérification des attributs data-type pour ${events.length} événements...`);
+        
+        let addedCount = 0;
+        let correctedTypes = 0;
+        let addedDates = 0;
+        
+        events.forEach((event, index) => {
+            // 1. Vérifier/ajouter l'attribut data-type
+            let type = event.getAttribute('data-type');
+            
+            if (!type) {
+                // Si pas de type, essayer de déduire du contenu ou des classes
+                const classList = Array.from(event.classList);
+                const typeClass = classList.find(cls => cls.startsWith('event-type-'));
+                
+                if (typeClass) {
+                    type = typeClass.replace('event-type-', '');
+                } else {
+                    // Valeur par défaut si aucun type n'est détectable
+                    type = 'economic';
+                }
+                
+                event.setAttribute('data-type', type);
+                addedCount++;
+                console.log(`✅ Ajout data-type="${type}" à l'événement #${index+1}`);
+            } 
+            // 2. CORRECTION: Normaliser les types merger -> m&a
+            else if (type === 'merger') {
+                event.setAttribute('data-type', 'm&a');
+                correctedTypes++;
+                console.log(`🔄 Correction du type "merger" en "m&a" pour l'événement #${index+1}`);
+            }
+            
+            // AJOUT: Toujours s'assurer que le type est en minuscules
+            const currentType = event.getAttribute('data-type');
+            if (currentType && currentType !== currentType.toLowerCase()) {
+                event.setAttribute('data-type', currentType.toLowerCase());
+                correctedTypes++;
+                console.log(`🔄 Conversion de "${currentType}" en minuscules pour l'événement #${index+1}`);
+            }
+            
+            // 3. Vérifier la présence de l'élément date nécessaire pour le filtrage
+            if (!event.querySelector('.event-date')) {
+                // Si pas d'élément date, créer un avec la date du jour
+                const today = new Date();
+                const dateStr = [
+                    String(today.getDate()).padStart(2, '0'),
+                    String(today.getMonth() + 1).padStart(2, '0'),
+                    today.getFullYear()
+                ].join('/');
+                
+                const dateEl = document.createElement('span');
+                dateEl.className = 'event-date';
+                dateEl.style.display = 'none'; // Invisible mais utilisé pour le filtrage
+                dateEl.textContent = dateStr;
+                event.appendChild(dateEl);
+                addedDates++;
+                
+                console.log(`✅ Ajout élément date (${dateStr}) à l'événement #${index+1}`);
+            }
+            
+            // 4. AJOUT: Ajouter un attribut de debug pour les événements qui posent problème
+            if (index < 3) {
+                event.setAttribute('data-debug', 'true');
+            }
+        });
+        
+        console.log(`✅ Attributs vérifiés: ${addedCount} data-type ajoutés, ${correctedTypes} types corrigés, ${addedDates} dates ajoutées`);
+        
+        // Mettre à jour le compteur d'événements
+        this.state.eventCount = events.length;
+        
+        return { addedCount, correctedTypes, addedDates };
     },
     
     // Débogage - Examiner l'état des cartes d'événements
@@ -82,7 +216,9 @@ const UnifiedEventFilters = {
         console.log('État des filtres:', {
             dateFilter: this.state.dateFilter,
             categoryFilter: this.state.categoryFilter,
-            initialized: this.state.initialized
+            initialized: this.state.initialized,
+            filterCount: this.state.filterCount,
+            lastFilterTime: this.state.lastFilterTime
         });
         
         const eventsContainer = document.querySelector(this.config.eventContainers.main);
@@ -128,7 +264,8 @@ const UnifiedEventFilters = {
                     title: title.substring(0, 30) + (title.length > 30 ? '...' : ''),
                     type: eventType,
                     visible: isVisible,
-                    shouldBeVisible: this.shouldBeVisible(event)
+                    shouldBeVisible: this.shouldBeVisible(event),
+                    date: event.querySelector('.event-date')?.textContent || 'Pas de date'
                 });
             }
         });
@@ -137,6 +274,9 @@ const UnifiedEventFilters = {
         console.log('Affichage:', displayCounts);
         console.log('Événements problématiques:', problematicEvents.length > 0 ? problematicEvents : 'Aucun');
         console.groupEnd();
+        
+        // Mettre à jour le compteur
+        this.state.visibleCount = displayCounts.visible;
         
         return {
             typeCounts,
@@ -287,16 +427,25 @@ const UnifiedEventFilters = {
     
     // Appliquer les filtres aux événements
     applyFilters: function() {
+        console.time('applyFilters');
         console.log(`🔍 Application des filtres: dateFilter=${this.state.dateFilter}, categoryFilter=${this.state.categoryFilter}`);
+        
+        // Mettre à jour les métriques
+        this.state.filterCount++;
+        this.state.lastFilterTime = new Date().toISOString();
         
         const eventsContainer = document.querySelector(this.config.eventContainers.main);
         if (!eventsContainer) {
             console.error('❌ Conteneur d\'événements non trouvé pour l\'application des filtres');
+            console.timeEnd('applyFilters');
             return;
         }
         
         const events = eventsContainer.querySelectorAll(this.config.eventContainers.itemClass);
         console.log(`📊 Filtrage de ${events.length} événements`);
+        
+        // CORRECTION: S'assurer que tous les événements ont leurs attributs avant de filtrer
+        this.ensureDataTypeAttributes();
         
         let visibleCount = 0;
         let hiddenCount = 0;
@@ -328,7 +477,8 @@ const UnifiedEventFilters = {
                     title: event.getAttribute('data-title') || event.querySelector('h3')?.textContent || `Événement #${index+1}`,
                     matchesDate,
                     matchesCategory,
-                    visible: shouldBeVisible
+                    visible: shouldBeVisible,
+                    date: event.querySelector('.event-date')?.textContent || 'Pas de date'
                 });
             }
         });
@@ -342,6 +492,13 @@ const UnifiedEventFilters = {
         // Vérifier s'il y a des événements visibles
         this.checkForEmptyResults(eventsContainer);
         
+        // Mettre à jour le compteur
+        this.state.visibleCount = visibleCount;
+        
+        // Mettre à jour l'indicateur d'événements
+        this.logFilteringMetrics();
+        
+        console.timeEnd('applyFilters');
         return visibleCount; // Retourne le nombre d'événements visibles pour des tests
     },
     
@@ -355,31 +512,55 @@ const UnifiedEventFilters = {
         // Pour le filtre 'today', vérifier la date de l'événement
         if (this.state.dateFilter === 'today') {
             try {
-                // Formatage de la date actuelle au format français (JJ/MM/AAAA)
-                const today = new Date();
-                const todayStr = [
-                    String(today.getDate()).padStart(2, '0'),
-                    String(today.getMonth() + 1).padStart(2, '0'),
-                    today.getFullYear()
-                ].join('/');
-                
-                // Trouver l'élément date dans l'événement
-                const dateElement = eventElement.querySelector('.event-date');
-                
-                if (!dateElement) {
-                    console.warn('⚠️ Élément de date non trouvé pour un événement');
-                    return true; // Si pas de date, on le montre par défaut
+                // UTILISATION DU NOUVEAU SYSTÈME DE NORMALISATION
+                if (window.DateNormalizer) {
+                    // Trouver l'élément date dans l'événement
+                    const dateElement = eventElement.querySelector('.event-date');
+                    
+                    if (!dateElement) {
+                        console.warn('⚠️ Élément de date non trouvé pour un événement');
+                        return true; // Si pas de date, on le montre par défaut
+                    }
+                    
+                    const eventDate = dateElement.textContent.trim();
+                    const todayStr = window.DateNormalizer.getTodayFormatted();
+                    
+                    // Utiliser le comparateur normalisé
+                    return window.DateNormalizer.areEqual(eventDate, todayStr);
+                } 
+                // Fallback à l'ancienne méthode si DateNormalizer n'est pas disponible
+                else {
+                    // Formatage de la date actuelle au format français (JJ/MM/AAAA)
+                    const today = new Date();
+                    const todayStr = [
+                        String(today.getDate()).padStart(2, '0'),
+                        String(today.getMonth() + 1).padStart(2, '0'),
+                        today.getFullYear()
+                    ].join('/');
+                    
+                    // Trouver l'élément date dans l'événement
+                    const dateElement = eventElement.querySelector('.event-date');
+                    
+                    if (!dateElement) {
+                        console.warn('⚠️ Élément de date non trouvé pour un événement');
+                        return true; // Si pas de date, on le montre par défaut
+                    }
+                    
+                    const eventDate = dateElement.textContent.trim();
+                    
+                    // CORRECTION: Normaliser manuellement la date pour la comparaison
+                    const normalizedEventDate = eventDate.replace(/\s/g, '');
+                    
+                    // Vérifier si la date de l'événement correspond à aujourd'hui
+                    const matches = normalizedEventDate === todayStr;
+                    
+                    // Pour le débogage
+                    if (eventElement.getAttribute('data-debug') === 'true') {
+                        console.log(`📅 Comparaison date: "${normalizedEventDate}" == "${todayStr}" => ${matches ? 'Oui' : 'Non'}`);
+                    }
+                    
+                    return matches;
                 }
-                
-                const eventDate = dateElement.textContent.trim();
-                
-                // Vérifier si la date de l'événement correspond à aujourd'hui
-                const matches = eventDate === todayStr;
-                
-                // Pour le débogage
-                console.log(`📅 Comparaison date: ${eventDate} == ${todayStr} => ${matches ? 'Oui' : 'Non'}`);
-                
-                return matches;
             } catch (e) {
                 console.error('❌ Erreur lors du filtrage par date:', e);
                 return true; // En cas d'erreur, on montre par défaut
@@ -395,10 +576,10 @@ const UnifiedEventFilters = {
             return true; // Accepter toutes les catégories
         }
         
-        // Obtenir le type de l'événement - PRIORITÉ AU DATA-TYPE EXPLICITE
-        const eventType = eventElement.getAttribute('data-type');
+        // CORRECTION: Obtenir le type de l'événement avec un fallback plus robuste
+        let eventType = eventElement.getAttribute('data-type');
         
-        // Si l'événement n'a pas d'attribut data-type, vérifier la classe pour le débogage
+        // Si l'événement n'a pas d'attribut data-type, essayer d'autres méthodes
         if (!eventType) {
             console.warn(`⚠️ Événement sans attribut data-type: ${eventElement.textContent.substring(0, 30)}...`);
             
@@ -407,16 +588,30 @@ const UnifiedEventFilters = {
             const typeClass = classList.find(cls => cls.startsWith('event-type-'));
             
             if (typeClass) {
-                const typeFromClass = typeClass.replace('event-type-', '');
-                console.log(`ℹ️ Type obtenu à partir de la classe: ${typeFromClass}`);
-                return typeFromClass === this.state.categoryFilter;
+                eventType = typeClass.replace('event-type-', '');
+                console.log(`ℹ️ Type obtenu à partir de la classe: ${eventType}`);
+                
+                // CORRECTION: Ajouter l'attribut data-type manquant pour le futur
+                eventElement.setAttribute('data-type', eventType);
+            } else {
+                // Valeur par défaut si rien n'est trouvé
+                eventType = 'economic';
+                eventElement.setAttribute('data-type', eventType);
+                console.log(`ℹ️ Type par défaut attribué: ${eventType}`);
             }
-            
-            return false;
         }
         
+        // CORRECTION: Normaliser le type merger -> m&a pour cohérence
+        if (eventType === 'merger') {
+            eventType = 'm&a';
+            eventElement.setAttribute('data-type', 'm&a');
+        }
+        
+        // AJOUT: Toujours s'assurer que le type est en minuscules
+        eventType = eventType.toLowerCase();
+        
         // Vérifier si l'événement a la catégorie recherchée
-        return eventType === this.state.categoryFilter;
+        return eventType === this.state.categoryFilter.toLowerCase();
     },
     
     // Vérifier s'il n'y a pas de résultats et afficher un message
@@ -464,15 +659,18 @@ const UnifiedEventFilters = {
         
         let formatCorrect = true;
         let firstDate = '';
+        let allDates = [];
         
-        events.forEach(event => {
+        events.forEach((event, index) => {
             const dateElement = event.querySelector('.event-date');
             if (dateElement) {
                 const dateText = dateElement.textContent.trim();
+                allDates.push(dateText);
+                
                 if (!firstDate) firstDate = dateText;
                 
                 if (!dateFormat.test(dateText)) {
-                    console.warn(`⚠️ Format de date incorrect: "${dateText}"`);
+                    console.warn(`⚠️ Format de date incorrect: "${dateText}" pour événement #${index+1}`);
                     formatCorrect = false;
                 }
             }
@@ -480,6 +678,9 @@ const UnifiedEventFilters = {
         
         if (!formatCorrect) {
             console.warn(`⚠️ Certaines dates ne sont pas au format jj/mm/aaaa. Exemple: "${firstDate}"`);
+            // AJOUT: Afficher toutes les dates uniques trouvées
+            const uniqueDates = [...new Set(allDates)];
+            console.log('Dates trouvées:', uniqueDates);
         } else {
             console.log('✅ Format de date vérifié: toutes les dates sont au format jj/mm/aaaa');
         }
@@ -510,11 +711,36 @@ function fixMissingDataTypes() {
                 // Vérifier s'il y a des indices dans le contenu
                 const title = event.querySelector('h3')?.textContent || '';
                 
-                // Ajouter un attribut data-type par défaut
-                event.setAttribute('data-type', 'economic'); // Valeur par défaut
-                console.log(`⚠️ Attribut data-type défaut (economic) pour événement #${index+1}: ${title.substring(0, 30)}`);
+                // CORRECTION: Choisir un type basé sur le titre si possible
+                let defaultType = 'economic'; // Valeur par défaut
+                
+                if (title.toLowerCase().includes('ipo')) {
+                    defaultType = 'ipo';
+                } else if (title.toLowerCase().includes('m&a') || 
+                           title.toLowerCase().includes('merger') || 
+                           title.toLowerCase().includes('acquisition')) {
+                    defaultType = 'm&a';
+                }
+                
+                event.setAttribute('data-type', defaultType);
+                console.log(`⚠️ Attribut data-type défaut (${defaultType}) pour événement #${index+1}: ${title.substring(0, 30)}`);
                 fixed++;
             }
+        }
+        
+        // CORRECTION: Vérifier et convertir 'merger' en 'm&a'
+        if (event.getAttribute('data-type') === 'merger') {
+            event.setAttribute('data-type', 'm&a');
+            console.log(`🔄 Type 'merger' converti en 'm&a' pour événement #${index+1}`);
+            fixed++;
+        }
+        
+        // AJOUT: Toujours s'assurer que le type est en minuscules
+        const currentType = event.getAttribute('data-type');
+        if (currentType && currentType !== currentType.toLowerCase()) {
+            event.setAttribute('data-type', currentType.toLowerCase());
+            fixed++;
+            console.log(`🔄 Conversion de "${currentType}" en minuscules pour événement #${index+1}`);
         }
         
         // Vérifier si l'élément .event-date est présent
@@ -565,15 +791,222 @@ window.forceFilter = function(category = null, dateFilter = null) {
     }
 };
 
+// Fonction de test automatique pour les filtres
+window.runEventTests = function() {
+    console.group('🧪 TESTS AUTOMATIQUES DES FILTRES D\'ÉVÉNEMENTS');
+    
+    if (!window.EventFilters) {
+        console.error('❌ EventFilters non initialisé!');
+        console.groupEnd();
+        return { error: 'EventFilters non initialisé' };
+    }
+    
+    // Sauvegarder l'état actuel
+    const originalState = {
+        dateFilter: window.EventFilters.state.dateFilter,
+        categoryFilter: window.EventFilters.state.categoryFilter
+    };
+    
+    console.log('État d\'origine:', originalState);
+    
+    // Résultats des tests
+    const results = {
+        filters: {},
+        combinations: {},
+        dataTypes: {},
+        dateFormats: {},
+        summary: {}
+    };
+    
+    // 1. Test des filtres de catégorie
+    console.log('1️⃣ Test des filtres par catégorie:');
+    
+    // Obtenir tous les boutons de catégorie
+    const categoryButtons = document.querySelectorAll('#event-category-filters button');
+    const categories = Array.from(categoryButtons).map(btn => btn.getAttribute('data-category'));
+    
+    // Tester chaque catégorie
+    categories.forEach(category => {
+        window.EventFilters.setCategoryFilter(category);
+        
+        // Compter les événements visibles
+        const visibleCount = [...document.querySelectorAll('.event-card')].filter(
+            card => window.getComputedStyle(card).display !== 'none'
+        ).length;
+        
+        results.filters[category] = visibleCount;
+        console.log(`  - ${category}: ${visibleCount} événements visibles`);
+    });
+    
+    // 2. Test des filtres de date
+    console.log('2️⃣ Test des filtres par date:');
+    
+    ['today', 'week'].forEach(dateFilter => {
+        window.EventFilters.setDateFilter(dateFilter);
+        
+        // Compter les événements visibles
+        const visibleCount = [...document.querySelectorAll('.event-card')].filter(
+            card => window.getComputedStyle(card).display !== 'none'
+        ).length;
+        
+        results.filters[dateFilter] = visibleCount;
+        console.log(`  - ${dateFilter}: ${visibleCount} événements visibles`);
+    });
+    
+    // 3. Test des combinaisons importantes
+    console.log('3️⃣ Test des combinaisons importantes:');
+    
+    const combinations = [
+        { date: 'today', category: 'all' },
+        { date: 'today', category: 'economic' },
+        { date: 'today', category: 'ipo' },
+        { date: 'today', category: 'm&a' },
+        { date: 'week', category: 'all' }
+    ];
+    
+    combinations.forEach(combo => {
+        window.EventFilters.setDateFilter(combo.date);
+        window.EventFilters.setCategoryFilter(combo.category);
+        
+        // Compter les événements visibles
+        const visibleCount = [...document.querySelectorAll('.event-card')].filter(
+            card => window.getComputedStyle(card).display !== 'none'
+        ).length;
+        
+        const comboKey = `${combo.date}+${combo.category}`;
+        results.combinations[comboKey] = visibleCount;
+        console.log(`  - ${comboKey}: ${visibleCount} événements visibles`);
+    });
+    
+    // 4. Vérification des attributs data-type
+    console.log('4️⃣ Vérification des attributs data-type:');
+    
+    const events = document.querySelectorAll('.event-card');
+    const typeCounts = {};
+    let missingTypes = 0;
+    
+    events.forEach(event => {
+        const type = event.getAttribute('data-type');
+        if (type) {
+            typeCounts[type] = (typeCounts[type] || 0) + 1;
+        } else {
+            missingTypes++;
+        }
+    });
+    
+    results.dataTypes = {
+        counts: typeCounts,
+        missing: missingTypes
+    };
+    
+    console.log(`  - Types trouvés: ${Object.keys(typeCounts).join(', ')}`);
+    console.log(`  - Répartition: `, typeCounts);
+    console.log(`  - Types manquants: ${missingTypes}`);
+    
+    // 5. Vérification des formats de date
+    console.log('5️⃣ Vérification des formats de date:');
+    
+    const dateFormat = /^\d{2}\/\d{2}\/\d{4}$/;
+    let validDates = 0;
+    let invalidDates = 0;
+    const uniqueDates = new Set();
+    
+    events.forEach(event => {
+        const dateEl = event.querySelector('.event-date');
+        if (dateEl) {
+            const dateText = dateEl.textContent.trim();
+            uniqueDates.add(dateText);
+            
+            if (dateFormat.test(dateText)) {
+                validDates++;
+            } else {
+                invalidDates++;
+            }
+        }
+    });
+    
+    results.dateFormats = {
+        valid: validDates,
+        invalid: invalidDates,
+        unique: Array.from(uniqueDates)
+    };
+    
+    console.log(`  - Dates valides: ${validDates}`);
+    console.log(`  - Dates invalides: ${invalidDates}`);
+    console.log(`  - Dates uniques: ${Array.from(uniqueDates).join(', ')}`);
+    
+    // 6. Résumé et recommandations
+    const hasDataTypeIssues = missingTypes > 0;
+    const hasDateFormatIssues = invalidDates > 0;
+    const filteringWorking = results.combinations['week+all'] >= results.combinations['today+all'];
+    
+    results.summary = {
+        totalEvents: events.length,
+        dataTypeIssues: hasDataTypeIssues,
+        dateFormatIssues: hasDateFormatIssues,
+        filteringWorking: filteringWorking
+    };
+    
+    console.log('6️⃣ Résumé des tests:');
+    console.log(`  - Nombre total d'événements: ${events.length}`);
+    console.log(`  - Problèmes de type de données: ${hasDataTypeIssues ? '❌ Oui' : '✅ Non'}`);
+    console.log(`  - Problèmes de format de date: ${hasDateFormatIssues ? '❌ Oui' : '✅ Non'}`);
+    console.log(`  - Filtrage fonctionne correctement: ${filteringWorking ? '✅ Oui' : '❌ Non'}`);
+    
+    // Recommandations
+    console.log('7️⃣ Recommandations:');
+    
+    if (hasDataTypeIssues) {
+        console.log('  - ❗ Exécutez window.fixEvents() pour réparer les attributs data-type manquants');
+    }
+    
+    if (hasDateFormatIssues) {
+        console.log('  - ❗ Vérifiez le format des dates dans news.json');
+    }
+    
+    if (!filteringWorking) {
+        console.log('  - ❗ Le filtre semaine devrait montrer plus d\'événements que le filtre jour');
+    }
+    
+    // Restaurer l'état original
+    window.EventFilters.setDateFilter(originalState.dateFilter);
+    window.EventFilters.setCategoryFilter(originalState.categoryFilter);
+    
+    console.log('Tests terminés, état d\'origine restauré');
+    console.groupEnd();
+    
+    return results;
+};
+
 // Initialisation au chargement du DOM
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🔄 Chargement du unified-event-filters.js');
     
-    // Attendre que tout soit chargé, puis initialiser
-    setTimeout(() => {
+    // Attendre que le module DateNormalizer soit chargé
+    const checkDateNormalizer = () => {
+        if (window.DateNormalizer) {
+            console.log('✅ DateNormalizer détecté, initialisation des filtres');
+            initializeFilters();
+        } else {
+            console.log('⏳ Attente du chargement de DateNormalizer...');
+            setTimeout(checkDateNormalizer, 100);
+        }
+    };
+    
+    // CORRECTION: Vérifier la présence du module DateNormalizer
+    setTimeout(checkDateNormalizer, 300);
+    
+    // Fonction d'initialisation
+    function initializeFilters() {
+        // Réinitialiser l'état si nécessaire
+        if (UnifiedEventFilters.state.initialized) {
+            UnifiedEventFilters.state.initialized = false;
+        }
+        
+        // Initialiser
         UnifiedEventFilters.init();
         
-        // Exposer des fonctions de débogage globale
+        // Exposer des fonctions de débogage globales
         window.debugFilters = function() {
             if (window.EventFilters) {
                 return window.EventFilters.debug();
@@ -589,8 +1022,37 @@ document.addEventListener('DOMContentLoaded', function() {
                 .filter(e => e.style.display !== 'none')
                 .map(e => ({
                     title: e.getAttribute('data-title') || e.querySelector('h3')?.textContent || 'Sans titre',
-                    type: e.getAttribute('data-type') || 'unknown'
+                    type: e.getAttribute('data-type') || 'unknown',
+                    date: e.querySelector('.event-date')?.textContent || 'Pas de date'
                 }));
         };
-    }, 800);
+        
+        // NOUVELLE FONCTION: Corriger explicitement les problèmes de filtrage
+        window.fixEventFilters = function() {
+            console.log('🔧 Correction manuelle des filtres d\'événements...');
+            
+            // 1. Corriger tous les attributs manquants
+            fixMissingDataTypes();
+            
+            // 2. Réinitialiser l'état des filtres
+            if (window.EventFilters) {
+                // Forcer un rafraîchissement des filtres
+                window.EventFilters.setDateFilter('week');
+                setTimeout(() => {
+                    window.EventFilters.setDateFilter('today');
+                }, 100);
+                
+                // Forcer le filtre "Tous"
+                setTimeout(() => {
+                    window.EventFilters.setCategoryFilter('all');
+                }, 200);
+                
+                console.log('✅ Filtres réinitialisés avec succès');
+            } else {
+                console.error('❌ EventFilters non disponible');
+            }
+            
+            return 'Correction des filtres terminée';
+        };
+    }
 });
