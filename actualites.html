@@ -181,48 +181,6 @@
             animation: pulse 2s infinite;
         }
         
-        .main-nav {
-            display: flex;
-            margin-left: 40px;
-        }
-        
-        .main-nav a {
-            margin-right: 30px;
-            padding: 8px 5px;
-            font-weight: 500;
-            position: relative;
-            transition: color 0.3s;
-            text-decoration: none;
-        }
-        
-        .dark .main-nav a {
-            color: var(--text-color);
-        }
-        
-        .light .main-nav a {
-            color: var(--light-text-color);
-        }
-        
-        .main-nav a::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background-color: var(--accent-color);
-            transition: width 0.3s;
-        }
-        
-        .main-nav a:hover::after,
-        .main-nav a.active::after {
-            width: 100%;
-        }
-        
-        .main-nav a.active {
-            color: var(--accent-color);
-        }
-        
         .header-right {
             display: flex;
             align-items: center;
@@ -661,10 +619,6 @@
                 margin-top: calc(var(--header-height));
                 margin-bottom: 60px;
             }
-            
-            .main-nav {
-                display: none;
-            }
         }
         
         /* Correctif pour les filtres d'événements */
@@ -786,16 +740,6 @@
                 <div class="pulse-dot"></div>
                 <a href="index.html">TRADEPULSE</a>
             </div>
-            <nav class="main-nav">
-                <a href="actualites.html" class="active">Actualités</a>
-                <a href="portefeuille.html?type=modere">Portefeuilles</a>
-                <a href="dashboard.html">Tableau de bord</a>
-                <a href="marches.html">Marchés</a>
-                <a href="secteurs.html">Secteurs</a>
-                <a href="liste.html">Listes</a>
-                <a href="etf.html">ETF</a>
-                <a href="crypto.html">Crypto</a>
-            </nav>
         </div>
         <div class="header-right">
             <div class="market-status">
@@ -940,7 +884,6 @@
                         <button class="text-xs md:text-sm px-3 py-1.5 bg-green-400 bg-opacity-10 text-green-400 border border-green-400 border-opacity-30 rounded-full font-medium filter-active" data-category="all">
                             <i class="fas fa-filter mr-1"></i> TOUS
                         </button>
-                        <!-- Bouton US supprimé -->
                         <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="economic">
                             <i class="fas fa-chart-line mr-1"></i> ECONOMIC
                         </button>
@@ -950,7 +893,6 @@
                         <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="m&a">
                             <i class="fas fa-handshake mr-1"></i> M&A
                         </button>
-                        <!-- Bouton CN supprimé -->
                     </div>
                     
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="events-container">
