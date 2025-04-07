@@ -306,6 +306,17 @@ def get_current_month_fr():
     # Obtenir le mois en français
     return datetime.datetime.now().strftime('%B').lower()
 
+def safe_parse_float(val):
+    """Nettoie proprement une chaîne de type '+23 233,33%' et retourne un float"""
+    if val is None:
+        return None
+    try:
+        val_clean = re.sub(r"[^\d\-.,]", "", str(val))  # garde seulement chiffres, -, . et ,
+        val_clean = val_clean.replace(',', '.').replace('\u202f', '')  # , → . et espace insécable
+        return float(val_clean)
+    except (ValueError, TypeError):
+        return None
+
 def filter_news_data(news_data):
     """Filtre les données d'actualités pour n'inclure que les plus pertinentes."""
     if not news_data or not isinstance(news_data, dict):
@@ -542,16 +553,15 @@ def filter_lists_data(lists_data):
                 ytd = asset.get("ytd", "")
                 daily = asset.get("change", "")  # Utilisation de la clé "change" pour la variation journalière
 
-                # Nettoyage et conversion
-                try:
-                    ytd_value = float(re.sub(r"[^\d\.-]", "", str(ytd).replace(",", ".")))
-                    daily_value = float(re.sub(r"[^\d\.-]", "", str(daily).replace(",", ".")))
-                except (ValueError, AttributeError):
-                    continue
+                # Utilisation de la nouvelle fonction safe_parse_float
+                ytd_value = safe_parse_float(ytd)
+                daily_value = safe_parse_float(daily)
 
-                # Filtre : YTD entre -5% et 120%, et Daily > -10%
-                if -5 <= ytd_value <= 120 and daily_value > -10:
-                    filtered_assets.append((name, ytd_value, daily_value))
+                # Vérifier que les valeurs ont été converties correctement
+                if ytd_value is not None and daily_value is not None:
+                    # Filtre : YTD entre -5% et 120%, et Daily > -10%
+                    if -5 <= ytd_value <= 120 and daily_value > -10:
+                        filtered_assets.append((name, ytd_value, daily_value))
 
     # Trier par YTD décroissant
     filtered_assets.sort(key=lambda x: x[1], reverse=True)
@@ -614,8 +624,8 @@ def filter_etf_data(etfs_data):
     selected_sector_etfs = []
     for etf in sector_etfs:
         try:
-            ytd = float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.'))
-            if ytd > 5:  # Seuil de 5% pour les ETF sectoriels
+            ytd = safe_parse_float(etf.get("ytd", "0"))
+            if ytd is not None and ytd > 5:  # Seuil de 5% pour les ETF sectoriels
                 selected_sector_etfs.append(f"{etf['name']} : {etf['ytd']}")
         except:
             continue
@@ -628,9 +638,10 @@ def filter_etf_data(etfs_data):
     selected_emerging = []
     for etf in emerging_etfs:
         try:
-            ytd = float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.'))
-            # Sélectionner tous, avec priorité aux performances positives
-            selected_emerging.append((etf['name'], ytd, f"{etf['name']} : {etf['ytd']}"))
+            ytd = safe_parse_float(etf.get("ytd", "0"))
+            if ytd is not None:
+                # Sélectionner tous, avec priorité aux performances positives
+                selected_emerging.append((etf['name'], ytd, f"{etf['name']} : {etf['ytd']}"))
         except:
             continue
     if selected_emerging:
@@ -692,9 +703,12 @@ def filter_crypto_data(crypto_data):
                 change_7d = crypto.get('change_7d', '0%')
                 market_cap = crypto.get('market_cap', 0)
                 
-                # Nettoyer les valeurs
-                change_24h_value = float(change_24h.replace('+', '').replace('%', '').replace(',', '.'))
-                change_7d_value = float(change_7d.replace('+', '').replace('%', '').replace(',', '.'))
+                # Nettoyer les valeurs avec safe_parse_float
+                change_24h_value = safe_parse_float(change_24h)
+                change_7d_value = safe_parse_float(change_7d)
+                
+                if change_24h_value is None or change_7d_value is None:
+                    continue
                 
                 # ⚠️ Filtrer les cryptos trop volatiles
                 if change_24h_value > 15 and change_24h_value > (change_7d_value * 2):
@@ -703,30 +717,25 @@ def filter_crypto_data(crypto_data):
                     continue  # Passer à la crypto suivante
                 
                 # Convertir la market cap en nombre si c'est une chaîne
+                market_cap_value = 0
                 if isinstance(market_cap, str):
-                    # Nettoyer la chaîne (supprimer symboles, espaces, etc.)
-                    cleaned_cap = re.sub(r'[^\d.,]', '', market_cap.replace(',', '.'))
-                    
-                    # Gérer les formats communs pour les milliards/millions (B, M)
+                    # Analyse différente formats possibles (notation avec B/M, espace insécable, etc.)
                     if 'B' in market_cap or 'b' in market_cap:
                         multiplier = 1_000_000_000
+                        market_cap_value = safe_parse_float(market_cap) * multiplier if safe_parse_float(market_cap) else 0
                     elif 'M' in market_cap or 'm' in market_cap:
                         multiplier = 1_000_000
+                        market_cap_value = safe_parse_float(market_cap) * multiplier if safe_parse_float(market_cap) else 0
                     else:
-                        multiplier = 1
-                    
-                    try:
-                        market_cap_value = float(cleaned_cap) * multiplier
-                    except (ValueError, TypeError):
-                        # Si la conversion échoue, utilisez un ordre de grandeur basé sur le prix
-                        # (juste comme approximation fallback)
-                        try:
-                            price_value = float(re.sub(r'[^\d.,]', '', str(price).replace(',', '.')))
-                            market_cap_value = price_value * 1_000_000  # estimation grossière
-                        except:
-                            market_cap_value = 0
+                        market_cap_value = safe_parse_float(market_cap) or 0
                 else:
                     market_cap_value = float(market_cap or 0)
+                
+                # Si market_cap échoue, utiliser price comme approximation
+                if market_cap_value <= 0:
+                    price_value = safe_parse_float(price)
+                    if price_value:
+                        market_cap_value = price_value * 1_000_000  # estimation grossière
                 
                 # Ajouter à toutes les cryptos
                 all_cryptos.append((name, symbol, change_24h_value, change_7d_value, price, market_cap_value))
@@ -756,9 +765,12 @@ def filter_crypto_data(crypto_data):
                     change_7d = crypto.get('change_7d', '0%')
                     market_cap = crypto.get('market_cap', 0)
                     
-                    # Nettoyer les valeurs
-                    change_24h_value = float(change_24h.replace('+', '').replace('%', '').replace(',', '.'))
-                    change_7d_value = float(change_7d.replace('+', '').replace('%', '').replace(',', '.'))
+                    # Nettoyer les valeurs avec safe_parse_float
+                    change_24h_value = safe_parse_float(change_24h)
+                    change_7d_value = safe_parse_float(change_7d)
+                    
+                    if change_24h_value is None or change_7d_value is None:
+                        continue
                     
                     # ⚠️ Filtrer les cryptos trop volatiles
                     if change_24h_value > 15 and change_24h_value > (change_7d_value * 2):
@@ -766,27 +778,25 @@ def filter_crypto_data(crypto_data):
                         cryptos_filtered_out.append((name, symbol, change_24h_value, change_7d_value, price))
                         continue  # Passer à la crypto suivante
                     
-                    # Convertir la market cap
+                    # Convertir la market cap avec méthode sécurisée
+                    market_cap_value = 0
                     if isinstance(market_cap, str):
-                        cleaned_cap = re.sub(r'[^\d.,]', '', market_cap.replace(',', '.'))
-                        
                         if 'B' in market_cap or 'b' in market_cap:
                             multiplier = 1_000_000_000
+                            market_cap_value = safe_parse_float(market_cap) * multiplier if safe_parse_float(market_cap) else 0
                         elif 'M' in market_cap or 'm' in market_cap:
                             multiplier = 1_000_000
+                            market_cap_value = safe_parse_float(market_cap) * multiplier if safe_parse_float(market_cap) else 0
                         else:
-                            multiplier = 1
-                        
-                        try:
-                            market_cap_value = float(cleaned_cap) * multiplier
-                        except:
-                            try:
-                                price_value = float(re.sub(r'[^\d.,]', '', str(price).replace(',', '.')))
-                                market_cap_value = price_value * 1_000_000
-                            except:
-                                market_cap_value = 0
+                            market_cap_value = safe_parse_float(market_cap) or 0
                     else:
                         market_cap_value = float(market_cap or 0)
+                    
+                    # Si market_cap échoue, utiliser price comme approximation
+                    if market_cap_value <= 0:
+                        price_value = safe_parse_float(price)
+                        if price_value:
+                            market_cap_value = price_value * 1_000_000  # estimation grossière
                     
                     # Ajouter à la liste
                     all_cryptos.append((name, symbol, change_24h_value, change_7d_value, price, market_cap_value))
@@ -805,11 +815,14 @@ def filter_crypto_data(crypto_data):
         if market_cap <= 0:
             try:
                 # Essayer d'extraire une valeur numérique du prix
-                price_cleaned = re.sub(r'[^\d.,]', '', str(price).replace(',', '.'))
-                price_value = float(price_cleaned)
-                # Utiliser le prix comme indicateur de l'ordre de grandeur de la capitalisation
-                # Mais ajouter aussi index pour garder l'ordre original si tout échoue
-                all_cryptos[i] = (name, symbol, change_24h, change_7d, price, price_value * 1000000 / (i + 1))
+                price_value = safe_parse_float(price)
+                if price_value:
+                    # Utiliser le prix comme indicateur de l'ordre de grandeur de la capitalisation
+                    # Mais ajouter aussi index pour garder l'ordre original si tout échoue
+                    all_cryptos[i] = (name, symbol, change_24h, change_7d, price, price_value * 1000000 / (i + 1))
+                else:
+                    # Si ça échoue aussi, utiliser juste l'index inversé pour garder un ordre quelconque
+                    all_cryptos[i] = (name, symbol, change_24h, change_7d, price, 1000000 / (i + 1))
             except:
                 # Si ça échoue aussi, utiliser juste l'index inversé pour garder un ordre quelconque
                 all_cryptos[i] = (name, symbol, change_24h, change_7d, price, 1000000 / (i + 1))
@@ -901,8 +914,8 @@ def detect_undervalued_opportunities(lists_data, sectors_data, themes_data):
             if not isinstance(sec, dict):
                 continue
             try:
-                ytd_value = float(str(sec.get("ytd", "0")).replace("%", "").replace(",", "."))
-                if ytd_value > 2:
+                ytd_value = safe_parse_float(sec.get("ytd", "0"))
+                if ytd_value is not None and ytd_value > 2:
                     sector_name = sec.get("name", "").strip().lower()
                     if sector_name:
                         good_sectors.add(sector_name)
@@ -934,9 +947,10 @@ def detect_undervalued_opportunities(lists_data, sectors_data, themes_data):
                     if not name:
                         continue
                         
-                    # Nettoyer et convertir YTD
-                    ytd_str = str(asset.get("ytd", "0"))
-                    ytd = float(ytd_str.replace('%', '').replace(',', '.'))
+                    # Nettoyer et convertir YTD avec la fonction safe_parse_float
+                    ytd = safe_parse_float(asset.get("ytd", "0"))
+                    if ytd is None:
+                        continue
                     
                     # Obtenir le secteur s'il existe
                     sector = asset.get("sector", "").strip().lower()
