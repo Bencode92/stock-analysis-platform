@@ -265,7 +265,7 @@ window.EventSystem = {
     if (!title) return info;
     
     // Extraction du symbole et des prévisions pour les résultats d'entreprises
-    const earningsMatch = title.match(/Résultats\\s+([A-Z0-9.]+)\\s+-\\s+Prévision:\\s+([-+]?\\d*\\.?\\d+)\\$/);
+    const earningsMatch = title.match(/Résultats\s+([A-Z0-9.]+)\s+-\s+Prévision:\s+([-+]?\d*\.?\d+)\$/);
     if (earningsMatch) {
       info.symbol = earningsMatch[1];
       info.forecast = earningsMatch[2];
@@ -273,14 +273,14 @@ window.EventSystem = {
     }
     
     // Extraction des infos d'IPO
-    const ipoMatch = title.match(/IPO:\\s+(.+)\\s+\\(([A-Z0-9.]+)\\)/);
+    const ipoMatch = title.match(/IPO:\s+(.+)\s+\(([A-Z0-9.]+)\)/);
     if (ipoMatch) {
       info.symbol = ipoMatch[2];
       info.category = 'ipo';
     }
     
     // Extraction des infos de M&A
-    const maMatch = title.match(/M&A:\\s+(.+)\\s+acquiert\\s+(.+)/);
+    const maMatch = title.match(/M&A:\s+(.+)\s+acquiert\s+(.+)/);
     if (maMatch) {
       info.category = 'm&a';
     }
@@ -502,9 +502,24 @@ window.EventSystem = {
       // Vérifier si l'événement correspond au filtre de date
       const matchesDate = this.eventMatchesDateFilter(event, date);
       
-      // Vérifier si l'événement correspond au filtre de catégorie
-      const matchesCategory = category === 'all' || 
-                             (event.type && event.type.toLowerCase() === category.toLowerCase());
+      // Vérifier si l'événement correspond au filtre de catégorie (CORRECTION)
+      let matchesCategory = category === 'all';
+      
+      if (!matchesCategory) {
+        // Recherche plus flexible pour les catégories
+        const eventType = (event.type || '').toLowerCase();
+        const eventCategory = (event.category || '').toLowerCase();
+        const eventTitle = (event.title || '').toLowerCase();
+        
+        // Recherche de correspondance par type exact ou par catégorie
+        matchesCategory = (eventType === category.toLowerCase()) || 
+                          (eventCategory === category.toLowerCase());
+        
+        // Si toujours pas de correspondance, recherche dans le titre
+        if (!matchesCategory && category) {
+          matchesCategory = eventTitle.includes(category.toLowerCase());
+        }
+      }
       
       return matchesDate && matchesCategory;
     });
