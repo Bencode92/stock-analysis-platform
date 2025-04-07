@@ -236,8 +236,8 @@ class MarketClock {
    * Convertit une heure au format "HH:MM AM/PM +/-XX:00" en objet Date
    */
   parseMarketTime(timeString, timezone) {
-    // Extraire les composants de l'heure
-    const regex = /(\\d{2}):(\\d{2}) (AM|PM) ([+-]\\d{2}):(\\d{2})/;
+    // CORRECTION: Expression régulière corrigée (retiré les double backslashes qui causaient le problème)
+    const regex = /(\d{2}):(\d{2}) (AM|PM) ([+-]\d{2}):(\d{2})/;
     const match = timeString.match(regex);
     
     if (!match) {
