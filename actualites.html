@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradePulse - Actualités Financières</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <script type="module" src="aiintegration.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="actualites-style.css">
+    <link rel="stylesheet" href="css/news-hierarchy.css">
+    <link rel="stylesheet" href="css/news-impact-indicators.css">
+    <link rel="stylesheet" href="css/ml-sentiment-indicators.css">
+    <link rel="stylesheet" href="events-style.css">
+    <link rel="stylesheet" href="css/ml-feedback.css">
+    <link rel="stylesheet" href="css/classification-updates.css">
+    <link rel="stylesheet" href="css/news-display-fix.css">
+    <link rel="stylesheet" href="css/events-date-filter.css">
+    <link rel="stylesheet" href="css/themes-dominant.css">
+    <link rel="stylesheet" href="css/event-filters.css">
+    <link rel="stylesheet" href="css/event-category-filters.css">
+    
+    <!-- Animation pour l'affichage des éléments -->
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .animate-fadeIn {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        /* Style pour les nouvelles actualités */
+        .new-content {
+            position: relative;
+        }
+        
+        .new-content::after {
+            content: 'NOUVEAU';
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: var(--accent-color);
+            color: #000;
+            font-size: 9px;
+            font-weight: bold;
+            padding: 2px 5px;
+            border-radius: 2px;
+            z-index: 1;
+            animation: pulse 2s infinite;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        green: {
+                            400: '#00FF87'
+                        }
+                    }
+                },
+                fontFamily: {
+                    sans: ['Inter', 'sans-serif']
+                }
+            }
+        }
+    </script>
+</head>
+<body class="dark">
+    <!-- Réseau de fond animé -->
+    <div class="network-background" id="network-background"></div>
+
+    <!-- Header principal -->
+    <header class="main-header">
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="pulse-dot"></div>
+                <a href="index.html">TRADEPULSE</a>
+            </div>
+            <nav class="main-nav">
+                <a href="actualites.html" class="active">Actualités</a>
+                <a href="portefeuille.html?type=modere">Portefeuilles</a>
+                <a href="dashboard.html">Tableau de bord</a>
+                <a href="marches.html">Marchés</a>
+                <a href="secteurs.html">Secteurs</a>
+                <a href="liste.html">Listes</a>
+                <a href="etf.html">ETF</a>
+                <a href="crypto.html">Crypto</a>
+            </nav>
+        </div>
+        <div class="header-right">
+            <div class="market-status">
+                <div class="market-indicator green"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time" id="marketTime">09:45:22</span>
+            </div>
+            <a href="recherche.html" class="search-button ripple">
+                <i class="fas fa-search"></i>
+                <span>Ma question</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Container principal -->
+    <main class="main-container">
+        <!-- Nouvelle interface minimaliste -->
+        <div class="p-6 md:p-8">
+            <div class="w-full overflow-hidden max-w-6xl mx-auto">
+                
+                <!-- Header Minimaliste -->
+                <div class="mb-8 text-center">
+                    <h1 class="text-3xl font-bold mb-2 text-white">ACTUALITÉS FINANCIÈRES</h1>
+                    <p class="text-sm text-gray-400" id="currentDate">7 AVRIL 2025</p>
+                </div>
+                
+                <!-- Section Événements (améliorée) -->
+                <div class="mb-10 p-4 glassmorphism rounded-xl" id="events-section">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-semibold text-green-400">
+                            <i class="fas fa-calendar-alt mr-2"></i>ÉVÉNEMENTS À VENIR
+                        </h2>
+                        <!-- Filtres de date -->
+                        <div class="flex gap-2">
+                            <button id="today-filter" class="text-xs text-green-400 px-2 py-1 border border-green-400 border-opacity-30 rounded filter-button active">
+                                Aujourd'hui
+                            </button>
+                            <button id="week-filter" class="text-xs text-gray-400 px-2 py-1 border border-gray-700 rounded filter-button">
+                                Cette semaine
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Filtres de catégorie pour les événements -->
+                    <div class="flex flex-wrap gap-2 mb-4" id="event-category-filters">
+                        <button class="text-xs md:text-sm px-3 py-1.5 bg-green-400 bg-opacity-10 text-green-400 border border-green-400 border-opacity-30 rounded-full font-medium filter-active" data-category="all">
+                            <i class="fas fa-filter mr-1"></i> TOUS
+                        </button>
+                        <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="economic">
+                            <i class="fas fa-chart-line mr-1"></i> ECONOMIC
+                        </button>
+                        <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="ipo">
+                            <i class="fas fa-rocket mr-1"></i> IPO
+                        </button>
+                        <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="m&a">
+                            <i class="fas fa-handshake mr-1"></i> M&A
+                        </button>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="events-container">
+                        <div class="col-span-3 flex items-center justify-center p-6">
+                            <div class="loading-spinner mr-3"></div>
+                            <p class="text-gray-400">Chargement des événements économiques...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Actualités générales -->
+                <div class="mb-8">
+                    <h2 class="text-gray-300 font-bold text-xl mb-4">📰 ACTUALITÉS GÉNÉRALES</h2>
+                    
+                    <!-- Conteneur simplifié sans la classe news-grid pour permettre le formatage uniforme -->
+                    <div id="recent-news">
+                        <!-- Spinner de chargement -->
+                        <div class="loading-state">
+                            <div class="loading-spinner"></div>
+                            <p>Chargement des actualités récentes...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="page-footer">
+        <div class="data-source-info">
+            <p><i class="fas fa-info-circle"></i> Les données de marché sont extraites en temps réel</p>
+            <p><i class="fas fa-database"></i> Actualités et événements fournis par Financial Modeling Prep</p>
+            <p><i class="fas fa-brain"></i> Classification automatique par machine learning</p>
+            <p><i class="fas fa-flask"></i> Système de feedback ML pour amélioration continue</p>
+            <p><i class="fas fa-clock"></i> Dernière mise à jour: <span class="update-time" id="updateTime">07/04/2025 08:51:00</span></p>
+        </div>
+    </footer>
+
+    <!-- Scripts basiques -->
+    <script src="actualites.js"></script>
+    <script src="events-loader.js"></script>
+    <script src="event-renderer.js"></script>
+    
+    <!-- NOUVEAU: Notre système de filtrage simple en premier -->
+    <script src="js/event-filters-simple.js"></script>
+    
+    <!-- Anciens scripts de filtrage (pour compatibilité) -->
+    <script src="js/unified-event-filters.js"></script>
+    <script src="js/event-debug.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Update market time
+            function updateMarketTime() {
+                const now = new Date();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                const seconds = now.getSeconds().toString().padStart(2, '0');
+                const timeStr = `${hours}:${minutes}:${seconds}`;
+                
+                const marketTimeElement = document.getElementById('marketTime');
+                if (marketTimeElement) {
+                    marketTimeElement.textContent = timeStr;
+                }
+            }
+            
+            updateMarketTime();
+            setInterval(updateMarketTime, 1000);
+            
+            // Mettre à jour la date du jour
+            const currentDateEl = document.getElementById('currentDate');
+            if (currentDateEl) {
+                const now = new Date();
+                const options = { day: 'numeric', month: 'long', year: 'numeric' };
+                const dateStr = now.toLocaleDateString('fr-FR', options).toUpperCase();
+                currentDateEl.textContent = dateStr;
+            }
+            
+            // Si les filtres ne fonctionnent toujours pas après un certain temps, essayer la réparation d'urgence
+            setTimeout(() => {
+                console.log('🔍 Vérification si les filtres fonctionnent...');
+                if (typeof window.fixEvents === 'function') {
+                    window.fixEvents();
+                }
+            }, 3000);
+        });
+    </script>
+</body>
+</html>
