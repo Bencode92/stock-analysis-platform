@@ -447,9 +447,10 @@ class MarketClock {
    * Affiche les horloges des marchés avec design amélioré
    */
   renderMarketClocks() {
-    // Diviser les marchés en deux groupes pour les côtés gauche et droit
-    const asianEuropeanMarkets = this.markets.filter(m => m.region === 'Asie-Pacifique' || m.region === 'Europe');
-    const americanMarkets = this.markets.filter(m => m.region === 'Amériques');
+    // Regrouper les marchés différemment selon la demande du client
+    // Asie-Pacifique dans le conteneur de gauche, Europe et Amériques dans celui de droite
+    const asianMarkets = this.markets.filter(m => m.region === 'Asie-Pacifique');
+    const europeAmericaMarkets = this.markets.filter(m => m.region === 'Europe' || m.region === 'Amériques');
     
     // Vider les conteneurs
     if (this.leftContainer) this.leftContainer.innerHTML = '';
@@ -472,14 +473,14 @@ class MarketClock {
     if (this.leftContainer) {
       const leftTitle = document.createElement('div');
       leftTitle.className = 'market-clock-title';
-      leftTitle.innerHTML = 'Marchés <span>Asie & Europe</span>';
+      leftTitle.innerHTML = 'Marchés <span>Asie-Pacifique</span>';
       this.leftContainer.appendChild(leftTitle);
     }
     
     if (this.rightContainer) {
       const rightTitle = document.createElement('div');
       rightTitle.className = 'market-clock-title';
-      rightTitle.innerHTML = 'Marchés <span>Amériques</span>';
+      rightTitle.innerHTML = 'Marchés <span>Europe & Amériques</span>';
       this.rightContainer.appendChild(rightTitle);
     }
     
@@ -496,8 +497,8 @@ class MarketClock {
     const rightContent = document.createElement('div');
     rightContent.className = 'market-clock-content';
     
-    // Ajouter les marchés à gauche
-    asianEuropeanMarkets.forEach(market => {
+    // Ajouter les marchés à gauche (Asie-Pacifique)
+    asianMarkets.forEach(market => {
       const element = this.buildMarketElement(market);
       leftContent.appendChild(element);
       
@@ -508,8 +509,8 @@ class MarketClock {
       }
     });
     
-    // Ajouter les marchés à droite
-    americanMarkets.forEach(market => {
+    // Ajouter les marchés à droite (Europe & Amériques)
+    europeAmericaMarkets.forEach(market => {
       const element = this.buildMarketElement(market);
       rightContent.appendChild(element);
       
