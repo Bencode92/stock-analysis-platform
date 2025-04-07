@@ -1013,11 +1013,18 @@
     
     <!-- Scripts pour les thèmes et les événements -->
     <script src="js/news-display-fix.js"></script>
+    
+    <!-- Nouveau ordre des scripts pour résoudre le problème de filtrage -->
     <script src="events-loader.js"></script>
+    <!-- Script de rendu d'événements avec débogage avancé -->
     <script src="event-renderer.js"></script>
+    <!-- Filtre unifié pour les événements avec débogage amélioré -->
+    <script src="js/unified-event-filters.js"></script>
+    <!-- Outils de débogage avancé -->
+    <script src="js/event-debug.js"></script>
+    
     <script src="js/connection-date-manager.js"></script>
     <script src="js/themes-visualizer.js"></script>
-    <script src="js/unified-event-filters.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {            
@@ -1198,6 +1205,14 @@
                     window.MLNewsIntegrator.initMLFeedback();
                 }, 1500);
             }
+            
+            // Exécuter le débogage automatique après le chargement de la page
+            setTimeout(() => {
+                console.log('🔍 Exécution automatique du diagnostic des événements...');
+                if (window.debug && window.debug.events) {
+                    window.debug.events();
+                }
+            }, 3000);
         });
     </script>
 </body>
