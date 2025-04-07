@@ -673,6 +673,19 @@
                 display: none;
             }
         }
+        
+        /* Correctif pour les filtres d'événements */
+        #event-category-filters button {
+            cursor: pointer;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Assurer que les événements ont une hauteur minimale */
+        .event-card {
+            min-height: 160px;
+        }
     </style>
 </head>
 <body class="dark">
@@ -893,13 +906,13 @@
                         </button>
                         <!-- Bouton US supprimé -->
                         <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="economic">
-                            <i class="fas fa-chart-line mr-1"></i> economic
+                            <i class="fas fa-chart-line mr-1"></i> ECONOMIC
                         </button>
                         <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="ipo">
-                            <i class="fas fa-rocket mr-1"></i> ipo
+                            <i class="fas fa-rocket mr-1"></i> IPO
                         </button>
                         <button class="text-xs md:text-sm px-3 py-1.5 bg-transparent text-gray-400 border border-gray-700 rounded-full font-medium" data-category="m&a">
-                            <i class="fas fa-handshake mr-1"></i> m&a
+                            <i class="fas fa-handshake mr-1"></i> M&A
                         </button>
                         <!-- Bouton CN supprimé -->
                     </div>
@@ -1027,7 +1040,7 @@
     <script src="js/themes-visualizer.js"></script>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {            
+        document.addEventListener('DOMContentLoaded', function() {
             // Créer un réseau de fond
             const networkBackground = document.getElementById('network-background');
             createNetworkBackground();
@@ -1211,6 +1224,35 @@
                 console.log('🔍 Exécution automatique du diagnostic des événements...');
                 if (window.debug && window.debug.events) {
                     window.debug.events();
+                }
+                
+                // Ajouter la fonction de débogage des filtres globale
+                if (!window.debugFilters) {
+                    window.debugFilters = function() {
+                        console.log('Débogage des filtres...');
+                        if (window.EventFilters) {
+                            window.EventFilters.debug();
+                        } else {
+                            console.error('Le système de filtres n\'est pas initialisé.');
+                        }
+                    };
+                }
+                
+                // Ajouter une fonction pour forcer le rendu des événements si nécessaire
+                if (!window.refreshEvents) {
+                    window.refreshEvents = function() {
+                        console.log('Rafraîchissement manuel des événements...');
+                        // Forcer la réinitialisation
+                        window.eventInitialized = false;
+                        setTimeout(() => {
+                            // Réinitialiser le gestionnaire d'événements
+                            if (typeof initializeEventsManager === 'function') {
+                                initializeEventsManager();
+                            } else if (window.eventsManager) {
+                                window.eventsManager.init();
+                            }
+                        }, 500);
+                    };
                 }
             }, 3000);
         });
