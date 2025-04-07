@@ -251,10 +251,14 @@ class MarketClock {
    */
   parseMarketTime(timeString, timezone) {
     // Extraire les composants de l'heure
-    const regex = /(\\d{2}):(\\d{2}) (AM|PM) ([+-]\\d{2}):(\\d{2})/;
+    // Correction de la regex pour éviter les backslashes échappés
+    const regex = /(\d{2}):(\d{2}) (AM|PM) ([+-]\d{2}):(\d{2})/;
     const match = timeString.match(regex);
     
-    if (!match) return null;
+    if (!match) {
+      console.warn(`Format d'heure non reconnu: ${timeString}`);
+      return null;
+    }
     
     let [_, hours, minutes, ampm, tzHours, tzMinutes] = match;
     
@@ -274,8 +278,11 @@ class MarketClock {
       0
     ));
     
-    // Ajuster pour le fuseau horaire
-    const tzOffsetMinutes = (parseInt(tzHours) * 60) + (parseInt(tzHours) > 0 ? parseInt(tzMinutes) : -parseInt(tzMinutes));
+    // Ajuster pour le fuseau horaire - correction du calcul
+    const tzOffsetSign = tzHours.startsWith('-') ? -1 : 1;
+    const tzOffsetHours = parseInt(tzHours.replace(/[+-]/, ''));
+    const tzOffsetMinutes = tzOffsetSign * (tzOffsetHours * 60 + parseInt(tzMinutes));
+    
     marketDate.setMinutes(marketDate.getMinutes() - tzOffsetMinutes);
     
     return marketDate;
@@ -291,10 +298,19 @@ class MarketClock {
     const openTime = this.parseMarketTime(market.openingHour, market.timezone);
     const closeTime = this.parseMarketTime(market.closingHour, market.timezone);
     
+    if (!openTime || !closeTime) {
+      console.error(`Impossible de déterminer les horaires pour ${market.exchange}`);
+      return false;
+    }
+    
     // Si le marché a une pause déjeuner, vérifier également les heures additionnelles
     if (market.openingAdditional && market.closingAdditional) {
       const openTimeAdditional = this.parseMarketTime(market.openingAdditional, market.timezone);
       const closeTimeAdditional = this.parseMarketTime(market.closingAdditional, market.timezone);
+      
+      if (!openTimeAdditional || !closeTimeAdditional) {
+        return now >= openTime && now <= closeTime;
+      }
       
       // Le marché est ouvert si l'heure actuelle est entre l'ouverture et la fermeture
       // OU entre l'ouverture additionnelle et la fermeture additionnelle
@@ -315,6 +331,8 @@ class MarketClock {
     const now = new Date();
     const closeTime = this.parseMarketTime(market.closingHour, market.timezone);
     const openTimeAdditional = this.parseMarketTime(market.openingAdditional, market.timezone);
+    
+    if (!closeTime || !openTimeAdditional) return false;
     
     return now > closeTime && now < openTimeAdditional;
   }
