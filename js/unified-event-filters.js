@@ -137,6 +137,12 @@ const UnifiedEventFilters = {
         console.log('Affichage:', displayCounts);
         console.log('Événements problématiques:', problematicEvents.length > 0 ? problematicEvents : 'Aucun');
         console.groupEnd();
+        
+        return {
+            typeCounts,
+            displayCounts,
+            problematicEvents
+        };
     },
     
     // Vérifier si un événement devrait être visible selon les filtres actuels
@@ -162,18 +168,22 @@ const UnifiedEventFilters = {
     // Configuration des écouteurs d'événements
     setupEventListeners: function() {
         // Écouteurs pour les filtres de date
-        const dateFilters = document.querySelectorAll(this.config.dateFilters.selector);
+        const todayFilter = document.querySelector(this.config.dateFilters.todaySelector);
+        const weekFilter = document.querySelector(this.config.dateFilters.weekSelector);
         
-        dateFilters.forEach(filter => {
-            filter.addEventListener('click', (e) => {
-                // Déterminer quel filtre a été cliqué
-                if (e.currentTarget.id === 'today-filter') {
-                    this.setDateFilter('today');
-                } else if (e.currentTarget.id === 'week-filter') {
-                    this.setDateFilter('week');
-                }
+        if (todayFilter) {
+            todayFilter.addEventListener('click', () => {
+                console.log('📅 Clic sur filtre aujourd\'hui');
+                this.setDateFilter('today');
             });
-        });
+        }
+        
+        if (weekFilter) {
+            weekFilter.addEventListener('click', () => {
+                console.log('📅 Clic sur filtre semaine');
+                this.setDateFilter('week');
+            });
+        }
         
         // Écouteurs pour les filtres de catégorie
         const categoryFilters = document.querySelectorAll(this.config.categoryFilters.selector);
@@ -324,48 +334,59 @@ const UnifiedEventFilters = {
         });
         
         console.log(`✓ Filtrage terminé: ${visibleCount} événements visibles, ${hiddenCount} masqués`);
-        console.log('Détails des premiers événements:', detailEvents);
+        
+        if (detailEvents.length > 0) {
+            console.log('Détails des premiers événements:', detailEvents);
+        }
         
         // Vérifier s'il y a des événements visibles
         this.checkForEmptyResults(eventsContainer);
+        
+        return visibleCount; // Retourne le nombre d'événements visibles pour des tests
     },
     
     // Vérifier si un événement correspond au filtre de date
     matchesDateFilter: function(eventElement) {
-        if (this.state.dateFilter === 'today') {
-            // Obtenir la date actuelle au format jj/mm/aaaa
-            const today = new Date().toLocaleDateString('fr-FR');
-            
-            // Trouver le conteneur de date dans l'événement
-            const dateElement = eventElement.querySelector('.event-date');
-            if (dateElement) {
-                const eventDate = dateElement.textContent.trim();
-                return eventDate === today;
-            }
-            
-            // Fallback à l'ancienne méthode si .event-date n'existe pas
-            return eventElement.classList.contains('event-today');
-        } else if (this.state.dateFilter === 'week') {
-            // Pour le filtre semaine, accepter tous les événements
+        // Si aucun filtre n'est actif, tout montrer
+        if (!this.state.dateFilter || this.state.dateFilter === 'week') {
             return true;
         }
         
-        return true; // Par défaut, accepter tous les événements
-    },
-    
-    // Obtenir les dates des 7 prochains jours
-    getWeekDates: function() {
-        const today = new Date();
-        const dates = [];
-        
-        // Ajouter les 7 prochains jours
-        for (let i = 0; i < 7; i++) {
-            const date = new Date();
-            date.setDate(today.getDate() + i);
-            dates.push(date.toLocaleDateString('fr-FR'));
+        // Pour le filtre 'today', vérifier la date de l'événement
+        if (this.state.dateFilter === 'today') {
+            try {
+                // Formatage de la date actuelle au format français (JJ/MM/AAAA)
+                const today = new Date();
+                const todayStr = [
+                    String(today.getDate()).padStart(2, '0'),
+                    String(today.getMonth() + 1).padStart(2, '0'),
+                    today.getFullYear()
+                ].join('/');
+                
+                // Trouver l'élément date dans l'événement
+                const dateElement = eventElement.querySelector('.event-date');
+                
+                if (!dateElement) {
+                    console.warn('⚠️ Élément de date non trouvé pour un événement');
+                    return true; // Si pas de date, on le montre par défaut
+                }
+                
+                const eventDate = dateElement.textContent.trim();
+                
+                // Vérifier si la date de l'événement correspond à aujourd'hui
+                const matches = eventDate === todayStr;
+                
+                // Pour le débogage
+                console.log(`📅 Comparaison date: ${eventDate} == ${todayStr} => ${matches ? 'Oui' : 'Non'}`);
+                
+                return matches;
+            } catch (e) {
+                console.error('❌ Erreur lors du filtrage par date:', e);
+                return true; // En cas d'erreur, on montre par défaut
+            }
         }
         
-        return dates;
+        return true; // Par défaut, accepter tous les événements
     },
     
     // Vérifier si un événement correspond au filtre de catégorie
@@ -374,25 +395,24 @@ const UnifiedEventFilters = {
             return true; // Accepter toutes les catégories
         }
         
-        // Obtenir le type de l'événement
+        // Obtenir le type de l'événement - PRIORITÉ AU DATA-TYPE EXPLICITE
         const eventType = eventElement.getAttribute('data-type');
         
         // Si l'événement n'a pas d'attribut data-type, vérifier la classe pour le débogage
         if (!eventType) {
             console.warn(`⚠️ Événement sans attribut data-type: ${eventElement.textContent.substring(0, 30)}...`);
+            
             // Essayer de trouver une classe event-type-*
             const classList = Array.from(eventElement.classList);
             const typeClass = classList.find(cls => cls.startsWith('event-type-'));
+            
             if (typeClass) {
                 const typeFromClass = typeClass.replace('event-type-', '');
+                console.log(`ℹ️ Type obtenu à partir de la classe: ${typeFromClass}`);
                 return typeFromClass === this.state.categoryFilter;
             }
+            
             return false;
-        }
-        
-        // Log détaillé pour débogage
-        if (eventType !== this.state.categoryFilter) {
-            console.log(`Type d'événement "${eventType}" ne correspond pas au filtre "${this.state.categoryFilter}"`);
         }
         
         // Vérifier si l'événement a la catégorie recherchée
@@ -460,7 +480,88 @@ const UnifiedEventFilters = {
         
         if (!formatCorrect) {
             console.warn(`⚠️ Certaines dates ne sont pas au format jj/mm/aaaa. Exemple: "${firstDate}"`);
+        } else {
+            console.log('✅ Format de date vérifié: toutes les dates sont au format jj/mm/aaaa');
         }
+    }
+};
+
+// Fonction pour ajouter des attributs data-type manquants
+function fixMissingDataTypes() {
+    // Obtenir tous les événements
+    const events = document.querySelectorAll('.event-card');
+    console.log(`🔧 Vérification de ${events.length} événements pour les attributs data-type manquants...`);
+    
+    let fixed = 0;
+    
+    events.forEach((event, index) => {
+        // Vérifier si l'attribut data-type est présent
+        if (!event.hasAttribute('data-type')) {
+            // Essayer d'extraire le type à partir des classes
+            const classList = Array.from(event.classList);
+            const typeClass = classList.find(cls => cls.startsWith('event-type-'));
+            
+            if (typeClass) {
+                const extractedType = typeClass.replace('event-type-', '');
+                event.setAttribute('data-type', extractedType);
+                console.log(`✅ Attribut data-type ajouté: ${extractedType} pour événement #${index+1}`);
+                fixed++;
+            } else {
+                // Vérifier s'il y a des indices dans le contenu
+                const title = event.querySelector('h3')?.textContent || '';
+                
+                // Ajouter un attribut data-type par défaut
+                event.setAttribute('data-type', 'economic'); // Valeur par défaut
+                console.log(`⚠️ Attribut data-type défaut (economic) pour événement #${index+1}: ${title.substring(0, 30)}`);
+                fixed++;
+            }
+        }
+        
+        // Vérifier si l'élément .event-date est présent
+        if (!event.querySelector('.event-date')) {
+            // Créer un élément date si manquant
+            const today = new Date();
+            const dateStr = [
+                String(today.getDate()).padStart(2, '0'),
+                String(today.getMonth() + 1).padStart(2, '0'), 
+                today.getFullYear()
+            ].join('/');
+            
+            const dateEl = document.createElement('span');
+            dateEl.className = 'event-date';
+            dateEl.style.display = 'none';
+            dateEl.textContent = dateStr;
+            event.appendChild(dateEl);
+            console.log(`⚠️ Élément .event-date ajouté avec date par défaut (${dateStr}) pour événement #${index+1}`);
+        }
+    });
+    
+    return fixed;
+}
+
+// Ajouter une fonction globale pour fixer les problèmes et forcer le filtrage
+window.forceFilter = function(category = null, dateFilter = null) {
+    console.log('🛠️ Forçage du filtrage avec réparation des attributs manquants...');
+    
+    // Fixer les attributs manquants
+    const fixed = fixMissingDataTypes();
+    console.log(`🔧 ${fixed} événements réparés`);
+    
+    // Appliquer les filtres spécifiés
+    if (window.EventFilters) {
+        if (category) {
+            window.EventFilters.setCategoryFilter(category);
+        }
+        
+        if (dateFilter) {
+            window.EventFilters.setDateFilter(dateFilter);
+        }
+        
+        // Appliquer les filtres
+        const visible = window.EventFilters.applyFilters();
+        console.log(`✅ Filtrage forcé terminé: ${visible} événements visibles`);
+    } else {
+        console.error('❌ EventFilters non initialisé. Veuillez recharger la page.');
     }
 };
 
@@ -472,13 +573,24 @@ document.addEventListener('DOMContentLoaded', function() {
     setTimeout(() => {
         UnifiedEventFilters.init();
         
-        // Exposer une fonction de débogage globale
+        // Exposer des fonctions de débogage globale
         window.debugFilters = function() {
             if (window.EventFilters) {
-                window.EventFilters.debug();
+                return window.EventFilters.debug();
             } else {
                 console.error('❌ EventFilters n\'est pas initialisé');
+                return null;
             }
         };
-    }, 1000);
+        
+        // Fonction pour obtenir les événements visibles
+        window.getVisibleEvents = function() {
+            return [...document.querySelectorAll('.event-card')]
+                .filter(e => e.style.display !== 'none')
+                .map(e => ({
+                    title: e.getAttribute('data-title') || e.querySelector('h3')?.textContent || 'Sans titre',
+                    type: e.getAttribute('data-type') || 'unknown'
+                }));
+        };
+    }, 800);
 });
