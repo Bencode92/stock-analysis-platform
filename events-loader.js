@@ -518,7 +518,7 @@ class EventsManager {
       
       // Aussi considérer les résultats avec des prévisions importantes 
       // (changements > 10% par action)
-      const forecastMatch = title.match(/prévision:\s*([-+]?\d+(\.?\d+)?)?\$/i);
+      const forecastMatch = title.match(/prévision:\s*([-+]?\d+(\.\d+)?)?\/i);
       if (forecastMatch) {
         const forecast = parseFloat(forecastMatch[1]);
         if (Math.abs(forecast) > 1.0) {
