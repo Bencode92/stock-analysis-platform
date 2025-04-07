@@ -1,0 +1,299 @@
+/**
+ * market-clock.css
+ * Styles pour l'horloge des marchés financiers
+ */
+
+/* Conteneurs d'horloges */
+.market-clock-container {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 220px;
+  max-height: 80vh;
+  overflow-y: auto;
+  background-color: rgba(1, 22, 39, 0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  padding: 15px;
+  z-index: 90;
+  transition: all 0.3s ease;
+  border: 1px solid rgba(0, 255, 135, 0.2);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 255, 135, 0.3) rgba(1, 22, 39, 0.4);
+}
+
+/* Variation pour la position gauche et droite */
+.market-clock-container.left {
+  left: 20px;
+  border-left: 3px solid rgba(0, 255, 135, 0.4);
+}
+
+.market-clock-container.right {
+  right: 20px;
+  border-right: 3px solid rgba(0, 255, 135, 0.4);
+}
+
+/* Style de la barre de défilement */
+.market-clock-container::-webkit-scrollbar {
+  width: 5px;
+}
+
+.market-clock-container::-webkit-scrollbar-track {
+  background: rgba(1, 22, 39, 0.4);
+  border-radius: 10px;
+}
+
+.market-clock-container::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 255, 135, 0.3);
+  border-radius: 10px;
+}
+
+/* Titre des horloges */
+.market-clock-title {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  text-align: center;
+  margin-bottom: 15px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0, 255, 135, 0.2);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.market-clock-title span {
+  display: block;
+  font-size: 12px;
+  color: var(--accent-color);
+  font-weight: 500;
+  opacity: 0.8;
+  letter-spacing: normal;
+}
+
+/* Éléments de marché */
+.market-item {
+  background: rgba(1, 30, 52, 0.6);
+  margin-bottom: 10px;
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.3s ease;
+  border-left: 3px solid transparent;
+}
+
+/* États des marchés */
+.market-item.open {
+  border-left-color: #4CAF50;
+  box-shadow: 0 0 15px rgba(76, 175, 80, 0.15);
+}
+
+.market-item.closed {
+  border-left-color: #F44336;
+  opacity: 0.7;
+}
+
+.market-item.lunch {
+  border-left-color: #FFC107;
+}
+
+/* En-tête du marché */
+.market-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.market-name {
+  font-weight: 700;
+  color: #fff;
+  font-size: 14px;
+}
+
+/* Indicateur de statut */
+.market-status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #F44336;
+}
+
+.market-item.open .market-status-indicator {
+  background-color: #4CAF50;
+  box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
+  animation: pulse 2s infinite;
+}
+
+.market-item.lunch .market-status-indicator {
+  background-color: #FFC107;
+  box-shadow: 0 0 8px rgba(255, 193, 7, 0.6);
+}
+
+/* Détails du marché */
+.market-details {
+  font-size: 12px;
+}
+
+.market-full-name {
+  color: rgba(255, 255, 255, 0.7);
+  margin-bottom: 4px;
+  font-weight: 500;
+  font-size: 11px;
+}
+
+.market-schedule {
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.market-schedule.additional {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 10px;
+  margin-top: 2px;
+}
+
+/* Effets au survol */
+.market-item:hover {
+  transform: translateY(-2px);
+  background: rgba(1, 35, 60, 0.8);
+}
+
+/* Animation de pulsation */
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0.7); }
+  70% { box-shadow: 0 0 0 6px rgba(76, 175, 80, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(76, 175, 80, 0); }
+}
+
+/* États cachés/visibles des horloges */
+.market-clock-container.hidden {
+  opacity: 0;
+  transform: translateY(-50%) translateX(-100%);
+  pointer-events: none;
+}
+
+.market-clock-container.right.hidden {
+  transform: translateY(-50%) translateX(100%);
+}
+
+/* Boutons de basculement */
+.market-clock-toggle {
+  position: fixed;
+  top: 50%;
+  width: 24px;
+  height: 60px;
+  background-color: rgba(1, 22, 39, 0.9);
+  border: 1px solid rgba(0, 255, 135, 0.3);
+  border-radius: 0 6px 6px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  z-index: 91;
+  transform: translateY(-50%);
+  transition: all 0.3s ease;
+}
+
+.market-clock-toggle:hover {
+  background-color: rgba(0, 255, 135, 0.2);
+}
+
+.market-clock-toggle.left {
+  left: 0;
+  border-left: none;
+}
+
+.market-clock-toggle.right {
+  right: 0;
+  border-right: none;
+  border-radius: 6px 0 0 6px;
+}
+
+.market-clock-toggle i {
+  color: var(--accent-color);
+  font-size: 14px;
+}
+
+/* Version responsive */
+@media (max-width: 1200px) {
+  .market-clock-container {
+    width: 180px;
+  }
+}
+
+@media (max-width: 992px) {
+  .market-clock-container {
+    display: none;
+  }
+  
+  /* En mode responsive, on affiche un bouton flottant pour accéder aux horloges */
+  .market-clock-mobile-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: var(--accent-color);
+    color: #011627;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0, 255, 135, 0.4);
+    cursor: pointer;
+  }
+  
+  .market-clock-mobile-btn i {
+    font-size: 20px;
+  }
+  
+  /* Modal pour afficher les horloges en mobile */
+  .market-clock-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(1, 22, 39, 0.95);
+    z-index: 1000;
+    display: none;
+    flex-direction: column;
+    padding: 20px;
+    overflow-y: auto;
+  }
+  
+  .market-clock-modal.active {
+    display: flex;
+  }
+  
+  .market-clock-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+  .market-clock-modal-title {
+    color: #fff;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  
+  .market-clock-modal-close {
+    color: var(--accent-color);
+    font-size: 24px;
+    cursor: pointer;
+  }
+  
+  .market-clock-modal-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+  }
+  
+  .market-clock-modal-column {
+    flex: 1;
+    min-width: 280px;
+  }
+}
