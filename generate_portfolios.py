@@ -1330,7 +1330,7 @@ def main():
     etfs_data = load_json_data('data/etf.json')
     crypto_data = load_json_data('data/crypto_lists.json')
     # Ajouter le chargement des tendances thématiques
-    themes_data = load_json_data('data/them.json')
+    themes_data = load_json_data('data/themes.json')
     
     print("🧠 Génération des portefeuilles optimisés...")
     portfolios = generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data, themes_data)
