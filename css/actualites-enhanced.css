@@ -1,0 +1,628 @@
+/* Actualités - Améliorations UX/UI
+   Ce fichier contient des améliorations spécifiques pour la page Actualités
+   Créé pour compléter les styles existants (actualites-style.css et news-hierarchy.css)
+*/
+
+/* 1. DISPOSITION ET LAYOUT AMÉLIORÉS */
+
+/* Structure à 3 colonnes pour grands écrans */
+@media (min-width: 1400px) {
+    .main-container .actualites-container {
+        display: grid;
+        grid-template-columns: 250px 1fr 250px;
+        gap: 25px;
+        max-width: 1600px;
+        margin: 0 auto;
+        padding: 10px;
+    }
+    
+    .actualites-main {
+        grid-column: 2;
+    }
+    
+    .actualites-sidebar.left {
+        grid-column: 1;
+    }
+    
+    .actualites-sidebar.right {
+        grid-column: 3;
+    }
+}
+
+/* Structure à 2 colonnes pour écrans moyens */
+@media (min-width: 992px) and (max-width: 1399px) {
+    .main-container .actualites-container {
+        display: grid;
+        grid-template-columns: 220px 1fr;
+        gap: 25px;
+        max-width: 1300px;
+        margin: 0 auto;
+        padding: 10px;
+    }
+    
+    .actualites-main {
+        grid-column: 2;
+    }
+    
+    .actualites-sidebar.left {
+        grid-column: 1;
+        grid-row: 1;
+    }
+    
+    .actualites-sidebar.right {
+        grid-column: 1;
+        grid-row: 2;
+    }
+}
+
+/* Structure à 1 colonne pour petits écrans */
+@media (max-width: 991px) {
+    .main-container .actualites-container {
+        display: flex;
+        flex-direction: column;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 10px;
+    }
+    
+    .actualites-sidebar {
+        margin-bottom: 25px;
+    }
+}
+
+/* 2. TABLEAUX DE BORD DES MARCHÉS */
+
+.marches-panel {
+    background: rgba(1, 22, 39, 0.7);
+    border: 1px solid rgba(0, 255, 135, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    height: fit-content;
+    position: sticky;
+    top: 90px;
+}
+
+.marches-panel-header {
+    padding: 12px 15px;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(0, 255, 135, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.marches-panel-title {
+    color: var(--accent-color);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+}
+
+.marches-panel-title i {
+    margin-right: 8px;
+}
+
+.marches-panel-content {
+    padding: 5px;
+}
+
+.marche-item {
+    padding: 10px 15px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.marche-item:last-child {
+    border-bottom: none;
+}
+
+.marche-item:hover {
+    background: rgba(0, 255, 135, 0.05);
+}
+
+.marche-status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 12px;
+    box-shadow: 0 0 10px rgba(76, 175, 80, 0.7);
+}
+
+.marche-status.open {
+    background-color: #4CAF50;
+}
+
+.marche-status.closed {
+    background-color: #F44336;
+    box-shadow: 0 0 10px rgba(244, 67, 54, 0.7);
+}
+
+.marche-status.pre-market {
+    background-color: #FF9800;
+    box-shadow: 0 0 10px rgba(255, 152, 0, 0.7);
+}
+
+.marche-info {
+    flex: 1;
+}
+
+.marche-info h4 {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.marche-info p {
+    margin: 2px 0 0;
+    font-size: 0.75rem;
+    opacity: 0.7;
+}
+
+.marche-hours {
+    display: block;
+    font-size: 0.7rem;
+    margin-top: 4px;
+    opacity: 0.5;
+}
+
+/* 3. AMÉLIORATIONS DES THÈMES DOMINANTS */
+
+.themes-dominant-container {
+    background: rgba(1, 22, 39, 0.5);
+    border: 1px solid rgba(0, 255, 135, 0.1);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.theme-card {
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+}
+
+.theme-item {
+    position: relative;
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 8px;
+    transition: all 0.25s ease;
+}
+
+.theme-item:hover {
+    background: rgba(255, 255, 255, 0.07);
+    transform: translateX(5px);
+}
+
+.theme-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.importance-indicator {
+    height: 5px;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.importance-level {
+    height: 100%;
+    border-radius: 3px;
+}
+
+.importance-value {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--accent-color);
+    background: rgba(0, 255, 135, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* 4. BRIEF STRATÉGIQUE AMÉLIORÉ */
+
+.brief-container {
+    background: rgba(1, 22, 39, 0.7);
+    border: 1px solid rgba(0, 255, 135, 0.1);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+}
+
+.brief-header {
+    padding: 15px 20px;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(0, 255, 135, 0.1);
+}
+
+.brief-toggle-btn {
+    display: flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.brief-toggle-btn:hover {
+    background: rgba(0, 255, 135, 0.1);
+    transform: translateY(-2px);
+}
+
+.brief-content {
+    padding: 20px;
+    border-top: 1px solid rgba(0, 255, 135, 0.1);
+}
+
+.brief-section {
+    margin-bottom: 20px;
+}
+
+.brief-section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--accent-color);
+}
+
+.brief-graph {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    height: 200px;
+    margin: 20px 0;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 5. ACTUALITÉS AMÉLIORÉES */
+
+/* Actualités critiques */
+.critical-news-item {
+    display: flex;
+    padding: 15px;
+    margin-bottom: 15px;
+    background: rgba(239, 68, 68, 0.05);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-left: 4px solid #EF4444;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    position: relative;
+    overflow: hidden;
+}
+
+.critical-news-item:hover {
+    transform: translateY(-3px);
+    background: rgba(239, 68, 68, 0.08);
+    box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+}
+
+.critical-news-item::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.05) 50%,
+        transparent 100%
+    );
+    animation: shine 3s infinite;
+}
+
+@keyframes shine {
+    to {
+        left: 100%;
+    }
+}
+
+.news-badge {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    border-radius: 4px;
+    margin-right: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.news-badge.negative {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: #EF4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.news-badge.positive {
+    background-color: rgba(34, 197, 94, 0.1);
+    color: #22c55e;
+    border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.news-badge.neutral {
+    background-color: rgba(249, 168, 37, 0.1);
+    color: #F9A825;
+    border: 1px solid rgba(249, 168, 37, 0.3);
+}
+
+/* 6. FILTRES ET NAVIGATION */
+
+.filters-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: rgba(1, 22, 39, 0.5);
+    border-radius: 10px;
+    border: 1px solid rgba(0, 255, 135, 0.1);
+}
+
+.filter-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.filter-btn {
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+}
+
+.filter-btn i {
+    margin-right: 6px;
+    font-size: 0.7rem;
+}
+
+.filter-btn:hover {
+    border-color: var(--accent-color);
+}
+
+.filter-btn.active {
+    background-color: rgba(0, 255, 135, 0.1);
+    color: var(--accent-color);
+    border-color: var(--accent-color);
+}
+
+.filter-select {
+    background: rgba(1, 22, 39, 0.7);
+    color: rgba(255, 255, 255, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 8px 30px 8px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2300ff87' width='18px' height='18px'%3E%3Cpath d='M0 0h24v24H0z' fill='none'/%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.filter-select:hover, .filter-select:focus {
+    border-color: var(--accent-color);
+}
+
+/* "Voir plus" button */
+.load-more-container {
+    display: flex;
+    justify-content: center;
+    margin: 30px 0;
+}
+
+.load-more-btn {
+    background: transparent;
+    color: var(--accent-color);
+    border: 2px solid var(--accent-color);
+    padding: 12px 25px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 15px rgba(0, 255, 135, 0.3);
+}
+
+.load-more-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(0, 255, 135, 0.2) 50%,
+        transparent 100%
+    );
+    transition: left 0.5s ease;
+}
+
+.load-more-btn:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0, 255, 135, 0.4);
+}
+
+.load-more-btn:hover::before {
+    left: 100%;
+}
+
+/* 7. LOADING SKELETONS AMÉLIORÉS */
+
+.theme-card .skeleton-line {
+    height: 16px;
+    background: linear-gradient(90deg, 
+        rgba(0, 255, 135, 0.05) 0%, 
+        rgba(0, 255, 135, 0.15) 50%, 
+        rgba(0, 255, 135, 0.05) 100%);
+    border-radius: 4px;
+    margin-bottom: 15px;
+    animation: skeleton-pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes skeleton-pulse {
+    0% { opacity: 0.5; }
+    50% { opacity: 0.8; }
+    100% { opacity: 0.5; }
+}
+
+.news-skeleton {
+    padding: 20px;
+    background: rgba(1, 22, 39, 0.5);
+    border-radius: 10px;
+    border: 1px solid rgba(0, 255, 135, 0.1);
+    margin-bottom: 15px;
+}
+
+.news-skeleton-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 15px;
+}
+
+.news-skeleton-badge {
+    width: 80px;
+    height: 20px;
+    background: linear-gradient(90deg, 
+        rgba(0, 255, 135, 0.1) 0%, 
+        rgba(0, 255, 135, 0.2) 50%, 
+        rgba(0, 255, 135, 0.1) 100%);
+    border-radius: 4px;
+    animation: skeleton-pulse 1.5s infinite ease-in-out;
+}
+
+.news-skeleton-date {
+    width: 100px;
+    height: 20px;
+    background: linear-gradient(90deg, 
+        rgba(0, 255, 135, 0.05) 0%, 
+        rgba(0, 255, 135, 0.1) 50%, 
+        rgba(0, 255, 135, 0.05) 100%);
+    border-radius: 4px;
+    animation: skeleton-pulse 1.5s infinite ease-in-out;
+    animation-delay: 0.2s;
+}
+
+.news-skeleton-title {
+    width: 85%;
+    height: 24px;
+    background: linear-gradient(90deg, 
+        rgba(0, 255, 135, 0.1) 0%, 
+        rgba(0, 255, 135, 0.2) 50%, 
+        rgba(0, 255, 135, 0.1) 100%);
+    border-radius: 4px;
+    margin-bottom: 15px;
+    animation: skeleton-pulse 1.5s infinite ease-in-out;
+    animation-delay: 0.3s;
+}
+
+.news-skeleton-content {
+    width: 100%;
+    height: 16px;
+    background: linear-gradient(90deg, 
+        rgba(0, 255, 135, 0.05) 0%, 
+        rgba(0, 255, 135, 0.1) 50%, 
+        rgba(0, 255, 135, 0.05) 100%);
+    border-radius: 4px;
+    margin-bottom: 10px;
+    animation: skeleton-pulse 1.5s infinite ease-in-out;
+    animation-delay: 0.4s;
+}
+
+.news-skeleton-content:last-child {
+    width: 60%;
+}
+
+/* 8. MODE CLAIR/SOMBRE */
+
+/* Mode clair */
+body.light .marches-panel,
+body.light .themes-dominant-container,
+body.light .brief-container,
+body.light .filter-select,
+body.light .news-skeleton,
+body.light .critical-news-item {
+    background: rgba(240, 245, 255, 0.8);
+    border-color: rgba(0, 210, 110, 0.2);
+}
+
+body.light .marches-panel-header,
+body.light .brief-header {
+    background: rgba(240, 245, 255, 0.95);
+    border-color: rgba(0, 210, 110, 0.2);
+}
+
+body.light .theme-item {
+    background: rgba(0, 0, 0, 0.03);
+}
+
+body.light .theme-item:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.light .filter-btn {
+    color: rgba(0, 0, 0, 0.7);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+body.light .filter-select {
+    color: rgba(0, 0, 0, 0.8);
+    border-color: rgba(0, 0, 0, 0.1);
+}
+
+/* 9. AJUSTEMENTS RESPONSIFS SUPPLÉMENTAIRES */
+
+@media (max-width: 768px) {
+    .filters-row {
+        flex-direction: column;
+    }
+    
+    .filter-group {
+        margin-bottom: 15px;
+    }
+    
+    .marches-panel,
+    .themes-dominant-container {
+        margin-bottom: 20px;
+    }
+    
+    .brief-section-title {
+        font-size: 0.9rem;
+    }
+    
+    .critical-news-item {
+        flex-direction: column;
+    }
+    
+    .news-badge {
+        align-self: flex-start;
+        margin-bottom: 10px;
+    }
+}
