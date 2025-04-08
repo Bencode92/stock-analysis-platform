@@ -121,9 +121,9 @@ def main():
             reverse=True
         )
         
-        # Ne garder que les articles au-dessus d'un seuil raisonnable (ou au moins 15)
+        # Ne garder que les articles au-dessus d'un seuil raisonnable (ou au moins 30)
         news_cutoff = [n for n in sorted_news if n.get("importance_score", 0) >= 5 or n.get("score", 0) >= 5]
-        top_news = news_cutoff[:25] if len(news_cutoff) >= 15 else sorted_news[:15]
+        top_news = news_cutoff[:70] if len(news_cutoff) >= 30 else sorted_news[:50]
         
         logger.info(f"🔝 Sélection de {len(top_news)} actualités pertinentes")
         
