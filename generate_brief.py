@@ -40,6 +40,8 @@ if not API_KEY:
 DATA_PATH = os.path.join(os.path.dirname(__file__), "data")
 THEMES_PATH = os.path.join(DATA_PATH, "themes.json")
 NEWS_PATH = os.path.join(DATA_PATH, "news.json")
+MARKET_PATH = os.path.join(DATA_PATH, "markets.json")
+SECTOR_PATH = os.path.join(DATA_PATH, "sectors.json")
 BRIEF_PATH = os.path.join(DATA_PATH, "brief_ia.json")
 BRIEF_MD_PATH = os.path.join(DATA_PATH, "brief_ia.md")
 
@@ -123,6 +125,8 @@ def main():
         # Chargement des fichiers JSON
         themes_data = load_json_data(THEMES_PATH)
         news_data = load_json_data(NEWS_PATH)
+        markets_data = load_json_data(MARKET_PATH)
+        sectors_data = load_json_data(SECTOR_PATH)
         
         # Validation des données
         if not themes_data or not news_data:
@@ -185,9 +189,11 @@ def main():
         prompt = f"""
 Tu es un stratège senior en allocation d'actifs au sein d'une société de gestion de renom.
 
-Tu reçois deux types de données financières :
+Tu reçois plusieurs types de données financières :
 1. **Thèmes dominants** extraits de plus de 100 articles économiques (structurés par thème, région, secteur)
 2. **Actualités à fort impact** (Top {len(synthesized_news)} globales, scorées par importance, en format synthétisé)
+3. **Données marché actuelles** (indices, taux, spreads, etc.)
+4. **Performances sectorielles récentes**
 
 🎯 **Objectif** : Produire un **brief stratégique à destination d'un comité d'investissement**, clair, synthétique et orienté allocation.
 
@@ -204,6 +210,7 @@ Tu reçois deux types de données financières :
 - Anticiper les **réactions probables des marchés** (prixant déjà certaines hypothèses)
 - Détecter des **décalages perception / réalité** : où les marchés ou médias se trompent-ils ?
 - Générer **des recommandations actionnables** sur l'allocation (secteurs, zones, classes d'actifs)
+- Utiliser les données de marché et sectorielles comme points de repère factuels dans tes anticipations
 
 ---
 
@@ -244,6 +251,12 @@ Tu reçois deux types de données financières :
 📂 **Actualités importantes (Top {len(synthesized_news)} globales, format synthétisé)** :
 {json.dumps(synthesized_news, indent=2, ensure_ascii=False)}
 
+📈 **Données marché actuelles** (indices, taux, spreads, etc.) :
+{json.dumps(markets_data, indent=2, ensure_ascii=False)}
+
+🏭 **Performances sectorielles récentes** :
+{json.dumps(sectors_data, indent=2, ensure_ascii=False)}
+
 ---
 
 🧠 Fournis maintenant le **brief stratégique complet**, directement exploitable par une équipe d'asset allocation.
@@ -261,7 +274,9 @@ Tu reçois deux types de données financières :
             "source": {
                 "themes_count": len(themes_weekly),
                 "news_count": len(synthesized_news),
-                "original_news_count": len(top_news)
+                "original_news_count": len(top_news),
+                "markets_data": bool(markets_data),
+                "sectors_data": bool(sectors_data)
             }
         }
         
