@@ -1,0 +1,174 @@
+/* brief-style.css */
+.brief-container {
+    border: 1px solid rgba(0, 255, 135, 0.3);
+    background-color: rgba(1, 22, 39, 0.7);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: all 0.3s ease;
+}
+
+.brief-container:hover {
+    border-color: rgba(0, 255, 135, 0.5);
+    box-shadow: 0 0 25px rgba(0, 255, 135, 0.1);
+}
+
+.brief-header {
+    border-bottom: 1px solid rgba(0, 255, 135, 0.2);
+    background: linear-gradient(90deg, rgba(0, 255, 135, 0.03) 0%, rgba(0, 255, 135, 0.08) 100%);
+    transition: background 0.3s ease;
+}
+
+.brief-header:hover {
+    background: linear-gradient(90deg, rgba(0, 255, 135, 0.05) 0%, rgba(0, 255, 135, 0.12) 100%);
+}
+
+.brief-toggle-btn {
+    transition: all 0.3s ease;
+}
+
+.brief-toggle-btn:hover {
+    background-color: rgba(0, 255, 135, 0.1);
+    transform: translateY(-2px);
+}
+
+.brief-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease, padding 0.3s ease;
+}
+
+.brief-content.expanded {
+    max-height: 2000px;
+    padding: 1.5rem;
+    overflow-y: auto;
+}
+
+/* Styles pour le contenu Markdown */
+.brief-markdown h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin: 1.5rem 0 1rem;
+    color: rgba(0, 255, 135, 0.9);
+}
+
+.brief-markdown h2 {
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 1.2rem 0 0.8rem;
+    color: rgba(0, 255, 135, 0.9);
+    border-bottom: 1px solid rgba(0, 255, 135, 0.2);
+    padding-bottom: 0.5rem;
+}
+
+.brief-markdown h3 {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 1rem 0 0.7rem;
+    color: rgba(0, 255, 135, 0.85);
+}
+
+.brief-markdown p {
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.brief-markdown ul {
+    margin-bottom: 1rem;
+    padding-left: 1.5rem;
+}
+
+.brief-markdown li {
+    margin-bottom: 0.5rem;
+    list-style: disc;
+}
+
+.brief-markdown strong {
+    color: rgba(0, 255, 135, 0.9);
+    font-weight: 600;
+}
+
+.brief-markdown em {
+    font-style: italic;
+    opacity: 0.9;
+}
+
+/* Styles pour les scénarios et probabilités */
+.scenario {
+    color: #00e5ff;
+    font-weight: 600;
+}
+
+.probability-high {
+    background-color: rgba(0, 255, 135, 0.2);
+    color: rgba(0, 255, 135, 1);
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.85em;
+}
+
+.probability-medium {
+    background-color: rgba(255, 209, 102, 0.2);
+    color: #ffd166;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.85em;
+}
+
+.probability-low {
+    background-color: rgba(239, 71, 111, 0.2);
+    color: #ef476f;
+    padding: 0.1rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.85em;
+}
+
+/* Animation de chargement du brief */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fadeInUp {
+    animation: fadeInUp 0.4s ease-out forwards;
+}
+
+/* Mode clair */
+body.light .brief-container {
+    background-color: rgba(240, 245, 255, 0.8);
+    border: 1px solid rgba(0, 210, 110, 0.3);
+}
+
+body.light .brief-header {
+    background: linear-gradient(90deg, rgba(0, 210, 110, 0.05) 0%, rgba(0, 210, 110, 0.1) 100%);
+    border-bottom: 1px solid rgba(0, 210, 110, 0.2);
+}
+
+body.light .brief-container:hover {
+    border-color: rgba(0, 210, 110, 0.5);
+}
+
+body.light .brief-toggle-btn {
+    border-color: rgba(0, 210, 110, 0.6);
+    color: rgba(0, 210, 110, 1);
+}
+
+body.light .brief-toggle-btn:hover {
+    background-color: rgba(0, 210, 110, 0.1);
+}
+
+body.light .brief-markdown h1,
+body.light .brief-markdown h2,
+body.light .brief-markdown h3 {
+    color: rgba(0, 140, 90, 1);
+}
+
+body.light .brief-markdown strong {
+    color: rgba(0, 170, 100, 1);
+}
