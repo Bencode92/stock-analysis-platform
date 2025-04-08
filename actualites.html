@@ -24,6 +24,8 @@
     <link rel="stylesheet" href="css/themes-dominant.css">
     <link rel="stylesheet" href="css/event-filters.css">
     <link rel="stylesheet" href="css/event-category-filters.css">
+    <!-- CSS pour le brief stratégique -->
+    <link rel="stylesheet" href="brief-style.css">
     <!-- Animation pour l'affichage des éléments -->
     <style>
         @keyframes fadeIn {
@@ -906,6 +908,29 @@
                     </div>
                 </div>
                 
+                <!-- Brief Stratégique (collapsable) -->
+                <div class="mb-8">
+                    <div class="brief-container rounded-xl overflow-hidden">
+                        <div class="brief-header flex justify-between items-center p-4 cursor-pointer" id="briefToggleHeader">
+                            <h2 class="text-green-400 font-bold text-xl flex items-center">
+                                <i class="fas fa-chart-line mr-2"></i>BRIEF STRATÉGIQUE
+                                <span class="text-sm font-normal ml-3 text-gray-400" id="brief-date">--/--/----</span>
+                            </h2>
+                            <button class="brief-toggle-btn bg-transparent border border-green-400 text-green-400 px-3 py-1 rounded flex items-center text-sm">
+                                <span class="brief-btn-text">Afficher le résumé</span>
+                                <i class="fas fa-chevron-down ml-2 brief-icon-toggle"></i>
+                            </button>
+                        </div>
+                        
+                        <div id="briefContent" class="brief-content hidden">
+                            <div class="brief-loading p-8 text-center">
+                                <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-400 mx-auto mb-4"></div>
+                                <p class="text-gray-400">Chargement du brief stratégique...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Actualités importantes -->
                 <div class="mb-8">
                     <h2 class="text-yellow-500 font-bold text-xl mb-4">🔥 ACTUALITÉS IMPORTANTES</h2>
@@ -1064,6 +1089,9 @@
     <script src="js/ml-news-integrator.js"></script>
     <script src="js/news-updates.js"></script>
     <script src="js/themes-visualizer.js"></script>
+    
+    <!-- Script pour le brief stratégique -->
+    <script src="brief-loader.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
