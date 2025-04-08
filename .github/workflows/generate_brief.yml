@@ -1,0 +1,47 @@
+name: Génération du Brief Stratégique
+
+on:
+  # Exécution automatique toutes les 12 heures (deux fois par jour)
+  schedule:
+    - cron: "0 0,12 * * *"
+  
+  # Déclenchement sur mise à jour des fichiers d'actualités ou thèmes
+  push:
+    branches:
+      - main
+    paths:
+      - 'data/news.json'
+      - 'data/themes.json'
+  
+  # Possibilité de lancer manuellement
+  workflow_dispatch:
+
+jobs:
+  generate-brief:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Cloner le dépôt
+        uses: actions/checkout@v3
+
+      - name: 📦 Installer Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
+
+      - name: 📦 Installer les dépendances
+        run: pip install requests python-dotenv
+
+      - name: 🔑 Définir la clé API OpenAI
+        run: echo "API_CHAT=${{ secrets.API_CHAT }}" >> $GITHUB_ENV
+
+      - name: 🧠 Exécuter le générateur de brief stratégique
+        run: python generate_brief.py
+
+      - name: 💾 Ajouter les changements et commit
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add data/brief_ia.json data/brief_ia.md debug/
+          git diff --staged --quiet || git commit -m "🧠 Mise à jour du brief stratégique IA"
+          git push
