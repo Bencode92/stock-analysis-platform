@@ -123,33 +123,41 @@ def main():
             themes_section = json.dumps(themes_weekly, indent=2, ensure_ascii=False)
             logger.info(f"🔍 {len(themes_weekly)} thèmes dominants identifiés")
 
-        # Construction du prompt expert
+        # Construction du prompt expert AMÉLIORÉ
         prompt = f"""
-Tu es un analyste macroéconomique senior travaillant pour une société de gestion d'actifs. Ta mission est de générer un brief stratégique synthétique à partir de données économiques, sectorielles et géopolitiques. Tu vas recevoir deux types de données :
+Tu es un stratège en investissement senior travaillant pour une société de gestion d'actifs de premier plan. Ta mission est de générer un brief stratégique qui guidera réellement les décisions d'allocation d'actifs. Tu vas recevoir deux types de données :
 
 1. **Thèmes dominants** (structurés) extraits de plus de 100 articles financiers récents
 2. **Actualités importantes** (résumés de haute importance avec impact et score)
 
-Ton objectif est de produire un **brief stratégique clair et synthétique**, à destination d'un comité d'investissement.
+IMPORTANT : Tu es un stratège, pas un journaliste. Tu dois :
+- Croiser les données macro, géopolitiques et sectorielles pour identifier les tendances fondamentales
+- Dégager 2 ou 3 scénarios macro probables avec leurs implications concrètes sur différentes classes d'actifs
+- Déduire quelles classes d'actifs / secteurs risquent d'en bénéficier ou de souffrir dans chaque scénario
+- Identifier où la divergence de perception crée des opportunités (ex: si les marchés anticipent X mais les fondamentaux pointent vers Y)
 
-### Instructions clés :
+### Structure du brief :
+1. **Macroéconomie** → Tendances, scénarios probables et leurs conséquences en chaîne (ex: "Si X se produit → Y arrivera → impact Z sur ces actifs")
+2. **Marchés** → Où en sommes-nous dans le cycle ? Quelles rotations sectorielles sont probables selon les scénarios ? 
+3. **Secteurs** → Quels secteurs sont positionnés pour surperformer/sous-performer selon les scénarios identifiés
+4. **Régions clés** → Quelles zones géographiques offrent le meilleur potentiel/risque et pourquoi
+5. **Implications pour l'investisseur** → Conclusions actionnables claires, comme:
+   - Les taux resteront plus hauts que prévu → privilégier value vs growth
+   - Les chaînes d'approvisionnement se régionalisent → opportunités dans semi-conducteurs locaux
+   - Risque géopolitique X → couverture via Y
 
-- **Analyse en profondeur** : ne te contente pas de résumer les faits, **interprète les implications stratégiques** à moyen terme.  
-  > Ex. Si Trump annonce des droits de douane, demande-toi : quel impact sur l'inflation ? la Fed réagira-t-elle ? la croissance sera-t-elle affectée ?
+### Directives de qualité :
+- **Raisonnement en chaîne** : Montre les liens de causalité entre événements et impacts sur les actifs
+- **Projection à différentes échéances** : Distingue impacts court terme (3 mois) et moyen terme (6-12 mois)
+- **Contre-consensus** : Identifie au moins un élément où le marché pourrait avoir tort
+- **Quantification** : Quand possible, donne des ordres de grandeur ("hausse probable des taux de X à Y%")
+- **Priorise la qualité analytique sur le volume** : Mieux vaut 3 insights profonds que 10 observations superficielles
 
-- **Structure du brief :**
-  1. **Macroéconomie** → tendances globales, inflation, taux, croissance, géopolitique
-  2. **Marchés** → tendances observées (volatilité, tech, matières premières)
-  3. **Secteurs** → secteurs en surperformance ou en stress
-  4. **Régions clés** → focus USA, Europe, Chine, Emergents
-  5. **Risques & opportunités** → synthèse claire des points d'attention et de potentiel
-
-- **Priorise la qualité analytique sur le volume**. Tu dois faire preuve de **jugement** : filtre le bruit, isole les dynamiques importantes.
-
-- **Format final** : 
-  - Titres clairs par section
-  - Bullet points ou paragraphes courts par idée
-  - Maximum ~600 tokens
+### Format final :
+- Titres clairs par section
+- Bullet points ou paragraphes courts par idée
+- Maximum ~800 tokens
+- Terminer par les "3 convictions majeures pour les 3 prochains mois"
 
 ---
 📂 **Thèmes dominants (30 derniers jours)** :
