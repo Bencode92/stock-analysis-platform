@@ -560,7 +560,7 @@ def filter_lists_data(lists_data):
 
     # Résumé textuel
     assets_summary = ["📋 Actifs filtrés (YTD -5% à 120% et Daily > -10%) :"]
-    for name, ytd_value, daily_value in filtered_assets[:15]:  # max 15 visibles
+    for name, ytd_value, daily_value in filtered_assets:
         assets_summary.append(f"• {name}: YTD {ytd_value:.2f}%, Daily {daily_value:.2f}%")
 
     return "\n".join(assets_summary) if filtered_assets else "Aucune donnée d'actifs significative"
