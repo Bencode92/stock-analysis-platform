@@ -1,920 +1,614 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" class="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulateur d'Investissement - TradePulse</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <title>TradePulse - Éducation Financière</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Lier les CSS existants de TradePulse -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="enhanced-ui.css">
     <link rel="stylesheet" href="dashboard-enhanced.css">
+    <link rel="stylesheet" href="market-clock.css">
+    <!-- CSS spécifique à la page d'éducation -->
     <style>
         :root {
             --background-color: #011627;
+            --light-background-color: #f0f5ff;
             --text-color: #FFFFFF;
+            --light-text-color: #1a202c;
             --accent-color: #00FF87;
-            --accent-glow: 0 0 10px rgba(0, 255, 135, 0.6);
-            --card-background: #041e35;
-            --input-background: #0a2540;
-            --input-border: #1e3956;
-            --success-color: #00c853;
-            --warning-color: #ffd54f;
-            --danger-color: #ff5252;
-            --info-color: #2196f3;
-            --panel-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+            --accent-glow: 0 0 20px rgba(0, 255, 135, 0.6);
+            --transition-time: 0.3s;
+            --header-height: 70px;
+            --sidebar-width: 80px;
+            --card-bg-dark: rgba(1, 30, 52, 0.5);
+            --card-bg-light: rgba(240, 245, 255, 0.8);
         }
-
-        body.light-theme {
-            --background-color: #f5f8fa;
-            --text-color: #333333;
-            --card-background: #ffffff;
-            --input-background: #eef1f5;
-            --input-border: #d0d7de;
+        
+        body.dark {
+            background-color: var(--background-color);
+            color: var(--text-color);
         }
-
-        /* Layout et styles généraux */
-        .simulator-container {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 24px;
-            max-width: 1400px;  /* Augmenté pour plus d'espace */
-            margin: 0 auto;
-            padding: 20px;
+        
+        body.light {
+            background-color: var(--light-background-color);
+            color: var(--light-text-color);
         }
-
-        @media (min-width: 992px) {
-            .simulator-container {
-                grid-template-columns: 1fr 1fr;
-            }
-        }
-
-        .intro-panel {
-            grid-column: 1 / -1;
-            background: var(--card-background);
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 1rem;
-            box-shadow: var(--panel-shadow);
-            border-left: 4px solid var(--accent-color);
-            display: flex;
-            align-items: center;
-        }
-
-        .intro-panel .intro-icon {
-            font-size: 2.5rem;
-            color: var(--accent-color);
-            margin-right: 20px;
-        }
-
-        .intro-panel .intro-content h2 {
-            margin-top: 0;
-            margin-bottom: 10px;
-            font-size: 1.8rem;
-        }
-
-        /* Sections et panneaux */
-        .simulator-panel, .results-panel, .explanation-panel, .comparison-panel {
-            background: var(--card-background);
-            border-radius: 12px;
-            padding: 24px;
-            box-shadow: var(--panel-shadow);
-            animation: fadeIn 0.5s ease-out;
-        }
-
+        
+        /* Animation d'apparition */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
-        .simulator-panel {
+        
+        .animate-fadeIn {
+            animation: fadeIn 0.5s ease-out forwards;
+        }
+        
+        /* Animation de pulsation */
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
+        }
+        
+        /* Network background */
+        .network-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            overflow: hidden;
+        }
+        
+        .node {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            opacity: 0.4;
+        }
+        
+        .node.pulse {
+            animation: node-pulse 3s infinite;
+        }
+        
+        .connection {
+            position: absolute;
+            height: 1px;
+            transform-origin: 0 0;
+            background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
+            opacity: 0.2;
+        }
+        
+        /* Centre date circle */
+        .date-circle {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.4);
+            width: 300px;
+            height: 300px;
+            border: 2px solid var(--accent-color);
+            border-radius: 50%;
+            box-shadow: var(--accent-glow);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0.15;
+            z-index: -1;
+        }
+        
+        .date-text {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--accent-color);
+            text-shadow: var(--accent-glow);
+            letter-spacing: 2px;
+        }
+        
+        /* Module cards */
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .module-card {
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.3s ease;
+            height: 100%;
             display: flex;
             flex-direction: column;
         }
         
-        .comparison-panel {
-            grid-column: 1 / -1;
+        .dark .module-card {
+            background: rgba(1, 30, 52, 0.6);
+            border: 1px solid rgba(0, 255, 135, 0.1);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
         }
-
+        
+        .light .module-card {
+            background: rgba(240, 245, 255, 0.6);
+            border: 1px solid rgba(0, 210, 110, 0.1);
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+        }
+        
+        .module-card:hover {
+            transform: translateY(-10px);
+        }
+        
+        .dark .module-card:hover {
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+            border-color: rgba(0, 255, 135, 0.3);
+        }
+        
+        .light .module-card:hover {
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+            border-color: rgba(0, 210, 110, 0.3);
+        }
+        
+        .module-icon {
+            font-size: 2.5rem;
+            color: var(--accent-color);
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+        
+        .module-card:hover .module-icon {
+            transform: translateY(-5px);
+        }
+        
+        .module-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        
+        .module-desc {
+            margin-bottom: 20px;
+            flex-grow: 1;
+            opacity: 0.8;
+        }
+        
+        .module-cta {
+            display: inline-flex;
+            align-items: center;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            margin-top: auto;
+            background-color: rgba(0, 255, 135, 0.1);
+            color: var(--accent-color);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+        }
+        
+        .module-cta i {
+            margin-left: 8px;
+            transition: transform 0.3s ease;
+        }
+        
+        .module-card:hover .module-cta {
+            background-color: var(--accent-color);
+            color: var(--background-color);
+        }
+        
+        .module-card:hover .module-cta i {
+            transform: translateX(5px);
+        }
+        
+        .module-card.new::after {
+            content: 'NOUVEAU';
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background-color: var(--accent-color);
+            color: var(--background-color);
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 4px 8px;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0, 255, 135, 0.4);
+        }
+        
+        /* Simulateur containers */
+        .simulator-panel, .results-panel, .explanation-panel {
+            background-color: rgba(1, 30, 52, 0.7);
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(0, 255, 135, 0.2);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+        }
+        
         .panel-header {
             display: flex;
             align-items: center;
             margin-bottom: 20px;
             padding-bottom: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(0, 255, 135, 0.2);
         }
-
+        
         .panel-header i {
             color: var(--accent-color);
             font-size: 1.5rem;
             margin-right: 12px;
         }
-
+        
         .panel-title {
             font-size: 1.5rem;
             font-weight: 600;
-            color: var(--text-color);
             margin: 0;
-        }
-
-        /* Inputs et contrôles */
-        .input-group {
-            margin-bottom: 28px;
-            position: relative;
-            transition: all 0.3s ease;
-        }
-
-        .input-group:hover {
-            transform: translateX(3px);
-        }
-
-        .input-group label {
-            display: block;
-            margin-bottom: 12px;
-            font-weight: 500;
             color: var(--text-color);
-            position: relative;
         }
-
-        .input-control {
+        
+        /* Section header */
+        .section-header {
+            border-left: 4px solid var(--accent-color);
+            padding-left: 15px;
+            margin: 40px 0 20px;
             display: flex;
             align-items: center;
-            gap: 12px;
         }
-
-        .input-wrapper {
-            position: relative;
-            flex: 1;
+        
+        .section-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 0;
+            color: var(--accent-color);
         }
-
-        input[type="number"], input[type="text"], select {
-            width: 100%;
-            padding: 14px 16px;
-            background-color: var(--input-background);
-            border: 1px solid var(--input-border);
-            border-radius: 8px;
-            color: var(--text-color);
+        
+        .section-subtitle {
+            margin: 0 0 0 auto;
             font-size: 1rem;
-            transition: all 0.3s ease;
-        }
-
-        input[type="number"]:focus, input[type="text"]:focus, select:focus {
-            outline: none;
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px rgba(0, 255, 135, 0.2);
-            transform: translateY(-2px);
-        }
-
-        .input-addon {
-            position: absolute;
-            right: 16px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-color);
             opacity: 0.7;
-            font-weight: 600;
         }
-
-        /* Slider styles */
+        
+        /* Sliders and inputs */
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
         .slider-container {
             display: flex;
             flex-direction: column;
-            gap: 8px;
-            margin-top: 8px;
+            gap: 4px;
         }
-
+        
         .slider-row {
             display: flex;
             align-items: center;
             gap: 12px;
         }
-
+        
         .slider {
             flex: 1;
             -webkit-appearance: none;
             height: 8px;
-            background: linear-gradient(to right, rgba(0, 255, 135, 0.3), rgba(0, 255, 135, 0.1));
             border-radius: 4px;
             outline: none;
             cursor: pointer;
+            background: linear-gradient(to right, rgba(0, 255, 135, 0.3), rgba(0, 255, 135, 0.1));
         }
-
+        
         .slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 22px;
-            height: 22px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
             background: var(--accent-color);
             cursor: pointer;
-            box-shadow: 0 0 4px rgba(0, 255, 135, 0.6), 0 0 0 5px rgba(0, 255, 135, 0.1);
-            transition: all 0.2s ease;
+            box-shadow: 0 0 5px rgba(0, 255, 135, 0.7);
         }
-
-        .slider::-webkit-slider-thumb:hover {
-            box-shadow: 0 0 4px rgba(0, 255, 135, 0.6), 0 0 0 8px rgba(0, 255, 135, 0.2);
-            transform: scale(1.1);
-        }
-
-        .slider::-moz-range-thumb {
-            width: 22px;
-            height: 22px;
-            border-radius: 50%;
-            background: var(--accent-color);
-            cursor: pointer;
-            box-shadow: 0 0 4px rgba(0, 255, 135, 0.6);
-            transition: all 0.2s ease;
-        }
-
-        .slider::-moz-range-thumb:hover {
-            transform: scale(1.1);
-        }
-
+        
         .slider-value {
             min-width: 60px;
             text-align: center;
-            color: var(--accent-color);
-            font-weight: 600;
-            font-size: 1.2rem;
-            padding: 5px 10px;
             background-color: rgba(0, 255, 135, 0.1);
-            border-radius: 6px;
+            color: var(--accent-color);
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-weight: 600;
         }
-
-        /* Toggle pour type d'investissement */
+        
+        /* Toggle group */
         .toggle-group {
             display: flex;
-            background-color: var(--input-background);
-            border-radius: 8px;
-            padding: 4px;
-            margin-top: 12px;
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            padding: 3px;
+            margin: 12px 0;
             position: relative;
             overflow: hidden;
         }
-
+        
         .toggle-option {
             flex: 1;
             text-align: center;
-            padding: 10px 12px;
-            font-weight: 500;
+            padding: 8px 12px;
             cursor: pointer;
-            border-radius: 6px;
-            transition: all 0.3s ease;
+            border-radius: 4px;
+            font-weight: 500;
             position: relative;
             z-index: 2;
+            transition: all 0.3s ease;
         }
-
+        
         .toggle-option.active {
             color: var(--background-color);
-            font-weight: 600;
         }
-
-        /* Animation de brillance sur hover */
-        .toggle-option:not(.active):hover {
-            color: var(--accent-color);
-        }
-
-        /* Slider animé pour l'élément actif */
+        
         .toggle-group::after {
             content: '';
             position: absolute;
-            left: 4px;
-            top: 4px;
-            width: calc(50% - 4px);
-            height: calc(100% - 8px);
+            top: 3px;
+            left: 3px;
+            height: calc(100% - 6px);
+            width: calc(50% - 3px);
             background-color: var(--accent-color);
-            border-radius: 6px;
+            border-radius: 4px;
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             z-index: 1;
         }
-
+        
         .toggle-group.monthly::after {
             left: calc(50% + 0px);
         }
-
-        /* Résultats et graphique */
+        
+        /* Result cards */
         .results-summary {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
             gap: 16px;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
         }
-
+        
         .result-card {
-            background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
-            border-radius: 12px;
-            padding: 20px;
             text-align: center;
+            padding: 16px;
+            border-radius: 8px;
             transition: all 0.3s ease;
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
-
+        
         .result-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
             border-color: rgba(0, 255, 135, 0.2);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
         }
-
+        
         .result-value {
             font-size: 1.8rem;
             font-weight: 700;
+            margin: 8px 0;
             color: var(--accent-color);
-            margin: 10px 0;
-            text-shadow: 0 0 15px rgba(0, 255, 135, 0.4);
         }
-
+        
         .result-label {
             font-size: 0.9rem;
-            color: var(--text-color);
             opacity: 0.8;
-            font-weight: 500;
+            color: var(--text-color);
         }
-
+        
+        /* Chart container */
         .chart-container {
             height: 350px;
-            margin-top: 20px;
-            position: relative;
+            margin: 20px 0;
+            padding: 16px;
             border-radius: 8px;
-            padding: 15px;
             background-color: rgba(255, 255, 255, 0.02);
             border: 1px solid rgba(255, 255, 255, 0.05);
         }
-
-        /* Explications */
-        .explanation-panel {
-            margin-top: 24px;
-            grid-column: 1 / -1;
-        }
-
-        .info-box {
-            background: linear-gradient(145deg, rgba(33, 150, 243, 0.1), rgba(33, 150, 243, 0.05));
-            border-left: 4px solid var(--info-color);
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
-            animation: fadeIn 0.5s ease-out;
-        }
-
-        .info-box h4 {
-            color: var(--info-color);
-            margin-top: 0;
-            display: flex;
-            align-items: center;
-        }
-
-        .info-box h4 i {
-            margin-right: 10px;
-        }
-
-        .tax-info {
-            margin-top: 20px;
-            padding: 20px;
-            background: linear-gradient(145deg, rgba(0, 200, 83, 0.1), rgba(0, 200, 83, 0.05));
-            border-radius: 8px;
-            border-left: 4px solid var(--success-color);
-            animation: slideIn 0.5s ease-out;
-        }
-
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateX(-20px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        .tax-info h4 {
-            color: var(--success-color);
-            margin-top: 0;
-            display: flex;
-            align-items: center;
-        }
-
-        .tax-info h4 i {
-            margin-right: 10px;
-        }
-
+        
         /* Investment types */
         .investment-types {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
             gap: 20px;
-            margin-top: 30px;
+            margin-top: 24px;
         }
-
+        
         .investment-type-card {
             background: linear-gradient(145deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
-            border-radius: 12px;
-            padding: 24px;
-            transition: all 0.3s ease;
             border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
         }
-
-        .investment-type-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 4px;
-            height: 100%;
-            background-color: var(--accent-color);
-            opacity: 0;
-            transition: all 0.3s ease;
-        }
-
+        
         .investment-type-card:hover {
-            transform: translateY(-5px) scale(1.03);
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+            transform: translateY(-5px);
             border-color: rgba(0, 255, 135, 0.2);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.3);
         }
-
-        .investment-type-card:hover::before {
-            opacity: 1;
-        }
-
+        
         .investment-type-header {
             display: flex;
             align-items: center;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
         }
-
+        
         .investment-type-header i {
-            font-size: 2rem;
-            margin-right: 16px;
+            font-size: 1.8rem;
+            margin-right: 12px;
             color: var(--accent-color);
-            transition: all 0.3s ease;
         }
-
-        .investment-type-card:hover .investment-type-header i {
-            transform: scale(1.2);
-        }
-
+        
         .investment-type-title {
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             font-weight: 600;
             margin: 0;
+            color: var(--text-color);
         }
-
+        
         .risk-rating {
             display: flex;
-            margin-top: 16px;
+            margin-top: 12px;
             align-items: center;
         }
-
+        
         .risk-label {
-            margin-right: 12px;
+            margin-right: 10px;
             font-size: 0.9rem;
             opacity: 0.8;
-            font-weight: 500;
         }
-
+        
         .risk-dots {
             display: flex;
-            gap: 5px;
+            gap: 4px;
         }
-
+        
         .risk-dot {
-            width: 10px;
-            height: 10px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
-            background-color: var(--input-border);
-            transition: all 0.2s ease;
+            background-color: rgba(255, 255, 255, 0.2);
         }
-
+        
         .risk-dot.active {
             background-color: var(--accent-color);
         }
-
+        
         .risk-dot.active.high {
-            background-color: var(--danger-color);
+            background-color: #ff5252;
         }
-
+        
         .risk-dot.active.medium {
-            background-color: var(--warning-color);
+            background-color: #ffd54f;
         }
-
+        
         .risk-dot.active.low {
-            background-color: var(--success-color);
+            background-color: #00c853;
         }
-
-        .investment-type-card:hover .risk-dot.active {
-            transform: scale(1.2);
-            box-shadow: 0 0 10px currentColor;
+        
+        /* Tax info box */
+        .tax-info {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 8px;
+            background: rgba(0, 200, 83, 0.1);
+            border-left: 3px solid var(--accent-color);
         }
-
-        /* Bouton de simulation */
-        .simulate-btn {
-            background: linear-gradient(135deg, var(--accent-color), #00d87a);
-            color: var(--background-color);
-            border: none;
-            padding: 16px 28px;
-            font-weight: 600;
-            font-size: 1.1rem;
-            border-radius: 12px;
-            cursor: pointer;
-            margin-top: 24px;
-            transition: all 0.3s ease;
-            display: inline-flex;
+        
+        .tax-info h4 {
+            display: flex;
             align-items: center;
-            justify-content: center;
-            box-shadow: 0 5px 15px rgba(0, 255, 135, 0.3);
-            position: relative;
-            overflow: hidden;
+            margin-top: 0;
+            margin-bottom: 10px;
+            color: var(--accent-color);
         }
-
-        .simulate-btn i {
-            margin-right: 10px;
-            font-size: 1.2rem;
-            transition: all 0.3s ease;
+        
+        .tax-info h4 i {
+            margin-right: 8px;
         }
-
-        .simulate-btn::after {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: linear-gradient(transparent, rgba(255, 255, 255, 0.3), transparent);
-            transform: rotate(30deg);
-            transition: all 0.5s ease;
-            opacity: 0;
-        }
-
-        .simulate-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0, 255, 135, 0.5);
-        }
-
-        .simulate-btn:hover i {
-            transform: rotate(360deg);
-        }
-
-        .simulate-btn:hover::after {
-            left: 100%;
-            opacity: 1;
-        }
-
-        .simulate-btn:active {
-            transform: translateY(1px);
-            box-shadow: 0 2px 10px rgba(0, 255, 135, 0.4);
-        }
-
-        /* Tooltips */
+        
+        /* Tooltip */
         .tooltip {
             position: relative;
             display: inline-block;
-            margin-left: 8px;
+            margin-left: 6px;
             color: rgba(255, 255, 255, 0.6);
             cursor: help;
-            transition: all 0.3s ease;
         }
-
+        
         .tooltip:hover {
             color: var(--accent-color);
         }
-
+        
         .tooltip .tooltip-text {
             visibility: hidden;
-            width: 280px;
-            background-color: var(--card-background);
+            width: 250px;
+            background-color: var(--background-color);
             color: var(--text-color);
             text-align: left;
-            border-radius: 8px;
-            padding: 12px 16px;
+            border-radius: 6px;
+            padding: 10px 12px;
             position: absolute;
             z-index: 10;
             bottom: 125%;
             left: 50%;
             transform: translateX(-50%) scale(0.9);
             opacity: 0;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transition: all 0.3s ease;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
             font-weight: normal;
-            font-size: 0.9rem;
-            border: 1px solid var(--input-border);
+            font-size: 0.85rem;
+            border: 1px solid rgba(0, 255, 135, 0.2);
             pointer-events: none;
         }
-
-        .tooltip .tooltip-text::after {
-            content: '';
-            position: absolute;
-            top: 100%;
-            left: 50%;
-            margin-left: -8px;
-            border-width: 8px;
-            border-style: solid;
-            border-color: var(--card-background) transparent transparent transparent;
-        }
-
+        
         .tooltip:hover .tooltip-text {
             visibility: visible;
             opacity: 1;
             transform: translateX(-50%) scale(1);
         }
-
-        /* Années importantes sur le graphique */
-        .milestone-markers {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 12px;
-        }
-
-        .milestone {
-            text-align: center;
-            position: relative;
-        }
-
-        .milestone::before {
-            content: "";
-            position: absolute;
-            top: -8px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 2px;
-            height: 8px;
-            background-color: var(--accent-color);
-        }
-
-        .milestone-label {
-            font-size: 0.75rem;
-            opacity: 0.7;
-        }
-
-        /* Export PDF Button */
-        .export-btn, .compare-btn {
-            background-color: transparent;
-            border: 2px solid var(--accent-color);
-            color: var(--accent-color);
-            padding: 12px 20px;
-            font-weight: 600;
-            font-size: 0.95rem;
-            border-radius: 12px;
-            cursor: pointer;
-            margin-top: 20px;
-            margin-right: 15px;
-            transition: all 0.3s ease;
-            display: inline-flex;
-            align-items: center;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .export-btn i, .compare-btn i {
-            margin-right: 10px;
-            font-size: 1.1rem;
-            transition: all 0.3s ease;
-        }
-
-        .export-btn::before, .compare-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background-color: var(--accent-color);
-            transition: all 0.4s ease;
-            z-index: -1;
-        }
-
-        .export-btn:hover, .compare-btn:hover {
+        
+        /* Simulate button */
+        .simulate-btn {
+            background: linear-gradient(135deg, var(--accent-color), #00d87a);
             color: var(--background-color);
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(0, 255, 135, 0.2);
-        }
-
-        .export-btn:hover::before, .compare-btn:hover::before {
-            left: 0;
-        }
-
-        .export-btn:hover i, .compare-btn:hover i {
-            transform: translateX(-5px);
-        }
-        
-        /* Modal de comparaison */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.7);
-            z-index: 1000;
-            overflow-y: auto;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            backdrop-filter: blur(5px);
-        }
-        
-        .modal.visible {
-            opacity: 1;
-        }
-        
-        .modal-content {
-            background: linear-gradient(145deg, var(--card-background), rgba(4, 25, 48, 0.95));
-            margin: 5% auto;
-            padding: 30px;
-            width: 90%;
-            max-width: 1200px;
-            border-radius: 16px;
-            position: relative;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
-            transform: translateY(-30px);
-            opacity: 0;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .modal.visible .modal-content {
-            transform: translateY(0);
-            opacity: 1;
-        }
-        
-        .close-modal {
-            position: absolute;
-            top: 20px;
-            right: 25px;
-            font-size: 26px;
-            font-weight: bold;
-            color: var(--text-color);
-            opacity: 0.7;
+            border: none;
+            padding: 14px 24px;
+            font-weight: 600;
+            font-size: 1rem;
+            border-radius: 8px;
             cursor: pointer;
-            transition: all 0.3s ease;
-            width: 40px;
-            height: 40px;
+            width: 100%;
+            margin-top: 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 50%;
         }
         
-        .close-modal:hover {
-            opacity: 1;
-            background-color: rgba(255, 255, 255, 0.1);
-            transform: rotate(90deg);
+        .simulate-btn i {
+            margin-right: 8px;
         }
         
-        /* Tableau de comparaison */
-        .comparison-table-container {
-            overflow-x: auto;
-            margin-top: 25px;
-            border-radius: 10px;
-            background-color: rgba(0, 0, 0, 0.2);
-            padding: 5px;
+        .simulate-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0, 255, 135, 0.3);
         }
         
-        .comparison-table {
-            width: 100%;
-            border-collapse: separate;
-            border-spacing: 0;
-            font-size: 0.95rem;
-        }
-        
-        .comparison-table th, .comparison-table td {
-            padding: 15px 20px;
-            text-align: left;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .comparison-table th {
-            background-color: rgba(0, 255, 135, 0.1);
-            color: var(--accent-color);
-            font-weight: 600;
-            position: sticky;
-            top: 0;
-            z-index: 10;
-        }
-
-        .comparison-table th:first-child {
-            border-top-left-radius: 8px;
-        }
-
-        .comparison-table th:last-child {
-            border-top-right-radius: 8px;
-        }
-        
-        .comparison-table tbody tr {
-            transition: all 0.3s ease;
-        }
-        
-        .comparison-table tbody tr:hover {
-            background-color: rgba(255, 255, 255, 0.05);
-            transform: translateX(5px);
-        }
-
-        .comparison-table tbody tr:last-child td:first-child {
-            border-bottom-left-radius: 8px;
-        }
-
-        .comparison-table tbody tr:last-child td:last-child {
-            border-bottom-right-radius: 8px;
-        }
-        
-        .vehicle-name {
-            display: flex;
-            align-items: center;
-            font-weight: 600;
-            font-size: 1.05rem;
-        }
-        
-        .vehicle-name i {
-            margin-right: 12px;
-            color: var(--accent-color);
-            font-size: 1.2rem;
-            transition: all 0.3s ease;
-        }
-
-        tr:hover .vehicle-name i {
-            transform: scale(1.2);
-        }
-        
-        /* Badge de suitability */
-        .suitability-badge {
-            display: inline-block;
-            padding: 6px 12px;
-            font-size: 0.9rem;
-            border-radius: 20px;
-            margin-bottom: 12px;
-            font-weight: 600;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-            animation: fadeIn 0.5s ease-out;
-        }
-        
-        .suitability-badge.high {
-            background: linear-gradient(145deg, rgba(0, 200, 83, 0.2), rgba(0, 200, 83, 0.1));
-            color: var(--success-color);
-            border: 1px solid rgba(0, 200, 83, 0.3);
-        }
-        
-        .suitability-badge.medium {
-            background: linear-gradient(145deg, rgba(255, 213, 79, 0.2), rgba(255, 213, 79, 0.1));
-            color: var(--warning-color);
-            border: 1px solid rgba(255, 213, 79, 0.3);
-        }
-        
-        .suitability-badge.low {
-            background: linear-gradient(145deg, rgba(255, 82, 82, 0.2), rgba(255, 82, 82, 0.1));
-            color: var(--danger-color);
-            border: 1px solid rgba(255, 82, 82, 0.3);
-        }
-        
-        /* Liste des commentaires d'adéquation */
-        .suitability-comments {
-            list-style-type: none;
-            padding-left: 0;
-            margin-top: 15px;
-        }
-        
-        .suitability-comments li {
-            position: relative;
-            padding-left: 25px;
-            margin-bottom: 10px;
-            font-size: 0.95rem;
-            opacity: 0;
-            animation: slideRight 0.5s ease-out forwards;
-        }
-        
-        @keyframes slideRight {
-            from { opacity: 0; transform: translateX(-20px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-        
-        .suitability-comments li:nth-child(1) { animation-delay: 0.1s; }
-        .suitability-comments li:nth-child(2) { animation-delay: 0.2s; }
-        .suitability-comments li:nth-child(3) { animation-delay: 0.3s; }
-        .suitability-comments li:nth-child(4) { animation-delay: 0.4s; }
-        
-        .suitability-comments li:before {
-            content: "\f058";
-            font-family: "Font Awesome 6 Free";
-            font-weight: 900;
-            position: absolute;
-            left: 0;
-            color: var(--accent-color);
-        }
-
-        /* Améliorations pour les préréglages de rendement */
         .return-presets {
-            margin-top: 10px;
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
+            margin-top: 10px;
         }
-
+        
         .return-presets a {
-            background-color: rgba(255, 255, 255, 0.05);
             padding: 5px 10px;
             border-radius: 15px;
-            text-decoration: none;
+            background-color: rgba(255, 255, 255, 0.05);
             color: var(--text-color);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-decoration: none;
             font-size: 0.8rem;
-            transition: all 0.3s ease;
             display: inline-flex;
             align-items: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-
+        
         .return-presets a::before {
             content: "";
             display: inline-block;
@@ -923,73 +617,77 @@
             border-radius: 50%;
             margin-right: 5px;
         }
-
+        
         .return-presets a:nth-child(1)::before { background-color: #4caf50; }
         .return-presets a:nth-child(2)::before { background-color: #2196f3; }
         .return-presets a:nth-child(3)::before { background-color: #ff9800; }
         .return-presets a:nth-child(4)::before { background-color: #9c27b0; }
         .return-presets a:nth-child(5)::before { background-color: #f44336; }
-
+        
         .return-presets a:hover {
             background-color: rgba(0, 255, 135, 0.1);
             color: var(--accent-color);
-            transform: translateY(-2px);
             border-color: var(--accent-color);
+            transform: translateY(-2px);
         }
-
-        /* Animations de transition */
-        .fade-in {
-            animation: fadeIn 0.5s ease-out forwards;
+        
+        /* Info box */
+        .info-box {
+            background: linear-gradient(145deg, rgba(33, 150, 243, 0.1), rgba(33, 150, 243, 0.05));
+            border-left: 4px solid #2196f3;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
         }
-
-        .slide-up {
-            animation: slideUp 0.5s ease-out forwards;
+        
+        .info-box h4 {
+            color: #2196f3;
+            margin-top: 0;
+            display: flex;
+            align-items: center;
         }
-
-        @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+        
+        .info-box h4 i {
+            margin-right: 10px;
         }
-
-        /* Progress bar - animation de remplissage */
-        .progress-container {
-            margin-top: 10px;
-            width: 100%;
-            height: 6px;
-            background-color: rgba(255, 255, 255, 0.1);
-            border-radius: 3px;
-            overflow: hidden;
+        
+        /* Footer */
+        .page-footer {
+            background: rgba(1, 22, 39, 0.8);
+            padding: 20px 40px;
+            text-align: center;
             position: relative;
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(0, 255, 135, 0.2);
+            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.1);
         }
-
-        .progress-bar {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent-color), #00d87a);
-            width: 0%;
-            transition: width 1s cubic-bezier(0.65, 0, 0.35, 1);
-            position: relative;
+        
+        .data-source-info {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
         }
-
-        .progress-bar::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, 
-                transparent, 
-                rgba(255, 255, 255, 0.3), 
-                transparent);
-            animation: shine 2s infinite;
+        
+        .data-source-info p {
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            display: flex;
+            align-items: center;
         }
-
-        @keyframes shine {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
+        
+        .data-source-info i {
+            margin-right: 8px;
+            color: var(--accent-color);
         }
-
-        /* Additional responsive adjustments */
+        
+        .update-time {
+            color: var(--accent-color);
+            font-weight: 500;
+        }
+        
+        /* Responsive */
         @media (max-width: 768px) {
             .results-summary {
                 grid-template-columns: repeat(2, 1fr);
@@ -1003,364 +701,651 @@
             .panel-header i {
                 margin-bottom: 8px;
             }
-
-            .intro-panel {
-                flex-direction: column;
-                text-align: center;
-            }
-
-            .intro-panel .intro-icon {
-                margin-right: 0;
-                margin-bottom: 15px;
-            }
-
+            
             .toggle-group {
                 flex-direction: column;
-                gap: 8px;
             }
-
+            
             .toggle-group::after {
                 display: none;
             }
-
+            
             .toggle-option {
-                border-radius: 6px;
+                border-radius: 4px;
+                margin-bottom: 5px;
             }
-
+            
             .toggle-option.active {
                 background-color: var(--accent-color);
             }
         }
     </style>
 </head>
-<body>
-    <!-- Header importé du système TradePulse -->
-    <header class="dashboard-header">
-        <div class="logo-container">
-            <div class="pulse-dot"></div>
-            <h1 class="logo">TRADEPULSE</h1>
-        </div>
-        <nav class="main-nav">
-            <ul>
-                <li><a href="index.html"><i class="fas fa-home"></i> Accueil</a></li>
-                <li><a href="actualites.html"><i class="fas fa-newspaper"></i> Actualités</a></li>
-                <li><a href="portefeuille.html"><i class="fas fa-chart-pie"></i> Portefeuille</a></li>
-                <li class="active"><a href="education.html"><i class="fas fa-graduation-cap"></i> Éducation</a></li>
-            </ul>
+<body class="dark">
+    <!-- Réseau de fond animé -->
+    <div class="network-background" id="network-background"></div>
+
+    <!-- Cercle de date central -->
+    <div class="date-circle">
+        <div class="date-text" id="formatted-date">08.04.2025</div>
+    </div>
+
+    <!-- Bouton du sélecteur de thème -->
+    <div class="theme-toggle">
+        <button id="theme-toggle-btn" class="theme-toggle-btn">
+            <i class="fas fa-moon" id="dark-icon"></i>
+            <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
+        </button>
+    </div>
+
+    <!-- Sidebar de navigation verticale -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">TP</div>
+        <nav class="sidebar-nav">
+            <a href="actualites.html" class="nav-item" title="Actualités">
+                <i class="fas fa-newspaper"></i>
+            </a>
+            <a href="portefeuille.html" class="nav-item" title="Portefeuilles">
+                <i class="fas fa-chart-pie"></i>
+            </a>
+            <a href="dashboard.html" class="nav-item" title="Tableau de bord">
+                <i class="fas fa-tachometer-alt"></i>
+            </a>
+            <a href="marches.html" class="nav-item" title="Marchés">
+                <i class="fas fa-chart-line"></i>
+            </a>
+            <a href="secteurs.html" class="nav-item" title="Secteurs">
+                <i class="fas fa-industry"></i>
+            </a>
+            <a href="liste.html" class="nav-item" title="Listes">
+                <i class="fas fa-list"></i>
+            </a>
+            <a href="etf.html" class="nav-item" title="ETF">
+                <i class="fas fa-funnel-dollar"></i>
+            </a>
+            <a href="crypto.html" class="nav-item" title="Crypto">
+                <i class="fab fa-bitcoin"></i>
+            </a>
+            <a href="education.html" class="nav-item active" title="Éducation">
+                <i class="fas fa-graduation-cap"></i>
+            </a>
+            <a href="email-preview.html" class="nav-item" title="Alertes">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge"></span>
+            </a>
+            <a href="parametres.html" class="nav-item" title="Paramètres">
+                <i class="fas fa-cog"></i>
+            </a>
         </nav>
-        <div class="user-actions">
-            <button id="theme-toggle-btn" aria-label="Changer de thème" class="button-press">
-                <i class="fas fa-moon" id="dark-icon"></i>
-                <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
-            </button>
-            <div class="user-info">
-                <span class="user-name">Utilisateur</span>
-                <img src="https://api.dicebear.com/6.x/initials/svg?seed=TP" alt="Avatar" class="user-avatar">
+    </aside>
+
+    <!-- Header principal -->
+    <header class="main-header">
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="pulse-dot"></div>
+                <a href="index.html">TRADEPULSE</a>
             </div>
+            <nav class="main-nav">
+                <a href="actualites.html">Actualités</a>
+                <a href="portefeuille.html?type=modere">Portefeuilles</a>
+                <a href="dashboard.html">Tableau de bord</a>
+                <a href="marches.html">Marchés</a>
+                <a href="secteurs.html">Secteurs</a>
+                <a href="liste.html">Listes</a>
+                <a href="etf.html">ETF</a>
+                <a href="crypto.html">Crypto</a>
+                <a href="education.html" class="active">Éducation</a>
+            </nav>
+        </div>
+        <div class="header-right">
+            <div class="market-status">
+                <div class="market-indicator green"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time" id="marketTime">15:32:47</span>
+            </div>
+            <a href="recherche.html" class="search-button ripple">
+                <i class="fas fa-search"></i>
+                <span>Ma question</span>
+            </a>
         </div>
     </header>
 
-    <main>
-        <div class="simulator-container">
-            <!-- Introduction Panel -->
-            <div class="intro-panel">
-                <div class="intro-icon">
-                    <i class="fas fa-chart-line"></i>
+    <!-- Container principal -->
+    <main class="main-container">
+        <div class="p-6 md:p-8">
+            <div class="w-full overflow-hidden max-w-6xl mx-auto">
+                
+                <!-- Header Minimaliste -->
+                <div class="mb-8 text-center">
+                    <h1 class="text-3xl font-bold mb-2 text-white">ÉDUCATION FINANCIÈRE</h1>
+                    <p class="text-sm text-gray-400" id="currentDate">8 AVRIL 2025</p>
                 </div>
-                <div class="intro-content">
-                    <h2>Simulateur d'Investissement</h2>
-                    <p>Découvrez l'impact des différentes stratégies d'investissement sur votre capital à long terme. Cet outil vous permet de simuler le rendement potentiel en fonction du montant investi, de la durée et du véhicule d'investissement choisi.</p>
+                
+                <!-- Modules éducatifs -->
+                <div class="section-header mb-6">
+                    <h2 class="section-title">Modules éducatifs</h2>
+                    <p class="section-subtitle">Développez vos compétences en finance</p>
                 </div>
-            </div>
-
-            <!-- Simulation Parameters Panel -->
-            <div class="simulator-panel">
-                <div class="panel-header">
-                    <i class="fas fa-sliders-h"></i>
-                    <h3 class="panel-title">Paramètres de simulation</h3>
+                
+                <div class="module-grid">
+                    <!-- Simulateur d'investissement -->
+                    <div class="module-card new">
+                        <i class="fas fa-chart-line module-icon"></i>
+                        <h3 class="module-title">Simulateur d'investissement</h3>
+                        <p class="module-desc">Comparez différentes stratégies d'investissement et visualisez l'impact à long terme des rendements composés sur votre capital.</p>
+                        <a href="#simulateur" class="module-cta">
+                            Accéder au simulateur <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    
+                    <!-- Concepts de base -->
+                    <div class="module-card">
+                        <i class="fas fa-book module-icon"></i>
+                        <h3 class="module-title">Concepts de base</h3>
+                        <p class="module-desc">Introduction aux fondamentaux de l'investissement : actions, obligations, diversification et gestion des risques.</p>
+                        <a href="#concepts" class="module-cta">
+                            Explorer les concepts <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    
+                    <!-- Analyses techniques -->
+                    <div class="module-card">
+                        <i class="fas fa-chart-bar module-icon"></i>
+                        <h3 class="module-title">Analyse technique</h3>
+                        <p class="module-desc">Découvrez les méthodes d'analyse graphique pour identifier les tendances et les opportunités de trading.</p>
+                        <a href="#analyse-technique" class="module-cta">
+                            Voir les méthodes <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    
+                    <!-- Analyse fondamentale -->
+                    <div class="module-card">
+                        <i class="fas fa-microscope module-icon"></i>
+                        <h3 class="module-title">Analyse fondamentale</h3>
+                        <p class="module-desc">Apprenez à évaluer la santé financière des entreprises et à déterminer la valeur intrinsèque des actifs.</p>
+                        <a href="#analyse-fondamentale" class="module-cta">
+                            Explorer les méthodes <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    
+                    <!-- Fiscalité des investissements -->
+                    <div class="module-card">
+                        <i class="fas fa-file-invoice-dollar module-icon"></i>
+                        <h3 class="module-title">Fiscalité des investissements</h3>
+                        <p class="module-desc">Comprendre les implications fiscales des différents véhicules d'investissement pour optimiser vos rendements.</p>
+                        <a href="#fiscalite" class="module-cta">
+                            Découvrir <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    
+                    <!-- Gestion de portefeuille -->
+                    <div class="module-card">
+                        <i class="fas fa-briefcase module-icon"></i>
+                        <h3 class="module-title">Gestion de portefeuille</h3>
+                        <p class="module-desc">Stratégies de construction et d'optimisation de portefeuille selon votre profil de risque et vos objectifs.</p>
+                        <a href="#gestion-portefeuille" class="module-cta">
+                            Apprendre <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
                 </div>
-
-                <!-- Investment Amount -->
-                <div class="input-group">
-                    <label for="investment-amount">
-                        Montant d'investissement 
-                        <span class="tooltip">
-                            <i class="fas fa-info-circle"></i>
-                            <span class="tooltip-text">Indiquez le montant que vous souhaitez investir, soit en une seule fois, soit mensuellement selon votre choix.</span>
-                        </span>
-                    </label>
-                    <div class="input-control">
-                        <div class="input-wrapper">
-                            <input type="number" id="investment-amount" value="1000" min="1">
-                            <span class="input-addon">€</span>
+                
+                <!-- Simulateur section -->
+                <div id="simulateur" class="mt-16">
+                    <div class="section-header mb-6">
+                        <h2 class="section-title">Simulateur d'investissement</h2>
+                        <p class="section-subtitle">Planifiez votre avenir financier</p>
+                    </div>
+                    
+                    <div class="bg-gray-800 p-6 rounded-xl mb-8">
+                        <p class="text-white">Découvrez l'impact des différentes stratégies d'investissement sur votre capital à long terme. Cet outil vous permet de simuler le rendement potentiel en fonction du montant investi, de la durée et du véhicule d'investissement choisi.</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Paramètres de simulation -->
+                        <div class="simulator-panel">
+                            <div class="panel-header">
+                                <i class="fas fa-sliders-h"></i>
+                                <h3 class="panel-title">Paramètres de simulation</h3>
+                            </div>
+                            
+                            <!-- Investment Amount -->
+                            <div class="input-group">
+                                <label for="investment-amount">
+                                    Montant d'investissement 
+                                    <span class="tooltip">
+                                        <i class="fas fa-info-circle"></i>
+                                        <span class="tooltip-text">Indiquez le montant que vous souhaitez investir, soit en une seule fois, soit mensuellement selon votre choix.</span>
+                                    </span>
+                                </label>
+                                <input type="number" id="investment-amount" value="1000" min="1">
+                                
+                                <div class="toggle-group" id="investment-type-toggle">
+                                    <div class="toggle-option active" data-value="one-time" onclick="toggleInvestmentType(this)">Versement unique</div>
+                                    <div class="toggle-option" data-value="monthly" onclick="toggleInvestmentType(this)">Versement mensuel</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Investment Duration -->
+                            <div class="input-group">
+                                <label for="duration-slider">
+                                    Durée d'investissement 
+                                    <span class="tooltip">
+                                        <i class="fas fa-info-circle"></i>
+                                        <span class="tooltip-text">La durée pendant laquelle vous prévoyez de maintenir votre investissement. Plus la période est longue, plus les effets des intérêts composés sont importants.</span>
+                                    </span>
+                                </label>
+                                <div class="slider-container">
+                                    <div class="slider-row">
+                                        <input type="range" id="duration-slider" class="slider" min="1" max="30" value="10" oninput="updateDuration(this.value)">
+                                        <span class="slider-value" id="duration-value">10 ans</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Annual Return -->
+                            <div class="input-group">
+                                <label for="return-slider">
+                                    Rendement annuel moyen estimé 
+                                    <span class="tooltip">
+                                        <i class="fas fa-info-circle"></i>
+                                        <span class="tooltip-text">Le taux de rendement annuel estimé varie selon le type d'investissement. Indice boursier: 7-10%, Obligations: 2-5%, Immobilier: 3-7%, Crypto: Très variable (pouvant dépasser 20% ou être négatif).</span>
+                                    </span>
+                                </label>
+                                <div class="slider-container">
+                                    <div class="slider-row">
+                                        <input type="range" id="return-slider" class="slider" min="1" max="15" value="7" oninput="updateReturn(this.value)">
+                                        <span class="slider-value" id="return-value">7%</span>
+                                    </div>
+                                    <div class="return-presets">
+                                        <a href="#" onclick="return setReturn(2)">Livret A (2%)</a>
+                                        <a href="#" onclick="return setReturn(3)">Assurance-Vie FE (3%)</a>
+                                        <a href="#" onclick="return setReturn(5)">SCPI (5%)</a>
+                                        <a href="#" onclick="return setReturn(7)">ETF Monde (7%)</a>
+                                        <a href="#" onclick="return setReturn(10)">Actions (10%)</a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Investment Vehicle -->
+                            <div class="input-group">
+                                <label for="investment-vehicle">
+                                    Enveloppe fiscale 
+                                    <span class="tooltip">
+                                        <i class="fas fa-info-circle"></i>
+                                        <span class="tooltip-text">L'enveloppe fiscale influence la taxation des gains générés par votre investissement. Chaque véhicule a des avantages et limites spécifiques.</span>
+                                    </span>
+                                </label>
+                                <select id="investment-vehicle" onchange="updateTaxInfo()">
+                                    <option value="pea">PEA</option>
+                                    <option value="cto">Compte-Titres</option>
+                                    <option value="assurance-vie">Assurance-Vie</option>
+                                    <option value="per">PER</option>
+                                    <option value="scpi">SCPI</option>
+                                    <option value="fcpi">FCPI / FIP</option>
+                                    <option value="livret-jeune">Livret Jeune</option>
+                                    <option value="ldds">LDDS</option>
+                                    <option value="lep">LEP</option>
+                                    <option value="crypto">Crypto-monnaies</option>
+                                </select>
+                                
+                                <div id="tax-info" class="tax-info">
+                                    <h4><i class="fas fa-chart-pie"></i> Fiscalité du PEA</h4>
+                                    <p>Le Plan d'Épargne en Actions (PEA) offre une exonération d'impôt sur les plus-values après 5 ans de détention (hors prélèvements sociaux de 17,2%).</p>
+                                    <p><strong>Plafond:</strong> 150 000€ par personne</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Simulation Button -->
+                            <button id="simulate-button" class="simulate-btn" onclick="runSimulation()">
+                                <i class="fas fa-play-circle"></i> Lancer la simulation
+                            </button>
+                        </div>
+                        
+                        <!-- Résultats de la simulation -->
+                        <div class="results-panel">
+                            <div class="panel-header">
+                                <i class="fas fa-chart-line"></i>
+                                <h3 class="panel-title">Résultats de la simulation</h3>
+                            </div>
+                            
+                            <div class="results-summary">
+                                <div class="result-card">
+                                    <div class="result-value" id="capital-final">1 967,15 €</div>
+                                    <div class="result-label">Capital final</div>
+                                </div>
+                                <div class="result-card">
+                                    <div class="result-value" id="total-investi">1 000,00 €</div>
+                                    <div class="result-label">Montant investi</div>
+                                </div>
+                                <div class="result-card">
+                                    <div class="result-value" id="gains-bruts">967,15 €</div>
+                                    <div class="result-label">Gains générés</div>
+                                </div>
+                                <div class="result-card">
+                                    <div class="result-value" id="net-impots">1 800,80 €</div>
+                                    <div class="result-label">Net d'impôts</div>
+                                </div>
+                            </div>
+                            
+                            <div class="chart-container">
+                                <canvas id="investment-chart"></canvas>
+                            </div>
+                            
+                            <!-- Affichage de l'adéquation au profil -->
+                            <div id="suitability-info" class="info-box" style="margin-top: 20px;">
+                                <h4><i class="fas fa-check-circle"></i> Adéquation avec votre profil</h4>
+                                <div id="suitability-content">
+                                    <div class="suitability-badge high">
+                                        Adéquation: 5/5
+                                    </div>
+                                    <ul class="suitability-comments">
+                                        <li>Le PEA est parfaitement adapté pour un investissement de cette durée.</li>
+                                        <li>Votre montant d'investissement est inférieur au plafond du PEA (150 000€).</li>
+                                        <li>Un rendement de 7% correspond aux performances historiques moyennes des indices boursiers.</li>
+                                    </ul>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
-                    <div class="toggle-group" id="investment-type-toggle">
-                        <div class="toggle-option active" data-value="one-time" onclick="toggleInvestmentType(this)">Versement unique</div>
-                        <div class="toggle-option" data-value="monthly" onclick="toggleInvestmentType(this)">Versement mensuel</div>
-                    </div>
-                </div>
-
-                <!-- Investment Duration -->
-                <div class="input-group">
-                    <label for="investment-duration">
-                        Durée d'investissement 
-                        <span class="tooltip">
-                            <i class="fas fa-info-circle"></i>
-                            <span class="tooltip-text">La durée pendant laquelle vous prévoyez de maintenir votre investissement. Plus la période est longue, plus les effets des intérêts composés sont importants.</span>
-                        </span>
-                    </label>
-                    <div class="slider-container">
-                        <div class="slider-row">
-                            <input type="range" id="duration-slider" class="slider" min="1" max="30" value="10" oninput="updateDuration(this.value)">
-                            <span class="slider-value" id="duration-value">10 ans</span>
+                    <!-- Explication des types d'investissement -->
+                    <div class="explanation-panel mt-8">
+                        <div class="panel-header">
+                            <i class="fas fa-graduation-cap"></i>
+                            <h3 class="panel-title">Les différents types d'investissement</h3>
                         </div>
-                        <div class="progress-container">
-                            <div class="progress-bar" id="duration-progress" style="width: 33%;"></div>
+                        
+                        <p>Découvrez les principales options d'investissement disponibles et leurs caractéristiques :</p>
+                        
+                        <div class="investment-types" id="investment-type-cards">
+                            <!-- PEA Card -->
+                            <div class="investment-type-card">
+                                <div class="investment-type-header">
+                                    <i class="fas fa-chart-pie"></i>
+                                    <h4 class="investment-type-title">PEA</h4>
+                                </div>
+                                <p>Plan d'Épargne en Actions permettant d'investir dans des actions européennes avec une fiscalité avantageuse après 5 ans.</p>
+                                <div class="risk-rating">
+                                    <span class="risk-label">Risque :</span>
+                                    <div class="risk-dots">
+                                        <div class="risk-dot active low"></div>
+                                        <div class="risk-dot active medium"></div>
+                                        <div class="risk-dot active medium"></div>
+                                        <div class="risk-dot"></div>
+                                        <div class="risk-dot"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- CTO Card -->
+                            <div class="investment-type-card">
+                                <div class="investment-type-header">
+                                    <i class="fas fa-balance-scale"></i>
+                                    <h4 class="investment-type-title">Compte-Titres</h4>
+                                </div>
+                                <p>Compte d'investissement standard offrant plus de flexibilité sur les titres disponibles, mais avec une fiscalité moins avantageuse.</p>
+                                <div class="risk-rating">
+                                    <span class="risk-label">Risque :</span>
+                                    <div class="risk-dots">
+                                        <div class="risk-dot active low"></div>
+                                        <div class="risk-dot active medium"></div>
+                                        <div class="risk-dot active medium"></div>
+                                        <div class="risk-dot"></div>
+                                        <div class="risk-dot"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Assurance-Vie Card -->
+                            <div class="investment-type-card">
+                                <div class="investment-type-header">
+                                    <i class="fas fa-shield-alt"></i>
+                                    <h4 class="investment-type-title">Assurance-Vie</h4>
+                                </div>
+                                <p>Contrat d'épargne polyvalent offrant des avantages fiscaux qui s'améliorent avec la durée de détention et des options de transmission avantageuses.</p>
+                                <div class="risk-rating">
+                                    <span class="risk-label">Risque :</span>
+                                    <div class="risk-dots">
+                                        <div class="risk-dot active low"></div>
+                                        <div class="risk-dot active medium"></div>
+                                        <div class="risk-dot"></div>
+                                        <div class="risk-dot"></div>
+                                        <div class="risk-dot"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- SCPI Card -->
+                            <div class="investment-type-card">
+                                <div class="investment-type-header">
+                                    <i class="fas fa-building"></i>
+                                    <h4 class="investment-type-title">SCPI</h4>
+                                </div>
+                                <p>Société Civile de Placement Immobilier permettant d'investir indirectement dans l'immobilier locatif avec un ticket d'entrée réduit.</p>
+                                <div class="risk-rating">
+                                    <span class="risk-label">Risque :</span>
+                                    <div class="risk-dots">
+                                        <div class="risk-dot active low"></div>
+                                        <div class="risk-dot active medium"></div>
+                                        <div class="risk-dot"></div>
+                                        <div class="risk-dot"></div>
+                                        <div class="risk-dot"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Crypto Card -->
+                            <div class="investment-type-card">
+                                <div class="investment-type-header">
+                                    <i class="fab fa-bitcoin"></i>
+                                    <h4 class="investment-type-title">Crypto-monnaies</h4>
+                                </div>
+                                <p>Classe d'actifs numériques à forte volatilité offrant un potentiel de rendement élevé mais également des risques importants.</p>
+                                <div class="risk-rating">
+                                    <span class="risk-label">Risque :</span>
+                                    <div class="risk-dots">
+                                        <div class="risk-dot active low"></div>
+                                        <div class="risk-dot active medium"></div>
+                                        <div class="risk-dot active high"></div>
+                                        <div class="risk-dot active high"></div>
+                                        <div class="risk-dot active high"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- PER Card -->
+                            <div class="investment-type-card">
+                                <div class="investment-type-header">
+                                    <i class="fas fa-chart-line"></i>
+                                    <h4 class="investment-type-title">PER</h4>
+                                </div>
+                                <p>Plan d'Épargne Retraite permettant de se constituer une épargne pour la retraite avec des avantages fiscaux à l'entrée.</p>
+                                <div class="risk-rating">
+                                    <span class="risk-label">Risque :</span>
+                                    <div class="risk-dots">
+                                        <div class="risk-dot active low"></div>
+                                        <div class="risk-dot active medium"></div>
+                                        <div class="risk-dot"></div>
+                                        <div class="risk-dot"></div>
+                                        <div class="risk-dot"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="info-box mt-8">
+                            <h4><i class="fas fa-info-circle"></i> L'importance de la diversification</h4>
+                            <p>La diversification est un principe fondamental de l'investissement qui consiste à répartir vos actifs entre différentes classes d'investissement pour réduire les risques. Une allocation bien équilibrée entre actions, obligations, immobilier et liquidités peut vous aider à atteindre vos objectifs financiers tout en minimisant la volatilité globale de votre portefeuille.</p>
                         </div>
                     </div>
-                </div>
-
-                <!-- Annual Return -->
-                <div class="input-group">
-                    <label for="annual-return">
-                        Rendement annuel moyen estimé 
-                        <span class="tooltip">
-                            <i class="fas fa-info-circle"></i>
-                            <span class="tooltip-text">Le taux de rendement annuel estimé varie selon le type d'investissement. Indice boursier: 7-10%, Obligations: 2-5%, Immobilier: 3-7%, Crypto: Très variable (pouvant dépasser 20% ou être négatif).</span>
-                        </span>
-                    </label>
-                    <div class="slider-container">
-                        <div class="slider-row">
-                            <input type="range" id="return-slider" class="slider" min="1" max="15" value="7" oninput="updateReturn(this.value)">
-                            <span class="slider-value" id="return-value">7%</span>
-                        </div>
-                        <div class="progress-container">
-                            <div class="progress-bar" id="return-progress" style="width: 47%;"></div>
-                        </div>
-                        <div class="return-presets">
-                            <a href="#" onclick="return setReturn(2)">Livret A (2%)</a>
-                            <a href="#" onclick="return setReturn(3)">Assurance-Vie FE (3%)</a>
-                            <a href="#" onclick="return setReturn(5)">SCPI (5%)</a>
-                            <a href="#" onclick="return setReturn(7)">ETF Monde (7%)</a>
-                            <a href="#" onclick="return setReturn(10)">Actions (10%)</a>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Investment Vehicle -->
-                <div class="input-group">
-                    <label for="investment-vehicle">
-                        Enveloppe fiscale 
-                        <span class="tooltip">
-                            <i class="fas fa-info-circle"></i>
-                            <span class="tooltip-text">L'enveloppe fiscale influence la taxation des gains générés par votre investissement. Chaque véhicule a des avantages et limites spécifiques.</span>
-                        </span>
-                    </label>
-                    <select id="investment-vehicle" onchange="updateTaxInfo()">
-                        <option value="pea">PEA</option>
-                        <option value="cto">Compte-Titres</option>
-                        <option value="assurance-vie">Assurance-Vie</option>
-                        <option value="per">PER</option>
-                        <option value="scpi">SCPI</option>
-                        <option value="fcpi">FCPI / FIP</option>
-                        <option value="livret-jeune">Livret Jeune</option>
-                        <option value="ldds">LDDS</option>
-                        <option value="lep">LEP</option>
-                        <option value="crypto">Crypto-monnaies</option>
-                    </select>
-
-                    <div id="tax-info" class="tax-info">
-                        <!-- Ce contenu sera mis à jour par la fonction updateTaxInfo() -->
-                    </div>
-                </div>
-
-                <!-- Simulation Button -->
-                <button id="simulate-button" class="simulate-btn" onclick="runSimulation()">
-                    <i class="fas fa-play-circle"></i> Lancer la simulation
-                </button>
-            </div>
-
-            <!-- Results Panel -->
-            <div class="results-panel">
-                <div class="panel-header">
-                    <i class="fas fa-chart-line"></i>
-                    <h3 class="panel-title">Résultats de la simulation</h3>
-                </div>
-
-                <div class="results-summary">
-                    <div class="result-card">
-                        <div class="result-value" id="capital-final">0 €</div>
-                        <div class="result-label">Capital final</div>
-                    </div>
-                    <div class="result-card">
-                        <div class="result-value" id="total-investi">0 €</div>
-                        <div class="result-label">Montant investi</div>
-                    </div>
-                    <div class="result-card">
-                        <div class="result-value" id="gains-bruts">0 €</div>
-                        <div class="result-label">Gains générés</div>
-                    </div>
-                    <div class="result-card">
-                        <div class="result-value" id="net-impots">0 €</div>
-                        <div class="result-label">Net d'impôts</div>
-                    </div>
-                </div>
-
-                <div class="chart-container">
-                    <canvas id="investment-chart"></canvas>
                 </div>
                 
-                <!-- Affichage de l'adéquation au profil -->
-                <div id="suitability-info" class="info-box" style="display: none; margin-top: 20px;">
-                    <h4><i class="fas fa-check-circle"></i> Adéquation avec votre profil</h4>
-                    <div id="suitability-content"></div>
+                <!-- Placeholder pour les autres sections -->
+                <div id="concepts" class="my-16 p-6 bg-gray-800 rounded-xl text-center">
+                    <i class="fas fa-tools text-4xl text-green-400 mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">Concepts de base - Module en développement</h3>
+                    <p>Cette section sera bientôt disponible avec du contenu éducatif complet.</p>
                 </div>
-
-                <div id="simulation-summary" class="info-box" style="margin-top: 20px;">
-                    <h4><i class="fas fa-chart-pie"></i> Analyse de votre investissement</h4>
-                    <p>Remplissez les paramètres et lancez la simulation pour obtenir une analyse détaillée.</p>
+                
+                <div id="analyse-technique" class="my-16 p-6 bg-gray-800 rounded-xl text-center">
+                    <i class="fas fa-tools text-4xl text-green-400 mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">Analyse technique - Module en développement</h3>
+                    <p>Cette section sera bientôt disponible avec du contenu éducatif complet.</p>
                 </div>
-
-                <div>
-                    <button id="export-results" class="export-btn">
-                        <i class="fas fa-file-download"></i> Exporter les résultats en PDF
-                    </button>
-                    <button id="compare-vehicles" class="compare-btn">
-                        <i class="fas fa-balance-scale"></i> Comparer les véhicules
-                    </button>
+                
+                <div id="analyse-fondamentale" class="my-16 p-6 bg-gray-800 rounded-xl text-center">
+                    <i class="fas fa-tools text-4xl text-green-400 mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">Analyse fondamentale - Module en développement</h3>
+                    <p>Cette section sera bientôt disponible avec du contenu éducatif complet.</p>
                 </div>
-            </div>
-
-            <!-- Educational Content -->
-            <div class="explanation-panel">
-                <div class="panel-header">
-                    <i class="fas fa-graduation-cap"></i>
-                    <h3 class="panel-title">Les différents types d'investissement</h3>
+                
+                <div id="fiscalite" class="my-16 p-6 bg-gray-800 rounded-xl text-center">
+                    <i class="fas fa-tools text-4xl text-green-400 mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">Fiscalité des investissements - Module en développement</h3>
+                    <p>Cette section sera bientôt disponible avec du contenu éducatif complet.</p>
                 </div>
-
-                <p>Découvrez les principales options d'investissement disponibles et leurs caractéristiques :</p>
-
-                <div class="investment-types" id="investment-type-cards">
-                    <!-- Ce contenu sera généré dynamiquement par JS -->
-                </div>
-
-                <div class="info-box" style="margin-top: 30px;">
-                    <h4><i class="fas fa-info-circle"></i> L'importance de la diversification</h4>
-                    <p>La diversification est un principe fondamental de l'investissement qui consiste à répartir vos actifs entre différentes classes d'investissement pour réduire les risques. Une allocation bien équilibrée entre actions, obligations, immobilier et liquidités peut vous aider à atteindre vos objectifs financiers tout en minimisant la volatilité globale de votre portefeuille.</p>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Modal de comparaison des véhicules -->
-        <div id="comparison-modal" class="modal">
-            <div class="modal-content">
-                <span class="close-modal">&times;</span>
-                <h2>Comparaison des véhicules d'investissement</h2>
-                <p>Ce tableau vous permet de comparer les caractéristiques des différents véhicules d'investissement disponibles en France.</p>
-                <div id="comparison-table-container">
-                    <!-- Le tableau sera généré dynamiquement par JS -->
+                
+                <div id="gestion-portefeuille" class="my-16 p-6 bg-gray-800 rounded-xl text-center">
+                    <i class="fas fa-tools text-4xl text-green-400 mb-4"></i>
+                    <h3 class="text-xl font-bold mb-2">Gestion de portefeuille - Module en développement</h3>
+                    <p>Cette section sera bientôt disponible avec du contenu éducatif complet.</p>
                 </div>
             </div>
         </div>
     </main>
 
-    <!-- Footer -->
-    <footer class="dashboard-footer">
-        <div class="footer-content">
-            <div class="footer-logo">
-                <div class="pulse-dot"></div>
-                <span class="logo-text">TRADEPULSE</span>
-            </div>
-            <div class="footer-links">
-                <a href="#">Mentions légales</a>
-                <a href="#">Politique de confidentialité</a>
-                <a href="#">Contact</a>
-            </div>
-            <div class="footer-copyright">
-                © 2025 TradePulse | Finance Intelligence Platform
-            </div>
+    <footer class="page-footer">
+        <div class="data-source-info">
+            <p><i class="fas fa-graduation-cap"></i> Contenu éducatif développé par l'équipe TradePulse</p>
+            <p><i class="fas fa-chart-line"></i> Simulations basées sur des données historiques de marché</p>
+            <p><i class="fas fa-clock"></i> Dernière mise à jour: <span class="update-time" id="updateTime">08/04/2025 15:30:22</span></p>
         </div>
     </footer>
 
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script type="module">
-        // Import du module investmentOptions
-        import investmentOptions from './investmentOptions.js';
-        
-        // Rendre le module disponible globalement
-        window.investmentOptions = investmentOptions;
-        
-        // Initialiser les cartes des types d'investissement
-        document.addEventListener('DOMContentLoaded', function() {
-            // Générer les cartes de types d'investissement dynamiquement
-            generateInvestmentTypeCards();
-            
-            // Initialiser l'info de la fiscalité
-            updateTaxInfo();
-        });
-        
-        // Fonction pour générer les cartes de types d'investissement
-        function generateInvestmentTypeCards() {
-            const container = document.getElementById('investment-type-cards');
-            if (!container) return;
-            
-            // Vider le contenu existant
-            container.innerHTML = '';
-            
-            // Sélectionner quelques véhicules clés à afficher (pour ne pas surcharger)
-            const keysToShow = ['pea', 'cto', 'assurance-vie', 'per', 'scpi', 'crypto'];
-            
-            for (const key of keysToShow) {
-                const vehicle = investmentOptions.vehicles[key];
-                if (!vehicle) continue;
-                
-                // Générer les points de risque
-                let riskDotsHtml = '';
-                for (let i = 1; i <= 5; i++) {
-                    const riskClass = i <= vehicle.riskRating 
-                        ? `active ${i > 3 ? 'high' : (i > 1 ? 'medium' : 'low')}` 
-                        : '';
-                    riskDotsHtml += `<div class="risk-dot ${riskClass}"></div>`;
-                }
-                
-                const card = document.createElement('div');
-                card.className = 'investment-type-card';
-                card.innerHTML = `
-                    <div class="investment-type-header">
-                        <i class="${vehicle.icon}"></i>
-                        <h4 class="investment-type-title">${vehicle.name}</h4>
-                    </div>
-                    <p>${vehicle.description}</p>
-                    <div class="risk-rating">
-                        <span class="risk-label">Risque :</span>
-                        <div class="risk-dots">
-                            ${riskDotsHtml}
-                        </div>
-                    </div>
-                `;
-                
-                container.appendChild(card);
-            }
-        }
-    </script>
-    
     <script>
         // Variables globales
-        let investmentType = 'one-time'; // 'one-time' ou 'monthly'
+        let investmentType = 'one-time';
         let chart = null;
+        
+        // Animation du réseau de fond
+        document.addEventListener('DOMContentLoaded', function() {
+            createNetworkBackground();
+            initTheme();
+            updateDuration(10);
+            updateReturn(7);
+            updateTaxInfo();
+            updateDate();
+            
+            // Créer un graphique par défaut
+            createChart();
+        });
+        
+        // Création du réseau de fond
+        function createNetworkBackground() {
+            const networkBackground = document.getElementById('network-background');
+            if (!networkBackground) return;
+            
+            const numNodes = Math.min(Math.floor(window.innerWidth * window.innerHeight / 15000), 40);
+            
+            for (let i = 0; i < numNodes; i++) {
+                const node = document.createElement('div');
+                node.className = 'node';
+                
+                const x = Math.random() * 100;
+                const y = Math.random() * 100;
+                
+                node.style.left = x + '%';
+                node.style.top = y + '%';
+                
+                if (Math.random() < 0.3) {
+                    node.classList.add('pulse');
+                }
+                
+                networkBackground.appendChild(node);
+            }
+        }
+        
+        // Mise à jour de la date
+        function updateDate() {
+            const now = new Date();
+            const day = now.getDate().toString().padStart(2, '0');
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            const year = now.getFullYear();
+            
+            const dateElement = document.getElementById('formatted-date');
+            if (dateElement) {
+                dateElement.textContent = `${day}.${month}.${year}`;
+            }
+            
+            const currentDateElement = document.getElementById('currentDate');
+            if (currentDateElement) {
+                const options = { day: 'numeric', month: 'long', year: 'numeric' };
+                const formattedDate = now.toLocaleDateString('fr-FR', options).toUpperCase();
+                currentDateElement.textContent = formattedDate;
+            }
+            
+            const marketTimeElement = document.getElementById('marketTime');
+            if (marketTimeElement) {
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                const seconds = now.getSeconds().toString().padStart(2, '0');
+                marketTimeElement.textContent = `${hours}:${minutes}:${seconds}`;
+            }
+            
+            const updateTimeElement = document.getElementById('updateTime');
+            if (updateTimeElement) {
+                const dateStr = now.toLocaleDateString('fr-FR');
+                const timeStr = now.toLocaleTimeString('fr-FR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+                updateTimeElement.textContent = `${dateStr} ${timeStr}`;
+            }
+        }
+        
+        // Initialisation du thème
+        function initTheme() {
+            const themeToggleBtn = document.getElementById('theme-toggle-btn');
+            const darkIcon = document.getElementById('dark-icon');
+            const lightIcon = document.getElementById('light-icon');
+            
+            if (themeToggleBtn) {
+                themeToggleBtn.addEventListener('click', function() {
+                    document.body.classList.toggle('dark');
+                    document.body.classList.toggle('light');
+                    document.documentElement.classList.toggle('dark');
+                    
+                    if (document.body.classList.contains('dark')) {
+                        darkIcon.style.display = 'block';
+                        lightIcon.style.display = 'none';
+                        localStorage.setItem('theme', 'dark');
+                    } else {
+                        darkIcon.style.display = 'none';
+                        lightIcon.style.display = 'block';
+                        localStorage.setItem('theme', 'light');
+                    }
+                });
+            }
+        }
         
         // Fonction pour mettre à jour l'affichage de la durée
         function updateDuration(value) {
             document.getElementById('duration-value').textContent = value + ' ans';
-            document.getElementById('duration-progress').style.width = (value / 30 * 100) + '%';
+            if (document.getElementById('duration-progress')) {
+                document.getElementById('duration-progress').style.width = (value / 30 * 100) + '%';
+            }
         }
         
         // Fonction pour mettre à jour l'affichage du rendement
         function updateReturn(value) {
             document.getElementById('return-value').textContent = value + '%';
-            document.getElementById('return-progress').style.width = (value / 15 * 100) + '%';
+            if (document.getElementById('return-progress')) {
+                document.getElementById('return-progress').style.width = (value / 15 * 100) + '%';
+            }
         }
         
         // Fonction pour définir une valeur de rendement prédéfinie
@@ -1368,36 +1353,23 @@
             const slider = document.getElementById('return-slider');
             slider.value = value;
             updateReturn(value);
-            return false; // Empêcher le comportement par défaut du lien
+            return false;
         }
         
         // Fonction pour basculer entre les types d'investissement
         function toggleInvestmentType(element) {
-            // Supprimer la classe active de tous les boutons
             document.querySelectorAll('.toggle-option').forEach(btn => {
                 btn.classList.remove('active');
             });
             
-            // Ajouter la classe active à l'élément cliqué
             element.classList.add('active');
-            
-            // Mettre à jour la variable de type d'investissement
             investmentType = element.getAttribute('data-value');
             
-            // Mettre à jour la classe du toggle-group pour l'animation CSS
             const toggleGroup = document.getElementById('investment-type-toggle');
             if (investmentType === 'monthly') {
                 toggleGroup.classList.add('monthly');
             } else {
                 toggleGroup.classList.remove('monthly');
-            }
-            
-            // Mettre à jour le libellé du montant
-            const label = document.querySelector('label[for="investment-amount"]');
-            if (investmentType === 'one-time') {
-                label.innerHTML = 'Montant d\'investissement <span class="tooltip"><i class="fas fa-info-circle"></i><span class="tooltip-text">Indiquez le montant que vous souhaitez investir en une seule fois.</span></span>';
-            } else {
-                label.innerHTML = 'Montant mensuel <span class="tooltip"><i class="fas fa-info-circle"></i><span class="tooltip-text">Indiquez le montant que vous souhaitez investir chaque mois.</span></span>';
             }
         }
         
@@ -1406,98 +1378,82 @@
             const vehicleType = document.getElementById('investment-vehicle').value;
             const taxInfoDiv = document.getElementById('tax-info');
             
-            // Animation de transition
-            taxInfoDiv.style.opacity = '0';
-            taxInfoDiv.style.transform = 'translateX(-10px)';
+            let taxContent = '';
             
-            setTimeout(() => {
-                // Utiliser le module importé pour obtenir les infos fiscales
-                if (window.investmentOptions) {
-                    taxInfoDiv.innerHTML = window.investmentOptions.getTaxInfo(vehicleType);
-                } else {
-                    // Fallback si le module n'est pas chargé
-                    let taxContent = '';
-                    
-                    switch(vehicleType) {
-                        case 'pea':
-                            taxContent = `
-                                <h4><i class="fas fa-chart-pie"></i> Fiscalité du PEA</h4>
-                                <p>Le Plan d'Épargne en Actions (PEA) offre une exonération d'impôt sur les plus-values après 5 ans de détention (hors prélèvements sociaux de 17,2%).</p>
-                                <p><strong>Plafond:</strong> 150 000€ par personne</p>
-                            `;
-                            break;
-                        case 'cto':
-                            taxContent = `
-                                <h4><i class="fas fa-balance-scale"></i> Fiscalité du Compte-Titres</h4>
-                                <p>Les plus-values sont soumises au Prélèvement Forfaitaire Unique (PFU) de 30% (12,8% d'impôt + 17,2% de prélèvements sociaux) ou au barème progressif de l'impôt sur le revenu.</p>
-                                <p><strong>Plafond:</strong> Aucun</p>
-                            `;
-                            break;
-                        case 'assurance-vie':
-                            taxContent = `
-                                <h4><i class="fas fa-shield-alt"></i> Fiscalité de l'Assurance-Vie</h4>
-                                <p>Taxation avantageuse après 8 ans de détention: seulement 24,7% (7,5% + 17,2% de prélèvements sociaux) sur les gains, avec un abattement annuel de 4 600€ (célibataire) ou 9 200€ (couple).</p>
-                                <p><strong>Plafond:</strong> Aucun</p>
-                            `;
-                            break;
-                        case 'per':
-                            taxContent = `
-                                <h4><i class="fas fa-chart-line"></i> Fiscalité du PER</h4>
-                                <p>Déduction fiscale jusqu'à 10 % des revenus nets imposables. Sortie possible à la retraite ou pour achat résidence principale.</p>
-                                <p><strong>Sortie :</strong> Imposée selon barème ou PFU (30 %), selon les options et types de versements.</p>
-                            `;
-                            break;
-                        case 'scpi':
-                            taxContent = `
-                                <h4><i class="fas fa-building"></i> Fiscalité des SCPI</h4>
-                                <p>Revenus soumis à l'IR + prélèvements sociaux (17,2%). Possibilité d'intégrer dans une Assurance-vie pour bénéficier du taux réduit de 7,5% après 8 ans.</p>
-                                <p><strong>Rendement :</strong> Entre 4 % et 6 % brut en moyenne.</p>
-                            `;
-                            break;
-                        case 'fcpi':
-                            taxContent = `
-                                <h4><i class="fas fa-rocket"></i> Fiscalité des FCPI / FIP</h4>
-                                <p>Réduction d'impôt de 18 % du montant investi (jusqu'à 2 160 € / an pour un célibataire). Blocage de 5 à 10 ans.</p>
-                                <p><strong>Plus-values :</strong> Exonérées d'IR après 5 ans (soumis aux PS).</p>
-                            `;
-                            break;
-                        case 'livret-jeune':
-                            taxContent = `
-                                <h4><i class="fas fa-piggy-bank"></i> Fiscalité du Livret Jeune</h4>
-                                <p>Exonération totale d'impôt et de prélèvements sociaux. Taux ≥ Livret A.</p>
-                                <p><strong>Plafond :</strong> 1 600 €.</p>
-                            `;
-                            break;
-                        case 'ldds':
-                            taxContent = `
-                                <h4><i class="fas fa-leaf"></i> Fiscalité du LDDS</h4>
-                                <p>Épargne réglementée exonérée d'impôt et de PS. Taux net garanti par l'État.</p>
-                                <p><strong>Plafond :</strong> 12 000 €.</p>
-                            `;
-                            break;
-                        case 'lep':
-                            taxContent = `
-                                <h4><i class="fas fa-hand-holding-usd"></i> Fiscalité du LEP</h4>
-                                <p>Exonération totale. Taux élevé (~5 %). Réservé aux revenus modestes.</p>
-                                <p><strong>Plafond :</strong> 10 000 €.</p>
-                            `;
-                            break;
-                        case 'crypto':
-                            taxContent = `
-                                <h4><i class="fab fa-bitcoin"></i> Fiscalité des Crypto-monnaies</h4>
-                                <p>Les plus-values sur crypto-actifs sont soumises au Prélèvement Forfaitaire Unique (PFU) de 30% (12,8% d'impôt + 17,2% de prélèvements sociaux).</p>
-                                <p><strong>Plafond:</strong> Aucun</p>
-                            `;
-                            break;
-                    }
-                    
-                    taxInfoDiv.innerHTML = taxContent;
-                }
-                
-                // Animation de transition
-                taxInfoDiv.style.opacity = '1';
-                taxInfoDiv.style.transform = 'translateX(0)';
-            }, 300);
+            switch(vehicleType) {
+                case 'pea':
+                    taxContent = `
+                        <h4><i class="fas fa-chart-pie"></i> Fiscalité du PEA</h4>
+                        <p>Le Plan d'Épargne en Actions (PEA) offre une exonération d'impôt sur les plus-values après 5 ans de détention (hors prélèvements sociaux de 17,2%).</p>
+                        <p><strong>Plafond:</strong> 150 000€ par personne</p>
+                    `;
+                    break;
+                case 'cto':
+                    taxContent = `
+                        <h4><i class="fas fa-balance-scale"></i> Fiscalité du Compte-Titres</h4>
+                        <p>Les plus-values sont soumises au Prélèvement Forfaitaire Unique (PFU) de 30% (12,8% d'impôt + 17,2% de prélèvements sociaux) ou au barème progressif de l'impôt sur le revenu.</p>
+                        <p><strong>Plafond:</strong> Aucun</p>
+                    `;
+                    break;
+                case 'assurance-vie':
+                    taxContent = `
+                        <h4><i class="fas fa-shield-alt"></i> Fiscalité de l'Assurance-Vie</h4>
+                        <p>Taxation avantageuse après 8 ans de détention: seulement 24,7% (7,5% + 17,2% de prélèvements sociaux) sur les gains, avec un abattement annuel de 4 600€ (célibataire) ou 9 200€ (couple).</p>
+                        <p><strong>Plafond:</strong> Aucun</p>
+                    `;
+                    break;
+                case 'per':
+                    taxContent = `
+                        <h4><i class="fas fa-chart-line"></i> Fiscalité du PER</h4>
+                        <p>Déduction fiscale jusqu'à 10 % des revenus nets imposables. Sortie possible à la retraite ou pour achat résidence principale.</p>
+                        <p><strong>Sortie :</strong> Imposée selon barème ou PFU (30 %), selon les options et types de versements.</p>
+                    `;
+                    break;
+                case 'scpi':
+                    taxContent = `
+                        <h4><i class="fas fa-building"></i> Fiscalité des SCPI</h4>
+                        <p>Revenus soumis à l'IR + prélèvements sociaux (17,2%). Possibilité d'intégrer dans une Assurance-vie pour bénéficier du taux réduit de 7,5% après 8 ans.</p>
+                        <p><strong>Rendement :</strong> Entre 4 % et 6 % brut en moyenne.</p>
+                    `;
+                    break;
+                case 'fcpi':
+                    taxContent = `
+                        <h4><i class="fas fa-rocket"></i> Fiscalité des FCPI / FIP</h4>
+                        <p>Réduction d'impôt de 18 % du montant investi (jusqu'à 2 160 € / an pour un célibataire). Blocage de 5 à 10 ans.</p>
+                        <p><strong>Plus-values :</strong> Exonérées d'IR après 5 ans (soumis aux PS).</p>
+                    `;
+                    break;
+                case 'livret-jeune':
+                    taxContent = `
+                        <h4><i class="fas fa-piggy-bank"></i> Fiscalité du Livret Jeune</h4>
+                        <p>Exonération totale d'impôt et de prélèvements sociaux. Taux ≥ Livret A.</p>
+                        <p><strong>Plafond :</strong> 1 600 €.</p>
+                    `;
+                    break;
+                case 'ldds':
+                    taxContent = `
+                        <h4><i class="fas fa-leaf"></i> Fiscalité du LDDS</h4>
+                        <p>Épargne réglementée exonérée d'impôt et de PS. Taux net garanti par l'État.</p>
+                        <p><strong>Plafond :</strong> 12 000 €.</p>
+                    `;
+                    break;
+                case 'lep':
+                    taxContent = `
+                        <h4><i class="fas fa-hand-holding-usd"></i> Fiscalité du LEP</h4>
+                        <p>Exonération totale. Taux élevé (~5 %). Réservé aux revenus modestes.</p>
+                        <p><strong>Plafond :</strong> 10 000 €.</p>
+                    `;
+                    break;
+                case 'crypto':
+                    taxContent = `
+                        <h4><i class="fab fa-bitcoin"></i> Fiscalité des Crypto-monnaies</h4>
+                        <p>Les plus-values sur crypto-actifs sont soumises au Prélèvement Forfaitaire Unique (PFU) de 30% (12,8% d'impôt + 17,2% de prélèvements sociaux).</p>
+                        <p><strong>Plafond:</strong> Aucun</p>
+                    `;
+                    break;
+            }
+            
+            taxInfoDiv.innerHTML = taxContent;
         }
         
         // Fonction pour formater les montants en euros
@@ -1505,25 +1461,19 @@
             return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(amount);
         }
         
-        // Fonction pour calculer le taux d'imposition en fonction du véhicule et de la durée
+        // Fonction pour calculer le taux d'imposition
         function calculateTaxRate(vehicle, years) {
-            // Utiliser le module importé si disponible
-            if (window.investmentOptions) {
-                return window.investmentOptions.calculateTaxRate(vehicle, years);
-            }
-            
-            // Fallback si le module n'est pas chargé
             switch(vehicle) {
                 case 'pea':
-                    return years >= 5 ? 0.172 : 0.30; // 17.2% après 5 ans, 30% avant
+                    return years >= 5 ? 0.172 : 0.30;
                 case 'assurance-vie':
-                    if (years >= 8) return 0.247; // 24.7% après 8 ans
-                    else if (years >= 4) return 0.275; // 27.5% entre 4 et 8 ans
-                    else return 0.30; // 30% avant 4 ans
+                    if (years >= 8) return 0.247;
+                    else if (years >= 4) return 0.275;
+                    else return 0.30;
                 case 'per':
-                    return 0.30; // on suppose sortie en capital imposée
+                    return 0.30;
                 case 'scpi':
-                    return 0.30; // IR + PS simulé ici
+                    return 0.30;
                 case 'fcpi':
                     return years >= 5 ? 0.172 : 0.30;
                 case 'livret-jeune':
@@ -1531,74 +1481,41 @@
                 case 'lep':
                     return 0.0;
                 default:
-                    return 0.30; // 30% (PFU)
+                    return 0.30;
             }
         }
         
-        // Fonction pour évaluer l'adéquation du véhicule avec le profil
-        function evaluateSuitability(vehicle, amount, years, investmentType) {
-            if (window.investmentOptions) {
-                return window.investmentOptions.evaluateSuitability(vehicle, amount, years, investmentType);
-            }
-            
-            // Fallback simple si le module n'est pas chargé
-            return {
-                score: 3,
-                comments: ["Évaluation d'adéquation non disponible sans le module investmentOptions.js."]
-            };
-        }
-        
-        // Fonction principale de simulation
+        // Fonction pour exécuter la simulation
         function runSimulation() {
-            // Animation pour montrer que le calcul est en cours
             document.getElementById('simulate-button').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Calcul en cours...';
             document.getElementById('simulate-button').disabled = true;
             
-            // Délai court pour permettre l'affichage de l'animation avant le traitement
             setTimeout(() => {
-                // Récupérer les valeurs d'entrée
                 const amount = parseFloat(document.getElementById('investment-amount').value);
                 const years = parseInt(document.getElementById('duration-slider').value);
                 const annualReturn = parseFloat(document.getElementById('return-slider').value) / 100;
                 const vehicle = document.getElementById('investment-vehicle').value;
                 
-                // Vérifier que les valeurs sont correctes
-                if (isNaN(amount) || amount <= 0 || isNaN(years) || years <= 0 || isNaN(annualReturn)) {
-                    alert('Veuillez saisir des valeurs valides pour tous les champs.');
-                    resetSimulateButton();
-                    return;
-                }
-                
-                // Initialiser les tableaux pour le graphique
                 const labels = [];
                 const investedValues = [];
                 const totalValues = [];
                 
-                // Variables pour les calculs
                 let investedAmount = 0;
                 let totalAmount = 0;
                 
-                // Calcul pour chaque année
                 for (let i = 0; i <= years; i++) {
                     labels.push(i === 0 ? 'Départ' : `Année ${i}`);
                     
                     if (i === 0) {
-                        // Valeur initiale
                         investedAmount = investmentType === 'one-time' ? amount : 0;
                         totalAmount = investedAmount;
                     } else {
                         if (investmentType === 'one-time') {
-                            // Investissement unique: juste les intérêts
                             totalAmount = totalAmount * (1 + annualReturn);
                         } else {
-                            // Investissement mensuel
-                            // D'abord les intérêts sur le capital existant
                             totalAmount = totalAmount * (1 + annualReturn);
-                            // Puis ajouter les 12 versements mensuels
                             for (let m = 0; m < 12; m++) {
                                 totalAmount += amount;
-                                // Intérêts sur les versements en cours d'année (simplifié)
-                                totalAmount += amount * (annualReturn / 12) * (12 - m - 1) / 12;
                                 investedAmount += amount;
                             }
                         }
@@ -1608,404 +1525,205 @@
                     totalValues.push(totalAmount);
                 }
                 
-                // Calcul des résultats finaux
                 const finalInvested = investedAmount;
                 const finalTotal = totalAmount;
                 const grossGains = finalTotal - finalInvested;
                 
-                // Calcul du montant net après impôts
                 const taxRate = calculateTaxRate(vehicle, years);
                 const taxAmount = grossGains * taxRate;
                 const netGains = grossGains - taxAmount;
                 const netTotal = finalInvested + netGains;
                 
-                // Mise à jour de l'affichage des résultats avec animation
-                animateValue('capital-final', 0, finalTotal, 1000, formatCurrency);
-                animateValue('total-investi', 0, finalInvested, 1000, formatCurrency);
-                animateValue('gains-bruts', 0, grossGains, 1000, formatCurrency);
-                animateValue('net-impots', 0, netTotal, 1000, formatCurrency);
+                document.getElementById('capital-final').textContent = formatCurrency(finalTotal);
+                document.getElementById('total-investi').textContent = formatCurrency(finalInvested);
+                document.getElementById('gains-bruts').textContent = formatCurrency(grossGains);
+                document.getElementById('net-impots').textContent = formatCurrency(netTotal);
                 
-                // Évaluation de l'adéquation
-                const suitability = evaluateSuitability(vehicle, amount, years, investmentType);
-                updateSuitabilityInfo(suitability, vehicle);
+                updateChart(labels, investedValues, totalValues);
                 
-                // Création ou mise à jour du graphique
-                const ctx = document.getElementById('investment-chart').getContext('2d');
-                
-                if (chart) {
-                    chart.destroy();
-                }
-                
-                // Déterminer les années importantes à mettre en évidence
-                let importantYears = [];
-                if (vehicle === 'pea' && years >= 5) {
-                    importantYears.push({ year: 5, label: 'Exonération PEA' });
-                } else if (vehicle === 'assurance-vie') {
-                    if (years >= 4) importantYears.push({ year: 4, label: 'Fiscalité réduite' });
-                    if (years >= 8) importantYears.push({ year: 8, label: 'Fiscalité avantageuse' });
-                } else if (vehicle === 'fcpi' && years >= 5) {
-                    importantYears.push({ year: 5, label: 'Exonération IR' });
-                }
-                
-                // Créer des annotations pour les années importantes
-                const annotations = {};
-                importantYears.forEach(item => {
-                    annotations[`milestone-${item.year}`] = {
-                        type: 'line',
-                        mode: 'vertical',
-                        scaleID: 'x',
-                        value: `Année ${item.year}`,
-                        borderColor: 'rgba(0, 255, 135, 0.5)',
-                        borderWidth: 2,
-                        label: {
-                            content: item.label,
-                            enabled: true,
-                            position: 'top',
-                            backgroundColor: 'rgba(0, 33, 64, 0.8)',
-                            color: '#fff',
-                            padding: 8,
-                            borderRadius: 4
-                        }
-                    };
-                });
-                
-                chart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: labels,
-                        datasets: [
-                            {
-                                label: 'Capital total',
-                                data: totalValues,
-                                borderColor: '#00FF87',
-                                backgroundColor: 'rgba(0, 255, 135, 0.1)',
-                                fill: true,
-                                tension: 0.4,
-                                borderWidth: 3,
-                                pointBackgroundColor: '#00FF87',
-                                pointBorderColor: '#00FF87',
-                                pointRadius: 4,
-                                pointHoverRadius: 6
-                            },
-                            {
-                                label: 'Montant investi',
-                                data: investedValues,
-                                borderColor: '#2196f3',
-                                backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                                fill: true,
-                                tension: 0.4,
-                                borderWidth: 3,
-                                pointBackgroundColor: '#2196f3',
-                                pointBorderColor: '#2196f3',
-                                pointRadius: 4,
-                                pointHoverRadius: 6
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        animation: {
-                            duration: 1500,
-                            easing: 'easeOutQuart'
-                        },
-                        plugins: {
-                            tooltip: {
-                                mode: 'index',
-                                intersect: false,
-                                backgroundColor: 'rgba(0, 33, 64, 0.8)',
-                                titleColor: '#fff',
-                                bodyColor: '#fff',
-                                borderColor: 'rgba(0, 255, 135, 0.3)',
-                                borderWidth: 1,
-                                padding: 12,
-                                cornerRadius: 8,
-                                titleFont: {
-                                    size: 14,
-                                    weight: 'bold'
-                                },
-                                bodyFont: {
-                                    size: 13
-                                },
-                                callbacks: {
-                                    label: function(context) {
-                                        let label = context.dataset.label || '';
-                                        if (label) {
-                                            label += ': ';
-                                        }
-                                        label += formatCurrency(context.raw);
-                                        return label;
-                                    }
-                                }
-                            },
-                            legend: {
-                                position: 'top',
-                                labels: {
-                                    usePointStyle: true,
-                                    padding: 20,
-                                    font: {
-                                        size: 13
-                                    }
-                                }
-                            },
-                            annotation: {
-                                annotations: annotations
-                            }
-                        },
-                        scales: {
-                            y: {
-                                beginAtZero: true,
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.05)'
-                                },
-                                ticks: {
-                                    callback: function(value) {
-                                        return formatCurrency(value);
-                                    },
-                                    font: {
-                                        size: 11
-                                    }
-                                }
-                            },
-                            x: {
-                                grid: {
-                                    color: 'rgba(255, 255, 255, 0.05)'
-                                },
-                                ticks: {
-                                    font: {
-                                        size: 11
-                                    }
-                                }
-                            }
-                        },
-                        interaction: {
-                            intersect: false,
-                            mode: 'index'
-                        }
-                    }
-                });
-                
-                // Mise à jour du résumé de simulation
-                updateSimulationSummary(amount, years, annualReturn, vehicle, finalInvested, finalTotal, grossGains, netGains, netTotal);
-                
-                // Réinitialiser le bouton
-                resetSimulateButton();
+                document.getElementById('simulate-button').innerHTML = '<i class="fas fa-play-circle"></i> Lancer la simulation';
+                document.getElementById('simulate-button').disabled = false;
             }, 800);
         }
-
-        // Animation des valeurs
-        function animateValue(elementId, start, end, duration, formatter) {
-            const element = document.getElementById(elementId);
-            const range = end - start;
-            const startTime = performance.now();
-            
-            function updateValue(timestamp) {
-                const elapsed = timestamp - startTime;
-                const progress = Math.min(elapsed / duration, 1);
-                
-                // Utiliser une fonction d'easing pour une animation plus naturelle
-                const easeProgress = 1 - Math.pow(1 - progress, 3); // easeOutCubic
-                
-                const currentValue = start + range * easeProgress;
-                element.textContent = formatter ? formatter(currentValue) : Math.round(currentValue);
-                
-                if (progress < 1) {
-                    requestAnimationFrame(updateValue);
-                }
-            }
-            
-            requestAnimationFrame(updateValue);
-        }
-
-        // Réinitialiser le bouton de simulation
-        function resetSimulateButton() {
-            const button = document.getElementById('simulate-button');
-            button.innerHTML = '<i class="fas fa-play-circle"></i> Lancer la simulation';
-            button.disabled = false;
-        }
         
-        // Fonction pour mettre à jour l'évaluation d'adéquation
-        function updateSuitabilityInfo(suitability, vehicle) {
-            const suitabilityInfoDiv = document.getElementById('suitability-info');
-            const suitabilityContentDiv = document.getElementById('suitability-content');
+        // Créer le graphique initial
+        function createChart() {
+            const ctx = document.getElementById('investment-chart').getContext('2d');
             
-            if (!suitabilityInfoDiv || !suitabilityContentDiv) return;
+            const years = 10;
+            const labels = Array.from({length: years + 1}, (_, i) => i === 0 ? 'Départ' : `Année ${i}`);
+            const investedValues = [1000];
+            const totalValues = [1000];
             
-            if (!suitability || suitability.score === 0) {
-                suitabilityInfoDiv.style.display = 'none';
-                return;
+            let total = 1000;
+            for (let i = 1; i <= years; i++) {
+                total *= 1.07;
+                investedValues.push(1000);
+                totalValues.push(total);
             }
             
-            // Déterminer la classe basée sur le score
-            let badgeClass = 'medium';
-            if (suitability.score >= 4) {
-                badgeClass = 'high';
-            } else if (suitability.score <= 2) {
-                badgeClass = 'low';
-            }
-            
-            // Créer le contenu
-            let content = `
-                <div class="suitability-badge ${badgeClass}">
-                    Adéquation: ${suitability.score}/5
-                </div>
-            `;
-            
-            if (suitability.comments && suitability.comments.length > 0) {
-                content += '<ul class="suitability-comments">';
-                suitability.comments.forEach(comment => {
-                    content += `<li>${comment}</li>`;
-                });
-                content += '</ul>';
-            }
-            
-            // Afficher le résultat
-            suitabilityContentDiv.innerHTML = content;
-            suitabilityInfoDiv.style.display = 'block';
-        }
-        
-        // Fonction pour mettre à jour le résumé de simulation
-        function updateSimulationSummary(amount, years, annualReturn, vehicle, finalInvested, finalTotal, grossGains, netGains, netTotal) {
-            const summaryDiv = document.getElementById('simulation-summary');
-            
-            // Animation de transition
-            summaryDiv.style.opacity = '0';
-            summaryDiv.style.transform = 'translateY(10px)';
-            
-            setTimeout(() => {
-                let summaryText = '';
-                const vehicleInfo = window.investmentOptions ? window.investmentOptions.getVehicleInfo(vehicle) : null;
-                const vehicleName = vehicleInfo ? vehicleInfo.name : vehicle;
-                
-                if (investmentType === 'one-time') {
-                    summaryText = `<h4><i class="fas fa-chart-pie"></i> Analyse de votre investissement</h4>
-                    <p>Avec un investissement unique de ${formatCurrency(amount)} dans un ${vehicleName} et un rendement annuel moyen de ${(annualReturn * 100).toFixed(1)}% sur ${years} ans, votre capital atteindrait environ ${formatCurrency(finalTotal)}.</p>
-                    <p>Après impôts, vous disposeriez de ${formatCurrency(netTotal)}, soit un gain net de ${formatCurrency(netGains)}.</p>`;
-                    
-                } else {
-                    const monthlyContributions = years * 12;
-                    summaryText = `<h4><i class="fas fa-chart-pie"></i> Analyse de votre investissement</h4>
-                    <p>Avec des versements mensuels de ${formatCurrency(amount)} sur un ${vehicleName} (soit ${formatCurrency(amount * 12)} par an) et un rendement annuel moyen de ${(annualReturn * 100).toFixed(1)}% sur ${years} ans, votre capital atteindrait environ ${formatCurrency(finalTotal)}.</p>
-                    <p>Après ${monthlyContributions} versements pour un total investi de ${formatCurrency(finalInvested)}, vous auriez généré ${formatCurrency(grossGains)} de gains bruts.</p>
-                    <p>Après impôts, vous disposeriez de ${formatCurrency(netTotal)}, soit un gain net de ${formatCurrency(netGains)}.</p>`;
-                    
-                    const multiplier = (finalTotal / finalInvested).toFixed(2);
-                    summaryText += `<p>Votre investissement serait multiplié par ${multiplier} sur la période.</p>`;
-                }
-                
-                // Ajouter des conseils spécifiques au véhicule
-                if (vehicle === 'pea' && years < 5) {
-                    summaryText += `<p><strong>Conseil :</strong> Envisagez de conserver votre PEA au moins 5 ans pour bénéficier de l'exonération d'impôt sur les plus-values.</p>`;
-                } else if (vehicle === 'assurance-vie' && years < 8) {
-                    summaryText += `<p><strong>Conseil :</strong> Envisagez de conserver votre Assurance-Vie au moins 8 ans pour bénéficier d'une fiscalité plus avantageuse.</p>`;
-                } else if (vehicle === 'per' && years < 10) {
-                    summaryText += `<p><strong>Conseil :</strong> Le PER est particulièrement adapté pour préparer la retraite sur le long terme. Sa fiscalité est optimale si vous êtes dans une tranche marginale d'imposition élevée.</p>`;
-                } else if (vehicle === 'fcpi' && years < 5) {
-                    summaryText += `<p><strong>Conseil :</strong> Les FCPI/FIP nécessitent généralement une durée de blocage de 5 à 10 ans pour bénéficier pleinement des avantages fiscaux.</p>`;
-                } else if (vehicle === 'scpi' && amount < 5000) {
-                    summaryText += `<p><strong>Conseil :</strong> Les SCPI sont généralement accessibles à partir de quelques milliers d'euros. Certaines plateformes permettent d'investir dès 200€ en achetant des fractions de parts.</p>`;
-                } else if (vehicle === 'crypto' && amount > 5000 && investmentType === 'one-time') {
-                    summaryText += `<p><strong>Attention :</strong> Les crypto-monnaies sont très volatiles. Il est recommandé de ne pas y investir plus de 5 à 10% de son patrimoine financier.</p>`;
-                }
-                
-                summaryDiv.innerHTML = summaryText;
-                
-                // Animation de transition
-                summaryDiv.style.opacity = '1';
-                summaryDiv.style.transform = 'translateY(0)';
-            }, 300);
-        }
-        
-        // Modal de comparaison des véhicules
-        document.getElementById('compare-vehicles').addEventListener('click', function() {
-            const modal = document.getElementById('comparison-modal');
-            const tableContainer = document.getElementById('comparison-table-container');
-            
-            // Afficher la modal d'abord pour les animations
-            modal.style.display = 'block';
-            
-            // Ajouter la classe visible après une micro-pause pour déclencher l'animation
-            setTimeout(() => {
-                modal.classList.add('visible');
-            }, 50);
-            
-            // Générer le tableau de comparaison
-            if (window.investmentOptions) {
-                tableContainer.innerHTML = window.investmentOptions.generateComparisonTable();
-            } else {
-                tableContainer.innerHTML = '<p>Le module de comparaison n\'est pas disponible.</p>';
-            }
-            
-            // Fermer la modal lorsqu'on clique sur la croix
-            document.querySelector('.close-modal').addEventListener('click', function() {
-                modal.classList.remove('visible');
-                
-                // Cacher complètement après la fin de l'animation
-                setTimeout(() => {
-                    modal.style.display = 'none';
-                }, 300);
-            });
-            
-            // Fermer la modal en cliquant en dehors
-            window.addEventListener('click', function(event) {
-                if (event.target === modal) {
-                    modal.classList.remove('visible');
-                    
-                    // Cacher complètement après la fin de l'animation
-                    setTimeout(() => {
-                        modal.style.display = 'none';
-                    }, 300);
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Capital total',
+                            data: totalValues,
+                            borderColor: '#00FF87',
+                            backgroundColor: 'rgba(0, 255, 135, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#00FF87',
+                            pointBorderColor: '#00FF87',
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: 'Montant investi',
+                            data: investedValues,
+                            borderColor: '#2196f3',
+                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#2196f3',
+                            pointBorderColor: '#2196f3',
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(0, 33, 64, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: 'rgba(0, 255, 135, 0.3)',
+                            borderWidth: 1,
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += formatCurrency(context.raw);
+                                    return label;
+                                }
+                            }
+                        },
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
                 }
             });
-        });
+        }
         
-        // Fonction pour exporter les résultats (simulée)
-        document.getElementById('export-results').addEventListener('click', function() {
-            // Ajouter un effet visuel au bouton
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Préparation...';
+        // Mise à jour du graphique
+        function updateChart(labels, investedValues, totalValues) {
+            const ctx = document.getElementById('investment-chart').getContext('2d');
             
-            setTimeout(() => {
-                this.innerHTML = '<i class="fas fa-file-download"></i> Exporter les résultats en PDF';
-                alert('Fonctionnalité d\'export PDF en cours de développement. Les résultats seraient exportés dans un document PDF détaillé.');
-            }, 1000);
-        });
-        
-        // Initialisation de la page
-        document.addEventListener('DOMContentLoaded', function() {
-            // Initialiser les valeurs des sliders
-            updateDuration(document.getElementById('duration-slider').value);
-            updateReturn(document.getElementById('return-slider').value);
-            
-            // Initialiser les informations fiscales
-            updateTaxInfo();
-            
-            // Pour le mode sombre/clair (intégration avec l'existant)
-            const toggleThemeBtn = document.getElementById('theme-toggle-btn');
-            const darkIcon = document.getElementById('dark-icon');
-            const lightIcon = document.getElementById('light-icon');
-            
-            if (toggleThemeBtn) {
-                toggleThemeBtn.addEventListener('click', function() {
-                    document.body.classList.toggle('light-theme');
-                    
-                    if (document.body.classList.contains('light-theme')) {
-                        darkIcon.style.display = 'none';
-                        lightIcon.style.display = 'inline-block';
-                    } else {
-                        darkIcon.style.display = 'inline-block';
-                        lightIcon.style.display = 'none';
-                    }
-                    
-                    // Si un graphique existe, le mettre à jour avec les couleurs du thème
-                    if (chart) {
-                        runSimulation();
-                    }
-                });
+            if (chart) {
+                chart.destroy();
             }
             
-            // Exécuter une simulation par défaut
-            runSimulation();
-        });
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: 'Capital total',
+                            data: totalValues,
+                            borderColor: '#00FF87',
+                            backgroundColor: 'rgba(0, 255, 135, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#00FF87',
+                            pointBorderColor: '#00FF87',
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        },
+                        {
+                            label: 'Montant investi',
+                            data: investedValues,
+                            borderColor: '#2196f3',
+                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                            fill: true,
+                            tension: 0.4,
+                            borderWidth: 3,
+                            pointBackgroundColor: '#2196f3',
+                            pointBorderColor: '#2196f3',
+                            pointRadius: 4,
+                            pointHoverRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 1000
+                    },
+                    plugins: {
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(0, 33, 64, 0.8)',
+                            titleColor: '#fff',
+                            bodyColor: '#fff',
+                            borderColor: 'rgba(0, 255, 135, 0.3)',
+                            borderWidth: 1,
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    let label = context.dataset.label || '';
+                                    if (label) {
+                                        label += ': ';
+                                    }
+                                    label += formatCurrency(context.raw);
+                                    return label;
+                                }
+                            }
+                        },
+                        legend: {
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatCurrency(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
     </script>
 </body>
 </html>
