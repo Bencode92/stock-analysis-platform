@@ -123,51 +123,58 @@ def main():
             themes_section = json.dumps(themes_weekly, indent=2, ensure_ascii=False)
             logger.info(f"🔍 {len(themes_weekly)} thèmes dominants identifiés")
 
-        # Construction du prompt expert AMÉLIORÉ
+        # Construction du prompt expert AMÉLIORÉ avec analyse comportementale et perception
         prompt = f"""
-Tu es un stratège en investissement senior travaillant pour une société de gestion d'actifs de premier plan. Ta mission est de générer un brief stratégique qui guidera réellement les décisions d'allocation d'actifs. Tu vas recevoir deux types de données :
+Tu es un stratège senior en allocation d'actifs au sein d'une société de gestion de renom.
 
-1. **Thèmes dominants** (structurés) extraits de plus de 100 articles financiers récents
-2. **Actualités importantes** (résumés de haute importance avec impact et score)
+Tu reçois deux types de données financières :
+1. **Thèmes dominants** extraits de plus de 100 articles économiques (structurés par thème, région, secteur)
+2. **Actualités à fort impact** (Top 25 globales, scorées par importance)
 
-IMPORTANT : Tu es un stratège, pas un journaliste. Tu dois :
-- Croiser les données macro, géopolitiques et sectorielles pour identifier les tendances fondamentales
-- Dégager 2 ou 3 scénarios macro probables avec leurs implications concrètes sur différentes classes d'actifs
-- Déduire quelles classes d'actifs / secteurs risquent d'en bénéficier ou de souffrir dans chaque scénario
-- Identifier où la divergence de perception crée des opportunités (ex: si les marchés anticipent X mais les fondamentaux pointent vers Y)
-
-### Structure du brief :
-1. **Macroéconomie** → Tendances, scénarios probables et leurs conséquences en chaîne (ex: "Si X se produit → Y arrivera → impact Z sur ces actifs")
-2. **Marchés** → Où en sommes-nous dans le cycle ? Quelles rotations sectorielles sont probables selon les scénarios ? 
-3. **Secteurs** → Quels secteurs sont positionnés pour surperformer/sous-performer selon les scénarios identifiés
-4. **Régions clés** → Quelles zones géographiques offrent le meilleur potentiel/risque et pourquoi
-5. **Implications pour l'investisseur** → Conclusions actionnables claires, comme:
-   - Les taux resteront plus hauts que prévu → privilégier value vs growth
-   - Les chaînes d'approvisionnement se régionalisent → opportunités dans semi-conducteurs locaux
-   - Risque géopolitique X → couverture via Y
-
-### Directives de qualité :
-- **Raisonnement en chaîne** : Montre les liens de causalité entre événements et impacts sur les actifs
-- **Projection à différentes échéances** : Distingue impacts court terme (3 mois) et moyen terme (6-12 mois)
-- **Contre-consensus** : Identifie au moins un élément où le marché pourrait avoir tort
-- **Quantification** : Quand possible, donne des ordres de grandeur ("hausse probable des taux de X à Y%")
-- **Priorise la qualité analytique sur le volume** : Mieux vaut 3 insights profonds que 10 observations superficielles
-
-### Format final :
-- Titres clairs par section
-- Bullet points ou paragraphes courts par idée
-- Maximum ~800 tokens
-- Terminer par les "3 convictions majeures pour les 3 prochains mois"
+🎯 **Objectif** : Produire un **brief stratégique à destination d'un comité d'investissement**, clair, synthétique et orienté allocation.
 
 ---
+
+🎓 **Tes missions** :
+
+- Identifier les grandes **dynamiques macro, géopolitiques et sectorielles**
+- Détailler **2 à 3 scénarios macro probables** à 3-12 mois, avec **leurs implications concrètes sur les classes d'actifs**
+- Anticiper les **réactions probables des marchés** (prixant déjà certaines hypothèses)
+- Détecter des **décalages perception / réalité** : où les marchés ou médias se trompent-ils ?
+- Générer **des recommandations actionnables** sur l'allocation (secteurs, zones, classes d'actifs)
+
+---
+
+📐 **Structure du brief attendue** :
+
+1. **Macroéconomie** – Tendances globales, scénarios, causalité économique (ex : "Si X ⇒ alors Y ⇒ impact Z")
+2. **Marchés** – Où en est-on dans le cycle ? Que price le marché ? Quelles rotations sectorielles probables ?
+3. **Secteurs** – Surperformance / sous-performance attendue
+4. **Régions clés** – États-Unis, Europe, Asie, Emergents : quelles zones sur / sous-performent ?
+5. **Implications pour l'investisseur** – Synthèse claire avec recommandations (actions value ? matières premières ? obligations longues ?)
+6. 🧠 **Anticipations vs Réalité** – Mets en évidence 2 ou 3 endroits où la perception du marché semble erronée, et ce que cela implique.
+
+---
+
+⚠️ **Niveau d'exigence** :
+
+- Sois **stratégique et synthétique** (max ~800 tokens)
+- Utilise des **chaînes de raisonnement** (pas seulement des constats)
+- Distingue **court terme (1-3 mois)** vs **moyen terme (6-12 mois)**
+- Intègre la **composante comportementale** : que price déjà le marché ? quelles attentes sont risquées ?
+- N'oublie pas d'inclure une **conclusion avec 3 convictions majeures pour les 3 prochains mois**
+
+---
+
 📂 **Thèmes dominants (30 derniers jours)** :
 {themes_section}
 
 📂 **Actualités importantes (Top 25 globales)** :
 {json.dumps(top_news, indent=2, ensure_ascii=False)}
+
 ---
 
-Fournis-moi un **brief stratégique maintenant**, selon les consignes ci-dessus.
+🧠 Fournis maintenant le **brief stratégique complet**, directement exploitable par une équipe d'asset allocation.
 """
         
         logger.info("🧠 Génération du brief stratégique via OpenAI...")
