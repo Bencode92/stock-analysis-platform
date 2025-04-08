@@ -1063,6 +1063,19 @@ Le document stratégique ci-dessus (brief_ia.json) est ta source d'information p
 
 🎯 Ton objectif est de construire des portefeuilles qui incarnent les convictions du brief tout en restant diversifiés, logiques, et adaptés aux profils de risque (Agressif / Modéré / Stable).
 
+⚠️ **AMÉLIORATIONS CRITIQUES D'ALIGNEMENT AVEC LE BRIEF** :
+1️⃣ **Références explicites obligatoires :**
+   Pour chaque actif sélectionné, indique explicitement s'il est aligné avec le brief stratégique, et avec quelle conviction (ex: récession, hausse budget défense, stabilisation des taux, etc.).
+
+2️⃣ **Restriction des actifs contradictoires :**
+   Ne sélectionne aucun actif cyclique ou spéculatif à moins qu'il soit justifié par une dynamique macro du brief ou un thème identifié (ex : résilience de la Chine ou des pays émergents dans le scénario 2).
+
+3️⃣ **Justifications précises et détaillées :**
+   La section "Choix des actifs" doit justifier chaque actif avec :
+   - lien explicite avec le brief (citer scénario ou conviction précise)
+   - logique sectorielle ou géographique alignée avec le brief
+   - ET potentiel futur (pas uniquement performance passée)
+
 📰 Actualités financières récentes: 
 {filtered_news}
 
@@ -1124,7 +1137,7 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 📰 **Actualités** — Résume objectivement les tendances macroéconomiques ou géopolitiques actuelles (ex. inflation, taux, conflits, croissance).  
 📈 **Marchés** — Analyse les performances récentes des marchés régionaux (Europe, US, Amérique Latine...), en insistant sur les mouvements marquants (hausse, baisse, stabilité).  
 🏭 **Secteurs** — Détaille les secteurs les plus dynamiques ou les plus en retrait selon les données récentes, sans orientation personnelle.  
-📊 **Choix des actifs** — Explique les allocations choisies dans le portefeuille en cohérence avec le profil (Agressif / Modéré / Stable), en s'appuyant uniquement sur les données fournies (ETF, actions, obligations, crypto...).
+📊 **Choix des actifs** — Explique les allocations choisies dans le portefeuille en cohérence avec le profil (Agressif / Modéré / Stable), en s'appuyant uniquement sur les données fournies (ETF, actions, obligations, crypto...). Pour chaque actif, cite OBLIGATOIREMENT le lien avec le brief stratégique.
 
 📌 COHÉRENCE ET LOGIQUE DANS LA CONSTRUCTION DES PORTEFEUILLES :
 - Tous les actifs sélectionnés doivent refléter une **analyse rationnelle** basée sur les données fournies.
