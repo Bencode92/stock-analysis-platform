@@ -11,8 +11,8 @@ from bs4 import BeautifulSoup
 from portfolio_adjuster import check_portfolio_constraints, adjust_portfolios, get_portfolio_prompt_additions, valid_etfs_cache, valid_bonds_cache
 # Importer la fonction de formatage du brief
 from brief_formatter import format_brief_data
-# Importer les améliorations de prompt
-from prompt_enhancement import get_enhanced_reasoning_prompt
+# Supprimer l'import problématique
+# from prompt_enhancement import get_enhanced_reasoning_prompt
 
 def extract_content_from_html(html_file):
     """Extraire le contenu pertinent d'un fichier HTML."""
@@ -1037,8 +1037,9 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
         try:
             # Obtenir les exigences minimales pour les portefeuilles
             minimum_requirements = get_portfolio_prompt_additions()
-            # Récupération des améliorations de raisonnement
-            enhanced_reasoning = get_enhanced_reasoning_prompt()
+            
+            # Modification ici - remplacer l'appel à get_enhanced_reasoning_prompt() par une chaîne vide
+            enhanced_reasoning = ""  # Remplacer par une chaîne vide au lieu d'appeler la fonction
             
             # Construire un prompt avec la whitelist d'ETF obligataires explicite
             prompt = f"""
@@ -1188,21 +1189,21 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 ✅ Le commentaire doit être **adapté au profil de risque** (Agressif / Modéré / Stable) sans forcer une direction (ex: ne dis pas "la techno est à privilégier" sauf si les données le montrent clairement).
 
 📊 Format JSON requis:
-{{
-  "Agressif": {{
+{
+  "Agressif": {
     "Commentaire": "Texte structuré suivant le format top-down demandé",
-    "Actions": {{
+    "Actions": {
       "Nom Précis de l'Action 1": "X%",
       "Nom Précis de l'Action 2": "Y%",
       ...etc (jusqu'à avoir entre 12-15 actifs au total)
-    }},
-    "Crypto": {{ ... }},
-    "ETF": {{ ... }},
-    "Obligations": {{ ... }}
-  }},
-  "Modéré": {{ ... }},
-  "Stable": {{ ... }}
-}}
+    },
+    "Crypto": { ... },
+    "ETF": { ... },
+    "Obligations": { ... }
+  },
+  "Modéré": { ... },
+  "Stable": { ... }
+}
 
 ⚠️ CRITÈRES DE VALIDATION (ABSOLUMENT REQUIS) :
 - Chaque portefeuille DOIT contenir EXACTEMENT entre 12 et 15 actifs au total, PAS MOINS, PAS PLUS
