@@ -85,6 +85,36 @@ def call_openai_api(prompt):
         logger.error(f"❌ Erreur lors de l'appel à l'API OpenAI: {str(e)}")
         raise
 
+def synthesize_news(news_list):
+    """Synthétise les actualités pour optimiser l'utilisation des tokens."""
+    logger.info("🔄 Synthétisation des actualités pour optimisation des tokens...")
+    
+    simplified_news = []
+    for item in news_list:
+        # Créer une version optimisée de chaque actualité
+        news_item = {
+            "titre": item.get("title", "")[:150],
+            "date": item.get("date", ""),
+            "catégorie": item.get("category", ""),
+            "score": item.get("importance_score", item.get("score", 0)),
+            "région": item.get("region", ""),
+            "sentiment": item.get("sentiment", "")
+        }
+        
+        # Ajouter une synthèse courte du contenu si disponible
+        if "summary" in item and item["summary"]:
+            news_item["résumé"] = item["summary"][:200] + ("..." if len(item["summary"]) > 200 else "")
+        elif "content" in item and item["content"]:
+            # Extraire première phrase ou les premiers 150 caractères
+            content = item["content"]
+            first_sentence = content.split(". ")[0] + "."
+            news_item["extrait"] = first_sentence[:200] + ("..." if len(first_sentence) > 200 else "")
+        
+        simplified_news.append(news_item)
+    
+    logger.info(f"✅ {len(simplified_news)} actualités synthétisées pour optimisation des tokens")
+    return simplified_news
+
 def main():
     """Fonction principale pour générer le brief stratégique."""
     try:
@@ -123,9 +153,12 @@ def main():
         
         # Ne garder que les articles au-dessus d'un seuil raisonnable (ou au moins 30)
         news_cutoff = [n for n in sorted_news if n.get("importance_score", 0) >= 5 or n.get("score", 0) >= 5]
-        top_news = news_cutoff[:70] if len(news_cutoff) >= 30 else sorted_news[:50]
+        top_news = news_cutoff[:100] if len(news_cutoff) >= 30 else sorted_news[:70]
         
         logger.info(f"🔝 Sélection de {len(top_news)} actualités pertinentes")
+        
+        # OPTIMISATION: Synthétiser les actualités pour réduire la consommation de tokens
+        synthesized_news = synthesize_news(top_news)
         
         # Extraction des thèmes dominants
         themes_weekly = themes_data.get("themes", {}).get("weekly", [])
@@ -154,7 +187,7 @@ Tu es un stratège senior en allocation d'actifs au sein d'une société de gest
 
 Tu reçois deux types de données financières :
 1. **Thèmes dominants** extraits de plus de 100 articles économiques (structurés par thème, région, secteur)
-2. **Actualités à fort impact** (Top {len(top_news)} globales, scorées par importance)
+2. **Actualités à fort impact** (Top {len(synthesized_news)} globales, scorées par importance, en format synthétisé)
 
 🎯 **Objectif** : Produire un **brief stratégique à destination d'un comité d'investissement**, clair, synthétique et orienté allocation.
 
@@ -177,10 +210,19 @@ Tu reçois deux types de données financières :
 📐 **Structure du brief attendue** :
 
 1. **Macroéconomie** – Tendances globales, scénarios, causalité économique (ex : "Si X ⇒ alors Y ⇒ impact Z")
+   - Pour chaque scénario, AJOUTE UN TITRE EXPLICITE, par exemple : 
+     * Scénario 1 : "Récession modérée" (probabilité élevée)
+     * Scénario 2 : "Stabilisation progressive" (probabilité moyenne)
+     * Scénario 3 : "Rebond optimiste" (probabilité faible)
+
 2. **Marchés** – Où en est-on dans le cycle ? Que price le marché ? Quelles rotations sectorielles probables ?
+
 3. **Secteurs** – Surperformance / sous-performance attendue
+
 4. **Régions clés** – États-Unis, Europe, Asie, Emergents : quelles zones sur / sous-performent ?
+
 5. **Implications pour l'investisseur** – Synthèse claire avec recommandations (actions value ? matières premières ? obligations longues ?)
+
 6. 🧠 **Anticipations vs Réalité** – Mets en évidence 2 ou 3 endroits où la perception du marché semble erronée, et ce que cela implique.
 
 ---
@@ -191,15 +233,16 @@ Tu reçois deux types de données financières :
 - Utilise des **chaînes de raisonnement** (pas seulement des constats)
 - Distingue **court terme (1-3 mois)** vs **moyen terme (6-12 mois)**
 - Intègre la **composante comportementale** : que price déjà le marché ? quelles attentes sont risquées ?
-- N'oublie pas d'inclure une **conclusion avec 3 convictions majeures pour les 3 prochains mois**
+- IMPORTANT: En conclusion, inclure **3 convictions majeures avec une nuance temporelle claire**
+  Par exemple: "Privilégier les obligations à long terme sur les 3 prochains mois en anticipation d'une baisse des taux dans le courant de l'été."
 
 ---
 
 📂 **Thèmes dominants (30 derniers jours)** :
 {themes_section}
 
-📂 **Actualités importantes (Top {len(top_news)} globales)** :
-{json.dumps(top_news, indent=2, ensure_ascii=False)}
+📂 **Actualités importantes (Top {len(synthesized_news)} globales, format synthétisé)** :
+{json.dumps(synthesized_news, indent=2, ensure_ascii=False)}
 
 ---
 
@@ -217,7 +260,8 @@ Tu reçois deux types de données financières :
             "generated_at": datetime.datetime.now().isoformat(),
             "source": {
                 "themes_count": len(themes_weekly),
-                "news_count": len(top_news)
+                "news_count": len(synthesized_news),
+                "original_news_count": len(top_news)
             }
         }
         
