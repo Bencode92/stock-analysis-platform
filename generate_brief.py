@@ -211,6 +211,10 @@ Tu reçois plusieurs types de données financières :
 - Détecter des **décalages perception / réalité** : où les marchés ou médias se trompent-ils ?
 - Générer **des recommandations actionnables** sur l'allocation (secteurs, zones, classes d'actifs)
 - Utiliser les données de marché et sectorielles comme points de repère factuels dans tes anticipations
+- Identifier les risques clés qui pourraient modifier les scénarios présentés
+- Lister les métriques et événements importants à surveiller dans les semaines à venir
+- Intégrer des chiffres clés des données de marché et sectorielles pour renforcer l'analyse
+- Formuler une recommandation explicite sur la position en liquidité/cash à maintenir
 
 ---
 
@@ -223,14 +227,21 @@ Tu reçois plusieurs types de données financières :
      * Scénario 3 : "Rebond optimiste" (probabilité faible)
 
 2. **Marchés** – Où en est-on dans le cycle ? Que price le marché ? Quelles rotations sectorielles probables ?
+   - INTÈGRE DES CHIFFRES CLÉS, comme "Les indices boursiers ont perdu en moyenne -3% cette semaine" ou "le taux 10 ans US est descendu à 3,25%"
 
 3. **Secteurs** – Surperformance / sous-performance attendue
+   - CITE DES DONNÉES CONCRÈTES, par exemple "Le secteur technologique a surperformé de +5,2% le mois dernier"
 
 4. **Régions clés** – États-Unis, Europe, Asie, Emergents : quelles zones sur / sous-performent ?
 
 5. **Implications pour l'investisseur** – Synthèse claire avec recommandations (actions value ? matières premières ? obligations longues ?)
+   - INCLURE UNE POSITION SUR LA LIQUIDITÉ/CASH, par exemple "Maintenir 15% de liquidités pour saisir les opportunités en cas de correction"
 
 6. 🧠 **Anticipations vs Réalité** – Mets en évidence 2 ou 3 endroits où la perception du marché semble erronée, et ce que cela implique.
+
+7. 🔺 **Risques clés** – Quels sont les 3 à 5 principaux risques à surveiller ?
+
+8. 📊 **Facteurs déterminants du marché** – Quelles seront les métriques ou annonces à suivre dans les semaines à venir ?
 
 ---
 
@@ -240,8 +251,10 @@ Tu reçois plusieurs types de données financières :
 - Utilise des **chaînes de raisonnement** (pas seulement des constats)
 - Distingue **court terme (1-3 mois)** vs **moyen terme (6-12 mois)**
 - Intègre la **composante comportementale** : que price déjà le marché ? quelles attentes sont risquées ?
-- IMPORTANT: En conclusion, inclure **3 convictions majeures avec une nuance temporelle claire**
-  Par exemple: "Privilégier les obligations à long terme sur les 3 prochains mois en anticipation d'une baisse des taux dans le courant de l'été."
+- IMPORTANT: En conclusion, inclure **3 convictions majeures avec une nuance temporelle précise**:
+  - Utiliser des mois précis plutôt que "3 prochains mois" (ex: "Entre mai et juillet 2025")
+  - Ajouter une raison d'action immédiate et lier à des événements spécifiques
+  - Exemple amélioré: "Entre avril et juin, les obligations longues offrent un couple rendement/risque attractif en anticipation d'une détente monétaire début été."
 
 ---
 
