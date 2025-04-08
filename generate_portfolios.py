@@ -9,10 +9,6 @@ import re
 from bs4 import BeautifulSoup
 # Importer les fonctions d'ajustement des portefeuilles
 from portfolio_adjuster import check_portfolio_constraints, adjust_portfolios, get_portfolio_prompt_additions, valid_etfs_cache, valid_bonds_cache
-# Importer la fonction de formatage du brief
-from brief_formatter import format_brief_data
-# Supprimer l'import problématique
-# from prompt_enhancement import get_enhanced_reasoning_prompt
 
 def extract_content_from_html(html_file):
     """Extraire le contenu pertinent d'un fichier HTML."""
@@ -965,7 +961,7 @@ if (window.recordDebugFile) {{
     
     return debug_file, html_file
 
-def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data=None, themes_data=None, brief_data=None):
+def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data=None, themes_data=None):
     """Génère trois portefeuilles optimisés en combinant les données fournies et le contexte actuel du marché."""
     api_key = os.environ.get('API_CHAT')
     if not api_key:
@@ -984,8 +980,6 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     filtered_crypto = filter_crypto_data(crypto_data) if crypto_data else "Aucune donnée de crypto-monnaie disponible"
     # Ajouter le filtrage des tendances thématiques
     filtered_themes = filter_themes_data(themes_data) if themes_data else "Aucune donnée de tendances thématiques disponible"
-    # Traiter le résumé d'actualités complet
-    filtered_brief = format_brief_data(brief_data) if brief_data else "Aucun résumé d'actualités complet disponible"
     
     # Formater la liste des ETF obligataires pour le prompt
     bond_etf_list = "\n".join([f"- {name}" for name in bond_etf_names])
@@ -993,7 +987,6 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     # Ajouter des logs pour déboguer les entrées
     print(f"🔍 Longueur des données FILTRÉES:")
     print(f"  📰 Actualités: {len(filtered_news)} caractères")
-    print(f"  📜 Résumé d'actualités complet: {len(filtered_brief)} caractères")
     print(f"  📈 Marché: {len(filtered_markets)} caractères")
     print(f"  🏭 Secteurs: {len(filtered_sectors)} caractères")
     print(f"  📋 Listes: {len(filtered_lists)} caractères")
@@ -1005,8 +998,6 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     print("\n===== APERÇU DES DONNÉES FILTRÉES =====")
     print("\n----- ACTUALITÉS (données filtrées) -----")
     print(filtered_news[:200] + "..." if len(filtered_news) > 200 else filtered_news)
-    print("\n----- RÉSUMÉ D'ACTUALITÉS COMPLET (données filtrées) -----")
-    print(filtered_brief[:200] + "..." if len(filtered_brief) > 200 else filtered_brief)
     print("\n----- MARCHÉS (données filtrées) -----")
     print(filtered_markets[:200] + "..." if len(filtered_markets) > 200 else filtered_markets)
     print("\n----- SECTEURS (données filtrées) -----")
@@ -1038,32 +1029,11 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
             # Obtenir les exigences minimales pour les portefeuilles
             minimum_requirements = get_portfolio_prompt_additions()
             
-            # Modification ici - remplacer l'appel à get_enhanced_reasoning_prompt() par une chaîne vide
-            enhanced_reasoning = ""  # Remplacer par une chaîne vide au lieu d'appeler la fonction
-            
             # Construire un prompt avec la whitelist d'ETF obligataires explicite
             prompt = f"""
 Tu es un expert en gestion de portefeuille. Tu dois IMPÉRATIVEMENT créer TROIS portefeuilles contenant EXACTEMENT entre 12 et 15 actifs CHACUN.
 
 Utilise ces données filtrées pour générer les portefeuilles :
-
-📜 RÉSUMÉ COMPLET DE L'ACTUALITÉ FINANCIÈRE: 
-{filtered_brief}
-
-⚠️ **Le brief stratégique ci-dessus est la référence principale.** Il contient les convictions macroéconomiques les plus actuelles, basées sur une analyse synthétique des risques, des scénarios économiques et des priorités géographiques/sectorielles. Tu dois en tenir compte **avant toute autre source** pour justifier la construction des portefeuilles. 
-🎯 Chaque actif sélectionné doit être : 
-1. **Aligné avec au moins une conviction forte du brief stratégique** 
-2. Justifié de manière claire dans la section "Choix des actifs", avec référence explicite au brief si nécessaire 
-3. Cohérent avec le scénario dominant (ex : "récession modérée" ➝ actifs défensifs, obligations souveraines, cash…) 
-
-🚫 Tu ne dois **jamais** sélectionner un actif si : 
-- Il est en contradiction avec le brief (ex : secteur cyclique en période de stress macro) 
-- Il n'est justifié que par sa performance brute (ex : YTD +80%) sans alignement avec le contexte macro/sectoriel 
-
-💡 Exemple de bonne logique : 
-> "Malgré une performance modeste, le secteur des services publics est recommandé dans le brief stratégique comme défensif en période de récession, ce qui justifie son inclusion." 
-
-🧠 Tu dois utiliser le brief stratégique comme un **filtre décisionnel principal**, pas comme une simple information.
 
 📰 Actualités financières récentes: 
 {filtered_news}
@@ -1141,8 +1111,6 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 - ⚠️ L'IA doit analyser les données de manière **contextuelle et stratégique**, en **croisant toutes les sources** (actualités, marchés, secteurs, performance, ETF filtrés…).
 - La sélection doit refléter une **lecture intelligente des tendances en cours ou en formation**, pas une simple extrapolation du passé.
 
-{enhanced_reasoning}
-
 🚫 Tu NE DOIS PAS prioriser un actif simplement en raison de sa performance récente (ex : +80% YTD). 
 👉 Cette performance passée n'est PAS un indicateur suffisant. Tu dois d'abord évaluer si :
    - L'actualité valide ou remet en question cette tendance
@@ -1189,21 +1157,21 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 ✅ Le commentaire doit être **adapté au profil de risque** (Agressif / Modéré / Stable) sans forcer une direction (ex: ne dis pas "la techno est à privilégier" sauf si les données le montrent clairement).
 
 📊 Format JSON requis:
-{
-  "Agressif": {
+{{
+  "Agressif": {{
     "Commentaire": "Texte structuré suivant le format top-down demandé",
-    "Actions": {
+    "Actions": {{
       "Nom Précis de l'Action 1": "X%",
       "Nom Précis de l'Action 2": "Y%",
       ...etc (jusqu'à avoir entre 12-15 actifs au total)
-    },
-    "Crypto": { ... },
-    "ETF": { ... },
-    "Obligations": { ... }
-  },
-  "Modéré": { ... },
-  "Stable": { ... }
-}
+    }},
+    "Crypto": {{ ... }},
+    "ETF": {{ ... }},
+    "Obligations": {{ ... }}
+  }},
+  "Modéré": {{ ... }},
+  "Stable": {{ ... }}
+}}
 
 ⚠️ CRITÈRES DE VALIDATION (ABSOLUMENT REQUIS) :
 - Chaque portefeuille DOIT contenir EXACTEMENT entre 12 et 15 actifs au total, PAS MOINS, PAS PLUS
@@ -1364,24 +1332,8 @@ def main():
     # Ajouter le chargement des tendances thématiques
     themes_data = load_json_data('data/themes.json')
     
-    # Essayer de charger le résumé d'actualités complet depuis différents emplacements possibles
-    brief_data = None
-    brief_paths = ['brief_ia.json', './brief_ia.json', 'data/brief_ia.json']
-    
-    for path in brief_paths:
-        try:
-            with open(path, 'r', encoding='utf-8') as file:
-                brief_data = json.load(file)
-                print(f"✅ Résumé d'actualités chargé avec succès depuis {path}")
-                break
-        except Exception as e:
-            print(f"⚠️ Impossible de charger {path}: {str(e)}")
-    
-    if brief_data is None:
-        print("⚠️ Aucun fichier brief_ia.json trouvé parmi les chemins testés")
-    
     print("🧠 Génération des portefeuilles optimisés...")
-    portfolios = generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data, themes_data, brief_data)
+    portfolios = generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data, themes_data)
     
     print("💾 Sauvegarde des portefeuilles...")
     save_portfolios(portfolios)
@@ -1396,7 +1348,7 @@ def load_json_data(file_path):
             print(f"✅ Données JSON chargées avec succès depuis {file_path}")
             return data
     except Exception as e:
-        print(f"⚠️ Attention: Erreur lors du chargement de {file_path}: {str(e)}")
+        print(f"❌ Erreur lors du chargement de {file_path}: {str(e)}")
         return {}
 
 if __name__ == "__main__":
