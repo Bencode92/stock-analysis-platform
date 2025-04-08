@@ -11,6 +11,8 @@ from bs4 import BeautifulSoup
 from portfolio_adjuster import check_portfolio_constraints, adjust_portfolios, get_portfolio_prompt_additions, valid_etfs_cache, valid_bonds_cache
 # Importer la fonction de formatage du brief
 from brief_formatter import format_brief_data
+# Importer les améliorations de prompt
+from prompt_enhancement import get_enhanced_reasoning_prompt
 
 def extract_content_from_html(html_file):
     """Extraire le contenu pertinent d'un fichier HTML."""
@@ -1035,6 +1037,8 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
         try:
             # Obtenir les exigences minimales pour les portefeuilles
             minimum_requirements = get_portfolio_prompt_additions()
+            # Récupération des améliorations de raisonnement
+            enhanced_reasoning = get_enhanced_reasoning_prompt()
             
             # Construire un prompt avec la whitelist d'ETF obligataires explicite
             prompt = f"""
@@ -1120,6 +1124,8 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
 - Le but est d'**anticiper intelligemment** : un actif faiblement valorisé mais soutenu par **des données cohérentes et des dynamiques récentes** peut offrir **plus de potentiel** qu'un actif déjà en haut du cycle.
 - ⚠️ L'IA doit analyser les données de manière **contextuelle et stratégique**, en **croisant toutes les sources** (actualités, marchés, secteurs, performance, ETF filtrés…).
 - La sélection doit refléter une **lecture intelligente des tendances en cours ou en formation**, pas une simple extrapolation du passé.
+
+{enhanced_reasoning}
 
 🚫 Tu NE DOIS PAS prioriser un actif simplement en raison de sa performance récente (ex : +80% YTD). 
 👉 Cette performance passée n'est PAS un indicateur suffisant. Tu dois d'abord évaluer si :
