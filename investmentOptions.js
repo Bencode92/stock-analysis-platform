@@ -438,11 +438,107 @@ const investmentOptions = {
     },
 
     /**
+     * Génère des cartes visuelles pour les types d'investissement
+     * @return {string} HTML contenant les cartes des types d'investissement
+     */
+    generateInvestmentTypeCards: function() {
+        let html = '';
+        
+        // Sélectionner quelques véhicules clés à afficher
+        const keysToShow = ['pea', 'cto', 'assurance-vie', 'per', 'scpi', 'crypto'];
+        
+        for (const key of keysToShow) {
+            const vehicle = this.vehicles[key];
+            if (!vehicle) continue;
+            
+            // Déterminer la classe de risque
+            let riskClass = 'medium';
+            if (vehicle.riskRating <= 2) {
+                riskClass = 'low';
+            } else if (vehicle.riskRating >= 4) {
+                riskClass = 'high';
+            }
+            
+            // Générer les points de risque
+            let riskDotsHtml = '';
+            for (let i = 1; i <= 5; i++) {
+                const riskDotClass = i <= vehicle.riskRating 
+                    ? `active ${i > 3 ? 'high' : (i > 1 ? 'medium' : 'low')}` 
+                    : '';
+                riskDotsHtml += `<div class="risk-dot ${riskDotClass}"></div>`;
+            }
+            
+            // Déterminer le rendement avec visuel
+            const rendementClass = vehicle.averageYield.average > 8 ? 'high' : 
+                (vehicle.averageYield.average > 4 ? 'medium' : 'low');
+            
+            html += `
+            <div class="investment-type-card">
+                <span class="risk-badge ${riskClass}">Risque: ${vehicle.riskRating}/5</span>
+                <div class="investment-type-header">
+                    <i class="${vehicle.icon}"></i>
+                    <h4 class="investment-type-title">${vehicle.name}</h4>
+                </div>
+                <p>${vehicle.description}</p>
+                
+                <div class="vehicle-metrics">
+                    <div class="metric-item">
+                        <span class="metric-label">Liquidité:</span>
+                        <div class="metric-value">
+                            <div class="risk-dots">
+                                ${Array(5).fill().map((_, i) => 
+                                    `<div class="risk-dot ${i < vehicle.liquidityRating ? 'active low' : ''}"></div>`
+                                ).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-item">
+                        <span class="metric-label">Rendement moyen:</span>
+                        <div class="metric-value">
+                            <span class="rendement-value ${rendementClass}">${vehicle.averageYield.average}%</span>
+                            <span class="rendement-range">(${vehicle.averageYield.min}%-${vehicle.averageYield.max}%)</span>
+                        </div>
+                    </div>
+                    
+                    <div class="metric-item">
+                        <span class="metric-label">Durée recommandée:</span>
+                        <div class="metric-value">
+                            <span class="duration-badge">${typeof vehicle.recommendedDuration === 'number' ? 
+                                vehicle.recommendedDuration + ' ans' : vehicle.recommendedDuration}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `;
+        }
+        
+        return html;
+    },
+
+    /**
      * Génère un tableau comparatif des véhicules d'investissement
      * @return {string} HTML du tableau comparatif
      */
     generateComparisonTable: function() {
         let html = `
+        <div class="comparison-filters">
+            <button class="filter-button active" data-filter="all">Tous</button>
+            <button class="filter-button" data-filter="safe">Sécurisés</button>
+            <button class="filter-button" data-filter="growth">Croissance</button>
+            <button class="filter-button" data-filter="tax">Optimisation fiscale</button>
+        </div>
+        
+        <div class="comparison-help">
+            <h4><i class="fas fa-lightbulb"></i> Comment utiliser ce tableau</h4>
+            <p>Ce tableau vous permet de comparer facilement les caractéristiques des différents véhicules d'investissement. Utilisez les filtres ci-dessus pour affiner votre sélection selon vos besoins.</p>
+            <ul>
+                <li>Le <strong>risque</strong> indique la volatilité potentielle de l'investissement.</li>
+                <li>La <strong>liquidité</strong> représente la facilité à récupérer son capital sans pénalité.</li>
+                <li>Le <strong>rendement moyen</strong> est une estimation basée sur les performances historiques.</li>
+            </ul>
+        </div>
+        
         <div class="comparison-table-container">
             <table class="comparison-table">
                 <thead>
@@ -479,9 +575,19 @@ const investmentOptions = {
                     liquidityHtml += `<span class="risk-dot"></span>`;
                 }
             }
+
+            // Ajout de badges visuels pour la fiscalité
+            let taxHtml = '';
+            if (vehicle.taxRates.default === 0) {
+                taxHtml = `<span class="zero-tax-badge">Exonérée</span>`;
+            } else if (vehicle.taxExemptionDuration) {
+                taxHtml = `<span class="duration-badge">Avantageuse après ${vehicle.taxExemptionDuration} ans</span>`;
+            } else {
+                taxHtml = `<span class="ceiling-badge">Standard (${vehicle.taxRates.default * 100}%)</span>`;
+            }
             
             html += `
-                <tr>
+                <tr data-vehicle="${key}">
                     <td>
                         <div class="vehicle-name">
                             <i class="${vehicle.icon}"></i>
@@ -500,8 +606,13 @@ const investmentOptions = {
                             ${liquidityHtml}
                         </div>
                     </td>
-                    <td>${vehicle.taxExemptionDuration ? 'Avantageuse après ' + vehicle.taxExemptionDuration + ' ans' : (vehicle.taxRates.default === 0 ? 'Exonérée' : 'Standard')}</td>
-                    <td>${vehicle.averageYield.average}% (${vehicle.averageYield.min}%-${vehicle.averageYield.max}%)</td>
+                    <td>${taxHtml}</td>
+                    <td>
+                        <span class="rendement-value ${vehicle.averageYield.average > 8 ? 'high' : (vehicle.averageYield.average > 4 ? 'medium' : 'low')}">
+                            ${vehicle.averageYield.average}%
+                        </span>
+                        <span class="rendement-range">(${vehicle.averageYield.min}%-${vehicle.averageYield.max}%)</span>
+                    </td>
                 </tr>
             `;
         }
@@ -510,6 +621,50 @@ const investmentOptions = {
                 </tbody>
             </table>
         </div>
+        
+        <script>
+            // Script pour filtrer le tableau
+            document.querySelectorAll('.filter-button').forEach(button => {
+                button.addEventListener('click', function() {
+                    // Retirer la classe active de tous les boutons
+                    document.querySelectorAll('.filter-button').forEach(btn => {
+                        btn.classList.remove('active');
+                    });
+                    
+                    // Ajouter la classe active au bouton cliqué
+                    this.classList.add('active');
+                    
+                    // Filtrer le tableau
+                    const filter = this.getAttribute('data-filter');
+                    filterComparisonTable(filter);
+                });
+            });
+            
+            function filterComparisonTable(filter) {
+                const rows = document.querySelectorAll('.comparison-table tbody tr');
+                
+                rows.forEach(row => {
+                    const vehicle = row.getAttribute('data-vehicle');
+                    const risk = row.querySelectorAll('.risk-dot.active').length;
+                    
+                    switch(filter) {
+                        case 'safe':
+                            row.style.display = risk <= 2 ? '' : 'none';
+                            break;
+                        case 'growth':
+                            row.style.display = risk >= 3 ? '' : 'none';
+                            break;
+                        case 'tax':
+                            const taxCell = row.querySelectorAll('td')[5].textContent;
+                            row.style.display = taxCell.includes('Avantageuse') || taxCell.includes('Exonérée') ? '' : 'none';
+                            break;
+                        default:
+                            row.style.display = '';
+                            break;
+                    }
+                });
+            }
+        </script>
         `;
         
         return html;
@@ -557,6 +712,72 @@ const investmentOptions = {
         }
         
         return advice;
+    },
+
+    /**
+     * Génère du contenu éducatif sur l'investissement
+     * @return {string} HTML contenant le contenu éducatif
+     */
+    generateEducationalContent: function() {
+        return `
+        <div class="education-content theme-card">
+            <div class="section-badge">
+                <i class="fas fa-book"></i>
+                <span>Guide d'investissement</span>
+            </div>
+            <h3>Principes fondamentaux d'investissement</h3>
+            
+            <div class="education-grid">
+                <div class="education-card">
+                    <div class="education-card-header">
+                        <i class="fas fa-chart-line"></i>
+                        <h4>Intérêts composés</h4>
+                    </div>
+                    <p>Les intérêts composés sont souvent appelés la "8ème merveille du monde". Il s'agit des intérêts générés non seulement sur votre capital initial, mais aussi sur les intérêts déjà accumulés.</p>
+                    <div class="card-footer">
+                        <span class="tip-tag">Conseil clé</span>
+                        <p>Plus vous commencez tôt, plus l'effet des intérêts composés sera puissant sur le long terme.</p>
+                    </div>
+                </div>
+                
+                <div class="education-card">
+                    <div class="education-card-header">
+                        <i class="fas fa-balance-scale"></i>
+                        <h4>Diversification</h4>
+                    </div>
+                    <p>La diversification consiste à répartir votre investissement entre différentes classes d'actifs pour réduire le risque global du portefeuille.</p>
+                    <div class="card-footer">
+                        <span class="tip-tag">Conseil clé</span>
+                        <p>Ne mettez pas tous vos œufs dans le même panier. Diversifiez entre actions, obligations, immobilier et liquidités.</p>
+                    </div>
+                </div>
+                
+                <div class="education-card">
+                    <div class="education-card-header">
+                        <i class="fas fa-clock"></i>
+                        <h4>Horizon d'investissement</h4>
+                    </div>
+                    <p>Votre horizon temporel détermine le niveau de risque que vous pouvez prendre. Plus votre horizon est long, plus vous pouvez vous permettre de prendre des risques.</p>
+                    <div class="card-footer">
+                        <span class="tip-tag">Conseil clé</span>
+                        <p>Pour des objectifs à court terme (moins de 5 ans), privilégiez les placements sécurisés. Pour le long terme, les actions offrent généralement un meilleur rendement.</p>
+                    </div>
+                </div>
+                
+                <div class="education-card">
+                    <div class="education-card-header">
+                        <i class="fas fa-euro-sign"></i>
+                        <h4>Investissement régulier</h4>
+                    </div>
+                    <p>L'investissement régulier ou "dollar cost averaging" consiste à investir un montant fixe à intervalles réguliers, indépendamment des fluctuations du marché.</p>
+                    <div class="card-footer">
+                        <span class="tip-tag">Conseil clé</span>
+                        <p>Cette approche réduit l'impact de la volatilité et élimine le stress lié au "timing" du marché.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        `;
     }
 };
 
