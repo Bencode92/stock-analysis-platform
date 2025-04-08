@@ -9,6 +9,7 @@ import json
 import requests
 import datetime
 import logging
+import locale
 from dotenv import load_dotenv
 
 # Configuration du logging
@@ -17,6 +18,15 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Configuration de la locale française pour les dates
+try:
+    locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
+except:
+    try:
+        locale.setlocale(locale.LC_TIME, 'fr_FR')
+    except:
+        logger.warning("⚠️ Impossible de configurer la locale française, utilisation de la locale par défaut")
 
 # Chargement des clés si local
 load_dotenv()
@@ -103,16 +113,19 @@ def main():
             
         logger.info(f"📊 Total: {len(all_news)} actualités à analyser")
         
-        # Trier les news par importance_score décroissant
-        # Utiliser le score si disponible, sinon utiliser un score par défaut
-        top_news = sorted(
+        # AMÉLIORATION: Trier et filtrer les actualités avec un seuil dynamique
+        sorted_news = sorted(
             all_news, 
             key=lambda x: x.get("importance_score", 0) if "importance_score" in x 
                 else x.get("score", 0),
             reverse=True
-        )[:25]  # Limiter aux 25 plus importantes
+        )
         
-        logger.info(f"🔝 Sélection des {len(top_news)} actualités les plus importantes")
+        # Ne garder que les articles au-dessus d'un seuil raisonnable (ou au moins 15)
+        news_cutoff = [n for n in sorted_news if n.get("importance_score", 0) >= 5 or n.get("score", 0) >= 5]
+        top_news = news_cutoff[:50] if len(news_cutoff) >= 15 else sorted_news[:30]
+        
+        logger.info(f"🔝 Sélection de {len(top_news)} actualités pertinentes")
         
         # Extraction des thèmes dominants
         themes_weekly = themes_data.get("themes", {}).get("weekly", [])
@@ -123,15 +136,31 @@ def main():
             themes_section = json.dumps(themes_weekly, indent=2, ensure_ascii=False)
             logger.info(f"🔍 {len(themes_weekly)} thèmes dominants identifiés")
 
-        # Construction du prompt expert AMÉLIORÉ avec analyse comportementale et perception
+        # Formatage de la date actuelle
+        current_date = datetime.datetime.now()
+        try:
+            date_formatted = current_date.strftime('%d %B %Y')
+        except:
+            # Fallback si la locale française ne fonctionne pas
+            month_names = {
+                1: "janvier", 2: "février", 3: "mars", 4: "avril", 5: "mai", 6: "juin",
+                7: "juillet", 8: "août", 9: "septembre", 10: "octobre", 11: "novembre", 12: "décembre"
+            }
+            date_formatted = f"{current_date.day} {month_names[current_date.month]} {current_date.year}"
+
+        # Construction du prompt expert AMÉLIORÉ avec analyse comportementale et perception + contexte temporel
         prompt = f"""
 Tu es un stratège senior en allocation d'actifs au sein d'une société de gestion de renom.
 
 Tu reçois deux types de données financières :
 1. **Thèmes dominants** extraits de plus de 100 articles économiques (structurés par thème, région, secteur)
-2. **Actualités à fort impact** (Top 25 globales, scorées par importance)
+2. **Actualités à fort impact** (Top {len(top_news)} globales, scorées par importance)
 
 🎯 **Objectif** : Produire un **brief stratégique à destination d'un comité d'investissement**, clair, synthétique et orienté allocation.
+
+---
+
+🗓️ Nous sommes la semaine du {date_formatted}. Tu peux utiliser cette information temporelle pour contextualiser tes scénarios (FOMC, échéances, saison des résultats...).
 
 ---
 
@@ -169,7 +198,7 @@ Tu reçois deux types de données financières :
 📂 **Thèmes dominants (30 derniers jours)** :
 {themes_section}
 
-📂 **Actualités importantes (Top 25 globales)** :
+📂 **Actualités importantes (Top {len(top_news)} globales)** :
 {json.dumps(top_news, indent=2, ensure_ascii=False)}
 
 ---
@@ -199,11 +228,12 @@ Tu reçois deux types de données financières :
         with open(BRIEF_PATH, "w", encoding="utf-8") as f:
             json.dump(brief_data, f, ensure_ascii=False, indent=2)
         
-        # Sauvegarde en format Markdown pour lisibilité humaine
+        # Sauvegarde en format Markdown pour lisibilité humaine avec signature/disclaimer
         with open(BRIEF_MD_PATH, "w", encoding="utf-8") as f:
             f.write("# Brief Stratégique TradePulse\n\n")
             f.write(f"*Généré le {datetime.datetime.now().strftime('%d/%m/%Y à %H:%M')}*\n\n")
             f.write(brief)
+            f.write("\n\n---\n\n*Cette note est générée automatiquement par TradePulse AI, sur la base des actualités et thèmes détectés dans les 7 derniers jours.*\n")
         
         logger.info(f"✅ Brief stratégique généré et sauvegardé: {BRIEF_PATH} et {BRIEF_MD_PATH}")
         
@@ -219,6 +249,7 @@ Tu reçois deux types de données financières :
             f.write(prompt)
             f.write("\n```\n\n## Résultat\n\n")
             f.write(brief)
+            f.write("\n\n---\n\n*Cette note est générée automatiquement par TradePulse AI, sur la base des actualités et thèmes détectés dans les 7 derniers jours.*\n")
         
         logger.info(f"🔍 Version debug sauvegardée: {debug_path}")
         
