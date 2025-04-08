@@ -50,8 +50,18 @@ def load_json_data(file_path):
     try:
         with open(file_path, 'r', encoding='utf-8') as file:
             data = json.load(file)
+            # Vérification supplémentaire que les données sont bien un dictionnaire ou une liste
+            if not isinstance(data, (dict, list)):
+                logger.warning(f"⚠️ Format de données non valide dans {file_path}, doit être dict ou list")
+                return {}
             logger.info(f"✅ Données JSON chargées avec succès depuis {file_path}")
             return data
+    except FileNotFoundError:
+        logger.error(f"❌ Fichier non trouvé: {file_path}")
+        return {}
+    except json.JSONDecodeError:
+        logger.error(f"❌ Format JSON invalide dans {file_path}")
+        return {}
     except Exception as e:
         logger.error(f"❌ Erreur lors du chargement de {file_path}: {str(e)}")
         return {}
@@ -304,6 +314,12 @@ Tu reçois plusieurs types de données financières :
         with open(BRIEF_MD_PATH, "w", encoding="utf-8") as f:
             f.write("# Brief Stratégique TradePulse\n\n")
             f.write(f"*Généré le {datetime.datetime.now().strftime('%d/%m/%Y à %H:%M')}*\n\n")
+            # Ajout des informations de diagnostic sur les sources de données
+            f.write("> **Sources de données:**\n")
+            f.write(f"> - **Marchés:** {'✅ Chargés' if markets_data else '❌ Non disponibles'}\n")
+            f.write(f"> - **Secteurs:** {'✅ Chargés' if sectors_data else '❌ Non disponibles'}\n")
+            f.write(f"> - **Actualités:** {len(synthesized_news)} sources analysées\n")
+            f.write(f"> - **Thèmes:** {len(themes_weekly)} thèmes dominants identifiés\n\n")
             f.write(brief)
             f.write("\n\n---\n\n*Cette note est générée automatiquement par TradePulse AI, sur la base des actualités et thèmes détectés dans les 7 derniers jours.*\n")
         
@@ -317,6 +333,12 @@ Tu reçois plusieurs types de données financières :
         with open(debug_path, "w", encoding="utf-8") as f:
             f.write("# Brief Stratégique TradePulse - DEBUG\n\n")
             f.write(f"*Généré le {datetime.datetime.now().strftime('%d/%m/%Y à %H:%M')}*\n\n")
+            # Ajout des informations de diagnostic sur les sources de données
+            f.write("> **Sources de données:**\n")
+            f.write(f"> - **Marchés:** {'✅ Chargés' if markets_data else '❌ Non disponibles'}\n")
+            f.write(f"> - **Secteurs:** {'✅ Chargés' if sectors_data else '❌ Non disponibles'}\n")
+            f.write(f"> - **Actualités:** {len(synthesized_news)} sources analysées\n")
+            f.write(f"> - **Thèmes:** {len(themes_weekly)} thèmes dominants identifiés\n\n")
             f.write("## Prompt envoyé\n```\n")
             f.write(prompt)
             f.write("\n```\n\n## Résultat\n\n")
