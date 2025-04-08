@@ -9,6 +9,8 @@ import re
 from bs4 import BeautifulSoup
 # Importer les fonctions d'ajustement des portefeuilles
 from portfolio_adjuster import check_portfolio_constraints, adjust_portfolios, get_portfolio_prompt_additions, valid_etfs_cache, valid_bonds_cache
+# Importer la fonction de formatage du brief
+from brief_formatter import format_brief_data
 
 def extract_content_from_html(html_file):
     """Extraire le contenu pertinent d'un fichier HTML."""
@@ -961,7 +963,7 @@ if (window.recordDebugFile) {{
     
     return debug_file, html_file
 
-def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data=None, themes_data=None):
+def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data=None, themes_data=None, brief_data=None):
     """Génère trois portefeuilles optimisés en combinant les données fournies et le contexte actuel du marché."""
     api_key = os.environ.get('API_CHAT')
     if not api_key:
@@ -980,6 +982,8 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     filtered_crypto = filter_crypto_data(crypto_data) if crypto_data else "Aucune donnée de crypto-monnaie disponible"
     # Ajouter le filtrage des tendances thématiques
     filtered_themes = filter_themes_data(themes_data) if themes_data else "Aucune donnée de tendances thématiques disponible"
+    # Traiter le résumé d'actualités complet
+    filtered_brief = format_brief_data(brief_data) if brief_data else "Aucun résumé d'actualités complet disponible"
     
     # Formater la liste des ETF obligataires pour le prompt
     bond_etf_list = "\n".join([f"- {name}" for name in bond_etf_names])
@@ -987,6 +991,7 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     # Ajouter des logs pour déboguer les entrées
     print(f"🔍 Longueur des données FILTRÉES:")
     print(f"  📰 Actualités: {len(filtered_news)} caractères")
+    print(f"  📜 Résumé d'actualités complet: {len(filtered_brief)} caractères")
     print(f"  📈 Marché: {len(filtered_markets)} caractères")
     print(f"  🏭 Secteurs: {len(filtered_sectors)} caractères")
     print(f"  📋 Listes: {len(filtered_lists)} caractères")
@@ -998,6 +1003,8 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     print("\n===== APERÇU DES DONNÉES FILTRÉES =====")
     print("\n----- ACTUALITÉS (données filtrées) -----")
     print(filtered_news[:200] + "..." if len(filtered_news) > 200 else filtered_news)
+    print("\n----- RÉSUMÉ D'ACTUALITÉS COMPLET (données filtrées) -----")
+    print(filtered_brief[:200] + "..." if len(filtered_brief) > 200 else filtered_brief)
     print("\n----- MARCHÉS (données filtrées) -----")
     print(filtered_markets[:200] + "..." if len(filtered_markets) > 200 else filtered_markets)
     print("\n----- SECTEURS (données filtrées) -----")
@@ -1034,6 +1041,9 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
 Tu es un expert en gestion de portefeuille. Tu dois IMPÉRATIVEMENT créer TROIS portefeuilles contenant EXACTEMENT entre 12 et 15 actifs CHACUN.
 
 Utilise ces données filtrées pour générer les portefeuilles :
+
+📜 RÉSUMÉ COMPLET DE L'ACTUALITÉ FINANCIÈRE: 
+{filtered_brief}
 
 📰 Actualités financières récentes: 
 {filtered_news}
@@ -1331,9 +1341,11 @@ def main():
     crypto_data = load_json_data('data/crypto_lists.json')
     # Ajouter le chargement des tendances thématiques
     themes_data = load_json_data('data/themes.json')
+    # Charger le résumé d'actualités complet
+    brief_data = load_json_data('brief_ia.json')
     
     print("🧠 Génération des portefeuilles optimisés...")
-    portfolios = generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data, themes_data)
+    portfolios = generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data, themes_data, brief_data)
     
     print("💾 Sauvegarde des portefeuilles...")
     save_portfolios(portfolios)
@@ -1348,7 +1360,7 @@ def load_json_data(file_path):
             print(f"✅ Données JSON chargées avec succès depuis {file_path}")
             return data
     except Exception as e:
-        print(f"❌ Erreur lors du chargement de {file_path}: {str(e)}")
+        print(f"⚠️ Attention: Erreur lors du chargement de {file_path}: {str(e)}")
         return {}
 
 if __name__ == "__main__":
