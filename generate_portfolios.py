@@ -1049,6 +1049,21 @@ Utilise ces données filtrées pour générer les portefeuilles :
 📜 RÉSUMÉ COMPLET DE L'ACTUALITÉ FINANCIÈRE: 
 {filtered_brief}
 
+⚠️ **Le brief stratégique ci-dessus est la référence principale.** Il contient les convictions macroéconomiques les plus actuelles, basées sur une analyse synthétique des risques, des scénarios économiques et des priorités géographiques/sectorielles. Tu dois en tenir compte **avant toute autre source** pour justifier la construction des portefeuilles. 
+🎯 Chaque actif sélectionné doit être : 
+1. **Aligné avec au moins une conviction forte du brief stratégique** 
+2. Justifié de manière claire dans la section "Choix des actifs", avec référence explicite au brief si nécessaire 
+3. Cohérent avec le scénario dominant (ex : "récession modérée" ➝ actifs défensifs, obligations souveraines, cash…) 
+
+🚫 Tu ne dois **jamais** sélectionner un actif si : 
+- Il est en contradiction avec le brief (ex : secteur cyclique en période de stress macro) 
+- Il n'est justifié que par sa performance brute (ex : YTD +80%) sans alignement avec le contexte macro/sectoriel 
+
+💡 Exemple de bonne logique : 
+> "Malgré une performance modeste, le secteur des services publics est recommandé dans le brief stratégique comme défensif en période de récession, ce qui justifie son inclusion." 
+
+🧠 Tu dois utiliser le brief stratégique comme un **filtre décisionnel principal**, pas comme une simple information.
+
 📰 Actualités financières récentes: 
 {filtered_news}
 
