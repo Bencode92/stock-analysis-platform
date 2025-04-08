@@ -60,7 +60,7 @@
         }
 
         /* Sections et panneaux */
-        .simulator-panel, .results-panel, .explanation-panel {
+        .simulator-panel, .results-panel, .explanation-panel, .comparison-panel {
             background: var(--card-background);
             border-radius: 12px;
             padding: 24px;
@@ -70,6 +70,10 @@
         .simulator-panel {
             display: flex;
             flex-direction: column;
+        }
+        
+        .comparison-panel {
+            grid-column: 1 / -1;
         }
 
         .panel-header {
@@ -450,7 +454,7 @@
         }
 
         /* Export PDF Button */
-        .export-btn {
+        .export-btn, .compare-btn {
             background-color: transparent;
             border: 1px solid var(--accent-color);
             color: var(--accent-color);
@@ -460,17 +464,143 @@
             border-radius: 6px;
             cursor: pointer;
             margin-top: 16px;
+            margin-right: 10px;
             transition: all 0.3s ease;
             display: inline-flex;
             align-items: center;
         }
 
-        .export-btn i {
+        .export-btn i, .compare-btn i {
             margin-right: 8px;
         }
 
-        .export-btn:hover {
+        .export-btn:hover, .compare-btn:hover {
             background-color: rgba(0, 255, 135, 0.1);
+        }
+        
+        /* Modal de comparaison */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+        
+        .modal-content {
+            background-color: var(--card-background);
+            margin: 5% auto;
+            padding: 20px;
+            width: 90%;
+            max-width: 1200px;
+            border-radius: 10px;
+            position: relative;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 15px;
+            right: 25px;
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--text-color);
+            opacity: 0.7;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+        
+        .close-modal:hover {
+            opacity: 1;
+        }
+        
+        /* Tableau de comparaison */
+        .comparison-table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.9rem;
+        }
+        
+        .comparison-table th, .comparison-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .comparison-table th {
+            background-color: rgba(0, 255, 135, 0.1);
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+        
+        .comparison-table tbody tr:hover {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+        
+        .vehicle-name {
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+        }
+        
+        .vehicle-name i {
+            margin-right: 10px;
+            color: var(--accent-color);
+        }
+        
+        /* Badge de suitability */
+        .suitability-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            border-radius: 12px;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        .suitability-badge.high {
+            background-color: rgba(0, 200, 83, 0.2);
+            color: var(--success-color);
+        }
+        
+        .suitability-badge.medium {
+            background-color: rgba(255, 213, 79, 0.2);
+            color: var(--warning-color);
+        }
+        
+        .suitability-badge.low {
+            background-color: rgba(255, 82, 82, 0.2);
+            color: var(--danger-color);
+        }
+        
+        /* Liste des commentaires d'adéquation */
+        .suitability-comments {
+            list-style-type: none;
+            padding-left: 0;
+            margin-top: 10px;
+        }
+        
+        .suitability-comments li {
+            position: relative;
+            padding-left: 20px;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+        
+        .suitability-comments li:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+            color: var(--accent-color);
         }
 
         /* Additional responsive adjustments */
@@ -586,7 +716,7 @@
                             <span class="slider-value" id="return-value">7%</span>
                         </div>
                         <div class="return-presets">
-                            <small>Préréglages: <a href="#" onclick="setReturn(2)">Livret A (2%)</a> | <a href="#" onclick="setReturn(7)">ETF Monde (7%)</a> | <a href="#" onclick="setReturn(10)">Actions (10%)</a></small>
+                            <small>Préréglages: <a href="#" onclick="return setReturn(2)">Livret A (2%)</a> | <a href="#" onclick="return setReturn(3)">Assurance-Vie FE (3%)</a> | <a href="#" onclick="return setReturn(5)">SCPI (5%)</a> | <a href="#" onclick="return setReturn(7)">ETF Monde (7%)</a> | <a href="#" onclick="return setReturn(10)">Actions (10%)</a></small>
                         </div>
                     </div>
                 </div>
@@ -604,13 +734,17 @@
                         <option value="pea">PEA</option>
                         <option value="cto">Compte-Titres</option>
                         <option value="assurance-vie">Assurance-Vie</option>
+                        <option value="per">PER</option>
+                        <option value="scpi">SCPI</option>
+                        <option value="fcpi">FCPI / FIP</option>
+                        <option value="livret-jeune">Livret Jeune</option>
+                        <option value="ldds">LDDS</option>
+                        <option value="lep">LEP</option>
                         <option value="crypto">Crypto-monnaies</option>
                     </select>
 
                     <div id="tax-info" class="tax-info">
-                        <h4>Fiscalité du PEA</h4>
-                        <p>Le Plan d'Épargne en Actions (PEA) offre une exonération d'impôt sur les plus-values après 5 ans de détention (hors prélèvements sociaux de 17,2%).</p>
-                        <p><strong>Plafond:</strong> 150 000€ par personne</p>
+                        <!-- Ce contenu sera mis à jour par la fonction updateTaxInfo() -->
                     </div>
                 </div>
 
@@ -649,15 +783,26 @@
                 <div class="chart-container">
                     <canvas id="investment-chart"></canvas>
                 </div>
+                
+                <!-- Affichage de l'adéquation au profil -->
+                <div id="suitability-info" class="info-box" style="display: none; margin-top: 20px;">
+                    <h4><i class="fas fa-check-circle"></i> Adéquation avec votre profil</h4>
+                    <div id="suitability-content"></div>
+                </div>
 
                 <div id="simulation-summary" class="info-box" style="margin-top: 20px;">
                     <h4>Analyse de votre investissement</h4>
                     <p>Remplissez les paramètres et lancez la simulation pour obtenir une analyse détaillée.</p>
                 </div>
 
-                <button id="export-results" class="export-btn">
-                    <i class="fas fa-file-download"></i> Exporter les résultats en PDF
-                </button>
+                <div>
+                    <button id="export-results" class="export-btn">
+                        <i class="fas fa-file-download"></i> Exporter les résultats en PDF
+                    </button>
+                    <button id="compare-vehicles" class="compare-btn">
+                        <i class="fas fa-balance-scale"></i> Comparer les véhicules
+                    </button>
+                </div>
             </div>
 
             <!-- Educational Content -->
@@ -669,83 +814,25 @@
 
                 <p>Découvrez les principales options d'investissement disponibles et leurs caractéristiques :</p>
 
-                <div class="investment-types">
-                    <div class="investment-type-card">
-                        <div class="investment-type-header">
-                            <i class="fas fa-chart-line"></i>
-                            <h4 class="investment-type-title">PEA</h4>
-                        </div>
-                        <p>Le Plan d'Épargne en Actions permet d'investir dans des actions européennes avec une fiscalité avantageuse après 5 ans.</p>
-                        <div class="risk-rating">
-                            <span class="risk-label">Risque :</span>
-                            <div class="risk-dots">
-                                <div class="risk-dot active medium"></div>
-                                <div class="risk-dot active medium"></div>
-                                <div class="risk-dot active medium"></div>
-                                <div class="risk-dot"></div>
-                                <div class="risk-dot"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="investment-type-card">
-                        <div class="investment-type-header">
-                            <i class="fas fa-balance-scale"></i>
-                            <h4 class="investment-type-title">Compte-Titres</h4>
-                        </div>
-                        <p>Un compte d'investissement standard qui offre plus de flexibilité sur les titres disponibles, mais avec une fiscalité moins avantageuse.</p>
-                        <div class="risk-rating">
-                            <span class="risk-label">Risque :</span>
-                            <div class="risk-dots">
-                                <div class="risk-dot active medium"></div>
-                                <div class="risk-dot active medium"></div>
-                                <div class="risk-dot active medium"></div>
-                                <div class="risk-dot"></div>
-                                <div class="risk-dot"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="investment-type-card">
-                        <div class="investment-type-header">
-                            <i class="fas fa-shield-alt"></i>
-                            <h4 class="investment-type-title">Assurance-Vie</h4>
-                        </div>
-                        <p>Contrat d'épargne polyvalent offrant des avantages fiscaux qui s'améliorent avec la durée de détention et des options de transmission avantageuses.</p>
-                        <div class="risk-rating">
-                            <span class="risk-label">Risque :</span>
-                            <div class="risk-dots">
-                                <div class="risk-dot active low"></div>
-                                <div class="risk-dot active low"></div>
-                                <div class="risk-dot"></div>
-                                <div class="risk-dot"></div>
-                                <div class="risk-dot"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="investment-type-card">
-                        <div class="investment-type-header">
-                            <i class="fas fa-coins"></i>
-                            <h4 class="investment-type-title">Crypto-monnaies</h4>
-                        </div>
-                        <p>Classe d'actifs numériques à forte volatilité offrant un potentiel de rendement élevé mais également des risques importants.</p>
-                        <div class="risk-rating">
-                            <span class="risk-label">Risque :</span>
-                            <div class="risk-dots">
-                                <div class="risk-dot active high"></div>
-                                <div class="risk-dot active high"></div>
-                                <div class="risk-dot active high"></div>
-                                <div class="risk-dot active high"></div>
-                                <div class="risk-dot active high"></div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="investment-types" id="investment-type-cards">
+                    <!-- Ce contenu sera généré dynamiquement par JS -->
                 </div>
 
                 <div class="info-box" style="margin-top: 30px;">
-                    <h4>L'importance de la diversification</h4>
+                    <h4><i class="fas fa-info-circle"></i> L'importance de la diversification</h4>
                     <p>La diversification est un principe fondamental de l'investissement qui consiste à répartir vos actifs entre différentes classes d'investissement pour réduire les risques. Une allocation bien équilibrée entre actions, obligations, immobilier et liquidités peut vous aider à atteindre vos objectifs financiers tout en minimisant la volatilité globale de votre portefeuille.</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Modal de comparaison des véhicules -->
+        <div id="comparison-modal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h2>Comparaison des véhicules d'investissement</h2>
+                <p>Ce tableau vous permet de comparer les caractéristiques des différents véhicules d'investissement disponibles en France.</p>
+                <div id="comparison-table-container">
+                    <!-- Le tableau sera généré dynamiquement par JS -->
                 </div>
             </div>
         </div>
@@ -770,6 +857,67 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="module">
+        // Import du module investmentOptions
+        import investmentOptions from './investmentOptions.js';
+        
+        // Rendre le module disponible globalement
+        window.investmentOptions = investmentOptions;
+        
+        // Initialiser les cartes des types d'investissement
+        document.addEventListener('DOMContentLoaded', function() {
+            // Générer les cartes de types d'investissement dynamiquement
+            generateInvestmentTypeCards();
+            
+            // Initialiser l'info de la fiscalité
+            updateTaxInfo();
+        });
+        
+        // Fonction pour générer les cartes de types d'investissement
+        function generateInvestmentTypeCards() {
+            const container = document.getElementById('investment-type-cards');
+            if (!container) return;
+            
+            // Vider le contenu existant
+            container.innerHTML = '';
+            
+            // Sélectionner quelques véhicules clés à afficher (pour ne pas surcharger)
+            const keysToShow = ['pea', 'cto', 'assurance-vie', 'per', 'scpi', 'crypto'];
+            
+            for (const key of keysToShow) {
+                const vehicle = investmentOptions.vehicles[key];
+                if (!vehicle) continue;
+                
+                // Générer les points de risque
+                let riskDotsHtml = '';
+                for (let i = 1; i <= 5; i++) {
+                    const riskClass = i <= vehicle.riskRating 
+                        ? `active ${i > 3 ? 'high' : (i > 1 ? 'medium' : 'low')}` 
+                        : '';
+                    riskDotsHtml += `<div class="risk-dot ${riskClass}"></div>`;
+                }
+                
+                const card = document.createElement('div');
+                card.className = 'investment-type-card';
+                card.innerHTML = `
+                    <div class="investment-type-header">
+                        <i class="${vehicle.icon}"></i>
+                        <h4 class="investment-type-title">${vehicle.name}</h4>
+                    </div>
+                    <p>${vehicle.description}</p>
+                    <div class="risk-rating">
+                        <span class="risk-label">Risque :</span>
+                        <div class="risk-dots">
+                            ${riskDotsHtml}
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            }
+        }
+    </script>
+    
     <script>
         // Variables globales
         let investmentType = 'one-time'; // 'one-time' ou 'monthly'
@@ -820,40 +968,88 @@
             const vehicleType = document.getElementById('investment-vehicle').value;
             const taxInfoDiv = document.getElementById('tax-info');
             
-            let taxContent = '';
-            
-            switch(vehicleType) {
-                case 'pea':
-                    taxContent = `
-                        <h4>Fiscalité du PEA</h4>
-                        <p>Le Plan d'Épargne en Actions (PEA) offre une exonération d'impôt sur les plus-values après 5 ans de détention (hors prélèvements sociaux de 17,2%).</p>
-                        <p><strong>Plafond:</strong> 150 000€ par personne</p>
-                    `;
-                    break;
-                case 'cto':
-                    taxContent = `
-                        <h4>Fiscalité du Compte-Titres</h4>
-                        <p>Les plus-values sont soumises au Prélèvement Forfaitaire Unique (PFU) de 30% (12,8% d'impôt + 17,2% de prélèvements sociaux) ou au barème progressif de l'impôt sur le revenu.</p>
-                        <p><strong>Plafond:</strong> Aucun</p>
-                    `;
-                    break;
-                case 'assurance-vie':
-                    taxContent = `
-                        <h4>Fiscalité de l'Assurance-Vie</h4>
-                        <p>Taxation avantageuse après 8 ans de détention: seulement 24,7% (7,5% + 17,2% de prélèvements sociaux) sur les gains, avec un abattement annuel de 4 600€ (célibataire) ou 9 200€ (couple).</p>
-                        <p><strong>Plafond:</strong> Aucun</p>
-                    `;
-                    break;
-                case 'crypto':
-                    taxContent = `
-                        <h4>Fiscalité des Crypto-monnaies</h4>
-                        <p>Les plus-values sur crypto-actifs sont soumises au Prélèvement Forfaitaire Unique (PFU) de 30% (12,8% d'impôt + 17,2% de prélèvements sociaux).</p>
-                        <p><strong>Plafond:</strong> Aucun</p>
-                    `;
-                    break;
+            // Utiliser le module importé pour obtenir les infos fiscales
+            if (window.investmentOptions) {
+                taxInfoDiv.innerHTML = window.investmentOptions.getTaxInfo(vehicleType);
+            } else {
+                // Fallback si le module n'est pas chargé
+                let taxContent = '';
+                
+                switch(vehicleType) {
+                    case 'pea':
+                        taxContent = `
+                            <h4><i class="fas fa-chart-pie"></i> Fiscalité du PEA</h4>
+                            <p>Le Plan d'Épargne en Actions (PEA) offre une exonération d'impôt sur les plus-values après 5 ans de détention (hors prélèvements sociaux de 17,2%).</p>
+                            <p><strong>Plafond:</strong> 150 000€ par personne</p>
+                        `;
+                        break;
+                    case 'cto':
+                        taxContent = `
+                            <h4><i class="fas fa-balance-scale"></i> Fiscalité du Compte-Titres</h4>
+                            <p>Les plus-values sont soumises au Prélèvement Forfaitaire Unique (PFU) de 30% (12,8% d'impôt + 17,2% de prélèvements sociaux) ou au barème progressif de l'impôt sur le revenu.</p>
+                            <p><strong>Plafond:</strong> Aucun</p>
+                        `;
+                        break;
+                    case 'assurance-vie':
+                        taxContent = `
+                            <h4><i class="fas fa-shield-alt"></i> Fiscalité de l'Assurance-Vie</h4>
+                            <p>Taxation avantageuse après 8 ans de détention: seulement 24,7% (7,5% + 17,2% de prélèvements sociaux) sur les gains, avec un abattement annuel de 4 600€ (célibataire) ou 9 200€ (couple).</p>
+                            <p><strong>Plafond:</strong> Aucun</p>
+                        `;
+                        break;
+                    case 'per':
+                        taxContent = `
+                            <h4><i class="fas fa-chart-line"></i> Fiscalité du PER</h4>
+                            <p>Déduction fiscale jusqu'à 10 % des revenus nets imposables. Sortie possible à la retraite ou pour achat résidence principale.</p>
+                            <p><strong>Sortie :</strong> Imposée selon barème ou PFU (30 %), selon les options et types de versements.</p>
+                        `;
+                        break;
+                    case 'scpi':
+                        taxContent = `
+                            <h4><i class="fas fa-building"></i> Fiscalité des SCPI</h4>
+                            <p>Revenus soumis à l'IR + prélèvements sociaux (17,2%). Possibilité d'intégrer dans une Assurance-vie pour bénéficier du taux réduit de 7,5% après 8 ans.</p>
+                            <p><strong>Rendement :</strong> Entre 4 % et 6 % brut en moyenne.</p>
+                        `;
+                        break;
+                    case 'fcpi':
+                        taxContent = `
+                            <h4><i class="fas fa-rocket"></i> Fiscalité des FCPI / FIP</h4>
+                            <p>Réduction d'impôt de 18 % du montant investi (jusqu'à 2 160 € / an pour un célibataire). Blocage de 5 à 10 ans.</p>
+                            <p><strong>Plus-values :</strong> Exonérées d'IR après 5 ans (soumis aux PS).</p>
+                        `;
+                        break;
+                    case 'livret-jeune':
+                        taxContent = `
+                            <h4><i class="fas fa-piggy-bank"></i> Fiscalité du Livret Jeune</h4>
+                            <p>Exonération totale d'impôt et de prélèvements sociaux. Taux ≥ Livret A.</p>
+                            <p><strong>Plafond :</strong> 1 600 €.</p>
+                        `;
+                        break;
+                    case 'ldds':
+                        taxContent = `
+                            <h4><i class="fas fa-leaf"></i> Fiscalité du LDDS</h4>
+                            <p>Épargne réglementée exonérée d'impôt et de PS. Taux net garanti par l'État.</p>
+                            <p><strong>Plafond :</strong> 12 000 €.</p>
+                        `;
+                        break;
+                    case 'lep':
+                        taxContent = `
+                            <h4><i class="fas fa-hand-holding-usd"></i> Fiscalité du LEP</h4>
+                            <p>Exonération totale. Taux élevé (~5 %). Réservé aux revenus modestes.</p>
+                            <p><strong>Plafond :</strong> 10 000 €.</p>
+                        `;
+                        break;
+                    case 'crypto':
+                        taxContent = `
+                            <h4><i class="fab fa-bitcoin"></i> Fiscalité des Crypto-monnaies</h4>
+                            <p>Les plus-values sur crypto-actifs sont soumises au Prélèvement Forfaitaire Unique (PFU) de 30% (12,8% d'impôt + 17,2% de prélèvements sociaux).</p>
+                            <p><strong>Plafond:</strong> Aucun</p>
+                        `;
+                        break;
+                }
+                
+                taxInfoDiv.innerHTML = taxContent;
             }
-            
-            taxInfoDiv.innerHTML = taxContent;
         }
         
         // Fonction pour formater les montants en euros
@@ -863,6 +1059,12 @@
         
         // Fonction pour calculer le taux d'imposition en fonction du véhicule et de la durée
         function calculateTaxRate(vehicle, years) {
+            // Utiliser le module importé si disponible
+            if (window.investmentOptions) {
+                return window.investmentOptions.calculateTaxRate(vehicle, years);
+            }
+            
+            // Fallback si le module n'est pas chargé
             switch(vehicle) {
                 case 'pea':
                     return years >= 5 ? 0.172 : 0.30; // 17.2% après 5 ans, 30% avant
@@ -870,11 +1072,32 @@
                     if (years >= 8) return 0.247; // 24.7% après 8 ans
                     else if (years >= 4) return 0.275; // 27.5% entre 4 et 8 ans
                     else return 0.30; // 30% avant 4 ans
-                case 'crypto':
-                case 'cto':
+                case 'per':
+                    return 0.30; // on suppose sortie en capital imposée
+                case 'scpi':
+                    return 0.30; // IR + PS simulé ici
+                case 'fcpi':
+                    return years >= 5 ? 0.172 : 0.30;
+                case 'livret-jeune':
+                case 'ldds':
+                case 'lep':
+                    return 0.0;
                 default:
                     return 0.30; // 30% (PFU)
             }
+        }
+        
+        // Fonction pour évaluer l'adéquation du véhicule avec le profil
+        function evaluateSuitability(vehicle, amount, years, investmentType) {
+            if (window.investmentOptions) {
+                return window.investmentOptions.evaluateSuitability(vehicle, amount, years, investmentType);
+            }
+            
+            // Fallback simple si le module n'est pas chargé
+            return {
+                score: 3,
+                comments: ["Évaluation d'adéquation non disponible sans le module investmentOptions.js."]
+            };
         }
         
         // Fonction principale de simulation
@@ -947,12 +1170,45 @@
             document.getElementById('gains-bruts').textContent = formatCurrency(grossGains);
             document.getElementById('net-impots').textContent = formatCurrency(netTotal);
             
+            // Évaluation de l'adéquation
+            const suitability = evaluateSuitability(vehicle, amount, years, investmentType);
+            updateSuitabilityInfo(suitability, vehicle);
+            
             // Création ou mise à jour du graphique
             const ctx = document.getElementById('investment-chart').getContext('2d');
             
             if (chart) {
                 chart.destroy();
             }
+            
+            // Déterminer les années importantes à mettre en évidence
+            let importantYears = [];
+            if (vehicle === 'pea' && years >= 5) {
+                importantYears.push({ year: 5, label: 'Exonération PEA' });
+            } else if (vehicle === 'assurance-vie') {
+                if (years >= 4) importantYears.push({ year: 4, label: 'Fiscalité réduite' });
+                if (years >= 8) importantYears.push({ year: 8, label: 'Fiscalité avantageuse' });
+            } else if (vehicle === 'fcpi' && years >= 5) {
+                importantYears.push({ year: 5, label: 'Exonération IR' });
+            }
+            
+            // Créer des annotations pour les années importantes
+            const annotations = {};
+            importantYears.forEach(item => {
+                annotations[`milestone-${item.year}`] = {
+                    type: 'line',
+                    mode: 'vertical',
+                    scaleID: 'x',
+                    value: `Année ${item.year}`,
+                    borderColor: 'rgba(0, 255, 135, 0.5)',
+                    borderWidth: 2,
+                    label: {
+                        content: item.label,
+                        enabled: true,
+                        position: 'top'
+                    }
+                };
+            });
             
             chart = new Chart(ctx, {
                 type: 'line',
@@ -999,6 +1255,9 @@
                         },
                         legend: {
                             position: 'top',
+                        },
+                        annotation: {
+                            annotations: annotations
                         }
                     },
                     scales: {
@@ -1015,21 +1274,64 @@
             });
             
             // Mise à jour du résumé de simulation
+            updateSimulationSummary(amount, years, annualReturn, vehicle, finalInvested, finalTotal, grossGains, netGains, netTotal);
+        }
+        
+        // Fonction pour mettre à jour l'évaluation d'adéquation
+        function updateSuitabilityInfo(suitability, vehicle) {
+            const suitabilityInfoDiv = document.getElementById('suitability-info');
+            const suitabilityContentDiv = document.getElementById('suitability-content');
+            
+            if (!suitabilityInfoDiv || !suitabilityContentDiv) return;
+            
+            if (!suitability || suitability.score === 0) {
+                suitabilityInfoDiv.style.display = 'none';
+                return;
+            }
+            
+            // Déterminer la classe basée sur le score
+            let badgeClass = 'medium';
+            if (suitability.score >= 4) {
+                badgeClass = 'high';
+            } else if (suitability.score <= 2) {
+                badgeClass = 'low';
+            }
+            
+            // Créer le contenu
+            let content = `
+                <div class="suitability-badge ${badgeClass}">
+                    Adéquation: ${suitability.score}/5
+                </div>
+            `;
+            
+            if (suitability.comments && suitability.comments.length > 0) {
+                content += '<ul class="suitability-comments">';
+                suitability.comments.forEach(comment => {
+                    content += `<li>${comment}</li>`;
+                });
+                content += '</ul>';
+            }
+            
+            // Afficher le résultat
+            suitabilityContentDiv.innerHTML = content;
+            suitabilityInfoDiv.style.display = 'block';
+        }
+        
+        // Fonction pour mettre à jour le résumé de simulation
+        function updateSimulationSummary(amount, years, annualReturn, vehicle, finalInvested, finalTotal, grossGains, netGains, netTotal) {
             let summaryText = '';
+            const vehicleInfo = window.investmentOptions ? window.investmentOptions.getVehicleInfo(vehicle) : null;
+            const vehicleName = vehicleInfo ? vehicleInfo.name : vehicle;
+            
             if (investmentType === 'one-time') {
-                summaryText = `<h4>Analyse de votre investissement</h4>
-                <p>Avec un investissement unique de ${formatCurrency(amount)} et un rendement annuel moyen de ${(annualReturn * 100).toFixed(1)}% sur ${years} ans, votre capital atteindrait environ ${formatCurrency(finalTotal)}.</p>
+                summaryText = `<h4><i class="fas fa-chart-pie"></i> Analyse de votre investissement</h4>
+                <p>Avec un investissement unique de ${formatCurrency(amount)} dans un ${vehicleName} et un rendement annuel moyen de ${(annualReturn * 100).toFixed(1)}% sur ${years} ans, votre capital atteindrait environ ${formatCurrency(finalTotal)}.</p>
                 <p>Après impôts, vous disposeriez de ${formatCurrency(netTotal)}, soit un gain net de ${formatCurrency(netGains)}.</p>`;
                 
-                if (vehicle === 'pea' && years < 5) {
-                    summaryText += `<p><strong>Conseil :</strong> Envisagez de conserver votre PEA au moins 5 ans pour bénéficier de l'exonération d'impôt sur les plus-values.</p>`;
-                } else if (vehicle === 'assurance-vie' && years < 8) {
-                    summaryText += `<p><strong>Conseil :</strong> Envisagez de conserver votre Assurance-Vie au moins 8 ans pour bénéficier d'une fiscalité plus avantageuse.</p>`;
-                }
             } else {
                 const monthlyContributions = years * 12;
-                summaryText = `<h4>Analyse de votre investissement</h4>
-                <p>Avec des versements mensuels de ${formatCurrency(amount)} (soit ${formatCurrency(amount * 12)} par an) et un rendement annuel moyen de ${(annualReturn * 100).toFixed(1)}% sur ${years} ans, votre capital atteindrait environ ${formatCurrency(finalTotal)}.</p>
+                summaryText = `<h4><i class="fas fa-chart-pie"></i> Analyse de votre investissement</h4>
+                <p>Avec des versements mensuels de ${formatCurrency(amount)} sur un ${vehicleName} (soit ${formatCurrency(amount * 12)} par an) et un rendement annuel moyen de ${(annualReturn * 100).toFixed(1)}% sur ${years} ans, votre capital atteindrait environ ${formatCurrency(finalTotal)}.</p>
                 <p>Après ${monthlyContributions} versements pour un total investi de ${formatCurrency(finalInvested)}, vous auriez généré ${formatCurrency(grossGains)} de gains bruts.</p>
                 <p>Après impôts, vous disposeriez de ${formatCurrency(netTotal)}, soit un gain net de ${formatCurrency(netGains)}.</p>`;
                 
@@ -1037,8 +1339,51 @@
                 summaryText += `<p>Votre investissement serait multiplié par ${multiplier} sur la période.</p>`;
             }
             
+            // Ajouter des conseils spécifiques au véhicule
+            if (vehicle === 'pea' && years < 5) {
+                summaryText += `<p><strong>Conseil :</strong> Envisagez de conserver votre PEA au moins 5 ans pour bénéficier de l'exonération d'impôt sur les plus-values.</p>`;
+            } else if (vehicle === 'assurance-vie' && years < 8) {
+                summaryText += `<p><strong>Conseil :</strong> Envisagez de conserver votre Assurance-Vie au moins 8 ans pour bénéficier d'une fiscalité plus avantageuse.</p>`;
+            } else if (vehicle === 'per' && years < 10) {
+                summaryText += `<p><strong>Conseil :</strong> Le PER est particulièrement adapté pour préparer la retraite sur le long terme. Sa fiscalité est optimale si vous êtes dans une tranche marginale d'imposition élevée.</p>`;
+            } else if (vehicle === 'fcpi' && years < 5) {
+                summaryText += `<p><strong>Conseil :</strong> Les FCPI/FIP nécessitent généralement une durée de blocage de 5 à 10 ans pour bénéficier pleinement des avantages fiscaux.</p>`;
+            } else if (vehicle === 'scpi' && amount < 5000) {
+                summaryText += `<p><strong>Conseil :</strong> Les SCPI sont généralement accessibles à partir de quelques milliers d'euros. Certaines plateformes permettent d'investir dès 200€ en achetant des fractions de parts.</p>`;
+            } else if (vehicle === 'crypto' && amount > 5000 && investmentType === 'one-time') {
+                summaryText += `<p><strong>Attention :</strong> Les crypto-monnaies sont très volatiles. Il est recommandé de ne pas y investir plus de 5 à 10% de son patrimoine financier.</p>`;
+            }
+            
             document.getElementById('simulation-summary').innerHTML = summaryText;
         }
+        
+        // Modal de comparaison des véhicules
+        document.getElementById('compare-vehicles').addEventListener('click', function() {
+            const modal = document.getElementById('comparison-modal');
+            const tableContainer = document.getElementById('comparison-table-container');
+            
+            // Générer le tableau de comparaison
+            if (window.investmentOptions) {
+                tableContainer.innerHTML = window.investmentOptions.generateComparisonTable();
+            } else {
+                tableContainer.innerHTML = '<p>Le module de comparaison n\'est pas disponible.</p>';
+            }
+            
+            // Afficher la modal
+            modal.style.display = 'block';
+            
+            // Fermer la modal lorsqu'on clique sur la croix
+            document.querySelector('.close-modal').addEventListener('click', function() {
+                modal.style.display = 'none';
+            });
+            
+            // Fermer la modal en cliquant en dehors
+            window.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    modal.style.display = 'none';
+                }
+            });
+        });
         
         // Fonction pour exporter les résultats (simulée)
         document.getElementById('export-results').addEventListener('click', function() {
@@ -1077,6 +1422,9 @@
                     }
                 });
             }
+            
+            // Exécuter une simulation par défaut
+            runSimulation();
         });
     </script>
 </body>
