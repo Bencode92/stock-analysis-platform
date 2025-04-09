@@ -543,6 +543,9 @@ def filter_lists_data(lists_data):
                 name = asset.get("name", "")
                 ytd = asset.get("ytd", "")
                 daily = asset.get("change", "")  # Utilisation de la clé "change" pour la variation journalière
+                # Récupération des nouveaux champs
+                sector = asset.get("sector", "")
+                country = asset.get("country", "")
 
                 # Nettoyage et conversion
                 try:
@@ -553,15 +556,19 @@ def filter_lists_data(lists_data):
 
                 # Filtre : YTD entre -5% et 120%, et Daily > -10%
                 if -5 <= ytd_value <= 120 and daily_value > -10:
-                    filtered_assets.append((name, ytd_value, daily_value))
+                    # Ajouter sector et country au tuple
+                    filtered_assets.append((name, ytd_value, daily_value, sector, country))
 
     # Trier par YTD décroissant
     filtered_assets.sort(key=lambda x: x[1], reverse=True)
 
-    # Résumé textuel
+    # Résumé textuel avec les informations secteur et pays
     assets_summary = ["📋 Actifs filtrés (YTD -5% à 120% et Daily > -10%) :"]
-    for name, ytd_value, daily_value in filtered_assets:
-        assets_summary.append(f"• {name}: YTD {ytd_value:.2f}%, Daily {daily_value:.2f}%")
+    for name, ytd_value, daily_value, sector, country in filtered_assets:
+        # Ajouter les informations de secteur et pays si elles existent
+        sector_info = f" | Secteur: {sector}" if sector else ""
+        country_info = f" | Pays: {country}" if country else ""
+        assets_summary.append(f"• {name}: YTD {ytd_value:.2f}%, Daily {daily_value:.2f}%{sector_info}{country_info}")
 
     return "\n".join(assets_summary) if filtered_assets else "Aucune donnée d'actifs significative"
 
