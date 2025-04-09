@@ -56,6 +56,75 @@ MIN_DAILY_LOSS_PERCENTAGE = -99.0  # Baisse journalière minimale autorisée
 MIN_YTD_LOSS_PERCENTAGE = -99.0    # Baisse YTD minimale autorisée
 # Remarque: Pas de limite pour les hausses YTD, car elles peuvent légitimement dépasser 99%
 
+# Mappings pour les actions du STOXX (nom -> pays et secteur)
+STOXX_MAPPINGS = {
+    "A2A": {"country": "Italy", "sector": "Services publics"},
+    "AALBERTS": {"country": "Netherlands", "sector": "Composants industriels / Automatisation"},
+    "ABB": {"country": "Switzerland", "sector": "Composants industriels / Automatisation"},
+    "ACCOR": {"country": "France", "sector": "Voyages / Loisirs"},
+    "ACS": {"country": "Spain", "sector": "Construction & Materials"},
+    "ADIDAS": {"country": "Germany", "sector": "Luxe"},
+    "ADP": {"country": "France", "sector": "Voyages / Loisirs"},
+    "ADYEN": {"country": "Netherlands", "sector": "Fintech / Paiements numériques"},
+    "AEDIFICA": {"country": "Belgium", "sector": "Immobilier / REITs"},
+    "AEGON": {"country": "Netherlands", "sector": "Assurances"},
+    "AGEAS": {"country": "Belgium", "sector": "Assurances"},
+    "AIR LIQUIDE": {"country": "France", "sector": "Matériaux de base / Métaux"},
+    "AIRBUS": {"country": "France", "sector": "Aéronautique, Défense & Technologies industrielles"},
+    "AIXTRON": {"country": "Germany", "sector": "Semiconducteurs"},
+    "AKZO NOBEL": {"country": "Netherlands", "sector": "Matériaux de base / Métaux"}
+}
+
+# Mappings pour les actions du NASDAQ (nom -> secteur)
+NASDAQ_MAPPINGS = {
+    "AAON": {"sector": "Matériaux"},
+    "ABRAXIS BIOSCIENCE INC NEW": {"sector": "Biotech"},
+    "ACACIA RES-AC TECHS": {"sector": "Biotech"},
+    "ACADIA PHARMA": {"sector": "Pharma"},
+    "ACCELRYS INC": {"sector": "Biotech"},
+    "ACCURAY": {"sector": "Santé / Équipement médical"},
+    "ACHIEVE LIFE SCI": {"sector": "Biotech"},
+    "ACI WORLDWIDE": {"sector": "Software"},
+    "ACTEL CORP": {"sector": "Semiconducteurs"},
+    "ADAMS GOLF INC": {"sector": "Produits ménagers"},
+    "ADDVANTAGE TECH": {"sector": "Technologie & Numérique"},
+    "ADEIA": {"sector": "Software"},
+    "ADOBE": {"sector": "Software"},
+    "ADVANCED EMISSIO": {"sector": "Composants industriels / Automatisation"},
+    "ADVANCED ENERGY": {"sector": "Composants industriels / Automatisation"},
+    "AEHR TEST SYSTEM": {"sector": "Fintech / Paiements numériques"},
+    "AEROVIRONMENT": {"sector": "Aéronautique, Défense & Technologies industrielles"},
+    "AGENUS": {"sector": "Biotech"},
+    "AGILYSYS": {"sector": "E-commerce"}
+}
+
+# Fonction pour obtenir le code pays à 2 lettres
+def get_country_code(country_name):
+    """Convertit un nom de pays en code ISO à 2 lettres pour affichage du drapeau"""
+    country_codes = {
+        "France": "FR",
+        "Germany": "DE", 
+        "Italy": "IT",
+        "Spain": "ES",
+        "Netherlands": "NL",
+        "Belgium": "BE",
+        "Switzerland": "CH",
+        "United Kingdom": "GB",
+        "Sweden": "SE",
+        "Denmark": "DK",
+        "Finland": "FI",
+        "Norway": "NO",
+        "Austria": "AT",
+        "Portugal": "PT",
+        "Ireland": "IE",
+        "Greece": "GR",
+        "Luxembourg": "LU",
+        "Poland": "PL",
+        "Hungary": "HU",
+        "Czech Republic": "CZ"
+    }
+    return country_codes.get(country_name, "")
+
 def get_headers():
     """Crée des en-têtes HTTP pour éviter la détection de bot"""
     return {
@@ -203,6 +272,43 @@ def get_top_performers(stocks, field='change', reverse=True, limit=10):
         logger.error(f"Erreur lors de l'extraction des top performers: {str(e)}")
         return []
 
+# Fonction pour enrichir les données d'une action avec des secteurs et pays
+def enrich_stock_data(stock, market_type):
+    """
+    Enrichit les données d'une action avec des informations de secteur et pays
+    
+    Args:
+        stock (dict): Données de l'action
+        market_type (str): Type de marché (NASDAQ ou STOXX)
+    """
+    name = stock.get("name", "")
+    
+    if market_type == "NASDAQ":
+        # Ajouter le secteur si disponible dans le mapping
+        stock_info = NASDAQ_MAPPINGS.get(name, {})
+        if "sector" in stock_info:
+            stock["sector"] = stock_info["sector"]
+        
+        # Ajouter USA comme pays par défaut pour NASDAQ
+        stock["country"] = "United States"
+        
+    elif market_type == "STOXX":
+        # Ajouter le secteur et le pays si disponibles
+        stock_info = STOXX_MAPPINGS.get(name, {})
+        if "sector" in stock_info:
+            stock["sector"] = stock_info["sector"]
+        if "country" in stock_info:
+            stock["country"] = stock_info["country"]
+            
+            # Ajouter le code pays pour le drapeau
+            country_code = get_country_code(stock_info["country"])
+            if country_code:
+                stock["country_code"] = country_code.lower()
+                # Option: ajouter une balise d'image pour le drapeau
+                stock["flag"] = f'<img src="flags/{country_code.lower()}.svg" class="country-flag" alt="{stock_info["country"]}" title="{stock_info["country"]}">'
+    
+    return stock
+
 #
 # Fonctions pour NASDAQ
 #
@@ -253,6 +359,8 @@ def scrape_nasdaq_page(letter, page=1):
         for row in rows:
             stock_data = extract_stock_data(row)
             if stock_data:
+                # Enrichir avec secteur et pays
+                stock_data = enrich_stock_data(stock_data, "NASDAQ")
                 stocks.append(stock_data)
                 
         logger.info(f"Trouvé {len(stocks)} actions NASDAQ pour la lettre {letter}, page {page}")
@@ -367,6 +475,8 @@ def scrape_stoxx_page(page=1, letter=""):
         for row in rows:
             stock_data = extract_stock_data(row)
             if stock_data:
+                # Enrichir avec secteur et pays
+                stock_data = enrich_stock_data(stock_data, "STOXX")
                 stocks.append(stock_data)
                 
         logger.info(f"Trouvé {len(stocks)} actions STOXX pour la lettre {letter}, page {page}")
