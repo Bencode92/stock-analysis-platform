@@ -336,6 +336,61 @@ def create_market_top_performers_file(stocks, market_name, timestamp):
     except Exception as e:
         logger.error(f"Erreur lors de la création du fichier pour {market_name}: {e}")
 
+def create_names_only_files(nasdaq_stocks, stoxx_stocks):
+    """
+    Crée deux fichiers JSON contenant uniquement les noms des actions
+    pour le NASDAQ et le STOXX.
+    
+    Args:
+        nasdaq_stocks (list): Liste des actions du NASDAQ
+        stoxx_stocks (list): Liste des actions du STOXX
+    """
+    try:
+        # Extraire uniquement les noms des actions NASDAQ
+        nasdaq_names = [stock["name"] for stock in nasdaq_stocks if "name" in stock]
+        # Supprimer les doublons éventuels
+        nasdaq_names = list(dict.fromkeys(nasdaq_names))
+        # Trier par ordre alphabétique
+        nasdaq_names.sort()
+        
+        # Extraire uniquement les noms des actions STOXX
+        stoxx_names = [stock["name"] for stock in stoxx_stocks if "name" in stock]
+        # Supprimer les doublons éventuels
+        stoxx_names = list(dict.fromkeys(stoxx_names))
+        # Trier par ordre alphabétique
+        stoxx_names.sort()
+        
+        # Créer le fichier pour les noms du NASDAQ
+        nasdaq_names_path = os.path.join(OUTPUT_DIR, "nasdaq_names.json")
+        with open(nasdaq_names_path, 'w', encoding='utf-8') as f:
+            json.dump(nasdaq_names, f, ensure_ascii=False, indent=2)
+        logger.info(f"Fichier nasdaq_names.json créé avec {len(nasdaq_names)} noms d'actions")
+        
+        # Créer le fichier pour les noms du STOXX
+        stoxx_names_path = os.path.join(OUTPUT_DIR, "stoxx_names.json") 
+        with open(stoxx_names_path, 'w', encoding='utf-8') as f:
+            json.dump(stoxx_names, f, ensure_ascii=False, indent=2)
+        logger.info(f"Fichier stoxx_names.json créé avec {len(stoxx_names)} noms d'actions")
+        
+        # Option: créer un fichier combiné avec les deux listes
+        combined_names = {
+            "nasdaq": nasdaq_names,
+            "stoxx": stoxx_names,
+            "meta": {
+                "nasdaq_count": len(nasdaq_names),
+                "stoxx_count": len(stoxx_names),
+                "timestamp": datetime.now().isoformat()
+            }
+        }
+        
+        combined_names_path = os.path.join(OUTPUT_DIR, "stock_names.json")
+        with open(combined_names_path, 'w', encoding='utf-8') as f:
+            json.dump(combined_names, f, ensure_ascii=False, indent=2)
+        logger.info(f"Fichier stock_names.json créé avec succès")
+        
+    except Exception as e:
+        logger.error(f"Erreur lors de la création des fichiers de noms: {e}")
+
 def validate_top_performers(data, market_name):
     """
     Vérifie que les tops performers sont correctement générés
@@ -401,6 +456,10 @@ def main():
         
         logger.info("Déduplication des données STOXX")
         stoxx_stocks = remove_duplicates(stoxx_stocks)
+        
+        # Création des fichiers contenant uniquement les noms des actions
+        logger.info("Création des fichiers contenant uniquement les noms des actions")
+        create_names_only_files(nasdaq_stocks, stoxx_stocks)
         
         # Créer un fichier structuré pour les listes.json
         logger.info("Création des structures de données pour les fichiers JSON")
