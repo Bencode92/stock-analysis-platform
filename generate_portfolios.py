@@ -1381,17 +1381,20 @@ def main():
     themes_data = load_json_data('data/themes.json')
     
     # Essayer de charger le résumé d'actualités complet depuis différents emplacements possibles
-     brief_data = None
-    try:
-        with open('data/brief_ia.json', 'r', encoding='utf-8') as file:
-            brief_data = json.load(file)
-            print(f"✅ Résumé d'actualités chargé avec succès depuis data/brief_ia.json")
-    except Exception as e:
-        print(f"❌ Erreur lors du chargement de data/brief_ia.json: {str(e)}")
-        print("⚠️ Le fichier brief_ia.json doit être présent dans le dossier data/")
+    brief_data = None
+    brief_paths = ['brief_ia.json', './brief_ia.json', 'data/brief_ia.json']
+    
+    for path in brief_paths:
+        try:
+            with open(path, 'r', encoding='utf-8') as file:
+                brief_data = json.load(file)
+                print(f"✅ Résumé d'actualités chargé avec succès depuis {path}")
+                break
+        except Exception as e:
+            print(f"⚠️ Impossible de charger {path}: {str(e)}")
     
     if brief_data is None:
-        print("⚠️ Le fichier brief_ia.json n'a pas pu être chargé depuis data/")
+        print("⚠️ Aucun fichier brief_ia.json trouvé parmi les chemins testés")
     
     print("🧠 Génération des portefeuilles optimisés...")
     portfolios = generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data, themes_data, brief_data)
