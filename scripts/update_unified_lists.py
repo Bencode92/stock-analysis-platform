@@ -1586,7 +1586,6 @@ NASDAQ_MAPPINGS = {
     "ZORAN CORP": {"sector": "Technologie & Numérique"},
     "ZUMIEZ": {"sector": "Vêtements"}
 }
-}
 
 # Fonction pour obtenir le code pays à 2 lettres
 def get_country_code(country_name):
