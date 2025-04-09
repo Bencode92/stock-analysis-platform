@@ -1382,7 +1382,7 @@ def main():
     
     # Essayer de charger le résumé d'actualités complet depuis différents emplacements possibles
     brief_data = None
-    brief_paths = ['data/brief_ia.json']
+    brief_paths = ['brief_ia.json', './brief_ia.json', 'data/brief_ia.json']
     
     for path in brief_paths:
         try:
