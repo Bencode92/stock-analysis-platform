@@ -990,15 +990,7 @@ def generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_
     # Ajouter le filtrage des tendances thématiques
     filtered_themes = filter_themes_data(themes_data) if themes_data else "Aucune donnée de tendances thématiques disponible"
     # Traiter le résumé d'actualités complet
-   if brief_data:
-    if "brief" in brief_data:
-        # Utilise directement le contenu du brief markdown de data/brief_ia.json
-        filtered_brief = brief_data["brief"]
-    else:
-        # Fallback sur le format_brief_data pour l'ancienne structure si nécessaire
-        filtered_brief = format_brief_data(brief_data)
-else:
-    filtered_brief = "Aucun résumé d'actualités complet disponible"
+    filtered_brief = format_brief_data(brief_data) if brief_data else "Aucun résumé d'actualités complet disponible"
     
     # Formater la liste des ETF obligataires pour le prompt
     bond_etf_list = "\n".join([f"- {name}" for name in bond_etf_names])
