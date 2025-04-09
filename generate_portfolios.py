@@ -1381,25 +1381,25 @@ def main():
     themes_data = load_json_data('data/themes.json')
     
     # Essayer de charger le résumé d'actualités complet depuis différents emplacements possibles
-   brief_data = None
-try:
-    with open('data/brief_ia.json', 'r', encoding='utf-8') as file:
-        brief_data = json.load(file)
-        print(f"✅ Résumé d'actualités chargé avec succès depuis data/brief_ia.json")
-except Exception as e:
-    print(f"❌ Erreur lors du chargement de data/brief_ia.json: {str(e)}")
-    print("⚠️ Le fichier brief_ia.json doit être présent dans le dossier data/")
-
-if brief_data is None:
-    print("⚠️ Le fichier brief_ia.json n'a pas pu être chargé depuis data/")
+     brief_data = None
+    try:
+        with open('data/brief_ia.json', 'r', encoding='utf-8') as file:
+            brief_data = json.load(file)
+            print(f"✅ Résumé d'actualités chargé avec succès depuis data/brief_ia.json")
+    except Exception as e:
+        print(f"❌ Erreur lors du chargement de data/brief_ia.json: {str(e)}")
+        print("⚠️ Le fichier brief_ia.json doit être présent dans le dossier data/")
     
-print("🧠 Génération des portefeuilles optimisés...")
-portfolios = generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data, themes_data, brief_data)
-
-print("💾 Sauvegarde des portefeuilles...")
-save_portfolios(portfolios)
-
-print("✨ Traitement terminé!")
+    if brief_data is None:
+        print("⚠️ Le fichier brief_ia.json n'a pas pu être chargé depuis data/")
+    
+    print("🧠 Génération des portefeuilles optimisés...")
+    portfolios = generate_portfolios(news_data, markets_data, sectors_data, lists_data, etfs_data, crypto_data, themes_data, brief_data)
+    
+    print("💾 Sauvegarde des portefeuilles...")
+    save_portfolios(portfolios)
+    
+    print("✨ Traitement terminé!")
 
 def load_json_data(file_path):
     """Charger des données depuis un fichier JSON."""
