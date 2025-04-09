@@ -1092,23 +1092,46 @@ Le document stratégique ci-dessus (brief_ia.json) est ta source d'information p
    - logique sectorielle ou géographique alignée avec le brief
    - ET potentiel futur (pas uniquement performance passée)
 
-🚨 Avertissement critique : certains actifs (ex : Rheinmetall) ont pu surperformer sur le YTD, mais sont désormais fragilisés par des événements récents (ex: revirement de politique étrangère américaine).
+🔺 **Attention aux performances trompeuses**
+Certains actifs affichent des **performances YTD spectaculaires**, mais sont **déjà en fin de cycle** ou exposés à des **risques récents majeurs** :
+* Exemples : **Rheinmetall** (+80% YTD) qui chute suite à un changement dans la politique étrangère américaine ; ou un ETF tech US qui baisse malgré un bon YTD, car les taux longs remontent brutalement.
+👉 Tu dois **impérativement croiser** :
+* **Les performances passées (YTD, 1M, 1D)** **AVEC**
+* **Les signaux actuels** (actualités, tendances macro, dynamique sectorielle, signaux faibles)
+🧠 Objectif : détecter si la performance est encore **pertinente et soutenable**, ou si elle est **artificielle et risquée**.
+**Règle :** *N'intègre jamais un actif **juste** parce qu'il a +X% YTD.*
+Tu dois vérifier :
+* Est-ce que des signaux **récents** confirment cette tendance ?
+* Ou au contraire, y a-t-il un **risque de retournement** non encore reflété dans les prix ?
 
-⚠️ Tu dois TOUJOURS te poser la question :
-→ "Cette performance passée est-elle soutenue par des éléments ACTUELS dans l'actualité, les secteurs ou les thèmes ?"
-→ "Ou bien est-ce une **surperformance artificielle sans justification actuelle** ?"
+🧩 **Favorise la résilience sectorielle (vs performance passée)**
+Ne privilégie pas les secteurs **seulement** parce qu'ils ont performé récemment. Tu dois identifier ceux qui **tiennent dans la tempête actuelle**, même si leur performance récente est modeste.
+🎯 Cherche des **signes de résilience ou de reprise structurelle** :
+* Secteurs défensifs (santé, utilities, consommation de base)
+* Secteurs résilients à l'inflation ou aux hausses de taux
+* Zones géographiques stables ou en rebond macro (Amérique Latine, Asie émergente…)
+🔍 Exemple :
+Un secteur comme la santé peut avoir un YTD neutre, mais bénéficier d'un regain d'intérêt en période d'instabilité géopolitique ou de repli économique.
+🧠 Inclure ces secteurs **montre une logique de préservation et d'anticipation**, pas seulement de performance.
 
-🧠 Si un actif chute fortement récemment (ex: actualité négative, revirement politique, contexte géoéconomique défavorable), **tu dois le considérer comme potentiellement risqué ou surévalué**, et l'exclure SAUF si tu justifies clairement sa résilience ou un rebond probable à partir d'une tendance actuelle.
+📉 **Sur-réaction du marché = opportunité ?**
+Un actif ou un secteur peut baisser fortement à court terme, **non pas à cause de ses fondamentaux**, mais à cause d'un **excès de peur** ou d'une réaction irrationnelle du marché.
+🧠 Tu dois détecter ces cas et les traiter intelligemment :
+Si un actif baisse de -6% en 1 jour, mais que :
+* Le secteur est en croissance
+* L'actualité ne remet pas en cause ses fondamentaux
+* Le thème est haussier (ex : énergie verte, digitalisation)
+👉 Tu peux l'inclure, **à condition de justifier clairement** qu'il s'agit d'un **retournement technique temporaire** ou d'une **opportunité liée à une exagération du marché.**
+🚫 Inversement, si la baisse est liée à un vrai changement de paradigme (ex : sanctions économiques, changement de politique budgétaire), il faut **exclure** cet actif même s'il est encore bien classé YTD.
 
-📉 Si un actif est en forte baisse aujourd'hui mais qu'un secteur ou un thème indique une **sur-réaction du marché**, tu peux **considérer l'intégrer à titre opportuniste**, mais UNIQUEMENT avec justification claire (ex: "baisse technique liée à un excès de pessimisme malgré de bons fondamentaux").
-
-🎯 TA PRIORITÉ : détecter les actifs qui montrent une **vraie solidité structurelle, pas une simple performance passée**.
-
-🧠 Si un actif est précédé de 🚩, cela signifie que sa performance récente pourrait être **trompeuse**.
-→ Ne le sélectionne **que si** une **justification macro/sectorielle** existe.
-
-📉 Si un actif est marqué comme "baisse significative mais secteur haussier", cela peut signaler une **opportunité à anticiper**.
-→ Tu peux l'intégrer, à condition de justifier pourquoi cette baisse pourrait être temporaire.
+🧠 **Checklist mentale à appliquer avant de sélectionner un actif**
+Pour chaque actif sélectionné, **pose-toi ces 4 questions**. Si une seule réponse est négative, **exclue ou justifie fortement** :
+1. **Tendance actuelle :** L'actif est-il aligné avec une **tendance macroéconomique, géopolitique ou sectorielle récente** ?
+2. **Contexte sectoriel :** Le **secteur ou la région** montre-t-il une **stabilité, une croissance ou un retournement anticipé** ?
+3. **Performance soutenable :** La performance passée est-elle **confirmée** par des **signaux récents positifs** ? Ou bien est-ce un pic isolé ?
+4. **Signal d'alerte ou opportunité ?** Une récente baisse ou volatilité est-elle :
+   * 🟥 un **signal de danger** ? (→ exclure)
+   * 🟩 ou une **opportunité technique ou structurelle** ? (→ justifier avec données macro/thème)
 
 📰 Actualités financières récentes: 
 {filtered_news}
@@ -1220,7 +1243,7 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
    3. Si l'actif a connu une forte performance passée, préciser les facteurs ACTUELS qui pourraient soutenir sa croissance future
    4. Si l'actif a connu une performance modeste, expliquer les catalyseurs potentiels qui justifient son inclusion
 
-📝 Pour chaque portefeuille généré, tu dois également fournir une brève liste "Actifs exclus malgré leur performance" avec 2-3 actifs que tu as délibérément écartés malgré leur forte performance YTD, en expliquant pourquoi (ex: "Rheinmetall: +80% YTD mais risque de correction suite aux annonces de politique étrangère américaine").
+📝 Pour chaque portefeuille généré, tu dois également fournir une brève liste "ActifsExclus" avec 2-3 actifs que tu as délibérément écartés malgré leur forte performance YTD, en expliquant pourquoi (ex: "Rheinmetall: +80% YTD mais risque de correction suite aux annonces de politique étrangère américaine").
 
 ✅ Voici la phrase à ajouter dans ton prompt pour **forcer cette logique** :
 🧠 **Tu dois justifier chacun des actifs sélectionnés** dans chaque portefeuille (Agressif, Modéré, Stable).
