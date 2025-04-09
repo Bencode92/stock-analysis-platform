@@ -241,12 +241,15 @@ def filter_sectors_data(sectors_data):
     return "\n".join(summary) if summary else "Aucune donnée sectorielle significative"
 
 def filter_lists_data(lists_data):
-    """Filtre les actifs avec YTD entre -5% et 120%, et Daily > -10% depuis lists.json."""
+    """Filtre les actifs avec YTD entre -5% et 120%, et Daily > -10% depuis lists.json,
+    puis sélectionne les 10 meilleurs par secteur."""
     if not lists_data or not isinstance(lists_data, dict):
         return "Aucune liste d'actifs disponible"
     
-    filtered_assets = []
-
+    # Dictionnaire pour regrouper les actifs par secteur
+    assets_by_sector = {}
+    
+    # Parcourir toutes les listes d'actifs
     for list_name, list_data in lists_data.items():
         if not isinstance(list_data, dict):
             continue
@@ -262,9 +265,8 @@ def filter_lists_data(lists_data):
 
                 name = asset.get("name", "")
                 ytd = asset.get("ytd", "")
-                daily = asset.get("change", "")  # Utilisation de la clé "change" pour la variation journalière
-                # Récupération des nouveaux champs
-                sector = asset.get("sector", "")
+                daily = asset.get("change", "")  # Variation journalière
+                sector = asset.get("sector", "Non classé")  # "Non classé" si pas de secteur
                 country = asset.get("country", "")
 
                 # Nettoyage et conversion
@@ -274,32 +276,66 @@ def filter_lists_data(lists_data):
                 except (ValueError, AttributeError):
                     continue
 
-                # Ajouter des tags pour les actifs potentiellement surévalués ou opportuns
-                # Détection des actifs potentiellement surévalués
-                if ytd_value > 50 and daily_value < 0:
-                    name = f"🚩 {name} (potentielle surévaluation)"
-                    
-                # Détection des baisses excessives dans des secteurs porteurs
-                if ytd_value > 10 and daily_value < -5:
-                    name = f"📉 {name} (forte baisse récente mais secteur haussier)"
-
                 # Filtre : YTD entre -5% et 120%, et Daily > -10%
                 if -5 <= ytd_value <= 120 and daily_value > -10:
-                    # Ajouter sector et country au tuple
-                    filtered_assets.append((name, ytd_value, daily_value, sector, country))
+                    # Ajouter des tags pour les actifs potentiellement intéressants
+                    display_name = name
+                    if ytd_value > 50 and daily_value < 0:
+                        display_name = f"🚩 {name} (potentielle surévaluation)"
+                    elif ytd_value > 10 and daily_value < -5:
+                        display_name = f"📉 {name} (forte baisse récente mais secteur haussier)"
+                    
+                    # Créer l'entrée pour cet actif
+                    asset_entry = {
+                        "name": display_name,
+                        "ytd": ytd_value,
+                        "daily": daily_value,
+                        "sector": sector,
+                        "country": country,
+                        "original_name": name  # Conserver le nom original pour référence
+                    }
+                    
+                    # Ajouter au dictionnaire sectoriel
+                    if sector not in assets_by_sector:
+                        assets_by_sector[sector] = []
+                    assets_by_sector[sector].append(asset_entry)
 
-    # Trier par YTD décroissant
-    filtered_assets.sort(key=lambda x: x[1], reverse=True)
-
-    # Résumé textuel avec les informations secteur et pays
-    assets_summary = ["📋 Actifs filtrés (YTD -5% à 120% et Daily > -10%) :"]
-    for name, ytd_value, daily_value, sector, country in filtered_assets:
-        # Ajouter les informations de secteur et pays si elles existent
-        sector_info = f" | Secteur: {sector}" if sector else ""
-        country_info = f" | Pays: {country}" if country else ""
-        assets_summary.append(f"• {name}: YTD {ytd_value:.2f}%, Daily {daily_value:.2f}%{sector_info}{country_info}")
-
-    return "\n".join(assets_summary) if filtered_assets else "Aucune donnée d'actifs significative"
+    # Résumé textuel organisé par secteur
+    summary_lines = ["📋 TOP 10 ACTIFS PAR SECTEUR (YTD -5% à 120% et Daily > -10%) :"]
+    
+    # Trier les secteurs par ordre alphabétique pour une présentation cohérente
+    sorted_sectors = sorted(assets_by_sector.keys())
+    
+    for sector in sorted_sectors:
+        sector_assets = assets_by_sector[sector]
+        
+        # Si le secteur n'a pas d'actifs qui correspondent aux critères, on saute
+        if not sector_assets:
+            continue
+        
+        # Trier les actifs du secteur par YTD décroissant
+        sector_assets.sort(key=lambda x: x["ytd"], reverse=True)
+        
+        # Sélectionner uniquement les 10 meilleurs
+        top_10_assets = sector_assets[:10]
+        
+        # Ajouter l'en-tête du secteur
+        summary_lines.append(f"\n🏭 SECTEUR: {sector.upper()} ({len(top_10_assets)} actifs)")
+        
+        # Ajouter chaque actif du top 10
+        for asset in top_10_assets:
+            # Construire la ligne de description avec les informations disponibles
+            country_info = f" | Pays: {asset['country']}" if asset['country'] else ""
+            
+            summary_lines.append(
+                f"• {asset['name']}: YTD {asset['ytd']:.2f}%, Daily {asset['daily']:.2f}%{country_info}"
+            )
+    
+    # Ajouter un compteur global
+    total_filtered_assets = sum(len(assets_by_sector[sector][:10]) for sector in sorted_sectors if assets_by_sector[sector])
+    summary_lines.insert(1, f"Total: {total_filtered_assets} actifs répartis dans {len(sorted_sectors)} secteurs")
+    
+    return "\n".join(summary_lines) if assets_by_sector else "Aucune donnée d'actifs significative"
 
 def filter_etf_data(etfs_data):
     """Filtre les ETF par catégories et critères spécifiques."""
