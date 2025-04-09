@@ -554,6 +554,15 @@ def filter_lists_data(lists_data):
                 except (ValueError, AttributeError):
                     continue
 
+                # Ajouter des tags pour les actifs potentiellement surévalués ou opportuns
+                # Détection des actifs potentiellement surévalués
+                if ytd_value > 50 and daily_value < 0:
+                    name = f"🚩 {name} (potentielle surévaluation)"
+                    
+                # Détection des baisses excessives dans des secteurs porteurs
+                if ytd_value > 10 and daily_value < -5:
+                    name = f"📉 {name} (forte baisse récente mais secteur haussier)"
+
                 # Filtre : YTD entre -5% et 120%, et Daily > -10%
                 if -5 <= ytd_value <= 120 and daily_value > -10:
                     # Ajouter sector et country au tuple
@@ -1083,6 +1092,24 @@ Le document stratégique ci-dessus (brief_ia.json) est ta source d'information p
    - logique sectorielle ou géographique alignée avec le brief
    - ET potentiel futur (pas uniquement performance passée)
 
+🚨 Avertissement critique : certains actifs (ex : Rheinmetall) ont pu surperformer sur le YTD, mais sont désormais fragilisés par des événements récents (ex: revirement de politique étrangère américaine).
+
+⚠️ Tu dois TOUJOURS te poser la question :
+→ "Cette performance passée est-elle soutenue par des éléments ACTUELS dans l'actualité, les secteurs ou les thèmes ?"
+→ "Ou bien est-ce une **surperformance artificielle sans justification actuelle** ?"
+
+🧠 Si un actif chute fortement récemment (ex: actualité négative, revirement politique, contexte géoéconomique défavorable), **tu dois le considérer comme potentiellement risqué ou surévalué**, et l'exclure SAUF si tu justifies clairement sa résilience ou un rebond probable à partir d'une tendance actuelle.
+
+📉 Si un actif est en forte baisse aujourd'hui mais qu'un secteur ou un thème indique une **sur-réaction du marché**, tu peux **considérer l'intégrer à titre opportuniste**, mais UNIQUEMENT avec justification claire (ex: "baisse technique liée à un excès de pessimisme malgré de bons fondamentaux").
+
+🎯 TA PRIORITÉ : détecter les actifs qui montrent une **vraie solidité structurelle, pas une simple performance passée**.
+
+🧠 Si un actif est précédé de 🚩, cela signifie que sa performance récente pourrait être **trompeuse**.
+→ Ne le sélectionne **que si** une **justification macro/sectorielle** existe.
+
+📉 Si un actif est marqué comme "baisse significative mais secteur haussier", cela peut signaler une **opportunité à anticiper**.
+→ Tu peux l'intégrer, à condition de justifier pourquoi cette baisse pourrait être temporaire.
+
 📰 Actualités financières récentes: 
 {filtered_news}
 
@@ -1193,6 +1220,8 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
    3. Si l'actif a connu une forte performance passée, préciser les facteurs ACTUELS qui pourraient soutenir sa croissance future
    4. Si l'actif a connu une performance modeste, expliquer les catalyseurs potentiels qui justifient son inclusion
 
+📝 Pour chaque portefeuille généré, tu dois également fournir une brève liste "Actifs exclus malgré leur performance" avec 2-3 actifs que tu as délibérément écartés malgré leur forte performance YTD, en expliquant pourquoi (ex: "Rheinmetall: +80% YTD mais risque de correction suite aux annonces de politique étrangère américaine").
+
 ✅ Voici la phrase à ajouter dans ton prompt pour **forcer cette logique** :
 🧠 **Tu dois justifier chacun des actifs sélectionnés** dans chaque portefeuille (Agressif, Modéré, Stable).
 * Pour chaque actif, explique **clairement et de manière concise** pourquoi il a été choisi, en t'appuyant sur **les données fournies** (actualités, marchés, secteurs, ETF, crypto, tendances thématiques, etc.).
@@ -1215,7 +1244,11 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
     }},
     "Crypto": {{ ... }},
     "ETF": {{ ... }},
-    "Obligations": {{ ... }}
+    "Obligations": {{ ... }},
+    "ActifsExclus": [
+      "Nom de l'actif exclu 1: Raison de l'exclusion",
+      "Nom de l'actif exclu 2: Raison de l'exclusion"
+    ]
   }},
   "Modéré": {{ ... }},
   "Stable": {{ ... }}
@@ -1272,8 +1305,8 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
             
             # Afficher un résumé des actifs par portefeuille
             for portfolio_type, portfolio in portfolios.items():
-                asset_count = sum(len(assets) for cat, assets in portfolio.items() if cat != "Commentaire")
-                categories = [cat for cat in portfolio.keys() if cat != "Commentaire"]
+                asset_count = sum(len(assets) for cat, assets in portfolio.items() if cat != "Commentaire" and cat != "ActifsExclus")
+                categories = [cat for cat in portfolio.keys() if cat != "Commentaire" and cat != "ActifsExclus"]
                 print(f"  📊 {portfolio_type}: {asset_count} actifs, {len(categories)} catégories")
             
             return portfolios
@@ -1350,7 +1383,7 @@ def update_history_index(history_file, portfolio_data):
         for portfolio_type, portfolio in portfolio_data["portfolios"].items():
             entry["summary"][portfolio_type] = {}
             for category, assets in portfolio.items():
-                if category != "Commentaire":  # Ne pas compter le commentaire comme une catégorie d'actifs
+                if category != "Commentaire" and category != "ActifsExclus":  # Ne pas compter le commentaire comme une catégorie d'actifs
                     count = len(assets)
                     entry["summary"][portfolio_type][category] = "{} actifs".format(count)
         
