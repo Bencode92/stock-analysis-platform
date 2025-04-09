@@ -613,7 +613,7 @@ NASDAQ_MAPPINGS = {
     "AUBURN NATL BANC": {"sector": "Technologie & Numérique"},
     "AUDIOCODES": {"sector": "Transports & Infrastructure industrielle"},
     "AUTODESK INC": {"sector": "Services aux collectivités"},
-    "AUTOSCOPE TECH": {"sector": "Semiconducteurs"}
+    "AUTOSCOPE TECH": {"sector": "Semiconducteurs"},
        "AVIAT NETWORKS": {"sector": "Technologie & Numérique"},
     "AWARE": {"sector": "Fintech / Paiements numériques"},
     "AXCELIS TECHS": {"sector": "Semiconducteurs"},
