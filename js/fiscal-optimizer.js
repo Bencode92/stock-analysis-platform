@@ -36,10 +36,10 @@ const PatrimoineSimulator = (function() {
         taux_charges: CHARGES_PAR_TYPE.salarie,
         per_pourcentage: 0.10,     // 10% du brut
         budget: {
-            loyer: 1000,           // loyer/crédit mensuel
-            quotidien: 1200,       // dépenses courantes
-            extra: 500,            // loisirs, sorties, etc.
-            investAuto: 300        // investissement automatique
+            loyer: 0,           // loyer/crédit mensuel
+            quotidien: 0,       // dépenses courantes
+            extra: 0,            // loisirs, sorties, etc.
+            investAuto: 0        // investissement automatique
         },
         allocation: {
             etf: 0.40,             // 40% en ETF
@@ -429,20 +429,6 @@ function calculerFiscalite() {
         tauxCharges: charges,
         perPourcentage: perPct
     });
-    
-    // Récupérer les données du budget
-    const budgetLoyer = parseFloat(document.getElementById('budget-loyer').value) || 1000;
-    const budgetQuotidien = parseFloat(document.getElementById('budget-quotidien').value) || 1200;
-    const budgetExtra = parseFloat(document.getElementById('budget-extra').value) || 500;
-    const budgetInvest = parseFloat(document.getElementById('budget-invest').value) || 300;
-    
-    // Calculer le budget
-    PatrimoineSimulator.calculerBudget({
-        loyer: budgetLoyer,
-        quotidien: budgetQuotidien,
-        extra: budgetExtra,
-        investAuto: budgetInvest
-    });
 
     // Affichage des résultats
     document.getElementById("impot-sans-per").textContent = `${resultats.impotSansPER.toLocaleString('fr-FR')} €`;
@@ -506,9 +492,6 @@ function calculerFiscalite() {
     if (document.getElementById('tax-comparison-chart')) {
         updateTaxComparisonChart(resultats);
     }
-    
-    // Mettre à jour les informations sur le budget et l'épargne
-    updateBudgetInfo(resultats);
 }
 
 /**
@@ -532,52 +515,6 @@ function getTauxMarginal(revenuImposable) {
     }
     
     return 0;
-}
-
-/**
- * Met à jour les informations sur le budget et l'épargne
- * CORRECTION: Corrige le calcul de l'épargne mensuelle
- */
-function updateBudgetInfo(resultats) {
-    // Récupérer les éléments du DOM
-    const revenuMensuel = document.getElementById('revenu-mensuel');
-    const depensesTotales = document.getElementById('depenses-totales');
-    const epargnePossible = document.getElementById('epargne-possible');
-    const tauxEpargne = document.getElementById('taux-epargne');
-    
-    if (!revenuMensuel || !depensesTotales || !epargnePossible || !tauxEpargne) return;
-    
-    // Récupérer les données du budget
-    const budgetLoyer = parseFloat(document.getElementById('budget-loyer').value) || 1000;
-    const budgetQuotidien = parseFloat(document.getElementById('budget-quotidien').value) || 1200;
-    const budgetExtra = parseFloat(document.getElementById('budget-extra').value) || 500;
-    const budgetInvest = parseFloat(document.getElementById('budget-invest').value) || 300;
-    
-    // Calculer les totaux
-    const depensesTotal = budgetLoyer + budgetQuotidien + budgetExtra + budgetInvest;
-    const revenuMensuelNet = resultats.netDispoAvecPER / 12;
-    
-    // CORRECTION: Calcul correct de l'épargne mensuelle
-    const epargne = Math.max(0, revenuMensuelNet - depensesTotal);
-    const tauxEpargnePct = revenuMensuelNet > 0 ? (epargne / revenuMensuelNet) * 100 : 0;
-    
-    // Mettre à jour l'affichage avec un formatage plus lisible
-    revenuMensuel.textContent = `${Math.round(revenuMensuelNet).toLocaleString('fr-FR')} €`;
-    depensesTotales.textContent = `${depensesTotal.toLocaleString('fr-FR')} €`;
-    epargnePossible.textContent = `${Math.round(epargne).toLocaleString('fr-FR')} €`;
-    tauxEpargne.textContent = `${tauxEpargnePct.toFixed(1)}%`;
-    
-    // Mise en évidence visuelle du taux d'épargne
-    if (tauxEpargnePct >= 20) {
-        tauxEpargne.classList.add('text-green-400');
-        tauxEpargne.classList.remove('text-yellow-400', 'text-red-400');
-    } else if (tauxEpargnePct >= 10) {
-        tauxEpargne.classList.add('text-yellow-400');
-        tauxEpargne.classList.remove('text-green-400', 'text-red-400');
-    } else {
-        tauxEpargne.classList.add('text-red-400');
-        tauxEpargne.classList.remove('text-green-400', 'text-yellow-400');
-    }
 }
 
 /**
