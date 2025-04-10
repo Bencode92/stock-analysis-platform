@@ -105,7 +105,7 @@
             padding: 15px;
         }
         
-        /* Style pour le tableau */
+        /* Style amélioré pour le tableau */
         .comparison-table {
             border-collapse: separate;
             border-spacing: 0;
@@ -121,15 +121,42 @@
             text-align: left;
             position: sticky;
             top: 0;
+            padding: 16px 15px;
+            font-size: 1.05rem;
         }
         
         .comparison-table th, .comparison-table td {
-            padding: 12px 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            vertical-align: top;
         }
         
         .comparison-table tr:hover {
             background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        /* Améliorations visuelles pour le tableau */
+        .comparison-table td {
+            line-height: 1.5;
+        }
+        
+        .comparison-table td .feature-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        
+        .comparison-table td .feature-icon {
+            margin-right: 8px;
+            color: #00FF87;
+            flex-shrink: 0;
+        }
+        
+        .product-name {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: white;
         }
         
         .profile-tag {
@@ -139,6 +166,7 @@
             font-size: 11px;
             font-weight: 600;
             margin-right: 5px;
+            margin-top: 4px;
         }
         
         .profile-tag.prudent {
@@ -154,6 +182,43 @@
         .profile-tag.dynamique {
             background-color: rgba(255, 107, 107, 0.2);
             color: #ff6b6b;
+        }
+        
+        /* Badge visuel pour info clé */
+        .key-info {
+            background-color: rgba(0, 255, 135, 0.1);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-weight: 500;
+            display: inline-block;
+            margin-top: 5px;
+            font-size: 0.9rem;
+        }
+        
+        /* Info bulle pour risque */
+        .risk-level {
+            display: inline-flex;
+            align-items: center;
+            margin-top: 5px;
+        }
+        
+        .risk-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 4px;
+        }
+        
+        .risk-low {
+            background-color: #4d9fff;
+        }
+        
+        .risk-medium {
+            background-color: #00d26e;
+        }
+        
+        .risk-high {
+            background-color: #ff6b6b;
         }
     </style>
 </head>
@@ -313,24 +378,19 @@
                                         <i class="fas fa-piggy-bank mr-2 text-green-400"></i> Produit
                                     </div>
                                 </th>
-                                <th class="w-64">
+                                <th class="w-48">
                                     <div class="flex items-center">
-                                        <i class="fas fa-search mr-2 text-green-400"></i> Intérêt principal
-                                    </div>
-                                </th>
-                                <th class="w-64">
-                                    <div class="flex items-center">
-                                        <i class="fas fa-exclamation-triangle mr-2 text-green-400"></i> Risques
-                                    </div>
-                                </th>
-                                <th class="w-64">
-                                    <div class="flex items-center">
-                                        <i class="fas fa-percentage mr-2 text-green-400"></i> Fiscalité
+                                        <i class="fas fa-search mr-2 text-green-400"></i> Points forts
                                     </div>
                                 </th>
                                 <th class="w-48">
                                     <div class="flex items-center">
-                                        <i class="fas fa-user mr-2 text-green-400"></i> Pour qui ?
+                                        <i class="fas fa-exclamation-triangle mr-2 text-green-400"></i> Risques
+                                    </div>
+                                </th>
+                                <th class="w-48">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-percentage mr-2 text-green-400"></i> Fiscalité
                                     </div>
                                 </th>
                             </tr>
@@ -339,143 +399,263 @@
                             <!-- PEA -->
                             <tr class="placement-row" data-profiles="equilibre dynamique">
                                 <td>
-                                    <div class="font-medium">PEA</div>
+                                    <div class="product-name">PEA</div>
                                     <div class="flex mt-1">
                                         <span class="profile-tag equilibre">Équilibré</span>
                                         <span class="profile-tag dynamique">Dynamique</span>
                                     </div>
+                                    <span class="key-info"><i class="fas fa-users mr-1"></i> Investisseur long terme EU</span>
                                 </td>
-                                <td>Exonération d'impôt sur les plus-values après 5 ans</td>
-                                <td>Risque actions / limité à l'UE</td>
-                                <td>0% IR (PS 17,2% sur les retraits)</td>
-                                <td>Investisseur long terme EU</td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Exonération d'impôt après 5 ans</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Plafond 150 000€</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Accès aux actions/ETF européens</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Limité à l'UE</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Volatilité des actions</div>
+                                    <div class="risk-level"><span class="risk-dot risk-medium"></span> Risque moyen à élevé</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> 0% IR sur plus-values</div>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> 17,2% PS sur retraits</div>
+                                    <span class="key-info"><i class="fas fa-clock mr-1"></i> Délai fiscal: 5 ans</span>
+                                </td>
                             </tr>
                             
                             <!-- CTO -->
                             <tr class="placement-row" data-profiles="dynamique">
                                 <td>
-                                    <div class="font-medium">CTO</div>
+                                    <div class="product-name">CTO</div>
                                     <div class="flex mt-1">
                                         <span class="profile-tag dynamique">Dynamique</span>
                                     </div>
+                                    <span class="key-info"><i class="fas fa-users mr-1"></i> Investisseur monde entier</span>
                                 </td>
-                                <td>Accès à tout (monde, crypto, obligations)</td>
-                                <td>Fiscalité forte / volatilité</td>
-                                <td>30% PFU (ou barème IR)</td>
-                                <td>Flexible, monde entier</td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Accès à tous les marchés mondiaux</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Sans plafond</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Crypto, obligations, etc.</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Fiscalité élevée</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Volatilité potentielle</div>
+                                    <div class="risk-level"><span class="risk-dot risk-high"></span> Risque variable selon actifs</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> 30% PFU (flat tax)</div>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Ou barème progressif IR</div>
+                                    <span class="key-info"><i class="fas fa-wallet mr-1"></i> Pas d'avantage fiscal</span>
+                                </td>
                             </tr>
                             
                             <!-- Assurance-vie -->
                             <tr class="placement-row" data-profiles="prudent equilibre">
                                 <td>
-                                    <div class="font-medium">Assurance-vie</div>
+                                    <div class="product-name">Assurance-vie</div>
                                     <div class="flex mt-1">
                                         <span class="profile-tag prudent">Prudent</span>
                                         <span class="profile-tag equilibre">Équilibré</span>
                                     </div>
+                                    <span class="key-info"><i class="fas fa-users mr-1"></i> Retraite, succession</span>
                                 </td>
-                                <td>Transmission / fiscalité douce / fonds euros</td>
-                                <td>Rendement faible fonds €, frais</td>
-                                <td>7,5% après 8 ans + abattement</td>
-                                <td>Retraite, succession</td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Transmission optimisée</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Fonds € sécurisés</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Gestion flexible</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Rendement faible (fonds €)</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Frais multiples</div>
+                                    <div class="risk-level"><span class="risk-dot risk-low"></span> Risque faible (fonds €)</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> 7,5% après 8 ans</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Abattement annuel (4600€)</div>
+                                    <span class="key-info"><i class="fas fa-clock mr-1"></i> Délai fiscal: 8 ans</span>
+                                </td>
                             </tr>
                             
                             <!-- PER -->
                             <tr class="placement-row" data-profiles="equilibre">
                                 <td>
-                                    <div class="font-medium">PER</div>
+                                    <div class="product-name">PER</div>
                                     <div class="flex mt-1">
                                         <span class="profile-tag equilibre">Équilibré</span>
                                     </div>
+                                    <span class="key-info"><i class="fas fa-users mr-1"></i> TMI élevé / achat RP</span>
                                 </td>
-                                <td>Réduction fiscale à l'entrée</td>
-                                <td>Bloqué jusqu'à la retraite</td>
-                                <td>IR ou PFU à la sortie</td>
-                                <td>TMI élevé / achat RP</td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Réduction fiscale immédiate</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Défiscalisation</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Déblocages anticipés</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Bloqué jusqu'à la retraite</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Fiscalité à la sortie</div>
+                                    <div class="risk-level"><span class="risk-dot risk-medium"></span> Risque selon allocation</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Déduction du revenu imposable</div>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> IR ou PFU à la sortie</div>
+                                    <span class="key-info"><i class="fas fa-calendar-alt mr-1"></i> Blocage jusqu'à retraite</span>
+                                </td>
                             </tr>
                             
                             <!-- SCPI -->
                             <tr class="placement-row" data-profiles="equilibre">
                                 <td>
-                                    <div class="font-medium">SCPI</div>
+                                    <div class="product-name">SCPI</div>
                                     <div class="flex mt-1">
                                         <span class="profile-tag equilibre">Équilibré</span>
                                     </div>
+                                    <span class="key-info"><i class="fas fa-users mr-1"></i> Revenu passif immobilier</span>
                                 </td>
-                                <td>Immobilier sans gestion</td>
-                                <td>Illiquide, frais élevés</td>
-                                <td>Revenus fonciers / via AV optimisable</td>
-                                <td>Revenu passif immobilier</td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Immobilier sans gestion</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Revenus réguliers</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Diversification</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Illiquidité</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Frais élevés</div>
+                                    <div class="risk-level"><span class="risk-dot risk-medium"></span> Risque modéré</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Revenus fonciers (IR)</div>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Optimisable via AV</div>
+                                    <span class="key-info"><i class="fas fa-building mr-1"></i> Fiscalité immobilière</span>
+                                </td>
                             </tr>
                             
                             <!-- FCPI / FIP -->
                             <tr class="placement-row" data-profiles="dynamique">
                                 <td>
-                                    <div class="font-medium">FCPI / FIP</div>
+                                    <div class="product-name">FCPI / FIP</div>
                                     <div class="flex mt-1">
                                         <span class="profile-tag dynamique">Dynamique</span>
                                     </div>
+                                    <span class="key-info"><i class="fas fa-users mr-1"></i> Risque / TMI élevé</span>
                                 </td>
-                                <td>Réduction IR 18% + plus-value exonérée</td>
-                                <td>Risque élevé, capital bloqué 5-10 ans</td>
-                                <td>IR réduit à l'entrée</td>
-                                <td>Risque / TMI élevé</td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Réduction IR 18%</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Plus-values exonérées</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Innovation / PME</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Risque capital élevé</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Bloqué 5-10 ans</div>
+                                    <div class="risk-level"><span class="risk-dot risk-high"></span> Risque très élevé</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Réduction IR à l'entrée</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Exonération plus-values</div>
+                                    <span class="key-info"><i class="fas fa-calendar-alt mr-1"></i> Blocage 5 à 10 ans</span>
+                                </td>
                             </tr>
                             
                             <!-- Crypto (CTO) -->
                             <tr class="placement-row" data-profiles="dynamique">
                                 <td>
-                                    <div class="font-medium">Crypto (CTO)</div>
+                                    <div class="product-name">Crypto (CTO)</div>
                                     <div class="flex mt-1">
                                         <span class="profile-tag dynamique">Dynamique</span>
                                     </div>
+                                    <span class="key-info"><i class="fas fa-users mr-1"></i> Investisseur averti</span>
                                 </td>
-                                <td>Diversification innovante</td>
-                                <td>Volatilité extrême, régulation floue</td>
-                                <td>30% PFU ou IR selon cas</td>
-                                <td>Investisseur averti</td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Potentiel de rendement élevé</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Diversification innovante</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Accessibilité</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Volatilité extrême</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Régulation floue</div>
+                                    <div class="risk-level"><span class="risk-dot risk-high"></span> Risque très élevé</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> 30% PFU (flat tax)</div>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Déclaration obligatoire</div>
+                                    <span class="key-info"><i class="fas fa-wallet mr-1"></i> Pas d'avantage fiscal</span>
+                                </td>
                             </tr>
                             
                             <!-- Livret A -->
                             <tr class="placement-row" data-profiles="prudent">
                                 <td>
-                                    <div class="font-medium">Livret A</div>
+                                    <div class="product-name">Livret A</div>
                                     <div class="flex mt-1">
                                         <span class="profile-tag prudent">Prudent</span>
                                     </div>
+                                    <span class="key-info"><i class="fas fa-users mr-1"></i> Épargne de précaution</span>
                                 </td>
-                                <td>Sécurité totale et liquidité</td>
-                                <td>Rendement bas vs inflation</td>
-                                <td>Exonération totale</td>
-                                <td>Épargne de précaution</td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Sécurité garantie</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Liquidité totale</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Simplicité</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Rendement < inflation</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Plafond 22 950€</div>
+                                    <div class="risk-level"><span class="risk-dot risk-low"></span> Risque nul</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Exonération totale</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Aucun impôt</div>
+                                    <span class="key-info"><i class="fas fa-shield-alt mr-1"></i> 0% d'imposition</span>
+                                </td>
                             </tr>
                             
                             <!-- LDDS -->
                             <tr class="placement-row" data-profiles="prudent">
                                 <td>
-                                    <div class="font-medium">LDDS</div>
+                                    <div class="product-name">LDDS</div>
                                     <div class="flex mt-1">
                                         <span class="profile-tag prudent">Prudent</span>
                                     </div>
+                                    <span class="key-info"><i class="fas fa-users mr-1"></i> Complément Livret A</span>
                                 </td>
-                                <td>Même taux que Livret A</td>
-                                <td>Plafond limité (12K€)</td>
-                                <td>Exonération totale</td>
-                                <td>Complément du Livret A</td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Même taux que Livret A</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Sécurité garantie</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Liquidité totale</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Rendement < inflation</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Plafond limité (12K€)</div>
+                                    <div class="risk-level"><span class="risk-dot risk-low"></span> Risque nul</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Exonération totale</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Aucun impôt</div>
+                                    <span class="key-info"><i class="fas fa-shield-alt mr-1"></i> 0% d'imposition</span>
+                                </td>
                             </tr>
                             
                             <!-- LEP -->
                             <tr class="placement-row" data-profiles="prudent">
                                 <td>
-                                    <div class="font-medium">LEP</div>
+                                    <div class="product-name">LEP</div>
                                     <div class="flex mt-1">
                                         <span class="profile-tag prudent">Prudent</span>
                                     </div>
+                                    <span class="key-info"><i class="fas fa-users mr-1"></i> Revenus modestes</span>
                                 </td>
-                                <td>Taux supérieur (≈ double du Livret A)</td>
-                                <td>Conditions de revenus</td>
-                                <td>Exonération totale</td>
-                                <td>Revenus modestes</td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Taux ~2× Livret A</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Sécurité garantie</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Liquidité totale</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Conditions de revenus</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Plafond limité (10K€)</div>
+                                    <div class="risk-level"><span class="risk-dot risk-low"></span> Risque nul</div>
+                                </td>
+                                <td>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Exonération totale</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Aucun impôt</div>
+                                    <span class="key-info"><i class="fas fa-shield-alt mr-1"></i> 0% d'imposition</span>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
