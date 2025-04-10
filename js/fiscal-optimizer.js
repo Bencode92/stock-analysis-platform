@@ -15,9 +15,25 @@ const PatrimoineSimulator = (function() {
         { min: 177106, max: Infinity, taux: 0.45 }
     ];
 
+    // AMÉLIORATION 1: Plafond PER
+    const PLAFOND_PER_ABSOLU = 32909; // 10% des revenus limités à 8 PASS (2024)
+    
+    // AMÉLIORATION 2: Charges par type de revenu
+    const CHARGES_PAR_TYPE = {
+        salarie: 0.22,      // ~22% pour un salarié
+        independant: 0.45,  // ~45% pour un TNS
+        dividendes: 0.172,  // 17.2% prélèvements sociaux sur revenus du capital
+        microEntrepreneur: {
+            service: 0.22,    // Services BNC
+            commercial: 0.123, // Activités commerciales
+            artisanal: 0.123  // Activités artisanales
+        }
+    };
+
     // Configuration par défaut
     const CONFIG_DEFAUT = {
-        taux_charges: 0.22,        // 22% charges sociales
+        typeRevenu: 'salarie',      // Salarié par défaut
+        taux_charges: CHARGES_PAR_TYPE.salarie,
         per_pourcentage: 0.10,     // 10% du brut
         budget: {
             loyer: 1000,           // loyer/crédit mensuel
@@ -37,6 +53,7 @@ const PatrimoineSimulator = (function() {
     // État interne du simulateur
     let state = {
         revenuBrut: 0,
+        typeRevenu: CONFIG_DEFAUT.typeRevenu,
         tauxCharges: CONFIG_DEFAUT.taux_charges,
         perPourcentage: CONFIG_DEFAUT.per_pourcentage,
         budget: {...CONFIG_DEFAUT.budget},
@@ -46,12 +63,17 @@ const PatrimoineSimulator = (function() {
             netImposableSansPER: 0,
             netImposableAvecPER: 0,
             perVersement: 0,
+            perDeductible: 0,      // AJOUT: montant effectivement déductible
             impotSansPER: 0,
             impotAvecPER: 0,
             gainFiscal: 0,
             netDispoSansPER: 0,
             netDispoAvecPER: 0,
             patrimoineGlobal: 0,
+            
+            // AJOUT: taux moyens d'imposition
+            tauxMoyenSansPER: 0,
+            tauxMoyenAvecPER: 0,
             
             // Section budget
             depensesTotales: 0,
@@ -74,6 +96,7 @@ const PatrimoineSimulator = (function() {
      * Réinitialise l'état avec les valeurs par défaut
      */
     function resetState() {
+        state.typeRevenu = CONFIG_DEFAUT.typeRevenu;
         state.tauxCharges = CONFIG_DEFAUT.taux_charges;
         state.perPourcentage = CONFIG_DEFAUT.per_pourcentage;
         state.budget = {...CONFIG_DEFAUT.budget};
@@ -102,6 +125,20 @@ const PatrimoineSimulator = (function() {
     }
 
     /**
+     * Détermine le taux de charges sociales en fonction du type de revenu
+     * @param {string} typeRevenu - Type de revenu
+     * @param {string} sousType - Sous-type pour microentrepreneur
+     * @returns {number} Taux de charges sociales
+     */
+    function getTauxCharges(typeRevenu, sousType = null) {
+        if (typeRevenu === 'microEntrepreneur' && sousType) {
+            return CHARGES_PAR_TYPE.microEntrepreneur[sousType] || CHARGES_PAR_TYPE.microEntrepreneur.service;
+        }
+        
+        return CHARGES_PAR_TYPE[typeRevenu] || CHARGES_PAR_TYPE.salarie;
+    }
+
+    /**
      * Calcule la simulation fiscale complète
      * @param {Object} params - Paramètres de la simulation
      * @returns {Object} Résultats détaillés de la simulation fiscale
@@ -109,13 +146,19 @@ const PatrimoineSimulator = (function() {
     function calculerSimulationFiscale(params = {}) {
         // Mise à jour de l'état avec les paramètres reçus
         state.revenuBrut = params.revenuBrut || state.revenuBrut;
-        state.tauxCharges = params.tauxCharges || state.tauxCharges;
+        state.typeRevenu = params.typeRevenu || state.typeRevenu;
+        state.tauxCharges = params.tauxCharges || getTauxCharges(state.typeRevenu, params.sousType);
         state.perPourcentage = params.perPourcentage || state.perPourcentage;
         
         // Calculs fiscaux principaux
         const netImposableSansPER = state.revenuBrut * (1 - state.tauxCharges);
+        
+        // AMÉLIORATION: Plafonnement du PER
         const perVersement = state.revenuBrut * state.perPourcentage;
-        const netImposableAvecPER = netImposableSansPER - perVersement;
+        const plafondDeductible = Math.min(state.revenuBrut * 0.1, PLAFOND_PER_ABSOLU);
+        const perDeductible = Math.min(perVersement, plafondDeductible);
+        
+        const netImposableAvecPER = netImposableSansPER - perDeductible;
         
         // Calculs d'impôts selon les tranches
         const impotSansPER = calculerImpot(netImposableSansPER);
@@ -127,17 +170,24 @@ const PatrimoineSimulator = (function() {
         const netDispoAvecPER = netImposableAvecPER - impotAvecPER;
         const patrimoineGlobal = netDispoAvecPER + perVersement;
         
+        // AMÉLIORATION: Taux moyens d'imposition
+        const tauxMoyenSansPER = netImposableSansPER > 0 ? (impotSansPER / netImposableSansPER) * 100 : 0;
+        const tauxMoyenAvecPER = netImposableAvecPER > 0 ? (impotAvecPER / netImposableAvecPER) * 100 : 0;
+        
         // Mise à jour des résultats
         Object.assign(state.resultats, {
             netImposableSansPER,
             netImposableAvecPER,
             perVersement,
+            perDeductible,
             impotSansPER,
             impotAvecPER,
             gainFiscal,
             netDispoSansPER,
             netDispoAvecPER,
-            patrimoineGlobal
+            patrimoineGlobal,
+            tauxMoyenSansPER,
+            tauxMoyenAvecPER
         });
         
         return state.resultats;
@@ -240,6 +290,7 @@ const PatrimoineSimulator = (function() {
             localStorage.setItem('tradepulse_simulation', JSON.stringify({
                 parametres: {
                     revenuBrut: state.revenuBrut,
+                    typeRevenu: state.typeRevenu,
                     tauxCharges: state.tauxCharges,
                     perPourcentage: state.perPourcentage,
                     budget: state.budget,
@@ -269,6 +320,7 @@ const PatrimoineSimulator = (function() {
             
             // Mise à jour de l'état avec les données sauvegardées
             state.revenuBrut = parsed.parametres.revenuBrut;
+            state.typeRevenu = parsed.parametres.typeRevenu || 'salarie';
             state.tauxCharges = parsed.parametres.tauxCharges;
             state.perPourcentage = parsed.parametres.perPourcentage;
             state.budget = parsed.parametres.budget;
@@ -360,10 +412,20 @@ function calculerFiscalite() {
     const brut = parseFloat(document.getElementById("brut-annuel").value);
     const charges = parseFloat(document.getElementById("taux-charges").value) / 100;
     const perPct = parseFloat(document.getElementById("per-pourcentage").value) / 100;
+    
+    // Récupérer le type de revenu s'il existe dans le formulaire
+    const typeRevenuSelect = document.getElementById("type-revenu");
+    const typeRevenu = typeRevenuSelect ? typeRevenuSelect.value : 'salarie';
+    
+    // Récupérer le sous-type de microentrepreneur si applicable
+    const sousTypeSelect = document.getElementById("sous-type-micro");
+    const sousType = (typeRevenu === 'microEntrepreneur' && sousTypeSelect) ? sousTypeSelect.value : null;
 
     // Déléguer le calcul au module
     const resultats = PatrimoineSimulator.calculerSimulationFiscale({
         revenuBrut: brut,
+        typeRevenu: typeRevenu,
+        sousType: sousType,
         tauxCharges: charges,
         perPourcentage: perPct
     });
@@ -375,10 +437,129 @@ function calculerFiscalite() {
     document.getElementById("net-sans-per").textContent = `${resultats.netDispoSansPER.toLocaleString('fr-FR')} €`;
     document.getElementById("net-avec-per").textContent = `${resultats.netDispoAvecPER.toLocaleString('fr-FR')} €`;
     document.getElementById("patrimoine-total").textContent = `${resultats.patrimoineGlobal.toLocaleString('fr-FR')} €`;
+    
+    // Afficher les taux moyens d'imposition si les éléments existent
+    const tauxMoyenSansPER = document.getElementById("taux-moyen-sans-per");
+    const tauxMoyenAvecPER = document.getElementById("taux-moyen-avec-per");
+    
+    if (tauxMoyenSansPER) tauxMoyenSansPER.textContent = `${resultats.tauxMoyenSansPER.toFixed(2)} %`;
+    if (tauxMoyenAvecPER) tauxMoyenAvecPER.textContent = `${resultats.tauxMoyenAvecPER.toFixed(2)} %`;
+    
+    // Afficher le montant PER déductible vs versé si l'élément existe
+    const perDeductibleElement = document.getElementById("per-deductible");
+    if (perDeductibleElement) {
+        const perVersement = resultats.perVersement;
+        const perDeductible = resultats.perDeductible;
+        
+        perDeductibleElement.textContent = `${perDeductible.toLocaleString('fr-FR')} € / ${perVersement.toLocaleString('fr-FR')} €`;
+        
+        // Si le PER est plafonné, afficher un message d'alerte
+        const perAlerte = document.getElementById("per-alerte");
+        if (perAlerte) {
+            if (perDeductible < perVersement) {
+                perAlerte.textContent = `⚠️ Attention: Votre versement PER dépasse le plafond de déductibilité (${PLAFOND_PER_ABSOLU.toLocaleString('fr-FR')} € max)`;
+                perAlerte.style.display = "block";
+            } else {
+                perAlerte.style.display = "none";
+            }
+        }
+    }
+
+    // Mise à jour du tableau récapitulatif des taux si disponible
+    const recapTauxElement = document.getElementById("recap-taux");
+    if (recapTauxElement) {
+        recapTauxElement.innerHTML = `
+            <tr>
+                <td>Taux de charges sociales</td>
+                <td>${(charges * 100).toFixed(1)}%</td>
+            </tr>
+            <tr>
+                <td>Taux marginal d'imposition</td>
+                <td>${getTauxMarginal(resultats.netImposableSansPER).toFixed(1)}%</td>
+            </tr>
+            <tr>
+                <td>Taux moyen d'imposition sans PER</td>
+                <td>${resultats.tauxMoyenSansPER.toFixed(2)}%</td>
+            </tr>
+            <tr>
+                <td>Taux moyen d'imposition avec PER</td>
+                <td>${resultats.tauxMoyenAvecPER.toFixed(2)}%</td>
+            </tr>
+        `;
+    }
 
     // Si des visualisations graphiques sont présentes
-    if (window.taxPieChart) {
+    if (document.getElementById('tax-comparison-chart')) {
         updateTaxComparisonChart(resultats);
+    }
+    
+    // Mettre à jour les informations sur le budget et l'épargne
+    updateBudgetInfo(resultats);
+}
+
+/**
+ * Détermine le taux marginal d'imposition pour un revenu donné
+ * @param {number} revenuImposable - Revenu imposable
+ * @returns {number} Taux marginal d'imposition en pourcentage
+ */
+function getTauxMarginal(revenuImposable) {
+    const TRANCHES_IMPOT = [
+        { min: 0, max: 11294, taux: 0 },
+        { min: 11294, max: 28787, taux: 0.11 },
+        { min: 28787, max: 82341, taux: 0.30 },
+        { min: 82341, max: 177106, taux: 0.41 },
+        { min: 177106, max: Infinity, taux: 0.45 }
+    ];
+    
+    for (let i = TRANCHES_IMPOT.length - 1; i >= 0; i--) {
+        if (revenuImposable > TRANCHES_IMPOT[i].min) {
+            return TRANCHES_IMPOT[i].taux * 100;
+        }
+    }
+    
+    return 0;
+}
+
+/**
+ * Met à jour les informations sur le budget et l'épargne
+ */
+function updateBudgetInfo(resultats) {
+    // Récupérer les éléments du DOM
+    const revenuMensuel = document.getElementById('revenu-mensuel');
+    const depensesTotales = document.getElementById('depenses-totales');
+    const epargnePossible = document.getElementById('epargne-possible');
+    const tauxEpargne = document.getElementById('taux-epargne');
+    
+    if (!revenuMensuel || !depensesTotales || !epargnePossible || !tauxEpargne) return;
+    
+    // Récupérer les données du budget
+    const budgetLoyer = parseFloat(document.getElementById('budget-loyer').value) || 1000;
+    const budgetQuotidien = parseFloat(document.getElementById('budget-quotidien').value) || 1200;
+    const budgetExtra = parseFloat(document.getElementById('budget-extra').value) || 500;
+    const budgetInvest = parseFloat(document.getElementById('budget-invest').value) || 300;
+    
+    // Calculer les totaux
+    const depensesTotal = budgetLoyer + budgetQuotidien + budgetExtra + budgetInvest;
+    const revenuMensuelNet = resultats.netDispoAvecPER / 12;
+    const epargne = Math.max(0, revenuMensuelNet - depensesTotal);
+    const tauxEpargnePct = revenuMensuelNet > 0 ? (epargne / revenuMensuelNet) * 100 : 0;
+    
+    // Mettre à jour l'affichage
+    revenuMensuel.textContent = `${revenuMensuelNet.toLocaleString('fr-FR')} €`;
+    depensesTotales.textContent = `${depensesTotal.toLocaleString('fr-FR')} €`;
+    epargnePossible.textContent = `${epargne.toLocaleString('fr-FR')} €`;
+    tauxEpargne.textContent = `${tauxEpargnePct.toFixed(1)}%`;
+    
+    // Mise en évidence visuelle du taux d'épargne
+    if (tauxEpargnePct >= 20) {
+        tauxEpargne.classList.add('text-green-400');
+        tauxEpargne.classList.remove('text-yellow-400', 'text-red-400');
+    } else if (tauxEpargnePct >= 10) {
+        tauxEpargne.classList.add('text-yellow-400');
+        tauxEpargne.classList.remove('text-green-400', 'text-red-400');
+    } else {
+        tauxEpargne.classList.add('text-red-400');
+        tauxEpargne.classList.remove('text-green-400', 'text-yellow-400');
     }
 }
 
