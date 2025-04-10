@@ -323,38 +323,11 @@
                                 </span>
                             </label>
                             <div class="flex items-center gap-2">
-                                <input type="range" id="per-pourcentage" min="0" max="20" value="10" step="0.5" class="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer">
+                                <input type="range" id="per-pourcentage" min="0" max="10" value="10" step="0.5" class="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer">
                                 <span id="per-value" class="bg-green-900 bg-opacity-30 text-green-400 px-2 py-1 rounded text-sm font-medium min-w-[60px] text-center">10%</span>
                             </div>
 
-                            <div class="mt-4">
-                                <label class="block text-sm font-medium mb-2 text-gray-300">
-                                    Budget mensuel
-                                    <span class="ml-1 text-green-400 cursor-help" title="Ces informations permettent de calculer votre capacité d'épargne réelle.">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Loyer/Crédit</label>
-                                        <input id="budget-loyer" type="number" value="1000" class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700 text-sm"/>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Quotidien</label>
-                                        <input id="budget-quotidien" type="number" value="1200" class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700 text-sm"/>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Extra</label>
-                                        <input id="budget-extra" type="number" value="500" class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700 text-sm"/>
-                                    </div>
-                                    <div>
-                                        <label class="block text-xs text-gray-400 mb-1">Invest. Auto</label>
-                                        <input id="budget-invest" type="number" value="300" class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700 text-sm"/>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <button onclick="calculerFiscalite()" class="w-full py-2 mt-4 bg-green-500 text-gray-900 font-semibold rounded hover:bg-green-400 transition flex items-center justify-center">
+                            <button onclick="calculerFiscalite()" class="w-full py-2 mt-6 bg-green-500 text-gray-900 font-semibold rounded hover:bg-green-400 transition flex items-center justify-center">
                                 <i class="fas fa-calculator mr-2"></i> Calculer
                             </button>
                         </div>
@@ -444,34 +417,6 @@
                                             <td id="net-avec-per" class="text-right font-medium">21 267,34 €</td>
                                         </tr>
                                     </table>
-                                </div>
-                            </div>
-
-                            <!-- Information sur l'épargne -->
-                            <div id="epargne-container" class="mt-4 bg-green-900 bg-opacity-10 border-l-4 border-green-400 rounded-md p-3">
-                                <h5 class="text-green-400 font-medium flex items-center mb-2">
-                                    <i class="fas fa-piggy-bank mr-2"></i>
-                                    Capacité d'épargne mensuelle
-                                </h5>
-                                <div class="grid grid-cols-2 gap-4 mb-2">
-                                    <div>
-                                        <p class="text-xs text-gray-400">Revenu mensuel net</p>
-                                        <p id="revenu-mensuel" class="font-medium">1 772 €</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-xs text-gray-400">Dépenses totales</p>
-                                        <p id="depenses-totales" class="font-medium">3 000 €</p>
-                                    </div>
-                                </div>
-                                <div class="flex justify-between items-center">
-                                    <div>
-                                        <p class="text-xs text-gray-400">Épargne possible</p>
-                                        <p id="epargne-possible" class="font-medium">0 €</p>
-                                    </div>
-                                    <div class="text-right">
-                                        <p class="text-xs text-gray-400">Taux d'épargne</p>
-                                        <p id="taux-epargne" class="font-medium">0%</p>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -655,26 +600,6 @@
         
         // Écouter le changement sur les éléments de budget
         document.addEventListener('DOMContentLoaded', function() {
-            // Écouter le changement sur les éléments de budget
-            const budgetInputs = [
-                document.getElementById('budget-loyer'),
-                document.getElementById('budget-quotidien'),
-                document.getElementById('budget-extra'),
-                document.getElementById('budget-invest')
-            ];
-            
-            budgetInputs.forEach(input => {
-                if (input) {
-                    input.addEventListener('change', function() {
-                        // Si la fonction calculerFiscalite existe et qu'il y a déjà eu un calcul
-                        if (typeof calculerFiscalite === 'function' && 
-                            document.getElementById('impot-sans-per').textContent !== '-') {
-                            calculerFiscalite();
-                        }
-                    });
-                }
-            });
-            
             // Gestion du changement de type de revenu
             const typeRevenuSelect = document.getElementById('type-revenu');
             const souTypeContainer = document.getElementById('sous-type-container');
