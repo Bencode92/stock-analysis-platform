@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TradePulse - Guide des Placements</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="css/simulation.css">
+    <style>
+        .placement-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .placement-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 255, 135, 0.2);
+        }
+        
+        .profile-pill {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .profile-pill:hover {
+            transform: scale(1.05);
+        }
+        
+        .profile-pill.active {
+            background-color: rgba(0, 255, 135, 0.15);
+            color: #00FF87;
+            border-color: #00FF87;
+        }
+        
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .tooltip-content {
+            visibility: hidden;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -150px;
+            width: 300px;
+            background-color: rgba(1, 22, 39, 0.95);
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            border: 1px solid #00FF87;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .tooltip-container:hover .tooltip-content {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        /* Styles pour l'accordéon */
+        .accordion-header {
+            cursor: pointer;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .accordion-header:hover {
+            background-color: rgba(0, 255, 135, 0.1);
+        }
+        
+        .accordion-header::after {
+            content: '\f078';
+            font-family: 'Font Awesome 5 Free';
+            font-weight: 900;
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            transition: transform 0.3s ease;
+        }
+        
+        .accordion-header.active::after {
+            transform: translateY(-50%) rotate(180deg);
+        }
+        
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease;
+            padding: 0 15px;
+        }
+        
+        .accordion-content.active {
+            max-height: 1000px;
+            padding: 15px;
+        }
+        
+        /* Style pour le tableau */
+        .comparison-table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .comparison-table th {
+            background-color: rgba(0, 255, 135, 0.15);
+            font-weight: 600;
+            text-align: left;
+            position: sticky;
+            top: 0;
+        }
+        
+        .comparison-table th, .comparison-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .comparison-table tr:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        .profile-tag {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-right: 5px;
+        }
+        
+        .profile-tag.prudent {
+            background-color: rgba(0, 117, 255, 0.2);
+            color: #4d9fff;
+        }
+        
+        .profile-tag.equilibre {
+            background-color: rgba(0, 210, 110, 0.2);
+            color: #00d26e;
+        }
+        
+        .profile-tag.dynamique {
+            background-color: rgba(255, 107, 107, 0.2);
+            color: #ff6b6b;
+        }
+    </style>
+</head>
+<body class="dark">
+    <!-- Sidebar de navigation verticale -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">TP</div>
+        <nav class="sidebar-nav">
+            <a href="actualites.html" class="nav-item" title="Actualités">
+                <i class="fas fa-newspaper"></i>
+            </a>
+            <a href="portefeuille.html" class="nav-item" title="Portefeuilles">
+                <i class="fas fa-chart-pie"></i>
+            </a>
+            <a href="dashboard.html" class="nav-item" title="Tableau de bord">
+                <i class="fas fa-tachometer-alt"></i>
+            </a>
+            <a href="marches.html" class="nav-item" title="Marchés">
+                <i class="fas fa-chart-line"></i>
+            </a>
+            <a href="secteurs.html" class="nav-item" title="Secteurs">
+                <i class="fas fa-industry"></i>
+            </a>
+            <a href="liste.html" class="nav-item" title="Listes">
+                <i class="fas fa-list"></i>
+            </a>
+            <a href="etf.html" class="nav-item" title="ETF">
+                <i class="fas fa-funnel-dollar"></i>
+            </a>
+            <a href="crypto.html" class="nav-item" title="Crypto">
+                <i class="fab fa-bitcoin"></i>
+            </a>
+            <a href="simulation.html" class="nav-item" title="Simulation">
+                <i class="fas fa-calculator"></i>
+            </a>
+            <a href="guide-placements.html" class="nav-item active" title="Guide Placements">
+                <i class="fas fa-book"></i>
+            </a>
+            <a href="email-preview.html" class="nav-item" title="Alertes">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge"></span>
+            </a>
+            <a href="parametres.html" class="nav-item" title="Paramètres">
+                <i class="fas fa-cog"></i>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Header principal -->
+    <header class="main-header">
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="pulse-dot"></div>
+                <a href="index.html">TRADEPULSE</a>
+            </div>
+            <nav class="main-nav">
+                <a href="actualites.html">Actualités</a>
+                <a href="portefeuille.html?type=modere">Portefeuilles</a>
+                <a href="dashboard.html">Tableau de bord</a>
+                <a href="marches.html">Marchés</a>
+                <a href="secteurs.html">Secteurs</a>
+                <a href="liste.html">Listes</a>
+                <a href="etf.html">ETF</a>
+                <a href="crypto.html">Crypto</a>
+                <a href="simulation.html">Simulation</a>
+                <a href="guide-placements.html" class="active">Guide Placements</a>
+            </nav>
+        </div>
+        <div class="header-right">
+            <div class="market-status">
+                <div class="market-indicator green"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time" id="marketTime">15:52:47</span>
+            </div>
+            <a href="recherche.html" class="search-button ripple">
+                <i class="fas fa-search"></i>
+                <span>Ma question</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Contenu principal -->
+    <div class="main-content">
+        <div class="content-wrapper max-w-7xl mx-auto">
+            <!-- En-tête de page -->
+            <div class="page-header text-center mb-12">
+                <h1 class="section-title text-4xl font-bold">GUIDE DES PLACEMENTS</h1>
+                <p class="section-subtitle text-xl opacity-80 mt-2" id="currentDate">10 AVRIL 2025</p>
+            </div>
+
+            <!-- Introduction -->
+            <div class="bg-blue-900 bg-opacity-20 p-8 rounded-xl mb-12">
+                <div class="max-w-4xl mx-auto">
+                    <h2 class="text-2xl font-bold text-green-400 mb-4 flex items-center">
+                        <i class="fas fa-lightbulb mr-3 text-3xl"></i>
+                        Comparer et choisir le bon placement
+                    </h2>
+                    <p class="text-lg mb-6">
+                        Ce guide te permet de comparer en un coup d'œil les différents placements et niches fiscales disponibles en France, pour mieux investir selon tes objectifs (rendement, fiscalité, sécurité...). Il peut t'aider à mieux orienter ton épargne, réduire tes impôts ou préparer ta retraite.
+                    </p>
+                    
+                    <div class="flex flex-col md:flex-row justify-center gap-4 mt-8 mb-6">
+                        <a href="#comparatif" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center justify-center">
+                            <i class="fas fa-table mr-2"></i> Voir le comparatif complet
+                        </a>
+                        <a href="simulation.html" class="bg-transparent border border-green-400 text-green-400 hover:bg-green-900 hover:bg-opacity-30 font-semibold py-3 px-6 rounded-lg transition flex items-center justify-center">
+                            <i class="fas fa-calculator mr-2"></i> Simuler mes investissements
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sélecteur de profil -->
+            <div class="mb-12">
+                <h3 class="text-xl font-semibold mb-6 text-center">Choisis ton profil d'investisseur</h3>
+                
+                <div class="flex flex-wrap justify-center gap-4">
+                    <button class="profile-pill flex flex-col items-center w-52 p-5 border border-blue-700 rounded-xl bg-blue-900 bg-opacity-20 active" data-profile="all">
+                        <i class="fas fa-users text-3xl mb-2 text-green-400"></i>
+                        <span class="font-semibold text-lg">Tous les profils</span>
+                        <span class="text-sm opacity-80 mt-1">Vue complète</span>
+                    </button>
+                    
+                    <button class="profile-pill flex flex-col items-center w-52 p-5 border border-blue-700 rounded-xl bg-blue-900 bg-opacity-20" data-profile="prudent">
+                        <i class="fas fa-shield-alt text-3xl mb-2 text-blue-400"></i>
+                        <span class="font-semibold text-lg">Prudent</span>
+                        <span class="text-sm opacity-80 mt-1">Sécurité & fiscalité</span>
+                    </button>
+                    
+                    <button class="profile-pill flex flex-col items-center w-52 p-5 border border-blue-700 rounded-xl bg-blue-900 bg-opacity-20" data-profile="equilibre">
+                        <i class="fas fa-balance-scale text-3xl mb-2 text-green-400"></i>
+                        <span class="font-semibold text-lg">Équilibré</span>
+                        <span class="text-sm opacity-80 mt-1">Diversification & fiscalité</span>
+                    </button>
+                    
+                    <button class="profile-pill flex flex-col items-center w-52 p-5 border border-blue-700 rounded-xl bg-blue-900 bg-opacity-20" data-profile="dynamique">
+                        <i class="fas fa-rocket text-3xl mb-2 text-red-400"></i>
+                        <span class="font-semibold text-lg">Dynamique</span>
+                        <span class="text-sm opacity-80 mt-1">Rendement & long terme</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tableau comparatif des placements -->
+            <div id="comparatif" class="mb-16">
+                <h3 class="text-2xl font-bold text-green-400 mb-6 flex items-center">
+                    <i class="fas fa-table mr-3"></i>
+                    Comparatif des placements financiers
+                </h3>
+                
+                <div class="overflow-x-auto">
+                    <table class="comparison-table">
+                        <thead>
+                            <tr>
+                                <th class="w-48">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-piggy-bank mr-2 text-green-400"></i> Produit
+                                    </div>
+                                </th>
+                                <th class="w-64">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-search mr-2 text-green-400"></i> Intérêt principal
+                                    </div>
+                                </th>
+                                <th class="w-64">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-exclamation-triangle mr-2 text-green-400"></i> Risques
+                                    </div>
+                                </th>
+                                <th class="w-64">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-percentage mr-2 text-green-400"></i> Fiscalité
+                                    </div>
+                                </th>
+                                <th class="w-48">
+                                    <div class="flex items-center">
+                                        <i class="fas fa-user mr-2 text-green-400"></i> Pour qui ?
+                                    </div>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- PEA -->
+                            <tr class="placement-row" data-profiles="equilibre dynamique">
+                                <td>
+                                    <div class="font-medium">PEA</div>
+                                    <div class="flex mt-1">
+                                        <span class="profile-tag equilibre">Équilibré</span>
+                                        <span class="profile-tag dynamique">Dynamique</span>
+                                    </div>
+                                </td>
+                                <td>Exonération d'impôt sur les plus-values après 5 ans</td>
+                                <td>Risque actions / limité à l'UE</td>
+                                <td>0% IR (PS 17,2% sur les retraits)</td>
+                                <td>Investisseur long terme EU</td>
+                            </tr>
+                            
+                            <!-- CTO -->
+                            <tr class="placement-row" data-profiles="dynamique">
+                                <td>
+                                    <div class="font-medium">CTO</div>
+                                    <div class="flex mt-1">
+                                        <span class="profile-tag dynamique">Dynamique</span>
+                                    </div>
+                                </td>
+                                <td>Accès à tout (monde, crypto, obligations)</td>
+                                <td>Fiscalité forte / volatilité</td>
+                                <td>30% PFU (ou barème IR)</td>
+                                <td>Flexible, monde entier</td>
+                            </tr>
+                            
+                            <!-- Assurance-vie -->
+                            <tr class="placement-row" data-profiles="prudent equilibre">
+                                <td>
+                                    <div class="font-medium">Assurance-vie</div>
+                                    <div class="flex mt-1">
+                                        <span class="profile-tag prudent">Prudent</span>
+                                        <span class="profile-tag equilibre">Équilibré</span>
+                                    </div>
+                                </td>
+                                <td>Transmission / fiscalité douce / fonds euros</td>
+                                <td>Rendement faible fonds €, frais</td>
+                                <td>7,5% après 8 ans + abattement</td>
+                                <td>Retraite, succession</td>
+                            </tr>
+                            
+                            <!-- PER -->
+                            <tr class="placement-row" data-profiles="equilibre">
+                                <td>
+                                    <div class="font-medium">PER</div>
+                                    <div class="flex mt-1">
+                                        <span class="profile-tag equilibre">Équilibré</span>
+                                    </div>
+                                </td>
+                                <td>Réduction fiscale à l'entrée</td>
+                                <td>Bloqué jusqu'à la retraite</td>
+                                <td>IR ou PFU à la sortie</td>
+                                <td>TMI élevé / achat RP</td>
+                            </tr>
+                            
+                            <!-- SCPI -->
+                            <tr class="placement-row" data-profiles="equilibre">
+                                <td>
+                                    <div class="font-medium">SCPI</div>
+                                    <div class="flex mt-1">
+                                        <span class="profile-tag equilibre">Équilibré</span>
+                                    </div>
+                                </td>
+                                <td>Immobilier sans gestion</td>
+                                <td>Illiquide, frais élevés</td>
+                                <td>Revenus fonciers / via AV optimisable</td>
+                                <td>Revenu passif immobilier</td>
+                            </tr>
+                            
+                            <!-- FCPI / FIP -->
+                            <tr class="placement-row" data-profiles="dynamique">
+                                <td>
+                                    <div class="font-medium">FCPI / FIP</div>
+                                    <div class="flex mt-1">
+                                        <span class="profile-tag dynamique">Dynamique</span>
+                                    </div>
+                                </td>
+                                <td>Réduction IR 18% + plus-value exonérée</td>
+                                <td>Risque élevé, capital bloqué 5-10 ans</td>
+                                <td>IR réduit à l'entrée</td>
+                                <td>Risque / TMI élevé</td>
+                            </tr>
+                            
+                            <!-- Crypto (CTO) -->
+                            <tr class="placement-row" data-profiles="dynamique">
+                                <td>
+                                    <div class="font-medium">Crypto (CTO)</div>
+                                    <div class="flex mt-1">
+                                        <span class="profile-tag dynamique">Dynamique</span>
+                                    </div>
+                                </td>
+                                <td>Diversification innovante</td>
+                                <td>Volatilité extrême, régulation floue</td>
+                                <td>30% PFU ou IR selon cas</td>
+                                <td>Investisseur averti</td>
+                            </tr>
+                            
+                            <!-- Livret A -->
+                            <tr class="placement-row" data-profiles="prudent">
+                                <td>
+                                    <div class="font-medium">Livret A</div>
+                                    <div class="flex mt-1">
+                                        <span class="profile-tag prudent">Prudent</span>
+                                    </div>
+                                </td>
+                                <td>Sécurité totale et liquidité</td>
+                                <td>Rendement bas vs inflation</td>
+                                <td>Exonération totale</td>
+                                <td>Épargne de précaution</td>
+                            </tr>
+                            
+                            <!-- LDDS -->
+                            <tr class="placement-row" data-profiles="prudent">
+                                <td>
+                                    <div class="font-medium">LDDS</div>
+                                    <div class="flex mt-1">
+                                        <span class="profile-tag prudent">Prudent</span>
+                                    </div>
+                                </td>
+                                <td>Même taux que Livret A</td>
+                                <td>Plafond limité (12K€)</td>
+                                <td>Exonération totale</td>
+                                <td>Complément du Livret A</td>
+                            </tr>
+                            
+                            <!-- LEP -->
+                            <tr class="placement-row" data-profiles="prudent">
+                                <td>
+                                    <div class="font-medium">LEP</div>
+                                    <div class="flex mt-1">
+                                        <span class="profile-tag prudent">Prudent</span>
+                                    </div>
+                                </td>
+                                <td>Taux supérieur (≈ double du Livret A)</td>
+                                <td>Conditions de revenus</td>
+                                <td>Exonération totale</td>
+                                <td>Revenus modestes</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="flex justify-center mt-8 mb-4">
+                    <a href="#" class="bg-blue-900 bg-opacity-30 hover:bg-blue-800 text-white font-medium py-2 px-6 rounded-lg transition flex items-center" onclick="downloadPDF(event)">
+                        <i class="fas fa-file-pdf mr-2"></i> Télécharger le comparatif PDF
+                    </a>
+                </div>
+            </div>
+
+            <!-- Comment bien faire ? (Accordéon) -->
+            <div class="mb-16">
+                <h3 class="text-2xl font-bold text-green-400 mb-6 flex items-center">
+                    <i class="fas fa-lightbulb mr-3"></i>
+                    Comment bien faire ? Guide pratique
+                </h3>
+                
+                <!-- Accordéon 1 -->
+                <div class="accordion-item mb-4 bg-blue-900 bg-opacity-20 rounded-xl overflow-hidden">
+                    <div class="accordion-header flex items-center">
+                        <i class="fas fa-list-ol text-green-400 mr-3"></i>
+                        <span class="font-semibold">1. Par où commencer ? L'ordre idéal des placements</span>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="space-y-4">
+                            <p>Un investissement réussi commence par une stratégie réfléchie. Voici l'ordre optimal pour construire son patrimoine :</p>
+                            
+                            <ol class="space-y-4 pl-6 list-decimal">
+                                <li class="pl-2">
+                                    <strong class="text-green-400">Épargne de sécurité</strong> : Constitue d'abord 3 à 6 mois de dépenses sur Livret A et LDDS.
+                                </li>
+                                <li class="pl-2">
+                                    <strong class="text-green-400">Préparer les projets à moyen terme</strong> : Assurance-vie en fonds euros pour les projets à 2-8 ans.
+                                </li>
+                                <li class="pl-2">
+                                    <strong class="text-green-400">Optimiser la fiscalité</strong> : Ouvrir un PEA et commencer les versements réguliers (pour faire courir le délai de 5 ans).
+                                </li>
+                                <li class="pl-2">
+                                    <strong class="text-green-400">Réduire les impôts</strong> : Si TMI > 30%, envisager un PER pour réduire l'imposition immédiate.
+                                </li>
+                                <li class="pl-2">
+                                    <strong class="text-green-400">Diversifier</strong> : Compléter avec CTO pour l'international, SCPI pour l'immobilier, etc.
+                                </li>
+                            </ol>
+                            
+                            <div class="bg-green-900 bg-opacity-10 rounded-lg p-4 border-l-4 border-green-400 mt-4">
+                                <p class="font-medium"><i class="fas fa-check-circle text-green-400 mr-2"></i> Conseil pratique :</p>
+                                <p>Avance étape par étape sans chercher à tout faire en même temps. Ouvre d'abord les enveloppes principales (Assurance-vie, PEA) dès que possible, même avec de petits montants, pour faire courir les délais fiscaux.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Accordéon 2 -->
+                <div class="accordion-item mb-4 bg-blue-900 bg-opacity-20 rounded-xl overflow-hidden">
+                    <div class="accordion-header flex items-center">
+                        <i class="fas fa-percentage text-green-400 mr-3"></i>
+                        <span class="font-semibold">2. Comment optimiser sa fiscalité ?</span>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="space-y-4">
+                            <p>La fiscalité est un élément clé de la performance. Quelques principes pour l'optimiser :</p>
+                            
+                            <ul class="space-y-4 pl-6 list-disc">
+                                <li class="pl-2">
+                                    <strong class="text-green-400">Respecte l'ordre des enveloppes fiscales</strong> : PEA pour les actions européennes, Assurance-vie pour la diversification, CTO en dernier recours.
+                                </li>
+                                <li class="pl-2">
+                                    <strong class="text-green-400">Considère ton horizon</strong> : Plus ton investissement est long, plus l'avantage du PEA est important.
+                                </li>
+                                <li class="pl-2">
+                                    <strong class="text-green-400">Tiens compte de ta TMI</strong> : Si ta TMI > 30%, un PER peut générer d'importantes économies d'impôt.
+                                </li>
+                                <li class="pl-2">
+                                    <strong class="text-green-400">Utilise les abattements</strong> : 4 600€ par an (9 200€ pour un couple) de rachat d'assurance-vie après 8 ans.
+                                </li>
+                            </ul>
+                            
+                            <div class="bg-blue-900 bg-opacity-40 rounded-lg p-4 mt-4">
+                                <p class="font-medium"><i class="fas fa-lightbulb text-green-400 mr-2"></i> Exemple concret :</p>
+                                <p>Pour un investissement de 10 000€ en actions avec un gain de 5% par an sur 10 ans, la différence entre un CTO (PFU 30%) et un PEA (17,2% de PS) représente environ 1 000€ d'économie fiscale.</p>
+                            </div>
+                            
+                            <a href="simulation.html" class="inline-block bg-green-500 hover:bg-green-400 text-gray-900 font-medium py-2 px-4 rounded-lg transition mt-4">
+                                <i class="fas fa-calculator mr-2"></i> Simuler ton optimisation fiscale
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Accordéon 3 -->
+                <div class="accordion-item mb-4 bg-blue-900 bg-opacity-20 rounded-xl overflow-hidden">
+                    <div class="accordion-header flex items-center">
+                        <i class="fas fa-balance-scale text-green-400 mr-3"></i>
+                        <span class="font-semibold">3. Comment répartir son épargne entre les différents placements ?</span>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="space-y-4">
+                            <p>La diversification est essentielle pour optimiser le couple rendement/risque :</p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
+                                <!-- Profil prudent -->
+                                <div class="bg-blue-800 bg-opacity-30 rounded-lg p-5">
+                                    <div class="flex items-center mb-4">
+                                        <i class="fas fa-shield-alt text-blue-400 mr-2 text-xl"></i>
+                                        <h4 class="font-semibold text-lg">Profil Prudent</h4>
+                                    </div>
+                                    <ul class="space-y-2">
+                                        <li>🔹 50% : Livrets réglementés</li>
+                                        <li>🔹 30% : Assurance-vie (fonds €)</li>
+                                        <li>🔹 15% : PEA (ETF diversifiés)</li>
+                                        <li>🔹 5% : Diversification</li>
+                                    </ul>
+                                    <div class="text-sm mt-4 text-gray-400">Objectif : Préserver le capital avec un rendement légèrement supérieur à l'inflation</div>
+                                </div>
+                                
+                                <!-- Profil équilibré -->
+                                <div class="bg-green-900 bg-opacity-20 rounded-lg p-5">
+                                    <div class="flex items-center mb-4">
+                                        <i class="fas fa-balance-scale text-green-400 mr-2 text-xl"></i>
+                                        <h4 class="font-semibold text-lg">Profil Équilibré</h4>
+                                    </div>
+                                    <ul class="space-y-2">
+                                        <li>🔹 20% : Livrets réglementés</li>
+                                        <li>🔹 30% : Assurance-vie (mixte)</li>
+                                        <li>🔹 30% : PEA (ETF et actions)</li>
+                                        <li>🔹 15% : SCPI / Immobilier</li>
+                                        <li>🔹 5% : Diversification</li>
+                                    </ul>
+                                    <div class="text-sm mt-4 text-gray-400">Objectif : Croissance modérée avec une volatilité maîtrisée</div>
+                                </div>
+                                
+                                <!-- Profil dynamique -->
+                                <div class="bg-red-900 bg-opacity-20 rounded-lg p-5">
+                                    <div class="flex items-center mb-4">
+                                        <i class="fas fa-rocket text-red-400 mr-2 text-xl"></i>
+                                        <h4 class="font-semibold text-lg">Profil Dynamique</h4>
+                                    </div>
+                                    <ul class="space-y-2">
+                                        <li>🔹 10% : Livrets réglementés</li>
+                                        <li>🔹 15% : Assurance-vie (UC)</li>
+                                        <li>🔹 45% : PEA (actions, ETF)</li>
+                                        <li>🔹 15% : CTO (international)</li>
+                                        <li>🔹 10% : SCPI / Immobilier</li>
+                                        <li>🔹 5% : Crypto / Alternatifs</li>
+                                    </ul>
+                                    <div class="text-sm mt-4 text-gray-400">Objectif : Performance maximale avec acceptation de volatilité</div>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-green-900 bg-opacity-10 rounded-lg p-4 border-l-4 border-green-400 mt-6">
+                                <p class="font-medium"><i class="fas fa-info-circle text-green-400 mr-2"></i> À savoir :</p>
+                                <p>Ces répartitions sont des guides et doivent être adaptées à ton âge, tes revenus, et tes projets. Plus ton horizon d'investissement est long, plus tu peux te permettre une allocation dynamique.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Accordéon 4 -->
+                <div class="accordion-item mb-4 bg-blue-900 bg-opacity-20 rounded-xl overflow-hidden">
+                    <div class="accordion-header flex items-center">
+                        <i class="fas fa-rocket text-green-400 mr-3"></i>
+                        <span class="font-semibold">4. Conseils pratiques pour démarrer simplement</span>
+                    </div>
+                    <div class="accordion-content">
+                        <div class="space-y-4">
+                            <p>Voici des recommandations concrètes pour mettre en place efficacement ta stratégie :</p>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                                <div class="bg-blue-800 bg-opacity-20 p-5 rounded-lg">
+                                    <h5 class="font-semibold flex items-center mb-3">
+                                        <i class="fas fa-check-circle text-green-400 mr-2"></i>
+                                        Commencer simplement
+                                    </h5>
+                                    <ul class="space-y-3">
+                                        <li class="flex items-start">
+                                            <span class="text-green-400 mr-2">•</span>
+                                            <span>Ouvre une assurance-vie adaptée à ton profil (frais faibles, large choix d'UC)</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <span class="text-green-400 mr-2">•</span>
+                                            <span>Ouvre un PEA dès que possible (même avec de petits versements)</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <span class="text-green-400 mr-2">•</span>
+                                            <span>Met en place un virement automatique mensuel (même petit)</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <span class="text-green-400 mr-2">•</span>
+                                            <span>Investis d'abord dans des ETF diversifiés avant de te lancer dans les actions individuelles</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="bg-blue-800 bg-opacity-20 p-5 rounded-lg">
+                                    <h5 class="font-semibold flex items-center mb-3">
+                                        <i class="fas fa-exclamation-triangle text-yellow-400 mr-2"></i>
+                                        Pièges à éviter
+                                    </h5>
+                                    <ul class="space-y-3">
+                                        <li class="flex items-start">
+                                            <span class="text-yellow-400 mr-2">•</span>
+                                            <span>Ne pas diversifier (concentration trop forte sur une seule classe d'actifs)</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <span class="text-yellow-400 mr-2">•</span>
+                                            <span>Choisir ses placements uniquement en fonction de la fiscalité</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <span class="text-yellow-400 mr-2">•</span>
+                                            <span>Multiplier les contrats et comptes sans nécessité (frais inutiles)</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <span class="text-yellow-400 mr-2">•</span>
+                                            <span>Chercher à "timer" le marché plutôt que d'investir régulièrement</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <blockquote class="bg-blue-900 bg-opacity-40 rounded-lg p-5 border-l-4 border-green-400 mt-6">
+                                <p class="italic">"Le meilleur moment pour planter un arbre était il y a 20 ans. Le deuxième meilleur moment est maintenant."</p>
+                                <p class="mt-2 text-sm text-right text-gray-400">— Proverbe chinois</p>
+                            </blockquote>
+                            
+                            <div class="flex justify-center mt-6">
+                                <a href="simulation.html" class="bg-gradient-to-r from-green-500 to-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg shadow-lg hover:shadow-green-500/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center">
+                                    <i class="fas fa-calculator mr-2"></i> 
+                                    Simuler ma stratégie personnalisée
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Call-to-Action -->
+            <div class="bg-gradient-to-r from-blue-900 to-green-900 bg-opacity-30 rounded-xl p-8 text-center mb-16">
+                <h3 class="text-2xl font-bold mb-4">Prêt à optimiser ton patrimoine ?</h3>
+                <p class="text-lg mb-6 max-w-3xl mx-auto">Utilise notre simulateur pour projeter tes investissements dans le temps et comprendre l'impact des différentes stratégies sur ton patrimoine.</p>
+                <div class="flex flex-col sm:flex-row justify-center gap-4">
+                    <a href="simulation.html" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center justify-center">
+                        <i class="fas fa-play-circle mr-2"></i> Lancer une simulation
+                    </a>
+                    <a href="#comparatif" class="bg-transparent border border-green-400 text-green-400 hover:bg-green-900 hover:bg-opacity-30 font-semibold py-3 px-6 rounded-lg transition flex items-center justify-center">
+                        <i class="fas fa-table mr-2"></i> Revoir le comparatif
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="bg-blue-900 bg-opacity-40 backdrop-blur-md border-t border-gray-800 py-4 px-6 text-center mt-12">
+            <div class="flex justify-around flex-wrap gap-4 text-sm text-gray-400">
+                <p class="flex items-center">
+                    <i class="fas fa-book text-green-400 mr-2"></i>
+                    Guide développé par l'équipe TradePulse
+                </p>
+                <p class="flex items-center">
+                    <i class="fas fa-sync-alt text-green-400 mr-2"></i>
+                    Informations fiscales mises à jour régulièrement
+                </p>
+                <p class="flex items-center">
+                    <i class="fas fa-clock text-green-400 mr-2"></i>
+                    Dernière mise à jour: <span class="text-green-400 font-medium ml-1 update-time">10/04/2025 15:30:22</span>
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Bouton du sélecteur de thème -->
+    <div class="theme-toggle">
+        <button id="theme-toggle-btn" class="theme-toggle-btn">
+            <i class="fas fa-moon" id="dark-icon"></i>
+            <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
+        </button>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mise à jour de la date actuelle
+            updateDate();
+            
+            // Initialiser l'accordéon
+            initAccordion();
+            
+            // Initialiser le filtrage par profil
+            initProfileFilter();
+        });
+        
+        function updateDate() {
+            const now = new Date();
+            const options = { day: 'numeric', month: 'long', year: 'numeric' };
+            const formattedDate = now.toLocaleDateString('fr-FR', options).toUpperCase();
+            
+            const currentDateElement = document.getElementById('currentDate');
+            if (currentDateElement) {
+                currentDateElement.textContent = formattedDate;
+            }
+            
+            // Mettre à jour l'heure du marché
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            const seconds = now.getSeconds().toString().padStart(2, '0');
+            
+            const marketTimeElement = document.getElementById('marketTime');
+            if (marketTimeElement) {
+                marketTimeElement.textContent = `${hours}:${minutes}:${seconds}`;
+            }
+        }
+        
+        function initAccordion() {
+            const headers = document.querySelectorAll('.accordion-header');
+            
+            headers.forEach((header, index) => {
+                const content = header.nextElementSibling;
+                
+                // Ouvrir le premier accordéon par défaut
+                if (index === 0) {
+                    header.classList.add('active');
+                    content.classList.add('active');
+                }
+                
+                header.addEventListener('click', () => {
+                    header.classList.toggle('active');
+                    content.classList.toggle('active');
+                });
+            });
+        }
+        
+        function initProfileFilter() {
+            const profilePills = document.querySelectorAll('.profile-pill');
+            const placementRows = document.querySelectorAll('.placement-row');
+            
+            profilePills.forEach(pill => {
+                pill.addEventListener('click', () => {
+                    // Mettre à jour les pills
+                    profilePills.forEach(p => p.classList.remove('active'));
+                    pill.classList.add('active');
+                    
+                    const selectedProfile = pill.getAttribute('data-profile');
+                    
+                    // Filtrer les lignes du tableau
+                    placementRows.forEach(row => {
+                        if (selectedProfile === 'all') {
+                            row.style.display = 'table-row';
+                        } else {
+                            const profiles = row.getAttribute('data-profiles').split(' ');
+                            row.style.display = profiles.includes(selectedProfile) ? 'table-row' : 'none';
+                        }
+                    });
+                });
+            });
+        }
+        
+        function downloadPDF(event) {
+            event.preventDefault();
+            alert('Le PDF du comparatif va être téléchargé (fonctionnalité en développement)');
+            // Ici, tu peux implémenter le téléchargement réel du PDF
+        }
+    </script>
+</body>
+</html>
