@@ -1011,7 +1011,7 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
             }
             
             data = {
-                "model": "gpt-4.0",  # 👈 ICI
+                "model": "gpt-4o",  # 👈 ICI
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.3           # 👈 Température réduite
             }
