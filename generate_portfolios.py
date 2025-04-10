@@ -1011,9 +1011,9 @@ Le commentaire doit IMPÉRATIVEMENT suivre cette structure :
             }
             
             data = {
-                "model": "gpt-4o",
+                "model": "gpt-4.5-preview",  # 👈 ICI
                 "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.7
+                "temperature": 0.3           # 👈 Température réduite
             }
             
             print(f"🚀 Envoi de la requête à l'API OpenAI (tentative {attempt+1}/{max_retries})...")
