@@ -28,7 +28,311 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Initialiser les onglets de simulation
     initSimulationTabs();
+
+    // Initialiser les listeners pour le calculateur fiscal si la section existe
+    initFiscalCalculator();
 });
+
+/**
+ * Calcul fiscal exact avec tranches progressives et optimisation PER
+ * @param {Object} params - Paramètres du calcul
+ * @param {number} params.brutAnnuel - Salaire brut annuel
+ * @param {number} params.tauxNeutre - Taux de charges sociales (ex: 0.22 pour 22%)
+ * @param {number} params.perPourcentage - Pourcentage du salaire net versé au PER (ex: 0.1 pour 10%)
+ * @returns {Object} Résultats de la simulation fiscale
+ */
+function calculFiscalExact(params) {
+    // Paramètres par défaut
+    const data = {
+        brutAnnuel: params.brutAnnuel || 50000,
+        tauxNeutre: params.tauxNeutre || 0.22,
+        perPourcentage: params.perPourcentage || 0.08
+    };
+    
+    // 1. Calcul du net annuel (sans PER)
+    const netAnnuel = data.brutAnnuel * (1 - data.tauxNeutre);
+    
+    // 2. Calcul du montant versé au PER
+    const montantPER = netAnnuel * data.perPourcentage;
+    
+    // 3. Calcul du revenu imposable sans PER
+    const revenuImposableSansPER = netAnnuel;
+    
+    // 4. Calcul du revenu imposable avec PER (déduction fiscale)
+    const revenuImposableAvecPER = netAnnuel - montantPER;
+    
+    // 5. Tranches d'imposition 2024 (France)
+    const tranches = [
+        { limite: 11294, taux: 0 },
+        { limite: 28797, taux: 0.11 },
+        { limite: 82341, taux: 0.30 },
+        { limite: 177106, taux: 0.41 },
+        { limite: Infinity, taux: 0.45 }
+    ];
+    
+    // 6. Calcul de l'impôt par tranches sans PER
+    let impotSansPER = 0;
+    let revenuRestant = revenuImposableSansPER;
+    
+    for (let i = 0; i < tranches.length; i++) {
+        const trancheActuelle = tranches[i];
+        const tranchePrecedente = i > 0 ? tranches[i-1].limite : 0;
+        
+        // Montant imposable dans cette tranche
+        const montantDansLaTranche = Math.min(
+            Math.max(0, revenuRestant - tranchePrecedente),
+            trancheActuelle.limite - tranchePrecedente
+        );
+        
+        // Impôt pour cette tranche
+        impotSansPER += montantDansLaTranche * trancheActuelle.taux;
+        
+        // Mise à jour du revenu restant
+        revenuRestant -= montantDansLaTranche;
+        
+        // Si plus de revenu à imposer, on sort de la boucle
+        if (revenuRestant <= 0) break;
+    }
+    
+    // 7. Calcul de l'impôt par tranches avec PER
+    let impotAvecPER = 0;
+    revenuRestant = revenuImposableAvecPER;
+    
+    for (let i = 0; i < tranches.length; i++) {
+        const trancheActuelle = tranches[i];
+        const tranchePrecedente = i > 0 ? tranches[i-1].limite : 0;
+        
+        // Montant imposable dans cette tranche
+        const montantDansLaTranche = Math.min(
+            Math.max(0, revenuRestant - tranchePrecedente),
+            trancheActuelle.limite - tranchePrecedente
+        );
+        
+        // Impôt pour cette tranche
+        impotAvecPER += montantDansLaTranche * trancheActuelle.taux;
+        
+        // Mise à jour du revenu restant
+        revenuRestant -= montantDansLaTranche;
+        
+        // Si plus de revenu à imposer, on sort de la boucle
+        if (revenuRestant <= 0) break;
+    }
+    
+    // 8. Calcul de l'économie d'impôt grâce au PER
+    const economieImpot = impotSansPER - impotAvecPER;
+    
+    // 9. Calcul du patrimoine total (net d'impôt + montant PER)
+    const patrimoineTotal = (netAnnuel - impotAvecPER) + montantPER;
+    
+    // 10. Calcul du net disponible après impôt sans PER
+    const netDisponibleSansPER = netAnnuel - impotSansPER;
+    
+    // 11. Calcul du net disponible après impôt avec PER (sans le montant versé au PER)
+    const netDisponibleAvecPER = netAnnuel - impotAvecPER - montantPER;
+    
+    // 12. Calcul du taux d'imposition effectif
+    const tauxEffectifSansPER = (impotSansPER / netAnnuel) * 100;
+    const tauxEffectifAvecPER = (impotAvecPER / netAnnuel) * 100;
+    
+    // Retourner les résultats
+    return {
+        brutAnnuel: data.brutAnnuel,
+        netAnnuel: netAnnuel,
+        montantPER: montantPER,
+        revenuImposableSansPER: revenuImposableSansPER,
+        revenuImposableAvecPER: revenuImposableAvecPER,
+        impotSansPER: impotSansPER,
+        impotAvecPER: impotAvecPER,
+        economieImpot: economieImpot,
+        patrimoineTotal: patrimoineTotal,
+        netDisponibleSansPER: netDisponibleSansPER,
+        netDisponibleAvecPER: netDisponibleAvecPER,
+        tauxEffectifSansPER: tauxEffectifSansPER,
+        tauxEffectifAvecPER: tauxEffectifAvecPER
+    };
+}
+
+/**
+ * Initialise le calculateur fiscal
+ */
+function initFiscalCalculator() {
+    // Vérifier si les éléments du formulaire fiscal existent
+    const brutAnnuelInput = document.getElementById('brut-annuel');
+    const tauxChargesInput = document.getElementById('taux-charges');
+    const perPourcentageInput = document.getElementById('per-pourcentage');
+    const calculerBtnFiscal = document.getElementById('calculer-fiscal');
+    
+    // Si les éléments n'existent pas, sortir de la fonction
+    if (!brutAnnuelInput || !tauxChargesInput || !perPourcentageInput || !calculerBtnFiscal) {
+        return;
+    }
+    
+    // Fonction pour mettre à jour la prévisualisation
+    function updateFiscalPreview() {
+        try {
+            const brutAnnuel = parseFloat(brutAnnuelInput.value) || 50000;
+            const tauxCharges = parseFloat(tauxChargesInput.value) || 22;
+            const perPourcentage = parseFloat(perPourcentageInput.value) || 8;
+            
+            const simulation = calculFiscalExact({
+                brutAnnuel: brutAnnuel,
+                tauxNeutre: tauxCharges / 100,
+                perPourcentage: perPourcentage / 100
+            });
+            
+            // Mettre à jour les résultats en temps réel
+            document.getElementById('net-annuel-preview').textContent = Math.round(simulation.netAnnuel).toLocaleString('fr-FR') + ' €';
+            document.getElementById('impot-sans-per-preview').textContent = Math.round(simulation.impotSansPER).toLocaleString('fr-FR') + ' €';
+            document.getElementById('impot-avec-per-preview').textContent = Math.round(simulation.impotAvecPER).toLocaleString('fr-FR') + ' €';
+            document.getElementById('economie-impot-preview').textContent = Math.round(simulation.economieImpot).toLocaleString('fr-FR') + ' €';
+        } catch (error) {
+            console.error('Erreur lors de la mise à jour de la prévisualisation fiscale:', error);
+        }
+    }
+    
+    // Ajouter les écouteurs d'événement pour la mise à jour en temps réel
+    brutAnnuelInput.addEventListener('input', updateFiscalPreview);
+    tauxChargesInput.addEventListener('input', updateFiscalPreview);
+    perPourcentageInput.addEventListener('input', updateFiscalPreview);
+    
+    // Ajouter un écouteur d'événement pour le bouton de calcul
+    calculerBtnFiscal.addEventListener('click', function() {
+        try {
+            const brutAnnuel = parseFloat(brutAnnuelInput.value) || 50000;
+            const tauxCharges = parseFloat(tauxChargesInput.value) || 22;
+            const perPourcentage = parseFloat(perPourcentageInput.value) || 8;
+            
+            // Calculer les résultats fiscaux
+            const simulation = calculFiscalExact({
+                brutAnnuel: brutAnnuel,
+                tauxNeutre: tauxCharges / 100,
+                perPourcentage: perPourcentage / 100
+            });
+            
+            // Mettre à jour l'interface avec les résultats
+            document.getElementById('brut-annuel-result').textContent = simulation.brutAnnuel.toLocaleString('fr-FR') + ' €';
+            document.getElementById('net-annuel-result').textContent = Math.round(simulation.netAnnuel).toLocaleString('fr-FR') + ' €';
+            document.getElementById('montant-per-result').textContent = Math.round(simulation.montantPER).toLocaleString('fr-FR') + ' €';
+            document.getElementById('impot-sans-per').textContent = Math.round(simulation.impotSansPER).toLocaleString('fr-FR') + ' €';
+            document.getElementById('impot-avec-per').textContent = Math.round(simulation.impotAvecPER).toLocaleString('fr-FR') + ' €';
+            document.getElementById('economie-impot').textContent = Math.round(simulation.economieImpot).toLocaleString('fr-FR') + ' €';
+            document.getElementById('patrimoine-total').textContent = Math.round(simulation.patrimoineTotal).toLocaleString('fr-FR') + ' €';
+            document.getElementById('net-disponible-sans-per').textContent = Math.round(simulation.netDisponibleSansPER).toLocaleString('fr-FR') + ' €';
+            document.getElementById('net-disponible-avec-per').textContent = Math.round(simulation.netDisponibleAvecPER).toLocaleString('fr-FR') + ' €';
+            document.getElementById('taux-effectif-sans-per').textContent = simulation.tauxEffectifSansPER.toFixed(2) + ' %';
+            document.getElementById('taux-effectif-avec-per').textContent = simulation.tauxEffectifAvecPER.toFixed(2) + ' %';
+            
+            // Afficher la section des résultats si elle est masquée
+            const resultatsSection = document.getElementById('resultats-fiscaux');
+            if (resultatsSection) {
+                resultatsSection.style.display = 'block';
+            }
+            
+            // Créer un graphique comparatif si la section graphique existe
+            updateFiscalChart(simulation);
+        } catch (error) {
+            console.error('Erreur lors du calcul fiscal:', error);
+        }
+    });
+    
+    // Effectuer un calcul initial pour afficher des résultats par défaut
+    updateFiscalPreview();
+}
+
+/**
+ * Met à jour le graphique comparatif fiscal
+ * @param {Object} simulation - Résultats de la simulation fiscale
+ */
+function updateFiscalChart(simulation) {
+    const ctx = document.getElementById('fiscal-chart');
+    if (!ctx) return;
+    
+    // Détruire le graphique existant s'il y en a un
+    if (window.fiscalChart) {
+        window.fiscalChart.destroy();
+    }
+    
+    // Données pour le graphique
+    const data = {
+        labels: ['Sans PER', 'Avec PER'],
+        datasets: [
+            {
+                label: 'Impôt',
+                data: [
+                    Math.round(simulation.impotSansPER),
+                    Math.round(simulation.impotAvecPER)
+                ],
+                backgroundColor: 'rgba(255, 71, 87, 0.7)',
+                borderColor: 'rgba(255, 71, 87, 1)',
+                borderWidth: 1
+            },
+            {
+                label: 'Net disponible',
+                data: [
+                    Math.round(simulation.netDisponibleSansPER),
+                    Math.round(simulation.netDisponibleAvecPER)
+                ],
+                backgroundColor: 'rgba(0, 210, 110, 0.7)',
+                borderColor: 'rgba(0, 210, 110, 1)',
+                borderWidth: 1
+            },
+            {
+                label: 'Montant PER',
+                data: [
+                    0,
+                    Math.round(simulation.montantPER)
+                ],
+                backgroundColor: 'rgba(33, 150, 243, 0.7)',
+                borderColor: 'rgba(33, 150, 243, 1)',
+                borderWidth: 1
+            }
+        ]
+    };
+    
+    // Options du graphique
+    const options = {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+            y: {
+                beginAtZero: true,
+                stacked: true,
+                ticks: {
+                    callback: function(value) {
+                        return value.toLocaleString('fr-FR') + ' €';
+                    }
+                }
+            },
+            x: {
+                stacked: true
+            }
+        },
+        plugins: {
+            legend: {
+                position: 'top',
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        let label = context.dataset.label || '';
+                        if (label) {
+                            label += ': ';
+                        }
+                        label += parseFloat(context.raw).toLocaleString('fr-FR') + ' €';
+                        return label;
+                    }
+                }
+            }
+        }
+    };
+    
+    // Créer le graphique
+    window.fiscalChart = new Chart(ctx, {
+        type: 'bar',
+        data: data,
+        options: options
+    });
+}
 
 /**
  * Fonction pour mettre à jour la date
@@ -451,7 +755,7 @@ function toggleInvestmentMode(mode) {
     }
     
     // Si une simulation est déjà active, la mettre à jour
-    if (document.querySelector('.results-container').style.display !== 'none') {
+    if (document.querySelector('.results-container') && document.querySelector('.results-container').style.display !== 'none') {
         runSimulation();
     }
 }
