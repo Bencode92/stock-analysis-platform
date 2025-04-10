@@ -443,16 +443,39 @@ def filter_crypto_data(crypto_data):
     """Retourne toutes les cryptos où 7j > 24h > 0, triées par market cap."""
     if not crypto_data or not isinstance(crypto_data, dict):
         return "Aucune donnée de crypto-monnaie disponible"
+    
+    print("🔍 Débogage du filtre crypto: Analyse des données d'entrée")
+    if 'categories' in crypto_data and 'main' in crypto_data['categories']:
+        print(f"   Nombre de cryptos trouvées: {len(crypto_data['categories']['main'])}")
+    
     cryptos = []
     main = crypto_data.get('categories', {}).get('main', [])
-    for crypto in main:
+    
+    for i, crypto in enumerate(main):
+        if i < 5:  # Afficher les 5 premières cryptos pour débogage
+            print(f"   Crypto #{i+1}: {crypto.get('name', 'N/A')} - 24h: {crypto.get('change_24h', 'N/A')}, 7j: {crypto.get('change_7d', 'N/A')}")
+        
         try:
             name = crypto.get('name', '')
             symbol = crypto.get('symbol', '')
             price = crypto.get('price', '')
-            c24 = float(str(crypto.get('change_24h', '0')).replace('%', '').replace(',', '.'))
-            c7 = float(str(crypto.get('change_7d', '0')).replace('%', '').replace(',', '.'))
+            
+            # Extraire proprement la valeur numérique (gérer +/- et %)
+            c24h_raw = crypto.get('change_24h', '0%')
+            c7d_raw = crypto.get('change_7d', '0%')
+            
+            # Supprimer les signes + et %, mais garder les signes -
+            c24 = float(c24h_raw.replace('+', '').replace('%', '').replace(',', '.'))
+            c7 = float(c7d_raw.replace('+', '').replace('%', '').replace(',', '.'))
+            
+            # Debug pour voir les valeurs converties
+            if i < 5:
+                print(f"      → Converti: 24h = {c24}, 7j = {c7}")
+                print(f"      → Condition 'c7 > c24 > 0': {c7 > c24 > 0}")
+            
             mc_raw = crypto.get('market_cap', '0')
+            
+            # Vérifier notre condition: 7j > 24h > 0
             if c7 > c24 > 0:
                 # Convertir market cap
                 if isinstance(mc_raw, str):
@@ -463,18 +486,85 @@ def filter_crypto_data(crypto_data):
                     market_cap = float(cleaned or 0) * multiplier
                 else:
                     market_cap = float(mc_raw or 0)
+                
+                # Ajouter à notre liste de cryptos filtrées
                 cryptos.append((name, symbol, price, c24, c7, market_cap))
-        except:
+                if i < 5:
+                    print(f"      ✅ SÉLECTIONNÉE")
+            elif i < 5:
+                print(f"      ❌ NON SÉLECTIONNÉE")
+                
+        except Exception as e:
+            if i < 5:
+                print(f"      ⚠️ ERREUR: {str(e)}")
             continue
+    
+    # Créer une version alternative des critères si aucune crypto ne correspond
+    alt_cryptos = []
+    if not cryptos:
+        print("⚠️ Aucune crypto ne respecte strictement les critères 7j > 24h > 0")
+        print("   Essai avec des critères alternatifs: 24h > 0 ET 7j > -5")
+        
+        for crypto in main:
+            try:
+                name = crypto.get('name', '')
+                symbol = crypto.get('symbol', '')
+                price = crypto.get('price', '')
+                
+                # Extraire proprement la valeur numérique
+                c24h_raw = crypto.get('change_24h', '0%')
+                c7d_raw = crypto.get('change_7d', '0%')
+                
+                c24 = float(c24h_raw.replace('+', '').replace('%', '').replace(',', '.'))
+                c7 = float(c7d_raw.replace('+', '').replace('%', '').replace(',', '.'))
+                
+                mc_raw = crypto.get('market_cap', '0')
+                
+                # Critères alternatifs: 24h > 0 ET 7j > -5
+                if c24 > 0 and c7 > -5:
+                    # Convertir market cap
+                    if isinstance(mc_raw, str):
+                        cleaned = re.sub(r'[^\d.,]', '', mc_raw.replace(',', '.'))
+                        multiplier = 1
+                        if 'B' in mc_raw.upper(): multiplier = 1_000_000_000
+                        elif 'M' in mc_raw.upper(): multiplier = 1_000_000
+                        market_cap = float(cleaned or 0) * multiplier
+                    else:
+                        market_cap = float(mc_raw or 0)
+                    
+                    alt_cryptos.append((name, symbol, price, c24, c7, market_cap))
+            except:
+                continue
+    
+    # Utiliser la liste alternative si la principale est vide
+    if not cryptos and alt_cryptos:
+        print(f"   ✅ {len(alt_cryptos)} cryptos trouvées avec les critères alternatifs")
+        cryptos = alt_cryptos
+        criteria_desc = "24h > 0 ET 7j > -5%"
+    else:
+        criteria_desc = "7j > 24h > 0%"
+    
     # Trier par market cap décroissante
     cryptos.sort(key=lambda x: x[5], reverse=True)
+    
     if not cryptos:
-        return "Aucune crypto ne respecte les critères 7j > 24h > 0"
-    summary = ["🪙 CRYPTOS AVEC 7J > 24H > 0%, triées par capitalisation :"]
+        return "Aucune crypto ne respecte les critères de tendance positive stable"
+    
+    # Générer le résumé
+    summary = [f"🪙 CRYPTOS AVEC TENDANCE POSITIVE ({criteria_desc}), triées par capitalisation:"]
     summary.append(f"Total: {len(cryptos)} cryptos respectent les critères")
+    
     for name, symbol, price, c24, c7, _ in cryptos:
-        stability = c7/c24 if c24 > 0 else 999
-        summary.append(f"• {name} ({symbol}): 24h +{c24:.2f}%, 7j +{c7:.2f}% | Stabilité: {stability:.1f}x | Prix: {price}")
+        if c24 > 0:  # Éviter division par zéro
+            stability = c7/c24 if c24 != 0 else 0
+            stability_txt = f"| Stabilité: {stability:.1f}x" if criteria_desc == "7j > 24h > 0%" else ""
+            
+            # Afficher les indicateurs avec signes
+            sign_24h = "+" if c24 > 0 else ""
+            sign_7d = "+" if c7 > 0 else ""
+            
+            summary.append(f"• {name} ({symbol}): 24h: {sign_24h}{c24:.2f}%, 7j: {sign_7d}{c7:.2f}% {stability_txt} | Prix: {price}")
+    
     return "\n".join(summary)
 
 def filter_themes_data(themes_data):
