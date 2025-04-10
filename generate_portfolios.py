@@ -301,7 +301,7 @@ def filter_lists_data(lists_data):
                     assets_by_sector[sector].append(asset_entry)
 
     # Résumé textuel organisé par secteur
-    summary_lines = ["📋 TOP 10 ACTIFS PAR SECTEUR (YTD -5% à 120% et Daily > -10%) :"]
+    summary_lines = ["📋 TOP 5 ACTIFS PAR SECTEUR (YTD -5% à 120% et Daily > -10%) :"]
     
     # Trier les secteurs par ordre alphabétique pour une présentation cohérente
     sorted_sectors = sorted(assets_by_sector.keys())
@@ -317,13 +317,13 @@ def filter_lists_data(lists_data):
         sector_assets.sort(key=lambda x: x["ytd"], reverse=True)
         
         # Sélectionner uniquement les 10 meilleurs
-        top_10_assets = sector_assets[:10]
+        top_5_assets = sector_assets[:5]
         
         # Ajouter l'en-tête du secteur
         summary_lines.append(f"\n🏭 SECTEUR: {sector.upper()} ({len(top_10_assets)} actifs)")
         
-        # Ajouter chaque actif du top 10
-        for asset in top_10_assets:
+        # Ajouter chaque actif du top 5
+        for asset in top_5_assets:
             # Construire la ligne de description avec les informations disponibles
             country_info = f" | Pays: {asset['country']}" if asset['country'] else ""
             
@@ -332,7 +332,7 @@ def filter_lists_data(lists_data):
             )
     
     # Ajouter un compteur global
-    total_filtered_assets = sum(len(assets_by_sector[sector][:10]) for sector in sorted_sectors if assets_by_sector[sector])
+    total_filtered_assets = sum(len(assets_by_sector[sector][:5]) for sector in sorted_sectors if assets_by_sector[sector])
     summary_lines.insert(1, f"Total: {total_filtered_assets} actifs répartis dans {len(sorted_sectors)} secteurs")
     
     return "\n".join(summary_lines) if assets_by_sector else "Aucune donnée d'actifs significative"
