@@ -213,7 +213,7 @@ const PatrimoineSimulator = (function() {
         const epargneTotale = revenumensuel - depensesTotales;
         
         // Taux d'épargne (pourcentage du revenu mensuel)
-        const tauxEpargne = (epargneTotale / revenumensuel) * 100;
+        const tauxEpargne = revenumensuel > 0 ? (epargneTotale / revenumensuel) * 100 : 0;
         
         // Mise à jour des résultats
         Object.assign(state.resultats, {
@@ -429,6 +429,20 @@ function calculerFiscalite() {
         tauxCharges: charges,
         perPourcentage: perPct
     });
+    
+    // Récupérer les données du budget
+    const budgetLoyer = parseFloat(document.getElementById('budget-loyer').value) || 1000;
+    const budgetQuotidien = parseFloat(document.getElementById('budget-quotidien').value) || 1200;
+    const budgetExtra = parseFloat(document.getElementById('budget-extra').value) || 500;
+    const budgetInvest = parseFloat(document.getElementById('budget-invest').value) || 300;
+    
+    // Calculer le budget
+    PatrimoineSimulator.calculerBudget({
+        loyer: budgetLoyer,
+        quotidien: budgetQuotidien,
+        extra: budgetExtra,
+        investAuto: budgetInvest
+    });
 
     // Affichage des résultats
     document.getElementById("impot-sans-per").textContent = `${resultats.impotSansPER.toLocaleString('fr-FR')} €`;
@@ -442,8 +456,8 @@ function calculerFiscalite() {
     const tauxMoyenSansPER = document.getElementById("taux-moyen-sans-per");
     const tauxMoyenAvecPER = document.getElementById("taux-moyen-avec-per");
     
-    if (tauxMoyenSansPER) tauxMoyenSansPER.textContent = `${resultats.tauxMoyenSansPER.toFixed(2)} %`;
-    if (tauxMoyenAvecPER) tauxMoyenAvecPER.textContent = `${resultats.tauxMoyenAvecPER.toFixed(2)} %`;
+    if (tauxMoyenSansPER) tauxMoyenSansPER.textContent = `${resultats.tauxMoyenSansPER.toFixed(2)}%`;
+    if (tauxMoyenAvecPER) tauxMoyenAvecPER.textContent = `${resultats.tauxMoyenAvecPER.toFixed(2)}%`;
     
     // Afficher le montant PER déductible vs versé si l'élément existe
     const perDeductibleElement = document.getElementById("per-deductible");
@@ -522,6 +536,7 @@ function getTauxMarginal(revenuImposable) {
 
 /**
  * Met à jour les informations sur le budget et l'épargne
+ * CORRECTION: Corrige le calcul de l'épargne mensuelle
  */
 function updateBudgetInfo(resultats) {
     // Récupérer les éléments du DOM
@@ -541,13 +556,15 @@ function updateBudgetInfo(resultats) {
     // Calculer les totaux
     const depensesTotal = budgetLoyer + budgetQuotidien + budgetExtra + budgetInvest;
     const revenuMensuelNet = resultats.netDispoAvecPER / 12;
+    
+    // CORRECTION: Calcul correct de l'épargne mensuelle
     const epargne = Math.max(0, revenuMensuelNet - depensesTotal);
     const tauxEpargnePct = revenuMensuelNet > 0 ? (epargne / revenuMensuelNet) * 100 : 0;
     
-    // Mettre à jour l'affichage
-    revenuMensuel.textContent = `${revenuMensuelNet.toLocaleString('fr-FR')} €`;
+    // Mettre à jour l'affichage avec un formatage plus lisible
+    revenuMensuel.textContent = `${Math.round(revenuMensuelNet).toLocaleString('fr-FR')} €`;
     depensesTotales.textContent = `${depensesTotal.toLocaleString('fr-FR')} €`;
-    epargnePossible.textContent = `${epargne.toLocaleString('fr-FR')} €`;
+    epargnePossible.textContent = `${Math.round(epargne).toLocaleString('fr-FR')} €`;
     tauxEpargne.textContent = `${tauxEpargnePct.toFixed(1)}%`;
     
     // Mise en évidence visuelle du taux d'épargne
