@@ -3,425 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TradePulse - Simulateur Financier</title>
+    <title>TradePulse - Simulateur d'Investissement</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="enhanced-ui.css">
-    <link rel="stylesheet" href="dashboard-enhanced.css">
-    <link rel="stylesheet" href="market-clock.css">
-    <style>
-        :root {
-            --background-color: #011627;
-            --light-background-color: #f0f5ff;
-            --text-color: #FFFFFF;
-            --light-text-color: #1a202c;
-            --accent-color: #00FF87;
-            --accent-glow: 0 0 20px rgba(0, 255, 135, 0.6);
-            --transition-time: 0.3s;
-            --header-height: 70px;
-            --sidebar-width: 80px;
-            --card-bg-dark: rgba(1, 30, 52, 0.5);
-            --card-bg-light: rgba(240, 245, 255, 0.8);
-        }
-        
-        body {
-            background-color: var(--background-color);
-            color: var(--text-color);
-            font-family: 'Inter', sans-serif;
-            margin: 0;
-            padding: 0;
-            min-height: 100vh;
-        }
-        
-        /* Animation d'apparition */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .animate-fadeIn {
-            animation: fadeIn 0.5s ease-out forwards;
-        }
-        
-        /* Animation de pulsation */
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(0, 255, 135, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0); }
-        }
-        
-        /* Vertical sidebar */
-        .sidebar {
-            width: var(--sidebar-width);
-            background-color: rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(10px);
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
-            height: 100vh;
-            position: fixed;
-            top: 0;
-            left: 0;
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px 0;
-        }
-        
-        .sidebar-logo {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--accent-color);
-            margin-bottom: 30px;
-            text-shadow: var(--accent-glow);
-        }
-        
-        .sidebar-nav {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-            align-items: center;
-            width: 100%;
-        }
-        
-        .nav-item {
-            width: 45px;
-            height: 45px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 8px;
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 1.2rem;
-            transition: all 0.3s ease;
-            position: relative;
-            text-decoration: none;
-            background-color: transparent;
-        }
-        
-        .nav-item:hover {
-            color: var(--accent-color);
-            background-color: rgba(0, 255, 135, 0.1);
-        }
-        
-        .nav-item.active {
-            color: var(--accent-color);
-            background-color: rgba(0, 255, 135, 0.2);
-        }
-        
-        .nav-item.active::before {
-            content: '';
-            position: absolute;
-            left: -2px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 4px;
-            height: 60%;
-            background-color: var(--accent-color);
-            border-radius: 0 2px 2px 0;
-        }
-        
-        /* Main content */
-        .main-content {
-            flex: 1;
-            margin-left: var(--sidebar-width);
-            padding-top: var(--header-height);
-            min-height: 100vh;
-            position: relative;
-        }
-        
-        /* Top navigation */
-        .main-header {
-            height: var(--header-height);
-            background-color: rgba(0, 0, 0, 0.2);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            position: fixed;
-            top: 0;
-            right: 0;
-            left: var(--sidebar-width);
-            z-index: 90;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 20px;
-        }
-        
-        .header-left {
-            display: flex;
-            align-items: center;
-        }
-        
-        .logo-container {
-            display: flex;
-            align-items: center;
-            margin-right: 30px;
-            font-weight: 700;
-            font-size: 1.2rem;
-            color: var(--accent-color);
-            text-decoration: none;
-            position: relative;
-        }
-        
-        .pulse-dot {
-            width: 8px;
-            height: 8px;
-            background-color: var(--accent-color);
-            border-radius: 50%;
-            margin-right: 8px;
-            box-shadow: var(--accent-glow);
-            position: relative;
-            animation: pulse 2s infinite;
-        }
-        
-        .main-nav {
-            display: flex;
-            gap: 20px;
-        }
-        
-        .main-nav a {
-            color: rgba(255, 255, 255, 0.7);
-            text-decoration: none;
-            font-size: 0.9rem;
-            transition: color 0.3s ease;
-            padding: 5px 0;
-            position: relative;
-        }
-        
-        .main-nav a:hover {
-            color: var(--text-color);
-        }
-        
-        .main-nav a.active {
-            color: var(--accent-color);
-        }
-        
-        .main-nav a.active::after {
-            content: '';
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background-color: var(--accent-color);
-            box-shadow: var(--accent-glow);
-        }
-        
-        .header-right {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-        }
-        
-        .market-status {
-            display: flex;
-            align-items: center;
-            font-size: 0.85rem;
-        }
-        
-        .market-indicator {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            margin-right: 8px;
-        }
-        
-        .market-indicator.green {
-            background-color: #4CAF50;
-            box-shadow: 0 0 8px rgba(76, 175, 80, 0.6);
-        }
-        
-        .market-time {
-            margin-left: 8px;
-            color: var(--accent-color);
-            font-weight: 500;
-        }
-        
-        .search-button {
-            display: flex;
-            align-items: center;
-            background-color: rgba(255, 255, 255, 0.1);
-            border: none;
-            border-radius: 6px;
-            padding: 8px 12px;
-            color: var(--text-color);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-decoration: none;
-        }
-        
-        .search-button i {
-            margin-right: 8px;
-            color: var(--accent-color);
-        }
-        
-        .search-button:hover {
-            background-color: rgba(255, 255, 255, 0.15);
-        }
-        
-        /* Content styles */
-        .content-wrapper {
-            padding: 20px;
-            max-width: 1600px;
-            margin: 0 auto;
-        }
-        
-        .page-header {
-            margin-bottom: 30px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .section-title {
-            font-size: 2.2rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-            color: var(--accent-color);
-            letter-spacing: 1px;
-        }
-        
-        .section-subtitle {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 1rem;
-        }
-        
-        /* Media queries */
-        @media (max-width: 1024px) {
-            .sidebar {
-                width: 70px;
-            }
-            
-            .main-content, .main-header {
-                left: 70px;
-            }
-            
-            .main-nav {
-                display: none;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .section-title {
-                font-size: 1.8rem;
-            }
-            
-            .grid-cols-2 {
-                grid-template-columns: 1fr;
-            }
-        }
-        
-        /* Theme toggle */
-        .theme-toggle {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-        }
-        
-        .theme-toggle-btn {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background-color: rgba(0, 0, 0, 0.3);
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--accent-color);
-            font-size: 1.2rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-        
-        .theme-toggle-btn:hover {
-            background-color: rgba(0, 255, 135, 0.2);
-            transform: translateY(-3px);
-        }
-        
-        /* Simulator Panel */
-        .simulator-panel {
-            background: linear-gradient(145deg, rgba(4, 35, 53, 0.3), rgba(1, 25, 39, 0.6));
-            border-radius: 16px;
-            padding: 25px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-        }
-        
-        .panel-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .panel-icon {
-            width: 40px;
-            height: 40px;
-            background-color: rgba(0, 255, 135, 0.15);
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            color: var(--accent-color);
-            margin-right: 15px;
-        }
-        
-        .panel-title {
-            font-size: 1.3rem;
-            font-weight: 600;
-            margin: 0;
-        }
-        
-        /* Chart Styles */
-        .chart-container {
-            height: 300px;
-            margin-bottom: 1.5rem;
-        }
-        
-        /* Custom range slider */
-        input[type="range"] {
-            -webkit-appearance: none;
-            height: 8px;
-            border-radius: 4px;
-        }
-        
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: var(--accent-color);
-            cursor: pointer;
-            box-shadow: 0 0 5px rgba(0, 255, 135, 0.5);
-        }
-        
-        /* Budget section */
-        .budget-distribution-chart {
-            width: 100%;
-            height: 200px;
-            margin-top: 1rem;
-        }
-        
-        .capacity-indicator {
-            height: 8px;
-            background-color: rgba(0, 255, 135, 0.2);
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 0.5rem;
-        }
-        
-        .capacity-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent-color), #00d6b4);
-            border-radius: 4px;
-            transition: width 0.5s ease;
-        }
-    </style>
+    <link rel="stylesheet" href="css/simulation.css">
 </head>
 <body class="dark">
     <!-- Sidebar de navigation verticale -->
@@ -452,11 +39,12 @@
             <a href="crypto.html" class="nav-item" title="Crypto">
                 <i class="fab fa-bitcoin"></i>
             </a>
-            <a href="education.html" class="nav-item" title="Éducation">
-                <i class="fas fa-graduation-cap"></i>
-            </a>
-            <a href="simulation.html" class="nav-item active" title="Simulateur">
+            <a href="simulation.html" class="nav-item active" title="Simulation">
                 <i class="fas fa-calculator"></i>
+            </a>
+            <a href="email-preview.html" class="nav-item" title="Alertes">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge"></span>
             </a>
             <a href="parametres.html" class="nav-item" title="Paramètres">
                 <i class="fas fa-cog"></i>
@@ -477,8 +65,10 @@
                 <a href="dashboard.html">Tableau de bord</a>
                 <a href="marches.html">Marchés</a>
                 <a href="secteurs.html">Secteurs</a>
-                <a href="education.html">Éducation</a>
-                <a href="simulation.html" class="active">Simulateur</a>
+                <a href="liste.html">Listes</a>
+                <a href="etf.html">ETF</a>
+                <a href="crypto.html">Crypto</a>
+                <a href="simulation.html" class="active">Simulation</a>
             </nav>
         </div>
         <div class="header-right">
@@ -499,243 +89,27 @@
         <div class="content-wrapper">
             <!-- En-tête de page -->
             <div class="page-header text-center">
-                <h1 class="section-title">SIMULATEUR FINANCIER</h1>
-                <p class="section-subtitle" id="currentDate">8 AVRIL 2025</p>
+                <h1 class="section-title">SIMULATEUR D'INVESTISSEMENT</h1>
+                <p class="section-subtitle" id="currentDate">10 AVRIL 2025</p>
             </div>
 
-            <!-- Section Calcul Fiscal -->
-            <div id="calcul-fiscal" class="mb-10">
-                <h2 class="text-2xl font-bold mb-6 text-green-400 flex items-center">
-                    <i class="fas fa-calculator mr-3"></i>
-                    Calculateur Fiscal et Budget
-                </h2>
-                
-                <div class="simulator-panel">
-                    <div class="panel-header">
-                        <div class="panel-icon">
-                            <i class="fas fa-money-bill-wave"></i>
-                        </div>
-                        <h3 class="panel-title">Optimisez votre capacité d'investissement</h3>
+            <!-- Informations du marché actuel -->
+            <div class="simulator-panel mb-8">
+                <div class="panel-header">
+                    <div class="panel-icon">
+                        <i class="fas fa-info-circle"></i>
                     </div>
-                    
-                    <p class="text-gray-300 mb-4">Calculez votre revenu disponible après impôts et dépenses pour déterminer votre capacité d'investissement mensuelle.</p>
-                    
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
-                        <!-- Paramètres de revenus et fiscalité -->
-                        <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                            <h4 class="text-xl font-semibold mb-4 flex items-center">
-                                <i class="fas fa-hand-holding-usd text-green-400 mr-2"></i>
-                                Revenus et Fiscalité
-                            </h4>
-                            
-                            <!-- Salaire brut annuel -->
-                            <div class="mb-4">
-                                <label class="block mb-2 text-sm font-medium text-gray-300">
-                                    Salaire brut annuel
-                                    <span class="ml-1 text-green-400 cursor-help" title="Votre salaire brut annuel avant prélèvements sociaux.">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
-                                <div class="flex">
-                                    <input type="number" id="brut-annuel" value="36000" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 flex-grow">
-                                    <span class="bg-blue-800 bg-opacity-30 border border-blue-700 rounded-r-lg p-2.5">€</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Taux de charges -->
-                            <div class="mb-4">
-                                <label class="block mb-2 text-sm font-medium text-gray-300">
-                                    Taux de charges sociales
-                                    <span class="ml-1 text-green-400 cursor-help" title="Le pourcentage de charges sociales prélevées sur votre salaire brut (environ 22% pour les salariés).">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
-                                <div class="flex items-center gap-4">
-                                    <input type="range" id="taux-charges-slider" min="0" max="40" value="22" class="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer">
-                                    <span class="bg-green-900 bg-opacity-30 text-green-400 px-2 py-1 rounded text-sm font-medium min-w-[60px] text-center">
-                                        <input type="number" id="taux-charges" value="22" min="0" max="40" class="bg-transparent text-green-400 w-10 text-center">%
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <!-- Versement PER -->
-                            <div class="mb-4">
-                                <label class="block mb-2 text-sm font-medium text-gray-300">
-                                    Versement PER (% du net)
-                                    <span class="ml-1 text-green-400 cursor-help" title="Pourcentage de votre revenu net que vous versez sur un Plan d'Épargne Retraite pour réduire votre impôt sur le revenu.">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
-                                <div class="flex items-center gap-4">
-                                    <input type="range" id="per-pourcentage-slider" min="0" max="20" value="0" class="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer">
-                                    <span class="bg-green-900 bg-opacity-30 text-green-400 px-2 py-1 rounded text-sm font-medium min-w-[60px] text-center">
-                                        <input type="number" id="per-pourcentage" value="0" min="0" max="20" class="bg-transparent text-green-400 w-10 text-center">%
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <!-- Résultats fiscaux -->
-                            <div class="mt-6 bg-blue-800 bg-opacity-30 p-4 rounded-lg">
-                                <h5 class="text-lg font-semibold mb-3 text-green-400">Résultats fiscaux</h5>
-                                
-                                <div class="grid grid-cols-2 gap-3">
-                                    <div>
-                                        <p class="text-xs text-gray-400 mb-1">Net avant impôt</p>
-                                        <p id="net-avant-impot" class="text-lg font-semibold">28 080 €</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-xs text-gray-400 mb-1">Versement PER</p>
-                                        <p id="montant-per" class="text-lg font-semibold">0 €</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-xs text-gray-400 mb-1">Impôt sans PER</p>
-                                        <p id="impot-sans-per" class="text-lg font-semibold">2 425 €</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-xs text-gray-400 mb-1">Impôt avec PER</p>
-                                        <p id="impot-avec-per" class="text-lg font-semibold">2 425 €</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-xs text-gray-400 mb-1">Économie d'impôt</p>
-                                        <p id="economie-impot" class="text-lg font-semibold text-green-400">0 €</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-xs text-gray-400 mb-1">Taux moyen d'imposition</p>
-                                        <p id="taux-moyen" class="text-lg font-semibold">8.6%</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Budget et dépenses -->
-                        <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                            <h4 class="text-xl font-semibold mb-4 flex items-center">
-                                <i class="fas fa-wallet text-green-400 mr-2"></i>
-                                Budget mensuel
-                            </h4>
-                            
-                            <!-- Résultat revenu mensuel -->
-                            <div class="mb-5 p-4 bg-green-900 bg-opacity-10 border-l-4 border-green-400 rounded-md">
-                                <h5 class="font-medium mb-1">Revenu mensuel net d'impôts</h5>
-                                <p id="revenu-mensuel-net" class="text-2xl font-bold text-green-400">2 138 €</p>
-                            </div>
-                            
-                            <!-- Dépenses obligatoires -->
-                            <div class="mb-4">
-                                <label class="block mb-2 text-sm font-medium text-gray-300">
-                                    Logement (loyer/crédit)
-                                    <span class="ml-1 text-green-400 cursor-help" title="Votre loyer mensuel ou mensualité de crédit immobilier, charges comprises.">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
-                                <div class="flex">
-                                    <input type="number" id="depense-logement" value="800" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 flex-grow">
-                                    <span class="bg-blue-800 bg-opacity-30 border border-blue-700 rounded-r-lg p-2.5">€</span>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-4">
-                                <label class="block mb-2 text-sm font-medium text-gray-300">
-                                    Énergie et télécommunications
-                                    <span class="ml-1 text-green-400 cursor-help" title="Vos dépenses mensuelles en électricité, gaz, eau, téléphone, internet.">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
-                                <div class="flex">
-                                    <input type="number" id="depense-energie" value="150" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 flex-grow">
-                                    <span class="bg-blue-800 bg-opacity-30 border border-blue-700 rounded-r-lg p-2.5">€</span>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-4">
-                                <label class="block mb-2 text-sm font-medium text-gray-300">
-                                    Alimentation
-                                    <span class="ml-1 text-green-400 cursor-help" title="Budget mensuel pour l'alimentation (courses, restaurants).">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
-                                <div class="flex">
-                                    <input type="number" id="depense-alimentation" value="400" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 flex-grow">
-                                    <span class="bg-blue-800 bg-opacity-30 border border-blue-700 rounded-r-lg p-2.5">€</span>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-4">
-                                <label class="block mb-2 text-sm font-medium text-gray-300">
-                                    Transport
-                                    <span class="ml-1 text-green-400 cursor-help" title="Dépenses en transport (essence, assurance, entretien, transports en commun).">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
-                                <div class="flex">
-                                    <input type="number" id="depense-transport" value="200" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 flex-grow">
-                                    <span class="bg-blue-800 bg-opacity-30 border border-blue-700 rounded-r-lg p-2.5">€</span>
-                                </div>
-                            </div>
-                            
-                            <div class="mb-4">
-                                <label class="block mb-2 text-sm font-medium text-gray-300">
-                                    Autres dépenses
-                                    <span class="ml-1 text-green-400 cursor-help" title="Loisirs, abonnements, santé, vêtements, etc.">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
-                                <div class="flex">
-                                    <input type="number" id="depense-divers" value="250" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 flex-grow">
-                                    <span class="bg-blue-800 bg-opacity-30 border border-blue-700 rounded-r-lg p-2.5">€</span>
-                                </div>
-                            </div>
-                            
-                            <!-- Résultat capacité d'investissement -->
-                            <div class="mt-6 p-4 rounded-lg bg-blue-800 bg-opacity-30">
-                                <div class="flex justify-between items-center mb-2">
-                                    <h5 class="font-medium">Capacité d'investissement mensuelle</h5>
-                                    <p id="capacite-investissement" class="text-xl font-bold text-green-400">338 €</p>
-                                </div>
-                                <div class="capacity-indicator">
-                                    <div id="capacity-fill" class="capacity-fill" style="width: 15%"></div>
-                                </div>
-                                <p id="taux-epargne" class="text-right text-sm mt-1 text-gray-300">Taux d'épargne: 15.8%</p>
-                            </div>
-                            
-                            <!-- Button to transfer to investment simulation -->
-                            <button id="transfer-to-simulation" class="w-full mt-6 py-3 px-4 bg-gradient-to-r from-green-500 to-green-400 text-gray-900 font-semibold rounded-lg shadow-lg hover:shadow-green-500/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center">
-                                <i class="fas fa-exchange-alt mr-2"></i> 
-                                Utiliser pour l'investissement
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Budget Distribution Chart -->
-                    <div class="mt-8 p-6 bg-blue-900 bg-opacity-20 rounded-lg">
-                        <h4 class="text-xl font-semibold mb-4 flex items-center">
-                            <i class="fas fa-chart-pie text-green-400 mr-2"></i>
-                            Répartition de votre budget
-                        </h4>
-                        <div class="budget-distribution-chart">
-                            <canvas id="budget-chart"></canvas>
-                        </div>
-                    </div>
+                    <h2 class="panel-title">Outils de simulation</h2>
                 </div>
-            </div>
-
-            <!-- Simulateur section -->
-            <div id="simulateur" class="mt-16">
-                <h2 class="text-2xl font-bold mb-6 text-green-400 flex items-center">
-                    <i class="fas fa-chart-line mr-3"></i>
-                    Simulateur d'investissement
-                </h2>
                 
-                <div class="simulator-panel">
-                    <div class="panel-header">
-                        <div class="panel-icon">
-                            <i class="fas fa-info-circle"></i>
-                        </div>
-                        <h3 class="panel-title">À propos du simulateur</h3>
-                    </div>
-                    
-                    <p class="text-gray-300 mb-4">Découvrez l'impact des différentes stratégies d'investissement sur votre capital à long terme. Cet outil vous permet de simuler le rendement potentiel en fonction du montant investi, de la durée et du véhicule d'investissement choisi.</p>
-                    
+                <div class="simulation-tabs">
+                    <div class="simulation-tab active" data-target="investment-simulator">Simulateur d'investissement</div>
+                    <div class="simulation-tab" data-target="tax-optimizer">Optimisation fiscale</div>
+                    <div class="simulation-tab" data-target="retirement-planner">Planification retraite</div>
+                    <div class="simulation-tab" data-target="real-estate">Investissement immobilier</div>
+                </div>
+                
+                <div id="investment-simulator" class="simulation-content">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
                         <!-- Paramètres de simulation -->
                         <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
@@ -755,8 +129,19 @@
                                 <input type="number" id="investment-amount" value="1000" min="1" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
                                 
                                 <div class="flex mt-2 bg-blue-800 bg-opacity-30 rounded-md overflow-hidden">
-                                    <button id="versement-unique" class="flex-1 py-2 px-3 text-sm font-medium text-green-400 bg-green-900 bg-opacity-30">Versement unique</button>
-                                    <button id="versement-mensuel" class="flex-1 py-2 px-3 text-sm font-medium text-gray-300">Versement mensuel</button>
+                                    <button id="unique-investment" class="flex-1 py-2 px-3 text-sm font-medium text-green-400 bg-green-900 bg-opacity-30 selected" onclick="toggleInvestmentMode('unique')">Versement unique</button>
+                                    <button id="periodic-investment" class="flex-1 py-2 px-3 text-sm font-medium text-gray-300" onclick="toggleInvestmentMode('periodique')">Versement périodique</button>
+                                </div>
+                                
+                                <div id="frequency-container" class="mt-3" style="display: none;">
+                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                        Fréquence de versement
+                                    </label>
+                                    <select id="investment-frequency" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                        <option value="monthly">Mensuel</option>
+                                        <option value="quarterly">Trimestriel</option>
+                                        <option value="annually">Annuel</option>
+                                    </select>
                                 </div>
                             </div>
                             
@@ -787,11 +172,11 @@
                                     <span class="bg-green-900 bg-opacity-30 text-green-400 px-2 py-1 rounded text-sm font-medium min-w-[60px] text-center">7%</span>
                                 </div>
                                 <div class="flex flex-wrap gap-2 mt-2">
-                                    <a href="#" class="preset-return text-xs px-2 py-1 rounded-full bg-blue-800 bg-opacity-30 text-gray-300 hover:text-green-400" data-value="2">Livret A (2%)</a>
-                                    <a href="#" class="preset-return text-xs px-2 py-1 rounded-full bg-blue-800 bg-opacity-30 text-gray-300 hover:text-green-400" data-value="3">Assurance-Vie (3%)</a>
-                                    <a href="#" class="preset-return text-xs px-2 py-1 rounded-full bg-blue-800 bg-opacity-30 text-gray-300 hover:text-green-400" data-value="5">SCPI (5%)</a>
-                                    <a href="#" class="preset-return text-xs px-2 py-1 rounded-full bg-blue-800 bg-opacity-30 text-gray-300 hover:text-green-400" data-value="7">ETF (7%)</a>
-                                    <a href="#" class="preset-return text-xs px-2 py-1 rounded-full bg-blue-800 bg-opacity-30 text-gray-300 hover:text-green-400" data-value="10">Actions (10%)</a>
+                                    <a href="#" class="text-xs px-2 py-1 rounded-full bg-blue-800 bg-opacity-30 text-gray-300 hover:text-green-400">Livret A (2%)</a>
+                                    <a href="#" class="text-xs px-2 py-1 rounded-full bg-blue-800 bg-opacity-30 text-gray-300 hover:text-green-400">Assurance-Vie (3%)</a>
+                                    <a href="#" class="text-xs px-2 py-1 rounded-full bg-blue-800 bg-opacity-30 text-gray-300 hover:text-green-400">SCPI (5%)</a>
+                                    <a href="#" class="text-xs px-2 py-1 rounded-full bg-blue-800 bg-opacity-30 text-gray-300 hover:text-green-400">ETF (7%)</a>
+                                    <a href="#" class="text-xs px-2 py-1 rounded-full bg-blue-800 bg-opacity-30 text-gray-300 hover:text-green-400">Actions (10%)</a>
                                 </div>
                             </div>
                             
@@ -810,19 +195,15 @@
                                     <option value="per">PER</option>
                                     <option value="scpi">SCPI</option>
                                     <option value="fcpi">FCPI / FIP</option>
-                                    <option value="livret-jeune">Livret Jeune</option>
-                                    <option value="ldds">LDDS</option>
-                                    <option value="lep">LEP</option>
-                                    <option value="crypto">Crypto-monnaies</option>
                                 </select>
                                 
-                                <div class="mt-4 bg-green-900 bg-opacity-10 border-l-4 border-green-400 rounded-md p-3">
+                                <div id="tax-info" class="mt-4 bg-green-900 bg-opacity-10 border-l-4 border-green-400 rounded-md p-3">
                                     <h5 class="text-green-400 font-medium flex items-center mb-2">
                                         <i class="fas fa-chart-pie mr-2"></i>
-                                        <span id="vehicle-title">Fiscalité du PEA</span>
+                                        Fiscalité du PEA
                                     </h5>
-                                    <p id="vehicle-description" class="text-sm text-gray-300 mb-1">Le Plan d'Épargne en Actions (PEA) offre une exonération d'impôt sur les plus-values après 5 ans de détention (hors prélèvements sociaux de 17,2%).</p>
-                                    <p id="vehicle-limit" class="text-sm font-medium">Plafond: 150 000€ par personne</p>
+                                    <p class="text-sm text-gray-300 mb-1">Le Plan d'Épargne en Actions (PEA) offre une exonération d'impôt sur les plus-values après 5 ans de détention (hors prélèvements sociaux de 17,2%).</p>
+                                    <p class="text-sm font-medium">Plafond: 150 000€ par personne</p>
                                 </div>
                             </div>
                             
@@ -841,37 +222,37 @@
                             </h4>
                             
                             <div class="grid grid-cols-2 gap-4 mb-6">
-                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center result-card">
-                                    <p class="text-green-400 text-2xl font-bold mb-1">1 967,15 €</p>
+                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+                                    <p class="text-green-400 text-2xl font-bold mb-1 result-value">1 967,15 €</p>
                                     <p class="text-gray-400 text-sm">Capital final</p>
                                 </div>
-                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center result-card">
-                                    <p class="text-green-400 text-2xl font-bold mb-1">1 000,00 €</p>
+                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+                                    <p class="text-green-400 text-2xl font-bold mb-1 result-value">1 000,00 €</p>
                                     <p class="text-gray-400 text-sm">Montant investi</p>
                                 </div>
-                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center result-card">
-                                    <p class="text-green-400 text-2xl font-bold mb-1">967,15 €</p>
+                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+                                    <p class="text-green-400 text-2xl font-bold mb-1 result-value">967,15 €</p>
                                     <p class="text-gray-400 text-sm">Gains générés</p>
                                 </div>
-                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center result-card">
-                                    <p class="text-green-400 text-2xl font-bold mb-1">1 800,80 €</p>
+                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+                                    <p class="text-green-400 text-2xl font-bold mb-1 result-value">1 800,80 €</p>
                                     <p class="text-gray-400 text-sm">Net d'impôts</p>
                                 </div>
                             </div>
                             
-                            <div class="chart-container bg-blue-800 bg-opacity-30 p-4 rounded-lg mb-6">
+                            <div class="chart-container mb-6">
                                 <canvas id="investment-chart"></canvas>
                             </div>
                             
-                            <div class="bg-blue-900 bg-opacity-20 p-4 rounded-lg border-l-4 border-blue-400">
+                            <div id="profile-adequacy" class="bg-blue-900 bg-opacity-20 p-4 rounded-lg border-l-4 border-blue-400">
                                 <h5 class="text-blue-400 font-medium flex items-center mb-2">
                                     <i class="fas fa-check-circle mr-2"></i>
                                     Adéquation avec votre profil
                                 </h5>
-                                <div class="bg-green-900 bg-opacity-20 text-green-400 inline-block px-2 py-1 rounded text-sm font-medium mb-2">
-                                    Adéquation: <span id="adequation-score">5/5</span>
+                                <div class="adequacy-score bg-green-900 bg-opacity-20 text-green-400 inline-block px-2 py-1 rounded text-sm font-medium mb-2">
+                                    Adéquation: 5/5
                                 </div>
-                                <ul id="adequation-details" class="text-sm text-gray-300 space-y-1 pl-4">
+                                <ul class="adequacy-list text-sm text-gray-300 space-y-1 pl-4">
                                     <li>Le PEA est parfaitement adapté pour un investissement de cette durée.</li>
                                     <li>Votre montant d'investissement est inférieur au plafond du PEA (150 000€).</li>
                                     <li>Un rendement de 7% correspond aux performances historiques moyennes des indices boursiers.</li>
@@ -880,15 +261,243 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Contenu pour l'onglet Optimisation fiscale -->
+                <div id="tax-optimizer" class="simulation-content" style="display: none;">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                        <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                            <h4 class="text-xl font-semibold mb-4 flex items-center">
+                                <i class="fas fa-percent text-green-400 mr-2"></i>
+                                Paramètres fiscaux
+                            </h4>
+
+                            <label class="block text-sm font-medium mb-2 text-gray-300">Revenu Brut Annuel (€)</label>
+                            <input id="brut-annuel" type="number" value="63345.96" class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700 mb-4"/>
+
+                            <label class="block text-sm font-medium mb-2 text-gray-300">Taux de charges sociales (%)</label>
+                            <input id="taux-charges" type="number" value="22" class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700 mb-4"/>
+
+                            <label class="block text-sm font-medium mb-2 text-gray-300">
+                                Versement PER (% du brut)
+                                <span class="ml-1 text-green-400 cursor-help" title="Le Plan d'Épargne Retraite permet de déduire les versements du revenu imposable. Cette déduction est plafonnée à 10% du revenu professionnels N-1.">
+                                    <i class="fas fa-info-circle"></i>
+                                </span>
+                            </label>
+                            <div class="flex items-center gap-2">
+                                <input type="range" id="per-pourcentage" min="0" max="20" value="10" step="0.5" class="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer">
+                                <span id="per-value" class="bg-green-900 bg-opacity-30 text-green-400 px-2 py-1 rounded text-sm font-medium min-w-[60px] text-center">10%</span>
+                            </div>
+
+                            <div class="mt-4">
+                                <label class="block text-sm font-medium mb-2 text-gray-300">
+                                    Budget mensuel (optionnel)
+                                    <span class="ml-1 text-green-400 cursor-help" title="Ces informations permettent de calculer votre capacité d'épargne réelle.">
+                                        <i class="fas fa-info-circle"></i>
+                                    </span>
+                                </label>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs text-gray-400 mb-1">Loyer/Crédit</label>
+                                        <input id="budget-loyer" type="number" value="1000" class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700 text-sm"/>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-400 mb-1">Quotidien</label>
+                                        <input id="budget-quotidien" type="number" value="1200" class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700 text-sm"/>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-400 mb-1">Extra</label>
+                                        <input id="budget-extra" type="number" value="500" class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700 text-sm"/>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-400 mb-1">Invest. Auto</label>
+                                        <input id="budget-invest" type="number" value="300" class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700 text-sm"/>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button onclick="calculerFiscalite()" class="w-full py-2 mt-4 bg-green-500 text-gray-900 font-semibold rounded hover:bg-green-400 transition flex items-center justify-center">
+                                <i class="fas fa-calculator mr-2"></i> Calculer
+                            </button>
+                        </div>
+
+                        <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                            <h4 class="text-xl font-semibold mb-4 flex items-center">
+                                <i class="fas fa-chart-bar text-green-400 mr-2"></i>
+                                Résultat fiscal
+                            </h4>
+
+                            <ul class="space-y-2 text-gray-300 text-sm mb-6">
+                                <li>Impôt <strong>sans PER</strong> : <span id="impot-sans-per" class="text-green-400 font-bold">-</span></li>
+                                <li>Impôt <strong>avec PER</strong> : <span id="impot-avec-per" class="text-green-400 font-bold">-</span></li>
+                                <li>Économie d'impôt : <span id="gain-fiscal" class="text-green-400 font-bold">-</span></li>
+                                <li>Salaire net dispo <strong>sans PER</strong> : <span id="net-sans-per" class="text-green-400 font-bold">-</span></li>
+                                <li>Salaire net dispo <strong>avec PER</strong> : <span id="net-avec-per" class="text-green-400 font-bold">-</span></li>
+                                <li>Patrimoine global (net + PER) : <span id="patrimoine-total" class="text-green-400 font-bold">-</span></li>
+                            </ul>
+
+                            <!-- Graphique comparatif -->
+                            <div class="chart-container mb-4 h-52">
+                                <canvas id="tax-comparison-chart"></canvas>
+                            </div>
+
+                            <!-- Information sur l'épargne -->
+                            <div id="epargne-container" class="mt-4 bg-green-900 bg-opacity-10 border-l-4 border-green-400 rounded-md p-3">
+                                <h5 class="text-green-400 font-medium flex items-center mb-2">
+                                    <i class="fas fa-piggy-bank mr-2"></i>
+                                    Capacité d'épargne mensuelle
+                                </h5>
+                                <div class="grid grid-cols-2 gap-4 mb-2">
+                                    <div>
+                                        <p class="text-xs text-gray-400">Revenu mensuel net</p>
+                                        <p id="revenu-mensuel" class="font-medium">— €</p>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs text-gray-400">Dépenses totales</p>
+                                        <p id="depenses-totales" class="font-medium">— €</p>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <div>
+                                        <p class="text-xs text-gray-400">Épargne possible</p>
+                                        <p id="epargne-possible" class="font-medium">— €</p>
+                                    </div>
+                                    <div class="text-right">
+                                        <p class="text-xs text-gray-400">Taux d'épargne</p>
+                                        <p id="taux-epargne" class="font-medium">—%</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Contenu pour l'onglet Planification retraite -->
+                <div id="retirement-planner" class="simulation-content" style="display: none;">
+                    <div class="p-4 bg-blue-900 bg-opacity-20 rounded-xl text-center mt-6">
+                        <i class="fas fa-tools text-4xl text-green-400 mb-4"></i>
+                        <h3 class="text-xl font-bold mb-2">Planification retraite - Module en développement</h3>
+                        <p>Calculez vos besoins pour la retraite et planifiez vos investissements en conséquence.</p>
+                        <p class="text-sm text-gray-400 mt-3">Disponible prochainement</p>
+                    </div>
+                </div>
+                
+                <!-- Contenu pour l'onglet Investissement immobilier -->
+                <div id="real-estate" class="simulation-content" style="display: none;">
+                    <div class="p-4 bg-blue-900 bg-opacity-20 rounded-xl text-center mt-6">
+                        <i class="fas fa-tools text-4xl text-green-400 mb-4"></i>
+                        <h3 class="text-xl font-bold mb-2">Investissement immobilier - Module en développement</h3>
+                        <p>Simulez le rendement de vos investissements immobiliers et comparez différentes stratégies.</p>
+                        <p class="text-sm text-gray-400 mt-3">Disponible prochainement</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scénarios & Formations -->
+            <div class="mt-12">
+                <h2 class="text-2xl font-bold mb-6 text-green-400 flex items-center">
+                    <i class="fas fa-lightbulb mr-3"></i>
+                    Scénarios et formations
+                </h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Analyses de scénarios -->
+                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
+                            <i class="fas fa-flask mr-2"></i>
+                            Analyse de scénarios
+                        </h3>
+                        
+                        <div class="scenario-block">
+                            <h4 class="font-medium mb-2">Que se passe-t-il en cas de krach boursier ?</h4>
+                            <p class="text-sm text-gray-300 mb-3">Simulation d'une baisse de 30% suivie d'une reprise progressive sur 5 ans.</p>
+                            <button class="text-green-400 text-sm font-medium flex items-center" onclick="alert('Fonctionnalité en développement')">
+                                Simuler ce scénario <i class="fas fa-chevron-right ml-2"></i>
+                            </button>
+                        </div>
+                        
+                        <div class="scenario-block">
+                            <h4 class="font-medium mb-2">Investissement progressif vs somme forfaitaire</h4>
+                            <p class="text-sm text-gray-300 mb-3">Comparaison entre investir une somme d'un coup ou progressivement.</p>
+                            <button class="text-green-400 text-sm font-medium flex items-center" onclick="alert('Fonctionnalité en développement')">
+                                Simuler ce scénario <i class="fas fa-chevron-right ml-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Formations recommandées -->
+                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
+                            <i class="fas fa-graduation-cap mr-2"></i>
+                            Formations recommandées
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
+                                    <i class="fas fa-chart-line text-green-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium">L'effet des intérêts composés</h4>
+                                    <p class="text-xs text-gray-400">12 min de lecture</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
+                                    <i class="fas fa-file-invoice-dollar text-green-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium">Choisir le bon véhicule fiscal</h4>
+                                    <p class="text-xs text-gray-400">15 min de lecture</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex items-center p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <div class="w-10 h-10 rounded-lg bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
+                                    <i class="fas fa-balance-scale text-green-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium">Répartition d'actifs: principes</h4>
+                                    <p class="text-xs text-gray-400">18 min de lecture</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Questions fréquentes -->
+                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                        <h3 class="text-lg font-semibold flex items-center text-green-400 mb-4">
+                            <i class="fas fa-question-circle mr-2"></i>
+                            Questions fréquentes
+                        </h3>
+                        
+                        <div class="space-y-4">
+                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <h4 class="font-medium mb-1">Comment estimer le rendement ?</h4>
+                                <p class="text-sm text-gray-300">Le rendement dépend de l'actif. Pour les indices boursiers, 7-10% est une estimation historique raisonnable sur le long terme.</p>
+                            </div>
+                            
+                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <h4 class="font-medium mb-1">Quelle durée d'investissement privilégier ?</h4>
+                                <p class="text-sm text-gray-300">Plus la durée est longue, plus l'effet des intérêts composés est puissant. Pour les actions, un horizon de 8-10 ans minimum est recommandé.</p>
+                            </div>
+                            
+                            <div class="p-3 bg-blue-800 bg-opacity-30 rounded-lg">
+                                <h4 class="font-medium mb-1">Quelle enveloppe choisir pour quel objectif ?</h4>
+                                <p class="text-sm text-gray-300">PEA pour les investissements en actions sur le long terme, Assurance-vie pour la flexibilité, PER pour la retraite.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
         <!-- Footer -->
-        <footer class="bg-blue-900 bg-opacity-40 backdrop-blur-md border-t border-gray-800 py-4 px-6 text-center">
+        <footer class="bg-blue-900 bg-opacity-40 backdrop-blur-md border-t border-gray-800 py-4 px-6 text-center mt-12">
             <div class="flex justify-around flex-wrap gap-4 text-sm text-gray-400">
                 <p class="flex items-center">
                     <i class="fas fa-calculator text-green-400 mr-2"></i>
-                    Simulation financière avec calcul fiscal exact (tranches 2024)
+                    Simulateur développé par l'équipe TradePulse
                 </p>
                 <p class="flex items-center">
                     <i class="fas fa-chart-line text-green-400 mr-2"></i>
@@ -896,7 +505,7 @@
                 </p>
                 <p class="flex items-center">
                     <i class="fas fa-clock text-green-400 mr-2"></i>
-                    Dernière mise à jour: <span class="text-green-400 font-medium ml-1" id="footer-date">08/04/2025</span>
+                    Dernière mise à jour: <span class="text-green-400 font-medium ml-1 update-time">10/04/2025 15:30:22</span>
                 </p>
             </div>
         </footer>
@@ -911,621 +520,36 @@
     </div>
 
     <!-- Scripts -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/simulation.js"></script>
     <script src="js/fiscal-optimizer.js"></script>
     <script>
-        // État global du simulateur
-        const appState = {
-            investmentType: 'single', // 'single' ou 'monthly'
-            currentVehicle: 'pea'
-        };
-        
-        // Données des véhicules d'investissement
-        const vehicleData = {
-            'pea': {
-                title: 'Fiscalité du PEA',
-                description: 'Le Plan d'Épargne en Actions (PEA) offre une exonération d'impôt sur les plus-values après 5 ans de détention (hors prélèvements sociaux de 17,2%).',
-                limit: 'Plafond: 150 000€ par personne',
-                taxRate: 0.172,
-                adequationScore: 5
-            },
-            'cto': {
-                title: 'Fiscalité du Compte-Titres',
-                description: 'Le Compte-Titres Ordinaire est soumis à la flat tax de 30% sur les plus-values (12,8% d'impôt + 17,2% de prélèvements sociaux).',
-                limit: 'Pas de plafond de versement',
-                taxRate: 0.30,
-                adequationScore: 3
-            },
-            'assurance-vie': {
-                title: 'Fiscalité de l'Assurance-Vie',
-                description: 'Après 8 ans, abattement de 4 600€ (célibataire) ou 9 200€ (couple) sur les gains, puis flat tax de 24,7% (7,5% d'impôt + 17,2% prélèvements sociaux).',
-                limit: 'Pas de plafond de versement',
-                taxRate: 0.247,
-                adequationScore: 4
-            },
-            'per': {
-                title: 'Fiscalité du PER',
-                description: 'Les versements sont déductibles des revenus imposables (dans certaines limites). À la sortie, le capital est exonéré d'impôt, seuls les gains sont imposés.',
-                limit: 'Déductible jusqu'à 10% des revenus professionnels',
-                taxRate: 0.30,
-                adequationScore: 4
-            },
-            'scpi': {
-                title: 'Fiscalité des SCPI',
-                description: 'Les revenus des SCPI sont imposés comme des revenus fonciers. Possibilité d'opter pour le régime micro-foncier sous certaines conditions.',
-                limit: 'Pas de plafond de versement',
-                taxRate: 0.30,
-                adequationScore: 3
-            }
-        };
-        
-        // Initialisation
-        document.addEventListener('DOMContentLoaded', function() {
-            // Mettre à jour la date du jour
-            updateDate();
-            
-            // Initialiser les graphiques
-            createInvestmentChart();
-            createBudgetChart();
-            
-            // Initialiser le calculateur fiscal
-            updateFiscalCalculation();
-            updateBudgetCalculation();
-            
-            // Ajouter des événements aux sliders et inputs
-            setupEventListeners();
+        // Script pour le slider de PER
+        document.getElementById('per-pourcentage').addEventListener('input', function() {
+            document.getElementById('per-value').textContent = this.value + '%';
         });
         
-        // Fonction pour mettre à jour la date
-        function updateDate() {
-            const now = new Date();
-            const options = { day: 'numeric', month: 'long', year: 'numeric' };
-            const formattedDate = now.toLocaleDateString('fr-FR', options).toUpperCase();
-            
-            const currentDateElement = document.getElementById('currentDate');
-            if (currentDateElement) {
-                currentDateElement.textContent = formattedDate;
-            }
-            
-            // Mettre à jour l'heure du marché
-            const hours = now.getHours().toString().padStart(2, '0');
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            const seconds = now.getSeconds().toString().padStart(2, '0');
-            
-            const marketTimeElement = document.getElementById('marketTime');
-            if (marketTimeElement) {
-                marketTimeElement.textContent = `${hours}:${minutes}:${seconds}`;
-            }
-            
-            // Mettre à jour la date du footer
-            const footerDateElement = document.getElementById('footer-date');
-            if (footerDateElement) {
-                footerDateElement.textContent = now.toLocaleDateString('fr-FR');
-            }
-        }
-        
-        // Configuration des écouteurs d'événements
-        function setupEventListeners() {
-            // Sliders fiscaux
-            document.getElementById('taux-charges-slider').addEventListener('input', function() {
-                document.getElementById('taux-charges').value = this.value;
-                updateFiscalCalculation();
-            });
-            
-            document.getElementById('taux-charges').addEventListener('input', function() {
-                document.getElementById('taux-charges-slider').value = this.value;
-                updateFiscalCalculation();
-            });
-            
-            document.getElementById('per-pourcentage-slider').addEventListener('input', function() {
-                document.getElementById('per-pourcentage').value = this.value;
-                updateFiscalCalculation();
-            });
-            
-            document.getElementById('per-pourcentage').addEventListener('input', function() {
-                document.getElementById('per-pourcentage-slider').value = this.value;
-                updateFiscalCalculation();
-            });
-            
-            document.getElementById('brut-annuel').addEventListener('input', updateFiscalCalculation);
-            
-            // Inputs de dépenses
-            const depenseInputs = ['depense-logement', 'depense-energie', 'depense-alimentation', 'depense-transport', 'depense-divers'];
-            depenseInputs.forEach(id => {
-                document.getElementById(id).addEventListener('input', updateBudgetCalculation);
-            });
-            
-            // Sliders d'investissement
-            document.getElementById('duration-slider').addEventListener('input', function() {
-                const durationValueElement = document.querySelector('#duration-slider + span');
-                if (durationValueElement) {
-                    durationValueElement.textContent = `${this.value} ans`;
-                }
-                runSimulation();
-            });
-            
-            document.getElementById('return-slider').addEventListener('input', function() {
-                const returnValueElement = document.querySelector('#return-slider + span');
-                if (returnValueElement) {
-                    returnValueElement.textContent = `${this.value}%`;
-                }
-                runSimulation();
-            });
-            
-            // Preset returns
-            document.querySelectorAll('.preset-return').forEach(el => {
-                el.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    const value = this.getAttribute('data-value');
-                    document.getElementById('return-slider').value = value;
-                    document.querySelector('#return-slider + span').textContent = `${value}%`;
-                    runSimulation();
-                });
-            });
-            
-            // Investment type toggle
-            document.getElementById('versement-unique').addEventListener('click', function() {
-                this.classList.add('text-green-400', 'bg-green-900', 'bg-opacity-30');
-                document.getElementById('versement-mensuel').classList.remove('text-green-400', 'bg-green-900', 'bg-opacity-30');
-                appState.investmentType = 'single';
-                runSimulation();
-            });
-            
-            document.getElementById('versement-mensuel').addEventListener('click', function() {
-                this.classList.add('text-green-400', 'bg-green-900', 'bg-opacity-30');
-                document.getElementById('versement-unique').classList.remove('text-green-400', 'bg-green-900', 'bg-opacity-30');
-                appState.investmentType = 'monthly';
-                runSimulation();
-            });
-            
-            // Investment vehicle change
-            document.getElementById('investment-vehicle').addEventListener('change', function() {
-                const vehicle = this.value;
-                appState.currentVehicle = vehicle;
-                
-                if (vehicleData[vehicle]) {
-                    document.getElementById('vehicle-title').textContent = vehicleData[vehicle].title;
-                    document.getElementById('vehicle-description').textContent = vehicleData[vehicle].description;
-                    document.getElementById('vehicle-limit').textContent = vehicleData[vehicle].limit;
-                    document.getElementById('adequation-score').textContent = `${vehicleData[vehicle].adequationScore}/5`;
-                }
-                
-                runSimulation();
-            });
-            
-            // Simulation button
-            document.getElementById('simulate-button').addEventListener('click', function() {
-                this.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Calcul en cours...';
-                this.disabled = true;
-                
-                setTimeout(() => {
-                    runSimulation();
-                    
-                    this.innerHTML = '<i class="fas fa-play-circle mr-2"></i> Lancer la simulation';
-                    this.disabled = false;
-                }, 800);
-            });
-            
-            // Transfer button for investment amount
-            document.getElementById('transfer-to-simulation').addEventListener('click', function() {
-                const capaciteInvestissement = document.getElementById('capacite-investissement').textContent;
-                const montant = parseFloat(capaciteInvestissement.replace(/[^\d,.-]/g, '').replace(',', '.'));
-                
-                if (!isNaN(montant)) {
-                    document.getElementById('investment-amount').value = montant;
-                    document.getElementById('versement-mensuel').click();
-                    document.getElementById('simulateur').scrollIntoView({ behavior: 'smooth' });
-                    runSimulation();
-                }
-            });
-        }
-        
-        // Mise à jour des calculs fiscaux avec PatrimoineSimulator
-        function updateFiscalCalculation() {
-            const brutAnnuel = parseFloat(document.getElementById('brut-annuel').value) || 0;
-            const tauxCharges = parseFloat(document.getElementById('taux-charges').value) / 100;
-            const perPourcentage = parseFloat(document.getElementById('per-pourcentage').value) / 100;
-            
-            // Utiliser le module PatrimoineSimulator existant
-            const resultats = PatrimoineSimulator.calculerSimulationFiscale({
-                revenuBrut: brutAnnuel,
-                tauxCharges: tauxCharges,
-                perPourcentage: perPourcentage
-            });
-            
-            // Mettre à jour l'interface
-            document.getElementById('net-avant-impot').textContent = Math.round(resultats.netImposableSansPER).toLocaleString('fr-FR') + ' €';
-            document.getElementById('montant-per').textContent = Math.round(resultats.perVersement).toLocaleString('fr-FR') + ' €';
-            document.getElementById('impot-sans-per').textContent = Math.round(resultats.impotSansPER).toLocaleString('fr-FR') + ' €';
-            document.getElementById('impot-avec-per').textContent = Math.round(resultats.impotAvecPER).toLocaleString('fr-FR') + ' €';
-            document.getElementById('economie-impot').textContent = Math.round(resultats.gainFiscal).toLocaleString('fr-FR') + ' €';
-            
-            // Calculer le taux moyen d'imposition
-            const tauxMoyen = resultats.impotAvecPER / resultats.netImposableAvecPER * 100;
-            document.getElementById('taux-moyen').textContent = tauxMoyen.toFixed(1) + '%';
-            
-            // Mettre à jour le revenu mensuel net
-            const revenuMensuelNet = resultats.netDispoAvecPER / 12;
-            document.getElementById('revenu-mensuel-net').textContent = Math.round(revenuMensuelNet).toLocaleString('fr-FR') + ' €';
-            
-            // Mettre à jour le calcul du budget
-            updateBudgetCalculation(revenuMensuelNet);
-            
-            return resultats;
-        }
-        
-        // Mise à jour des calculs de budget
-        function updateBudgetCalculation(revenuMensuelNet = null) {
-            // Si le revenu n'est pas fourni, le récupérer de l'interface
-            if (revenuMensuelNet === null) {
-                const revenuText = document.getElementById('revenu-mensuel-net').textContent;
-                revenuMensuelNet = parseFloat(revenuText.replace(/[^\d,.-]/g, '').replace(',', '.'));
-            }
-            
-            // Récupérer les dépenses
-            const depenseLogement = parseFloat(document.getElementById('depense-logement').value) || 0;
-            const depenseEnergie = parseFloat(document.getElementById('depense-energie').value) || 0;
-            const depenseAlimentation = parseFloat(document.getElementById('depense-alimentation').value) || 0;
-            const depenseTransport = parseFloat(document.getElementById('depense-transport').value) || 0;
-            const depenseDivers = parseFloat(document.getElementById('depense-divers').value) || 0;
-            
-            // Calcul des dépenses totales
-            const depensesTotales = depenseLogement + depenseEnergie + depenseAlimentation + depenseTransport + depenseDivers;
-            
-            // Calcul de la capacité d'investissement
-            const capaciteInvestissement = Math.max(0, revenuMensuelNet - depensesTotales);
-            
-            // Calcul du taux d'épargne
-            const tauxEpargne = (capaciteInvestissement / revenuMensuelNet) * 100;
-            
-            // Mettre à jour l'interface
-            document.getElementById('capacite-investissement').textContent = Math.round(capaciteInvestissement).toLocaleString('fr-FR') + ' €';
-            document.getElementById('taux-epargne').textContent = `Taux d'épargne: ${tauxEpargne.toFixed(1)}%`;
-            
-            // Mettre à jour la barre de capacité
-            document.getElementById('capacity-fill').style.width = `${tauxEpargne}%`;
-            
-            // Mettre à jour le graphique de budget
-            updateBudgetChart({
-                depenseLogement,
-                depenseEnergie,
-                depenseAlimentation,
-                depenseTransport,
-                depenseDivers,
-                capaciteInvestissement,
-                revenuMensuelNet
-            });
-            
-            return {
-                depensesTotales,
-                capaciteInvestissement,
-                tauxEpargne
-            };
-        }
-        
-        // Création du graphique de budget
-        function createBudgetChart() {
-            const ctx = document.getElementById('budget-chart');
-            if (!ctx) return;
-            
-            window.budgetChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Logement', 'Énergie & Télécom', 'Alimentation', 'Transport', 'Divers', 'Capacité d\'investissement'],
-                    datasets: [{
-                        data: [37, 7, 19, 9, 12, 16],
-                        backgroundColor: [
-                            '#4361ee',
-                            '#3f37c9',
-                            '#4895ef',
-                            '#4cc9f0',
-                            '#560bad',
-                            '#00FF87'
-                        ],
-                        borderWidth: 1,
-                        borderColor: '#011627'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                            labels: {
-                                color: '#FFFFFF',
-                                font: {
-                                    family: 'Inter',
-                                    size: 12
-                                }
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(1, 22, 39, 0.9)',
-                            titleColor: '#FFFFFF',
-                            bodyColor: '#FFFFFF',
-                            borderColor: 'rgba(0, 255, 135, 0.3)',
-                            borderWidth: 1,
-                            cornerRadius: 8,
-                            padding: 12,
-                            callbacks: {
-                                label: function(context) {
-                                    const label = context.label || '';
-                                    const value = context.raw || 0;
-                                    const percent = ((value / context.dataset.data.reduce((a, b) => a + b, 0)) * 100).toFixed(1);
-                                    return `${label}: ${percent}% (${value.toLocaleString('fr-FR')} €)`;
-                                }
-                            }
-                        }
-                    },
-                    cutout: '60%'
-                }
-            });
-        }
-        
-        // Mise à jour du graphique de budget
-        function updateBudgetChart(budgetData) {
-            if (!window.budgetChart) return;
-            
-            const total = budgetData.revenuMensuelNet;
-            const percentages = {
-                logement: (budgetData.depenseLogement / total) * 100,
-                energie: (budgetData.depenseEnergie / total) * 100,
-                alimentation: (budgetData.depenseAlimentation / total) * 100,
-                transport: (budgetData.depenseTransport / total) * 100,
-                divers: (budgetData.depenseDivers / total) * 100,
-                investissement: (budgetData.capaciteInvestissement / total) * 100
-            };
-            
-            window.budgetChart.data.datasets[0].data = [
-                budgetData.depenseLogement,
-                budgetData.depenseEnergie,
-                budgetData.depenseAlimentation,
-                budgetData.depenseTransport,
-                budgetData.depenseDivers,
-                budgetData.capaciteInvestissement
+        // Initailisation des champs pour le module fiscal
+        document.addEventListener('DOMContentLoaded', function() {
+            // Écouter le changement sur les éléments de budget
+            const budgetInputs = [
+                document.getElementById('budget-loyer'),
+                document.getElementById('budget-quotidien'),
+                document.getElementById('budget-extra'),
+                document.getElementById('budget-invest')
             ];
             
-            window.budgetChart.update();
-        }
-        
-        // Création du graphique d'investissement
-        function createInvestmentChart() {
-            const ctx = document.getElementById('investment-chart');
-            if (!ctx) return;
-            
-            const years = 10;
-            const labels = Array.from({length: years + 1}, (_, i) => i === 0 ? 'Départ' : `Année ${i}`);
-            const investedValues = [1000];
-            const totalValues = [1000];
-            
-            let total = 1000;
-            for (let i = 1; i <= years; i++) {
-                total *= 1.07;
-                investedValues.push(1000);
-                totalValues.push(total);
-            }
-            
-            window.investmentChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: labels,
-                    datasets: [
-                        {
-                            label: 'Capital total',
-                            data: totalValues,
-                            borderColor: '#00FF87',
-                            backgroundColor: 'rgba(0, 255, 135, 0.1)',
-                            fill: true,
-                            tension: 0.4,
-                            borderWidth: 3,
-                            pointBackgroundColor: '#00FF87',
-                            pointBorderColor: '#00FF87',
-                            pointRadius: 4,
-                            pointHoverRadius: 6
-                        },
-                        {
-                            label: 'Montant investi',
-                            data: investedValues,
-                            borderColor: '#2196f3',
-                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                            fill: true,
-                            tension: 0.4,
-                            borderWidth: 3,
-                            pointBackgroundColor: '#2196f3',
-                            pointBorderColor: '#2196f3',
-                            pointRadius: 4,
-                            pointHoverRadius: 6
+            budgetInputs.forEach(input => {
+                if (input) {
+                    input.addEventListener('change', function() {
+                        // Si la fonction calculerFiscalite existe et qu'il y a déjà eu un calcul
+                        if (typeof calculerFiscalite === 'function' && 
+                            document.getElementById('impot-sans-per').textContent !== '-') {
+                            calculerFiscalite();
                         }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            backgroundColor: 'rgba(0, 33, 64, 0.8)',
-                            titleColor: '#fff',
-                            bodyColor: '#fff',
-                            borderColor: 'rgba(0, 255, 135, 0.3)',
-                            borderWidth: 1,
-                            padding: 12,
-                            cornerRadius: 8,
-                            callbacks: {
-                                label: function(context) {
-                                    let label = context.dataset.label || '';
-                                    if (label) {
-                                        label += ': ';
-                                    }
-                                    label += new Intl.NumberFormat('fr-FR', { 
-                                        style: 'currency', 
-                                        currency: 'EUR' 
-                                    }).format(context.raw);
-                                    return label;
-                                }
-                            }
-                        },
-                        legend: {
-                            position: 'top',
-                            labels: {
-                                color: '#FFFFFF',
-                                font: {
-                                    family: 'Inter'
-                                }
-                            }
-                        }
-                    },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.1)'
-                            },
-                            ticks: {
-                                color: '#FFFFFF',
-                                callback: function(value) {
-                                    return new Intl.NumberFormat('fr-FR', { 
-                                        style: 'currency', 
-                                        currency: 'EUR',
-                                        maximumFractionDigits: 0
-                                    }).format(value);
-                                }
-                            }
-                        },
-                        x: {
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.1)'
-                            },
-                            ticks: {
-                                color: '#FFFFFF'
-                            }
-                        }
-                    }
+                    });
                 }
             });
-        }
-        
-        // Fonction pour exécuter la simulation
-        function runSimulation() {
-            // Récupérer les paramètres
-            const initialAmount = parseFloat(document.getElementById('investment-amount').value) || 1000;
-            const years = parseInt(document.getElementById('duration-slider').value) || 10;
-            const annualReturn = parseFloat(document.getElementById('return-slider').value) / 100 || 0.07;
-            const vehicle = appState.currentVehicle;
-            const investmentType = appState.investmentType;
-            
-            // Générer les nouvelles données
-            const labels = Array.from({length: years + 1}, (_, i) => i === 0 ? 'Départ' : `Année ${i}`);
-            const investedValues = [0];
-            const totalValues = [0];
-            
-            let totalInvested = 0;
-            let totalValue = 0;
-            
-            // Différentes logiques selon le type d'investissement
-            if (investmentType === 'single') {
-                // Investissement unique
-                totalInvested = initialAmount;
-                totalValue = initialAmount;
-                
-                investedValues[0] = totalInvested;
-                totalValues[0] = totalValue;
-                
-                for (let i = 1; i <= years; i++) {
-                    totalValue *= (1 + annualReturn);
-                    investedValues.push(totalInvested);
-                    totalValues.push(totalValue);
-                }
-            } else {
-                // Versements mensuels
-                investedValues[0] = 0;
-                totalValues[0] = 0;
-                
-                const monthlyAmount = initialAmount;
-                
-                for (let year = 1; year <= years; year++) {
-                    for (let month = 1; month <= 12; month++) {
-                        totalInvested += monthlyAmount;
-                        totalValue = (totalValue + monthlyAmount) * Math.pow(1 + annualReturn, 1/12);
-                    }
-                    investedValues.push(totalInvested);
-                    totalValues.push(totalValue);
-                }
-            }
-            
-            // Mettre à jour le graphique
-            window.investmentChart.data.labels = labels;
-            window.investmentChart.data.datasets[0].data = totalValues;
-            window.investmentChart.data.datasets[1].data = investedValues;
-            window.investmentChart.update();
-            
-            // Calculer les gains et le montant après impôts
-            const gains = totalValue - totalInvested;
-            const taxRate = vehicleData[vehicle]?.taxRate || 0.172;
-            const netGains = gains * (1 - taxRate);
-            const netTotal = totalInvested + netGains;
-            
-            // Mettre à jour les valeurs affichées dans les cartes de résultat
-            const resultCards = document.querySelectorAll('.result-card p:first-child');
-            resultCards[0].textContent = new Intl.NumberFormat('fr-FR', { 
-                style: 'currency', 
-                currency: 'EUR' 
-            }).format(totalValue);
-            
-            resultCards[1].textContent = new Intl.NumberFormat('fr-FR', { 
-                style: 'currency', 
-                currency: 'EUR' 
-            }).format(totalInvested);
-            
-            resultCards[2].textContent = new Intl.NumberFormat('fr-FR', { 
-                style: 'currency', 
-                currency: 'EUR' 
-            }).format(gains);
-            
-            resultCards[3].textContent = new Intl.NumberFormat('fr-FR', { 
-                style: 'currency', 
-                currency: 'EUR' 
-            }).format(netTotal);
-            
-            // Mettre à jour les recommandations d'adéquation
-            updateAdequationRecommendations(initialAmount, years, annualReturn, vehicle, investmentType);
-        }
-        
-        // Mettre à jour les recommandations d'adéquation
-        function updateAdequationRecommendations(montant, annees, rendement, vehicule, typeInvestissement) {
-            const adequationList = document.getElementById('adequation-details');
-            const recommendations = [];
-            
-            // Logique de recommandation basée sur les paramètres
-            if (vehicule === 'pea') {
-                recommendations.push(`Le PEA est ${annees >= 5 ? 'parfaitement' : 'moyennement'} adapté pour un investissement de ${annees} ans.`);
-                recommendations.push(`Votre montant d'investissement est ${montant <= 150000 ? 'inférieur' : 'supérieur'} au plafond du PEA (150 000€).`);
-            } else if (vehicule === 'assurance-vie') {
-                recommendations.push(`L'assurance-vie est ${annees >= 8 ? 'idéale' : 'peu optimale'} pour votre durée d'investissement de ${annees} ans.`);
-                recommendations.push(`Les avantages fiscaux sont maximisés après 8 ans de détention.`);
-            } else if (vehicule === 'per') {
-                recommendations.push(`Le PER est pertinent si vous êtes dans une tranche marginale d'imposition élevée.`);
-                recommendations.push(`Ce véhicule est bloqué jusqu'à la retraite (sauf cas exceptionnels).`);
-            }
-            
-            recommendations.push(`Un rendement de ${rendement * 100}% ${rendement <= 0.07 ? 'est réaliste' : 'est ambitieux'} pour ce type d'investissement.`);
-            
-            if (typeInvestissement === 'monthly') {
-                recommendations.push(`Les versements mensuels sont excellents pour lisser le risque de marché.`);
-            } else {
-                recommendations.push(`Un versement unique est adapté si vous disposez déjà d'une épargne de précaution.`);
-            }
-            
-            // Mettre à jour la liste
-            adequationList.innerHTML = '';
-            recommendations.forEach(rec => {
-                const li = document.createElement('li');
-                li.textContent = rec;
-                adequationList.appendChild(li);
-            });
-        }
+        });
     </script>
 </body>
 </html>
