@@ -281,15 +281,44 @@
                                 Paramètres fiscaux
                             </h4>
 
+                            <!-- NOUVEAU: Type de revenu -->
+                            <label class="block text-sm font-medium mb-2 text-gray-300">
+                                Type de revenu
+                                <span class="ml-1 text-green-400 cursor-help" title="Le type de revenu détermine le taux de charges sociales applicable.">
+                                    <i class="fas fa-info-circle"></i>
+                                </span>
+                            </label>
+                            <select id="type-revenu" class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700 mb-4">
+                                <option value="salarie">Salaire</option>
+                                <option value="independant">Travailleur non salarié (TNS)</option>
+                                <option value="dividendes">Dividendes/Capital</option>
+                                <option value="microEntrepreneur">Micro-entrepreneur</option>
+                            </select>
+
+                            <!-- NOUVEAU: Sous-type pour micro-entrepreneur (affiché conditionnellement) -->
+                            <div id="sous-type-container" style="display: none;" class="mb-4">
+                                <label class="block text-sm font-medium mb-2 text-gray-300">Type d'activité micro-entrepreneur</label>
+                                <select id="sous-type-micro" class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700">
+                                    <option value="service">Services (BNC) - 22%</option>
+                                    <option value="commercial">Commercial (BIC) - 12.3%</option>
+                                    <option value="artisanal">Artisanal (BIC) - 12.3%</option>
+                                </select>
+                            </div>
+
                             <label class="block text-sm font-medium mb-2 text-gray-300">Revenu Brut Annuel (€)</label>
                             <input id="brut-annuel" type="number" value="63345.96" class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700 mb-4"/>
 
-                            <label class="block text-sm font-medium mb-2 text-gray-300">Taux de charges sociales (%)</label>
+                            <label class="block text-sm font-medium mb-2 text-gray-300">
+                                Taux de charges sociales (%)
+                                <span class="ml-1 text-green-400 cursor-help" title="Ce taux s'ajuste automatiquement selon le type de revenu sélectionné, mais peut être personnalisé.">
+                                    <i class="fas fa-info-circle"></i>
+                                </span>
+                            </label>
                             <input id="taux-charges" type="number" value="22" class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700 mb-4"/>
 
                             <label class="block text-sm font-medium mb-2 text-gray-300">
                                 Versement PER (% du brut)
-                                <span class="ml-1 text-green-400 cursor-help" title="Le Plan d'Épargne Retraite permet de déduire les versements du revenu imposable. Cette déduction est plafonnée à 10% du revenu professionnels N-1.">
+                                <span class="ml-1 text-green-400 cursor-help" title="Le Plan d'Épargne Retraite permet de déduire les versements du revenu imposable. Cette déduction est plafonnée à 10% du revenu professionnel, dans la limite de 32 909€ en 2024.">
                                     <i class="fas fa-info-circle"></i>
                                 </span>
                             </label>
@@ -336,12 +365,45 @@
                                 Résultat fiscal
                             </h4>
 
+                            <!-- NOUVEAU: Message d'alerte pour le plafond PER -->
+                            <div id="per-alerte" class="bg-yellow-900 bg-opacity-20 text-yellow-400 p-3 rounded-md mb-4 border-l-4 border-yellow-400 text-sm" style="display: none;">
+                                ⚠️ Attention: Votre versement PER dépasse le plafond de déductibilité (32 909€ max)
+                            </div>
+
+                            <!-- NOUVEAU: Aperçu des taux appliqués -->
+                            <div class="bg-blue-900 bg-opacity-30 p-3 rounded-md mb-4">
+                                <h5 class="text-blue-400 font-medium flex items-center mb-2">
+                                    <i class="fas fa-percentage mr-2"></i>
+                                    Taux appliqués
+                                </h5>
+                                <table class="w-full text-sm" id="recap-taux">
+                                    <tr>
+                                        <td>Taux de charges sociales</td>
+                                        <td class="text-right font-medium">22.0%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Taux marginal d'imposition</td>
+                                        <td class="text-right font-medium">30.0%</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Taux moyen d'imposition sans PER</td>
+                                        <td id="taux-moyen-sans-per" class="text-right font-medium">-</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Taux moyen d'imposition avec PER</td>
+                                        <td id="taux-moyen-avec-per" class="text-right font-medium">-</td>
+                                    </tr>
+                                </table>
+                            </div>
+
                             <ul class="space-y-2 text-gray-300 text-sm mb-6">
                                 <li>Impôt <strong>sans PER</strong> : <span id="impot-sans-per" class="text-green-400 font-bold">-</span></li>
                                 <li>Impôt <strong>avec PER</strong> : <span id="impot-avec-per" class="text-green-400 font-bold">-</span></li>
                                 <li>Économie d'impôt : <span id="gain-fiscal" class="text-green-400 font-bold">-</span></li>
                                 <li>Salaire net dispo <strong>sans PER</strong> : <span id="net-sans-per" class="text-green-400 font-bold">-</span></li>
                                 <li>Salaire net dispo <strong>avec PER</strong> : <span id="net-avec-per" class="text-green-400 font-bold">-</span></li>
+                                <!-- NOUVEAU: Affichage du montant PER déductible vs versé -->
+                                <li>PER déductible/versé : <span id="per-deductible" class="text-green-400 font-bold">-</span></li>
                                 <li>Patrimoine global (net + PER) : <span id="patrimoine-total" class="text-green-400 font-bold">-</span></li>
                             </ul>
 
@@ -556,7 +618,7 @@
             document.getElementById('per-value').textContent = this.value + '%';
         });
         
-        // Initailisation des champs pour le module fiscal
+        // Écouter le changement sur les éléments de budget
         document.addEventListener('DOMContentLoaded', function() {
             // Écouter le changement sur les éléments de budget
             const budgetInputs = [
@@ -577,6 +639,62 @@
                     });
                 }
             });
+            
+            // NOUVEAU: Gestion du changement de type de revenu
+            const typeRevenuSelect = document.getElementById('type-revenu');
+            const souTypeContainer = document.getElementById('sous-type-container');
+            const tauxChargesInput = document.getElementById('taux-charges');
+            
+            if (typeRevenuSelect && tauxChargesInput) {
+                typeRevenuSelect.addEventListener('change', function() {
+                    const selectedType = this.value;
+                    
+                    // Afficher/masquer le choix de sous-type pour micro-entrepreneur
+                    if (selectedType === 'microEntrepreneur' && souTypeContainer) {
+                        souTypeContainer.style.display = 'block';
+                    } else if (souTypeContainer) {
+                        souTypeContainer.style.display = 'none';
+                    }
+                    
+                    // Mettre à jour le taux de charges en fonction du type de revenu
+                    switch(selectedType) {
+                        case 'salarie':
+                            tauxChargesInput.value = '22';
+                            break;
+                        case 'independant':
+                            tauxChargesInput.value = '45';
+                            break;
+                        case 'dividendes':
+                            tauxChargesInput.value = '17.2';
+                            break;
+                        case 'microEntrepreneur':
+                            // Le sous-type déterminera le taux exact
+                            const sousTypeSelect = document.getElementById('sous-type-micro');
+                            if (sousTypeSelect) {
+                                if (sousTypeSelect.value === 'service') {
+                                    tauxChargesInput.value = '22';
+                                } else {
+                                    tauxChargesInput.value = '12.3';
+                                }
+                                
+                                // Écouter les changements de sous-type
+                                sousTypeSelect.addEventListener('change', function() {
+                                    if (this.value === 'service') {
+                                        tauxChargesInput.value = '22';
+                                    } else {
+                                        tauxChargesInput.value = '12.3';
+                                    }
+                                });
+                            }
+                            break;
+                    }
+                    
+                    // Recalculer si des résultats sont déjà affichés
+                    if (document.getElementById('impot-sans-per').textContent !== '-') {
+                        calculerFiscalite();
+                    }
+                });
+            }
         });
     </script>
 </body>
