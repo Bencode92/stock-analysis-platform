@@ -379,7 +379,7 @@ def filter_lists_data(lists_data):
     return "\n".join(summary_lines) if assets_by_sector else "Aucune donnée d'actifs significative"
 
 def filter_etf_data(etfs_data):
-    """Filtre les ETF par catégories et critères spécifiques."""
+    """Filtre les ETF par catégories."""
     if not etfs_data or not isinstance(etfs_data, dict):
         return "Aucune donnée ETF disponible"
     
@@ -423,36 +423,6 @@ def filter_etf_data(etfs_data):
     if selected_short_term:
         summary.append("📆 ETF COURT TERME:")
         summary.extend(f"• {etf}" for etf in selected_short_term)
-    
-    # 4. ETF Sectoriels en croissance (si disponible)
-    sector_etfs = etfs_data.get("etf_sectoriels", []) or []
-    selected_sector_etfs = []
-    for etf in sector_etfs:
-        try:
-            ytd = float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.'))
-            if ytd > 5:  # Seuil de 5% pour les ETF sectoriels
-                selected_sector_etfs.append(f"{etf['name']} : {etf['ytd']}")
-        except:
-            continue
-    if selected_sector_etfs:
-        summary.append("🔍 ETF SECTORIELS (>5% YTD):")
-        summary.extend(f"• {etf}" for etf in selected_sector_etfs)
-        
-    # 5. ETF Marchés émergents (si disponible)
-    emerging_etfs = etfs_data.get("etf_marches_emergents", []) or []
-    selected_emerging = []
-    for etf in emerging_etfs:
-        try:
-            ytd = float(str(etf.get("ytd", "0")).replace('%','').replace(',', '.'))
-            # Sélectionner tous, avec priorité aux performances positives
-            selected_emerging.append((etf['name'], ytd, f"{etf['name']} : {etf['ytd']}"))
-        except:
-            continue
-    if selected_emerging:
-        # Trier par performance décroissante
-        selected_emerging.sort(key=lambda x: x[1], reverse=True)
-        summary.append("🌍 ETF MARCHÉS ÉMERGENTS:")
-        summary.extend(f"• {etf[2]}" for etf in selected_emerging[:5])  # Limiter aux 5 meilleurs
     
     # Si aucun ETF obligataire n'a été trouvé, ajouter des exemples par défaut
     if not bond_names:
