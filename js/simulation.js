@@ -31,6 +31,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialiser les listeners pour le calculateur fiscal si la section existe
     initFiscalCalculator();
+    
+    // Écouter le changement sur les éléments de budget dans le simulateur
+    const simulationBudgetInputs = [
+        document.getElementById('simulation-budget-loyer'),
+        document.getElementById('simulation-budget-quotidien'),
+        document.getElementById('simulation-budget-extra'),
+        document.getElementById('simulation-budget-invest')
+    ];
+    
+    simulationBudgetInputs.forEach(input => {
+        if (input) {
+            input.addEventListener('change', function() {
+                if (document.querySelector('.result-value').textContent !== '') {
+                    runSimulation();
+                }
+            });
+        }
+    });
 });
 
 /**
@@ -487,6 +505,9 @@ function runSimulation() {
         // Mettre à jour les résultats affichés
         updateResultsDisplay(results);
         
+        // Calculer et mettre à jour les résultats du budget
+        updateBudgetResults(results, years);
+        
         // Restaurer le bouton
         button.innerHTML = '<i class="fas fa-play-circle mr-2"></i> Lancer la simulation';
         button.disabled = false;
@@ -523,6 +544,38 @@ function calculateInvestmentResults(initialAmount, years, annualReturn) {
         years,
         annualReturn
     };
+}
+
+/**
+ * Calcule et met à jour les résultats du budget
+ * @param {Object} results - Résultats de la simulation d'investissement
+ * @param {number} years - Nombre d'années
+ */
+function updateBudgetResults(results, years) {
+    // Récupérer les données du budget
+    const budgetLoyer = parseFloat(document.getElementById('simulation-budget-loyer').value) || 1000;
+    const budgetQuotidien = parseFloat(document.getElementById('simulation-budget-quotidien').value) || 1200;
+    const budgetExtra = parseFloat(document.getElementById('simulation-budget-extra').value) || 500;
+    const budgetInvest = parseFloat(document.getElementById('simulation-budget-invest').value) || 300;
+    
+    // Calculer les totaux du budget
+    const depensesTotales = budgetLoyer + budgetQuotidien + budgetExtra + budgetInvest;
+    const revenuMensuel = (results.afterTaxAmount / years) / 12; // Revenu mensuel estimé
+    const epargnePossible = Math.max(0, revenuMensuel - depensesTotales);
+    const tauxEpargne = revenuMensuel > 0 ? (epargnePossible / revenuMensuel) * 100 : 0;
+    
+    // Formater les valeurs monétaires
+    const formatter = new Intl.NumberFormat('fr-FR', { 
+        style: 'currency', 
+        currency: 'EUR',
+        maximumFractionDigits: 2
+    });
+    
+    // Mettre à jour l'affichage du budget
+    document.getElementById('simulation-revenu-mensuel').textContent = formatter.format(revenuMensuel);
+    document.getElementById('simulation-depenses-totales').textContent = formatter.format(depensesTotales);
+    document.getElementById('simulation-epargne-possible').textContent = formatter.format(epargnePossible);
+    document.getElementById('simulation-taux-epargne').textContent = tauxEpargne.toFixed(1) + '%';
 }
 
 /**
