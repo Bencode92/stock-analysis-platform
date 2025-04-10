@@ -242,12 +242,13 @@ def filter_sectors_data(sectors_data):
 
 def filter_lists_data(lists_data):
     """Filtre les actifs avec YTD entre -5% et 120%, et Daily > -10% depuis lists.json,
-    puis sélectionne les 10 meilleurs par secteur."""
+    puis sélectionne les 5 meilleurs par secteur et par pays."""
     if not lists_data or not isinstance(lists_data, dict):
         return "Aucune liste d'actifs disponible"
     
-    # Dictionnaire pour regrouper les actifs par secteur
+    # Dictionnaires pour regrouper les actifs par secteur et par pays
     assets_by_sector = {}
+    assets_by_country = {}  # Pour regroupement par pays
     
     # Parcourir toutes les listes d'actifs
     for list_name, list_data in lists_data.items():
@@ -267,7 +268,7 @@ def filter_lists_data(lists_data):
                 ytd = asset.get("ytd", "")
                 daily = asset.get("change", "")  # Variation journalière
                 sector = asset.get("sector", "Non classé")  # "Non classé" si pas de secteur
-                country = asset.get("country", "")
+                country = asset.get("country", "Non précisé")  # "Non précisé" si pas de pays
 
                 # Nettoyage et conversion
                 try:
@@ -299,6 +300,11 @@ def filter_lists_data(lists_data):
                     if sector not in assets_by_sector:
                         assets_by_sector[sector] = []
                     assets_by_sector[sector].append(asset_entry)
+                    
+                    # Ajouter au dictionnaire par pays
+                    if country not in assets_by_country:
+                        assets_by_country[country] = []
+                    assets_by_country[country].append(asset_entry)
 
     # Résumé textuel organisé par secteur
     summary_lines = ["📋 TOP 5 ACTIFS PAR SECTEUR (YTD -5% à 120% et Daily > -10%) :"]
@@ -316,11 +322,11 @@ def filter_lists_data(lists_data):
         # Trier les actifs du secteur par YTD décroissant
         sector_assets.sort(key=lambda x: x["ytd"], reverse=True)
         
-        # Sélectionner uniquement les 10 meilleurs
+        # Sélectionner uniquement les 5 meilleurs
         top_5_assets = sector_assets[:5]
         
         # Ajouter l'en-tête du secteur
-        summary_lines.append(f"\n🏭 SECTEUR: {sector.upper()} ({len(top_10_assets)} actifs)")
+        summary_lines.append(f"\n🏭 SECTEUR: {sector.upper()} ({len(top_5_assets)} actifs)")
         
         # Ajouter chaque actif du top 5
         for asset in top_5_assets:
@@ -331,9 +337,44 @@ def filter_lists_data(lists_data):
                 f"• {asset['name']}: YTD {asset['ytd']:.2f}%, Daily {asset['daily']:.2f}%{country_info}"
             )
     
-    # Ajouter un compteur global
-    total_filtered_assets = sum(len(assets_by_sector[sector][:5]) for sector in sorted_sectors if assets_by_sector[sector])
-    summary_lines.insert(1, f"Total: {total_filtered_assets} actifs répartis dans {len(sorted_sectors)} secteurs")
+    # Ajouter un compteur global pour les secteurs
+    total_filtered_assets_sectors = sum(len(assets_by_sector[sector][:5]) for sector in sorted_sectors if assets_by_sector[sector])
+    summary_lines.insert(1, f"Total: {total_filtered_assets_sectors} actifs répartis dans {len(sorted_sectors)} secteurs")
+    
+    # Ajouter le résumé par pays
+    summary_lines.append("\n🌍 TOP 5 ACTIFS PAR PAYS (YTD -5% à 120% et Daily > -10%) :")
+    
+    # Trier les pays par ordre alphabétique
+    sorted_countries = sorted(assets_by_country.keys())
+    
+    # Ajouter un compteur global pour les pays
+    total_filtered_assets_countries = sum(len(assets_by_country[country][:5]) for country in sorted_countries if assets_by_country[country])
+    summary_lines.append(f"Total: {total_filtered_assets_countries} actifs répartis dans {len(sorted_countries)} pays")
+    
+    for country in sorted_countries:
+        country_assets = assets_by_country[country]
+        
+        # Si le pays n'a pas d'actifs qui correspondent aux critères, on saute
+        if not country_assets:
+            continue
+        
+        # Trier les actifs du pays par YTD décroissant
+        country_assets.sort(key=lambda x: x["ytd"], reverse=True)
+        
+        # Sélectionner uniquement les 5 meilleurs
+        top_5_assets = country_assets[:5]
+        
+        # Ajouter l'en-tête du pays
+        summary_lines.append(f"\n📌 PAYS: {country.upper()} ({len(top_5_assets)} actifs)")
+        
+        # Ajouter chaque actif du top 5
+        for asset in top_5_assets:
+            # Construire la ligne de description avec les informations sectorielles
+            sector_info = f" | Secteur: {asset['sector']}" if asset['sector'] else ""
+            
+            summary_lines.append(
+                f"• {asset['name']}: YTD {asset['ytd']:.2f}%, Daily {asset['daily']:.2f}%{sector_info}"
+            )
     
     return "\n".join(summary_lines) if assets_by_sector else "Aucune donnée d'actifs significative"
 
