@@ -391,6 +391,20 @@ const PatrimoineSimulator = (function() {
         };
     }
 
+    /**
+     * Récupère le taux marginal d'imposition (TMI) pour un revenu donné
+     * @param {number} revenuImposable - Revenu imposable
+     * @returns {number} Taux marginal d'imposition en pourcentage
+     */
+    function getTauxMarginal(revenuImposable) {
+        for (let i = TRANCHES_IMPOT.length - 1; i >= 0; i--) {
+            if (revenuImposable > TRANCHES_IMPOT[i].min) {
+                return TRANCHES_IMPOT[i].taux * 100;
+            }
+        }
+        return 0;
+    }
+
     // API publique du module
     return {
         calculerSimulationFiscale,
@@ -401,6 +415,7 @@ const PatrimoineSimulator = (function() {
         chargerResultats,
         resetState,
         exporterDataGraphique,
+        getTauxMarginal, // Exposer la fonction de calcul du taux marginal
         // Exporter l'état actuel (pour inspection et debugging)
         getState: () => ({...state})
     };
@@ -466,27 +481,11 @@ function calculerFiscalite() {
     }
 
     // Mise à jour du tableau récapitulatif des taux si disponible
-    const recapTauxElement = document.getElementById("recap-taux");
-    if (recapTauxElement) {
-        recapTauxElement.innerHTML = `
-            <tr>
-                <td>Taux de charges sociales</td>
-                <td>${(charges * 100).toFixed(1)}%</td>
-            </tr>
-            <tr>
-                <td>Taux marginal d'imposition</td>
-                <td>${getTauxMarginal(resultats.netImposableSansPER).toFixed(1)}%</td>
-            </tr>
-            <tr>
-                <td>Taux moyen d'imposition sans PER</td>
-                <td>${resultats.tauxMoyenSansPER.toFixed(2)}%</td>
-            </tr>
-            <tr>
-                <td>Taux moyen d'imposition avec PER</td>
-                <td>${resultats.tauxMoyenAvecPER.toFixed(2)}%</td>
-            </tr>
-        `;
-    }
+    const recapCharges = document.getElementById("recap-charges");
+    const recapMarginal = document.getElementById("recap-marginal");
+    
+    if (recapCharges) recapCharges.textContent = `${(charges * 100).toFixed(1)}%`;
+    if (recapMarginal) recapMarginal.textContent = `${PatrimoineSimulator.getTauxMarginal(resultats.netImposableSansPER).toFixed(1)}%`;
 
     // Si des visualisations graphiques sont présentes
     if (document.getElementById('tax-comparison-chart')) {
@@ -494,27 +493,110 @@ function calculerFiscalite() {
     }
 }
 
-/**
- * Détermine le taux marginal d'imposition pour un revenu donné
- * @param {number} revenuImposable - Revenu imposable
- * @returns {number} Taux marginal d'imposition en pourcentage
- */
-function getTauxMarginal(revenuImposable) {
-    const TRANCHES_IMPOT = [
-        { min: 0, max: 11294, taux: 0 },
-        { min: 11294, max: 28787, taux: 0.11 },
-        { min: 28787, max: 82341, taux: 0.30 },
-        { min: 82341, max: 177106, taux: 0.41 },
-        { min: 177106, max: Infinity, taux: 0.45 }
-    ];
+// NOUVELLE FONCTION: Estimation simplifiée pour l'optimisation fiscale
+function estimerNetImposable(salaireBrut, tauxDeduction = 0.281) {
+    return salaireBrut * (1 - tauxDeduction);
+}
+
+// NOUVELLE FONCTION: Taux de déduction par statut
+function getTauxDeductionParStatut(statut) {
+    switch (statut) {
+        case 'fonctionnaire': return 0.24;
+        case 'cadre': return 0.30;
+        case 'salarie':
+        default: return 0.281;
+    }
+}
+
+// NOUVELLE FONCTION: Générer une synthèse simplifiée pour le PER
+function genererSynthesePER(salaireBrut, statut = 'salarie') {
+    const PLAFOND_PER_ABSOLU = 32909; // Plafond PER 2024-2025
     
-    for (let i = TRANCHES_IMPOT.length - 1; i >= 0; i--) {
-        if (revenuImposable > TRANCHES_IMPOT[i].min) {
-            return TRANCHES_IMPOT[i].taux * 100;
+    const tauxDeduction = getTauxDeductionParStatut(statut);
+    const netImposable = estimerNetImposable(salaireBrut, tauxDeduction);
+    const tmi = PatrimoineSimulator.getTauxMarginal(netImposable);
+    const plafond = Math.min(netImposable * 0.10, PLAFOND_PER_ABSOLU);
+    const economie = plafond * (tmi / 100);
+
+    return {
+        tmi: tmi,
+        plafondVersement: plafond,
+        economieImpot: economie,
+        netImposable: netImposable,
+        messageHTML: `
+            <div class="bg-blue-900 bg-opacity-20 p-5 rounded-lg my-4">
+                <h3 class="text-lg font-bold text-green-400 mb-3">Synthèse de votre situation PER</h3>
+                <p>Avec un salaire brut annuel de <span class="font-semibold text-white">${salaireBrut.toLocaleString('fr-FR')} €</span> :</p>
+                
+                <div class="bg-blue-800 bg-opacity-30 p-3 rounded-lg my-3">
+                    <p class="flex justify-between mb-2">
+                        <span>Votre TMI est de</span> 
+                        <span class="font-semibold text-white">${tmi} %</span>
+                    </p>
+                    <p class="flex justify-between">
+                        <span>Le PER est</span> 
+                        <span class="font-semibold ${tmi >= 30 ? 'text-green-400' : 'text-blue-300'}">${tmi >= 30 ? 'très intéressant' : 'potentiellement intéressant'}</span>
+                    </p>
+                </div>
+                
+                <div class="mt-3">
+                    <p class="flex justify-between mb-2">
+                        <span>Versement PER optimal</span>
+                        <span class="font-semibold text-green-400">${plafond.toLocaleString('fr-FR')} €</span>
+                    </p>
+                    <p class="flex justify-between mb-2">
+                        <span>Économie d'impôt estimée</span>
+                        <span class="font-semibold text-green-400">${economie.toLocaleString('fr-FR')} €</span>
+                    </p>
+                </div>
+                
+                <div class="bg-green-900 bg-opacity-20 p-3 rounded border-l-4 border-green-400 mt-4">
+                    <p><i class="fas fa-lightbulb text-green-400 mr-2"></i> <strong>À savoir :</strong> Votre PER reste bloqué jusqu'à la retraite, sauf exceptions dont l'achat de votre résidence principale.</p>
+                </div>
+            </div>
+        `
+    };
+}
+
+// NOUVELLE FONCTION: Afficher la synthèse PER
+function afficherSynthesePER() {
+    const brutInput = document.getElementById('salaire-brut-simple');
+    if (!brutInput) return;
+    
+    const brut = parseFloat(brutInput.value);
+    if (!brut || brut <= 0) {
+        // Afficher un message d'erreur
+        const resultatElement = document.getElementById('resultat-synthese');
+        if (resultatElement) {
+            resultatElement.innerHTML = `
+                <div class="bg-red-900 bg-opacity-20 p-3 rounded border-l-4 border-red-400 mt-4">
+                    <p><i class="fas fa-exclamation-triangle text-red-400 mr-2"></i> Veuillez entrer un salaire brut annuel valide.</p>
+                </div>
+            `;
         }
+        return;
     }
     
-    return 0;
+    const statutSelect = document.getElementById('statut-simple');
+    const statut = statutSelect ? statutSelect.value : 'salarie';
+    
+    const synthese = genererSynthesePER(brut, statut);
+    
+    // Afficher la synthèse
+    const resultatElement = document.getElementById('resultat-synthese');
+    if (resultatElement) {
+        resultatElement.innerHTML = synthese.messageHTML;
+        
+        // Optionnel: mise à jour du formulaire principal si présent
+        const brutPrincipal = document.getElementById('brut-annuel');
+        const perPourcentage = document.getElementById('per-pourcentage');
+        
+        if (brutPrincipal) brutPrincipal.value = brut;
+        if (perPourcentage) perPourcentage.value = '10'; // 10% par défaut
+        
+        // Scroll jusqu'aux résultats
+        resultatElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
 }
 
 /**
@@ -587,3 +669,7 @@ function updateTaxComparisonChart(resultats) {
 
 // Exporter le module pour utilisation externe
 window.PatrimoineSimulator = PatrimoineSimulator;
+
+// Exporter les nouvelles fonctions
+window.genererSynthesePER = genererSynthesePER;
+window.afficherSynthesePER = afficherSynthesePER;
