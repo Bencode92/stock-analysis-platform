@@ -554,6 +554,72 @@
                                     <input type="range" id="insurance-rate-slider" min="0" max="0.8" value="0.14" step="0.01" class="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer">
                                     <span id="insurance-rate-value" class="bg-green-900 bg-opacity-30 text-green-400 px-2 py-1 rounded text-sm font-medium min-w-[60px] text-center">0.14%</span>
                                 </div>
+                                
+                                <div class="mt-2 flex items-center">
+                                    <input id="assurance-capital-initial" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                    <label for="assurance-capital-initial" class="ml-2 text-sm font-medium text-gray-300">
+                                        Assurance sur capital initial
+                                        <span class="ml-1 text-green-400 cursor-help" title="Si activé, le taux d'assurance s'applique au capital initial. Sinon, il s'applique au capital restant dû.">
+                                            <i class="fas fa-info-circle"></i>
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Frais annexes -->
+                            <div class="mt-8 mb-4 pt-6 border-t border-blue-800">
+                                <h5 class="text-lg font-semibold mb-4 flex items-center">
+                                    <i class="fas fa-file-invoice-dollar text-green-400 mr-2"></i>
+                                    Frais annexes
+                                </h5>
+                                
+                                <!-- Frais de dossier -->
+                                <div class="mb-4">
+                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                        Frais de dossier
+                                        <span class="ml-1 text-green-400 cursor-help" title="Frais demandés par la banque pour l'étude et le montage du dossier.">
+                                            <i class="fas fa-info-circle"></i>
+                                        </span>
+                                    </label>
+                                    <input type="number" id="frais-dossier" value="2000" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                </div>
+                                
+                                <!-- Type de garantie -->
+                                <div class="mb-4">
+                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                        Type de garantie
+                                        <span class="ml-1 text-green-400 cursor-help" title="Type de garantie pour le prêt: caution bancaire, hypothèque, privilège de prêteur de deniers.">
+                                            <i class="fas fa-info-circle"></i>
+                                        </span>
+                                    </label>
+                                    <select id="type-garantie" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                        <option value="caution">Caution bancaire (Crédit Logement)</option>
+                                        <option value="hypotheque">Hypothèque</option>
+                                        <option value="ppd">Privilège de Prêteur de Deniers (PPD)</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Frais de garantie -->
+                                <div class="mb-4">
+                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                        Frais de garantie estimés
+                                        <span class="ml-1 text-green-400 cursor-help" title="Frais liés à la garantie du prêt. Calculés automatiquement selon le type de garantie ou personnalisables.">
+                                            <i class="fas fa-info-circle"></i>
+                                        </span>
+                                    </label>
+                                    <input type="number" id="frais-garantie" placeholder="Calculé automatiquement" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                </div>
+                                
+                                <!-- Frais de tenue de compte -->
+                                <div class="mb-4">
+                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                        Frais de tenue de compte
+                                        <span class="ml-1 text-green-400 cursor-help" title="Frais de tenue du compte bancaire sur la durée du prêt.">
+                                            <i class="fas fa-info-circle"></i>
+                                        </span>
+                                    </label>
+                                    <input type="number" id="frais-tenue-compte" value="710" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                </div>
                             </div>
                             
                             <!-- Paramètres de remboursement anticipé -->
@@ -562,6 +628,21 @@
                                     <i class="fas fa-hand-holding-usd text-green-400 mr-2"></i>
                                     Remboursement anticipé
                                 </h5>
+                                
+                                <!-- Mode de remboursement anticipé -->
+                                <div class="mb-4">
+                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                        Mode de remboursement anticipé
+                                        <span class="ml-1 text-green-400 cursor-help" title="Choisissez si vous souhaitez réduire la durée du prêt en gardant la même mensualité, ou réduire la mensualité en gardant la même durée.">
+                                            <i class="fas fa-info-circle"></i>
+                                        </span>
+                                    </label>
+                                    <div class="flex gap-2">
+                                        <button id="mode-duree" class="flex-1 py-2 px-3 bg-blue-800 bg-opacity-30 text-green-400 rounded active">Réduire la durée</button>
+                                        <button id="mode-mensualite" class="flex-1 py-2 px-3 bg-blue-800 bg-opacity-30 text-gray-300 rounded">Réduire la mensualité</button>
+                                    </div>
+                                    <input type="hidden" id="remboursement-mode" value="duree">
+                                </div>
                                 
                                 <!-- Montant du remboursement anticipé -->
                                 <div class="mb-4">
@@ -606,7 +687,7 @@
                                 <div class="mb-4">
                                     <label class="block mb-2 text-sm font-medium text-gray-300">
                                         Indemnités de remboursement anticipé (mois)
-                                        <span class="ml-1 text-green-400 cursor-help" title="Nombre de mois d'intérêts servant de base au calcul des indemnités de remboursement anticipé (généralement entre 0 et 6 mois).">
+                                        <span class="ml-1 text-green-400 cursor-help" title="Nombre de mois d'intérêts servant de base au calcul des indemnités de remboursement anticipé (généralement entre 0 et 6 mois). Les IRA sont légalement plafonnées à 6 mois d'intérêts ou 3% du capital remboursé.">
                                             <i class="fas fa-info-circle"></i>
                                         </span>
                                     </label>
@@ -647,6 +728,22 @@
                                 <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
                                     <p id="total-cost" class="text-green-400 text-2xl font-bold mb-1 result-value">0 €</p>
                                     <p class="text-gray-400 text-sm">Coût total du crédit</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Nouvelles cellules pour frais et coût global -->
+                            <div class="col-span-2 grid grid-cols-2 gap-4 mt-2 mb-6">
+                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+                                    <p id="total-fees" class="text-green-400 text-2xl font-bold mb-1 result-value">0 €</p>
+                                    <p class="text-gray-400 text-sm">Frais annexes</p>
+                                </div>
+                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
+                                    <p id="taeg" class="text-green-400 text-2xl font-bold mb-1 result-value">0%</p>
+                                    <p class="text-gray-400 text-sm">TAEG approximatif</p>
+                                </div>
+                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center col-span-2">
+                                    <p id="cout-global" class="text-green-400 text-2xl font-bold mb-1 result-value">0 €</p>
+                                    <p class="text-gray-400 text-sm">Coût global (tout compris)</p>
                                 </div>
                             </div>
                             
@@ -925,6 +1022,23 @@
                     window.location.hash = targetId;
                 });
             });
+            
+            // Gestion du mode de remboursement anticipé
+            if (document.getElementById('mode-duree') && document.getElementById('mode-mensualite')) {
+                document.getElementById('mode-duree').addEventListener('click', function() {
+                    document.getElementById('mode-duree').classList.add('active', 'text-green-400');
+                    document.getElementById('mode-mensualite').classList.remove('active', 'text-green-400');
+                    document.getElementById('mode-mensualite').classList.add('text-gray-300');
+                    document.getElementById('remboursement-mode').value = 'duree';
+                });
+                
+                document.getElementById('mode-mensualite').addEventListener('click', function() {
+                    document.getElementById('mode-mensualite').classList.add('active', 'text-green-400');
+                    document.getElementById('mode-duree').classList.remove('active', 'text-green-400');
+                    document.getElementById('mode-duree').classList.add('text-gray-300');
+                    document.getElementById('remboursement-mode').value = 'mensualite';
+                });
+            }
         });
         
         // Fonction pour basculer entre les vues simplifiée et détaillée
