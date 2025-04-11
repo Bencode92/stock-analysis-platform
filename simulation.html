@@ -51,6 +51,43 @@
             from { opacity: 0; transform: translateY(-10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        
+        /* Styles pour les sous-catégories de budget */
+        #view-detailed, #view-simple {
+            transition: all 0.3s ease;
+        }
+        
+        #view-detailed.selected, #view-simple.selected {
+            position: relative;
+            z-index: 1;
+        }
+        
+        #detailed-view-courante, #detailed-view-loisirs, #simple-view {
+            transition: all 0.3s ease;
+        }
+        
+        .bg-blue-800.bg-opacity-20 {
+            transition: all 0.3s ease;
+        }
+        
+        .bg-blue-800.bg-opacity-20:hover {
+            background-color: rgba(30, 64, 175, 0.25);
+        }
+        
+        #total-vie-courante, #total-loisirs {
+            transition: all 0.3s ease;
+        }
+        
+        /* Animation pour la mise à jour des totaux */
+        .total-updated {
+            animation: pulse-update 1s ease;
+        }
+        
+        @keyframes pulse-update {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); color: rgb(74, 222, 128); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body class="dark">
@@ -617,10 +654,37 @@
     <script src="js/fiscal-optimizer.js"></script>
     <script src="js/budget-epargne.js"></script>
     <script>
+        // Ajouter une animation lorsque les totaux sont mis à jour
+        function animateTotalUpdate(elementId) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.classList.add('total-updated');
+                setTimeout(() => {
+                    element.classList.remove('total-updated');
+                }, 1000);
+            }
+        }
+        
         // Écouter le changement sur les éléments de budget
         document.addEventListener('DOMContentLoaded', function() {
+            // Vérifier si l'URL contient un ancre pour l'onglet budget
+            if (window.location.hash === '#budget-planner') {
+                // Trouver tous les onglets et masquer tous les contenus
+                const tabs = document.querySelectorAll('.simulation-tab');
+                const contents = document.querySelectorAll('.simulation-content');
+                
+                tabs.forEach(tab => tab.classList.remove('active'));
+                contents.forEach(content => content.style.display = 'none');
+                
+                // Activer l'onglet Budget
+                const budgetTab = document.querySelector('[data-target="budget-planner"]');
+                if (budgetTab) {
+                    budgetTab.classList.add('active');
+                    document.getElementById('budget-planner').style.display = 'block';
+                }
+            }
             // Vérifier si l'URL contient un ancre pour l'onglet d'optimisation fiscale
-            if (window.location.hash === '#tax-optimizer') {
+            else if (window.location.hash === '#tax-optimizer') {
                 // Trouver tous les onglets et masquer tous les contenus
                 const tabs = document.querySelectorAll('.simulation-tab');
                 const contents = document.querySelectorAll('.simulation-content');
@@ -641,19 +705,6 @@
                             salaireBrutInput.focus();
                         }
                     }, 500);
-                }
-            } else if (window.location.hash === '#budget-planner') {
-                // Activer l'onglet Budget si spécifié dans l'URL
-                const tabs = document.querySelectorAll('.simulation-tab');
-                const contents = document.querySelectorAll('.simulation-content');
-                
-                tabs.forEach(tab => tab.classList.remove('active'));
-                contents.forEach(content => content.style.display = 'none');
-                
-                const budgetTab = document.querySelector('[data-target="budget-planner"]');
-                if (budgetTab) {
-                    budgetTab.classList.add('active');
-                    document.getElementById('budget-planner').style.display = 'block';
                 }
             }
             
@@ -679,6 +730,20 @@
                 });
             });
         });
+        
+        // Fonction pour basculer entre les vues simplifiée et détaillée
+        window.toggleBudgetView = function(mode) {
+            const detailedView = document.getElementById('detailed-view');
+            const simpleView = document.getElementById('simple-view');
+            
+            if (mode === 'detailed') {
+                detailedView.style.display = 'block';
+                simpleView.style.display = 'none';
+            } else {
+                detailedView.style.display = 'none';
+                simpleView.style.display = 'block';
+            }
+        };
         
         // Fonction pour calculer automatiquement une recommandation de versement PER
         function calculerRecommandationPER(salaireBrut) {
