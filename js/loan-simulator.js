@@ -25,20 +25,8 @@ class LoanSimulator {
         this.fraisDossier = fraisDossier;
         this.fraisTenueCompte = fraisTenueCompte;
         
-        // Calcul des frais de garantie selon le type
-        let fraisCalcules;
-        switch(typeGarantie) {
-            case 'hypotheque':
-                fraisCalcules = Math.max(capital * 0.015, 800); // Min 800€
-                break;
-            case 'ppd':
-                fraisCalcules = Math.max(capital * 0.01, 500); // Min 500€
-                break;
-            case 'caution':
-            default:
-                fraisCalcules = capital * 0.013709; // Crédit Logement
-        }
-        this.fraisGarantie = fraisGarantie !== null ? fraisGarantie : fraisCalcules;
+        // MODIFIÉ: Simplifier le calcul des frais de garantie (juste formule directe)
+        this.fraisGarantie = fraisGarantie !== null ? fraisGarantie : capital * 0.013709;
     }
     
     calculerMensualite() {
@@ -110,20 +98,18 @@ class LoanSimulator {
                 mensualitesAvantRembours += (mensualite + assurance);
             }
             
-            // Réinjection de capital (remboursement anticipé partiel)
+            // MODIFIÉ: Gestion du nouveau taux et remboursement anticipé
             if (moisAnticipe && mois === moisAnticipe) {
+                // Appliquer le nouveau taux indépendamment du remboursement anticipé
+                if (nouveauTaux !== null) {
+                    tauxMensuel = nouveauTaux / 100 / 12;
+                }
+                
+                // Appliquer le remboursement anticipé
                 capitalRestant -= remboursementAnticipe;
                 
-                // Nouvelle mensualité si changement de taux ou mode mensualité
-                if (nouveauTaux !== null || modeRemboursement === 'mensualite') {
-                    let nouveauTauxMensuel = nouveauTaux !== null ? 
-                        nouveauTaux / 100 / 12 : tauxMensuel;
-                    
-                    if (nouveauTaux !== null) {
-                        tauxMensuel = nouveauTauxMensuel;
-                    }
-                    
-                    // Recalculer la mensualité pour la durée restante selon le type de prêt
+                // Recalcul de la mensualité selon le mode et le type de prêt
+                if (modeRemboursement === 'mensualite' || nouveauTaux !== null) {
                     if (this.typePret === 'inFine') {
                         mensualite = capitalRestant * tauxMensuel;
                     } else if (this.typePret === 'degressif') {
@@ -136,7 +122,7 @@ class LoanSimulator {
                             (1 - Math.pow(1 + tauxMensuel, -(this.dureeMois - mois + 1)));
                     }
                 }
-                // Si mode durée, on garde la même mensualité (on raccourcit la durée)
+                // Si mode durée et pas de nouveau taux, on garde la même mensualité (raccourcit la durée)
             }
             
             capitalRestant -= capitalAmorti;
@@ -362,22 +348,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 <div class="mb-4">
                     <label class="block mb-2 text-sm font-medium text-gray-300">
-                        Type de garantie
-                        <span class="ml-1 text-green-400 cursor-help" title="Type de garantie pour le prêt: caution bancaire, hypothèque, privilège de prêteur de deniers.">
-                            <i class="fas fa-info-circle"></i>
-                        </span>
-                    </label>
-                    <select id="type-garantie" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-                        <option value="caution">Caution bancaire (Crédit Logement)</option>
-                        <option value="hypotheque">Hypothèque</option>
-                        <option value="ppd">Privilège de Prêteur de Deniers (PPD)</option>
-                    </select>
-                </div>
-                
-                <div class="mb-4">
-                    <label class="block mb-2 text-sm font-medium text-gray-300">
                         Frais de garantie estimés
-                        <span class="ml-1 text-green-400 cursor-help" title="Frais liés à la garantie du prêt. Calculés automatiquement selon le type de garantie ou personnalisables.">
+                        <span class="ml-1 text-green-400 cursor-help" title="Frais liés à la garantie du prêt. Calculés automatiquement (0.013709 du capital emprunté).">
                             <i class="fas fa-info-circle"></i>
                         </span>
                     </label>
@@ -409,24 +381,13 @@ document.addEventListener('DOMContentLoaded', function() {
             
             parametersColumn.appendChild(feesSection);
             
-            // Mise à jour des frais de garantie en fonction du type sélectionné
+            // MODIFIÉ: Mise à jour simplifiée des frais de garantie
             const updateGarantieEstimation = () => {
                 const capital = parseFloat(document.getElementById('loan-amount').value);
-                const typeGarantie = document.getElementById('type-garantie').value;
                 const fraisGarantieInput = document.getElementById('frais-garantie');
                 
-                let fraisEstimes;
-                switch(typeGarantie) {
-                    case 'hypotheque':
-                        fraisEstimes = Math.max(capital * 0.015, 800); // Min 800€
-                        break;
-                    case 'ppd':
-                        fraisEstimes = Math.max(capital * 0.01, 500); // Min 500€
-                        break;
-                    case 'caution':
-                    default:
-                        fraisEstimes = capital * 0.013709; // Crédit Logement
-                }
+                // Calcul simplifié - toujours la même formule
+                const fraisEstimes = capital * 0.013709;
                 
                 fraisGarantieInput.placeholder = fraisEstimes.toFixed(2) + " €";
                 if (!fraisGarantieInput.value) {
@@ -434,8 +395,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             };
             
-            // Ajouter les écouteurs
-            document.getElementById('type-garantie').addEventListener('change', updateGarantieEstimation);
+            // Ajouter l'écouteur pour le montant du prêt
             document.getElementById('loan-amount').addEventListener('change', updateGarantieEstimation);
             
             // Initialiser l'estimation
@@ -563,7 +523,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // NOUVEAU: Récupérer le type de prêt
         const typePret = document.getElementById('type-pret')?.value || 'amortissable';
         
-        const typeGarantie = document.getElementById('type-garantie')?.value || 'caution';
         const assuranceSurCapitalInitial = document.getElementById('assurance-capital-initial')?.checked || false;
         
         // Récupérer le mode de remboursement (durée ou mensualité)
@@ -579,7 +538,6 @@ document.addEventListener('DOMContentLoaded', function() {
             fraisDossier: fraisDossier,
             fraisTenueCompte: fraisTenueCompte,
             fraisGarantie: fraisGarantie,
-            typeGarantie: typeGarantie,
             assuranceSurCapitalInitial: assuranceSurCapitalInitial,
             typePret: typePret // NOUVEAU
         });
@@ -1011,10 +969,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <p>${document.getElementById('frais-tenue-compte').value} €</p>
                             </div>
                             <div>
-                                <p class="font-bold">Type de garantie:</p>
-                                <p>${document.getElementById('type-garantie').options[document.getElementById('type-garantie').selectedIndex].text}</p>
-                            </div>
-                            <div>
                                 <p class="font-bold">TAEG approximatif:</p>
                                 <p>${document.getElementById('taeg')?.textContent || "N/A"}</p>
                             </div>
@@ -1034,7 +988,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mt-3 mb-6 p-4 border-l-4 border-green-500 bg-green-50 pl-4">
                         <h3 class="font-bold mb-2 text-green-700">Économies réalisées</h3>
                         <div class="text-sm">
-                            ${savingsSummary.innerHTML.replace(/class=\"[^\\\"]*\\\"/g, '').replace(/<i[^>]*><\\/i>/g, '•')}
+                            ${savingsSummary.innerHTML.replace(/class=\"[^\"]*\"/g, '').replace(/<i[^>]*><\/i>/g, '•')}
                         </div>
                     </div>
                 `;
