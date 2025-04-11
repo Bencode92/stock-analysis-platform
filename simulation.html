@@ -610,6 +610,17 @@
                                     <input type="number" id="frais-garantie" placeholder="Calculé automatiquement" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
                                 </div>
                                 
+                                <!-- Frais de courtage (NOUVEAU) -->
+                                <div class="mb-4">
+                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                        Frais de courtage
+                                        <span class="ml-1 text-green-400 cursor-help" title="Frais liés au service d'un courtier en crédit immobilier.">
+                                            <i class="fas fa-info-circle"></i>
+                                        </span>
+                                    </label>
+                                    <input type="number" id="frais-courtage" value="0" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                </div>
+                                
                                 <!-- Frais de tenue de compte -->
                                 <div class="mb-4">
                                     <label class="block mb-2 text-sm font-medium text-gray-300">
@@ -619,6 +630,51 @@
                                         </span>
                                     </label>
                                     <input type="number" id="frais-tenue-compte" value="710" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                </div>
+                            </div>
+                            
+                            <!-- Options avancées (NOUVEAU) -->
+                            <div class="mt-8 mb-4 pt-6 border-t border-blue-800">
+                                <h5 class="text-lg font-semibold mb-4 flex items-center">
+                                    <i class="fas fa-sliders-h text-green-400 mr-2"></i>
+                                    Options avancées
+                                </h5>
+                                
+                                <!-- Périodicité des remboursements -->
+                                <div class="mb-4">
+                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                        Périodicité des remboursements
+                                        <span class="ml-1 text-green-400 cursor-help" title="Fréquence à laquelle vous remboursez votre prêt.">
+                                            <i class="fas fa-info-circle"></i>
+                                        </span>
+                                    </label>
+                                    <select id="periodicite" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                        <option value="mensuel" selected>Mensuelle</option>
+                                        <option value="trimestriel">Trimestrielle</option>
+                                        <option value="annuel">Annuelle</option>
+                                    </select>
+                                </div>
+                                
+                                <!-- Différé d'amortissement -->
+                                <div class="mb-4">
+                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                        Différé d'amortissement (mois)
+                                        <span class="ml-1 text-green-400 cursor-help" title="Période pendant laquelle vous ne remboursez que les intérêts, sans le capital.">
+                                            <i class="fas fa-info-circle"></i>
+                                        </span>
+                                    </label>
+                                    <input type="number" id="differe-amortissement" value="0" min="0" max="36" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                </div>
+                                
+                                <!-- Comparaison avec/sans remboursement anticipé -->
+                                <div class="mt-3 flex items-center">
+                                    <input id="compare-scenarios" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                    <label for="compare-scenarios" class="ml-2 text-sm font-medium text-gray-300">
+                                        Comparer avec/sans remboursement anticipé
+                                        <span class="ml-1 text-green-400 cursor-help" title="Active la comparaison entre un scénario sans remboursement anticipé et un scénario avec remboursement anticipé.">
+                                            <i class="fas fa-info-circle"></i>
+                                        </span>
+                                    </label>
                                 </div>
                             </div>
                             
@@ -744,6 +800,26 @@
                                 <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center col-span-2">
                                     <p id="cout-global" class="text-green-400 text-2xl font-bold mb-1 result-value">0 €</p>
                                     <p class="text-gray-400 text-sm">Coût global (tout compris)</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Tableau comparatif (NOUVEAU) -->
+                            <div id="comparison-table" class="mb-6 hidden">
+                                <h5 class="text-lg font-semibold mb-3">Comparaison des scénarios</h5>
+                                <div class="overflow-auto max-h-60 bg-blue-800 bg-opacity-20 rounded-lg">
+                                    <table class="min-w-full text-sm">
+                                        <thead class="bg-blue-900 bg-opacity-50 sticky top-0">
+                                            <tr>
+                                                <th class="px-3 py-2 text-left">Paramètre</th>
+                                                <th class="px-3 py-2 text-right">Sans remb. anticipé</th>
+                                                <th class="px-3 py-2 text-right">Avec remb. anticipé</th>
+                                                <th class="px-3 py-2 text-right">Différence</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="comparison-table-body">
+                                            <!-- Le tableau sera rempli dynamiquement par JavaScript -->
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                             
