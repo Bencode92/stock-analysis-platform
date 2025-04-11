@@ -259,6 +259,29 @@
             visibility: visible;
             opacity: 1;
         }
+
+        /* Style pour le bouton de simulation */
+        .simulation-link {
+            display: inline-flex;
+            align-items: center;
+            margin-top: 12px;
+            background-color: rgba(0, 255, 135, 0.15);
+            color: #00FF87;
+            border-radius: 4px;
+            padding: 6px 10px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .simulation-link:hover {
+            background-color: rgba(0, 255, 135, 0.25);
+            transform: translateY(-2px);
+        }
+        
+        .simulation-link i {
+            margin-right: 6px;
+        }
     </style>
 </head>
 <body class="dark">
@@ -532,6 +555,9 @@
                                     <div class="feature-item"><i class="fas fa-check feature-icon"></i> Déduction jusqu'à 37 094 €/an sur revenus imposables</div>
                                     <div class="feature-item"><i class="fas fa-check feature-icon"></i> Optimisé pour les hauts revenus (TMI ≥ 30 %)</div>
                                     <div class="feature-item"><i class="fas fa-check feature-icon"></i> Sortie en capital ou rente</div>
+                                    <a href="simulation.html#tax-optimizer" class="simulation-link">
+                                        <i class="fas fa-calculator"></i> Simuler mon gain fiscal PER
+                                    </a>
                                 </td>
                                 <td>
                                     <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Épargne bloquée jusqu'à la retraite (sauf exceptions)</div>
@@ -990,6 +1016,14 @@
             
             // Initialiser le filtrage par profil
             initProfileFilter();
+            
+            // Ajouter le comportement pour ouvrir l'onglet d'optimisation fiscale quand on arrive depuis un lien
+            if (window.location.hash === '#tax-optimizer') {
+                setTimeout(function() {
+                    // Simuler un clic sur l'onglet d'optimisation fiscale
+                    document.querySelector('[data-target="tax-optimizer"]').click();
+                }, 500);
+            }
         });
         
         function updateDate() {
