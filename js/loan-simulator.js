@@ -1,6 +1,6 @@
 // Fichier JS pour simulateur de dette avec options dynamiques
 class LoanSimulator {
-    constructor({ capital, tauxAnnuel, dureeMois, assuranceAnnuelle = 0, indemnitesMois = 6 }) {
+    constructor({ capital, tauxAnnuel, dureeMois, assuranceAnnuelle = 0, indemnitesMois = 12 }) {
         this.capital = capital;
         this.tauxMensuel = tauxAnnuel / 100 / 12;
         this.dureeMois = dureeMois;
@@ -21,11 +21,23 @@ class LoanSimulator {
         let assuranceMensuelle = this.assuranceMensuelle;
         let totalInterets = 0;
         let totalAssurance = 0;
+        let totalCapitalAmorti = 0;
+        let capitalInitial = this.capital;
+        
+        // Suivi avant remboursement anticipé
+        let interetsAvantRembours = 0;
+        let mensualitesAvantRembours = 0;
         
         for (let mois = 1; mois <= this.dureeMois; mois++) {
             let interets = capitalRestant * tauxMensuel;
             let assurance = capitalRestant * assuranceMensuelle;
             let capitalAmorti = mensualite - interets;
+            
+            // Calculs avant remboursement anticipé
+            if (moisAnticipe && mois < moisAnticipe) {
+                interetsAvantRembours += interets;
+                mensualitesAvantRembours += (mensualite + assurance);
+            }
             
             // Réinjection de capital (remboursement anticipé partiel)
             if (moisAnticipe && mois === moisAnticipe) {
@@ -43,6 +55,7 @@ class LoanSimulator {
             
             totalInterets += interets;
             totalAssurance += assurance;
+            totalCapitalAmorti += capitalAmorti;
             
             tableau.push({
                 mois,
@@ -62,14 +75,28 @@ class LoanSimulator {
             indemnites = remboursementAnticipe * tauxMensuel * this.indemnitesMois;
         }
         
+        // Calcul des économies réalisées avec le remboursement anticipé
+        const dureeInitiale = this.dureeMois;
+        const dureeReelle = tableau.length;
+        const mensualiteInitiale = this.calculerMensualite() + this.capital * this.assuranceMensuelle;
+        const economiesMensualites = (dureeInitiale - dureeReelle) * mensualiteInitiale;
+        const economiesInterets = (capitalInitial * this.tauxMensuel * dureeInitiale) - totalInterets;
+        
         return {
             tableau,
-            mensualiteInitiale: this.calculerMensualite() + this.capital * this.assuranceMensuelle,
+            mensualiteInitiale,
             indemnites,
             totalInterets,
             totalAssurance,
+            totalCapitalAmorti,
+            capitalInitial,
             totalPaye: tableau.reduce((sum, l) => sum + l.mensualite, 0) + indemnites,
-            dureeReelle: tableau.length
+            dureeReelle,
+            dureeInitiale,
+            economiesMensualites,
+            economiesInterets,
+            interetsAvantRembours,
+            mensualitesAvantRembours
         };
     }
 }
@@ -213,6 +240,50 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Génération du graphique
         updateChart(result);
+        
+        // Ajouter un résumé des économies
+        updateSavingsSummary(result);
+    }
+    
+    // Fonction pour ajouter un résumé des économies
+    function updateSavingsSummary(result) {
+        // Rechercher ou créer la section de résumé
+        let savingsSummary = document.getElementById('savings-summary');
+        
+        if (!savingsSummary) {
+            savingsSummary = document.createElement('div');
+            savingsSummary.id = 'savings-summary';
+            savingsSummary.className = 'bg-blue-900 bg-opacity-20 p-4 rounded-lg border-l-4 border-green-400 mt-6';
+            
+            // Ajouter après le graphique
+            const chartContainer = document.querySelector('.chart-container');
+            chartContainer.after(savingsSummary);
+        }
+        
+        // Calculer le pourcentage d'économies
+        const economiesPourcentage = ((result.economiesInterets / (result.totalInterets + result.economiesInterets)) * 100).toFixed(1);
+        
+        // Mise à jour du contenu
+        savingsSummary.innerHTML = `
+            <h5 class="text-green-400 font-medium flex items-center mb-2">
+                <i class="fas fa-piggy-bank mr-2"></i>
+                Économies réalisées avec le remboursement anticipé
+            </h5>
+            <ul class="text-sm text-gray-300 space-y-2 pl-4">
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                    <span>Vous économisez ${formatMontant(result.economiesInterets)} d'intérêts (${economiesPourcentage}% du total)</span>
+                </li>
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                    <span>Réduction de la durée du prêt de ${result.dureeInitiale - result.dureeReelle} mois</span>
+                </li>
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                    <span>Indemnités de remboursement anticipé: ${formatMontant(result.indemnites)}</span>
+                </li>
+            </ul>
+        `;
     }
 
     // Graphique d'amortissement
@@ -334,6 +405,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+        
+        // Marquer visuellement le remboursement anticipé
+        const earlyRepaymentMonth = parseInt(document.getElementById('early-repayment-month-slider').value);
+        const remboursementIndex = Math.floor(earlyRepaymentMonth / sampleRate);
+        
+        if (remboursementIndex < labels.length) {
+            // Ajouter une ligne verticale pour indiquer le remboursement anticipé
+            const dataset = loanChart.data.datasets[0];
+            dataset.pointBackgroundColor = dataset.data.map((value, index) => 
+                index === remboursementIndex ? 'rgba(52, 211, 153, 1)' : 'transparent'
+            );
+            dataset.pointRadius = dataset.data.map((value, index) => 
+                index === remboursementIndex ? 5 : 0
+            );
+            loanChart.update();
+        }
     }
 
     // Événement de clic sur le bouton de calcul
@@ -392,6 +479,44 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             `;
+            
+            // Ajouter les infos de remboursement anticipé
+            element.innerHTML += `
+                <div class="mt-3 mb-6 p-4 border border-gray-300 rounded">
+                    <h3 class="font-bold mb-2">Remboursement anticipé</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="font-bold">Montant remboursé par anticipation:</p>
+                            <p>${document.getElementById('early-repayment-amount').value} €</p>
+                        </div>
+                        <div>
+                            <p class="font-bold">Mois du remboursement:</p>
+                            <p>${document.getElementById('early-repayment-month-slider').value}</p>
+                        </div>
+                        <div>
+                            <p class="font-bold">Taux après renégociation:</p>
+                            <p>${document.getElementById('new-interest-rate-slider').value}%</p>
+                        </div>
+                        <div>
+                            <p class="font-bold">Indemnités (mois):</p>
+                            <p>${document.getElementById('penalty-months-slider').value} mois</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Ajouter les économies réalisées si elles existent
+            const savingsSummary = document.getElementById('savings-summary');
+            if (savingsSummary) {
+                element.innerHTML += `
+                    <div class="mt-3 mb-6 p-4 border-l-4 border-green-500 bg-green-50 pl-4">
+                        <h3 class="font-bold mb-2 text-green-700">Économies réalisées</h3>
+                        <div class="text-sm">
+                            ${savingsSummary.innerHTML.replace(/class="[^"]*"/g, '')}
+                        </div>
+                    </div>
+                `;
+            }
             
             // Copie du tableau
             const tableContainer = document.createElement('div');
