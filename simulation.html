@@ -109,7 +109,7 @@
                 <div class="simulation-tabs">
                     <div class="simulation-tab active" data-target="investment-simulator">Simulateur d'investissement</div>
                     <div class="simulation-tab" data-target="tax-optimizer">Optimisation fiscale PER</div>
-                    <div class="simulation-tab" data-target="retirement-planner">Planification retraite</div>
+                    <div class="simulation-tab" data-target="budget-planner">Budget & Épargne</div>
                     <div class="simulation-tab" data-target="real-estate">Investissement immobilier</div>
                 </div>
                 
@@ -408,14 +408,9 @@
                     </div>
                 </div>
                 
-                <!-- Contenu pour l'onglet Planification retraite -->
-                <div id="retirement-planner" class="simulation-content" style="display: none;">
-                    <div class="p-4 bg-blue-900 bg-opacity-20 rounded-xl text-center mt-6">
-                        <i class="fas fa-tools text-4xl text-green-400 mb-4"></i>
-                        <h3 class="text-xl font-bold mb-2">Planification retraite - Module en développement</h3>
-                        <p>Calculez vos besoins pour la retraite et planifiez vos investissements en conséquence.</p>
-                        <p class="text-sm text-gray-400 mt-3">Disponible prochainement</p>
-                    </div>
+                <!-- Contenu pour l'onglet Budget & Épargne -->
+                <div id="budget-planner" class="simulation-content" style="display: none;">
+                    <!-- Le contenu sera généré dynamiquement par budget-epargne.js -->
                 </div>
                 
                 <!-- Contenu pour l'onglet Investissement immobilier -->
@@ -577,6 +572,7 @@
     <!-- Scripts -->
     <script src="js/simulation.js"></script>
     <script src="js/fiscal-optimizer.js"></script>
+    <script src="js/budget-epargne.js"></script>
     <script>
         // Écouter le changement sur les éléments de budget
         document.addEventListener('DOMContentLoaded', function() {
