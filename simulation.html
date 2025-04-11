@@ -542,6 +542,21 @@
                                 </div>
                             </div>
                             
+                            <!-- Type de prêt -->
+                            <div class="mb-4">
+                                <label class="block mb-2 text-sm font-medium text-gray-300">
+                                    Type de prêt
+                                    <span class="ml-1 text-green-400 cursor-help" title="Amortissable: remboursement progressif du capital. In fine: remboursement du capital à la fin. Dégressif: remboursement constant du capital.">
+                                        <i class="fas fa-info-circle"></i>
+                                    </span>
+                                </label>
+                                <select id="type-pret" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                    <option value="amortissable">Amortissable</option>
+                                    <option value="inFine">In fine</option>
+                                    <option value="degressif">Dégressif</option>
+                                </select>
+                            </div>
+                            
                             <!-- Taux d'assurance -->
                             <div class="mb-4">
                                 <label class="block mb-2 text-sm font-medium text-gray-300">
@@ -584,41 +599,15 @@
                                     <input type="number" id="frais-dossier" value="2000" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
                                 </div>
                                 
-                                <!-- Type de garantie -->
-                                <div class="mb-4">
-                                    <label class="block mb-2 text-sm font-medium text-gray-300">
-                                        Type de garantie
-                                        <span class="ml-1 text-green-400 cursor-help" title="Type de garantie pour le prêt: caution bancaire, hypothèque, privilège de prêteur de deniers.">
-                                            <i class="fas fa-info-circle"></i>
-                                        </span>
-                                    </label>
-                                    <select id="type-garantie" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-                                        <option value="caution">Caution bancaire (Crédit Logement)</option>
-                                        <option value="hypotheque">Hypothèque</option>
-                                        <option value="ppd">Privilège de Prêteur de Deniers (PPD)</option>
-                                    </select>
-                                </div>
-                                
                                 <!-- Frais de garantie -->
                                 <div class="mb-4">
                                     <label class="block mb-2 text-sm font-medium text-gray-300">
                                         Frais de garantie estimés
-                                        <span class="ml-1 text-green-400 cursor-help" title="Frais liés à la garantie du prêt. Calculés automatiquement selon le type de garantie ou personnalisables.">
+                                        <span class="ml-1 text-green-400 cursor-help" title="Frais liés à la garantie du prêt. Calculés automatiquement (0.013709 du capital emprunté).">
                                             <i class="fas fa-info-circle"></i>
                                         </span>
                                     </label>
                                     <input type="number" id="frais-garantie" placeholder="Calculé automatiquement" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-                                </div>
-                                
-                                <!-- Frais de courtage (NOUVEAU) -->
-                                <div class="mb-4">
-                                    <label class="block mb-2 text-sm font-medium text-gray-300">
-                                        Frais de courtage
-                                        <span class="ml-1 text-green-400 cursor-help" title="Frais liés au service d'un courtier en crédit immobilier.">
-                                            <i class="fas fa-info-circle"></i>
-                                        </span>
-                                    </label>
-                                    <input type="number" id="frais-courtage" value="0" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
                                 </div>
                                 
                                 <!-- Frais de tenue de compte -->
