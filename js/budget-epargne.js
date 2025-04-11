@@ -5,35 +5,38 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialiser la section Budget & Épargne
-    initBudgetEpargneSection();
+    // Initialiser l'onglet Budget
+    initBudgetPlanner();
 });
 
 /**
- * Initialise et génère la section Budget & Épargne 
+ * Initialise et génère le contenu de l'onglet Budget
  */
-function initBudgetEpargneSection() {
-    // Vérifier si le conteneur existe dans la page
-    const simulationContent = document.getElementById('investment-simulator');
-    if (!simulationContent) return;
+function initBudgetPlanner() {
+    // Cibler l'onglet Budget
+    const budgetPlanner = document.getElementById('budget-planner');
+    if (!budgetPlanner) return;
     
-    // Créer le conteneur pour Budget & Épargne s'il n'existe pas déjà
-    let budgetSection = document.getElementById('budget-epargne-section');
+    // Vider le contenu actuel
+    budgetPlanner.innerHTML = '';
     
-    if (!budgetSection) {
-        budgetSection = document.createElement('div');
-        budgetSection.id = 'budget-epargne-section';
-        budgetSection.className = 'grid grid-cols-1 md:grid-cols-2 gap-6 mt-8';
-        
-        // Ajouter le conteneur à la suite des paramètres et résultats existants
-        simulationContent.appendChild(budgetSection);
-        
-        // Générer le contenu HTML du budget
-        generateBudgetInterface(budgetSection);
-    }
+    // Créer le conteneur pour Budget & Épargne
+    let budgetGrid = document.createElement('div');
+    budgetGrid.className = 'grid grid-cols-1 md:grid-cols-2 gap-6 mt-8';
+    
+    // Ajouter le conteneur à l'onglet Budget
+    budgetPlanner.appendChild(budgetGrid);
+    
+    // Générer l'interface Budget & Épargne
+    generateBudgetInterface(budgetGrid);
     
     // Initialiser les écouteurs d'événements
     initBudgetListeners();
+    
+    // Analyser le budget avec les valeurs par défaut
+    setTimeout(() => {
+        analyserBudget();
+    }, 500);
 }
 
 /**
@@ -46,7 +49,7 @@ function generateBudgetInterface(container) {
     budgetInputCol.className = 'bg-blue-900 bg-opacity-20 p-6 rounded-lg';
     budgetInputCol.innerHTML = `
         <h4 class="text-xl font-semibold mb-4 flex items-center">
-            <i class="fas fa-wallet text-green-400 mr-2"></i>
+            <i class="fas fa-wallet text-blue-400 mr-2"></i>
             Budget Mensuel & Épargne
         </h4>
         
@@ -54,7 +57,7 @@ function generateBudgetInterface(container) {
         <div class="mb-4">
             <label class="block mb-2 text-sm font-medium text-gray-300">
                 Loyer / Crédit immobilier
-                <span class="ml-1 text-green-400 cursor-help" title="Votre dépense mensuelle pour votre logement (loyer ou mensualité de crédit).">
+                <span class="ml-1 text-blue-400 cursor-help" title="Votre dépense mensuelle pour votre logement (loyer ou mensualité de crédit).">
                     <i class="fas fa-info-circle"></i>
                 </span>
             </label>
@@ -64,7 +67,7 @@ function generateBudgetInterface(container) {
         <div class="mb-4">
             <label class="block mb-2 text-sm font-medium text-gray-300">
                 Dépenses quotidiennes
-                <span class="ml-1 text-green-400 cursor-help" title="Vos dépenses mensuelles courantes: alimentation, transport, factures, etc.">
+                <span class="ml-1 text-blue-400 cursor-help" title="Vos dépenses mensuelles courantes: alimentation, transport, factures, etc.">
                     <i class="fas fa-info-circle"></i>
                 </span>
             </label>
@@ -74,7 +77,7 @@ function generateBudgetInterface(container) {
         <div class="mb-4">
             <label class="block mb-2 text-sm font-medium text-gray-300">
                 Loisirs & Extra
-                <span class="ml-1 text-green-400 cursor-help" title="Vos dépenses non essentielles: sorties, abonnements, vacances, etc.">
+                <span class="ml-1 text-blue-400 cursor-help" title="Vos dépenses non essentielles: sorties, abonnements, vacances, etc.">
                     <i class="fas fa-info-circle"></i>
                 </span>
             </label>
@@ -84,11 +87,21 @@ function generateBudgetInterface(container) {
         <div class="mb-4">
             <label class="block mb-2 text-sm font-medium text-gray-300">
                 Investissement mensuel
-                <span class="ml-1 text-green-400 cursor-help" title="Le montant que vous souhaitez automatiquement investir chaque mois.">
+                <span class="ml-1 text-blue-400 cursor-help" title="Le montant que vous souhaitez automatiquement investir chaque mois.">
                     <i class="fas fa-info-circle"></i>
                 </span>
             </label>
             <input type="number" id="simulation-budget-invest" value="200" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+        </div>
+        
+        <div class="mt-4 mb-4">
+            <label class="block mb-2 text-sm font-medium text-gray-300">
+                Revenu mensuel estimé
+                <span class="ml-1 text-blue-400 cursor-help" title="Votre revenu mensuel net après impôts.">
+                    <i class="fas fa-info-circle"></i>
+                </span>
+            </label>
+            <input type="number" id="revenu-mensuel-input" value="3000" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
         </div>
         
         <button id="simulate-budget-button" class="w-full mt-6 py-3 px-4 bg-gradient-to-r from-blue-500 to-blue-400 text-gray-900 font-semibold rounded-lg shadow-lg hover:shadow-blue-500/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center">
@@ -102,25 +115,25 @@ function generateBudgetInterface(container) {
     budgetResultsCol.className = 'bg-blue-900 bg-opacity-20 p-6 rounded-lg';
     budgetResultsCol.innerHTML = `
         <h4 class="text-xl font-semibold mb-4 flex items-center">
-            <i class="fas fa-piggy-bank text-green-400 mr-2"></i>
+            <i class="fas fa-piggy-bank text-blue-400 mr-2"></i>
             Analyse du budget
         </h4>
         
         <div class="grid grid-cols-2 gap-4 mb-6">
             <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-revenu-mensuel">0 €</p>
-                <p class="text-gray-400 text-sm">Revenu mensuel estimé</p>
+                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-revenu-mensuel">3 000,00 €</p>
+                <p class="text-gray-400 text-sm">Revenu mensuel</p>
             </div>
             <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-depenses-totales">2 600 €</p>
+                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-depenses-totales">2 600,00 €</p>
                 <p class="text-gray-400 text-sm">Dépenses totales</p>
             </div>
             <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-epargne-possible">0 €</p>
+                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-epargne-possible">400,00 €</p>
                 <p class="text-gray-400 text-sm">Épargne possible</p>
             </div>
             <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-taux-epargne">0%</p>
+                <p class="text-blue-400 text-2xl font-bold mb-1" id="simulation-taux-epargne">13,3%</p>
                 <p class="text-gray-400 text-sm">Taux d'épargne</p>
             </div>
         </div>
@@ -163,7 +176,7 @@ function initBudgetChart() {
     const data = {
         labels: ['Loyer', 'Quotidien', 'Extra', 'Investissement', 'Épargne'],
         datasets: [{
-            data: [800, 1200, 400, 200, 0],
+            data: [800, 1200, 400, 200, 400],
             backgroundColor: [
                 'rgba(255, 99, 132, 0.7)',
                 'rgba(54, 162, 235, 0.7)',
@@ -227,7 +240,8 @@ function initBudgetListeners() {
         document.getElementById('simulation-budget-loyer'),
         document.getElementById('simulation-budget-quotidien'),
         document.getElementById('simulation-budget-extra'),
-        document.getElementById('simulation-budget-invest')
+        document.getElementById('simulation-budget-invest'),
+        document.getElementById('revenu-mensuel-input')
     ];
     
     budgetInputs.forEach(input => {
@@ -249,15 +263,8 @@ function analyserBudget() {
     const extra = parseFloat(document.getElementById('simulation-budget-extra').value) || 0;
     const investAuto = parseFloat(document.getElementById('simulation-budget-invest').value) || 0;
     
-    // Récupérer le revenu mensuel depuis les résultats de simulation
-    // En utilisant le capital final / années / 12 comme estimation
-    let revenuMensuel = 0;
-    const resultElements = document.querySelectorAll('.result-value');
-    if (resultElements.length >= 4) {
-        const capitalFinal = parseFloat(resultElements[0].textContent.replace(/[^0-9,-]/g, '').replace(',', '.')) || 0;
-        const duree = parseInt(document.getElementById('duration-slider').value) || 10;
-        revenuMensuel = (capitalFinal / duree) / 12;
-    }
+    // Récupérer le revenu mensuel saisi par l'utilisateur
+    const revenuMensuel = parseFloat(document.getElementById('revenu-mensuel-input').value) || 3000;
     
     // Calculer les totaux du budget
     const depensesTotales = loyer + quotidien + extra + investAuto;
