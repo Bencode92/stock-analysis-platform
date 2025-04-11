@@ -9,7 +9,6 @@ class LoanSimulator {
         fraisDossier = 2000,
         fraisTenueCompte = 710,
         fraisGarantie = null,
-        typeGarantie = 'caution',
         assuranceSurCapitalInitial = false,
         typePret = 'amortissable' // NOUVEAU: 'amortissable', 'inFine' ou 'degressif'
     }) {
@@ -25,19 +24,8 @@ class LoanSimulator {
         this.fraisDossier = fraisDossier;
         this.fraisTenueCompte = fraisTenueCompte;
         
-        // Calcul des frais de garantie selon le type
-        let fraisCalcules;
-        switch(typeGarantie) {
-            case 'hypotheque':
-                fraisCalcules = Math.max(capital * 0.015, 800); // Min 800€
-                break;
-            case 'ppd':
-                fraisCalcules = Math.max(capital * 0.01, 500); // Min 500€
-                break;
-            case 'caution':
-            default:
-                fraisCalcules = capital * 0.013709; // Crédit Logement
-        }
+        // MODIFIÉ: Calcul simplifié des frais de garantie (toujours 1,3709% du capital)
+        const fraisCalcules = capital * 0.013709;
         this.fraisGarantie = fraisGarantie !== null ? fraisGarantie : fraisCalcules;
     }
     
@@ -60,6 +48,7 @@ class LoanSimulator {
         remboursementAnticipe = 0, 
         moisAnticipe = null, 
         nouveauTaux = null,
+        moisNouveauTaux = null, // NOUVEAU: mois d'application du nouveau taux (indépendant du remboursement)
         modeRemboursement = 'duree' // 'duree' ou 'mensualite'
     }) {
         let mensualite = this.calculerMensualite();
@@ -77,6 +66,23 @@ class LoanSimulator {
         let mensualitesAvantRembours = 0;
         
         for (let mois = 1; mois <= this.dureeMois; mois++) {
+            // NOUVEAU: Changement de taux indépendant du remboursement anticipé
+            if (moisNouveauTaux && mois === moisNouveauTaux && nouveauTaux !== null) {
+                tauxMensuel = nouveauTaux / 100 / 12;
+                
+                // Recalculer la mensualité selon le type de prêt
+                if (this.typePret === 'inFine') {
+                    mensualite = capitalRestant * tauxMensuel;
+                } else if (this.typePret === 'degressif') {
+                    const amortissementFixe = capitalRestant / (this.dureeMois - mois + 1);
+                    mensualite = amortissementFixe + (capitalRestant * tauxMensuel);
+                } else {
+                    // Prêt amortissable classique
+                    mensualite = capitalRestant * tauxMensuel / 
+                        (1 - Math.pow(1 + tauxMensuel, -(this.dureeMois - mois + 1)));
+                }
+            }
+            
             let interets = capitalRestant * tauxMensuel;
             
             // Calcul de l'assurance selon le mode (capital initial ou restant dû)
@@ -84,7 +90,7 @@ class LoanSimulator {
                 capitalInitial * assuranceMensuelle : 
                 capitalRestant * assuranceMensuelle;
             
-            // MODIFIÉ: Calcul du capital amorti selon le type de prêt
+            // Calcul du capital amorti selon le type de prêt
             let capitalAmorti;
             
             if (this.typePret === 'inFine') {
@@ -114,15 +120,8 @@ class LoanSimulator {
             if (moisAnticipe && mois === moisAnticipe) {
                 capitalRestant -= remboursementAnticipe;
                 
-                // Nouvelle mensualité si changement de taux ou mode mensualité
-                if (nouveauTaux !== null || modeRemboursement === 'mensualite') {
-                    let nouveauTauxMensuel = nouveauTaux !== null ? 
-                        nouveauTaux / 100 / 12 : tauxMensuel;
-                    
-                    if (nouveauTaux !== null) {
-                        tauxMensuel = nouveauTauxMensuel;
-                    }
-                    
+                // Recalculer mensualité si mode mensualité (mais pas besoin de changer le taux ici)
+                if (modeRemboursement === 'mensualite') {
                     // Recalculer la mensualité pour la durée restante selon le type de prêt
                     if (this.typePret === 'inFine') {
                         mensualite = capitalRestant * tauxMensuel;
@@ -342,6 +341,58 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
             
+            // NOUVEAU: Créer une section pour le changement de taux
+            const changeTauxSection = document.createElement('div');
+            changeTauxSection.className = 'mt-8 mb-4 pt-6 border-t border-blue-800';
+            changeTauxSection.innerHTML = `
+                <h5 class="text-lg font-semibold mb-4 flex items-center">
+                    <i class="fas fa-percentage text-green-400 mr-2"></i>
+                    Changement de taux
+                </h5>
+                
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                        Mois d'application du nouveau taux
+                        <span class="ml-1 text-green-400 cursor-help" title="Mois à partir duquel s'appliquera le nouveau taux d'intérêt.">
+                            <i class="fas fa-info-circle"></i>
+                        </span>
+                    </label>
+                    <div class="flex items-center gap-4">
+                        <input type="range" id="new-rate-month-slider" min="1" max="120" value="24" step="1" class="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer">
+                        <span id="new-rate-month-value" class="bg-green-900 bg-opacity-30 text-green-400 px-2 py-1 rounded text-sm font-medium min-w-[60px] text-center">24</span>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                        Nouveau taux d'intérêt (%)
+                        <span class="ml-1 text-green-400 cursor-help" title="Le nouveau taux d'intérêt qui s'appliquera à partir du mois spécifié.">
+                            <i class="fas fa-info-circle"></i>
+                        </span>
+                    </label>
+                    <div class="flex items-center gap-4">
+                        <input type="range" id="new-interest-rate-slider" min="0.5" max="7" value="2.3" step="0.01" class="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer">
+                        <span id="new-interest-rate-value" class="bg-green-900 bg-opacity-30 text-green-400 px-2 py-1 rounded text-sm font-medium min-w-[60px] text-center">2.3%</span>
+                    </div>
+                </div>
+            `;
+            
+            // Ajouter la section après le sélecteur de type de prêt 
+            const pretInfoElement = document.getElementById('pret-info');
+            if (pretInfoElement) {
+                pretInfoElement.after(changeTauxSection);
+            }
+            
+            // Actualiser le mois d'application du nouveau taux
+            const newRateMonthSlider = document.getElementById('new-rate-month-slider');
+            const newRateMonthValue = document.getElementById('new-rate-month-value');
+            
+            if (newRateMonthSlider && newRateMonthValue) {
+                newRateMonthSlider.addEventListener('input', function() {
+                    newRateMonthValue.textContent = this.value;
+                });
+            }
+            
             const feesSection = document.createElement('div');
             feesSection.className = 'mt-8 mb-4 pt-6 border-t border-blue-800';
             feesSection.innerHTML = `
@@ -362,26 +413,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 <div class="mb-4">
                     <label class="block mb-2 text-sm font-medium text-gray-300">
-                        Type de garantie
-                        <span class="ml-1 text-green-400 cursor-help" title="Type de garantie pour le prêt: caution bancaire, hypothèque, privilège de prêteur de deniers.">
+                        Frais de garantie (1,3709% du capital)
+                        <span class="ml-1 text-green-400 cursor-help" title="Frais de garantie calculés automatiquement à 1,3709% du montant emprunté.">
                             <i class="fas fa-info-circle"></i>
                         </span>
                     </label>
-                    <select id="type-garantie" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-                        <option value="caution">Caution bancaire (Crédit Logement)</option>
-                        <option value="hypotheque">Hypothèque</option>
-                        <option value="ppd">Privilège de Prêteur de Deniers (PPD)</option>
-                    </select>
-                </div>
-                
-                <div class="mb-4">
-                    <label class="block mb-2 text-sm font-medium text-gray-300">
-                        Frais de garantie estimés
-                        <span class="ml-1 text-green-400 cursor-help" title="Frais liés à la garantie du prêt. Calculés automatiquement selon le type de garantie ou personnalisables.">
-                            <i class="fas fa-info-circle"></i>
-                        </span>
-                    </label>
-                    <input type="number" id="frais-garantie" placeholder="Calculé automatiquement" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                    <input type="number" id="frais-garantie" placeholder="Calculé automatiquement" disabled class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
                 </div>
                 
                 <div class="mb-4">
@@ -409,33 +446,19 @@ document.addEventListener('DOMContentLoaded', function() {
             
             parametersColumn.appendChild(feesSection);
             
-            // Mise à jour des frais de garantie en fonction du type sélectionné
+            // Mise à jour des frais de garantie
             const updateGarantieEstimation = () => {
                 const capital = parseFloat(document.getElementById('loan-amount').value);
-                const typeGarantie = document.getElementById('type-garantie').value;
                 const fraisGarantieInput = document.getElementById('frais-garantie');
                 
-                let fraisEstimes;
-                switch(typeGarantie) {
-                    case 'hypotheque':
-                        fraisEstimes = Math.max(capital * 0.015, 800); // Min 800€
-                        break;
-                    case 'ppd':
-                        fraisEstimes = Math.max(capital * 0.01, 500); // Min 500€
-                        break;
-                    case 'caution':
-                    default:
-                        fraisEstimes = capital * 0.013709; // Crédit Logement
-                }
+                // MODIFIÉ: Toujours calculer avec la formule fixe
+                const fraisEstimes = capital * 0.013709;
                 
                 fraisGarantieInput.placeholder = fraisEstimes.toFixed(2) + " €";
-                if (!fraisGarantieInput.value) {
-                    fraisGarantieInput.dataset.autoValue = fraisEstimes;
-                }
+                fraisGarantieInput.dataset.autoValue = fraisEstimes;
             };
             
-            // Ajouter les écouteurs
-            document.getElementById('type-garantie').addEventListener('change', updateGarantieEstimation);
+            // Mettre à jour les frais de garantie quand le montant du prêt change
             document.getElementById('loan-amount').addEventListener('change', updateGarantieEstimation);
             
             // Initialiser l'estimation
@@ -547,23 +570,23 @@ document.addEventListener('DOMContentLoaded', function() {
         const newInterestRate = parseFloat(document.getElementById('new-interest-rate-slider').value);
         const penaltyMonths = parseInt(document.getElementById('penalty-months-slider').value);
         
+        // NOUVEAU: Récupérer le mois d'application du nouveau taux
+        const moisNouveauTaux = parseInt(document.getElementById('new-rate-month-slider')?.value || 0);
+        
         // Récupérer les nouveaux paramètres
         const fraisDossier = parseFloat(document.getElementById('frais-dossier')?.value || 2000);
         const fraisTenueCompte = parseFloat(document.getElementById('frais-tenue-compte')?.value || 710);
         
-        // Récupérer les frais de garantie (valeur saisie ou calculée)
+        // Récupérer les frais de garantie (valeur calculée automatiquement)
         const fraisGarantieInput = document.getElementById('frais-garantie');
         let fraisGarantie = null;
-        if (fraisGarantieInput) {
-            fraisGarantie = fraisGarantieInput.value ? 
-                parseFloat(fraisGarantieInput.value) : 
-                (fraisGarantieInput.dataset.autoValue ? parseFloat(fraisGarantieInput.dataset.autoValue) : null);
+        if (fraisGarantieInput && fraisGarantieInput.dataset.autoValue) {
+            fraisGarantie = parseFloat(fraisGarantieInput.dataset.autoValue);
         }
         
-        // NOUVEAU: Récupérer le type de prêt
+        // Récupérer le type de prêt
         const typePret = document.getElementById('type-pret')?.value || 'amortissable';
         
-        const typeGarantie = document.getElementById('type-garantie')?.value || 'caution';
         const assuranceSurCapitalInitial = document.getElementById('assurance-capital-initial')?.checked || false;
         
         // Récupérer le mode de remboursement (durée ou mensualité)
@@ -579,9 +602,8 @@ document.addEventListener('DOMContentLoaded', function() {
             fraisDossier: fraisDossier,
             fraisTenueCompte: fraisTenueCompte,
             fraisGarantie: fraisGarantie,
-            typeGarantie: typeGarantie,
             assuranceSurCapitalInitial: assuranceSurCapitalInitial,
-            typePret: typePret // NOUVEAU
+            typePret: typePret
         });
 
         // Calcul du tableau d'amortissement
@@ -589,6 +611,7 @@ document.addEventListener('DOMContentLoaded', function() {
             remboursementAnticipe: earlyRepaymentAmount,
             moisAnticipe: earlyRepaymentMonth,
             nouveauTaux: newInterestRate,
+            moisNouveauTaux: moisNouveauTaux, // NOUVEAU
             modeRemboursement: modeRemboursement
         });
 
@@ -618,14 +641,19 @@ document.addEventListener('DOMContentLoaded', function() {
             const row = result.tableau[i];
             const tr = document.createElement('tr');
             
-            // MODIFIÉ: Coloration spéciale pour le dernier mois du prêt in fine
+            // Coloration spéciale pour le dernier mois du prêt in fine
             if (typePret === 'inFine' && i === result.tableau.length - 1) {
                 tr.classList.add('bg-blue-500', 'bg-opacity-20');
             } 
             // Marquage différent pour le mois de remboursement anticipé
             else if (row.mois === earlyRepaymentMonth) {
                 tr.classList.add('bg-green-900', 'bg-opacity-20');
-            } else {
+            }
+            // NOUVEAU: Marquer le mois où le taux change
+            else if (row.mois === moisNouveauTaux) {
+                tr.classList.add('bg-yellow-600', 'bg-opacity-20');
+            }
+            else {
                 tr.classList.add(i % 2 === 0 ? 'bg-blue-800' : 'bg-blue-900', 'bg-opacity-10');
             }
             
@@ -714,6 +742,20 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         }
         
+        // NOUVEAU: Information sur le changement de taux
+        const moisNouveauTaux = parseInt(document.getElementById('new-rate-month-slider')?.value || 0);
+        const nouveauTaux = parseFloat(document.getElementById('new-interest-rate-slider')?.value || 0);
+        
+        let changeTauxHtml = '';
+        if (moisNouveauTaux > 0) {
+            changeTauxHtml = `
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-blue-400 mr-2 mt-1"></i>
+                    <span>Changement de taux au mois ${moisNouveauTaux} : ${nouveauTaux}% (indépendant du remboursement anticipé)</span>
+                </li>
+            `;
+        }
+        
         // Mettre à jour le contenu
         savingsSummary.innerHTML = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
@@ -727,6 +769,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     (capital + intérêts + assurance + frais)</span>
                 </li>
                 ${specificsHtml}
+                ${changeTauxHtml}
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
                     <span>Vous économisez ${formatMontant(result.economiesInterets)} d'intérêts (${economiesPourcentage}% du total)</span>
@@ -886,19 +929,27 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Marquer visuellement le remboursement anticipé
+        // MODIFIÉ: Marquer visuellement le remboursement anticipé ET le changement de taux
         const earlyRepaymentMonth = parseInt(document.getElementById('early-repayment-month-slider').value);
-        const remboursementIndex = Math.floor(earlyRepaymentMonth / sampleRate);
+        const moisNouveauTaux = parseInt(document.getElementById('new-rate-month-slider')?.value || 0);
         
-        if (remboursementIndex < labels.length) {
-            // Ajouter une ligne verticale pour indiquer le remboursement anticipé
+        // Calcul des indices pour le graphique
+        const remboursementIndex = Math.floor(earlyRepaymentMonth / sampleRate);
+        const changeTauxIndex = Math.floor(moisNouveauTaux / sampleRate);
+        
+        // Marquer les points importants sur le graphique
+        if (loanChart && loanChart.data && loanChart.data.datasets && loanChart.data.datasets[0]) {
             const dataset = loanChart.data.datasets[0];
-            dataset.pointBackgroundColor = dataset.data.map((value, index) => 
-                index === remboursementIndex ? 'rgba(52, 211, 153, 1)' : 'transparent'
-            );
+            dataset.pointBackgroundColor = dataset.data.map((value, index) => {
+                if (index === remboursementIndex) return 'rgba(52, 211, 153, 1)';
+                if (index === changeTauxIndex) return 'rgba(251, 191, 36, 1)'; // Jaune pour le changement de taux
+                return 'transparent';
+            });
+            
             dataset.pointRadius = dataset.data.map((value, index) => 
-                index === remboursementIndex ? 5 : 0
+                (index === remboursementIndex || index === changeTauxIndex) ? 5 : 0
             );
+            
             loanChart.update();
         }
     }
@@ -967,6 +1018,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
             
+            // Informations sur le changement de taux
+            const moisNouveauTaux = document.getElementById('new-rate-month-slider')?.value;
+            const nouveauTaux = document.getElementById('new-interest-rate-slider')?.value;
+            
+            if (moisNouveauTaux && nouveauTaux) {
+                element.innerHTML += `
+                    <div class="mt-3 mb-6 p-4 border border-gray-300 rounded">
+                        <h3 class="font-bold mb-2">Changement de taux</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="font-bold">Mois d'application:</p>
+                                <p>${moisNouveauTaux}</p>
+                            </div>
+                            <div>
+                                <p class="font-bold">Nouveau taux:</p>
+                                <p>${nouveauTaux}%</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
             // Ajouter les infos de remboursement anticipé
             element.innerHTML += `
                 <div class="mt-3 mb-6 p-4 border border-gray-300 rounded">
@@ -979,10 +1052,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div>
                             <p class="font-bold">Mois du remboursement:</p>
                             <p>${document.getElementById('early-repayment-month-slider').value}</p>
-                        </div>
-                        <div>
-                            <p class="font-bold">Taux après renégociation:</p>
-                            <p>${document.getElementById('new-interest-rate-slider').value}%</p>
                         </div>
                         <div>
                             <p class="font-bold">Indemnités (mois):</p>
@@ -1003,22 +1072,18 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <p>${document.getElementById('frais-dossier').value} €</p>
                             </div>
                             <div>
-                                <p class="font-bold">Frais de garantie:</p>
-                                <p>${document.getElementById('frais-garantie').value || document.getElementById('frais-garantie').placeholder} €</p>
+                                <p class="font-bold">Frais de garantie (1,3709%):</p>
+                                <p>${document.getElementById('frais-garantie').placeholder} €</p>
                             </div>
                             <div>
                                 <p class="font-bold">Frais de tenue de compte:</p>
                                 <p>${document.getElementById('frais-tenue-compte').value} €</p>
                             </div>
                             <div>
-                                <p class="font-bold">Type de garantie:</p>
-                                <p>${document.getElementById('type-garantie').options[document.getElementById('type-garantie').selectedIndex].text}</p>
-                            </div>
-                            <div>
                                 <p class="font-bold">TAEG approximatif:</p>
                                 <p>${document.getElementById('taeg')?.textContent || "N/A"}</p>
                             </div>
-                            <div>
+                            <div class="col-span-2">
                                 <p class="font-bold">Coût global:</p>
                                 <p>${document.getElementById('cout-global')?.textContent || "N/A"}</p>
                             </div>
@@ -1032,9 +1097,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (savingsSummary) {
                 element.innerHTML += `
                     <div class="mt-3 mb-6 p-4 border-l-4 border-green-500 bg-green-50 pl-4">
-                        <h3 class="font-bold mb-2 text-green-700">Économies réalisées</h3>
+                        <h3 class="font-bold mb-2 text-green-700">Analyse complète</h3>
                         <div class="text-sm">
-                            ${savingsSummary.innerHTML.replace(/class=\"[^\\\"]*\\\"/g, '').replace(/<i[^>]*><\\/i>/g, '•')}
+                            ${savingsSummary.innerHTML.replace(/class=\"[^\"]*\"/g, '').replace(/<i[^>]*><\/i>/g, '•')}
                         </div>
                     </div>
                 `;
