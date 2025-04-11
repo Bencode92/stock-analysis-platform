@@ -108,7 +108,7 @@
                 
                 <div class="simulation-tabs">
                     <div class="simulation-tab active" data-target="investment-simulator">Simulateur d'investissement</div>
-                    <div class="simulation-tab" data-target="tax-optimizer">Optimisation fiscale</div>
+                    <div class="simulation-tab" data-target="tax-optimizer">Optimisation fiscale PER</div>
                     <div class="simulation-tab" data-target="retirement-planner">Planification retraite</div>
                     <div class="simulation-tab" data-target="real-estate">Investissement immobilier</div>
                 </div>
@@ -272,199 +272,137 @@
                     </div>
                 </div>
                 
-                <!-- Contenu pour l'onglet Optimisation fiscale -->
+                <!-- Contenu pour l'onglet Optimisation fiscale PER -->
                 <div id="tax-optimizer" class="simulation-content" style="display: none;">
-                    <!-- Ajout du simulateur simplifié en haut de la page -->
-                    <div class="bg-gradient-to-r from-green-900 to-blue-900 bg-opacity-30 rounded-xl p-6 my-6">
-                        <h3 class="text-xl font-semibold text-green-400 mb-4 flex items-center">
-                            <i class="fas fa-bolt mr-3"></i>
-                            Simulateur PER rapide
-                        </h3>
-                        <p class="text-gray-300 mb-4">Découvrez en un clic si le PER est intéressant pour vous et combien vous pourriez économiser d'impôts.</p>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                            <div>
-                                <label class="block text-sm font-medium mb-2 text-white">
-                                    Salaire brut annuel
-                                    <span class="ml-1 text-green-400 cursor-help" title="Votre salaire annuel brut avant déduction des charges sociales.">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
-                                <input type="number" id="salaire-brut-simple" placeholder="Ex: 50000" class="w-full p-3 rounded bg-blue-800 text-white border border-green-700 focus:border-green-400 focus:ring-1 focus:ring-green-400 focus:outline-none" />
-                            </div>
+                    <!-- Simulateur simplifié en pleine page -->
+                    <div class="max-w-4xl mx-auto mt-8 mb-10">
+                        <div class="bg-gradient-to-r from-green-900 to-blue-900 bg-opacity-30 rounded-xl p-8">
+                            <h3 class="text-2xl font-bold text-green-400 mb-4 flex items-center">
+                                <i class="fas fa-bolt mr-3"></i>
+                                Simulateur PER - Économisez sur vos impôts
+                            </h3>
+                            <p class="text-lg text-gray-300 mb-6">Découvrez combien vous pourriez économiser d'impôts avec un PER et comment financer votre résidence principale.</p>
                             
-                            <div>
-                                <label class="block text-sm font-medium mb-2 text-white">
-                                    Statut professionnel
-                                    <span class="ml-1 text-green-400 cursor-help" title="Votre statut professionnel influence le taux de charges sociales appliqué à votre salaire.">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
-                                <select id="statut-simple" class="w-full p-3 rounded bg-blue-800 text-white border border-green-700 focus:border-green-400 focus:outline-none">
-                                    <option value="salarie">Salarié du privé</option>
-                                    <option value="fonctionnaire">Fonctionnaire</option>
-                                    <option value="cadre">Cadre</option>
-                                </select>
-                            </div>
-                            
-                            <div class="flex items-end">
-                                <button onclick="afficherSynthesePER()" class="w-full py-3 px-4 bg-gradient-to-r from-green-500 to-green-400 text-gray-900 font-semibold rounded-lg shadow-lg hover:shadow-green-500/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center">
-                                    <i class="fas fa-calculator mr-2"></i> 
-                                    Analyser mon PER
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Zone de résultat pour le simulateur simplifié -->
-                        <div id="resultat-synthese" class="mt-6">
-                            <!-- Le résultat sera ajouté ici par JavaScript -->
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                        <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                            <h4 class="text-xl font-semibold mb-4 flex items-center">
-                                <i class="fas fa-percent text-green-400 mr-2"></i>
-                                Paramètres fiscaux
-                            </h4>
-
-                            <!-- Type de revenu -->
-                            <label class="block text-sm font-medium mb-2 text-gray-300">
-                                Type de revenu
-                                <span class="ml-1 text-green-400 cursor-help" title="Le type de revenu détermine le taux de charges sociales applicable.">
-                                    <i class="fas fa-info-circle"></i>
-                                </span>
-                            </label>
-                            <select id="type-revenu" class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700 mb-4">
-                                <option value="salarie">Salaire</option>
-                                <option value="independant">Travailleur non salarié (TNS)</option>
-                                <option value="dividendes">Dividendes/Capital</option>
-                                <option value="microEntrepreneur">Micro-entrepreneur</option>
-                            </select>
-
-                            <!-- Sous-type pour micro-entrepreneur (affiché conditionnellement) -->
-                            <div id="sous-type-container" style="display: none;" class="mb-4">
-                                <label class="block text-sm font-medium mb-2 text-gray-300">Type d'activité micro-entrepreneur</label>
-                                <select id="sous-type-micro" class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700">
-                                    <option value="service">Services (BNC) - 22%</option>
-                                    <option value="commercial">Commercial (BIC) - 12.3%</option>
-                                    <option value="artisanal">Artisanal (BIC) - 12.3%</option>
-                                </select>
-                            </div>
-
-                            <label class="block text-sm font-medium mb-2 text-gray-300">Revenu Brut Annuel (€)</label>
-                            <input id="brut-annuel" type="number" value="63345.96" class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700 mb-4"/>
-
-                            <label class="block text-sm font-medium mb-2 text-gray-300">
-                                Taux de charges sociales (%)
-                                <span class="ml-1 text-green-400 cursor-help" title="Ce taux s'ajuste automatiquement selon le type de revenu sélectionné, mais peut être personnalisé.">
-                                    <i class="fas fa-info-circle"></i>
-                                </span>
-                            </label>
-                            <input id="taux-charges" type="number" value="22" class="w-full p-2 rounded bg-blue-800 text-white border border-blue-700 mb-4"/>
-
-                            <label class="block text-sm font-medium mb-2 text-gray-300">
-                                Versement PER (% du brut)
-                                <span class="ml-1 text-green-400 cursor-help" title="Le Plan d'Épargne Retraite permet de déduire les versements du revenu imposable. Cette déduction est plafonnée à 10% du revenu professionnel, dans la limite de 32 909€ en 2024.">
-                                    <i class="fas fa-info-circle"></i>
-                                </span>
-                            </label>
-                            <div class="flex items-center gap-2">
-                                <input type="range" id="per-pourcentage" min="0" max="10" value="10" step="0.5" class="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer">
-                                <span id="per-value" class="bg-green-900 bg-opacity-30 text-green-400 px-2 py-1 rounded text-sm font-medium min-w-[60px] text-center">10%</span>
-                            </div>
-
-                            <button onclick="calculerFiscalite()" class="w-full py-3 px-4 mt-6 bg-gradient-to-r from-green-500 to-green-400 text-gray-900 font-semibold rounded-lg shadow-lg hover:shadow-green-500/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center">
-                                <i class="fas fa-calculator mr-2"></i> Calculer
-                            </button>
-                        </div>
-
-                        <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
-                            <h4 class="text-xl font-semibold mb-4 flex items-center">
-                                <i class="fas fa-chart-bar text-green-400 mr-2"></i>
-                                Résultat fiscal
-                            </h4>
-
-                            <!-- Message d'alerte pour le plafond PER -->
-                            <div id="per-alerte" class="bg-yellow-900 bg-opacity-20 text-yellow-400 p-3 rounded-md mb-4 border-l-4 border-yellow-400 text-sm" style="display: none;">
-                                ⚠️ Attention: Votre versement PER dépasse le plafond de déductibilité (32 909€ max)
-                            </div>
-
-                            <!-- Résultats simplifiés pour non-financiers -->
-                            <div class="bg-blue-800 bg-opacity-20 p-4 rounded-lg mb-6">
-                                <h5 class="text-lg font-medium text-green-400 mb-3">En résumé</h5>
-                                <div class="space-y-3">
-                                    <div class="flex justify-between items-center border-b border-blue-700 pb-2">
-                                        <span class="text-gray-300">Économie d'impôt avec PER</span>
-                                        <span id="gain-fiscal" class="text-xl font-bold text-green-400">550 €</span>
+                            <div class="bg-blue-900 bg-opacity-30 p-6 rounded-xl">
+                                <h4 class="text-xl font-semibold mb-6 text-white">Entrez votre salaire brut annuel</h4>
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                    <div>
+                                        <label class="block text-base font-medium mb-3 text-white">
+                                            Salaire brut annuel
+                                            <span class="ml-1 text-green-400 cursor-help" title="Votre salaire annuel brut avant déduction des charges sociales. C'est le montant que vous trouvez sur votre bulletin de salaire annuel.">
+                                                <i class="fas fa-info-circle"></i>
+                                            </span>
+                                        </label>
+                                        <div class="relative">
+                                            <input type="number" id="salaire-brut-simple" placeholder="Ex: 50000" class="w-full p-4 text-lg rounded bg-blue-800 text-white border border-green-700 focus:border-green-400 focus:ring-1 focus:ring-green-400 focus:outline-none" />
+                                            <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                                <span class="text-gray-400">€</span>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-gray-300">Versement PER</span>
-                                        <span id="per-deductible" class="font-medium text-blue-300">5 000 € / 5 000 €</span>
+                                    
+                                    <div>
+                                        <label class="block text-base font-medium mb-3 text-white">
+                                            Statut professionnel
+                                            <span class="ml-1 text-green-400 cursor-help" title="Votre statut professionnel influence le taux de charges sociales appliqué à votre salaire.">
+                                                <i class="fas fa-info-circle"></i>
+                                            </span>
+                                        </label>
+                                        <select id="statut-simple" class="w-full p-4 text-lg rounded bg-blue-800 text-white border border-green-700 focus:border-green-400 focus:outline-none">
+                                            <option value="salarie">Salarié du privé</option>
+                                            <option value="fonctionnaire">Fonctionnaire</option>
+                                            <option value="cadre">Cadre</option>
+                                        </select>
                                     </div>
-                                    <div class="flex justify-between items-center">
-                                        <span class="text-gray-300">Patrimoine global</span>
-                                        <span id="patrimoine-total" class="font-medium text-blue-300">26 287,34 €</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Graphique comparatif -->
-                            <div class="chart-container mb-4 h-52">
-                                <canvas id="tax-comparison-chart"></canvas>
-                            </div>
-
-                            <!-- Tableau récapitulatif détaillé -->
-                            <div class="bg-blue-900 bg-opacity-30 p-3 rounded-md mb-4">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h5 class="text-blue-400 font-medium flex items-center">
-                                        <i class="fas fa-percentage mr-2"></i>
-                                        Détails des calculs
-                                    </h5>
-                                    <button id="toggle-details" class="text-xs text-gray-400 hover:text-white flex items-center">
-                                        <i class="fas fa-chevron-down mr-1"></i> Afficher plus
-                                    </button>
                                 </div>
                                 
-                                <div id="details-content" style="display: none;">
-                                    <table class="w-full text-sm mt-2">
-                                        <tr class="border-b border-blue-700">
-                                            <td class="py-1 text-gray-400">Taux de charges sociales</td>
-                                            <td id="recap-charges" class="text-right font-medium">22.0%</td>
-                                        </tr>
-                                        <tr class="border-b border-blue-700">
-                                            <td class="py-1 text-gray-400">Taux marginal d'imposition</td>
-                                            <td id="recap-marginal" class="text-right font-medium">30.0%</td>
-                                        </tr>
-                                        <tr class="border-b border-blue-700">
-                                            <td class="py-1 text-gray-400">Taux moyen d'imposition sans PER</td>
-                                            <td id="taux-moyen-sans-per" class="text-right font-medium">6.48%</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="py-1 text-gray-400">Taux moyen d'imposition avec PER</td>
-                                            <td id="taux-moyen-avec-per" class="text-right font-medium">5.48%</td>
-                                        </tr>
-                                    </table>
-                                    
-                                    <table class="w-full text-sm mt-3">
-                                        <tr class="border-b border-blue-700">
-                                            <td class="py-1 text-gray-400">Impôt sans PER</td>
-                                            <td id="impot-sans-per" class="text-right font-medium">1 782,66 €</td>
-                                        </tr>
-                                        <tr class="border-b border-blue-700">
-                                            <td class="py-1 text-gray-400">Impôt avec PER</td>
-                                            <td id="impot-avec-per" class="text-right font-medium">1 232,66 €</td>
-                                        </tr>
-                                        <tr class="border-b border-blue-700">
-                                            <td class="py-1 text-gray-400">Salaire net sans PER</td>
-                                            <td id="net-sans-per" class="text-right font-medium">25 717,34 €</td>
-                                        </tr>
-                                        <tr>
-                                            <td class="py-1 text-gray-400">Salaire net avec PER</td>
-                                            <td id="net-avec-per" class="text-right font-medium">21 267,34 €</td>
-                                        </tr>
-                                    </table>
+                                <button onclick="afficherSynthesePER()" class="w-full py-4 px-6 bg-gradient-to-r from-green-500 to-green-400 text-gray-900 text-xl font-semibold rounded-lg shadow-lg hover:shadow-green-500/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center">
+                                    <i class="fas fa-calculator mr-3"></i> 
+                                    Analyser mon potentiel d'économie
+                                </button>
+                            </div>
+                            
+                            <!-- Zone de résultat pour le simulateur simplifié -->
+                            <div id="resultat-synthese" class="mt-8">
+                                <!-- Le résultat sera ajouté ici par JavaScript -->
+                            </div>
+                            
+                            <div class="bg-blue-900 bg-opacity-30 p-6 rounded-xl mt-8 border-l-4 border-green-400">
+                                <h4 class="text-lg font-semibold mb-3 text-green-400">Le saviez-vous ?</h4>
+                                <p class="text-base text-gray-300 mb-3">
+                                    Le PER est l'un des rares placements qui offre à la fois :
+                                </p>
+                                <ul class="space-y-2 ml-6 text-base">
+                                    <li class="flex items-start">
+                                        <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                                        <span>Une déduction immédiate de votre revenu imposable (économie d'impôt)</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                                        <span>La possibilité de débloquer les fonds pour l'achat de votre résidence principale</span>
+                                    </li>
+                                </ul>
+                                <p class="text-base text-gray-300 mt-3">
+                                    Idéal pour les personnes ayant une tranche marginale d'imposition (TMI) de 30% ou plus.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Info sur le double avantage du PER -->
+                    <div class="max-w-4xl mx-auto mt-8 mb-10">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                                <div class="flex items-center mb-4">
+                                    <div class="w-12 h-12 rounded-full bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
+                                        <i class="fas fa-piggy-bank text-2xl text-green-400"></i>
+                                    </div>
+                                    <h4 class="text-xl font-semibold">Économisez dès maintenant</h4>
                                 </div>
+                                <p class="text-gray-300 mb-4">
+                                    Le PER vous permet de déduire vos versements de votre revenu imposable, ce qui réduit immédiatement votre impôt sur le revenu.
+                                </p>
+                                <ul class="space-y-2 text-gray-300">
+                                    <li class="flex items-start">
+                                        <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
+                                        <span>Déduction jusqu'à 10% de vos revenus professionnels</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
+                                        <span>Plus votre TMI est élevée, plus l'économie est importante</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
+                                        <span>Pour une TMI à 30%, versez 1000€ et économisez 300€ d'impôt</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                                <div class="flex items-center mb-4">
+                                    <div class="w-12 h-12 rounded-full bg-green-900 bg-opacity-30 flex items-center justify-center mr-3">
+                                        <i class="fas fa-home text-2xl text-green-400"></i>
+                                    </div>
+                                    <h4 class="text-xl font-semibold">Financez votre résidence principale</h4>
+                                </div>
+                                <p class="text-gray-300 mb-4">
+                                    Bien que normalement bloqué jusqu'à la retraite, le PER peut être débloqué dans plusieurs cas exceptionnels, notamment pour l'achat de votre résidence principale.
+                                </p>
+                                <ul class="space-y-2 text-gray-300">
+                                    <li class="flex items-start">
+                                        <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
+                                        <span>Déblocage autorisé pour l'achat de votre résidence principale</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
+                                        <span>Permet de constituer un apport tout en réduisant vos impôts</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-angle-right text-green-400 mr-2 mt-1"></i>
+                                        <span>Autres cas de déblocage : invalidité, décès, surendettement, etc.</span>
+                                    </li>
+                                </ul>
                             </div>
                         </div>
                     </div>
@@ -640,11 +578,6 @@
     <script src="js/simulation.js"></script>
     <script src="js/fiscal-optimizer.js"></script>
     <script>
-        // Script pour le slider de PER
-        document.getElementById('per-pourcentage').addEventListener('input', function() {
-            document.getElementById('per-value').textContent = this.value + '%';
-        });
-        
         // Écouter le changement sur les éléments de budget
         document.addEventListener('DOMContentLoaded', function() {
             // Vérifier si l'URL contient un ancre pour l'onglet d'optimisation fiscale
@@ -661,79 +594,15 @@
                 if (taxTab) {
                     taxTab.classList.add('active');
                     document.getElementById('tax-optimizer').style.display = 'block';
+                    
+                    // Focus sur le champ de salaire brut
+                    setTimeout(() => {
+                        const salaireBrutInput = document.getElementById('salaire-brut-simple');
+                        if (salaireBrutInput) {
+                            salaireBrutInput.focus();
+                        }
+                    }, 500);
                 }
-            }
-            
-            // Gestion du changement de type de revenu
-            const typeRevenuSelect = document.getElementById('type-revenu');
-            const souTypeContainer = document.getElementById('sous-type-container');
-            const tauxChargesInput = document.getElementById('taux-charges');
-            
-            if (typeRevenuSelect && tauxChargesInput) {
-                typeRevenuSelect.addEventListener('change', function() {
-                    const selectedType = this.value;
-                    
-                    // Afficher/masquer le choix de sous-type pour micro-entrepreneur
-                    if (selectedType === 'microEntrepreneur' && souTypeContainer) {
-                        souTypeContainer.style.display = 'block';
-                    } else if (souTypeContainer) {
-                        souTypeContainer.style.display = 'none';
-                    }
-                    
-                    // Mettre à jour le taux de charges en fonction du type de revenu
-                    switch(selectedType) {
-                        case 'salarie':
-                            tauxChargesInput.value = '22';
-                            break;
-                        case 'independant':
-                            tauxChargesInput.value = '45';
-                            break;
-                        case 'dividendes':
-                            tauxChargesInput.value = '17.2';
-                            break;
-                        case 'microEntrepreneur':
-                            // Le sous-type déterminera le taux exact
-                            const sousTypeSelect = document.getElementById('sous-type-micro');
-                            if (sousTypeSelect) {
-                                if (sousTypeSelect.value === 'service') {
-                                    tauxChargesInput.value = '22';
-                                } else {
-                                    tauxChargesInput.value = '12.3';
-                                }
-                                
-                                // Écouter les changements de sous-type
-                                sousTypeSelect.addEventListener('change', function() {
-                                    if (this.value === 'service') {
-                                        tauxChargesInput.value = '22';
-                                    } else {
-                                        tauxChargesInput.value = '12.3';
-                                    }
-                                });
-                            }
-                            break;
-                    }
-                    
-                    // Recalculer si des résultats sont déjà affichés
-                    if (document.getElementById('impot-sans-per').textContent !== '-') {
-                        calculerFiscalite();
-                    }
-                });
-            }
-            
-            // Ajouter la fonctionnalité d'affichage/masquage des détails
-            const toggleButton = document.getElementById('toggle-details');
-            const detailsContent = document.getElementById('details-content');
-            
-            if (toggleButton && detailsContent) {
-                toggleButton.addEventListener('click', function() {
-                    if (detailsContent.style.display === 'none') {
-                        detailsContent.style.display = 'block';
-                        toggleButton.innerHTML = '<i class="fas fa-chevron-up mr-1"></i> Masquer les détails';
-                    } else {
-                        detailsContent.style.display = 'none';
-                        toggleButton.innerHTML = '<i class="fas fa-chevron-down mr-1"></i> Afficher plus';
-                    }
-                });
             }
             
             // Gestion des onglets de simulation
@@ -755,6 +624,12 @@
                 });
             });
         });
+        
+        // Fonction pour calculer automatiquement une recommandation de versement PER
+        function calculerRecommandationPER(salaireBrut) {
+            // Par défaut, recommandation de 10% du salaire brut
+            return Math.min(salaireBrut * 0.1, 32909);
+        }
     </script>
 </body>
 </html>
