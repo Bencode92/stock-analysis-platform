@@ -18,6 +18,10 @@ class LoanSimulator {
         this.assuranceMensuelle = assuranceAnnuelle / 100 / 12;
         this.indemnitesMois = indemnitesMois;
         this.assuranceSurCapitalInitial = assuranceSurCapitalInitial;
+        
+        // Stockage de l'assurance fixe sur capital initial pour éviter la confusion
+        this.assuranceMensuelleFixe = this.assuranceSurCapitalInitial ? 
+            capital * this.assuranceMensuelle : null;
 
         // Frais annexes
         this.fraisDossier = fraisDossier;
@@ -64,12 +68,17 @@ class LoanSimulator {
         let interetsAvantRembours = 0;
         let mensualitesAvantRembours = 0;
         
-        for (let mois = 1; mois <= this.dureeMois; mois++) {
+        // Remplacer la boucle for par une boucle while pour mieux gérer le remboursement anticipé
+        let mois = 1;
+        // Limite de sécurité (150% de la durée initiale pour éviter les boucles infinies)
+        let maxMois = Math.ceil(this.dureeMois * 1.5);
+        
+        while (capitalRestant > 0 && mois <= maxMois) {
             let interets = capitalRestant * tauxMensuel;
             
             // Calcul de l'assurance selon le mode (capital initial ou restant dû)
             let assurance = this.assuranceSurCapitalInitial ? 
-                capitalInitial * assuranceMensuelle : 
+                (this.assuranceMensuelleFixe || capitalInitial * assuranceMensuelle) : 
                 capitalRestant * assuranceMensuelle;
             
             let capitalAmorti = mensualite - interets;
@@ -84,20 +93,18 @@ class LoanSimulator {
             if (moisAnticipe && mois === moisAnticipe) {
                 capitalRestant -= remboursementAnticipe;
                 
-                // Nouvelle mensualité si changement de taux ou mode mensualité
-                if (nouveauTaux !== null || modeRemboursement === 'mensualite') {
-                    let nouveauTauxMensuel = nouveauTaux !== null ? 
-                        nouveauTaux / 100 / 12 : tauxMensuel;
-                    
-                    if (nouveauTaux !== null) {
-                        tauxMensuel = nouveauTauxMensuel;
-                    }
-                    
-                    // Recalculer la mensualité pour la durée restante
+                // CORRECTION: Appliquer d'abord le nouveau taux si spécifié
+                if (nouveauTaux !== null) {
+                    tauxMensuel = nouveauTaux / 100 / 12;
+                }
+                
+                // Déterminer le comportement selon le mode de remboursement
+                if (modeRemboursement === 'mensualite') {
+                    // Recalculer la mensualité pour garder la même durée
                     mensualite = capitalRestant * tauxMensuel / 
                         (1 - Math.pow(1 + tauxMensuel, -(this.dureeMois - mois + 1)));
                 }
-                // Si mode durée, on garde la même mensualité (on raccourcit la durée)
+                // Pour mode 'duree', on garde la même mensualité (comportement actuel)
             }
             
             capitalRestant -= capitalAmorti;
@@ -116,7 +123,7 @@ class LoanSimulator {
                 capitalRestant,
             });
             
-            if (capitalRestant <= 0) break;
+            mois++;
         }
         
         // Indemnités de remboursement anticipé avec plafond légal
@@ -136,20 +143,26 @@ class LoanSimulator {
         // Calcul des économies réalisées avec le remboursement anticipé
         const dureeInitiale = this.dureeMois;
         const dureeReelle = tableau.length;
+        
+        // CORRECTION: Mensualité initiale simplifiée (plus besoin de condition, juste ajouter l'assurance)
         const mensualiteInitiale = this.calculerMensualite() + 
             (this.assuranceSurCapitalInitial ? this.capital * this.assuranceMensuelle : this.capital * this.assuranceMensuelle);
+        
         const economiesMensualites = (dureeInitiale - dureeReelle) * mensualiteInitiale;
         const economiesInterets = (capitalInitial * this.tauxMensuel * dureeInitiale) - totalInterets;
         
-        // Calcul du TAEG approximatif (sans les frais annexes pour l'instant)
+        // Calcul du montant total payé
         const montantTotal = tableau.reduce((sum, l) => sum + l.mensualite, 0);
-        const tauxEffectifAnnuel = ((Math.pow((montantTotal / this.capital), (12 / dureeReelle)) - 1) * 12) * 100;
         
         // Total des frais annexes
         const totalFrais = this.fraisDossier + this.fraisTenueCompte + this.fraisGarantie;
         
         // Coût global (tout compris)
         const coutGlobalTotal = montantTotal + indemnites + totalFrais;
+        
+        // CORRECTION: Calcul du TAEG amélioré
+        // Formule: ((coutGlobalTotal / capitalInitial) ^ (12 / dureeReelle) - 1) * 12 * 100
+        const tauxEffectifAnnuel = ((Math.pow((coutGlobalTotal / this.capital), (12 / dureeReelle)) - 1) * 12) * 100;
         
         return {
             tableau,
@@ -170,6 +183,32 @@ class LoanSimulator {
             totalFrais,
             coutGlobalTotal
         };
+    }
+    
+    /**
+     * Calcule le Taux Annuel Effectif Global selon la formule réglementaire
+     * @param {Object} result - Résultat de la simulation
+     * @returns {number} TAEG en pourcentage
+     */
+    calculerTaegReel(result) {
+        // Cette fonction utiliserait une méthode itérative (comme Newton-Raphson)
+        // pour résoudre l'équation: Σ(CFᵢ / (1 + TAEG)^(tᵢ/365)) = 0
+        // où CFᵢ sont les flux de trésorerie (négatif pour l'emprunt, positifs pour les remboursements)
+        // et tᵢ est le temps en jours depuis le début du prêt
+
+        // Version simplifiée pour l'exemple
+        return this.calculerTaegApproximatif(result);
+    }
+    
+    /**
+     * Calcule une approximation du TAEG
+     * @param {Object} result - Résultat de la simulation
+     * @returns {number} TAEG approximatif en pourcentage
+     */
+    calculerTaegApproximatif(result) {
+        const { coutGlobalTotal, dureeReelle, capitalInitial } = result;
+        // Formule: ((coût total / capital) ^ (12/durée en mois) - 1) * 12 * 100
+        return ((Math.pow((coutGlobalTotal / capitalInitial), (12 / dureeReelle)) - 1) * 12) * 100;
     }
 }
 
@@ -839,6 +878,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             <p class="font-bold">Indemnités (mois):</p>
                             <p>${document.getElementById('penalty-months-slider').value} mois</p>
                         </div>
+                        <div>
+                            <p class="font-bold">Mode de remboursement:</p>
+                            <p>${document.getElementById('remboursement-mode').value === 'duree' ? 'Réduction de durée' : 'Réduction de mensualité'}</p>
+                        </div>
                     </div>
                 </div>
             `;
@@ -873,6 +916,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <p class="font-bold">Coût global:</p>
                                 <p>${document.getElementById('cout-global')?.textContent || "N/A"}</p>
                             </div>
+                            <div>
+                                <p class="font-bold">Assurance sur capital initial:</p>
+                                <p>${document.getElementById('assurance-capital-initial').checked ? 'Oui' : 'Non'}</p>
+                            </div>
                         </div>
                     </div>
                 `;
@@ -885,7 +932,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mt-3 mb-6 p-4 border-l-4 border-green-500 bg-green-50 pl-4">
                         <h3 class="font-bold mb-2 text-green-700">Économies réalisées</h3>
                         <div class="text-sm">
-                            ${savingsSummary.innerHTML.replace(/class="[^\"]*\"/g, '').replace(/<i[^>]*><\/i>/g, '•')}
+                            ${savingsSummary.innerHTML.replace(/class=\"[^\"]*\"/g, '').replace(/<i[^>]*><\/i>/g, '•')}
                         </div>
                     </div>
                 `;
