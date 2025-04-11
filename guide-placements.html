@@ -220,6 +220,45 @@
         .risk-high {
             background-color: #ff6b6b;
         }
+        
+        /* Nouveaux styles pour le PER */
+        .highlight {
+            background-color: rgba(0, 255, 135, 0.1);
+            border-left: 3px solid #00FF87;
+            padding-left: 12px !important;
+            font-weight: 600;
+        }
+        
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+            margin-left: 5px;
+            cursor: help;
+        }
+        
+        .tooltip-text {
+            visibility: hidden;
+            position: absolute;
+            z-index: 10;
+            width: 300px;
+            background-color: rgba(1, 22, 39, 0.95);
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -150px;
+            border: 1px solid #00FF87;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="dark">
@@ -479,26 +518,30 @@
                             <!-- PER -->
                             <tr class="placement-row" data-profiles="equilibre">
                                 <td>
-                                    <div class="product-name">PER</div>
+                                    <div class="product-name">PER <span class="tooltip-container">
+                                        <i class="fas fa-info-circle text-green-400"></i>
+                                        <span class="tooltip-text">Le Plan d'Épargne Retraite permet de se constituer une épargne tout en réduisant son impôt sur le revenu. Idéal pour les TMI ≥ 30% avec un horizon long terme.</span>
+                                    </span></div>
                                     <div class="flex mt-1">
                                         <span class="profile-tag equilibre">Équilibré</span>
                                     </div>
-                                    <span class="key-info"><i class="fas fa-users mr-1"></i> TMI élevé / achat RP</span>
+                                    <span class="key-info"><i class="fas fa-users mr-1"></i> Idéal TMI élevé / achat résidence principale</span>
                                 </td>
                                 <td>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Réduction fiscale immédiate</div>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Défiscalisation</div>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Déblocages anticipés</div>
+                                    <div class="feature-item highlight"><i class="fas fa-home feature-icon"></i> Déblocage possible pour achat résidence principale</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Déduction jusqu'à 37 094 €/an sur revenus imposables</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Optimisé pour les hauts revenus (TMI ≥ 30 %)</div>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Sortie en capital ou rente</div>
                                 </td>
                                 <td>
-                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Bloqué jusqu'à la retraite</div>
-                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Fiscalité à la sortie</div>
-                                    <div class="risk-level"><span class="risk-dot risk-medium"></span> Risque selon allocation</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Épargne bloquée jusqu'à la retraite (sauf exceptions)</div>
+                                    <div class="feature-item"><i class="fas fa-exclamation-circle feature-icon"></i> Imposition à la sortie selon mode de déduction</div>
+                                    <div class="risk-level"><span class="risk-dot risk-medium"></span> Risque moyen à élevé (selon gestion)</div>
                                 </td>
                                 <td>
-                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Déduction du revenu imposable</div>
-                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> IR ou PFU à la sortie</div>
-                                    <span class="key-info"><i class="fas fa-calendar-alt mr-1"></i> Blocage jusqu'à retraite</span>
+                                    <div class="feature-item"><i class="fas fa-check feature-icon"></i> Déduction du revenu imposable (TMI)</div>
+                                    <div class="feature-item"><i class="fas fa-info-circle feature-icon"></i> Sortie imposée : IR ou PFU selon situation</div>
+                                    <span class="key-info"><i class="fas fa-calendar-alt mr-1"></i> Fiscalité avantageuse à l'entrée</span>
                                 </td>
                             </tr>
                             
