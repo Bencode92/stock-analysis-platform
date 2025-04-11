@@ -88,6 +88,55 @@
             50% { transform: scale(1.1); color: rgb(74, 222, 128); }
             100% { transform: scale(1); }
         }
+        
+        /* Styles pour les nouvelles fonctionnalités de simulation de prêt */
+        .comparison-badge {
+            background-color: rgba(52, 211, 153, 0.2);
+            color: rgba(52, 211, 153, 1);
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            margin-left: 0.5rem;
+        }
+        
+        .simulation-saved {
+            animation: saved-pulse 2s ease;
+        }
+        
+        @keyframes saved-pulse {
+            0% { transform: scale(1); background-color: rgba(52, 211, 153, 0.1); }
+            50% { transform: scale(1.02); background-color: rgba(52, 211, 153, 0.2); }
+            100% { transform: scale(1); background-color: rgba(52, 211, 153, 0.1); }
+        }
+        
+        /* Style pour le nouveau tableau de comparaison */
+        #comparaison-simulations-container {
+            transition: all 0.3s ease;
+        }
+        
+        .delete-simulation {
+            transition: all 0.2s ease;
+        }
+        
+        .delete-simulation:hover {
+            transform: scale(1.2);
+        }
+        
+        /* Style pour l'affichage du mode in fine capitalisé */
+        #capitalisation-frais-container {
+            opacity: 0;
+            max-height: 0;
+            overflow: hidden;
+            transition: opacity 0.3s ease, max-height 0.3s ease;
+        }
+        
+        #capitalisation-frais-container.visible {
+            opacity: 1;
+            max-height: 3rem;
+        }
     </style>
 </head>
 <body class="dark">
@@ -557,6 +606,29 @@
                                 </select>
                             </div>
                             
+                            <!-- Information sur le type de prêt -->
+                            <div id="pret-info" class="mt-4 mb-4 bg-green-900 bg-opacity-10 border-l-4 border-green-400 rounded-md p-3">
+                                <h5 class="text-green-400 font-medium flex items-center mb-2">
+                                    <i class="fas fa-info-circle mr-2"></i>
+                                    <span id="pret-info-titre">Prêt amortissable classique</span>
+                                </h5>
+                                <p id="pret-info-description" class="text-sm text-gray-300">
+                                    Chaque mensualité comprend une part d'intérêts et une part de capital. 
+                                    La part d'intérêts diminue progressivement tandis que la part de capital augmente.
+                                </p>
+                            </div>
+                            
+                            <!-- Option pour capitaliser les frais (prêts in fine) -->
+                            <div id="capitalisation-frais-container" class="mt-3 flex items-center">
+                                <input id="capitaliser-frais-in-fine" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                <label for="capitaliser-frais-in-fine" class="ml-2 text-sm font-medium text-gray-300">
+                                    Capitaliser les frais initiaux
+                                    <span class="ml-1 text-green-400 cursor-help" title="Pour les prêts in fine uniquement. Si activé, les frais de dossier et de garantie sont ajoutés au capital emprunté et remboursés à l'échéance.">
+                                        <i class="fas fa-info-circle"></i>
+                                    </span>
+                                </label>
+                            </div>
+                            
                             <!-- Taux d'assurance -->
                             <div class="mb-4">
                                 <label class="block mb-2 text-sm font-medium text-gray-300">
@@ -622,7 +694,7 @@
                                 </div>
                             </div>
                             
-                            <!-- Options avancées (NOUVEAU) -->
+                            <!-- Options avancées -->
                             <div class="mt-8 mb-4 pt-6 border-t border-blue-800">
                                 <h5 class="text-lg font-semibold mb-4 flex items-center">
                                     <i class="fas fa-sliders-h text-green-400 mr-2"></i>
@@ -784,15 +856,19 @@
                                 </div>
                                 <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
                                     <p id="taeg" class="text-green-400 text-2xl font-bold mb-1 result-value">0%</p>
-                                    <p class="text-gray-400 text-sm">TAEG approximatif</p>
+                                    <p class="text-gray-400 text-sm">TAEG exact</p>
                                 </div>
                                 <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center col-span-2">
                                     <p id="cout-global" class="text-green-400 text-2xl font-bold mb-1 result-value">0 €</p>
                                     <p class="text-gray-400 text-sm">Coût global (tout compris)</p>
                                 </div>
+                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center col-span-2">
+                                    <p id="ratio-cout" class="text-green-400 text-2xl font-bold mb-1 result-value">0</p>
+                                    <p class="text-gray-400 text-sm">Coût par euro emprunté</p>
+                                </div>
                             </div>
                             
-                            <!-- Tableau comparatif (NOUVEAU) -->
+                            <!-- Espace pour le tableau de comparaison des simulations -->
                             <div id="comparison-table" class="mb-6 hidden">
                                 <h5 class="text-lg font-semibold mb-3">Comparaison des scénarios</h5>
                                 <div class="overflow-auto max-h-60 bg-blue-800 bg-opacity-20 rounded-lg">
@@ -818,9 +894,14 @@
                             
                             <div class="flex justify-between mb-4">
                                 <h5 class="text-lg font-semibold">Tableau d'amortissement</h5>
-                                <button id="export-pdf" class="px-3 py-1 bg-blue-800 bg-opacity-30 text-gray-300 hover:text-green-400 rounded transition-colors flex items-center">
-                                    <i class="fas fa-file-pdf mr-2"></i>Exporter en PDF
-                                </button>
+                                <div class="flex">
+                                    <button id="export-pdf" class="px-3 py-1 bg-blue-800 bg-opacity-30 text-gray-300 hover:text-green-400 rounded transition-colors flex items-center">
+                                        <i class="fas fa-file-pdf mr-2"></i>Exporter en PDF
+                                    </button>
+                                    <button id="save-simulation-btn" class="ml-2 px-3 py-1 bg-green-800 bg-opacity-30 text-green-400 hover:bg-green-700 rounded transition-colors flex items-center">
+                                        <i class="fas fa-save mr-2"></i>Sauvegarder simulation
+                                    </button>
+                                </div>
                             </div>
                             
                             <div class="overflow-auto max-h-80 bg-blue-800 bg-opacity-20 rounded-lg">
@@ -976,7 +1057,7 @@
                 </p>
                 <p class="flex items-center">
                     <i class="fas fa-clock text-green-400 mr-2"></i>
-                    Dernière mise à jour: <span class="text-green-400 font-medium ml-1 update-time">10/04/2025 15:30:22</span>
+                    Dernière mise à jour: <span class="text-green-400 font-medium ml-1 update-time">11/04/2025 14:23:43</span>
                 </p>
             </div>
         </footer>
@@ -1009,6 +1090,22 @@
         
         // Écouter le changement sur les éléments de budget
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialisation pour l'option de capitalisation des frais
+            const capitalisationContainer = document.getElementById('capitalisation-frais-container');
+            if (capitalisationContainer) {
+                capitalisationContainer.style.display = 'none';
+            }
+            
+            // Mise à jour de l'affichage de l'option de capitalisation en fonction du type de prêt
+            document.getElementById('type-pret')?.addEventListener('change', function() {
+                const capitalisationContainer = document.getElementById('capitalisation-frais-container');
+                if (this.value === 'inFine' && capitalisationContainer) {
+                    capitalisationContainer.style.display = 'flex';
+                } else if (capitalisationContainer) {
+                    capitalisationContainer.style.display = 'none';
+                }
+            });
+            
             // Vérifier si l'URL contient un ancre pour l'onglet budget
             if (window.location.hash === '#budget-planner') {
                 // Trouver tous les onglets et masquer tous les contenus
@@ -1103,6 +1200,24 @@
                     document.getElementById('mode-duree').classList.add('text-gray-300');
                     document.getElementById('remboursement-mode').value = 'mensualite';
                 });
+            }
+            
+            // Mettre à jour l'horodatage courant dans le footer
+            const updateTimeElements = document.querySelectorAll('.update-time');
+            if (updateTimeElements.length > 0) {
+                const now = new Date();
+                const formattedDate = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1).toString().padStart(2, '0')}/${now.getFullYear()} ${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+                updateTimeElements.forEach(el => {
+                    el.textContent = formattedDate;
+                });
+            }
+            
+            // Mettre à jour la date courante dans l'en-tête
+            const currentDateElement = document.getElementById('currentDate');
+            if (currentDateElement) {
+                const now = new Date();
+                const months = ['JANVIER', 'FÉVRIER', 'MARS', 'AVRIL', 'MAI', 'JUIN', 'JUILLET', 'AOÛT', 'SEPTEMBRE', 'OCTOBRE', 'NOVEMBRE', 'DÉCEMBRE'];
+                currentDateElement.textContent = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
             }
         });
         
