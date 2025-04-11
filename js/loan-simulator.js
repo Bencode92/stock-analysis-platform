@@ -10,7 +10,8 @@ class LoanSimulator {
         fraisTenueCompte = 710,
         fraisGarantie = null,
         typeGarantie = 'caution',
-        assuranceSurCapitalInitial = false
+        assuranceSurCapitalInitial = false,
+        typePret = 'amortissable' // NOUVEAU: 'amortissable', 'inFine' ou 'degressif'
     }) {
         this.capital = capital;
         this.tauxMensuel = tauxAnnuel / 100 / 12;
@@ -18,6 +19,7 @@ class LoanSimulator {
         this.assuranceMensuelle = assuranceAnnuelle / 100 / 12;
         this.indemnitesMois = indemnitesMois;
         this.assuranceSurCapitalInitial = assuranceSurCapitalInitial;
+        this.typePret = typePret; // NOUVEAU
 
         // Frais annexes
         this.fraisDossier = fraisDossier;
@@ -40,8 +42,18 @@ class LoanSimulator {
     }
     
     calculerMensualite() {
-        const { capital, tauxMensuel, dureeMois } = this;
-        return capital * tauxMensuel / (1 - Math.pow(1 + tauxMensuel, -dureeMois));
+        const { capital, tauxMensuel, dureeMois, typePret } = this;
+        
+        // MODIFIÉ: Calcul différent selon le type de prêt
+        if (typePret === 'inFine') {
+            return capital * tauxMensuel; // Uniquement les intérêts
+        } else if (typePret === 'degressif') {
+            const amortissementFixe = capital / dureeMois;
+            return amortissementFixe + (capital * tauxMensuel); // Première mensualité
+        } else {
+            // Prêt amortissable classique
+            return capital * tauxMensuel / (1 - Math.pow(1 + tauxMensuel, -dureeMois));
+        }
     }
     
     tableauAmortissement({ 
@@ -72,7 +84,25 @@ class LoanSimulator {
                 capitalInitial * assuranceMensuelle : 
                 capitalRestant * assuranceMensuelle;
             
-            let capitalAmorti = mensualite - interets;
+            // MODIFIÉ: Calcul du capital amorti selon le type de prêt
+            let capitalAmorti;
+            
+            if (this.typePret === 'inFine') {
+                if (mois < this.dureeMois) {
+                    capitalAmorti = 0; // Pas d'amortissement avant l'échéance
+                    mensualite = interets; // Seulement les intérêts
+                } else {
+                    capitalAmorti = capitalRestant; // Remboursement total du capital à l'échéance
+                    mensualite = interets + capitalRestant;
+                }
+            } else if (this.typePret === 'degressif') {
+                const amortissementFixe = capitalInitial / this.dureeMois;
+                capitalAmorti = amortissementFixe;
+                mensualite = amortissementFixe + interets;
+            } else {
+                // Prêt amortissable classique
+                capitalAmorti = mensualite - interets;
+            }
             
             // Calculs avant remboursement anticipé
             if (moisAnticipe && mois < moisAnticipe) {
@@ -93,9 +123,18 @@ class LoanSimulator {
                         tauxMensuel = nouveauTauxMensuel;
                     }
                     
-                    // Recalculer la mensualité pour la durée restante
-                    mensualite = capitalRestant * tauxMensuel / 
-                        (1 - Math.pow(1 + tauxMensuel, -(this.dureeMois - mois + 1)));
+                    // Recalculer la mensualité pour la durée restante selon le type de prêt
+                    if (this.typePret === 'inFine') {
+                        mensualite = capitalRestant * tauxMensuel;
+                    } else if (this.typePret === 'degressif') {
+                        // Recalculer l'amortissement fixe sur le capital restant et la durée restante
+                        const amortissementFixe = capitalRestant / (this.dureeMois - mois + 1);
+                        mensualite = amortissementFixe + (capitalRestant * tauxMensuel);
+                    } else {
+                        // Prêt amortissable classique
+                        mensualite = capitalRestant * tauxMensuel / 
+                            (1 - Math.pow(1 + tauxMensuel, -(this.dureeMois - mois + 1)));
+                    }
                 }
                 // Si mode durée, on garde la même mensualité (on raccourcit la durée)
             }
@@ -243,6 +282,66 @@ document.addEventListener('DOMContentLoaded', function() {
         const parametersColumn = document.querySelector('.bg-blue-900.bg-opacity-20.p-6.rounded-lg:first-child');
         
         if (parametersColumn) {
+            // NOUVEAU: Ajout du sélecteur de type de prêt
+            const typePretSection = document.createElement('div');
+            typePretSection.className = 'mb-4';
+            typePretSection.innerHTML = `
+                <label class="block mb-2 text-sm font-medium text-gray-300">
+                    Type de prêt
+                    <span class="ml-1 text-green-400 cursor-help" title="Amortissable: remboursement progressif du capital. In fine: remboursement du capital à la fin. Dégressif: remboursement constant du capital.">
+                        <i class="fas fa-info-circle"></i>
+                    </span>
+                </label>
+                <select id="type-pret" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                    <option value="amortissable">Amortissable</option>
+                    <option value="inFine">In fine</option>
+                    <option value="degressif">Dégressif</option>
+                </select>
+            `;
+            
+            // Insérer après le slider de durée du prêt
+            const durationElement = document.getElementById('loan-duration-slider')?.closest('.mb-4');
+            if (durationElement) {
+                durationElement.after(typePretSection);
+                
+                // Ajouter une zone d'information contextuelle pour les types de prêt
+                const infoContextuelle = document.createElement('div');
+                infoContextuelle.id = 'pret-info';
+                infoContextuelle.className = 'mt-4 mb-4 bg-green-900 bg-opacity-10 border-l-4 border-green-400 rounded-md p-3';
+                infoContextuelle.innerHTML = `
+                    <h5 class="text-green-400 font-medium flex items-center mb-2">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        <span id="pret-info-titre">Prêt amortissable classique</span>
+                    </h5>
+                    <p id="pret-info-description" class="text-sm text-gray-300">
+                        Chaque mensualité comprend une part d'intérêts et une part de capital. 
+                        La part d'intérêts diminue progressivement tandis que la part de capital augmente.
+                    </p>
+                `;
+                
+                typePretSection.after(infoContextuelle);
+                
+                // Mettre à jour les infos selon le type de prêt sélectionné
+                document.getElementById('type-pret').addEventListener('change', function() {
+                    const titre = document.getElementById('pret-info-titre');
+                    const description = document.getElementById('pret-info-description');
+                    
+                    switch(this.value) {
+                        case 'inFine':
+                            titre.textContent = "Prêt in fine";
+                            description.textContent = "L'emprunteur ne paie que les intérêts chaque mois et rembourse l'intégralité du capital à la fin du prêt. Avantages fiscaux pour les investisseurs (LMNP, SCPI).";
+                            break;
+                        case 'degressif':
+                            titre.textContent = "Prêt à amortissement dégressif";
+                            description.textContent = "L'emprunteur rembourse une part fixe du capital chaque mois + les intérêts. Les mensualités sont dégressives car les intérêts diminuent.";
+                            break;
+                        default:
+                            titre.textContent = "Prêt amortissable classique";
+                            description.textContent = "Chaque mensualité comprend une part d'intérêts et une part de capital. La part d'intérêts diminue progressivement tandis que la part de capital augmente.";
+                    }
+                });
+            }
+            
             const feesSection = document.createElement('div');
             feesSection.className = 'mt-8 mb-4 pt-6 border-t border-blue-800';
             feesSection.innerHTML = `
@@ -461,6 +560,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 (fraisGarantieInput.dataset.autoValue ? parseFloat(fraisGarantieInput.dataset.autoValue) : null);
         }
         
+        // NOUVEAU: Récupérer le type de prêt
+        const typePret = document.getElementById('type-pret')?.value || 'amortissable';
+        
         const typeGarantie = document.getElementById('type-garantie')?.value || 'caution';
         const assuranceSurCapitalInitial = document.getElementById('assurance-capital-initial')?.checked || false;
         
@@ -478,7 +580,8 @@ document.addEventListener('DOMContentLoaded', function() {
             fraisTenueCompte: fraisTenueCompte,
             fraisGarantie: fraisGarantie,
             typeGarantie: typeGarantie,
-            assuranceSurCapitalInitial: assuranceSurCapitalInitial
+            assuranceSurCapitalInitial: assuranceSurCapitalInitial,
+            typePret: typePret // NOUVEAU
         });
 
         // Calcul du tableau d'amortissement
@@ -515,8 +618,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const row = result.tableau[i];
             const tr = document.createElement('tr');
             
+            // MODIFIÉ: Coloration spéciale pour le dernier mois du prêt in fine
+            if (typePret === 'inFine' && i === result.tableau.length - 1) {
+                tr.classList.add('bg-blue-500', 'bg-opacity-20');
+            } 
             // Marquage différent pour le mois de remboursement anticipé
-            if (row.mois === earlyRepaymentMonth) {
+            else if (row.mois === earlyRepaymentMonth) {
                 tr.classList.add('bg-green-900', 'bg-opacity-20');
             } else {
                 tr.classList.add(i % 2 === 0 ? 'bg-blue-800' : 'bg-blue-900', 'bg-opacity-10');
@@ -570,8 +677,42 @@ document.addEventListener('DOMContentLoaded', function() {
             chartContainer.after(savingsSummary);
         }
         
-        // Calculer le pourcentage d'économies
-        const economiesPourcentage = ((result.economiesInterets / (result.totalInterets + result.economiesInterets)) * 100).toFixed(1);
+        // Calculer le pourcentage d'économies (avec protection contre division par zéro)
+        let economiesPourcentage = 0;
+        if (result.totalInterets + result.economiesInterets > 0) {
+            economiesPourcentage = ((result.economiesInterets / (result.totalInterets + result.economiesInterets)) * 100).toFixed(1);
+        }
+        
+        // Obtenir le type de prêt
+        const typePret = document.getElementById('type-pret')?.value || 'amortissable';
+        
+        // Mettre à jour le contenu avec des informations spécifiques au type de prêt
+        let specificsHtml = '';
+        
+        if (typePret === 'inFine') {
+            specificsHtml = `
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                    <span>Prêt in fine : capital (${formatMontant(result.capitalInitial)}) remboursé intégralement à l'échéance</span>
+                </li>
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                    <span>Paiement mensuel fixe d'intérêts : ${formatMontant(result.capitalInitial * (parseFloat(document.getElementById('interest-rate-slider').value) / 100 / 12))}</span>
+                </li>
+            `;
+        } else if (typePret === 'degressif') {
+            const amortissementFixe = result.capitalInitial / result.dureeInitiale;
+            specificsHtml = `
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                    <span>Prêt dégressif : amortissement constant de ${formatMontant(amortissementFixe)} par mois</span>
+                </li>
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                    <span>Mensualités dégressives, de ${formatMontant(result.mensualiteInitiale)} à ${formatMontant(result.tableau[result.tableau.length-1].mensualite)}</span>
+                </li>
+            `;
+        }
         
         // Mettre à jour le contenu
         savingsSummary.innerHTML = `
@@ -585,6 +726,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span>Coût total du crédit : ${formatMontant(result.coutGlobalTotal)} 
                     (capital + intérêts + assurance + frais)</span>
                 </li>
+                ${specificsHtml}
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
                     <span>Vous économisez ${formatMontant(result.economiesInterets)} d'intérêts (${economiesPourcentage}% du total)</span>
@@ -774,6 +916,9 @@ document.addEventListener('DOMContentLoaded', function() {
             element.className = 'pdf-export bg-white text-black p-8';
             document.body.appendChild(element);
             
+            // Récupérer le type de prêt
+            const typePret = document.getElementById('type-pret')?.value || 'amortissable';
+            
             // En-tête du PDF
             element.innerHTML = `
                 <div class="text-center mb-6">
@@ -792,6 +937,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div>
                         <p class="font-bold">Durée:</p>
                         <p>${document.getElementById('loan-duration-slider').value} ans</p>
+                    </div>
+                    <div>
+                        <p class="font-bold">Type de prêt:</p>
+                        <p>${typePret === 'inFine' ? 'In fine' : (typePret === 'degressif' ? 'Dégressif' : 'Amortissable')}</p>
                     </div>
                     <div>
                         <p class="font-bold">Assurance:</p>
@@ -885,7 +1034,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mt-3 mb-6 p-4 border-l-4 border-green-500 bg-green-50 pl-4">
                         <h3 class="font-bold mb-2 text-green-700">Économies réalisées</h3>
                         <div class="text-sm">
-                            ${savingsSummary.innerHTML.replace(/class="[^\"]*\"/g, '').replace(/<i[^>]*><\/i>/g, '•')}
+                            ${savingsSummary.innerHTML.replace(/class=\"[^\\\"]*\\\"/g, '').replace(/<i[^>]*><\\/i>/g, '•')}
                         </div>
                     </div>
                 `;
