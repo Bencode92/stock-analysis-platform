@@ -8,7 +8,50 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Ajout de la bibliothèque html2pdf pour l'export PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <link rel="stylesheet" href="css/simulation.css">
+    <style>
+        /* Styles supplémentaires pour le module budget */
+        .budget-score-circle {
+            transition: background-color 0.3s ease;
+        }
+        
+        #budget-score {
+            transition: color 0.3s ease;
+        }
+        
+        #budget-score-bar {
+            transition: width 0.5s ease-out, background-color 0.3s ease;
+        }
+        
+        .depense-ligne {
+            transition: all 0.3s ease;
+        }
+        
+        .depense-ligne:hover {
+            background: rgba(59, 130, 246, 0.1);
+            border-radius: 0.5rem;
+        }
+        
+        .depense-supprimer {
+            opacity: 0.6;
+            transition: all 0.2s ease;
+        }
+        
+        .depense-supprimer:hover {
+            opacity: 1;
+        }
+        
+        #temps-objectif {
+            animation: fadeIn 0.5s ease;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 </head>
 <body class="dark">
     <!-- Sidebar de navigation verticale -->
@@ -599,6 +642,19 @@
                         }
                     }, 500);
                 }
+            } else if (window.location.hash === '#budget-planner') {
+                // Activer l'onglet Budget si spécifié dans l'URL
+                const tabs = document.querySelectorAll('.simulation-tab');
+                const contents = document.querySelectorAll('.simulation-content');
+                
+                tabs.forEach(tab => tab.classList.remove('active'));
+                contents.forEach(content => content.style.display = 'none');
+                
+                const budgetTab = document.querySelector('[data-target="budget-planner"]');
+                if (budgetTab) {
+                    budgetTab.classList.add('active');
+                    document.getElementById('budget-planner').style.display = 'block';
+                }
             }
             
             // Gestion des onglets de simulation
@@ -617,6 +673,9 @@
                     // Afficher le contenu correspondant à l'onglet cliqué
                     const targetId = this.getAttribute('data-target');
                     document.getElementById(targetId).style.display = 'block';
+                    
+                    // Mettre à jour l'URL avec un hash pour permettre les liens directs
+                    window.location.hash = targetId;
                 });
             });
         });
