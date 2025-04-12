@@ -11,8 +11,7 @@ class LoanSimulator {
         fraisGarantie = null,
         typeGarantie = 'caution',
         assuranceSurCapitalInitial = false,
-        typePret = 'amortissable', // 'amortissable', 'inFine' ou 'degressif'
-        capitaliserFrais = false // Nouveau paramètre pour les prêts in fine
+        typePret = 'amortissable' // NOUVEAU: 'amortissable', 'inFine' ou 'degressif'
     }) {
         this.capital = capital;
         this.tauxMensuel = tauxAnnuel / 100 / 12;
@@ -20,21 +19,20 @@ class LoanSimulator {
         this.assuranceMensuelle = assuranceAnnuelle / 100 / 12;
         this.indemnitesMois = indemnitesMois;
         this.assuranceSurCapitalInitial = assuranceSurCapitalInitial;
-        this.typePret = typePret;
-        this.capitaliserFrais = capitaliserFrais; // Nouvelle propriété pour capitaliser les frais dans un prêt in fine
+        this.typePret = typePret; // NOUVEAU
 
         // Frais annexes
         this.fraisDossier = fraisDossier;
         this.fraisTenueCompte = fraisTenueCompte;
         
-        // Simplifier le calcul des frais de garantie (juste formule directe)
+        // MODIFIÉ: Simplifier le calcul des frais de garantie (juste formule directe)
         this.fraisGarantie = fraisGarantie !== null ? fraisGarantie : capital * 0.013709;
     }
     
     calculerMensualite() {
         const { capital, tauxMensuel, dureeMois, typePret } = this;
         
-        // Calcul différent selon le type de prêt
+        // MODIFIÉ: Calcul différent selon le type de prêt
         if (typePret === 'inFine') {
             return capital * tauxMensuel; // Uniquement les intérêts
         } else if (typePret === 'degressif') {
@@ -44,30 +42,6 @@ class LoanSimulator {
             // Prêt amortissable classique
             return capital * tauxMensuel / (1 - Math.pow(1 + tauxMensuel, -dureeMois));
         }
-    }
-    
-    // NOUVELLE FONCTION: Calcul du TAEG exact via Newton-Raphson
-    calculerTAEGExact(paiements, capitalDebloque, fraisInitial) {
-        const precision = 1e-7;
-        const maxIterations = 100;
-        let taux = 0.02; // point de départ = 2% par mois
-
-        for (let iteration = 0; iteration < maxIterations; iteration++) {
-            let f = -capitalDebloque + fraisInitial;
-            let fPrime = 0;
-
-            for (let t = 1; t <= paiements.length; t++) {
-                const Mt = paiements[t - 1];
-                f += Mt / Math.pow(1 + taux, t);
-                fPrime += -t * Mt / Math.pow(1 + taux, t + 1);
-            }
-
-            const newTaux = taux - f / fPrime;
-            if (Math.abs(newTaux - taux) < precision) break;
-            taux = newTaux;
-        }
-
-        return (Math.pow(1 + taux, 12) - 1) * 100; // Converti en TAEG annuel
     }
     
     tableauAmortissement({ 
@@ -84,16 +58,7 @@ class LoanSimulator {
         let totalInterets = 0;
         let totalAssurance = 0;
         let totalCapitalAmorti = 0;
-        
-        // Initialisation du capital initial, avec gestion de la capitalisation des frais pour les prêts in fine
         let capitalInitial = this.capital;
-        if (this.typePret === 'inFine' && this.capitaliserFrais) {
-            capitalInitial += this.fraisDossier + this.fraisGarantie;
-            capitalRestant = capitalInitial; // Mise à jour du capital restant pour tenir compte des frais capitalisés
-        }
-        
-        // Pour le prêt dégressif, on calcule l'amortissement fixe une seule fois
-        let amortissementFixe = this.typePret === 'degressif' ? capitalInitial / this.dureeMois : 0;
         
         // Suivi avant remboursement anticipé
         let interetsAvantRembours = 0;
@@ -107,7 +72,7 @@ class LoanSimulator {
                 capitalInitial * assuranceMensuelle : 
                 capitalRestant * assuranceMensuelle;
             
-            // Calcul du capital amorti selon le type de prêt
+            // MODIFIÉ: Calcul du capital amorti selon le type de prêt
             let capitalAmorti;
             
             if (this.typePret === 'inFine') {
@@ -119,6 +84,7 @@ class LoanSimulator {
                     mensualite = interets + capitalRestant;
                 }
             } else if (this.typePret === 'degressif') {
+                const amortissementFixe = capitalInitial / this.dureeMois;
                 capitalAmorti = amortissementFixe;
                 mensualite = amortissementFixe + interets;
             } else {
@@ -132,7 +98,7 @@ class LoanSimulator {
                 mensualitesAvantRembours += (mensualite + assurance);
             }
             
-            // Gestion du nouveau taux et remboursement anticipé
+            // MODIFIÉ: Gestion du nouveau taux et remboursement anticipé
             if (moisAnticipe && mois === moisAnticipe) {
                 // Appliquer le nouveau taux indépendamment du remboursement anticipé
                 if (nouveauTaux !== null) {
@@ -148,7 +114,7 @@ class LoanSimulator {
                         mensualite = capitalRestant * tauxMensuel;
                     } else if (this.typePret === 'degressif') {
                         // Recalculer l'amortissement fixe sur le capital restant et la durée restante
-                        amortissementFixe = capitalRestant / (this.dureeMois - mois + 1);
+                        const amortissementFixe = capitalRestant / (this.dureeMois - mois + 1);
                         mensualite = amortissementFixe + (capitalRestant * tauxMensuel);
                     } else {
                         // Prêt amortissable classique
@@ -200,21 +166,15 @@ class LoanSimulator {
         const economiesMensualites = (dureeInitiale - dureeReelle) * mensualiteInitiale;
         const economiesInterets = (capitalInitial * this.tauxMensuel * dureeInitiale) - totalInterets;
         
+        // Calcul du TAEG approximatif (sans les frais annexes pour l'instant)
+        const montantTotal = tableau.reduce((sum, l) => sum + l.mensualite, 0);
+        const tauxEffectifAnnuel = ((Math.pow((montantTotal / this.capital), (12 / dureeReelle)) - 1) * 12) * 100;
+        
         // Total des frais annexes
         const totalFrais = this.fraisDossier + this.fraisTenueCompte + this.fraisGarantie;
         
-        // Montant total payé
-        const montantTotal = tableau.reduce((sum, l) => sum + l.mensualite, 0);
-        
-        // Calcul du TAEG exact avec Newton-Raphson
-        const mensualites = tableau.map(l => l.mensualite);
-        const taegExact = this.calculerTAEGExact(mensualites, this.capital, totalFrais);
-        
         // Coût global (tout compris)
         const coutGlobalTotal = montantTotal + indemnites + totalFrais;
-        
-        // NOUVEAU: Ratio coût par euro emprunté
-        const ratioCoutParEuro = (coutGlobalTotal - this.capital) / this.capital;
         
         return {
             tableau,
@@ -231,10 +191,9 @@ class LoanSimulator {
             economiesInterets,
             interetsAvantRembours,
             mensualitesAvantRembours,
-            taeg: taegExact,
+            taeg: tauxEffectifAnnuel,
             totalFrais,
-            coutGlobalTotal,
-            ratioCoutParEuro  // NOUVEAU: Ajout du ratio coût par euro
+            coutGlobalTotal
         };
     }
 }
@@ -242,113 +201,6 @@ class LoanSimulator {
 // Formater les nombres en euros
 function formatMontant(montant) {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(montant);
-}
-
-// Stockage local pour les simulations
-if (!window.pretSimulations) {
-    window.pretSimulations = [];
-}
-
-// Fonction pour sauvegarder une simulation
-function sauvegarderSimulation(params, resultats, nom) {
-    const simulation = {
-        id: Date.now(),
-        nom: nom || `Simulation ${window.pretSimulations.length + 1}`,
-        date: new Date().toLocaleDateString('fr-FR'),
-        params: {...params},
-        resultats: {
-            mensualite: resultats.mensualiteInitiale,
-            duree: resultats.dureeReelle,
-            totalInterets: resultats.totalInterets,
-            coutGlobal: resultats.coutGlobalTotal,
-            taeg: resultats.taeg,
-            ratioCout: resultats.ratioCoutParEuro
-        }
-    };
-    
-    window.pretSimulations.push(simulation);
-    
-    // Sauvegarder dans localStorage
-    localStorage.setItem('tradepulse_simulations', JSON.stringify(window.pretSimulations));
-    
-    return simulation.id;
-}
-
-// Fonction pour afficher le tableau comparatif
-function afficherComparaisonSimulations() {
-    // Supprimer l'ancien tableau s'il existe
-    const oldComparison = document.getElementById('comparaison-simulations-container');
-    if (oldComparison) {
-        oldComparison.remove();
-    }
-    
-    // Créer le nouveau tableau
-    const container = document.createElement('div');
-    container.id = 'comparaison-simulations-container';
-    container.className = 'mt-8 bg-blue-900 bg-opacity-20 p-6 rounded-lg';
-    container.innerHTML = `
-        <h4 class="text-xl font-semibold mb-4 flex items-center">
-            <i class="fas fa-table text-green-400 mr-2"></i>
-            Comparaison des simulations
-        </h4>
-        
-        <div class="overflow-auto">
-            <table class="min-w-full text-sm">
-                <thead class="bg-blue-900 bg-opacity-50">
-                    <tr>
-                        <th class="px-3 py-2 text-left">Nom</th>
-                        <th class="px-3 py-2 text-right">Capital</th>
-                        <th class="px-3 py-2 text-right">Durée</th>
-                        <th class="px-3 py-2 text-right">Mensualité</th>
-                        <th class="px-3 py-2 text-right">TAEG</th>
-                        <th class="px-3 py-2 text-right">Coût global</th>
-                        <th class="px-3 py-2 text-right">Coût par €</th>
-                        <th class="px-3 py-2 text-center">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="simulations-comparees">
-                    ${window.pretSimulations.map((sim, index) => `
-                        <tr class="${index % 2 === 0 ? 'bg-blue-800' : 'bg-blue-900'} bg-opacity-10">
-                            <td class="px-3 py-2">${sim.nom}</td>
-                            <td class="px-3 py-2 text-right">${formatMontant(sim.params.capital)}</td>
-                            <td class="px-3 py-2 text-right">${Math.ceil(sim.resultats.duree/12)} ans (${sim.resultats.duree} mois)</td>
-                            <td class="px-3 py-2 text-right">${formatMontant(sim.resultats.mensualite)}</td>
-                            <td class="px-3 py-2 text-right">${sim.resultats.taeg.toFixed(2)}%</td>
-                            <td class="px-3 py-2 text-right">${formatMontant(sim.resultats.coutGlobal)}</td>
-                            <td class="px-3 py-2 text-right">${sim.resultats.ratioCout.toFixed(2)} €</td>
-                            <td class="px-3 py-2 text-center">
-                                <button data-id="${sim.id}" class="delete-simulation px-2 py-1 text-red-400 hover:text-red-300">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </td>
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-    `;
-    
-    // Insérer avant le tableau d'amortissement
-    const tableHeader = document.querySelector('.flex.justify-between.mb-4');
-    if (tableHeader) {
-        tableHeader.parentNode.insertBefore(container, tableHeader);
-    } else {
-        // Alternative: insérer après le graphique
-        const chartContainer = document.querySelector('.chart-container');
-        if (chartContainer) {
-            chartContainer.parentNode.insertBefore(container, chartContainer.nextSibling);
-        }
-    }
-    
-    // Ajouter les listeners pour les boutons de suppression
-    container.querySelectorAll('.delete-simulation').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const simId = parseInt(this.dataset.id);
-            window.pretSimulations = window.pretSimulations.filter(sim => sim.id !== simId);
-            localStorage.setItem('tradepulse_simulations', JSON.stringify(window.pretSimulations));
-            afficherComparaisonSimulations();
-        });
-    });
 }
 
 // Mise à jour des valeurs des sliders
@@ -455,44 +307,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 typePretSection.after(infoContextuelle);
                 
-                // NOUVELLE OPTION: Option pour capitaliser les frais (prêt in fine)
-                const capitalisationOption = document.createElement('div');
-                capitalisationOption.id = 'capitalisation-frais-container';
-                capitalisationOption.className = 'mt-3 flex items-center';
-                capitalisationOption.style.display = 'none';
-                capitalisationOption.innerHTML = `
-                    <input id="capitaliser-frais-in-fine" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
-                    <label for="capitaliser-frais-in-fine" class="ml-2 text-sm font-medium text-gray-300">
-                        Capitaliser les frais initiaux
-                        <span class="ml-1 text-green-400 cursor-help" title="Pour les prêts in fine uniquement. Si activé, les frais de dossier et de garantie sont ajoutés au capital emprunté et remboursés à l'échéance.">
-                            <i class="fas fa-info-circle"></i>
-                        </span>
-                    </label>
-                `;
-                
-                infoContextuelle.after(capitalisationOption);
-                
                 // Mettre à jour les infos selon le type de prêt sélectionné
                 document.getElementById('type-pret').addEventListener('change', function() {
                     const titre = document.getElementById('pret-info-titre');
                     const description = document.getElementById('pret-info-description');
-                    const capitalisationContainer = document.getElementById('capitalisation-frais-container');
                     
                     switch(this.value) {
                         case 'inFine':
                             titre.textContent = "Prêt in fine";
                             description.textContent = "L'emprunteur ne paie que les intérêts chaque mois et rembourse l'intégralité du capital à la fin du prêt. Avantages fiscaux pour les investisseurs (LMNP, SCPI).";
-                            capitalisationContainer.style.display = 'flex';
                             break;
                         case 'degressif':
                             titre.textContent = "Prêt à amortissement dégressif";
                             description.textContent = "L'emprunteur rembourse une part fixe du capital chaque mois + les intérêts. Les mensualités sont dégressives car les intérêts diminuent.";
-                            capitalisationContainer.style.display = 'none';
                             break;
                         default:
                             titre.textContent = "Prêt amortissable classique";
                             description.textContent = "Chaque mensualité comprend une part d'intérêts et une part de capital. La part d'intérêts diminue progressivement tandis que la part de capital augmente.";
-                            capitalisationContainer.style.display = 'none';
                     }
                 });
             }
@@ -587,15 +418,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
                 <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
                     <p id="taeg" class="text-green-400 text-2xl font-bold mb-1 result-value">0%</p>
-                    <p class="text-gray-400 text-sm">TAEG exact</p>
+                    <p class="text-gray-400 text-sm">TAEG approximatif</p>
                 </div>
                 <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center col-span-2">
                     <p id="cout-global" class="text-green-400 text-2xl font-bold mb-1 result-value">0 €</p>
                     <p class="text-gray-400 text-sm">Coût global (tout compris)</p>
-                </div>
-                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center col-span-2">
-                    <p id="ratio-cout" class="text-green-400 text-2xl font-bold mb-1 result-value">0</p>
-                    <p class="text-gray-400 text-sm">Coût par euro emprunté</p>
                 </div>
             `;
             
@@ -696,9 +523,6 @@ document.addEventListener('DOMContentLoaded', function() {
         // NOUVEAU: Récupérer le type de prêt
         const typePret = document.getElementById('type-pret')?.value || 'amortissable';
         
-        // NOUVEAU: Récupérer l'option de capitalisation des frais
-        const capitaliserFrais = document.getElementById('capitaliser-frais-in-fine')?.checked || false;
-        
         const assuranceSurCapitalInitial = document.getElementById('assurance-capital-initial')?.checked || false;
         
         // Récupérer le mode de remboursement (durée ou mensualité)
@@ -715,8 +539,7 @@ document.addEventListener('DOMContentLoaded', function() {
             fraisTenueCompte: fraisTenueCompte,
             fraisGarantie: fraisGarantie,
             assuranceSurCapitalInitial: assuranceSurCapitalInitial,
-            typePret: typePret,
-            capitaliserFrais: capitaliserFrais // NOUVEAU
+            typePret: typePret // NOUVEAU
         });
 
         // Calcul du tableau d'amortissement
@@ -737,12 +560,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const totalFeesElement = document.getElementById('total-fees');
         const taegElement = document.getElementById('taeg');
         const coutGlobalElement = document.getElementById('cout-global');
-        const ratioCoutElement = document.getElementById('ratio-cout');
         
         if (totalFeesElement) totalFeesElement.textContent = formatMontant(result.totalFrais);
         if (taegElement) taegElement.textContent = result.taeg.toFixed(2) + '%';
         if (coutGlobalElement) coutGlobalElement.textContent = formatMontant(result.coutGlobalTotal);
-        if (ratioCoutElement) ratioCoutElement.textContent = result.ratioCoutParEuro.toFixed(2) + ' €';
 
         // Génération du tableau d'amortissement
         const tableBody = document.getElementById('amortization-table');
@@ -797,45 +618,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Ajouter un résumé des économies
         updateSavingsSummary(result);
-        
-        // NOUVEAU: Ajouter un bouton pour sauvegarder et comparer la simulation
-        const exportContainer = document.getElementById('export-pdf').parentNode;
-        if (exportContainer && !document.getElementById('save-simulation-btn')) {
-            const saveButton = document.createElement('button');
-            saveButton.id = 'save-simulation-btn';
-            saveButton.className = 'ml-2 px-3 py-1 bg-green-800 bg-opacity-30 text-green-400 hover:bg-green-700 rounded transition-colors flex items-center';
-            saveButton.innerHTML = '<i class="fas fa-save mr-2"></i>Sauvegarder simulation';
-            saveButton.addEventListener('click', function() {
-                const nomSimulation = prompt('Donnez un nom à cette simulation:', `${typePret} - ${loanAmount}€`);
-                if (nomSimulation) {
-                    const params = {
-                        capital: loanAmount,
-                        tauxAnnuel: interestRate,
-                        dureeMois: loanDurationYears * 12,
-                        assuranceAnnuelle: insuranceRate,
-                        typePret: typePret,
-                        capitaliserFrais: capitaliserFrais
-                    };
-                    sauvegarderSimulation(params, result, nomSimulation);
-                    afficherComparaisonSimulations();
-                }
-            });
-            
-            exportContainer.appendChild(saveButton);
-        }
-        
-        // Charger/afficher les simulations existantes
-        const savedSimulations = localStorage.getItem('tradepulse_simulations');
-        if (savedSimulations) {
-            try {
-                window.pretSimulations = JSON.parse(savedSimulations);
-                if (window.pretSimulations.length > 0) {
-                    afficherComparaisonSimulations();
-                }
-            } catch (e) {
-                console.error("Erreur lors du chargement des simulations sauvegardées:", e);
-            }
-        }
     }
     
     // Fonction pour ajouter un résumé des économies
@@ -902,10 +684,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     <span>Coût total du crédit : ${formatMontant(result.coutGlobalTotal)} 
                     (capital + intérêts + assurance + frais)</span>
                 </li>
-                <li class="flex items-start">
-                    <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                    <span>Ce prêt vous coûte ${result.ratioCoutParEuro.toFixed(2)} € par euro emprunté</span>
-                </li>
                 ${specificsHtml}
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
@@ -922,7 +700,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
-                    <span>TAEG exact calculé via Newton-Raphson: ${result.taeg.toFixed(2)}%</span>
+                    <span>TAEG approximatif: ${result.taeg.toFixed(2)}%</span>
                 </li>
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
@@ -1191,16 +969,12 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <p>${document.getElementById('frais-tenue-compte').value} €</p>
                             </div>
                             <div>
-                                <p class="font-bold">TAEG exact:</p>
+                                <p class="font-bold">TAEG approximatif:</p>
                                 <p>${document.getElementById('taeg')?.textContent || "N/A"}</p>
                             </div>
                             <div>
                                 <p class="font-bold">Coût global:</p>
                                 <p>${document.getElementById('cout-global')?.textContent || "N/A"}</p>
-                            </div>
-                            <div>
-                                <p class="font-bold">Coût par euro emprunté:</p>
-                                <p>${document.getElementById('ratio-cout')?.textContent || "N/A"}</p>
                             </div>
                         </div>
                     </div>
@@ -1214,7 +988,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mt-3 mb-6 p-4 border-l-4 border-green-500 bg-green-50 pl-4">
                         <h3 class="font-bold mb-2 text-green-700">Économies réalisées</h3>
                         <div class="text-sm">
-                            ${savingsSummary.innerHTML.replace(/class=\\\"[^\\\"]*\\\"/g, '').replace(/<i[^>]*><\\/i>/g, '•')}
+                            ${savingsSummary.innerHTML.replace(/class=\"[^\"]*\"/g, '').replace(/<i[^>]*><\/i>/g, '•')}
                         </div>
                     </div>
                 `;
