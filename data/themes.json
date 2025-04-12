@@ -2,6 +2,56 @@
   "themes": {
     "weekly": {
       "macroeconomics": {
+        "inflation": {
+          "count": 7,
+          "articles": [
+            "Wholesale prices unexpectedly fell 0.4% in March, showing easing inflation backdrop ahead of tariffs",
+            "10-Year Treasury yields fall after Trump's tariff reprieve",
+            "Tesla and Apple bull slashes his price targets for both companies in tariff fallout",
+            "US bond funds hit by heavy outflows as recession, inflation fears mount",
+            "US off-price chains poised to win as tariffs play to strengths in sourcing, inventory",
+            "Fed's Kashkari says rising bond yields, falling dollar show investors are moving on from the U.S.",
+            "This Is the Calm Before the Inflation Storm, Says JPM's Kelly"
+          ],
+          "keywords": {
+            "inflation": {
+              "count": 3,
+              "examples": [
+                "Wholesale prices unexpectedly fell 0.4% in March, showing easing inflation backdrop ahead of tariffs",
+                "US bond funds hit by heavy outflows as recession, inflation fears mount",
+                "This Is the Calm Before the Inflation Storm, Says JPM's Kelly"
+              ]
+            },
+            "price": {
+              "count": 3,
+              "examples": [
+                "Wholesale prices unexpectedly fell 0.4% in March, showing easing inflation backdrop ahead of tariffs",
+                "Tesla and Apple bull slashes his price targets for both companies in tariff fallout",
+                "US off-price chains poised to win as tariffs play to strengths in sourcing, inventory"
+              ]
+            },
+            "yield": {
+              "count": 2,
+              "examples": [
+                "10-Year Treasury yields fall after Trump's tariff reprieve",
+                "Fed's Kashkari says rising bond yields, falling dollar show investors are moving on from the U.S."
+              ]
+            },
+            "yields": {
+              "count": 2,
+              "examples": [
+                "10-Year Treasury yields fall after Trump's tariff reprieve",
+                "Fed's Kashkari says rising bond yields, falling dollar show investors are moving on from the U.S."
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 14.3,
+            "neutral": 14.3,
+            "negative": 71.4
+          },
+          "gpt_summary": "📰 The theme **inflation** was detected in **7 articles** during the period, mainly through topics like: inflation (3), price (3), yield (2), yields (2). Sentiment is mostly negative (71.4% vs 14.3% positive). Examples of articles: « Wholesale prices unexpectedly fell 0.4% in March, showing easing inflation backdrop ahead of tariffs », « 10-Year Treasury yields fall after Trump's tariff reprieve », « Tesla and Apple bull slashes his price targets for both companies in tariff fallout »."
+        },
         "geopolitics": {
           "count": 7,
           "articles": [
@@ -43,47 +93,42 @@
           },
           "gpt_summary": "📰 The theme **geopolitics** was detected in **7 articles** during the period, mainly through topics like: china (3), taiwan (2), war (1). Sentiment is mostly negative (42.9% vs 14.3% positive). Examples of articles: « Taiwan's Formosa cuts refinery run rate to 68% on planned maintenance », « China petchem plants face shutdown as tariffs on US LPG loom », « Trump's triple-digit tariff essentially cuts off most trade with China, says economist »."
         },
-        "inflation": {
+        "monetary_policy": {
           "count": 4,
           "articles": [
-            "10-Year Treasury yields fall after Trump's tariff reprieve",
-            "Tesla and Apple bull slashes his price targets for both companies in tariff fallout",
-            "US bond funds hit by heavy outflows as recession, inflation fears mount",
-            "US off-price chains poised to win as tariffs play to strengths in sourcing, inventory"
+            "Fed minutes show some debate over balance sheet runoff slowdown",
+            "Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator",
+            "Fed should lead in financial technology space, Harker says",
+            "Fed's Kashkari says rising bond yields, falling dollar show investors are moving on from the U.S."
           ],
           "keywords": {
-            "yield": {
-              "count": 1,
+            "fed": {
+              "count": 4,
               "examples": [
-                "10-Year Treasury yields fall after Trump's tariff reprieve"
+                "Fed minutes show some debate over balance sheet runoff slowdown",
+                "Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator",
+                "Fed should lead in financial technology space, Harker says"
               ]
             },
-            "yields": {
+            "central bank": {
               "count": 1,
               "examples": [
-                "10-Year Treasury yields fall after Trump's tariff reprieve"
+                "Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator"
               ]
             },
-            "price": {
-              "count": 2,
-              "examples": [
-                "Tesla and Apple bull slashes his price targets for both companies in tariff fallout",
-                "US off-price chains poised to win as tariffs play to strengths in sourcing, inventory"
-              ]
-            },
-            "inflation": {
+            "monetary": {
               "count": 1,
               "examples": [
-                "US bond funds hit by heavy outflows as recession, inflation fears mount"
+                "Fed should lead in financial technology space, Harker says"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 25.0,
-            "neutral": 0.0,
-            "negative": 75.0
+            "positive": 0.0,
+            "neutral": 75.0,
+            "negative": 25.0
           },
-          "gpt_summary": "📰 The theme **inflation** was detected in **4 articles** during the period, mainly through topics like: price (2), yield (1), yields (1), inflation (1). Sentiment is mostly negative (75.0% vs 25.0% positive). Examples of articles: « 10-Year Treasury yields fall after Trump's tariff reprieve », « Tesla and Apple bull slashes his price targets for both companies in tariff fallout », « US bond funds hit by heavy outflows as recession, inflation fears mount »."
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **4 articles** during the period, mainly through topics like: fed (4), central bank (1), monetary (1). Sentiment is mostly negative (25.0% vs 0.0% positive). Examples of articles: « Fed minutes show some debate over balance sheet runoff slowdown », « Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator », « Fed should lead in financial technology space, Harker says »."
         },
         "recession": {
           "count": 3,
@@ -107,42 +152,6 @@
             "negative": 100.0
           },
           "gpt_summary": "📰 The theme **recession** was detected in **3 articles** during the period, mainly through topics like: recession (2). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « Trump acknowledged he could cause a recession, but just didn't want a depression, according to WSJ », « Fed minutes show some debate over balance sheet runoff slowdown », « US bond funds hit by heavy outflows as recession, inflation fears mount »."
-        },
-        "monetary_policy": {
-          "count": 3,
-          "articles": [
-            "Fed minutes show some debate over balance sheet runoff slowdown",
-            "Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator",
-            "Fed should lead in financial technology space, Harker says"
-          ],
-          "keywords": {
-            "fed": {
-              "count": 3,
-              "examples": [
-                "Fed minutes show some debate over balance sheet runoff slowdown",
-                "Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator",
-                "Fed should lead in financial technology space, Harker says"
-              ]
-            },
-            "central bank": {
-              "count": 1,
-              "examples": [
-                "Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator"
-              ]
-            },
-            "monetary": {
-              "count": 1,
-              "examples": [
-                "Fed should lead in financial technology space, Harker says"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 66.7,
-            "negative": 33.3
-          },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **3 articles** during the period, mainly through topics like: fed (3), central bank (1), monetary (1). Sentiment is mostly negative (33.3% vs 0.0% positive). Examples of articles: « Fed minutes show some debate over balance sheet runoff slowdown », « Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator », « Fed should lead in financial technology space, Harker says »."
         }
       },
       "sectors": {
@@ -241,19 +250,17 @@
           "gpt_summary": "📰 The theme **industry** was detected in **5 articles** during the period, mainly through topics like: production (3), industry (1). Sentiment is mixed (0.0% positive, 20.0% negative). Examples of articles: « Exclusive: Apple supplier Luxshare weighs manufacturing in U.S. to tackle tariffs », « US chipmakers outsourcing manufacturing will escape China's tariffs », « Apple Supplier Luxshare to Maintain Vietnam Production Hub to Support U.S. Market »."
         },
         "finance": {
-          "count": 4,
+          "count": 3,
           "articles": [
             "Fed should lead in financial technology space, Harker says",
             "Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk",
-            "10-Year Treasury yields fall after Trump's tariff reprieve",
-            "Morgan Stanley's Strong Financial Performance in Q1 2025"
+            "10-Year Treasury yields fall after Trump's tariff reprieve"
           ],
           "keywords": {
             "financial": {
-              "count": 2,
+              "count": 1,
               "examples": [
-                "Fed should lead in financial technology space, Harker says",
-                "Morgan Stanley's Strong Financial Performance in Q1 2025"
+                "Fed should lead in financial technology space, Harker says"
               ]
             },
             "insurance": {
@@ -267,20 +274,14 @@
               "examples": [
                 "10-Year Treasury yields fall after Trump's tariff reprieve"
               ]
-            },
-            "banking": {
-              "count": 1,
-              "examples": [
-                "Morgan Stanley's Strong Financial Performance in Q1 2025"
-              ]
             }
           },
           "sentiment_distribution": {
-            "positive": 25.0,
-            "neutral": 25.0,
-            "negative": 50.0
+            "positive": 0.0,
+            "neutral": 33.3,
+            "negative": 66.7
           },
-          "gpt_summary": "📰 The theme **finance** was detected in **4 articles** during the period, mainly through topics like: financial (2), insurance (1), treasury (1), banking (1). Sentiment is mostly negative (50.0% vs 25.0% positive). Examples of articles: « Fed should lead in financial technology space, Harker says », « Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk », « 10-Year Treasury yields fall after Trump's tariff reprieve »."
+          "gpt_summary": "📰 The theme **finance** was detected in **3 articles** during the period, mainly through topics like: financial (1), insurance (1), treasury (1). Sentiment is mostly negative (66.7% vs 0.0% positive). Examples of articles: « Fed should lead in financial technology space, Harker says », « Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk », « 10-Year Treasury yields fall after Trump's tariff reprieve »."
         },
         "transport": {
           "count": 3,
@@ -308,7 +309,7 @@
       },
       "regions": {
         "usa": {
-          "count": 7,
+          "count": 8,
           "articles": [
             "Fed minutes show some debate over balance sheet runoff slowdown",
             "Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator",
@@ -316,11 +317,12 @@
             "Liberation Day Sparks Chaos, Pain, And Uncertainty For American Wealth",
             "Live Nasdaq Composite: AMZN (Nasdaq: AMZN), CEG (Nasdaq: CEG) Fall in Sea of Red",
             "Apple moving iPhone production into U.S. has extremely low odds, says Bank of America's Wamsi Mohan",
+            "Fed's Kashkari says rising bond yields, falling dollar show investors are moving on from the U.S.",
             "Trump team thinks Apple's iPhones should be made in USA. Analysts are doubtful."
           ],
           "keywords": {
             "fed": {
-              "count": 4,
+              "count": 5,
               "examples": [
                 "Fed minutes show some debate over balance sheet runoff slowdown",
                 "Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator",
@@ -354,10 +356,10 @@
           },
           "sentiment_distribution": {
             "positive": 0.0,
-            "neutral": 71.4,
-            "negative": 28.6
+            "neutral": 75.0,
+            "negative": 25.0
           },
-          "gpt_summary": "📰 The theme **usa** was detected in **7 articles** during the period, mainly through topics like: fed (4), s&p (1), nasdaq (1), dow jones (1), america (1). Sentiment is mostly negative (28.6% vs 0.0% positive). Examples of articles: « Fed minutes show some debate over balance sheet runoff slowdown », « Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator », « Fed should lead in financial technology space, Harker says »."
+          "gpt_summary": "📰 The theme **usa** was detected in **8 articles** during the period, mainly through topics like: fed (5), s&p (1), nasdaq (1), dow jones (1), america (1). Sentiment is mostly negative (25.0% vs 0.0% positive). Examples of articles: « Fed minutes show some debate over balance sheet runoff slowdown », « Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator », « Fed should lead in financial technology space, Harker says »."
         },
         "asia": {
           "count": 7,
@@ -550,8 +552,78 @@
           },
           "gpt_summary": "📰 The theme **geopolitics** was detected in **15 articles** during the period, mainly through topics like: china (8), war (4), taiwan (3), geopolitical (1). Sentiment is mostly negative (46.7% vs 20.0% positive). Examples of articles: « Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout », « Taiwan's Formosa cuts refinery run rate to 68% on planned maintenance », « Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025) »."
         },
+        "inflation": {
+          "count": 13,
+          "articles": [
+            "Dot Plot, Inflation Expectations: What to Watch in FOMC Announcement",
+            "Wholesale prices unexpectedly fell 0.4% in March, showing easing inflation backdrop ahead of tariffs",
+            "10-Year Treasury yields fall after Trump's tariff reprieve",
+            "Tesla and Apple bull slashes his price targets for both companies in tariff fallout",
+            "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)",
+            "US bond funds hit by heavy outflows as recession, inflation fears mount",
+            "US off-price chains poised to win as tariffs play to strengths in sourcing, inventory",
+            "China's bond yields are rising — but economists say deflation worries could soon pull them lower",
+            "Stocks lose ground amid inflation concerns, trade war worries",
+            "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts",
+            "Fed's Kashkari says rising bond yields, falling dollar show investors are moving on from the U.S.",
+            "Fed's Bostic on Inflation, Rate Cuts and Tariffs",
+            "This Is the Calm Before the Inflation Storm, Says JPM's Kelly"
+          ],
+          "keywords": {
+            "interest rate": {
+              "count": 1,
+              "examples": [
+                "Dot Plot, Inflation Expectations: What to Watch in FOMC Announcement"
+              ]
+            },
+            "inflation": {
+              "count": 4,
+              "examples": [
+                "Wholesale prices unexpectedly fell 0.4% in March, showing easing inflation backdrop ahead of tariffs",
+                "US bond funds hit by heavy outflows as recession, inflation fears mount",
+                "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts"
+              ]
+            },
+            "price": {
+              "count": 4,
+              "examples": [
+                "Wholesale prices unexpectedly fell 0.4% in March, showing easing inflation backdrop ahead of tariffs",
+                "Tesla and Apple bull slashes his price targets for both companies in tariff fallout",
+                "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)"
+              ]
+            },
+            "yield": {
+              "count": 3,
+              "examples": [
+                "10-Year Treasury yields fall after Trump's tariff reprieve",
+                "China's bond yields are rising — but economists say deflation worries could soon pull them lower",
+                "Fed's Kashkari says rising bond yields, falling dollar show investors are moving on from the U.S."
+              ]
+            },
+            "yields": {
+              "count": 3,
+              "examples": [
+                "10-Year Treasury yields fall after Trump's tariff reprieve",
+                "China's bond yields are rising — but economists say deflation worries could soon pull them lower",
+                "Fed's Kashkari says rising bond yields, falling dollar show investors are moving on from the U.S."
+              ]
+            },
+            "prices": {
+              "count": 1,
+              "examples": [
+                "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 23.1,
+            "neutral": 15.4,
+            "negative": 61.5
+          },
+          "gpt_summary": "📰 The theme **inflation** was detected in **13 articles** during the period, mainly through topics like: inflation (4), price (4), yield (3), yields (3), interest rate (1). Sentiment is mostly negative (61.5% vs 23.1% positive). Examples of articles: « Dot Plot, Inflation Expectations: What to Watch in FOMC Announcement », « Wholesale prices unexpectedly fell 0.4% in March, showing easing inflation backdrop ahead of tariffs », « 10-Year Treasury yields fall after Trump's tariff reprieve »."
+        },
         "monetary_policy": {
-          "count": 11,
+          "count": 12,
           "articles": [
             "Fed minutes show some debate over balance sheet runoff slowdown",
             "Fed's Barkin: Auto firms under tariffs will face tough choices on pricing, margins",
@@ -562,12 +634,13 @@
             "ECB's Kazaks expects more rate cuts if current economic trajectory holds, Bloomberg News reports",
             "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan",
             "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts",
+            "Fed's Kashkari says rising bond yields, falling dollar show investors are moving on from the U.S.",
             "Fed's Bostic on Inflation, Rate Cuts and Tariffs",
             "What recent Fed commentary reveals about the state of the economy"
           ],
           "keywords": {
             "fed": {
-              "count": 10,
+              "count": 11,
               "examples": [
                 "Fed minutes show some debate over balance sheet runoff slowdown",
                 "Fed's Barkin: Auto firms under tariffs will face tough choices on pricing, margins",
@@ -591,76 +664,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 18.2,
-            "neutral": 45.5,
-            "negative": 36.4
+            "positive": 16.7,
+            "neutral": 50.0,
+            "negative": 33.3
           },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **11 articles** during the period, mainly through topics like: fed (10), central bank (4), monetary (2). Sentiment is mixed (18.2% positive, 36.4% negative). Examples of articles: « Fed minutes show some debate over balance sheet runoff slowdown », « Fed's Barkin: Auto firms under tariffs will face tough choices on pricing, margins », « Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator »."
-        },
-        "inflation": {
-          "count": 11,
-          "articles": [
-            "Dot Plot, Inflation Expectations: What to Watch in FOMC Announcement",
-            "10-Year Treasury yields fall after Trump's tariff reprieve",
-            "Tesla and Apple bull slashes his price targets for both companies in tariff fallout",
-            "Australian beef farmers say Trump tariffs to boost price of US hamburgers",
-            "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)",
-            "US bond funds hit by heavy outflows as recession, inflation fears mount",
-            "US off-price chains poised to win as tariffs play to strengths in sourcing, inventory",
-            "China's bond yields are rising — but economists say deflation worries could soon pull them lower",
-            "Stocks lose ground amid inflation concerns, trade war worries",
-            "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts",
-            "Fed's Bostic on Inflation, Rate Cuts and Tariffs"
-          ],
-          "keywords": {
-            "interest rate": {
-              "count": 1,
-              "examples": [
-                "Dot Plot, Inflation Expectations: What to Watch in FOMC Announcement"
-              ]
-            },
-            "yield": {
-              "count": 2,
-              "examples": [
-                "10-Year Treasury yields fall after Trump's tariff reprieve",
-                "China's bond yields are rising — but economists say deflation worries could soon pull them lower"
-              ]
-            },
-            "yields": {
-              "count": 2,
-              "examples": [
-                "10-Year Treasury yields fall after Trump's tariff reprieve",
-                "China's bond yields are rising — but economists say deflation worries could soon pull them lower"
-              ]
-            },
-            "price": {
-              "count": 3,
-              "examples": [
-                "Tesla and Apple bull slashes his price targets for both companies in tariff fallout",
-                "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)",
-                "US off-price chains poised to win as tariffs play to strengths in sourcing, inventory"
-              ]
-            },
-            "prices": {
-              "count": 1,
-              "examples": [
-                "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)"
-              ]
-            },
-            "inflation": {
-              "count": 2,
-              "examples": [
-                "US bond funds hit by heavy outflows as recession, inflation fears mount",
-                "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 36.4,
-            "neutral": 9.1,
-            "negative": 54.5
-          },
-          "gpt_summary": "📰 The theme **inflation** was detected in **11 articles** during the period, mainly through topics like: price (3), yield (2), yields (2), inflation (2), interest rate (1). Sentiment is mixed (36.4% positive, 54.5% negative). Examples of articles: « Dot Plot, Inflation Expectations: What to Watch in FOMC Announcement », « 10-Year Treasury yields fall after Trump's tariff reprieve », « Tesla and Apple bull slashes his price targets for both companies in tariff fallout »."
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **12 articles** during the period, mainly through topics like: fed (11), central bank (4), monetary (2). Sentiment is mixed (16.7% positive, 33.3% negative). Examples of articles: « Fed minutes show some debate over balance sheet runoff slowdown », « Fed's Barkin: Auto firms under tariffs will face tough choices on pricing, margins », « Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator »."
         },
         "recession": {
           "count": 9,
@@ -818,56 +826,6 @@
           },
           "gpt_summary": "📰 The theme **transport** was detected in **8 articles** during the period, mainly through topics like: port (6). Sentiment is mostly negative (37.5% vs 0.0% positive). Examples of articles: « Apple shakes up AI executive ranks in bid to turn around Siri, Bloomberg News reports », « Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk », « Apple losing over $1 billion a year on streaming service, the Information reports »."
         },
-        "finance": {
-          "count": 6,
-          "articles": [
-            "Fed should lead in financial technology space, Harker says",
-            "Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk",
-            "10-Year Treasury yields fall after Trump's tariff reprieve",
-            "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan",
-            "Japanese stocks tumble as banks slump on tariff jitters",
-            "Morgan Stanley's Strong Financial Performance in Q1 2025"
-          ],
-          "keywords": {
-            "financial": {
-              "count": 2,
-              "examples": [
-                "Fed should lead in financial technology space, Harker says",
-                "Morgan Stanley's Strong Financial Performance in Q1 2025"
-              ]
-            },
-            "insurance": {
-              "count": 1,
-              "examples": [
-                "Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk"
-              ]
-            },
-            "treasury": {
-              "count": 1,
-              "examples": [
-                "10-Year Treasury yields fall after Trump's tariff reprieve"
-              ]
-            },
-            "rates": {
-              "count": 1,
-              "examples": [
-                "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan"
-              ]
-            },
-            "banking": {
-              "count": 1,
-              "examples": [
-                "Morgan Stanley's Strong Financial Performance in Q1 2025"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 16.7,
-            "neutral": 16.7,
-            "negative": 66.7
-          },
-          "gpt_summary": "📰 The theme **finance** was detected in **6 articles** during the period, mainly through topics like: financial (2), insurance (1), treasury (1), rates (1), banking (1). Sentiment is mostly negative (66.7% vs 16.7% positive). Examples of articles: « Fed should lead in financial technology space, Harker says », « Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk », « 10-Year Treasury yields fall after Trump's tariff reprieve »."
-        },
         "industry": {
           "count": 6,
           "articles": [
@@ -901,6 +859,48 @@
           },
           "gpt_summary": "📰 The theme **industry** was detected in **6 articles** during the period, mainly through topics like: production (3), industry (1). Sentiment is mixed (0.0% positive, 16.7% negative). Examples of articles: « Exclusive: Apple supplier Luxshare weighs manufacturing in U.S. to tackle tariffs », « US chipmakers outsourcing manufacturing will escape China's tariffs », « Apple Supplier Luxshare to Maintain Vietnam Production Hub to Support U.S. Market »."
         },
+        "finance": {
+          "count": 5,
+          "articles": [
+            "Fed should lead in financial technology space, Harker says",
+            "Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk",
+            "10-Year Treasury yields fall after Trump's tariff reprieve",
+            "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan",
+            "Japanese stocks tumble as banks slump on tariff jitters"
+          ],
+          "keywords": {
+            "financial": {
+              "count": 1,
+              "examples": [
+                "Fed should lead in financial technology space, Harker says"
+              ]
+            },
+            "insurance": {
+              "count": 1,
+              "examples": [
+                "Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk"
+              ]
+            },
+            "treasury": {
+              "count": 1,
+              "examples": [
+                "10-Year Treasury yields fall after Trump's tariff reprieve"
+              ]
+            },
+            "rates": {
+              "count": 1,
+              "examples": [
+                "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 0.0,
+            "neutral": 20.0,
+            "negative": 80.0
+          },
+          "gpt_summary": "📰 The theme **finance** was detected in **5 articles** during the period, mainly through topics like: financial (1), insurance (1), treasury (1), rates (1). Sentiment is mostly negative (80.0% vs 0.0% positive). Examples of articles: « Fed should lead in financial technology space, Harker says », « Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk », « 10-Year Treasury yields fall after Trump's tariff reprieve »."
+        },
         "energy": {
           "count": 2,
           "articles": [
@@ -931,7 +931,7 @@
       },
       "regions": {
         "usa": {
-          "count": 16,
+          "count": 17,
           "articles": [
             "Fed minutes show some debate over balance sheet runoff slowdown",
             "Fed's Barkin: Auto firms under tariffs will face tough choices on pricing, margins",
@@ -945,6 +945,7 @@
             "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink",
             "Apple moving iPhone production into U.S. has extremely low odds, says Bank of America's Wamsi Mohan",
             "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts",
+            "Fed's Kashkari says rising bond yields, falling dollar show investors are moving on from the U.S.",
             "Fed's Bostic on Inflation, Rate Cuts and Tariffs",
             "Trump team thinks Apple's iPhones should be made in USA. Analysts are doubtful.",
             "What recent Fed commentary reveals about the state of the economy",
@@ -952,7 +953,7 @@
           ],
           "keywords": {
             "fed": {
-              "count": 11,
+              "count": 12,
               "examples": [
                 "Fed minutes show some debate over balance sheet runoff slowdown",
                 "Fed's Barkin: Auto firms under tariffs will face tough choices on pricing, margins",
@@ -995,11 +996,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 12.5,
-            "neutral": 50.0,
-            "negative": 37.5
+            "positive": 11.8,
+            "neutral": 52.9,
+            "negative": 35.3
           },
-          "gpt_summary": "📰 The theme **usa** was detected in **16 articles** during the period, mainly through topics like: fed (11), nasdaq (3), s&p (2), dow jones (2), united states (1). Sentiment is mostly negative (37.5% vs 12.5% positive). Examples of articles: « Fed minutes show some debate over balance sheet runoff slowdown », « Fed's Barkin: Auto firms under tariffs will face tough choices on pricing, margins », « Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator »."
+          "gpt_summary": "📰 The theme **usa** was detected in **17 articles** during the period, mainly through topics like: fed (12), nasdaq (3), s&p (2), dow jones (2), united states (1). Sentiment is mostly negative (35.3% vs 11.8% positive). Examples of articles: « Fed minutes show some debate over balance sheet runoff slowdown », « Fed's Barkin: Auto firms under tariffs will face tough choices on pricing, margins », « Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator »."
         },
         "asia": {
           "count": 16,
@@ -1176,26 +1177,24 @@
           "gpt_summary": "📰 The theme **canada** was detected in **2 articles** during the period, mainly through topics like: canada (2), canadian (1). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk », « I make $700k at a FAANG company but layoffs are coming – should I sell my U.S. homes and head back to Canada? »."
         },
         "australia": {
-          "count": 2,
+          "count": 1,
           "articles": [
-            "Australian beef farmers say Trump tariffs to boost price of US hamburgers",
             "Exclusive: AUKUS nuclear submarine sale under scrutiny as Trump tariffs rattle Australia"
           ],
           "keywords": {
             "australia": {
-              "count": 2,
+              "count": 1,
               "examples": [
-                "Australian beef farmers say Trump tariffs to boost price of US hamburgers",
                 "Exclusive: AUKUS nuclear submarine sale under scrutiny as Trump tariffs rattle Australia"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 50.0,
+            "positive": 0.0,
             "neutral": 0.0,
-            "negative": 50.0
+            "negative": 100.0
           },
-          "gpt_summary": "📰 The theme **australia** was detected in **2 articles** during the period, mainly through topics like: australia (2). Sentiment is mixed (50.0% positive, 50.0% negative). Examples of articles: « Australian beef farmers say Trump tariffs to boost price of US hamburgers », « Exclusive: AUKUS nuclear submarine sale under scrutiny as Trump tariffs rattle Australia »."
+          "gpt_summary": "📰 The theme **australia** was detected in **1 articles** during the period, mainly through topics like: australia (1). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « Exclusive: AUKUS nuclear submarine sale under scrutiny as Trump tariffs rattle Australia »."
         },
         "latam": {
           "count": 1,
@@ -1272,8 +1271,78 @@
           },
           "gpt_summary": "📰 The theme **geopolitics** was detected in **15 articles** during the period, mainly through topics like: china (8), war (4), taiwan (3), geopolitical (1). Sentiment is mostly negative (46.7% vs 20.0% positive). Examples of articles: « Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout », « Taiwan's Formosa cuts refinery run rate to 68% on planned maintenance », « Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025) »."
         },
+        "inflation": {
+          "count": 13,
+          "articles": [
+            "Dot Plot, Inflation Expectations: What to Watch in FOMC Announcement",
+            "Wholesale prices unexpectedly fell 0.4% in March, showing easing inflation backdrop ahead of tariffs",
+            "10-Year Treasury yields fall after Trump's tariff reprieve",
+            "Tesla and Apple bull slashes his price targets for both companies in tariff fallout",
+            "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)",
+            "US bond funds hit by heavy outflows as recession, inflation fears mount",
+            "US off-price chains poised to win as tariffs play to strengths in sourcing, inventory",
+            "China's bond yields are rising — but economists say deflation worries could soon pull them lower",
+            "Stocks lose ground amid inflation concerns, trade war worries",
+            "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts",
+            "Fed's Kashkari says rising bond yields, falling dollar show investors are moving on from the U.S.",
+            "Fed's Bostic on Inflation, Rate Cuts and Tariffs",
+            "This Is the Calm Before the Inflation Storm, Says JPM's Kelly"
+          ],
+          "keywords": {
+            "interest rate": {
+              "count": 1,
+              "examples": [
+                "Dot Plot, Inflation Expectations: What to Watch in FOMC Announcement"
+              ]
+            },
+            "inflation": {
+              "count": 4,
+              "examples": [
+                "Wholesale prices unexpectedly fell 0.4% in March, showing easing inflation backdrop ahead of tariffs",
+                "US bond funds hit by heavy outflows as recession, inflation fears mount",
+                "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts"
+              ]
+            },
+            "price": {
+              "count": 4,
+              "examples": [
+                "Wholesale prices unexpectedly fell 0.4% in March, showing easing inflation backdrop ahead of tariffs",
+                "Tesla and Apple bull slashes his price targets for both companies in tariff fallout",
+                "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)"
+              ]
+            },
+            "yield": {
+              "count": 3,
+              "examples": [
+                "10-Year Treasury yields fall after Trump's tariff reprieve",
+                "China's bond yields are rising — but economists say deflation worries could soon pull them lower",
+                "Fed's Kashkari says rising bond yields, falling dollar show investors are moving on from the U.S."
+              ]
+            },
+            "yields": {
+              "count": 3,
+              "examples": [
+                "10-Year Treasury yields fall after Trump's tariff reprieve",
+                "China's bond yields are rising — but economists say deflation worries could soon pull them lower",
+                "Fed's Kashkari says rising bond yields, falling dollar show investors are moving on from the U.S."
+              ]
+            },
+            "prices": {
+              "count": 1,
+              "examples": [
+                "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 23.1,
+            "neutral": 15.4,
+            "negative": 61.5
+          },
+          "gpt_summary": "📰 The theme **inflation** was detected in **13 articles** during the period, mainly through topics like: inflation (4), price (4), yield (3), yields (3), interest rate (1). Sentiment is mostly negative (61.5% vs 23.1% positive). Examples of articles: « Dot Plot, Inflation Expectations: What to Watch in FOMC Announcement », « Wholesale prices unexpectedly fell 0.4% in March, showing easing inflation backdrop ahead of tariffs », « 10-Year Treasury yields fall after Trump's tariff reprieve »."
+        },
         "monetary_policy": {
-          "count": 11,
+          "count": 12,
           "articles": [
             "Fed minutes show some debate over balance sheet runoff slowdown",
             "Fed's Barkin: Auto firms under tariffs will face tough choices on pricing, margins",
@@ -1284,12 +1353,13 @@
             "ECB's Kazaks expects more rate cuts if current economic trajectory holds, Bloomberg News reports",
             "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan",
             "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts",
+            "Fed's Kashkari says rising bond yields, falling dollar show investors are moving on from the U.S.",
             "Fed's Bostic on Inflation, Rate Cuts and Tariffs",
             "What recent Fed commentary reveals about the state of the economy"
           ],
           "keywords": {
             "fed": {
-              "count": 10,
+              "count": 11,
               "examples": [
                 "Fed minutes show some debate over balance sheet runoff slowdown",
                 "Fed's Barkin: Auto firms under tariffs will face tough choices on pricing, margins",
@@ -1313,76 +1383,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 18.2,
-            "neutral": 45.5,
-            "negative": 36.4
+            "positive": 16.7,
+            "neutral": 50.0,
+            "negative": 33.3
           },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **11 articles** during the period, mainly through topics like: fed (10), central bank (4), monetary (2). Sentiment is mixed (18.2% positive, 36.4% negative). Examples of articles: « Fed minutes show some debate over balance sheet runoff slowdown », « Fed's Barkin: Auto firms under tariffs will face tough choices on pricing, margins », « Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator »."
-        },
-        "inflation": {
-          "count": 11,
-          "articles": [
-            "Dot Plot, Inflation Expectations: What to Watch in FOMC Announcement",
-            "10-Year Treasury yields fall after Trump's tariff reprieve",
-            "Tesla and Apple bull slashes his price targets for both companies in tariff fallout",
-            "Australian beef farmers say Trump tariffs to boost price of US hamburgers",
-            "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)",
-            "US bond funds hit by heavy outflows as recession, inflation fears mount",
-            "US off-price chains poised to win as tariffs play to strengths in sourcing, inventory",
-            "China's bond yields are rising — but economists say deflation worries could soon pull them lower",
-            "Stocks lose ground amid inflation concerns, trade war worries",
-            "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts",
-            "Fed's Bostic on Inflation, Rate Cuts and Tariffs"
-          ],
-          "keywords": {
-            "interest rate": {
-              "count": 1,
-              "examples": [
-                "Dot Plot, Inflation Expectations: What to Watch in FOMC Announcement"
-              ]
-            },
-            "yield": {
-              "count": 2,
-              "examples": [
-                "10-Year Treasury yields fall after Trump's tariff reprieve",
-                "China's bond yields are rising — but economists say deflation worries could soon pull them lower"
-              ]
-            },
-            "yields": {
-              "count": 2,
-              "examples": [
-                "10-Year Treasury yields fall after Trump's tariff reprieve",
-                "China's bond yields are rising — but economists say deflation worries could soon pull them lower"
-              ]
-            },
-            "price": {
-              "count": 3,
-              "examples": [
-                "Tesla and Apple bull slashes his price targets for both companies in tariff fallout",
-                "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)",
-                "US off-price chains poised to win as tariffs play to strengths in sourcing, inventory"
-              ]
-            },
-            "prices": {
-              "count": 1,
-              "examples": [
-                "Taiwan Semiconductor (TSM) Price Prediction and Forecast (March 2025)"
-              ]
-            },
-            "inflation": {
-              "count": 2,
-              "examples": [
-                "US bond funds hit by heavy outflows as recession, inflation fears mount",
-                "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 36.4,
-            "neutral": 9.1,
-            "negative": 54.5
-          },
-          "gpt_summary": "📰 The theme **inflation** was detected in **11 articles** during the period, mainly through topics like: price (3), yield (2), yields (2), inflation (2), interest rate (1). Sentiment is mixed (36.4% positive, 54.5% negative). Examples of articles: « Dot Plot, Inflation Expectations: What to Watch in FOMC Announcement », « 10-Year Treasury yields fall after Trump's tariff reprieve », « Tesla and Apple bull slashes his price targets for both companies in tariff fallout »."
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **12 articles** during the period, mainly through topics like: fed (11), central bank (4), monetary (2). Sentiment is mixed (16.7% positive, 33.3% negative). Examples of articles: « Fed minutes show some debate over balance sheet runoff slowdown », « Fed's Barkin: Auto firms under tariffs will face tough choices on pricing, margins », « Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator »."
         },
         "recession": {
           "count": 9,
@@ -1543,56 +1548,6 @@
           },
           "gpt_summary": "📰 The theme **transport** was detected in **8 articles** during the period, mainly through topics like: port (6). Sentiment is mostly negative (37.5% vs 0.0% positive). Examples of articles: « Apple shakes up AI executive ranks in bid to turn around Siri, Bloomberg News reports », « Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk », « Apple losing over $1 billion a year on streaming service, the Information reports »."
         },
-        "finance": {
-          "count": 6,
-          "articles": [
-            "Fed should lead in financial technology space, Harker says",
-            "Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk",
-            "10-Year Treasury yields fall after Trump's tariff reprieve",
-            "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan",
-            "Japanese stocks tumble as banks slump on tariff jitters",
-            "Morgan Stanley's Strong Financial Performance in Q1 2025"
-          ],
-          "keywords": {
-            "financial": {
-              "count": 2,
-              "examples": [
-                "Fed should lead in financial technology space, Harker says",
-                "Morgan Stanley's Strong Financial Performance in Q1 2025"
-              ]
-            },
-            "insurance": {
-              "count": 1,
-              "examples": [
-                "Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk"
-              ]
-            },
-            "treasury": {
-              "count": 1,
-              "examples": [
-                "10-Year Treasury yields fall after Trump's tariff reprieve"
-              ]
-            },
-            "rates": {
-              "count": 1,
-              "examples": [
-                "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan"
-              ]
-            },
-            "banking": {
-              "count": 1,
-              "examples": [
-                "Morgan Stanley's Strong Financial Performance in Q1 2025"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 16.7,
-            "neutral": 16.7,
-            "negative": 66.7
-          },
-          "gpt_summary": "📰 The theme **finance** was detected in **6 articles** during the period, mainly through topics like: financial (2), insurance (1), treasury (1), rates (1), banking (1). Sentiment is mostly negative (66.7% vs 16.7% positive). Examples of articles: « Fed should lead in financial technology space, Harker says », « Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk », « 10-Year Treasury yields fall after Trump's tariff reprieve »."
-        },
         "industry": {
           "count": 6,
           "articles": [
@@ -1626,6 +1581,48 @@
           },
           "gpt_summary": "📰 The theme **industry** was detected in **6 articles** during the period, mainly through topics like: production (3), industry (1). Sentiment is mixed (0.0% positive, 16.7% negative). Examples of articles: « Exclusive: Apple supplier Luxshare weighs manufacturing in U.S. to tackle tariffs », « US chipmakers outsourcing manufacturing will escape China's tariffs », « Apple Supplier Luxshare to Maintain Vietnam Production Hub to Support U.S. Market »."
         },
+        "finance": {
+          "count": 5,
+          "articles": [
+            "Fed should lead in financial technology space, Harker says",
+            "Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk",
+            "10-Year Treasury yields fall after Trump's tariff reprieve",
+            "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan",
+            "Japanese stocks tumble as banks slump on tariff jitters"
+          ],
+          "keywords": {
+            "financial": {
+              "count": 1,
+              "examples": [
+                "Fed should lead in financial technology space, Harker says"
+              ]
+            },
+            "insurance": {
+              "count": 1,
+              "examples": [
+                "Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk"
+              ]
+            },
+            "treasury": {
+              "count": 1,
+              "examples": [
+                "10-Year Treasury yields fall after Trump's tariff reprieve"
+              ]
+            },
+            "rates": {
+              "count": 1,
+              "examples": [
+                "China's central bank follows U.S. Fed in keeping rates steady as tariff threats pressure yuan"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 0.0,
+            "neutral": 20.0,
+            "negative": 80.0
+          },
+          "gpt_summary": "📰 The theme **finance** was detected in **5 articles** during the period, mainly through topics like: financial (1), insurance (1), treasury (1), rates (1). Sentiment is mostly negative (80.0% vs 0.0% positive). Examples of articles: « Fed should lead in financial technology space, Harker says », « Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk », « 10-Year Treasury yields fall after Trump's tariff reprieve »."
+        },
         "energy": {
           "count": 2,
           "articles": [
@@ -1656,7 +1653,7 @@
       },
       "regions": {
         "usa": {
-          "count": 16,
+          "count": 17,
           "articles": [
             "Fed minutes show some debate over balance sheet runoff slowdown",
             "Fed's Barkin: Auto firms under tariffs will face tough choices on pricing, margins",
@@ -1670,6 +1667,7 @@
             "Live: Vanguard S&P 500 ETF (VOO) Plummets 4% as Nike (NKE) and Dell (DELL) Sink",
             "Apple moving iPhone production into U.S. has extremely low odds, says Bank of America's Wamsi Mohan",
             "'Transitory' is back as the Fed doesn't expect tariffs to have long-lasting inflation impacts",
+            "Fed's Kashkari says rising bond yields, falling dollar show investors are moving on from the U.S.",
             "Fed's Bostic on Inflation, Rate Cuts and Tariffs",
             "Trump team thinks Apple's iPhones should be made in USA. Analysts are doubtful.",
             "What recent Fed commentary reveals about the state of the economy",
@@ -1677,7 +1675,7 @@
           ],
           "keywords": {
             "fed": {
-              "count": 11,
+              "count": 12,
               "examples": [
                 "Fed minutes show some debate over balance sheet runoff slowdown",
                 "Fed's Barkin: Auto firms under tariffs will face tough choices on pricing, margins",
@@ -1720,11 +1718,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 12.5,
-            "neutral": 50.0,
-            "negative": 37.5
+            "positive": 11.8,
+            "neutral": 52.9,
+            "negative": 35.3
           },
-          "gpt_summary": "📰 The theme **usa** was detected in **16 articles** during the period, mainly through topics like: fed (11), nasdaq (3), s&p (2), dow jones (2), united states (1). Sentiment is mostly negative (37.5% vs 12.5% positive). Examples of articles: « Fed minutes show some debate over balance sheet runoff slowdown », « Fed's Barkin: Auto firms under tariffs will face tough choices on pricing, margins », « Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator »."
+          "gpt_summary": "📰 The theme **usa** was detected in **17 articles** during the period, mainly through topics like: fed (12), nasdaq (3), s&p (2), dow jones (2), united states (1). Sentiment is mostly negative (35.3% vs 11.8% positive). Examples of articles: « Fed minutes show some debate over balance sheet runoff slowdown », « Fed's Barkin: Auto firms under tariffs will face tough choices on pricing, margins », « Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator »."
         },
         "asia": {
           "count": 16,
@@ -1901,26 +1899,24 @@
           "gpt_summary": "📰 The theme **canada** was detected in **2 articles** during the period, mainly through topics like: canada (2), canadian (1). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « Canadian exporters inquire on trade insurance as Trump's tariffs heighten risk », « I make $700k at a FAANG company but layoffs are coming – should I sell my U.S. homes and head back to Canada? »."
         },
         "australia": {
-          "count": 2,
+          "count": 1,
           "articles": [
-            "Australian beef farmers say Trump tariffs to boost price of US hamburgers",
             "Exclusive: AUKUS nuclear submarine sale under scrutiny as Trump tariffs rattle Australia"
           ],
           "keywords": {
             "australia": {
-              "count": 2,
+              "count": 1,
               "examples": [
-                "Australian beef farmers say Trump tariffs to boost price of US hamburgers",
                 "Exclusive: AUKUS nuclear submarine sale under scrutiny as Trump tariffs rattle Australia"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 50.0,
+            "positive": 0.0,
             "neutral": 0.0,
-            "negative": 50.0
+            "negative": 100.0
           },
-          "gpt_summary": "📰 The theme **australia** was detected in **2 articles** during the period, mainly through topics like: australia (2). Sentiment is mixed (50.0% positive, 50.0% negative). Examples of articles: « Australian beef farmers say Trump tariffs to boost price of US hamburgers », « Exclusive: AUKUS nuclear submarine sale under scrutiny as Trump tariffs rattle Australia »."
+          "gpt_summary": "📰 The theme **australia** was detected in **1 articles** during the period, mainly through topics like: australia (1). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « Exclusive: AUKUS nuclear submarine sale under scrutiny as Trump tariffs rattle Australia »."
         },
         "latam": {
           "count": 1,
@@ -1938,6 +1934,6 @@
       }
     }
   },
-  "lastUpdated": "2025-04-12T01:14:23.472579",
+  "lastUpdated": "2025-04-12T04:14:30.083390",
   "analysisCount": 108
 }
