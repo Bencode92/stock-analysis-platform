@@ -521,6 +521,12 @@ document.addEventListener('DOMContentLoaded', function() {
             
             anticipatedSection.appendChild(modeSelector);
             
+            // Ajouter la zone pour le résumé en langage naturel
+            const earlySummaryContainer = document.createElement('p');
+            earlySummaryContainer.id = 'early-repayment-summary';
+            earlySummaryContainer.className = 'mt-4 text-sm text-green-300 font-medium';
+            anticipatedSection.appendChild(earlySummaryContainer);
+            
             // Ajouter les écouteurs d'événements
             document.getElementById('mode-duree').addEventListener('click', function() {
                 document.getElementById('mode-duree').classList.add('active', 'text-green-400');
@@ -839,6 +845,35 @@ document.addEventListener('DOMContentLoaded', function() {
             nouveauTaux: newInterestRate,
             modeRemboursement: modeRemboursement
         });
+
+        // Résumé humain du remboursement anticipé
+        const earlySummary = document.getElementById('early-repayment-summary');
+        if (earlySummary) {
+            const mode = document.getElementById('remboursement-mode')?.value || 'duree';
+            const moisRemb = earlyRepaymentMonth;
+            const montantAnticipe = earlyRepaymentAmount;
+            
+            let message = "";
+            const gainInterets = result.economiesInterets;
+            const gainTemps = result.dureeInitiale - result.dureeReelle;
+            
+            // Trouver la mensualité après remboursement
+            const nouvelleMensualite = result.tableau.find(r => r.mois === moisRemb + 1)?.mensualite || result.mensualiteInitiale;
+
+            if (mode === 'duree') {
+                message = `📉 En remboursant ${formatMontant(montantAnticipe)} au mois ${moisRemb}, 
+                vous raccourcissez votre prêt de ${gainTemps} mois 
+                et économisez ${formatMontant(gainInterets)} d'intérêts.`;
+            } else {
+                const reduction = result.mensualiteInitiale - nouvelleMensualite;
+                message = `📉 En remboursant ${formatMontant(montantAnticipe)} au mois ${moisRemb}, 
+                votre mensualité passe de ${formatMontant(result.mensualiteInitiale)} à 
+                ${formatMontant(nouvelleMensualite)}, soit une réduction de ${formatMontant(reduction)} par mois.`;
+            }
+            
+            // Nettoyer les sauts de ligne pour une meilleure présentation
+            earlySummary.textContent = message.replace(/\s+/g, ' ').trim();
+        }
 
         // Mise à jour des résultats
         document.getElementById('monthly-payment').textContent = formatMontant(result.mensualiteInitiale);
@@ -1252,6 +1287,17 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
             `;
+            
+            // Ajouter la description du remboursement anticipé si disponible
+            const earlySummary = document.getElementById('early-repayment-summary');
+            if (earlySummary && earlySummary.textContent) {
+                element.innerHTML += `
+                    <div class="mt-3 mb-6 p-4 border-l-4 border-green-500 bg-green-50 pl-4">
+                        <h3 class="font-bold mb-2 text-green-700">Impact du remboursement anticipé</h3>
+                        <p>${earlySummary.textContent}</p>
+                    </div>
+                `;
+            }
             
             // Ajouter les frais annexes si disponibles
             if (document.getElementById('frais-dossier')) {
