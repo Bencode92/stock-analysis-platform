@@ -98,22 +98,22 @@ class LoanSimulator {
                 mensualitesAvantRembours += (mensualite + assurance);
             }
             
-            // MODIFIÉ: Gestion du nouveau taux et remboursement anticipé
+            // Gestion du remboursement anticipé
             if (moisAnticipe && mois === moisAnticipe) {
-                // Appliquer le nouveau taux indépendamment du remboursement anticipé
+                // Appliquer d'abord le remboursement anticipé
+                capitalRestant -= remboursementAnticipe;
+                
+                // Ensuite appliquer le nouveau taux si fourni
                 if (nouveauTaux !== null) {
                     tauxMensuel = nouveauTaux / 100 / 12;
                 }
                 
-                // Appliquer le remboursement anticipé
-                capitalRestant -= remboursementAnticipe;
-                
-                // Recalcul de la mensualité selon le mode et le type de prêt
-                if (modeRemboursement === 'mensualite' || nouveauTaux !== null) {
+                // Recalcul selon le mode choisi et le type de prêt
+                if (modeRemboursement === 'mensualite') {
+                    // Mode "réduire la mensualité": recalcul en gardant la même durée
                     if (this.typePret === 'inFine') {
                         mensualite = capitalRestant * tauxMensuel;
                     } else if (this.typePret === 'degressif') {
-                        // Recalculer l'amortissement fixe sur le capital restant et la durée restante
                         const amortissementFixe = capitalRestant / (this.dureeMois - mois + 1);
                         mensualite = amortissementFixe + (capitalRestant * tauxMensuel);
                     } else {
@@ -121,8 +121,12 @@ class LoanSimulator {
                         mensualite = capitalRestant * tauxMensuel / 
                             (1 - Math.pow(1 + tauxMensuel, -(this.dureeMois - mois + 1)));
                     }
+                } 
+                // Si mode durée: on garde la mensualité (sauf pour in fine)
+                else if (this.typePret === 'inFine') {
+                    mensualite = capitalRestant * tauxMensuel;
                 }
-                // Si mode durée et pas de nouveau taux, on garde la même mensualité (raccourcit la durée)
+                // Pour les autres types en mode durée, on garde la même mensualité
             }
             
             capitalRestant -= capitalAmorti;
@@ -166,7 +170,7 @@ class LoanSimulator {
         const economiesMensualites = (dureeInitiale - dureeReelle) * mensualiteInitiale;
         const economiesInterets = (capitalInitial * this.tauxMensuel * dureeInitiale) - totalInterets;
         
-        // Calcul du TAEG approximatif (sans les frais annexes pour l'instant)
+        // Calcul du TAEG approximatif
         const montantTotal = tableau.reduce((sum, l) => sum + l.mensualite, 0);
         const tauxEffectifAnnuel = ((Math.pow((montantTotal / this.capital), (12 / dureeReelle)) - 1) * 12) * 100;
         
@@ -201,6 +205,277 @@ class LoanSimulator {
 // Formater les nombres en euros
 function formatMontant(montant) {
     return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(montant);
+}
+
+// Fonction pour comparer les scénarios (baisse de taux vs remboursement anticipé)
+function comparerScenarios() {
+    // Récupérer les paramètres actuels
+    const loanAmount = parseFloat(document.getElementById('loan-amount').value);
+    const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
+    const loanDurationYears = parseInt(document.getElementById('loan-duration-slider').value);
+    const insuranceRate = parseFloat(document.getElementById('insurance-rate-slider').value);
+    const earlyRepaymentAmount = parseFloat(document.getElementById('early-repayment-amount').value);
+    const earlyRepaymentMonth = parseInt(document.getElementById('early-repayment-month-slider').value);
+    const newInterestRate = parseFloat(document.getElementById('new-interest-rate-slider').value);
+    const penaltyMonths = parseInt(document.getElementById('penalty-months-slider').value);
+    
+    // Récupérer les frais et options
+    const fraisDossier = parseFloat(document.getElementById('frais-dossier')?.value || 2000);
+    const fraisTenueCompte = parseFloat(document.getElementById('frais-tenue-compte')?.value || 710);
+    
+    const fraisGarantieInput = document.getElementById('frais-garantie');
+    let fraisGarantie = null;
+    if (fraisGarantieInput) {
+        fraisGarantie = fraisGarantieInput.value ? 
+            parseFloat(fraisGarantieInput.value) : 
+            (fraisGarantieInput.dataset.autoValue ? parseFloat(fraisGarantieInput.dataset.autoValue) : null);
+    }
+    
+    const typePret = document.getElementById('type-pret')?.value || 'amortissable';
+    const assuranceSurCapitalInitial = document.getElementById('assurance-capital-initial')?.checked || false;
+    const modeRemboursement = document.getElementById('remboursement-mode')?.value || 'duree';
+    
+    // Créer le simulateur avec les paramètres de base
+    const simulator = new LoanSimulator({
+        capital: loanAmount,
+        tauxAnnuel: interestRate,
+        dureeMois: loanDurationYears * 12,
+        assuranceAnnuelle: insuranceRate,
+        indemnitesMois: penaltyMonths,
+        fraisDossier: fraisDossier,
+        fraisTenueCompte: fraisTenueCompte,
+        fraisGarantie: fraisGarantie,
+        assuranceSurCapitalInitial: assuranceSurCapitalInitial,
+        typePret: typePret
+    });
+    
+    // Scénario de référence (sans changement)
+    const scenarioReference = simulator.tableauAmortissement({
+        remboursementAnticipe: 0,
+        moisAnticipe: null,
+        nouveauTaux: null,
+        modeRemboursement: modeRemboursement
+    });
+    
+    // Scénario 1: Sans remboursement anticipé, mais avec baisse de taux
+    const scenarioTaux = simulator.tableauAmortissement({
+        remboursementAnticipe: 0,
+        moisAnticipe: earlyRepaymentMonth,
+        nouveauTaux: newInterestRate,
+        modeRemboursement: modeRemboursement
+    });
+    
+    // Scénario 2: Avec remboursement anticipé, sans changement de taux
+    const scenarioRemboursement = simulator.tableauAmortissement({
+        remboursementAnticipe: earlyRepaymentAmount,
+        moisAnticipe: earlyRepaymentMonth,
+        nouveauTaux: null,
+        modeRemboursement: modeRemboursement
+    });
+    
+    // Scénario 3: Combiné (remboursement anticipé + nouveau taux)
+    const scenarioCombine = simulator.tableauAmortissement({
+        remboursementAnticipe: earlyRepaymentAmount,
+        moisAnticipe: earlyRepaymentMonth,
+        nouveauTaux: newInterestRate,
+        modeRemboursement: modeRemboursement
+    });
+    
+    // Calculer les gains par rapport au scénario de référence
+    const gainTaux = scenarioReference.coutGlobalTotal - scenarioTaux.coutGlobalTotal;
+    const gainRemboursement = scenarioReference.coutGlobalTotal - scenarioRemboursement.coutGlobalTotal;
+    const gainCombine = scenarioReference.coutGlobalTotal - scenarioCombine.coutGlobalTotal;
+    
+    // Déterminer le scénario optimal
+    let scenarioOptimal, optimalGain;
+    
+    if (gainCombine >= gainTaux && gainCombine >= gainRemboursement) {
+        scenarioOptimal = "Remboursement anticipé + baisse de taux";
+        optimalGain = gainCombine;
+    } else if (gainRemboursement >= gainTaux) {
+        scenarioOptimal = "Remboursement anticipé seul";
+        optimalGain = gainRemboursement;
+    } else {
+        scenarioOptimal = "Baisse de taux seule";
+        optimalGain = gainTaux;
+    }
+    
+    return {
+        scenarioReference,
+        scenarioTaux,
+        scenarioRemboursement,
+        scenarioCombine,
+        gainTaux,
+        gainRemboursement,
+        gainCombine,
+        optimalGain,
+        scenarioOptimal
+    };
+}
+
+// Mettre à jour l'interface avec les résultats de la comparaison
+function updateComparisonUI(comparisonResults) {
+    // Ajouter l'élément de comparaison s'il n'existe pas
+    addComparisonElement();
+    
+    // Afficher les résultats
+    document.getElementById('gain-taux').textContent = formatMontant(comparisonResults.gainTaux);
+    document.getElementById('gain-remb').textContent = formatMontant(comparisonResults.gainRemboursement);
+    document.getElementById('scenario-optimal').textContent = `${comparisonResults.scenarioOptimal} (${formatMontant(comparisonResults.optimalGain)})`;
+    
+    // Afficher le conteneur
+    document.getElementById('taux-vs-remboursement').classList.remove('hidden');
+    
+    // Mettre à jour le tableau de comparaison
+    const comparisonTableBody = document.getElementById('comparison-table-body');
+    if (comparisonTableBody) {
+        comparisonTableBody.innerHTML = '';
+        
+        // Mensualité initiale
+        addComparisonRow(comparisonTableBody, "Mensualité initiale", 
+            formatMontant(comparisonResults.scenarioReference.mensualiteInitiale),
+            formatMontant(comparisonResults.scenarioRemboursement.mensualiteInitiale),
+            "0 €"
+        );
+        
+        // Durée du prêt
+        addComparisonRow(comparisonTableBody, "Durée totale (mois)", 
+            comparisonResults.scenarioReference.dureeReelle,
+            comparisonResults.scenarioRemboursement.dureeReelle,
+            (comparisonResults.scenarioReference.dureeReelle - comparisonResults.scenarioRemboursement.dureeReelle)
+        );
+        
+        // Mensualité après remboursement anticipé
+        const moisApres = parseInt(document.getElementById('early-repayment-month-slider').value) + 1;
+        
+        // Trouver les mensualités après remboursement
+        const mensualiteReference = comparisonResults.scenarioReference.tableau.find(r => r.mois === moisApres)?.mensualite || 
+            comparisonResults.scenarioReference.mensualiteInitiale;
+            
+        const mensualiteApresRemb = comparisonResults.scenarioRemboursement.tableau.find(r => r.mois === moisApres)?.mensualite || 
+            comparisonResults.scenarioRemboursement.mensualiteInitiale;
+        
+        addComparisonRow(comparisonTableBody, "Mensualité après ajustement", 
+            formatMontant(mensualiteReference),
+            formatMontant(mensualiteApresRemb),
+            formatMontant(mensualiteReference - mensualiteApresRemb)
+        );
+        
+        // Total des intérêts
+        addComparisonRow(comparisonTableBody, "Total des intérêts", 
+            formatMontant(comparisonResults.scenarioReference.totalInterets),
+            formatMontant(comparisonResults.scenarioRemboursement.totalInterets),
+            formatMontant(comparisonResults.scenarioReference.totalInterets - comparisonResults.scenarioRemboursement.totalInterets)
+        );
+        
+        // Indemnités de remboursement anticipé
+        addComparisonRow(comparisonTableBody, "Indemnités de remboursement anticipé", 
+            "0 €",
+            formatMontant(comparisonResults.scenarioRemboursement.indemnites),
+            formatMontant(-comparisonResults.scenarioRemboursement.indemnites),
+            true
+        );
+        
+        // Coût total du crédit
+        addComparisonRow(comparisonTableBody, "Coût total du crédit", 
+            formatMontant(comparisonResults.scenarioReference.coutGlobalTotal),
+            formatMontant(comparisonResults.scenarioRemboursement.coutGlobalTotal),
+            formatMontant(comparisonResults.scenarioReference.coutGlobalTotal - comparisonResults.scenarioRemboursement.coutGlobalTotal)
+        );
+        
+        // Afficher le tableau de comparaison
+        document.getElementById('comparison-table').classList.remove('hidden');
+    }
+}
+
+// Fonction utilitaire pour ajouter une ligne au tableau de comparaison
+function addComparisonRow(tableBody, label, value1, value2, difference, forceNegative = false) {
+    const row = document.createElement('tr');
+    
+    // Déterminer si la différence est un nombre
+    let numericDifference = 0;
+    if (typeof difference === 'string') {
+        // Convertir la chaîne en nombre en supprimant le formatage
+        const cleanDiff = difference.replace(/[^\d,-]/g, '').replace(',', '.');
+        numericDifference = parseFloat(cleanDiff) || 0;
+    } else {
+        numericDifference = difference;
+    }
+    
+    // Colorer selon la valeur (positif en vert, négatif en rouge)
+    if (forceNegative) {
+        row.classList.add('text-red-400');
+    } else {
+        row.classList.add(numericDifference >= 0 ? 'text-green-400' : 'text-red-400');
+    }
+    
+    row.innerHTML = `
+        <td class="px-3 py-2 text-left">${label}</td>
+        <td class="px-3 py-2 text-right">${value1}</td>
+        <td class="px-3 py-2 text-right">${value2}</td>
+        <td class="px-3 py-2 text-right">${difference}</td>
+    `;
+    
+    tableBody.appendChild(row);
+}
+
+// Ajouter la zone de comparaison à l'interface
+function addComparisonElement() {
+    // Vérifier si l'élément existe déjà
+    if (document.getElementById('taux-vs-remboursement')) {
+        return;
+    }
+    
+    // Créer l'élément de comparaison
+    const comparisonElement = document.createElement('div');
+    comparisonElement.id = 'taux-vs-remboursement';
+    comparisonElement.className = 'mt-6 bg-blue-900 bg-opacity-20 p-4 rounded-lg text-sm text-gray-300 hidden';
+    comparisonElement.innerHTML = `
+        <h4 class="text-green-400 font-semibold mb-2">Comparaison : baisse de taux vs remboursement par capital</h4>
+        <ul>
+            <li>⚡ Économie en réduisant les taux : <span class="text-green-300" id="gain-taux"></span></li>
+            <li>💰 Économie via remboursement anticipé : <span class="text-green-300" id="gain-remb"></span></li>
+            <li class="mt-2">🎯 <strong>Scénario le plus avantageux :</strong> <span id="scenario-optimal" class="font-bold text-green-400"></span></li>
+        </ul>
+    `;
+    
+    // Chercher un bon endroit pour l'insérer
+    const savingsSummary = document.getElementById('savings-summary');
+    if (savingsSummary) {
+        savingsSummary.after(comparisonElement);
+    } else {
+        const chartContainer = document.querySelector('.chart-container');
+        if (chartContainer) {
+            chartContainer.after(comparisonElement);
+        }
+    }
+    
+    // Ajouter également le tableau de comparaison s'il n'existe pas
+    if (!document.getElementById('comparison-table')) {
+        const comparisonTable = document.createElement('div');
+        comparisonTable.id = 'comparison-table';
+        comparisonTable.className = 'mb-6 hidden';
+        comparisonTable.innerHTML = `
+            <h5 class="text-lg font-semibold mb-3">Comparaison des scénarios</h5>
+            <div class="overflow-auto max-h-60 bg-blue-800 bg-opacity-20 rounded-lg">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-blue-900 bg-opacity-50 sticky top-0">
+                        <tr>
+                            <th class="px-3 py-2 text-left">Paramètre</th>
+                            <th class="px-3 py-2 text-right">Sans remb. anticipé</th>
+                            <th class="px-3 py-2 text-right">Avec remb. anticipé</th>
+                            <th class="px-3 py-2 text-right">Différence</th>
+                        </tr>
+                    </thead>
+                    <tbody id="comparison-table-body">
+                        <!-- Le tableau sera rempli dynamiquement par JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        comparisonElement.after(comparisonTable);
+    }
 }
 
 // Mise à jour des valeurs des sliders
@@ -260,6 +535,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById('mode-duree').classList.add('text-gray-300');
                 document.getElementById('remboursement-mode').value = 'mensualite';
             });
+            
+            // Ajouter la case à cocher pour la comparaison de scénarios
+            const checkboxContainer = document.createElement('div');
+            checkboxContainer.className = 'mt-3 flex items-center';
+            checkboxContainer.innerHTML = `
+                <input id="compare-scenarios" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                <label for="compare-scenarios" class="ml-2 text-sm font-medium text-gray-300">
+                    Comparer avec/sans remboursement anticipé
+                    <span class="ml-1 text-green-400 cursor-help" title="Active la comparaison entre un scénario sans remboursement anticipé et un scénario avec remboursement anticipé.">
+                        <i class="fas fa-info-circle"></i>
+                    </span>
+                </label>
+            `;
+            
+            anticipatedSection.appendChild(checkboxContainer);
         }
     };
     
@@ -618,6 +908,19 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Ajouter un résumé des économies
         updateSavingsSummary(result);
+        
+        // Effectuer la comparaison si l'option est activée
+        if (document.getElementById('compare-scenarios')?.checked) {
+            const comparisonResults = comparerScenarios();
+            updateComparisonUI(comparisonResults);
+        } else {
+            // Cacher la zone de comparaison
+            const comparisonElement = document.getElementById('taux-vs-remboursement');
+            const comparisonTable = document.getElementById('comparison-table');
+            
+            if (comparisonElement) comparisonElement.classList.add('hidden');
+            if (comparisonTable) comparisonTable.classList.add('hidden');
+        }
     }
     
     // Fonction pour ajouter un résumé des économies
@@ -989,6 +1292,19 @@ document.addEventListener('DOMContentLoaded', function() {
                         <h3 class="font-bold mb-2 text-green-700">Économies réalisées</h3>
                         <div class="text-sm">
                             ${savingsSummary.innerHTML.replace(/class=\"[^\"]*\"/g, '').replace(/<i[^>]*><\/i>/g, '•')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Ajouter la comparaison des scénarios si elle existe
+            const tauxVsRemboursement = document.getElementById('taux-vs-remboursement');
+            if (tauxVsRemboursement && !tauxVsRemboursement.classList.contains('hidden')) {
+                element.innerHTML += `
+                    <div class="mt-3 mb-6 p-4 border-l-4 border-blue-500 bg-blue-50 pl-4">
+                        <h3 class="font-bold mb-2 text-blue-700">Comparaison des stratégies</h3>
+                        <div class="text-sm">
+                            ${tauxVsRemboursement.innerHTML.replace(/class=\"[^\"]*\"/g, '').replace(/<i[^>]*><\/i>/g, '•')}
                         </div>
                     </div>
                 `;
