@@ -10,7 +10,10 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Ajout de la bibliothèque html2pdf pour l'export PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Styles généraux -->
     <link rel="stylesheet" href="css/simulation.css">
+    <!-- Styles spécifiques pour le simulateur de prêt -->
+    <link rel="stylesheet" href="css/loan-simulator.css">
     <style>
         /* Styles supplémentaires pour le module budget */
         .budget-score-circle {
@@ -76,66 +79,6 @@
         
         #total-vie-courante, #total-loisirs {
             transition: all 0.3s ease;
-        }
-        
-        /* Animation pour la mise à jour des totaux */
-        .total-updated {
-            animation: pulse-update 1s ease;
-        }
-        
-        @keyframes pulse-update {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); color: rgb(74, 222, 128); }
-            100% { transform: scale(1); }
-        }
-        
-        /* Styles pour les nouvelles fonctionnalités de simulation de prêt */
-        .comparison-badge {
-            background-color: rgba(52, 211, 153, 0.2);
-            color: rgba(52, 211, 153, 1);
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.5rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-            display: inline-flex;
-            align-items: center;
-            margin-left: 0.5rem;
-        }
-        
-        .simulation-saved {
-            animation: saved-pulse 2s ease;
-        }
-        
-        @keyframes saved-pulse {
-            0% { transform: scale(1); background-color: rgba(52, 211, 153, 0.1); }
-            50% { transform: scale(1.02); background-color: rgba(52, 211, 153, 0.2); }
-            100% { transform: scale(1); background-color: rgba(52, 211, 153, 0.1); }
-        }
-        
-        /* Style pour le nouveau tableau de comparaison */
-        #comparaison-simulations-container {
-            transition: all 0.3s ease;
-        }
-        
-        .delete-simulation {
-            transition: all 0.2s ease;
-        }
-        
-        .delete-simulation:hover {
-            transform: scale(1.2);
-        }
-        
-        /* Style pour l'affichage du mode in fine capitalisé */
-        #capitalisation-frais-container {
-            opacity: 0;
-            max-height: 0;
-            overflow: hidden;
-            transition: opacity 0.3s ease, max-height 0.3s ease;
-        }
-        
-        #capitalisation-frais-container.visible {
-            opacity: 1;
-            max-height: 3rem;
         }
     </style>
 </head>
@@ -554,9 +497,9 @@
                             
                             <!-- Montant du prêt -->
                             <div class="mb-4">
-                                <label class="block mb-2 text-sm font-medium text-gray-300">
+                                <label class="loan-option-label">
                                     Montant du prêt
-                                    <span class="ml-1 text-green-400 cursor-help" title="Le montant total que vous empruntez auprès de votre banque.">
+                                    <span class="loan-option-info cursor-help" title="Le montant total que vous empruntez auprès de votre banque.">
                                         <i class="fas fa-info-circle"></i>
                                     </span>
                                 </label>
@@ -565,37 +508,37 @@
                             
                             <!-- Taux d'intérêt -->
                             <div class="mb-4">
-                                <label class="block mb-2 text-sm font-medium text-gray-300">
+                                <label class="loan-option-label">
                                     Taux d'intérêt annuel (%)
-                                    <span class="ml-1 text-green-400 cursor-help" title="Le taux d'intérêt annuel de votre prêt, exprimé en pourcentage.">
+                                    <span class="loan-option-info cursor-help" title="Le taux d'intérêt annuel de votre prêt, exprimé en pourcentage.">
                                         <i class="fas fa-info-circle"></i>
                                     </span>
                                 </label>
                                 <div class="flex items-center gap-4">
-                                    <input type="range" id="interest-rate-slider" min="0.5" max="7" value="3.09" step="0.01" class="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer">
-                                    <span id="interest-rate-value" class="bg-green-900 bg-opacity-30 text-green-400 px-2 py-1 rounded text-sm font-medium min-w-[60px] text-center">3.09%</span>
+                                    <input type="range" id="interest-rate-slider" min="0.5" max="7" value="3.09" step="0.01" class="loan-slider">
+                                    <span id="interest-rate-value" class="loan-slider-value">3.09%</span>
                                 </div>
                             </div>
                             
                             <!-- Durée du prêt -->
                             <div class="mb-4">
-                                <label class="block mb-2 text-sm font-medium text-gray-300">
+                                <label class="loan-option-label">
                                     Durée du prêt (années)
-                                    <span class="ml-1 text-green-400 cursor-help" title="La durée totale de votre prêt en années.">
+                                    <span class="loan-option-info cursor-help" title="La durée totale de votre prêt en années.">
                                         <i class="fas fa-info-circle"></i>
                                     </span>
                                 </label>
                                 <div class="flex items-center gap-4">
-                                    <input type="range" id="loan-duration-slider" min="5" max="30" value="25" step="1" class="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer">
-                                    <span id="loan-duration-value" class="bg-green-900 bg-opacity-30 text-green-400 px-2 py-1 rounded text-sm font-medium min-w-[60px] text-center">25 ans</span>
+                                    <input type="range" id="loan-duration-slider" min="5" max="30" value="25" step="1" class="loan-slider">
+                                    <span id="loan-duration-value" class="loan-slider-value">25 ans</span>
                                 </div>
                             </div>
                             
                             <!-- Type de prêt -->
                             <div class="mb-4">
-                                <label class="block mb-2 text-sm font-medium text-gray-300">
+                                <label class="loan-option-label">
                                     Type de prêt
-                                    <span class="ml-1 text-green-400 cursor-help" title="Amortissable: remboursement progressif du capital. In fine: remboursement du capital à la fin. Dégressif: remboursement constant du capital.">
+                                    <span class="loan-option-info cursor-help" title="Amortissable: remboursement progressif du capital. In fine: remboursement du capital à la fin. Dégressif: remboursement constant du capital.">
                                         <i class="fas fa-info-circle"></i>
                                     </span>
                                 </label>
@@ -607,7 +550,7 @@
                             </div>
                             
                             <!-- Information sur le type de prêt -->
-                            <div id="pret-info" class="mt-4 mb-4 bg-green-900 bg-opacity-10 border-l-4 border-green-400 rounded-md p-3">
+                            <div id="pret-info" class="credit-type-info">
                                 <h5 class="text-green-400 font-medium flex items-center mb-2">
                                     <i class="fas fa-info-circle mr-2"></i>
                                     <span id="pret-info-titre">Prêt amortissable classique</span>
@@ -619,11 +562,11 @@
                             </div>
                             
                             <!-- Option pour capitaliser les frais (prêts in fine) -->
-                            <div id="capitalisation-frais-container" class="mt-3 flex items-center">
+                            <div id="capitalisation-frais-container">
                                 <input id="capitaliser-frais-in-fine" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
                                 <label for="capitaliser-frais-in-fine" class="ml-2 text-sm font-medium text-gray-300">
                                     Capitaliser les frais initiaux
-                                    <span class="ml-1 text-green-400 cursor-help" title="Pour les prêts in fine uniquement. Si activé, les frais de dossier et de garantie sont ajoutés au capital emprunté et remboursés à l'échéance.">
+                                    <span class="loan-option-info cursor-help" title="Pour les prêts in fine uniquement. Si activé, les frais de dossier et de garantie sont ajoutés au capital emprunté et remboursés à l'échéance.">
                                         <i class="fas fa-info-circle"></i>
                                     </span>
                                 </label>
@@ -631,22 +574,22 @@
                             
                             <!-- Taux d'assurance -->
                             <div class="mb-4">
-                                <label class="block mb-2 text-sm font-medium text-gray-300">
+                                <label class="loan-option-label">
                                     Taux d'assurance annuel (%)
-                                    <span class="ml-1 text-green-400 cursor-help" title="Le taux d'assurance emprunteur annuel, généralement entre 0.1% et 0.4% selon votre profil.">
+                                    <span class="loan-option-info cursor-help" title="Le taux d'assurance emprunteur annuel, généralement entre 0.1% et 0.4% selon votre profil.">
                                         <i class="fas fa-info-circle"></i>
                                     </span>
                                 </label>
                                 <div class="flex items-center gap-4">
-                                    <input type="range" id="insurance-rate-slider" min="0" max="0.8" value="0.14" step="0.01" class="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer">
-                                    <span id="insurance-rate-value" class="bg-green-900 bg-opacity-30 text-green-400 px-2 py-1 rounded text-sm font-medium min-w-[60px] text-center">0.14%</span>
+                                    <input type="range" id="insurance-rate-slider" min="0" max="0.8" value="0.14" step="0.01" class="loan-slider">
+                                    <span id="insurance-rate-value" class="loan-slider-value">0.14%</span>
                                 </div>
                                 
                                 <div class="mt-2 flex items-center">
                                     <input id="assurance-capital-initial" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
                                     <label for="assurance-capital-initial" class="ml-2 text-sm font-medium text-gray-300">
                                         Assurance sur capital initial
-                                        <span class="ml-1 text-green-400 cursor-help" title="Si activé, le taux d'assurance s'applique au capital initial. Sinon, il s'applique au capital restant dû.">
+                                        <span class="loan-option-info cursor-help" title="Si activé, le taux d'assurance s'applique au capital initial. Sinon, il s'applique au capital restant dû.">
                                             <i class="fas fa-info-circle"></i>
                                         </span>
                                     </label>
@@ -654,17 +597,17 @@
                             </div>
                             
                             <!-- Frais annexes -->
-                            <div class="mt-8 mb-4 pt-6 border-t border-blue-800">
-                                <h5 class="text-lg font-semibold mb-4 flex items-center">
-                                    <i class="fas fa-file-invoice-dollar text-green-400 mr-2"></i>
+                            <div class="parameters-section">
+                                <h5 class="parameters-section-title">
+                                    <i class="fas fa-file-invoice-dollar"></i>
                                     Frais annexes
                                 </h5>
                                 
                                 <!-- Frais de dossier -->
-                                <div class="mb-4">
-                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                <div class="parameter-row">
+                                    <label class="loan-option-label">
                                         Frais de dossier
-                                        <span class="ml-1 text-green-400 cursor-help" title="Frais demandés par la banque pour l'étude et le montage du dossier.">
+                                        <span class="loan-option-info cursor-help" title="Frais demandés par la banque pour l'étude et le montage du dossier.">
                                             <i class="fas fa-info-circle"></i>
                                         </span>
                                     </label>
@@ -672,10 +615,10 @@
                                 </div>
                                 
                                 <!-- Frais de garantie -->
-                                <div class="mb-4">
-                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                <div class="parameter-row">
+                                    <label class="loan-option-label">
                                         Frais de garantie estimés
-                                        <span class="ml-1 text-green-400 cursor-help" title="Frais liés à la garantie du prêt. Calculés automatiquement (0.013709 du capital emprunté).">
+                                        <span class="loan-option-info cursor-help" title="Frais liés à la garantie du prêt. Calculés automatiquement (0.013709 du capital emprunté).">
                                             <i class="fas fa-info-circle"></i>
                                         </span>
                                     </label>
@@ -683,10 +626,10 @@
                                 </div>
                                 
                                 <!-- Frais de tenue de compte -->
-                                <div class="mb-4">
-                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                <div class="parameter-row">
+                                    <label class="loan-option-label">
                                         Frais de tenue de compte
-                                        <span class="ml-1 text-green-400 cursor-help" title="Frais de tenue du compte bancaire sur la durée du prêt.">
+                                        <span class="loan-option-info cursor-help" title="Frais de tenue du compte bancaire sur la durée du prêt.">
                                             <i class="fas fa-info-circle"></i>
                                         </span>
                                     </label>
@@ -695,17 +638,17 @@
                             </div>
                             
                             <!-- Options avancées -->
-                            <div class="mt-8 mb-4 pt-6 border-t border-blue-800">
-                                <h5 class="text-lg font-semibold mb-4 flex items-center">
-                                    <i class="fas fa-sliders-h text-green-400 mr-2"></i>
+                            <div class="parameters-section">
+                                <h5 class="parameters-section-title">
+                                    <i class="fas fa-sliders-h"></i>
                                     Options avancées
                                 </h5>
                                 
                                 <!-- Périodicité des remboursements -->
-                                <div class="mb-4">
-                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                <div class="parameter-row">
+                                    <label class="loan-option-label">
                                         Périodicité des remboursements
-                                        <span class="ml-1 text-green-400 cursor-help" title="Fréquence à laquelle vous remboursez votre prêt.">
+                                        <span class="loan-option-info cursor-help" title="Fréquence à laquelle vous remboursez votre prêt.">
                                             <i class="fas fa-info-circle"></i>
                                         </span>
                                     </label>
@@ -717,10 +660,10 @@
                                 </div>
                                 
                                 <!-- Différé d'amortissement -->
-                                <div class="mb-4">
-                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                <div class="parameter-row">
+                                    <label class="loan-option-label">
                                         Différé d'amortissement (mois)
-                                        <span class="ml-1 text-green-400 cursor-help" title="Période pendant laquelle vous ne remboursez que les intérêts, sans le capital.">
+                                        <span class="loan-option-info cursor-help" title="Période pendant laquelle vous ne remboursez que les intérêts, sans le capital.">
                                             <i class="fas fa-info-circle"></i>
                                         </span>
                                     </label>
@@ -732,7 +675,7 @@
                                     <input id="compare-scenarios" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
                                     <label for="compare-scenarios" class="ml-2 text-sm font-medium text-gray-300">
                                         Comparer avec/sans remboursement anticipé
-                                        <span class="ml-1 text-green-400 cursor-help" title="Active la comparaison entre un scénario sans remboursement anticipé et un scénario avec remboursement anticipé.">
+                                        <span class="loan-option-info cursor-help" title="Active la comparaison entre un scénario sans remboursement anticipé et un scénario avec remboursement anticipé.">
                                             <i class="fas fa-info-circle"></i>
                                         </span>
                                     </label>
@@ -740,32 +683,32 @@
                             </div>
                             
                             <!-- Paramètres de remboursement anticipé -->
-                            <div class="mt-8 mb-4 pt-6 border-t border-blue-800">
-                                <h5 class="text-lg font-semibold mb-4 flex items-center">
-                                    <i class="fas fa-hand-holding-usd text-green-400 mr-2"></i>
+                            <div class="parameters-section">
+                                <h5 class="parameters-section-title">
+                                    <i class="fas fa-hand-holding-usd"></i>
                                     Remboursement anticipé
                                 </h5>
                                 
                                 <!-- Mode de remboursement anticipé -->
-                                <div class="mb-4">
-                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                <div class="parameter-row">
+                                    <label class="loan-option-label">
                                         Mode de remboursement anticipé
-                                        <span class="ml-1 text-green-400 cursor-help" title="Choisissez si vous souhaitez réduire la durée du prêt en gardant la même mensualité, ou réduire la mensualité en gardant la même durée.">
+                                        <span class="loan-option-info cursor-help" title="Choisissez si vous souhaitez réduire la durée du prêt en gardant la même mensualité, ou réduire la mensualité en gardant la même durée.">
                                             <i class="fas fa-info-circle"></i>
                                         </span>
                                     </label>
                                     <div class="flex gap-2">
-                                        <button id="mode-duree" class="flex-1 py-2 px-3 bg-blue-800 bg-opacity-30 text-green-400 rounded active">Réduire la durée</button>
-                                        <button id="mode-mensualite" class="flex-1 py-2 px-3 bg-blue-800 bg-opacity-30 text-gray-300 rounded">Réduire la mensualité</button>
+                                        <button id="mode-duree" class="mode-button active">Réduire la durée</button>
+                                        <button id="mode-mensualite" class="mode-button">Réduire la mensualité</button>
                                     </div>
                                     <input type="hidden" id="remboursement-mode" value="duree">
                                 </div>
                                 
                                 <!-- Montant du remboursement anticipé -->
-                                <div class="mb-4">
-                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                <div class="parameter-row">
+                                    <label class="loan-option-label">
                                         Montant à rembourser par anticipation
-                                        <span class="ml-1 text-green-400 cursor-help" title="Le montant que vous souhaitez rembourser en une fois, avant l'échéance prévue.">
+                                        <span class="loan-option-info cursor-help" title="Le montant que vous souhaitez rembourser en une fois, avant l'échéance prévue.">
                                             <i class="fas fa-info-circle"></i>
                                         </span>
                                     </label>
@@ -773,50 +716,50 @@
                                 </div>
                                 
                                 <!-- Mois du remboursement anticipé -->
-                                <div class="mb-4">
-                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                <div class="parameter-row">
+                                    <label class="loan-option-label">
                                         Mois du remboursement anticipé
-                                        <span class="ml-1 text-green-400 cursor-help" title="Le mois auquel vous effectuerez le remboursement anticipé.">
+                                        <span class="loan-option-info cursor-help" title="Le mois auquel vous effectuerez le remboursement anticipé.">
                                             <i class="fas fa-info-circle"></i>
                                         </span>
                                     </label>
                                     <div class="flex items-center gap-4">
-                                        <input type="range" id="early-repayment-month-slider" min="1" max="120" value="36" step="1" class="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer">
-                                        <span id="early-repayment-month-value" class="bg-green-900 bg-opacity-30 text-green-400 px-2 py-1 rounded text-sm font-medium min-w-[60px] text-center">36</span>
+                                        <input type="range" id="early-repayment-month-slider" min="1" max="120" value="36" step="1" class="loan-slider">
+                                        <span id="early-repayment-month-value" class="loan-slider-value">36</span>
                                     </div>
                                 </div>
                                 
                                 <!-- Nouveau taux après renégociation -->
-                                <div class="mb-4">
-                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                <div class="parameter-row">
+                                    <label class="loan-option-label">
                                         Nouveau taux après renégociation (%)
-                                        <span class="ml-1 text-green-400 cursor-help" title="Le nouveau taux d'intérêt annuel après renégociation ou rachat de crédit.">
+                                        <span class="loan-option-info cursor-help" title="Le nouveau taux d'intérêt annuel après renégociation ou rachat de crédit.">
                                             <i class="fas fa-info-circle"></i>
                                         </span>
                                     </label>
                                     <div class="flex items-center gap-4">
-                                        <input type="range" id="new-interest-rate-slider" min="0.5" max="7" value="2.3" step="0.01" class="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer">
-                                        <span id="new-interest-rate-value" class="bg-green-900 bg-opacity-30 text-green-400 px-2 py-1 rounded text-sm font-medium min-w-[60px] text-center">2.3%</span>
+                                        <input type="range" id="new-interest-rate-slider" min="0.5" max="7" value="2.3" step="0.01" class="loan-slider">
+                                        <span id="new-interest-rate-value" class="loan-slider-value">2.3%</span>
                                     </div>
                                 </div>
                                 
                                 <!-- Indemnités de remboursement anticipé -->
-                                <div class="mb-4">
-                                    <label class="block mb-2 text-sm font-medium text-gray-300">
+                                <div class="parameter-row">
+                                    <label class="loan-option-label">
                                         Indemnités de remboursement anticipé (mois)
-                                        <span class="ml-1 text-green-400 cursor-help" title="Nombre de mois d'intérêts servant de base au calcul des indemnités de remboursement anticipé (généralement entre 0 et 6 mois). Les IRA sont légalement plafonnées à 6 mois d'intérêts ou 3% du capital remboursé.">
+                                        <span class="loan-option-info cursor-help" title="Nombre de mois d'intérêts servant de base au calcul des indemnités de remboursement anticipé (généralement entre 0 et 6 mois). Les IRA sont légalement plafonnées à 6 mois d'intérêts ou 3% du capital remboursé.">
                                             <i class="fas fa-info-circle"></i>
                                         </span>
                                     </label>
                                     <div class="flex items-center gap-4">
-                                        <input type="range" id="penalty-months-slider" min="0" max="6" value="3" step="1" class="w-full h-2 bg-blue-800 rounded-lg appearance-none cursor-pointer">
-                                        <span id="penalty-months-value" class="bg-green-900 bg-opacity-30 text-green-400 px-2 py-1 rounded text-sm font-medium min-w-[60px] text-center">3 mois</span>
+                                        <input type="range" id="penalty-months-slider" min="0" max="6" value="3" step="1" class="loan-slider">
+                                        <span id="penalty-months-value" class="loan-slider-value">3 mois</span>
                                     </div>
                                 </div>
                             </div>
                             
                             <!-- Bouton de simulation -->
-                            <button id="calculate-loan-button" class="w-full mt-6 py-3 px-4 bg-gradient-to-r from-green-500 to-green-400 text-gray-900 font-semibold rounded-lg shadow-lg hover:shadow-green-500/30 hover:-translate-y-1 transition-all duration-300 flex items-center justify-center">
+                            <button id="calculate-loan-button" class="loan-action-button w-full mt-6">
                                 <i class="fas fa-play-circle mr-2"></i> 
                                 Calculer le plan d'amortissement
                             </button>
@@ -830,41 +773,41 @@
                             </h4>
                             
                             <div class="grid grid-cols-2 gap-4 mb-6">
-                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                                    <p id="monthly-payment" class="text-green-400 text-2xl font-bold mb-1 result-value">0 €</p>
-                                    <p class="text-gray-400 text-sm">Mensualité initiale</p>
+                                <div class="result-card">
+                                    <p id="monthly-payment" class="result-value">0 €</p>
+                                    <p class="result-label">Mensualité initiale</p>
                                 </div>
-                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                                    <p id="total-interest" class="text-green-400 text-2xl font-bold mb-1 result-value">0 €</p>
-                                    <p class="text-gray-400 text-sm">Total des intérêts</p>
+                                <div class="result-card">
+                                    <p id="total-interest" class="result-value">0 €</p>
+                                    <p class="result-label">Total des intérêts</p>
                                 </div>
-                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                                    <p id="early-repayment-penalty" class="text-green-400 text-2xl font-bold mb-1 result-value">0 €</p>
-                                    <p class="text-gray-400 text-sm">Indemnités de remb. anticipé</p>
+                                <div class="result-card">
+                                    <p id="early-repayment-penalty" class="result-value">0 €</p>
+                                    <p class="result-label">Indemnités de remb. anticipé</p>
                                 </div>
-                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                                    <p id="total-cost" class="text-green-400 text-2xl font-bold mb-1 result-value">0 €</p>
-                                    <p class="text-gray-400 text-sm">Coût total du crédit</p>
+                                <div class="result-card">
+                                    <p id="total-cost" class="result-value">0 €</p>
+                                    <p class="result-label">Coût total du crédit</p>
                                 </div>
                             </div>
                             
                             <!-- Nouvelles cellules pour frais et coût global -->
                             <div class="col-span-2 grid grid-cols-2 gap-4 mt-2 mb-6">
-                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                                    <p id="total-fees" class="text-green-400 text-2xl font-bold mb-1 result-value">0 €</p>
-                                    <p class="text-gray-400 text-sm">Frais annexes</p>
+                                <div class="result-card">
+                                    <p id="total-fees" class="result-value">0 €</p>
+                                    <p class="result-label">Frais annexes</p>
                                 </div>
-                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center">
-                                    <p id="taeg" class="text-green-400 text-2xl font-bold mb-1 result-value">0%</p>
-                                    <p class="text-gray-400 text-sm">TAEG exact</p>
+                                <div class="result-card">
+                                    <p id="taeg" class="result-value">0%</p>
+                                    <p class="result-label">TAEG exact</p>
                                 </div>
-                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center col-span-2">
-                                    <p id="cout-global" class="text-green-400 text-2xl font-bold mb-1 result-value">0 €</p>
-                                    <p class="text-gray-400 text-sm">Coût global (tout compris)</p>
+                                <div class="result-card col-span-2">
+                                    <p id="cout-global" class="result-value">0 €</p>
+                                    <p class="result-label">Coût global (tout compris)</p>
                                 </div>
-                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg text-center col-span-2">
-                                    <p id="ratio-cout" class="text-green-400 text-2xl font-bold mb-1 result-value">0</p>
-                                    <p class="text-gray-400 text-sm">Coût par euro emprunté</p>
+                                <div class="result-card col-span-2">
+                                    <p id="ratio-cout" class="result-value">0</p>
+                                    <p class="result-label">Coût par euro emprunté</p>
                                 </div>
                             </div>
                             
@@ -895,20 +838,20 @@
                             <div class="flex justify-between mb-4">
                                 <h5 class="text-lg font-semibold">Tableau d'amortissement</h5>
                                 <div class="flex">
-                                    <button id="export-pdf" class="px-3 py-1 bg-blue-800 bg-opacity-30 text-gray-300 hover:text-green-400 rounded transition-colors flex items-center">
-                                        <i class="fas fa-file-pdf mr-2"></i>Exporter en PDF
+                                    <button id="export-pdf" class="loan-secondary-button ml-2">
+                                        <i class="fas fa-file-pdf"></i>Exporter en PDF
                                     </button>
-                                    <button id="save-simulation-btn" class="ml-2 px-3 py-1 bg-green-800 bg-opacity-30 text-green-400 hover:bg-green-700 rounded transition-colors flex items-center">
-                                        <i class="fas fa-save mr-2"></i>Sauvegarder simulation
+                                    <button id="save-simulation-btn" class="loan-secondary-button ml-2 text-green-400 hover:bg-green-700">
+                                        <i class="fas fa-save"></i>Sauvegarder simulation
                                     </button>
                                 </div>
                             </div>
                             
-                            <div class="overflow-auto max-h-80 bg-blue-800 bg-opacity-20 rounded-lg">
+                            <div class="amortization-table-container">
                                 <table class="min-w-full text-sm">
                                     <thead class="bg-blue-900 bg-opacity-50 sticky top-0">
                                         <tr>
-                                            <th class="px-3 py-2 text-left">Mois</th>
+                                            <th class="px-3 py-2 text-left">Période</th>
                                             <th class="px-3 py-2 text-right">Mensualité</th>
                                             <th class="px-3 py-2 text-right">Capital</th>
                                             <th class="px-3 py-2 text-right">Intérêts</th>
@@ -1090,19 +1033,13 @@
         
         // Écouter le changement sur les éléments de budget
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialisation pour l'option de capitalisation des frais
-            const capitalisationContainer = document.getElementById('capitalisation-frais-container');
-            if (capitalisationContainer) {
-                capitalisationContainer.style.display = 'none';
-            }
-            
             // Mise à jour de l'affichage de l'option de capitalisation en fonction du type de prêt
             document.getElementById('type-pret')?.addEventListener('change', function() {
                 const capitalisationContainer = document.getElementById('capitalisation-frais-container');
                 if (this.value === 'inFine' && capitalisationContainer) {
-                    capitalisationContainer.style.display = 'flex';
+                    capitalisationContainer.classList.add('visible');
                 } else if (capitalisationContainer) {
-                    capitalisationContainer.style.display = 'none';
+                    capitalisationContainer.classList.remove('visible');
                 }
             });
             
@@ -1184,23 +1121,6 @@
                     window.location.hash = targetId;
                 });
             });
-            
-            // Gestion du mode de remboursement anticipé
-            if (document.getElementById('mode-duree') && document.getElementById('mode-mensualite')) {
-                document.getElementById('mode-duree').addEventListener('click', function() {
-                    document.getElementById('mode-duree').classList.add('active', 'text-green-400');
-                    document.getElementById('mode-mensualite').classList.remove('active', 'text-green-400');
-                    document.getElementById('mode-mensualite').classList.add('text-gray-300');
-                    document.getElementById('remboursement-mode').value = 'duree';
-                });
-                
-                document.getElementById('mode-mensualite').addEventListener('click', function() {
-                    document.getElementById('mode-mensualite').classList.add('active', 'text-green-400');
-                    document.getElementById('mode-duree').classList.remove('active', 'text-green-400');
-                    document.getElementById('mode-duree').classList.add('text-gray-300');
-                    document.getElementById('remboursement-mode').value = 'mensualite';
-                });
-            }
             
             // Mettre à jour l'horodatage courant dans le footer
             const updateTimeElements = document.querySelectorAll('.update-time');
