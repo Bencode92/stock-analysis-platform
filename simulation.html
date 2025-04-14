@@ -635,15 +635,18 @@
                                     Options avancées
                                 </h5>
                                 
-                                <!-- Comparaison avec/sans remboursement anticipé -->
-                                <div class="mt-3 flex items-center">
-                                    <input id="compare-scenarios" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
-                                    <label for="compare-scenarios" class="ml-2 text-sm font-medium text-gray-300">
-                                        Comparer avec/sans remboursement anticipé
-                                        <span class="loan-option-info cursor-help" title="Active la comparaison entre un scénario sans remboursement anticipé et un scénario avec remboursement anticipé.">
+                                <!-- Nouveau taux après renégociation (commun aux deux modes) -->
+                                <div class="parameter-row">
+                                    <label class="loan-option-label">
+                                        Nouveau taux après renégociation (%)
+                                        <span class="loan-option-info cursor-help" title="Le nouveau taux d'intérêt annuel après renégociation ou rachat de crédit.">
                                             <i class="fas fa-info-circle"></i>
                                         </span>
                                     </label>
+                                    <div class="flex items-center gap-4">
+                                        <input type="range" id="new-interest-rate-slider" min="0.5" max="7" value="2.3" step="0.01" class="loan-slider">
+                                        <span id="new-interest-rate-value" class="loan-slider-value">2.3%</span>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -654,6 +657,17 @@
                                     Remboursement anticipé
                                 </h5>
                                 
+                                <!-- Comparaison avec/sans remboursement anticipé - DÉPLACÉ ICI -->
+                                <div class="mt-3 mb-4 flex items-center">
+                                    <input id="compare-scenarios" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                    <label for="compare-scenarios" class="ml-2 text-sm font-medium text-gray-300">
+                                        Comparer avec/sans remboursement anticipé
+                                        <span class="loan-option-info cursor-help" title="Active la comparaison entre un scénario sans remboursement anticipé et un scénario avec remboursement anticipé.">
+                                            <i class="fas fa-info-circle"></i>
+                                        </span>
+                                    </label>
+                                </div>
+                                
                                 <!-- Mode de remboursement anticipé -->
                                 <div class="parameter-row">
                                     <label class="loan-option-label">
@@ -663,8 +677,8 @@
                                         </span>
                                     </label>
                                     <div class="flex gap-2">
-                                        <button id="mode-duree" class="mode-button active">Réduire la durée</button>
-                                        <button id="mode-mensualite" class="mode-button">Réduire la mensualité</button>
+                                        <button id="mode-duree" class="mode-button active">Réduire la durée (garder la mensualité fixe)</button>
+                                        <button id="mode-mensualite" class="mode-button">Réduire la mensualité (garder la durée constante)</button>
                                     </div>
                                     <input type="hidden" id="remboursement-mode" value="duree">
                                 </div>
@@ -750,20 +764,6 @@
                                             <input type="range" id="penalty-months-slider-mensualite" min="0" max="6" value="3" step="1" class="loan-slider">
                                             <span id="penalty-months-value-mensualite" class="loan-slider-value">3 mois</span>
                                         </div>
-                                    </div>
-                                </div>
-
-                                <!-- Nouveau taux après renégociation (commun aux deux modes) -->
-                                <div class="parameter-row">
-                                    <label class="loan-option-label">
-                                        Nouveau taux après renégociation (%)
-                                        <span class="loan-option-info cursor-help" title="Le nouveau taux d'intérêt annuel après renégociation ou rachat de crédit.">
-                                            <i class="fas fa-info-circle"></i>
-                                        </span>
-                                    </label>
-                                    <div class="flex items-center gap-4">
-                                        <input type="range" id="new-interest-rate-slider" min="0.5" max="7" value="2.3" step="0.01" class="loan-slider">
-                                        <span id="new-interest-rate-value" class="loan-slider-value">2.3%</span>
                                     </div>
                                 </div>
                             </div>
