@@ -678,45 +678,28 @@
                                         </h5>
                                         <p class="text-sm text-gray-300 mb-3">Garder la même mensualité et réduire la durée totale du prêt</p>
                                         
-                                        <!-- Nombre de mois à réduire -->
+                                        <!-- Montant du remboursement anticipé -->
                                         <div class="parameter-row">
                                             <label class="loan-option-label">
-                                                Réduire la durée de
-                                                <span class="loan-option-info cursor-help" title="Le nombre de mois que vous souhaitez réduire sur la durée totale du prêt.">
+                                                Montant à rembourser
+                                                <span class="loan-option-info cursor-help" title="Le montant que vous souhaitez rembourser en une fois, avant l'échéance prévue.">
+                                                    <i class="fas fa-info-circle"></i>
+                                                </span>
+                                            </label>
+                                            <input type="number" id="early-repayment-amount-duree" value="10000" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                        </div>
+                                        
+                                        <!-- Mois du remboursement anticipé -->
+                                        <div class="parameter-row">
+                                            <label class="loan-option-label">
+                                                Mois du remboursement
+                                                <span class="loan-option-info cursor-help" title="Le mois auquel vous effectuerez le remboursement anticipé.">
                                                     <i class="fas fa-info-circle"></i>
                                                 </span>
                                             </label>
                                             <div class="flex items-center gap-4">
-                                                <input type="range" id="reduction-duree-slider" min="3" max="120" value="24" step="1" class="loan-slider">
-                                                <span id="reduction-duree-value" class="loan-slider-value">24 mois</span>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Mois du début de la réduction -->
-                                        <div class="parameter-row">
-                                            <label class="loan-option-label">
-                                                Mois de début de réduction
-                                                <span class="loan-option-info cursor-help" title="Le mois auquel vous effectuerez le remboursement anticipé qui réduira la durée du prêt.">
-                                                    <i class="fas fa-info-circle"></i>
-                                                </span>
-                                            </label>
-                                            <div class="flex items-center gap-4">
-                                                <input type="range" id="mois-debut-reduction-duree-slider" min="1" max="120" value="36" step="1" class="loan-slider">
-                                                <span id="mois-debut-reduction-duree-value" class="loan-slider-value">36</span>
-                                            </div>
-                                        </div>
-                                        
-                                        <!-- Montant calculé automatiquement -->
-                                        <div class="parameter-row">
-                                            <label class="loan-option-label">
-                                                Montant nécessaire
-                                                <span class="loan-option-info cursor-help" title="Montant calculé automatiquement pour réduire la durée du nombre de mois spécifié.">
-                                                    <i class="fas fa-info-circle"></i>
-                                                </span>
-                                            </label>
-                                            <div class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full flex items-center justify-between">
-                                                <span id="montant-calcule-duree" class="text-green-400">Calculé automatiquement</span>
-                                                <i class="fas fa-calculator text-gray-400"></i>
+                                                <input type="range" id="early-repayment-month-slider-duree" min="1" max="120" value="36" step="1" class="loan-slider">
+                                                <span id="early-repayment-month-value-duree" class="loan-slider-value">36</span>
                                             </div>
                                         </div>
                                         
@@ -734,20 +717,10 @@
                                             </div>
                                         </div>
                                         
-                                        <div class="mt-3 flex items-center justify-between">
-                                            <div>
-                                                <input type="checkbox" id="exonere-ira-duree" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
-                                                <label for="exonere-ira-duree" class="ml-2 text-sm font-medium text-gray-300">
-                                                    Exonération d'indemnités (IRA)
-                                                </label>
-                                            </div>
-                                            <div>
-                                                <input type="checkbox" id="apply-duree" class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500">
-                                                <label for="apply-duree" class="ml-2 text-sm font-medium text-green-400">
-                                                    Appliquer
-                                                </label>
-                                            </div>
-                                        </div>
+                                        <input type="checkbox" id="apply-duree" class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 mt-3">
+                                        <label for="apply-duree" class="ml-2 text-sm font-medium text-green-400">
+                                            Appliquer ce remboursement
+                                        </label>
                                     </div>
                                     
                                     <!-- Section Réduire la mensualité -->
@@ -766,7 +739,7 @@
                                                     <i class="fas fa-info-circle"></i>
                                                 </span>
                                             </label>
-                                            <input type="number" id="montant-reduction-mensualite" value="10000" min="1000" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                            <input type="number" id="early-repayment-amount-mensualite" value="10000" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
                                         </div>
                                         
                                         <!-- Mois du remboursement anticipé -->
@@ -778,8 +751,8 @@
                                                 </span>
                                             </label>
                                             <div class="flex items-center gap-4">
-                                                <input type="range" id="mois-reduction-mensualite-slider" min="1" max="120" value="36" step="1" class="loan-slider">
-                                                <span id="mois-reduction-mensualite-value" class="loan-slider-value">36</span>
+                                                <input type="range" id="early-repayment-month-slider-mensualite" min="1" max="120" value="36" step="1" class="loan-slider">
+                                                <span id="early-repayment-month-value-mensualite" class="loan-slider-value">36</span>
                                             </div>
                                         </div>
                                         
@@ -797,20 +770,10 @@
                                             </div>
                                         </div>
                                         
-                                        <div class="mt-3 flex items-center justify-between">
-                                            <div>
-                                                <input type="checkbox" id="exonere-ira-mensualite" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
-                                                <label for="exonere-ira-mensualite" class="ml-2 text-sm font-medium text-gray-300">
-                                                    Exonération d'indemnités (IRA)
-                                                </label>
-                                            </div>
-                                            <div>
-                                                <input type="checkbox" id="apply-mensualite" class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500">
-                                                <label for="apply-mensualite" class="ml-2 text-sm font-medium text-green-400">
-                                                    Appliquer
-                                                </label>
-                                            </div>
-                                        </div>
+                                        <input type="checkbox" id="apply-mensualite" class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 mt-3">
+                                        <label for="apply-mensualite" class="ml-2 text-sm font-medium text-green-400">
+                                            Appliquer ce remboursement
+                                        </label>
                                     </div>
                                 </div>
                             </div>
@@ -914,7 +877,6 @@
                                             <th class="px-3 py-2 text-right">Intérêts</th>
                                             <th class="px-3 py-2 text-right">Assurance</th>
                                             <th class="px-3 py-2 text-right">Capital restant</th>
-                                            <th class="px-3 py-2 text-right">Remb. anticipé</th>
                                         </tr>
                                     </thead>
                                     <tbody id="amortization-table">
