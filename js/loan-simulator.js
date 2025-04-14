@@ -48,7 +48,8 @@ class LoanSimulator {
         remboursementAnticipe = 0, 
         moisAnticipe = null, 
         nouveauTaux = null,
-        modeRemboursement = 'duree' // 'duree' ou 'mensualite'
+        modeRemboursement = 'duree', // 'duree' ou 'mensualite'
+        moisAReduire = 0 // Nouveau paramètre pour le nombre de mois à réduire directement
     }) {
         let mensualite = this.calculerMensualite();
         let capitalRestant = this.capital;
@@ -60,11 +61,17 @@ class LoanSimulator {
         let totalCapitalAmorti = 0;
         let capitalInitial = this.capital;
         
+        // Définir la durée finale en fonction du mode
+        let dureeFinale = this.dureeMois;
+        if (modeRemboursement === 'duree' && moisAReduire > 0) {
+            dureeFinale = Math.max(1, this.dureeMois - moisAReduire);
+        }
+        
         // Suivi avant remboursement anticipé
         let interetsAvantRembours = 0;
         let mensualitesAvantRembours = 0;
         
-        for (let mois = 1; mois <= this.dureeMois; mois++) {
+        for (let mois = 1; mois <= dureeFinale; mois++) {
             let interets = capitalRestant * tauxMensuel;
             
             // Calcul de l'assurance selon le mode (capital initial ou restant dû)
@@ -80,25 +87,21 @@ class LoanSimulator {
                 mensualitesAvantRembours += (mensualite + assurance);
             }
             
-            // Réinjection de capital (remboursement anticipé partiel)
-            if (moisAnticipe && mois === moisAnticipe) {
+            // Traitement différent selon le mode
+            if (modeRemboursement === 'mensualite' && moisAnticipe && mois === moisAnticipe) {
+                // Mode mensualité: réduction du capital restant par le montant remboursé
                 capitalRestant -= remboursementAnticipe;
                 
-                // Nouvelle mensualité si changement de taux ou mode mensualité
-                if (nouveauTaux !== null || modeRemboursement === 'mensualite') {
-                    let nouveauTauxMensuel = nouveauTaux !== null ? 
-                        nouveauTaux / 100 / 12 : tauxMensuel;
-                    
-                    if (nouveauTaux !== null) {
-                        tauxMensuel = nouveauTauxMensuel;
-                    }
-                    
-                    // Recalculer la mensualité pour la durée restante
-                    mensualite = capitalRestant * tauxMensuel / 
-                        (1 - Math.pow(1 + tauxMensuel, -(this.dureeMois - mois + 1)));
+                // Appliquer le nouveau taux si spécifié
+                if (nouveauTaux !== null) {
+                    tauxMensuel = nouveauTaux / 100 / 12;
                 }
-                // Si mode durée, on garde la même mensualité (on raccourcit la durée)
+                
+                // Recalculer la mensualité pour la même durée restante
+                mensualite = capitalRestant * tauxMensuel / 
+                    (1 - Math.pow(1 + tauxMensuel, -(this.dureeMois - mois + 1)));
             }
+            // Note: Pour le mode durée, on n'a pas besoin d'ajustement ici car on a déjà réduit dureeFinale
             
             capitalRestant -= capitalAmorti;
             if (capitalRestant < 0) capitalRestant = 0;
@@ -121,15 +124,19 @@ class LoanSimulator {
         
         // Indemnités de remboursement anticipé avec plafond légal
         let indemnites = 0;
-        if (remboursementAnticipe > 0 && moisAnticipe) {
-            // Calcul avec la formule standard
+        if (modeRemboursement === 'mensualite' && remboursementAnticipe > 0 && moisAnticipe) {
+            // Calcul standard pour le mode mensualité
             const indemniteStandard = remboursementAnticipe * tauxMensuel * this.indemnitesMois;
-            
-            // Calcul des plafonds légaux
             const plafond3Pourcent = remboursementAnticipe * 0.03;
             const plafond6Mois = mensualite * 6;
-            
-            // Application du minimum entre la formule standard et les plafonds légaux
+            indemnites = Math.min(indemniteStandard, Math.min(plafond3Pourcent, plafond6Mois));
+        } else if (modeRemboursement === 'duree' && moisAReduire > 0) {
+            // Pour le mode durée, estimer le capital qui serait remboursé pour les mois réduits
+            // pour calculer les indemnités
+            const capitalEstime = mensualite * moisAReduire * 0.8; // Estimation approximative (80% de la mensualité * nb mois)
+            const indemniteStandard = capitalEstime * tauxMensuel * this.indemnitesMois;
+            const plafond3Pourcent = capitalEstime * 0.03;
+            const plafond6Mois = mensualite * 6;
             indemnites = Math.min(indemniteStandard, Math.min(plafond3Pourcent, plafond6Mois));
         }
         
@@ -168,7 +175,8 @@ class LoanSimulator {
             mensualitesAvantRembours,
             taeg: tauxEffectifAnnuel,
             totalFrais,
-            coutGlobalTotal
+            coutGlobalTotal,
+            moisAReduire  // Nouveau champ retourné
         };
     }
 }
@@ -306,14 +314,25 @@ document.addEventListener('DOMContentLoaded', function() {
         // Récupérer le mode de remboursement (durée ou mensualité)
         const modeRemboursement = document.getElementById('remboursement-mode')?.value || 'duree';
         
-        // Récupérer les valeurs du mode actif (durée ou mensualité)
-        let earlyRepaymentAmount, earlyRepaymentMonth, penaltyMonths;
+        // Variables pour stocker les valeurs du remboursement anticipé
+        let earlyRepaymentAmount = 0;
+        let earlyRepaymentMonth = 0;
+        let penaltyMonths = 0;
+        let moisAReduire = 0;
         
+        // Récupération des valeurs en fonction du mode de remboursement actif
         if (modeRemboursement === 'duree') {
-            earlyRepaymentAmount = parseFloat(document.getElementById('early-repayment-amount-duree').value);
+            // Pour le mode durée, on utilise le nombre de mois à réduire
+            moisAReduire = parseInt(document.getElementById('reduction-duree-mois')?.value || 12);
             earlyRepaymentMonth = parseInt(document.getElementById('early-repayment-month-slider-duree').value);
             penaltyMonths = parseInt(document.getElementById('penalty-months-slider-duree').value);
+            
+            // Rétrocompatibilité - Si reduction-duree-mois n'existe pas, utiliser l'ancien champ
+            if (!document.getElementById('reduction-duree-mois')) {
+                moisAReduire = parseInt(loanDurationYears * 12 * 0.2); // Par défaut, réduction de 20% de la durée
+            }
         } else {
+            // Mode mensualité inchangé
             earlyRepaymentAmount = parseFloat(document.getElementById('early-repayment-amount-mensualite').value);
             earlyRepaymentMonth = parseInt(document.getElementById('early-repayment-month-slider-mensualite').value);
             penaltyMonths = parseInt(document.getElementById('penalty-months-slider-mensualite').value);
@@ -333,12 +352,13 @@ document.addEventListener('DOMContentLoaded', function() {
             assuranceSurCapitalInitial: assuranceSurCapitalInitial
         });
 
-        // Calcul du tableau d'amortissement
+        // Calcul du tableau d'amortissement avec les nouveaux paramètres
         const result = simulator.tableauAmortissement({
             remboursementAnticipe: earlyRepaymentAmount,
             moisAnticipe: earlyRepaymentMonth,
             nouveauTaux: newInterestRate,
-            modeRemboursement: modeRemboursement
+            modeRemboursement: modeRemboursement,
+            moisAReduire: moisAReduire
         });
 
         // Mise à jour des résultats
@@ -481,7 +501,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td class="px-3 py-2 font-medium">Mensualité</td>
                     <td class="px-3 py-2 text-right">${formatMontant(baseResult.mensualiteInitiale)}</td>
                     <td class="px-3 py-2 text-right">${formatMontant(result.tableau[result.tableau.length - 1].mensualite)}</td>
-                    <td class="px-3 py-2 text-right ${modeRemboursement === 'mensualite' ? 'text-green-400' : 'text-gray-400'}">${formatMontant(baseResult.mensualiteInitiale - result.tableau[result.tableau.length - 1].mensualite)}</td>
+                    <td class="px-3 py-2 text-right ${modeRemboursement === 'mensualite' ? 'text-green-400' : 'text-gray-400'}\">${formatMontant(baseResult.mensualiteInitiale - result.tableau[result.tableau.length - 1].mensualite)}</td>
                 `;
                 comparisonTableBody.appendChild(trMensualite);
                 
@@ -755,10 +775,12 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Récupérer le mode actif
             const modeRemboursement = document.getElementById('remboursement-mode')?.value || 'duree';
-            let earlyRepaymentAmount, earlyRepaymentMonth, penaltyMonths;
+            
+            // Récupérer les valeurs selon le mode
+            let moisAReduire, earlyRepaymentAmount, earlyRepaymentMonth, penaltyMonths;
             
             if (modeRemboursement === 'duree') {
-                earlyRepaymentAmount = document.getElementById('early-repayment-amount-duree').value;
+                moisAReduire = document.getElementById('reduction-duree-mois')?.value || 12;
                 earlyRepaymentMonth = document.getElementById('early-repayment-month-slider-duree').value;
                 penaltyMonths = document.getElementById('penalty-months-slider-duree').value;
             } else {
@@ -812,29 +834,55 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             
             // Ajouter les infos de remboursement anticipé
-            element.innerHTML += `
-                <div class="mt-3 mb-6 p-4 border border-gray-300 rounded">
-                    <h3 class="font-bold mb-2">Remboursement anticipé (mode: ${modeRemboursement === 'duree' ? 'Réduction de durée' : 'Réduction de mensualité'})</h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <p class="font-bold">Montant remboursé par anticipation:</p>
-                            <p>${earlyRepaymentAmount} €</p>
-                        </div>
-                        <div>
-                            <p class="font-bold">Mois du remboursement:</p>
-                            <p>${earlyRepaymentMonth}</p>
-                        </div>
-                        <div>
-                            <p class="font-bold">Taux après renégociation:</p>
-                            <p>${document.getElementById('new-interest-rate-slider').value}%</p>
-                        </div>
-                        <div>
-                            <p class="font-bold">Indemnités (mois):</p>
-                            <p>${penaltyMonths} mois</p>
+            if (modeRemboursement === 'duree') {
+                element.innerHTML += `
+                    <div class="mt-3 mb-6 p-4 border border-gray-300 rounded">
+                        <h3 class="font-bold mb-2">Remboursement anticipé (mode: Réduction de durée)</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="font-bold">Nombre de mois à réduire:</p>
+                                <p>${moisAReduire} mois</p>
+                            </div>
+                            <div>
+                                <p class="font-bold">Mois du remboursement:</p>
+                                <p>${earlyRepaymentMonth}</p>
+                            </div>
+                            <div>
+                                <p class="font-bold">Taux après renégociation:</p>
+                                <p>${document.getElementById('new-interest-rate-slider').value}%</p>
+                            </div>
+                            <div>
+                                <p class="font-bold">Indemnités (mois):</p>
+                                <p>${penaltyMonths} mois</p>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `;
+                `;
+            } else {
+                element.innerHTML += `
+                    <div class="mt-3 mb-6 p-4 border border-gray-300 rounded">
+                        <h3 class="font-bold mb-2">Remboursement anticipé (mode: Réduction de mensualité)</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="font-bold">Montant remboursé par anticipation:</p>
+                                <p>${earlyRepaymentAmount} €</p>
+                            </div>
+                            <div>
+                                <p class="font-bold">Mois du remboursement:</p>
+                                <p>${earlyRepaymentMonth}</p>
+                            </div>
+                            <div>
+                                <p class="font-bold">Taux après renégociation:</p>
+                                <p>${document.getElementById('new-interest-rate-slider').value}%</p>
+                            </div>
+                            <div>
+                                <p class="font-bold">Indemnités (mois):</p>
+                                <p>${penaltyMonths} mois</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
             
             // Ajouter les frais annexes si disponibles
             if (document.getElementById('frais-dossier')) {
@@ -856,7 +904,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div>
                                 <p class="font-bold">Type de garantie:</p>
-                                <p>${document.getElementById('type-garantie').options[document.getElementById('type-garantie').selectedIndex].text}</p>
+                                <p>${document.getElementById('type-garantie')?.options[document.getElementById('type-garantie').selectedIndex]?.text || "Caution"}</p>
                             </div>
                             <div>
                                 <p class="font-bold">TAEG approximatif:</p>
@@ -878,7 +926,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mt-3 mb-6 p-4 border-l-4 border-green-500 bg-green-50 pl-4">
                         <h3 class="font-bold mb-2 text-green-700">Économies réalisées</h3>
                         <div class="text-sm">
-                            ${savingsSummary.innerHTML.replace(/class="[^\"]*\"/g, '').replace(/<i[^>]*><\/i>/g, '•')}
+                            ${savingsSummary.innerHTML.replace(/class=\"[^\\\"]*\\\"/g, '').replace(/<i[^>]*><\\/i>/g, '•')}
                         </div>
                     </div>
                 `;
