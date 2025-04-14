@@ -534,42 +534,28 @@
                                 </div>
                             </div>
                             
-                            <!-- Type de prêt -->
+                            <!-- Type de prêt (simplifié) -->
                             <div class="mb-4">
                                 <label class="loan-option-label">
                                     Type de prêt
-                                    <span class="loan-option-info cursor-help" title="Amortissable: remboursement progressif du capital. In fine: remboursement du capital à la fin. Dégressif: remboursement constant du capital.">
+                                    <span class="loan-option-info cursor-help" title="Prêt amortissable: remboursement progressif du capital et des intérêts.">
                                         <i class="fas fa-info-circle"></i>
                                     </span>
                                 </label>
-                                <select id="type-pret" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-                                    <option value="amortissable">Amortissable</option>
-                                    <option value="inFine">In fine</option>
-                                    <option value="degressif">Dégressif</option>
-                                </select>
+                                <input type="text" value="Prêt amortissable" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full" readonly>
+                                <input type="hidden" id="type-pret" value="amortissable">
                             </div>
                             
                             <!-- Information sur le type de prêt -->
                             <div id="pret-info" class="credit-type-info">
                                 <h5 class="text-green-400 font-medium flex items-center mb-2">
                                     <i class="fas fa-info-circle mr-2"></i>
-                                    <span id="pret-info-titre">Prêt amortissable classique</span>
+                                    <span id="pret-info-titre">Prêt amortissable</span>
                                 </h5>
                                 <p id="pret-info-description" class="text-sm text-gray-300">
                                     Chaque mensualité comprend une part d'intérêts et une part de capital. 
                                     La part d'intérêts diminue progressivement tandis que la part de capital augmente.
                                 </p>
-                            </div>
-                            
-                            <!-- Option pour capitaliser les frais (prêts in fine) -->
-                            <div id="capitalisation-frais-container">
-                                <input id="capitaliser-frais-in-fine" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
-                                <label for="capitaliser-frais-in-fine" class="ml-2 text-sm font-medium text-gray-300">
-                                    Capitaliser les frais initiaux
-                                    <span class="loan-option-info cursor-help" title="Pour les prêts in fine uniquement. Si activé, les frais de dossier et de garantie sont ajoutés au capital emprunté et remboursés à l'échéance.">
-                                        <i class="fas fa-info-circle"></i>
-                                    </span>
-                                </label>
                             </div>
                             
                             <!-- Taux d'assurance -->
@@ -1033,16 +1019,6 @@
         
         // Écouter le changement sur les éléments de budget
         document.addEventListener('DOMContentLoaded', function() {
-            // Mise à jour de l'affichage de l'option de capitalisation en fonction du type de prêt
-            document.getElementById('type-pret')?.addEventListener('change', function() {
-                const capitalisationContainer = document.getElementById('capitalisation-frais-container');
-                if (this.value === 'inFine' && capitalisationContainer) {
-                    capitalisationContainer.classList.add('visible');
-                } else if (capitalisationContainer) {
-                    capitalisationContainer.classList.remove('visible');
-                }
-            });
-            
             // Vérifier si l'URL contient un ancre pour l'onglet budget
             if (window.location.hash === '#budget-planner') {
                 // Trouver tous les onglets et masquer tous les contenus
