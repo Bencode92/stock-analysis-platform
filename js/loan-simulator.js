@@ -49,7 +49,9 @@ class LoanSimulator {
         moisAnticipe = null, 
         nouveauTaux = null,
         modeRemboursement = 'duree', // 'duree' ou 'mensualite'
-        moisAReduire = 0 // Nouveau paramètre pour le nombre de mois à réduire directement
+        moisAReduire = 0, // Nombre de mois à réduire directement
+        // Nouveau paramètre pour gérer plusieurs remboursements anticipés
+        remboursementsAnticipes = []
     }) {
         let mensualite = this.calculerMensualite();
         let capitalRestant = this.capital;
@@ -60,6 +62,21 @@ class LoanSimulator {
         let totalAssurance = 0;
         let totalCapitalAmorti = 0;
         let capitalInitial = this.capital;
+        let indemnites = 0;
+        
+        // Gestion de la rétrocompatibilité : si remboursementAnticipe et moisAnticipe sont fournis,
+        // nous les ajoutons à remboursementsAnticipes s'ils ne sont pas déjà inclus
+        if (remboursementAnticipe > 0 && moisAnticipe !== null) {
+            // On vérifie si un remboursement à ce mois existe déjà
+            const remboursementExistant = remboursementsAnticipes.find(r => r.mois === moisAnticipe);
+            if (!remboursementExistant) {
+                remboursementsAnticipes.push({
+                    montant: remboursementAnticipe,
+                    mois: moisAnticipe,
+                    nouveauTaux: nouveauTaux
+                });
+            }
+        }
         
         // Définir la durée finale en fonction du mode
         let dureeFinale = this.dureeMois;
@@ -70,6 +87,9 @@ class LoanSimulator {
         // Suivi avant remboursement anticipé
         let interetsAvantRembours = 0;
         let mensualitesAvantRembours = 0;
+        
+        // Seuil minimum pour les remboursements anticipés (10% du capital initial ou 1000€)
+        const seuilMinimum = Math.max(1000, capitalInitial * 0.10);
         
         for (let mois = 1; mois <= dureeFinale; mois++) {
             let interets = capitalRestant * tauxMensuel;
@@ -82,26 +102,65 @@ class LoanSimulator {
             let capitalAmorti = mensualite - interets;
             
             // Calculs avant remboursement anticipé
-            if (moisAnticipe && mois < moisAnticipe) {
+            if (remboursementsAnticipes.some(r => r.mois > mois)) {
                 interetsAvantRembours += interets;
                 mensualitesAvantRembours += (mensualite + assurance);
             }
             
-            // Traitement différent selon le mode
-            if (modeRemboursement === 'mensualite' && moisAnticipe && mois === moisAnticipe) {
-                // Mode mensualité: réduction du capital restant par le montant remboursé
-                capitalRestant -= remboursementAnticipe;
-                
-                // Appliquer le nouveau taux si spécifié
-                if (nouveauTaux !== null) {
-                    tauxMensuel = nouveauTaux / 100 / 12;
+            // Vérifier s'il y a un remboursement anticipé pour ce mois
+            const remboursementCourant = remboursementsAnticipes.find(r => r.mois === mois);
+            
+            if (remboursementCourant) {
+                // Vérification du seuil minimum
+                if (remboursementCourant.montant < seuilMinimum) {
+                    console.warn(`Remboursement ignoré au mois ${mois}: montant ${remboursementCourant.montant}€ inférieur au seuil minimum (${seuilMinimum}€)`);
+                } else {
+                    // Calcul des indemnités de remboursement anticipé
+                    const indemniteStandard = remboursementCourant.montant * tauxMensuel * this.indemnitesMois;
+                    const plafond3Pourcent = remboursementCourant.montant * 0.03;
+                    const plafond6Mois = mensualite * 6;
+                    const indemnitesCourantes = Math.min(indemniteStandard, Math.min(plafond3Pourcent, plafond6Mois));
+                    indemnites += indemnitesCourantes;
+                    
+                    // Vérification pour remboursement total
+                    if (capitalRestant <= remboursementCourant.montant) {
+                        // C'est un remboursement total
+                        tableau.push({
+                            mois,
+                            interets,
+                            capitalAmorti: capitalRestant,
+                            assurance,
+                            mensualite: capitalRestant + interets + assurance,
+                            capitalRestant: 0,
+                            remboursementAnticipe: capitalRestant,
+                            indemnites: indemnitesCourantes
+                        });
+                        
+                        totalInterets += interets;
+                        totalAssurance += assurance;
+                        totalCapitalAmorti += capitalRestant;
+                        
+                        capitalRestant = 0;
+                        break; // On sort de la boucle car le prêt est soldé
+                    } else {
+                        // Remboursement partiel
+                        capitalRestant -= remboursementCourant.montant;
+                        
+                        // Appliquer le nouveau taux si spécifié
+                        if (remboursementCourant.nouveauTaux !== null && remboursementCourant.nouveauTaux !== undefined) {
+                            tauxMensuel = remboursementCourant.nouveauTaux / 100 / 12;
+                        }
+                        
+                        // Recalculer la mensualité selon le mode
+                        if (modeRemboursement === 'mensualite') {
+                            // Mode mensualité: on garde la même durée mais on réduit la mensualité
+                            mensualite = capitalRestant * tauxMensuel / 
+                                (1 - Math.pow(1 + tauxMensuel, -(this.dureeMois - mois + 1)));
+                        }
+                        // Pour le mode durée, on garde la même mensualité
+                    }
                 }
-                
-                // Recalculer la mensualité pour la même durée restante
-                mensualite = capitalRestant * tauxMensuel / 
-                    (1 - Math.pow(1 + tauxMensuel, -(this.dureeMois - mois + 1)));
             }
-            // Note: Pour le mode durée, on n'a pas besoin d'ajustement ici car on a déjà réduit dureeFinale
             
             capitalRestant -= capitalAmorti;
             if (capitalRestant < 0) capitalRestant = 0;
@@ -117,20 +176,15 @@ class LoanSimulator {
                 assurance,
                 mensualite: mensualite + assurance,
                 capitalRestant,
+                remboursementAnticipe: remboursementCourant ? remboursementCourant.montant : 0,
+                indemnites: remboursementCourant ? (indemnites / remboursementsAnticipes.length) : 0  // Répartition des indemnités
             });
             
             if (capitalRestant <= 0) break;
         }
         
-        // Indemnités de remboursement anticipé avec plafond légal
-        let indemnites = 0;
-        if (modeRemboursement === 'mensualite' && remboursementAnticipe > 0 && moisAnticipe) {
-            // Calcul standard pour le mode mensualité
-            const indemniteStandard = remboursementAnticipe * tauxMensuel * this.indemnitesMois;
-            const plafond3Pourcent = remboursementAnticipe * 0.03;
-            const plafond6Mois = mensualite * 6;
-            indemnites = Math.min(indemniteStandard, Math.min(plafond3Pourcent, plafond6Mois));
-        } else if (modeRemboursement === 'duree' && moisAReduire > 0) {
+        // Indemnités pour le mode durée si aucun remboursement anticipé n'est défini
+        if (modeRemboursement === 'duree' && moisAReduire > 0 && indemnites === 0) {
             // Pour le mode durée, estimer le capital qui serait remboursé pour les mois réduits
             // pour calculer les indemnités
             const capitalEstime = mensualite * moisAReduire * 0.8; // Estimation approximative (80% de la mensualité * nb mois)
@@ -158,6 +212,10 @@ class LoanSimulator {
         // Coût global (tout compris)
         const coutGlobalTotal = montantTotal + indemnites + totalFrais;
         
+        // Vérification si le prêt est soldé avant terme
+        const pretSoldeAvantTerme = dureeReelle < dureeInitiale;
+        const gainTemps = dureeInitiale - dureeReelle;
+        
         return {
             tableau,
             mensualiteInitiale,
@@ -176,7 +234,10 @@ class LoanSimulator {
             taeg: tauxEffectifAnnuel,
             totalFrais,
             coutGlobalTotal,
-            moisAReduire  // Nouveau champ retourné
+            moisAReduire,
+            pretSoldeAvantTerme,
+            gainTemps,
+            remboursementsAnticipes
         };
     }
 }
@@ -337,6 +398,32 @@ document.addEventListener('DOMContentLoaded', function() {
             earlyRepaymentMonth = parseInt(document.getElementById('early-repayment-month-slider-mensualite').value);
             penaltyMonths = parseInt(document.getElementById('penalty-months-slider-mensualite').value);
         }
+        
+        // Nouveau : tableau pour plusieurs remboursements anticipés
+        // Pour l'instant, on utilise une implémentation simple avec un seul remboursement
+        // Dans une version future, cela pourrait être une interface où l'utilisateur peut ajouter plusieurs remboursements
+        const remboursementsAnticipes = [];
+        
+        if (modeRemboursement === 'mensualite' && earlyRepaymentAmount > 0) {
+            remboursementsAnticipes.push({
+                montant: earlyRepaymentAmount,
+                mois: earlyRepaymentMonth,
+                nouveauTaux: newInterestRate
+            });
+            
+            // Exemple de remboursements multiples (à activer dans une future version)
+            // En commentaire pour l'instant pour conserver le comportement d'origine
+            /*
+            // Ajouter un second remboursement de démonstration à 48 mois
+            if (earlyRepaymentMonth < 48) {
+                remboursementsAnticipes.push({
+                    montant: earlyRepaymentAmount * 0.5, // 50% du montant du premier remboursement
+                    mois: 48,
+                    nouveauTaux: newInterestRate
+                });
+            }
+            */
+        }
 
         // Création du simulateur
         const simulator = new LoanSimulator({
@@ -358,7 +445,8 @@ document.addEventListener('DOMContentLoaded', function() {
             moisAnticipe: earlyRepaymentMonth,
             nouveauTaux: newInterestRate,
             modeRemboursement: modeRemboursement,
-            moisAReduire: moisAReduire
+            moisAReduire: moisAReduire,
+            remboursementsAnticipes: remboursementsAnticipes
         });
 
         // Mise à jour des résultats
@@ -392,8 +480,8 @@ document.addEventListener('DOMContentLoaded', function() {
             const row = result.tableau[i];
             const tr = document.createElement('tr');
             
-            // Marquage différent pour le mois de remboursement anticipé
-            if (row.mois === earlyRepaymentMonth) {
+            // Marquage différent pour les mois de remboursement anticipé
+            if (row.remboursementAnticipe > 0) {
                 tr.classList.add('bg-green-900', 'bg-opacity-20');
             } else {
                 tr.classList.add(i % 2 === 0 ? 'bg-blue-800' : 'bg-blue-900', 'bg-opacity-10');
@@ -573,8 +661,8 @@ document.addEventListener('DOMContentLoaded', function() {
             modeText = `Réduction de la mensualité de ${formatMontant(difference)} (${formatMontant(mensualiteInitiale)} → ${formatMontant(mensualiteFinale)})`;
         }
         
-        // Mettre à jour le contenu
-        savingsSummary.innerHTML = `
+        // Préparer le contenu HTML
+        let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
                 <i class="fas fa-piggy-bank mr-2"></i>
                 Analyse complète du prêt
@@ -592,7 +680,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
                     <span>${modeText}</span>
-                </li>
+                </li>`;
+                
+        // Affichage spécial pour le prêt soldé avant terme
+        if (result.pretSoldeAvantTerme) {
+            const gainTemps = result.gainTemps;
+            const annees = Math.floor(gainTemps / 12);
+            const mois = gainTemps % 12;
+            
+            let texteGain = '';
+            if (annees > 0) {
+                texteGain += `${annees} an${annees > 1 ? 's' : ''}`;
+            }
+            if (mois > 0) {
+                texteGain += `${annees > 0 ? ' et ' : ''}${mois} mois`;
+            }
+            
+            htmlContent += `
+                <li class="flex items-start bg-green-900 bg-opacity-30 p-2 rounded-lg my-2">
+                    <i class="fas fa-award text-green-400 mr-2 mt-1"></i>
+                    <span><strong>Prêt soldé avant terme!</strong> Vous gagnez ${texteGain} sur la durée initiale.</span>
+                </li>`;
+        }
+        
+        // Ajouter les infos restantes
+        htmlContent += `
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
                     <span>Indemnités de remboursement anticipé: ${formatMontant(result.indemnites)} 
@@ -608,6 +720,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>
             </ul>
         `;
+        
+        // Mettre à jour le contenu
+        savingsSummary.innerHTML = htmlContent;
     }
 
     // Graphique d'amortissement
@@ -744,19 +859,40 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Marquer visuellement le remboursement anticipé
-        const remboursementIndex = Math.floor(earlyRepaymentMonth / sampleRate);
-        
-        if (remboursementIndex < labels.length) {
-            // Ajouter une ligne verticale pour indiquer le remboursement anticipé
-            const dataset = loanChart.data.datasets[0];
-            dataset.pointBackgroundColor = dataset.data.map((value, index) => 
-                index === remboursementIndex ? 'rgba(52, 211, 153, 1)' : 'transparent'
-            );
-            dataset.pointRadius = dataset.data.map((value, index) => 
-                index === remboursementIndex ? 5 : 0
-            );
+        // Marquer visuellement les remboursements anticipés
+        // Pour chaque remboursement anticipé dans result.remboursementsAnticipes
+        if (result.remboursementsAnticipes && result.remboursementsAnticipes.length > 0) {
+            result.remboursementsAnticipes.forEach(rembours => {
+                const remboursementIndex = Math.floor(rembours.mois / sampleRate);
+                
+                if (remboursementIndex < labels.length) {
+                    // Ajouter un point pour indiquer le remboursement anticipé
+                    const dataset = loanChart.data.datasets[0];
+                    dataset.pointBackgroundColor = dataset.pointBackgroundColor || Array(dataset.data.length).fill('transparent');
+                    dataset.pointRadius = dataset.pointRadius || Array(dataset.data.length).fill(0);
+                    
+                    dataset.pointBackgroundColor[remboursementIndex] = 'rgba(52, 211, 153, 1)';
+                    dataset.pointRadius[remboursementIndex] = 5;
+                }
+            });
+            
             loanChart.update();
+        }
+        // Conserver l'ancien comportement pour la rétrocompatibilité
+        else if (earlyRepaymentMonth) {
+            const remboursementIndex = Math.floor(earlyRepaymentMonth / sampleRate);
+            
+            if (remboursementIndex < labels.length) {
+                // Ajouter une ligne verticale pour indiquer le remboursement anticipé
+                const dataset = loanChart.data.datasets[0];
+                dataset.pointBackgroundColor = dataset.data.map((value, index) => 
+                    index === remboursementIndex ? 'rgba(52, 211, 153, 1)' : 'transparent'
+                );
+                dataset.pointRadius = dataset.data.map((value, index) => 
+                    index === remboursementIndex ? 5 : 0
+                );
+                loanChart.update();
+            }
         }
     }
 
@@ -926,7 +1062,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mt-3 mb-6 p-4 border-l-4 border-green-500 bg-green-50 pl-4">
                         <h3 class="font-bold mb-2 text-green-700">Économies réalisées</h3>
                         <div class="text-sm">
-                            ${savingsSummary.innerHTML.replace(/class=\"[^\\\"]*\\\"/g, '').replace(/<i[^>]*><\\/i>/g, '•')}
+                            ${savingsSummary.innerHTML.replace(/class=\\\"[^\\\\\\\"]*\\\\\\\"/g, '').replace(/<i[^>]*><\\\\/i>/g, '•')}
                         </div>
                     </div>
                 `;
