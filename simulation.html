@@ -1268,6 +1268,8 @@
                     if (mode === 'duree') {
                         // Mode durée: estimer le montant à partir des mois à réduire
                         const moisAReduire = parseInt(document.getElementById('reduction-duree-mois').value);
+                        // Obtenir le montant du prêt depuis le champ existant
+                        const loanAmount = parseFloat(document.getElementById('loan-amount').value);
                         // Estimation du montant à partir du nombre de mois (approximatif)
                         const tauxMensuel = parseFloat(document.getElementById('interest-rate-slider').value) / 100 / 12;
                         const dureeMois = parseInt(document.getElementById('loan-duration-slider').value) * 12;
