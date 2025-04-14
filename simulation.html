@@ -630,7 +630,7 @@
                                     Options avancées
                                 </h5>
                                 
-                                <!-- Périodicité des remboursements -->
+                                <!-- Périodicité des remboursements (fixée à Mensuelle) -->
                                 <div class="parameter-row">
                                     <label class="loan-option-label">
                                         Périodicité des remboursements
@@ -638,11 +638,8 @@
                                             <i class="fas fa-info-circle"></i>
                                         </span>
                                     </label>
-                                    <select id="periodicite" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-                                        <option value="mensuel" selected>Mensuelle</option>
-                                        <option value="trimestriel">Trimestrielle</option>
-                                        <option value="annuel">Annuelle</option>
-                                    </select>
+                                    <input type="text" value="Mensuelle" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full" readonly>
+                                    <input type="hidden" id="periodicite" value="mensuel">
                                 </div>
                                 
                                 <!-- Différé d'amortissement -->
