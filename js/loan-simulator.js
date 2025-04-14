@@ -277,6 +277,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const earlyRepaymentMonthValueMensualite = document.getElementById('early-repayment-month-value-mensualite');
     const penaltyMonthsSliderMensualite = document.getElementById('penalty-months-slider-mensualite');
     const penaltyMonthsValueMensualite = document.getElementById('penalty-months-value-mensualite');
+    
+    // Références pour les remboursements anticipés multiples
+    const multipleRepaymentsToggle = document.getElementById('multiple-repayments-toggle');
+    const multipleRepaymentsContainer = document.getElementById('multiple-repayments-container');
+    const addRepaymentBtn = document.getElementById('add-repayment-btn');
+    const repaymentsList = document.getElementById('repayments-list');
 
     // Mise à jour des affichages des sliders
     if (interestRateSlider && interestRateValue) {
@@ -347,14 +353,164 @@ document.addEventListener('DOMContentLoaded', function() {
             sectionDuree.classList.add('hidden');
         });
     }
-
+    
+    // Gestion du toggle des remboursements multiples
+    if (multipleRepaymentsToggle && multipleRepaymentsContainer) {
+        multipleRepaymentsToggle.addEventListener('change', function() {
+            if (this.checked) {
+                multipleRepaymentsContainer.classList.remove('hidden');
+            } else {
+                multipleRepaymentsContainer.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Événement d'ajout de remboursement anticipé
+    if (addRepaymentBtn) {
+        addRepaymentBtn.addEventListener('click', function() {
+            addRepayment();
+        });
+    }
+    
+    // Fonction pour récupérer les remboursements anticipés depuis l'interface
+    function getRepaymentsFromUI() {
+        const remboursements = [];
+        
+        // Si le mode remboursements multiples est activé
+        if (multipleRepaymentsToggle && multipleRepaymentsToggle.checked && repaymentsList) {
+            // Récupérer tous les éléments de remboursement
+            const items = repaymentsList.querySelectorAll('.repayment-item');
+            items.forEach(item => {
+                const montant = parseFloat(item.dataset.amount);
+                const mois = parseInt(item.dataset.month);
+                const taux = item.dataset.rate ? parseFloat(item.dataset.rate) : null;
+                
+                if (!isNaN(montant) && !isNaN(mois)) {
+                    remboursements.push({
+                        montant: montant,
+                        mois: mois,
+                        nouveauTaux: taux
+                    });
+                }
+            });
+        } 
+        // Sinon, utiliser le mode standard (un seul remboursement)
+        else {
+            const modeRemboursement = document.getElementById('remboursement-mode')?.value || 'duree';
+            
+            if (modeRemboursement === 'mensualite') {
+                const amount = parseFloat(document.getElementById('early-repayment-amount-mensualite').value);
+                const month = parseInt(document.getElementById('early-repayment-month-slider-mensualite').value);
+                const rate = parseFloat(document.getElementById('new-interest-rate-slider').value);
+                
+                if (amount > 0 && document.getElementById('apply-mensualite')?.checked) {
+                    remboursements.push({
+                        montant: amount,
+                        mois: month,
+                        nouveauTaux: rate
+                    });
+                }
+            } else {
+                // En mode durée, le montant est estimé par le nombre de mois à réduire
+                // Nous le calculons dans la fonction tableauAmortissement
+                const month = parseInt(document.getElementById('early-repayment-month-slider-duree').value);
+                const rate = parseFloat(document.getElementById('new-interest-rate-slider').value);
+                
+                if (document.getElementById('apply-duree')?.checked) {
+                    // On crée un remboursement virtuel avec montant 0 qui sera calculé plus tard
+                    remboursements.push({
+                        montant: 0, // Montant factice, sera calculé par le moteur
+                        mois: month,
+                        nouveauTaux: rate
+                    });
+                }
+            }
+        }
+        
+        return remboursements;
+    }
+    
+    // Fonction pour ajouter un remboursement anticipé à l'interface
+    function addRepayment() {
+        const amount = parseFloat(document.getElementById('new-repayment-amount').value);
+        const month = parseInt(document.getElementById('new-repayment-month').value);
+        const rate = document.getElementById('new-repayment-rate').value ? 
+                    parseFloat(document.getElementById('new-repayment-rate').value) : null;
+        
+        // Vérification des valeurs
+        if (!amount || isNaN(amount) || amount < 1000) {
+            alert('Veuillez entrer un montant valide d\'au moins 1000€');
+            return;
+        }
+        
+        if (!month || isNaN(month) || month < 1) {
+            alert('Veuillez entrer un mois valide (≥ 1)');
+            return;
+        }
+        
+        // Création de l'élément dans la liste
+        if (repaymentsList) {
+            const repaymentItem = document.createElement('div');
+            repaymentItem.className = 'repayment-item flex items-center justify-between p-3 mb-2 bg-blue-800 bg-opacity-30 rounded-lg';
+            repaymentItem.dataset.month = month;
+            repaymentItem.dataset.amount = amount;
+            repaymentItem.dataset.rate = rate || '';
+            
+            repaymentItem.innerHTML = `
+                <div class="flex items-center">
+                    <div class="w-8 h-8 rounded-full bg-green-900 bg-opacity-30 flex items-center justify-center mr-2">
+                        <i class="fas fa-money-bill-wave text-green-400"></i>
+                    </div>
+                    <div>
+                        <p class="font-medium">${formatMontant(amount)}</p>
+                        <p class="text-xs text-gray-400">Mois ${month}${rate ? ` • Nouveau taux: ${rate}%` : ''}</p>
+                    </div>
+                </div>
+                <button class="remove-repayment-btn p-1 rounded-full">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            // Événement pour supprimer le remboursement
+            const removeBtn = repaymentItem.querySelector('.remove-repayment-btn');
+            removeBtn.addEventListener('click', function() {
+                repaymentItem.remove();
+                sortRepayments();
+            });
+            
+            // Ajouter à la liste et trier
+            repaymentsList.appendChild(repaymentItem);
+            sortRepayments();
+            
+            // Effacer le formulaire
+            document.getElementById('new-repayment-amount').value = '';
+            document.getElementById('new-repayment-month').value = '';
+            document.getElementById('new-repayment-rate').value = '';
+        }
+    }
+    
+    // Fonction pour trier les remboursements par ordre chronologique
+    function sortRepayments() {
+        if (!repaymentsList) return;
+        
+        const items = Array.from(repaymentsList.querySelectorAll('.repayment-item'));
+        
+        items.sort((a, b) => {
+            return parseInt(a.dataset.month) - parseInt(b.dataset.month);
+        });
+        
+        // Vider la liste et réajouter les éléments dans l'ordre
+        repaymentsList.innerHTML = '';
+        items.forEach(item => repaymentsList.appendChild(item));
+    }
+    
     // Fonction pour calculer et afficher les résultats
     function calculateLoan() {
+        // Paramètres principaux du prêt
         const loanAmount = parseFloat(document.getElementById('loan-amount').value);
         const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
         const loanDurationYears = parseInt(document.getElementById('loan-duration-slider').value);
         const insuranceRate = parseFloat(document.getElementById('insurance-rate-slider').value);
-        const newInterestRate = parseFloat(document.getElementById('new-interest-rate-slider').value);
         
         // Récupérer les nouveaux paramètres
         const fraisDossier = parseFloat(document.getElementById('frais-dossier')?.value || 2000);
@@ -375,7 +531,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Récupérer le mode de remboursement (durée ou mensualité)
         const modeRemboursement = document.getElementById('remboursement-mode')?.value || 'duree';
         
-        // Variables pour stocker les valeurs du remboursement anticipé
+        // Valeurs pour le remboursement anticipé standard
         let earlyRepaymentAmount = 0;
         let earlyRepaymentMonth = 0;
         let penaltyMonths = 0;
@@ -393,37 +549,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 moisAReduire = parseInt(loanDurationYears * 12 * 0.2); // Par défaut, réduction de 20% de la durée
             }
         } else {
-            // Mode mensualité inchangé
+            // Mode mensualité
             earlyRepaymentAmount = parseFloat(document.getElementById('early-repayment-amount-mensualite').value);
             earlyRepaymentMonth = parseInt(document.getElementById('early-repayment-month-slider-mensualite').value);
             penaltyMonths = parseInt(document.getElementById('penalty-months-slider-mensualite').value);
         }
         
-        // Nouveau : tableau pour plusieurs remboursements anticipés
-        // Pour l'instant, on utilise une implémentation simple avec un seul remboursement
-        // Dans une version future, cela pourrait être une interface où l'utilisateur peut ajouter plusieurs remboursements
-        const remboursementsAnticipes = [];
-        
-        if (modeRemboursement === 'mensualite' && earlyRepaymentAmount > 0) {
-            remboursementsAnticipes.push({
-                montant: earlyRepaymentAmount,
-                mois: earlyRepaymentMonth,
-                nouveauTaux: newInterestRate
-            });
-            
-            // Exemple de remboursements multiples (à activer dans une future version)
-            // En commentaire pour l'instant pour conserver le comportement d'origine
-            /*
-            // Ajouter un second remboursement de démonstration à 48 mois
-            if (earlyRepaymentMonth < 48) {
-                remboursementsAnticipes.push({
-                    montant: earlyRepaymentAmount * 0.5, // 50% du montant du premier remboursement
-                    mois: 48,
-                    nouveauTaux: newInterestRate
-                });
-            }
-            */
-        }
+        // Récupérer les remboursements anticipés depuis l'interface
+        const remboursementsAnticipes = getRepaymentsFromUI();
 
         // Création du simulateur
         const simulator = new LoanSimulator({
@@ -443,7 +576,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const result = simulator.tableauAmortissement({
             remboursementAnticipe: earlyRepaymentAmount,
             moisAnticipe: earlyRepaymentMonth,
-            nouveauTaux: newInterestRate,
+            nouveauTaux: parseFloat(document.getElementById('new-interest-rate-slider').value),
             modeRemboursement: modeRemboursement,
             moisAReduire: moisAReduire,
             remboursementsAnticipes: remboursementsAnticipes
@@ -514,7 +647,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Génération du graphique
-        updateChart(result, earlyRepaymentMonth);
+        updateChart(result);
         
         // Ajouter un résumé des économies
         updateSavingsSummary(result, modeRemboursement);
@@ -589,7 +722,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td class="px-3 py-2 font-medium">Mensualité</td>
                     <td class="px-3 py-2 text-right">${formatMontant(baseResult.mensualiteInitiale)}</td>
                     <td class="px-3 py-2 text-right">${formatMontant(result.tableau[result.tableau.length - 1].mensualite)}</td>
-                    <td class="px-3 py-2 text-right ${modeRemboursement === 'mensualite' ? 'text-green-400' : 'text-gray-400'}\">${formatMontant(baseResult.mensualiteInitiale - result.tableau[result.tableau.length - 1].mensualite)}</td>
+                    <td class="px-3 py-2 text-right ${modeRemboursement === 'mensualite' ? 'text-green-400' : 'text-gray-400'}">${formatMontant(baseResult.mensualiteInitiale - result.tableau[result.tableau.length - 1].mensualite)}</td>
                 `;
                 comparisonTableBody.appendChild(trMensualite);
                 
@@ -661,6 +794,19 @@ document.addEventListener('DOMContentLoaded', function() {
             modeText = `Réduction de la mensualité de ${formatMontant(difference)} (${formatMontant(mensualiteInitiale)} → ${formatMontant(mensualiteFinale)})`;
         }
         
+        // Information sur les remboursements anticipés
+        let remboursementsInfo = '';
+        if (result.remboursementsAnticipes && result.remboursementsAnticipes.length > 0) {
+            const totalRembourse = result.remboursementsAnticipes.reduce((sum, r) => sum + r.montant, 0);
+            const pourcentageCapital = (totalRembourse / result.capitalInitial * 100).toFixed(1);
+            remboursementsInfo = `
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                    <span>Total remboursé par anticipation: ${formatMontant(totalRembourse)} (${pourcentageCapital}% du capital initial)</span>
+                </li>
+            `;
+        }
+        
         // Préparer le contenu HTML
         let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
@@ -677,6 +823,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
                     <span>Vous économisez ${formatMontant(result.economiesInterets)} d'intérêts (${economiesPourcentage}% du total)</span>
                 </li>
+                ${remboursementsInfo}
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
                     <span>${modeText}</span>
@@ -728,7 +875,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Graphique d'amortissement
     let loanChart;
     
-    function updateChart(result, earlyRepaymentMonth) {
+    function updateChart(result) {
         const ctx = document.getElementById('loan-chart')?.getContext('2d');
         if (!ctx) return;
         
@@ -860,39 +1007,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Marquer visuellement les remboursements anticipés
-        // Pour chaque remboursement anticipé dans result.remboursementsAnticipes
         if (result.remboursementsAnticipes && result.remboursementsAnticipes.length > 0) {
+            // On prépare les arrays pour les pointBackgroundColor et pointRadius
+            const pointBackgroundColor = Array(capitalData.length).fill('transparent');
+            const pointRadius = Array(capitalData.length).fill(0);
+            
+            // Pour chaque remboursement anticipé, on marque le point correspondant
             result.remboursementsAnticipes.forEach(rembours => {
                 const remboursementIndex = Math.floor(rembours.mois / sampleRate);
                 
                 if (remboursementIndex < labels.length) {
-                    // Ajouter un point pour indiquer le remboursement anticipé
-                    const dataset = loanChart.data.datasets[0];
-                    dataset.pointBackgroundColor = dataset.pointBackgroundColor || Array(dataset.data.length).fill('transparent');
-                    dataset.pointRadius = dataset.pointRadius || Array(dataset.data.length).fill(0);
-                    
-                    dataset.pointBackgroundColor[remboursementIndex] = 'rgba(52, 211, 153, 1)';
-                    dataset.pointRadius[remboursementIndex] = 5;
+                    pointBackgroundColor[remboursementIndex] = 'rgba(52, 211, 153, 1)';
+                    pointRadius[remboursementIndex] = 5;
                 }
             });
             
+            // On met à jour le graphique
+            loanChart.data.datasets[0].pointBackgroundColor = pointBackgroundColor;
+            loanChart.data.datasets[0].pointRadius = pointRadius;
             loanChart.update();
-        }
-        // Conserver l'ancien comportement pour la rétrocompatibilité
-        else if (earlyRepaymentMonth) {
-            const remboursementIndex = Math.floor(earlyRepaymentMonth / sampleRate);
-            
-            if (remboursementIndex < labels.length) {
-                // Ajouter une ligne verticale pour indiquer le remboursement anticipé
-                const dataset = loanChart.data.datasets[0];
-                dataset.pointBackgroundColor = dataset.data.map((value, index) => 
-                    index === remboursementIndex ? 'rgba(52, 211, 153, 1)' : 'transparent'
-                );
-                dataset.pointRadius = dataset.data.map((value, index) => 
-                    index === remboursementIndex ? 5 : 0
-                );
-                loanChart.update();
-            }
         }
     }
 
@@ -911,19 +1044,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Récupérer le mode actif
             const modeRemboursement = document.getElementById('remboursement-mode')?.value || 'duree';
-            
-            // Récupérer les valeurs selon le mode
-            let moisAReduire, earlyRepaymentAmount, earlyRepaymentMonth, penaltyMonths;
-            
-            if (modeRemboursement === 'duree') {
-                moisAReduire = document.getElementById('reduction-duree-mois')?.value || 12;
-                earlyRepaymentMonth = document.getElementById('early-repayment-month-slider-duree').value;
-                penaltyMonths = document.getElementById('penalty-months-slider-duree').value;
-            } else {
-                earlyRepaymentAmount = document.getElementById('early-repayment-amount-mensualite').value;
-                earlyRepaymentMonth = document.getElementById('early-repayment-month-slider-mensualite').value;
-                penaltyMonths = document.getElementById('penalty-months-slider-mensualite').value;
-            }
             
             // En-tête du PDF
             element.innerHTML = `
@@ -969,19 +1089,60 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
             
-            // Ajouter les infos de remboursement anticipé
-            if (modeRemboursement === 'duree') {
+            // Information sur les remboursements anticipés
+            if (multipleRepaymentsToggle && multipleRepaymentsToggle.checked && repaymentsList) {
+                const remboursements = Array.from(repaymentsList.querySelectorAll('.repayment-item'));
+                if (remboursements.length > 0) {
+                    let remboursementsHTML = `
+                        <div class="mt-3 mb-6 p-4 border border-gray-300 rounded">
+                            <h3 class="font-bold mb-2">Remboursements anticipés multiples</h3>
+                            <table class="min-w-full border border-gray-300">
+                                <thead class="bg-gray-200">
+                                    <tr>
+                                        <th class="px-3 py-2 text-left border">Mois</th>
+                                        <th class="px-3 py-2 text-right border">Montant</th>
+                                        <th class="px-3 py-2 text-right border">Nouveau taux</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                    `;
+                    
+                    remboursements.forEach(rembours => {
+                        const montant = parseFloat(rembours.dataset.amount);
+                        const mois = parseInt(rembours.dataset.month);
+                        const taux = rembours.dataset.rate ? parseFloat(rembours.dataset.rate) : '';
+                        
+                        remboursementsHTML += `
+                            <tr>
+                                <td class="px-3 py-2 text-left border">${mois}</td>
+                                <td class="px-3 py-2 text-right border">${formatMontant(montant)}</td>
+                                <td class="px-3 py-2 text-right border">${taux ? taux + '%' : '-'}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    remboursementsHTML += `
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    
+                    element.innerHTML += remboursementsHTML;
+                }
+            }
+            // Informations standards (mode simple)
+            else if (modeRemboursement === 'duree') {
                 element.innerHTML += `
                     <div class="mt-3 mb-6 p-4 border border-gray-300 rounded">
                         <h3 class="font-bold mb-2">Remboursement anticipé (mode: Réduction de durée)</h3>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <p class="font-bold">Nombre de mois à réduire:</p>
-                                <p>${moisAReduire} mois</p>
+                                <p>${document.getElementById('reduction-duree-mois')?.value || 12} mois</p>
                             </div>
                             <div>
                                 <p class="font-bold">Mois du remboursement:</p>
-                                <p>${earlyRepaymentMonth}</p>
+                                <p>${document.getElementById('early-repayment-month-slider-duree').value}</p>
                             </div>
                             <div>
                                 <p class="font-bold">Taux après renégociation:</p>
@@ -989,7 +1150,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div>
                                 <p class="font-bold">Indemnités (mois):</p>
-                                <p>${penaltyMonths} mois</p>
+                                <p>${document.getElementById('penalty-months-slider-duree').value} mois</p>
                             </div>
                         </div>
                     </div>
@@ -1001,11 +1162,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="grid grid-cols-2 gap-4">
                             <div>
                                 <p class="font-bold">Montant remboursé par anticipation:</p>
-                                <p>${earlyRepaymentAmount} €</p>
+                                <p>${document.getElementById('early-repayment-amount-mensualite').value} €</p>
                             </div>
                             <div>
                                 <p class="font-bold">Mois du remboursement:</p>
-                                <p>${earlyRepaymentMonth}</p>
+                                <p>${document.getElementById('early-repayment-month-slider-mensualite').value}</p>
                             </div>
                             <div>
                                 <p class="font-bold">Taux après renégociation:</p>
@@ -1013,7 +1174,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </div>
                             <div>
                                 <p class="font-bold">Indemnités (mois):</p>
-                                <p>${penaltyMonths} mois</p>
+                                <p>${document.getElementById('penalty-months-slider-mensualite').value} mois</p>
                             </div>
                         </div>
                     </div>
@@ -1062,7 +1223,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mt-3 mb-6 p-4 border-l-4 border-green-500 bg-green-50 pl-4">
                         <h3 class="font-bold mb-2 text-green-700">Économies réalisées</h3>
                         <div class="text-sm">
-                            ${savingsSummary.innerHTML.replace(/class=\\\"[^\\\\\\\"]*\\\\\\\"/g, '').replace(/<i[^>]*><\\\\/i>/g, '•')}
+                            ${savingsSummary.innerHTML.replace(/class=\"[^\"]*\"/g, '').replace(/<i[^>]*><\/i>/g, '•')}
                         </div>
                     </div>
                 `;
@@ -1123,38 +1284,44 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Synchroniser les valeurs entre les modes
     function syncModeValues() {
-        // Du mode durée vers le mode mensualité
-        document.getElementById('early-repayment-amount-mensualite').value = document.getElementById('early-repayment-amount-duree').value;
-        document.getElementById('early-repayment-month-slider-mensualite').value = document.getElementById('early-repayment-month-slider-duree').value;
-        document.getElementById('early-repayment-month-value-mensualite').textContent = document.getElementById('early-repayment-month-value-duree').textContent;
-        document.getElementById('penalty-months-slider-mensualite').value = document.getElementById('penalty-months-slider-duree').value;
-        document.getElementById('penalty-months-value-mensualite').textContent = document.getElementById('penalty-months-value-duree').textContent;
+        // Vérifier si les éléments existent
+        const earlyRepaymentAmountDuree = document.getElementById('early-repayment-amount-duree');
+        const earlyRepaymentAmountMensualite = document.getElementById('early-repayment-amount-mensualite');
         
-        // Du mode mensualité vers le mode durée
-        document.getElementById('early-repayment-amount-duree').addEventListener('input', function() {
-            document.getElementById('early-repayment-amount-mensualite').value = this.value;
-        });
-        document.getElementById('early-repayment-month-slider-duree').addEventListener('input', function() {
-            document.getElementById('early-repayment-month-slider-mensualite').value = this.value;
-            document.getElementById('early-repayment-month-value-mensualite').textContent = this.value;
-        });
-        document.getElementById('penalty-months-slider-duree').addEventListener('input', function() {
-            document.getElementById('penalty-months-slider-mensualite').value = this.value;
-            document.getElementById('penalty-months-value-mensualite').textContent = `${this.value} mois`;
-        });
-        
-        // Du mode mensualité vers le mode durée
-        document.getElementById('early-repayment-amount-mensualite').addEventListener('input', function() {
-            document.getElementById('early-repayment-amount-duree').value = this.value;
-        });
-        document.getElementById('early-repayment-month-slider-mensualite').addEventListener('input', function() {
-            document.getElementById('early-repayment-month-slider-duree').value = this.value;
-            document.getElementById('early-repayment-month-value-duree').textContent = this.value;
-        });
-        document.getElementById('penalty-months-slider-mensualite').addEventListener('input', function() {
-            document.getElementById('penalty-months-slider-duree').value = this.value;
-            document.getElementById('penalty-months-value-duree').textContent = `${this.value} mois`;
-        });
+        if (earlyRepaymentAmountDuree && earlyRepaymentAmountMensualite) {
+            // Du mode durée vers le mode mensualité
+            earlyRepaymentAmountMensualite.value = earlyRepaymentAmountDuree.value;
+            document.getElementById('early-repayment-month-slider-mensualite').value = document.getElementById('early-repayment-month-slider-duree').value;
+            document.getElementById('early-repayment-month-value-mensualite').textContent = document.getElementById('early-repayment-month-value-duree').textContent;
+            document.getElementById('penalty-months-slider-mensualite').value = document.getElementById('penalty-months-slider-duree').value;
+            document.getElementById('penalty-months-value-mensualite').textContent = document.getElementById('penalty-months-value-duree').textContent;
+            
+            // Du mode mensualité vers le mode durée
+            earlyRepaymentAmountDuree.addEventListener('input', function() {
+                earlyRepaymentAmountMensualite.value = this.value;
+            });
+            document.getElementById('early-repayment-month-slider-duree').addEventListener('input', function() {
+                document.getElementById('early-repayment-month-slider-mensualite').value = this.value;
+                document.getElementById('early-repayment-month-value-mensualite').textContent = this.value;
+            });
+            document.getElementById('penalty-months-slider-duree').addEventListener('input', function() {
+                document.getElementById('penalty-months-slider-mensualite').value = this.value;
+                document.getElementById('penalty-months-value-mensualite').textContent = `${this.value} mois`;
+            });
+            
+            // Du mode mensualité vers le mode durée
+            earlyRepaymentAmountMensualite.addEventListener('input', function() {
+                earlyRepaymentAmountDuree.value = this.value;
+            });
+            document.getElementById('early-repayment-month-slider-mensualite').addEventListener('input', function() {
+                document.getElementById('early-repayment-month-slider-duree').value = this.value;
+                document.getElementById('early-repayment-month-value-duree').textContent = this.value;
+            });
+            document.getElementById('penalty-months-slider-mensualite').addEventListener('input', function() {
+                document.getElementById('penalty-months-slider-duree').value = this.value;
+                document.getElementById('penalty-months-value-duree').textContent = `${this.value} mois`;
+            });
+        }
     }
     
     // Calculer les résultats initiaux au chargement de la page
