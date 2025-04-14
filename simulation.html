@@ -823,6 +823,17 @@
                                             <input type="number" id="early-repayment-amount-mensualite" value="10000" min="1000" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
                                         </div>
                                         
+                                        <!-- Option de remboursement total (NOUVEAU) -->
+                                        <div class="mt-3 flex items-center">
+                                            <input id="total-repayment" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                            <label for="total-repayment" class="ml-2 text-sm font-medium text-gray-300">
+                                                Remboursement total (solde du prêt)
+                                                <span class="loan-option-info cursor-help" title="Cochez cette option pour effectuer un remboursement total qui soldera entièrement votre prêt.">
+                                                    <i class="fas fa-info-circle"></i>
+                                                </span>
+                                            </label>
+                                        </div>
+                                        
                                         <!-- Mois du remboursement anticipé (mode mensualité) -->
                                         <div class="parameter-row">
                                             <label class="loan-option-label">
@@ -1199,10 +1210,21 @@
             
             // Vérification si le montant est proche du capital restant dû
             const notice = document.getElementById('total-repayment-notice');
-            if (notice && montant >= capitalRestant * 0.95) { // Si le montant représente au moins 95% du capital restant
-                notice.classList.remove('hidden');
-            } else if (notice) {
-                notice.classList.add('hidden');
+            const totalRepaymentCheckbox = document.getElementById('total-repayment');
+            
+            if (notice) {
+                // Afficher la notification uniquement si la case est cochée
+                if (totalRepaymentCheckbox && totalRepaymentCheckbox.checked) {
+                    notice.classList.remove('hidden');
+                    
+                    // Mettre à jour le montant de remboursement avec le capital restant
+                    const earlyRepaymentAmountInput = document.getElementById('early-repayment-amount-mensualite');
+                    if (earlyRepaymentAmountInput) {
+                        earlyRepaymentAmountInput.value = Math.ceil(capitalRestant);
+                    }
+                } else {
+                    notice.classList.add('hidden');
+                }
             }
         }
         
@@ -1214,6 +1236,17 @@
             
             // Remboursements anticipés stockés
             window.storedRepayments = [];
+            
+            // Gestion de la case à cocher pour le remboursement total
+            const totalRepaymentCheckbox = document.getElementById('total-repayment');
+            if (totalRepaymentCheckbox) {
+                totalRepaymentCheckbox.addEventListener('change', function() {
+                    // Appeler checkTotalRepayment avec le montant actuel lorsque la case est cochée/décochée
+                    const earlyRepaymentAmountInput = document.getElementById('early-repayment-amount-mensualite');
+                    const montant = earlyRepaymentAmountInput ? parseFloat(earlyRepaymentAmountInput.value) : 0;
+                    checkTotalRepayment(montant);
+                });
+            }
             
             if (addRepaymentBtn && repaymentsList) {
                 addRepaymentBtn.addEventListener('click', function() {
@@ -1248,13 +1281,15 @@
                         };
                     } else {
                         montant = parseFloat(document.getElementById('early-repayment-amount-mensualite').value);
+                        const totalRepayment = document.getElementById('total-repayment')?.checked || false;
                         
                         repayment = {
                             id: 'repayment-' + (++repaymentsCount),
                             mode: 'mensualite',
                             montant: montant,
                             mois: parseInt(document.getElementById('early-repayment-month-slider-mensualite').value),
-                            indemnitesMois: parseInt(document.getElementById('penalty-months-slider-mensualite').value)
+                            indemnitesMois: parseInt(document.getElementById('penalty-months-slider-mensualite').value),
+                            isRemboursementTotal: totalRepayment // Nouvelle propriété
                         };
                     }
                     
@@ -1293,8 +1328,12 @@
                     // Mettre à jour l'affichage
                     updateRepaymentsList();
                     
-                    // Vérifier si c'est un remboursement total
-                    checkTotalRepayment(repayment.montant);
+                    // Réinitialiser la case à cocher de remboursement total
+                    if (totalRepaymentCheckbox) {
+                        totalRepaymentCheckbox.checked = false;
+                        const notice = document.getElementById('total-repayment-notice');
+                        if (notice) notice.classList.add('hidden');
+                    }
                     
                     // Déclencher automatiquement le calcul
                     document.getElementById('calculate-loan-button').click();
@@ -1334,7 +1373,8 @@
                         if (repayment.mode === 'duree') {
                             headerContent = `<strong>Mois ${repayment.mois}</strong> - Réduction de ${repayment.moisAReduire} mois`;
                         } else {
-                            headerContent = `<strong>Mois ${repayment.mois}</strong> - ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(repayment.montant)}`;
+                            const totalText = repayment.isRemboursementTotal ? ' (Remboursement total)' : '';
+                            headerContent = `<strong>Mois ${repayment.mois}</strong> - ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(repayment.montant)}${totalText}`;
                         }
                         
                         repaymentItem.innerHTML = `
@@ -1355,6 +1395,10 @@
                                         `<div><span class="text-gray-400">Montant:</span> ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(repayment.montant)}</div>`
                                     }
                                     <div><span class="text-gray-400">Indemnités:</span> ${repayment.indemnitesMois} mois</div>
+                                    ${repayment.isRemboursementTotal ? 
+                                        `<div class="col-span-2 mt-2 text-green-400"><i class="fas fa-check-circle mr-1"></i> Ce remboursement soldera intégralement votre prêt</div>` : 
+                                        ''
+                                    }
                                 </div>
                             </div>
                         `;
