@@ -393,9 +393,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     fraisGarantie = parseFloat(fraisGarantieInput.value);
                 } else {
                     // Calculer automatiquement si vide
-                    fraisGarantie = loanAmount * 0.013709;
-                    // Mettre à jour le placeholder
-                    fraisGarantieInput.placeholder = `Calculé: ${formatMontant(fraisGarantie)}`;
+                    fraisGarantie = Math.round(loanAmount * 0.013709);
+                    // Mettre la valeur directement dans le champ au lieu du placeholder
+                    fraisGarantieInput.value = fraisGarantie;
                 }
             }
             
@@ -1156,7 +1156,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mt-3 mb-6 p-4 border-l-4 border-green-500 bg-green-50 pl-4">
                         <h3 class="font-bold mb-2 text-green-700">Économies réalisées</h3>
                         <div class="text-sm">
-                            ${savingsSummary.innerHTML.replace(/class="[^\"]*"/g, '').replace(/<i[^>]*><\/i>/g, '•')}
+                            ${savingsSummary.innerHTML.replace(/class=\"[^\"]*\"/g, '').replace(/<i[^>]*><\/i>/g, '•')}
                         </div>
                     </div>
                 `;
