@@ -52,7 +52,9 @@ class LoanSimulator {
         modeRemboursement = 'duree', // 'duree' ou 'mensualite'
         moisAReduire = 0, // Nombre de mois à réduire directement
         // Nouveau paramètre pour gérer plusieurs remboursements anticipés
-        remboursementsAnticipes = []
+        remboursementsAnticipes = [],
+        // Nouveau paramètre pour rendre la renégociation optionnelle
+        appliquerRenegociation = true
     }) {
         let mensualite = this.calculerMensualite();
         let capitalRestant = this.capital;
@@ -94,7 +96,7 @@ class LoanSimulator {
         
         for (let mois = 1; mois <= dureeFinale; mois++) {
             // Vérifier si on applique le nouveau taux de renégociation à ce mois
-            if (moisRenegociation !== null && mois === moisRenegociation && nouveauTaux !== null) {
+            if (appliquerRenegociation && moisRenegociation !== null && mois === moisRenegociation && nouveauTaux !== null) {
                 tauxMensuel = nouveauTaux / 100 / 12;
                 
                 // Recalculer la mensualité avec le nouveau taux
@@ -247,7 +249,8 @@ class LoanSimulator {
             pretSoldeAvantTerme,
             gainTemps,
             remboursementsAnticipes,
-            moisRenegociation // Ajout du mois de renégociation dans le résultat
+            moisRenegociation, // Ajout du mois de renégociation dans le résultat
+            appliquerRenegociation // Ajout de l'état de la renégociation dans le résultat
         };
     }
 }
@@ -280,6 +283,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const modeMensualiteBtn = document.getElementById('mode-mensualite');
     const sectionDuree = document.getElementById('section-reduire-duree');
     const sectionMensualite = document.getElementById('section-reduire-mensualite');
+    
+    // Nouvelle référence pour la case "Appliquer la renégociation"
+    const applyRenegotiationCheckbox = document.getElementById('apply-renegotiation');
     
     // Nouvelle référence pour les sliders de chaque mode
     const earlyRepaymentMonthSliderDuree = document.getElementById('early-repayment-month-slider-duree');
@@ -368,6 +374,14 @@ document.addEventListener('DOMContentLoaded', function() {
             sectionDuree.classList.add('hidden');
         });
     }
+    
+    // Ajout d'un écouteur pour la case à cocher "Appliquer la renégociation"
+    if (applyRenegotiationCheckbox) {
+        applyRenegotiationCheckbox.addEventListener('change', function() {
+            // Recalculer lorsque la case est cochée/décochée
+            calculateLoan();
+        });
+    }
 
     // Fonction pour calculer et afficher les résultats
     function calculateLoan() {
@@ -380,6 +394,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const insuranceRate = parseFloat(document.getElementById('insurance-rate-slider').value);
             const newInterestRate = parseFloat(document.getElementById('new-interest-rate-slider').value);
             const renegotiationMonth = parseInt(document.getElementById('renegotiation-month-slider').value);
+            
+            // Récupérer l'état de la case à cocher "Appliquer la renégociation"
+            const applyRenegotiation = document.getElementById('apply-renegotiation')?.checked || false;
             
             // Récupérer les nouveaux paramètres
             const fraisDossier = parseFloat(document.getElementById('frais-dossier')?.value || 2000);
@@ -420,6 +437,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const remboursementsAnticipes = window.storedRepayments || [];
             
             console.log("Remboursements anticipés:", remboursementsAnticipes);
+            console.log("Appliquer renégociation:", applyRenegotiation);
             
             // Appliquer le nouveau taux à tous les remboursements si spécifié
             if (newInterestRate && remboursementsAnticipes.length > 0) {
@@ -448,7 +466,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 moisRenegociation: renegotiationMonth,
                 modeRemboursement: modeRemboursement,
                 moisAReduire: moisAReduire,
-                remboursementsAnticipes: remboursementsAnticipes
+                remboursementsAnticipes: remboursementsAnticipes,
+                appliquerRenegociation: applyRenegotiation // Ajout du paramètre pour rendre la renégociation optionnelle
             });
 
             console.log("Résultats calculés:", result);
@@ -487,8 +506,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Marquage différent pour les mois de remboursement anticipé
                 if (row.remboursementAnticipe > 0) {
                     tr.classList.add('bg-green-900', 'bg-opacity-20');
-                } else if (i + 1 === result.moisRenegociation) {
-                    // Mise en évidence du mois de renégociation
+                } else if (i + 1 === result.moisRenegociation && result.appliquerRenegociation) {
+                    // Mise en évidence du mois de renégociation uniquement si elle est appliquée
                     tr.classList.add('bg-blue-500', 'bg-opacity-20');
                 } else {
                     tr.classList.add(i % 2 === 0 ? 'bg-blue-800' : 'bg-blue-900', 'bg-opacity-10');
@@ -603,7 +622,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td class="px-3 py-2 font-medium">Mensualité</td>
                     <td class="px-3 py-2 text-right">${formatMontant(baseResult.mensualiteInitiale)}</td>
                     <td class="px-3 py-2 text-right">${formatMontant(result.tableau[result.tableau.length - 1].mensualite)}</td>
-                    <td class="px-3 py-2 text-right ${modeRemboursement === 'mensualite' ? 'text-green-400' : 'text-gray-400'}">${formatMontant(baseResult.mensualiteInitiale - result.tableau[result.tableau.length - 1].mensualite)}</td>
+                    <td class="px-3 py-2 text-right ${modeRemboursement === 'mensualite' ? 'text-green-400' : 'text-gray-400'}">
+                    ${formatMontant(baseResult.mensualiteInitiale - result.tableau[result.tableau.length - 1].mensualite)}</td>
                 `;
                 comparisonTableBody.appendChild(trMensualite);
                 
@@ -679,11 +699,18 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Information sur la renégociation
         let renégociationText = '';
-        if (result.moisRenegociation) {
+        if (result.appliquerRenegociation && result.moisRenegociation) {
             renégociationText = `
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
                     <span>Renégociation au mois ${result.moisRenegociation} : taux passant de ${document.getElementById('interest-rate-slider').value}% à ${document.getElementById('new-interest-rate-slider').value}%</span>
+                </li>
+            `;
+        } else if (result.moisRenegociation) {
+            renégociationText = `
+                <li class="flex items-start">
+                    <i class="fas fa-times-circle text-amber-400 mr-2 mt-1"></i>
+                    <span>Renégociation désactivée : le taux initial de ${document.getElementById('interest-rate-slider').value}% est conservé sur toute la durée du prêt</span>
                 </li>
             `;
         }
@@ -918,8 +945,8 @@ document.addEventListener('DOMContentLoaded', function() {
             loanChart.update();
         }
         
-        // Marquer le mois de renégociation sur le graphique
-        if (result.moisRenegociation) {
+        // Marquer le mois de renégociation sur le graphique seulement si la renégociation est appliquée
+        if (result.moisRenegociation && result.appliquerRenegociation) {
             const renegotiationIndex = Math.floor(result.moisRenegociation / sampleRate);
             
             if (renegotiationIndex < labels.length) {
@@ -965,8 +992,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 penaltyMonths = document.getElementById('penalty-months-slider-mensualite').value;
             }
             
-            // Récupérer la valeur du mois de renégociation
+            // Récupérer la valeur du mois de renégociation et l'état de la case à cocher
             const renegotiationMonth = document.getElementById('renegotiation-month-slider').value;
+            const applyRenegotiation = document.getElementById('apply-renegotiation')?.checked || false;
             
             // En-tête du PDF
             element.innerHTML = `
@@ -1024,6 +1052,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div>
                             <p class="font-bold">Mois de la renégociation:</p>
                             <p>${renegotiationMonth}</p>
+                        </div>
+                        <div>
+                            <p class="font-bold">Appliquer la renégociation:</p>
+                            <p>${applyRenegotiation ? 'Oui' : 'Non'}</p>
                         </div>
                     </div>
                 </div>
