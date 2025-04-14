@@ -91,9 +91,6 @@ class LoanSimulator {
         let interetsAvantRembours = 0;
         let mensualitesAvantRembours = 0;
         
-        // Seuil minimum pour les remboursements anticipés (10% du capital initial ou 1000€)
-        const seuilMinimum = Math.max(1000, capitalInitial * 0.10);
-        
         for (let mois = 1; mois <= dureeFinale; mois++) {
             // Vérifier si on applique le nouveau taux de renégociation à ce mois
             if (appliquerRenegociation && moisRenegociation !== null && mois === moisRenegociation && nouveauTaux !== null) {
@@ -122,9 +119,9 @@ class LoanSimulator {
             const remboursementCourant = remboursementsAnticipes.find(r => r.mois === mois);
             
             if (remboursementCourant) {
-                // Vérification du seuil minimum
-                if (remboursementCourant.montant < seuilMinimum) {
-                    console.warn(`Remboursement ignoré au mois ${mois}: montant ${remboursementCourant.montant}€ inférieur au seuil minimum (${seuilMinimum}€)`);
+                // Vérification que le montant est positif
+                if (remboursementCourant.montant <= 0) {
+                    console.warn(`Remboursement ignoré au mois ${mois}: montant doit être positif`);
                 } else {
                     // Calcul des indemnités de remboursement anticipé
                     const indemniteStandard = remboursementCourant.montant * tauxMensuel * this.indemnitesMois;
