@@ -122,55 +122,54 @@ class LoanSimulator {
             const remboursementCourant = remboursementsAnticipes.find(r => r.mois === mois);
             
             if (remboursementCourant) {
-                // Afficher un avertissement si le montant est inférieur au seuil minimum,
-                // mais appliquer quand même le remboursement
+                // Vérification du seuil minimum
                 if (remboursementCourant.montant < seuilMinimum) {
-                    console.warn(`Remboursement au mois ${mois}: montant ${remboursementCourant.montant}€ inférieur au seuil recommandé (${seuilMinimum}€) mais appliqué quand même.`);
-                }
-                
-                // Calcul des indemnités de remboursement anticipé
-                const indemniteStandard = remboursementCourant.montant * tauxMensuel * this.indemnitesMois;
-                const plafond3Pourcent = remboursementCourant.montant * 0.03;
-                const plafond6Mois = mensualite * 6;
-                const indemnitesCourantes = Math.min(indemniteStandard, Math.min(plafond3Pourcent, plafond6Mois));
-                indemnites += indemnitesCourantes;
-                
-                // Vérification pour remboursement total
-                if (capitalRestant <= remboursementCourant.montant) {
-                    // C'est un remboursement total
-                    tableau.push({
-                        mois,
-                        interets,
-                        capitalAmorti: capitalRestant,
-                        assurance,
-                        mensualite: capitalRestant + interets + assurance,
-                        capitalRestant: 0,
-                        remboursementAnticipe: capitalRestant,
-                        indemnites: indemnitesCourantes
-                    });
-                    
-                    totalInterets += interets;
-                    totalAssurance += assurance;
-                    totalCapitalAmorti += capitalRestant;
-                    
-                    capitalRestant = 0;
-                    break; // On sort de la boucle car le prêt est soldé
+                    console.warn(`Remboursement ignoré au mois ${mois}: montant ${remboursementCourant.montant}€ inférieur au seuil minimum (${seuilMinimum}€)`);
                 } else {
-                    // Remboursement partiel
-                    capitalRestant -= remboursementCourant.montant;
+                    // Calcul des indemnités de remboursement anticipé
+                    const indemniteStandard = remboursementCourant.montant * tauxMensuel * this.indemnitesMois;
+                    const plafond3Pourcent = remboursementCourant.montant * 0.03;
+                    const plafond6Mois = mensualite * 6;
+                    const indemnitesCourantes = Math.min(indemniteStandard, Math.min(plafond3Pourcent, plafond6Mois));
+                    indemnites += indemnitesCourantes;
                     
-                    // Appliquer le nouveau taux si spécifié
-                    if (remboursementCourant.nouveauTaux !== null && remboursementCourant.nouveauTaux !== undefined) {
-                        tauxMensuel = remboursementCourant.nouveauTaux / 100 / 12;
+                    // Vérification pour remboursement total
+                    if (capitalRestant <= remboursementCourant.montant) {
+                        // C'est un remboursement total
+                        tableau.push({
+                            mois,
+                            interets,
+                            capitalAmorti: capitalRestant,
+                            assurance,
+                            mensualite: capitalRestant + interets + assurance,
+                            capitalRestant: 0,
+                            remboursementAnticipe: capitalRestant,
+                            indemnites: indemnitesCourantes
+                        });
+                        
+                        totalInterets += interets;
+                        totalAssurance += assurance;
+                        totalCapitalAmorti += capitalRestant;
+                        
+                        capitalRestant = 0;
+                        break; // On sort de la boucle car le prêt est soldé
+                    } else {
+                        // Remboursement partiel
+                        capitalRestant -= remboursementCourant.montant;
+                        
+                        // Appliquer le nouveau taux si spécifié
+                        if (remboursementCourant.nouveauTaux !== null && remboursementCourant.nouveauTaux !== undefined) {
+                            tauxMensuel = remboursementCourant.nouveauTaux / 100 / 12;
+                        }
+                        
+                        // Recalculer la mensualité selon le mode
+                        if (modeRemboursement === 'mensualite') {
+                            // Mode mensualité: on garde la même durée mais on réduit la mensualité
+                            mensualite = capitalRestant * tauxMensuel / 
+                                (1 - Math.pow(1 + tauxMensuel, -(this.dureeMois - mois + 1)));
+                        }
+                        // Pour le mode durée, on garde la même mensualité
                     }
-                    
-                    // Recalculer la mensualité selon le mode
-                    if (modeRemboursement === 'mensualite') {
-                        // Mode mensualité: on garde la même durée mais on réduit la mensualité
-                        mensualite = capitalRestant * tauxMensuel / 
-                            (1 - Math.pow(1 + tauxMensuel, -(this.dureeMois - mois + 1)));
-                    }
-                    // Pour le mode durée, on garde la même mensualité
                 }
             }
             
@@ -1391,183 +1390,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error("Erreur lors de la synchronisation des modes:", error);
         }
     }
-    
-    // Modification de la partie d'ajout des remboursements anticipés pour enlever la restriction sur le montant minimum
-    document.addEventListener('DOMContentLoaded', function() {
-        // ... Code existant ...
-        
-        // Gestion des remboursements anticipés multiples
-        const addRepaymentBtn = document.getElementById('add-repayment-btn');
-        const repaymentsList = document.getElementById('repayments-list');
-        let repaymentsCount = 0;
-        
-        // Remboursements anticipés stockés
-        window.storedRepayments = window.storedRepayments || [];
-        
-        if (addRepaymentBtn && repaymentsList) {
-            addRepaymentBtn.addEventListener('click', function() {
-                const mode = document.getElementById('remboursement-mode').value;
-                let repayment = {};
-                let montant = 0;
-                
-                // Calculer le seuil minimum (10% du capital initial ou 1000€)
-                const loanAmount = parseFloat(document.getElementById('loan-amount').value);
-                const seuilMinimum = Math.max(1000, loanAmount * 0.10);
-                
-                if (mode === 'duree') {
-                    // Mode durée: estimer le montant à partir des mois à réduire
-                    const moisAReduire = parseInt(document.getElementById('reduction-duree-mois').value);
-                    // Estimation du montant à partir du nombre de mois (approximatif)
-                    const tauxMensuel = parseFloat(document.getElementById('interest-rate-slider').value) / 100 / 12;
-                    const dureeMois = parseInt(document.getElementById('loan-duration-slider').value) * 12;
-                    const mensualite = loanAmount * tauxMensuel / (1 - Math.pow(1 + tauxMensuel, -dureeMois));
-                    
-                    montant = mensualite * moisAReduire * 0.8; // 80% de la mensualité * nb mois (approximation)
-                    
-                    // Mettre à jour le champ caché pour la compatibilité
-                    document.getElementById('early-repayment-amount-duree').value = montant.toString();
-                    
-                    repayment = {
-                        id: 'repayment-' + (++repaymentsCount),
-                        mode: 'duree',
-                        moisAReduire: moisAReduire,
-                        mois: parseInt(document.getElementById('early-repayment-month-slider-duree').value),
-                        indemnitesMois: parseInt(document.getElementById('penalty-months-slider-duree').value),
-                        montant: montant // Ajout du montant estimé pour vérification
-                    };
-                } else {
-                    montant = parseFloat(document.getElementById('early-repayment-amount-mensualite').value);
-                    const totalRepayment = document.getElementById('total-repayment')?.checked || false;
-                    
-                    repayment = {
-                        id: 'repayment-' + (++repaymentsCount),
-                        mode: 'mensualite',
-                        montant: montant,
-                        mois: parseInt(document.getElementById('early-repayment-month-slider-mensualite').value),
-                        indemnitesMois: parseInt(document.getElementById('penalty-months-slider-mensualite').value),
-                        isRemboursementTotal: totalRepayment // Nouvelle propriété
-                    };
-                }
-                
-                // Afficher un message d'information si le montant est inférieur au seuil recommandé
-                const alertElement = document.getElementById('min-threshold-alert');
-                const thresholdElement = document.getElementById('min-threshold-amount');
-                
-                if (montant < seuilMinimum && alertElement && thresholdElement) {
-                    // Mettre à jour le montant dans le message
-                    thresholdElement.textContent = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(seuilMinimum);
-                    
-                    // Afficher l'alerte comme un simple rappel, pas comme une erreur bloquante
-                    alertElement.classList.remove('hidden');
-                    // Faire disparaître l'alerte après 5 secondes
-                    setTimeout(() => {
-                        alertElement.classList.add('hidden');
-                    }, 5000);
-                    
-                    // Style visuel pour l'alerte, mais on continue quand même
-                    this.classList.add('bg-amber-500', 'hover:bg-amber-400');
-                    setTimeout(() => {
-                        this.classList.remove('bg-amber-500', 'hover:bg-amber-400');
-                        this.classList.add('bg-green-500', 'hover:bg-green-400');
-                    }, 1000);
-                }
-                
-                // Ajouter au tableau des remboursements (on ajoute TOUJOURS le remboursement, quelle que soit sa valeur)
-                window.storedRepayments.push(repayment);
-                
-                // Mettre à jour l'affichage
-                updateRepaymentsList();
-                
-                // Réinitialiser la case à cocher de remboursement total
-                if (document.getElementById('total-repayment')) {
-                    document.getElementById('total-repayment').checked = false;
-                    const notice = document.getElementById('total-repayment-notice');
-                    if (notice) notice.classList.add('hidden');
-                }
-                
-                // Déclencher automatiquement le calcul
-                document.getElementById('calculate-loan-button').click();
-            });
-            
-            // Fonctions de gestion des repayments
-            window.toggleRepaymentDetails = function(id) {
-                const item = document.getElementById(id);
-                if (item) {
-                    item.classList.toggle('expanded');
-                }
-            };
-            
-            window.removeRepayment = function(id) {
-                window.storedRepayments = window.storedRepayments.filter(r => r.id !== id);
-                updateRepaymentsList();
-                
-                // Recalculer après suppression
-                if (document.getElementById('calculate-loan-button')) {
-                    document.getElementById('calculate-loan-button').click();
-                }
-            };
-            
-            // Fonction pour mettre à jour la liste des remboursements anticipés
-            function updateRepaymentsList() {
-                if (!repaymentsList) return;
-                
-                repaymentsList.innerHTML = '';
-                
-                if (window.storedRepayments.length === 0) {
-                    repaymentsList.innerHTML = '<p class="text-sm text-gray-400 italic">Aucun remboursement anticipé configuré. Utilisez le formulaire ci-dessous pour en ajouter.</p>';
-                    return;
-                }
-                
-                // Trier les remboursements par mois
-                window.storedRepayments.sort((a, b) => a.mois - b.mois);
-                
-                window.storedRepayments.forEach(repayment => {
-                    const repaymentItem = document.createElement('div');
-                    repaymentItem.id = repayment.id;
-                    repaymentItem.className = 'repayment-item';
-                    
-                    let headerContent = '';
-                    if (repayment.mode === 'duree') {
-                        headerContent = `<strong>Mois ${repayment.mois}</strong> - Réduction de ${repayment.moisAReduire} mois`;
-                    } else {
-                        const totalText = repayment.isRemboursementTotal ? ' (Remboursement total)' : '';
-                        headerContent = `<strong>Mois ${repayment.mois}</strong> - ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(repayment.montant)}${totalText}`;
-                    }
-                    
-                    repaymentItem.innerHTML = `
-                        <div class="repayment-item-header" onclick="toggleRepaymentDetails('${repayment.id}')">
-                            <div>${headerContent}</div>
-                            <div>
-                                <button class="remove-repayment" onclick="event.stopPropagation(); removeRepayment('${repayment.id}')">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="repayment-item-body">
-                            <div class="grid grid-cols-2 gap-2 text-sm">
-                                <div><span class="text-gray-400">Mode:</span> ${repayment.mode === 'duree' ? 'Réduction de durée' : 'Réduction de mensualité'}</div>
-                                <div><span class="text-gray-400">Mois:</span> ${repayment.mois}</div>
-                                ${repayment.mode === 'duree' ? 
-                                    `<div><span class="text-gray-400">Mois à réduire:</span> ${repayment.moisAReduire}</div>` : 
-                                    `<div><span class="text-gray-400">Montant:</span> ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(repayment.montant)}</div>`
-                                }
-                                <div><span class="text-gray-400">Indemnités:</span> ${repayment.indemnitesMois} mois</div>
-                                ${repayment.isRemboursementTotal ? 
-                                    `<div class="col-span-2 mt-2 text-green-400"><i class="fas fa-check-circle mr-1"></i> Ce remboursement soldera intégralement votre prêt</div>` : 
-                                    ''
-                                }
-                            </div>
-                        </div>
-                    `;
-                    
-                    repaymentsList.appendChild(repaymentItem);
-                });
-            }
-            
-            // Initialisation de la liste
-            updateRepaymentsList();
-        }
-    });
     
     // Calculer les résultats initiaux au chargement de la page
     if (document.getElementById('loan-amount')) {
