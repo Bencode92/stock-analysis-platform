@@ -52,9 +52,7 @@ class LoanSimulator {
         modeRemboursement = 'duree', // 'duree' ou 'mensualite'
         moisAReduire = 0, // Nombre de mois à réduire directement
         // Nouveau paramètre pour gérer plusieurs remboursements anticipés
-        remboursementsAnticipes = [],
-        // Nouveau paramètre pour activer/désactiver la renégociation
-        appliquerRenegociation = true
+        remboursementsAnticipes = []
     }) {
         let mensualite = this.calculerMensualite();
         let capitalRestant = this.capital;
@@ -96,7 +94,7 @@ class LoanSimulator {
         
         for (let mois = 1; mois <= dureeFinale; mois++) {
             // Vérifier si on applique le nouveau taux de renégociation à ce mois
-            if (appliquerRenegociation && moisRenegociation !== null && mois === moisRenegociation && nouveauTaux !== null) {
+            if (moisRenegociation !== null && mois === moisRenegociation && nouveauTaux !== null) {
                 tauxMensuel = nouveauTaux / 100 / 12;
                 
                 // Recalculer la mensualité avec le nouveau taux
@@ -249,8 +247,7 @@ class LoanSimulator {
             pretSoldeAvantTerme,
             gainTemps,
             remboursementsAnticipes,
-            moisRenegociation, // Ajout du mois de renégociation dans le résultat
-            appliquerRenegociation // Ajouter l'état de la renégociation dans le résultat
+            moisRenegociation // Ajout du mois de renégociation dans le résultat
         };
     }
 }
@@ -377,25 +374,12 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             console.log("Début du calcul du prêt...");
             
-            // Afficher le message de calcul en cours
-            console.log("Récupération des valeurs d'entrée...");
-            
             const loanAmount = parseFloat(document.getElementById('loan-amount').value);
             const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
             const loanDurationYears = parseInt(document.getElementById('loan-duration-slider').value);
             const insuranceRate = parseFloat(document.getElementById('insurance-rate-slider').value);
-            
-            console.log("Montant du prêt:", loanAmount);
-            console.log("Taux d'intérêt:", interestRate);
-            console.log("Durée en années:", loanDurationYears);
-            console.log("Taux d'assurance:", insuranceRate);
-            
-            // Récupérer le nouveau taux d'intérêt après renégociation et le mois de renégociation
             const newInterestRate = parseFloat(document.getElementById('new-interest-rate-slider').value);
             const renegotiationMonth = parseInt(document.getElementById('renegotiation-month-slider').value);
-            
-            console.log("Nouveau taux après renégociation:", newInterestRate);
-            console.log("Mois de renégociation:", renegotiationMonth);
             
             // Récupérer les nouveaux paramètres
             const fraisDossier = parseFloat(document.getElementById('frais-dossier')?.value || 2000);
@@ -421,11 +405,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Récupérer le mode de remboursement (durée ou mensualité)
             const modeRemboursement = document.getElementById('remboursement-mode')?.value || 'duree';
             
-            // Récupérer l'état de la case à cocher "Appliquer la renégociation"
-            const applyRenegotiation = document.getElementById('apply-renegotiation')?.checked || false;
-            
-            console.log("Application de la renégociation:", applyRenegotiation);
-            
             // Variables pour stocker les valeurs du remboursement anticipé
             let moisAReduire = 0;
             
@@ -449,8 +428,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
 
-            console.log("Création du simulateur...");
-            
             // Création du simulateur
             const simulator = new LoanSimulator({
                 capital: loanAmount,
@@ -465,16 +442,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 assuranceSurCapitalInitial: assuranceSurCapitalInitial
             });
 
-            console.log("Calcul du tableau d'amortissement...");
-            
             // Calcul du tableau d'amortissement avec les nouveaux paramètres
             const result = simulator.tableauAmortissement({
                 nouveauTaux: newInterestRate,
                 moisRenegociation: renegotiationMonth,
                 modeRemboursement: modeRemboursement,
                 moisAReduire: moisAReduire,
-                remboursementsAnticipes: remboursementsAnticipes,
-                appliquerRenegociation: applyRenegotiation // Passer l'état de la case à cocher
+                remboursementsAnticipes: remboursementsAnticipes
             });
 
             console.log("Résultats calculés:", result);
@@ -501,53 +475,49 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Génération du tableau d'amortissement
             const tableBody = document.getElementById('amortization-table');
-            if (tableBody) {
-                tableBody.innerHTML = '';
+            tableBody.innerHTML = '';
 
-                // Limiter le tableau aux 120 premières lignes pour des raisons de performance
-                const displayRows = Math.min(result.tableau.length, 120);
+            // Limiter le tableau aux 120 premières lignes pour des raisons de performance
+            const displayRows = Math.min(result.tableau.length, 120);
+            
+            for (let i = 0; i < displayRows; i++) {
+                const row = result.tableau[i];
+                const tr = document.createElement('tr');
                 
-                for (let i = 0; i < displayRows; i++) {
-                    const row = result.tableau[i];
-                    const tr = document.createElement('tr');
-                    
-                    // Marquage différent pour les mois de remboursement anticipé
-                    if (row.remboursementAnticipe > 0) {
-                        tr.classList.add('bg-green-900', 'bg-opacity-20');
-                    } else if (result.appliquerRenegociation && i + 1 === result.moisRenegociation) {
-                        // Mise en évidence du mois de renégociation uniquement si la renégociation est appliquée
-                        tr.classList.add('bg-blue-500', 'bg-opacity-20');
-                    } else {
-                        tr.classList.add(i % 2 === 0 ? 'bg-blue-800' : 'bg-blue-900', 'bg-opacity-10');
-                    }
-                    
-                    tr.innerHTML = `
-                        <td class="px-3 py-2">${row.mois}</td>
-                        <td class="px-3 py-2 text-right">${formatMontant(row.mensualite)}</td>
-                        <td class="px-3 py-2 text-right">${formatMontant(row.capitalAmorti)}</td>
-                        <td class="px-3 py-2 text-right">${formatMontant(row.interets)}</td>
-                        <td class="px-3 py-2 text-right">${formatMontant(row.assurance)}</td>
-                        <td class="px-3 py-2 text-right">${formatMontant(row.capitalRestant)}</td>
-                    `;
-                    
-                    tableBody.appendChild(tr);
+                // Marquage différent pour les mois de remboursement anticipé
+                if (row.remboursementAnticipe > 0) {
+                    tr.classList.add('bg-green-900', 'bg-opacity-20');
+                } else if (i + 1 === result.moisRenegociation) {
+                    // Mise en évidence du mois de renégociation
+                    tr.classList.add('bg-blue-500', 'bg-opacity-20');
+                } else {
+                    tr.classList.add(i % 2 === 0 ? 'bg-blue-800' : 'bg-blue-900', 'bg-opacity-10');
                 }
                 
-                // Si le tableau est trop long, ajouter un message
-                if (result.tableau.length > 120) {
-                    const trInfo = document.createElement('tr');
-                    trInfo.classList.add('bg-blue-900', 'bg-opacity-50');
-                    trInfo.innerHTML = `
-                        <td colspan="6" class="px-3 py-2 text-center">
-                            <i class="fas fa-info-circle mr-2"></i>
-                            Affichage limité aux 120 premiers mois pour des raisons de performance.
-                            Durée totale du prêt: ${result.dureeReelle} mois.
-                        </td>
-                    `;
-                    tableBody.appendChild(trInfo);
-                }
-            } else {
-                console.error("Élément 'amortization-table' non trouvé");
+                tr.innerHTML = `
+                    <td class="px-3 py-2">${row.mois}</td>
+                    <td class="px-3 py-2 text-right">${formatMontant(row.mensualite)}</td>
+                    <td class="px-3 py-2 text-right">${formatMontant(row.capitalAmorti)}</td>
+                    <td class="px-3 py-2 text-right">${formatMontant(row.interets)}</td>
+                    <td class="px-3 py-2 text-right">${formatMontant(row.assurance)}</td>
+                    <td class="px-3 py-2 text-right">${formatMontant(row.capitalRestant)}</td>
+                `;
+                
+                tableBody.appendChild(tr);
+            }
+            
+            // Si le tableau est trop long, ajouter un message
+            if (result.tableau.length > 120) {
+                const trInfo = document.createElement('tr');
+                trInfo.classList.add('bg-blue-900', 'bg-opacity-50');
+                trInfo.innerHTML = `
+                    <td colspan="6" class="px-3 py-2 text-center">
+                        <i class="fas fa-info-circle mr-2"></i>
+                        Affichage limité aux 120 premiers mois pour des raisons de performance.
+                        Durée totale du prêt: ${result.dureeReelle} mois.
+                    </td>
+                `;
+                tableBody.appendChild(trInfo);
             }
 
             // Génération du graphique
@@ -559,7 +529,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Affichage du tableau de comparaison si l'option est cochée
             updateComparisonTable(result, modeRemboursement);
             
-            console.log("Calcul terminé avec succès");
             return true;
         } catch (error) {
             console.error("Erreur lors du calcul:", error);
@@ -710,18 +679,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Information sur la renégociation
         let renégociationText = '';
-        if (result.appliquerRenegociation && result.moisRenegociation) {
+        if (result.moisRenegociation) {
             renégociationText = `
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
                     <span>Renégociation au mois ${result.moisRenegociation} : taux passant de ${document.getElementById('interest-rate-slider').value}% à ${document.getElementById('new-interest-rate-slider').value}%</span>
-                </li>
-            `;
-        } else if (result.moisRenegociation) {
-            renégociationText = `
-                <li class="flex items-start">
-                    <i class="fas fa-times-circle text-amber-400 mr-2 mt-1"></i>
-                    <span>Renégociation désactivée (cochez "Appliquer la renégociation" pour l'activer)</span>
                 </li>
             `;
         }
@@ -807,10 +769,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function updateChart(result) {
         const ctx = document.getElementById('loan-chart')?.getContext('2d');
-        if (!ctx) {
-            console.error("Élément 'loan-chart' non trouvé ou contexte non disponible");
-            return;
-        }
+        if (!ctx) return;
         
         // Destruction du graphique existant s'il y en a un
         if (loanChart) {
@@ -960,7 +919,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Marquer le mois de renégociation sur le graphique
-        if (result.appliquerRenegociation && result.moisRenegociation) {
+        if (result.moisRenegociation) {
             const renegotiationIndex = Math.floor(result.moisRenegociation / sampleRate);
             
             if (renegotiationIndex < labels.length) {
@@ -980,8 +939,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Événement de clic sur le bouton de calcul
     if (calculateLoanButton) {
         calculateLoanButton.addEventListener('click', calculateLoan);
-    } else {
-        console.error("Élément 'calculate-loan-button' non trouvé");
     }
     
     // Export PDF
@@ -1008,9 +965,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 penaltyMonths = document.getElementById('penalty-months-slider-mensualite').value;
             }
             
-            // Récupérer la valeur du mois de renégociation et si elle est appliquée
+            // Récupérer la valeur du mois de renégociation
             const renegotiationMonth = document.getElementById('renegotiation-month-slider').value;
-            const applyRenegotiation = document.getElementById('apply-renegotiation')?.checked || false;
             
             // En-tête du PDF
             element.innerHTML = `
@@ -1068,10 +1024,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div>
                             <p class="font-bold">Mois de la renégociation:</p>
                             <p>${renegotiationMonth}</p>
-                        </div>
-                        <div>
-                            <p class="font-bold">Renégociation appliquée:</p>
-                            <p>${applyRenegotiation ? 'Oui' : 'Non'}</p>
                         </div>
                     </div>
                 </div>
@@ -1204,7 +1156,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mt-3 mb-6 p-4 border-l-4 border-green-500 bg-green-50 pl-4">
                         <h3 class="font-bold mb-2 text-green-700">Économies réalisées</h3>
                         <div class="text-sm">
-                            ${savingsSummary.innerHTML.replace(/class=\\\"[^\\\"]*\\\"/g, '').replace(/<i[^>]*><\\/i>/g, '•')}
+                            ${savingsSummary.innerHTML.replace(/class=\"[^\"]*\"/g, '').replace(/<i[^>]*><\/i>/g, '•')}
                         </div>
                     </div>
                 `;
@@ -1375,44 +1327,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         
         // Lancer le calcul initial
-        setTimeout(function() {
-            console.log("Lancement du calcul initial...");
-            calculateLoan();
-        }, 1000);
-    } else {
-        console.error("Élément 'loan-amount' non trouvé, le simulateur ne peut pas démarrer");
+        setTimeout(calculateLoan, 1000);
     }
-    
-    // Ajouter un event listener pour le checkbox de renégociation
-    const applyRenegotiationCheckbox = document.getElementById('apply-renegotiation');
-    if (applyRenegotiationCheckbox) {
-        applyRenegotiationCheckbox.addEventListener('change', function() {
-            // Recalculer quand la case est cochée/décochée
-            console.log("État de la case 'Appliquer la renégociation' modifié:", this.checked);
-            calculateLoan();
-        });
-    } else {
-        console.error("Élément 'apply-renegotiation' non trouvé");
-    }
-
-    // Ajouter des écouteurs d'événements pour recalculer quand les paramètres principaux changent
-    const mainInputs = [
-        'loan-amount',
-        'interest-rate-slider',
-        'loan-duration-slider',
-        'insurance-rate-slider',
-        'new-interest-rate-slider',
-        'renegotiation-month-slider',
-        'assurance-capital-initial'
-    ];
-
-    mainInputs.forEach(inputId => {
-        const element = document.getElementById(inputId);
-        if (element) {
-            element.addEventListener('change', function() {
-                console.log(`Paramètre ${inputId} modifié, recalcul...`);
-                calculateLoan();
-            });
-        }
-    });
 });
