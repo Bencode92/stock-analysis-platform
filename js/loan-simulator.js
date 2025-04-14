@@ -48,6 +48,7 @@ class LoanSimulator {
         remboursementAnticipe = 0, 
         moisAnticipe = null, 
         nouveauTaux = null,
+        moisRenegociation = null, // Nouveau paramètre pour le mois de renégociation
         modeRemboursement = 'duree', // 'duree' ou 'mensualite'
         moisAReduire = 0, // Nombre de mois à réduire directement
         // Nouveau paramètre pour gérer plusieurs remboursements anticipés
@@ -92,6 +93,14 @@ class LoanSimulator {
         const seuilMinimum = Math.max(1000, capitalInitial * 0.10);
         
         for (let mois = 1; mois <= dureeFinale; mois++) {
+            // Vérifier si on applique le nouveau taux de renégociation à ce mois
+            if (moisRenegociation !== null && mois === moisRenegociation && nouveauTaux !== null) {
+                tauxMensuel = nouveauTaux / 100 / 12;
+                
+                // Recalculer la mensualité avec le nouveau taux
+                mensualite = capitalRestant * tauxMensuel / (1 - Math.pow(1 + tauxMensuel, -(dureeFinale - mois + 1)));
+            }
+            
             let interets = capitalRestant * tauxMensuel;
             
             // Calcul de l'assurance selon le mode (capital initial ou restant dû)
@@ -237,7 +246,8 @@ class LoanSimulator {
             moisAReduire,
             pretSoldeAvantTerme,
             gainTemps,
-            remboursementsAnticipes
+            remboursementsAnticipes,
+            moisRenegociation // Ajout du mois de renégociation dans le résultat
         };
     }
 }
@@ -260,6 +270,10 @@ document.addEventListener('DOMContentLoaded', function() {
     const newInterestRateValue = document.getElementById('new-interest-rate-value');
     const calculateLoanButton = document.getElementById('calculate-loan-button');
     const exportPdfButton = document.getElementById('export-pdf');
+    
+    // Nouvelles références pour le mois de renégociation
+    const renegotiationMonthSlider = document.getElementById('renegotiation-month-slider');
+    const renegotiationMonthValue = document.getElementById('renegotiation-month-value');
     
     // Nouvelles références pour les sections de mode de remboursement
     const modeDureeBtn = document.getElementById('mode-duree');
@@ -294,6 +308,13 @@ document.addEventListener('DOMContentLoaded', function() {
     if (insuranceRateSlider && insuranceRateValue) {
         insuranceRateSlider.addEventListener('input', function() {
             insuranceRateValue.textContent = `${this.value}%`;
+        });
+    }
+    
+    // Gestion du slider du mois de renégociation
+    if (renegotiationMonthSlider && renegotiationMonthValue) {
+        renegotiationMonthSlider.addEventListener('input', function() {
+            renegotiationMonthValue.textContent = this.value;
         });
     }
     
@@ -355,6 +376,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const loanDurationYears = parseInt(document.getElementById('loan-duration-slider').value);
         const insuranceRate = parseFloat(document.getElementById('insurance-rate-slider').value);
         const newInterestRate = parseFloat(document.getElementById('new-interest-rate-slider').value);
+        const renegotiationMonth = parseInt(document.getElementById('renegotiation-month-slider').value);
         
         // Récupérer les nouveaux paramètres
         const fraisDossier = parseFloat(document.getElementById('frais-dossier')?.value || 2000);
@@ -444,6 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
             remboursementAnticipe: earlyRepaymentAmount,
             moisAnticipe: earlyRepaymentMonth,
             nouveauTaux: newInterestRate,
+            moisRenegociation: renegotiationMonth, // Nouveau paramètre pour la renégociation
             modeRemboursement: modeRemboursement,
             moisAReduire: moisAReduire,
             remboursementsAnticipes: remboursementsAnticipes
@@ -483,6 +506,9 @@ document.addEventListener('DOMContentLoaded', function() {
             // Marquage différent pour les mois de remboursement anticipé
             if (row.remboursementAnticipe > 0) {
                 tr.classList.add('bg-green-900', 'bg-opacity-20');
+            } else if (i + 1 === result.moisRenegociation) {
+                // Mise en évidence du mois de renégociation
+                tr.classList.add('bg-blue-500', 'bg-opacity-20');
             } else {
                 tr.classList.add(i % 2 === 0 ? 'bg-blue-800' : 'bg-blue-900', 'bg-opacity-10');
             }
@@ -589,7 +615,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td class="px-3 py-2 font-medium">Mensualité</td>
                     <td class="px-3 py-2 text-right">${formatMontant(baseResult.mensualiteInitiale)}</td>
                     <td class="px-3 py-2 text-right">${formatMontant(result.tableau[result.tableau.length - 1].mensualite)}</td>
-                    <td class="px-3 py-2 text-right ${modeRemboursement === 'mensualite' ? 'text-green-400' : 'text-gray-400'}\">${formatMontant(baseResult.mensualiteInitiale - result.tableau[result.tableau.length - 1].mensualite)}</td>
+                    <td class="px-3 py-2 text-right ${modeRemboursement === 'mensualite' ? 'text-green-400' : 'text-gray-400'}\\">${formatMontant(baseResult.mensualiteInitiale - result.tableau[result.tableau.length - 1].mensualite)}</td>
                 `;
                 comparisonTableBody.appendChild(trMensualite);
                 
@@ -661,6 +687,17 @@ document.addEventListener('DOMContentLoaded', function() {
             modeText = `Réduction de la mensualité de ${formatMontant(difference)} (${formatMontant(mensualiteInitiale)} → ${formatMontant(mensualiteFinale)})`;
         }
         
+        // Information sur la renégociation
+        let renégociationText = '';
+        if (result.moisRenegociation) {
+            renégociationText = `
+                <li class="flex items-start">
+                    <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                    <span>Renégociation au mois ${result.moisRenegociation} : taux passant de ${document.getElementById('interest-rate-slider').value}% à ${document.getElementById('new-interest-rate-slider').value}%</span>
+                </li>
+            `;
+        }
+        
         // Préparer le contenu HTML
         let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
@@ -680,7 +717,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 <li class="flex items-start">
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
                     <span>${modeText}</span>
-                </li>`;
+                </li>
+                ${renégociationText}`;
                 
         // Affichage spécial pour le prêt soldé avant terme
         if (result.pretSoldeAvantTerme) {
@@ -859,7 +897,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Marquer visuellement les remboursements anticipés
+        // Marquer visuellement les remboursements anticipés et la renégociation
         // Pour chaque remboursement anticipé dans result.remboursementsAnticipes
         if (result.remboursementsAnticipes && result.remboursementsAnticipes.length > 0) {
             result.remboursementsAnticipes.forEach(rembours => {
@@ -883,7 +921,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const remboursementIndex = Math.floor(earlyRepaymentMonth / sampleRate);
             
             if (remboursementIndex < labels.length) {
-                // Ajouter une ligne verticale pour indiquer le remboursement anticipé
+                // Ajouter une marque pour le remboursement anticipé
                 const dataset = loanChart.data.datasets[0];
                 dataset.pointBackgroundColor = dataset.data.map((value, index) => 
                     index === remboursementIndex ? 'rgba(52, 211, 153, 1)' : 'transparent'
@@ -891,9 +929,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 dataset.pointRadius = dataset.data.map((value, index) => 
                     index === remboursementIndex ? 5 : 0
                 );
-                loanChart.update();
             }
         }
+        
+        // Marquer le mois de renégociation sur le graphique
+        if (result.moisRenegociation) {
+            const renegotiationIndex = Math.floor(result.moisRenegociation / sampleRate);
+            
+            if (renegotiationIndex < labels.length) {
+                // Ajouter un point pour indiquer la renégociation
+                const dataset = loanChart.data.datasets[1]; // Dataset des intérêts
+                dataset.pointBackgroundColor = dataset.pointBackgroundColor || Array(dataset.data.length).fill('transparent');
+                dataset.pointRadius = dataset.pointRadius || Array(dataset.data.length).fill(0);
+                
+                dataset.pointBackgroundColor[renegotiationIndex] = 'rgba(59, 130, 246, 1)'; // Bleu pour la renégociation
+                dataset.pointRadius[renegotiationIndex] = 5;
+            }
+        }
+        
+        loanChart.update();
     }
 
     // Événement de clic sur le bouton de calcul
@@ -924,6 +978,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 earlyRepaymentMonth = document.getElementById('early-repayment-month-slider-mensualite').value;
                 penaltyMonths = document.getElementById('penalty-months-slider-mensualite').value;
             }
+            
+            // Récupérer la valeur du mois de renégociation
+            const renegotiationMonth = document.getElementById('renegotiation-month-slider').value;
             
             // En-tête du PDF
             element.innerHTML = `
@@ -969,6 +1026,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
             
+            // Ajouter les infos de renégociation
+            element.innerHTML += `
+                <div class="mt-3 mb-6 p-4 border border-gray-300 rounded">
+                    <h3 class="font-bold mb-2">Options avancées</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <p class="font-bold">Nouveau taux après renégociation:</p>
+                            <p>${document.getElementById('new-interest-rate-slider').value}%</p>
+                        </div>
+                        <div>
+                            <p class="font-bold">Mois de la renégociation:</p>
+                            <p>${renegotiationMonth}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
             // Ajouter les infos de remboursement anticipé
             if (modeRemboursement === 'duree') {
                 element.innerHTML += `
@@ -982,10 +1056,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div>
                                 <p class="font-bold">Mois du remboursement:</p>
                                 <p>${earlyRepaymentMonth}</p>
-                            </div>
-                            <div>
-                                <p class="font-bold">Taux après renégociation:</p>
-                                <p>${document.getElementById('new-interest-rate-slider').value}%</p>
                             </div>
                             <div>
                                 <p class="font-bold">Indemnités (mois):</p>
@@ -1006,10 +1076,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div>
                                 <p class="font-bold">Mois du remboursement:</p>
                                 <p>${earlyRepaymentMonth}</p>
-                            </div>
-                            <div>
-                                <p class="font-bold">Taux après renégociation:</p>
-                                <p>${document.getElementById('new-interest-rate-slider').value}%</p>
                             </div>
                             <div>
                                 <p class="font-bold">Indemnités (mois):</p>
@@ -1062,7 +1128,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mt-3 mb-6 p-4 border-l-4 border-green-500 bg-green-50 pl-4">
                         <h3 class="font-bold mb-2 text-green-700">Économies réalisées</h3>
                         <div class="text-sm">
-                            ${savingsSummary.innerHTML.replace(/class=\\\"[^\\\\\\\"]*\\\\\\\"/g, '').replace(/<i[^>]*><\\\\/i>/g, '•')}
+                            ${savingsSummary.innerHTML.replace(/class=\\\\\\\"[^\\\\\\\\\\\\\\\"]*\\\\\\\\\\\\\\\"/g, '').replace(/<i[^>]*><\\\\\\\\/i>/g, '•')}
                         </div>
                     </div>
                 `;
