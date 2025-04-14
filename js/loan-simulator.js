@@ -298,6 +298,47 @@ document.addEventListener('DOMContentLoaded', function() {
     const penaltyMonthsSliderMensualite = document.getElementById('penalty-months-slider-mensualite');
     const penaltyMonthsValueMensualite = document.getElementById('penalty-months-value-mensualite');
 
+    // Fonction pour mettre à jour les valeurs maximales des sliders en fonction de la durée du prêt
+    function updateSliderMaxValues() {
+        try {
+            const loanDurationYears = parseInt(loanDurationSlider.value);
+            const loanDurationMonths = loanDurationYears * 12;
+            
+            // Mettre à jour le max du slider de mois de renégociation
+            if (renegotiationMonthSlider) {
+                renegotiationMonthSlider.max = loanDurationMonths;
+                // Ajuster la valeur si elle dépasse le nouveau max
+                if (parseInt(renegotiationMonthSlider.value) > loanDurationMonths) {
+                    renegotiationMonthSlider.value = loanDurationMonths;
+                    renegotiationMonthValue.textContent = loanDurationMonths;
+                }
+            }
+            
+            // Mettre à jour le max des sliders de mois de remboursement anticipé
+            if (earlyRepaymentMonthSliderDuree) {
+                earlyRepaymentMonthSliderDuree.max = loanDurationMonths;
+                // Ajuster la valeur si elle dépasse le nouveau max
+                if (parseInt(earlyRepaymentMonthSliderDuree.value) > loanDurationMonths) {
+                    earlyRepaymentMonthSliderDuree.value = loanDurationMonths;
+                    earlyRepaymentMonthValueDuree.textContent = loanDurationMonths;
+                }
+            }
+            
+            if (earlyRepaymentMonthSliderMensualite) {
+                earlyRepaymentMonthSliderMensualite.max = loanDurationMonths;
+                // Ajuster la valeur si elle dépasse le nouveau max
+                if (parseInt(earlyRepaymentMonthSliderMensualite.value) > loanDurationMonths) {
+                    earlyRepaymentMonthSliderMensualite.value = loanDurationMonths;
+                    earlyRepaymentMonthValueMensualite.textContent = loanDurationMonths;
+                }
+            }
+            
+            console.log(`Valeurs max des sliders mises à jour : ${loanDurationMonths} mois`);
+        } catch (error) {
+            console.error("Erreur lors de la mise à jour des valeurs max des sliders:", error);
+        }
+    }
+
     // Mise à jour des affichages des sliders
     if (interestRateSlider && interestRateValue) {
         interestRateSlider.addEventListener('input', function() {
@@ -308,6 +349,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (loanDurationSlider && loanDurationValue) {
         loanDurationSlider.addEventListener('input', function() {
             loanDurationValue.textContent = `${this.value} ans`;
+            // Mettre à jour les max des sliders quand la durée change
+            updateSliderMaxValues();
         });
     }
     
@@ -1350,6 +1393,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Calculer les résultats initiaux au chargement de la page
     if (document.getElementById('loan-amount')) {
+        // Initialiser la mise à jour des valeurs max des sliders
+        updateSliderMaxValues();
+        
         // Initialiser la synchronisation des valeurs entre les modes
         setTimeout(syncModeValues, 500);
         
