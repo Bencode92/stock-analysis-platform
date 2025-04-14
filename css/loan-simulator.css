@@ -1,6 +1,6 @@
 /* Styles spécifiques pour le simulateur de prêt */
 
-/* ===== Styles pour les différents types de prêts ===== */
+/* ===== Styles pour les différents types de lignes du tableau ===== */
 .loan-row-standard {
     background-color: rgba(30, 58, 138, 0.1);
 }
@@ -9,10 +9,7 @@
     background-color: rgba(30, 58, 138, 0.05);
 }
 
-.loan-row-in-fine {
-    background-color: rgba(59, 130, 246, 0.2);
-}
-
+/* Lignes spéciales pour le différé et le remboursement anticipé */
 .loan-row-differe {
     background-color: rgba(245, 158, 11, 0.2);
 }
@@ -45,19 +42,6 @@
 }
 
 /* ===== Composants UI spécifiques ===== */
-/* Style pour l'affichage du mode in fine capitalisé */
-#capitalisation-frais-container {
-    opacity: 0;
-    max-height: 0;
-    overflow: hidden;
-    transition: opacity 0.3s ease, max-height 0.3s ease;
-}
-
-#capitalisation-frais-container.visible {
-    opacity: 1;
-    max-height: 3rem;
-}
-
 /* Styles pour les badges de comparaison */
 .comparison-badge {
     background-color: rgba(52, 211, 153, 0.2);
@@ -104,7 +88,7 @@
     z-index: 1;
 }
 
-/* Styles pour les types de crédit et leurs options */
+/* Styles pour les infos du type de crédit */
 .credit-type-info {
     margin-top: 1rem;
     margin-bottom: 1rem;
