@@ -80,6 +80,11 @@
         #total-vie-courante, #total-loisirs {
             transition: all 0.3s ease;
         }
+        
+        /* Style pour la classe hidden */
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body class="dark">
@@ -686,33 +691,92 @@
                                     </div>
                                     <input type="hidden" id="remboursement-mode" value="duree">
                                 </div>
-                                
-                                <!-- Montant du remboursement anticipé -->
-                                <div class="parameter-row">
-                                    <label class="loan-option-label">
-                                        Montant à rembourser par anticipation
-                                        <span class="loan-option-info cursor-help" title="Le montant que vous souhaitez rembourser en une fois, avant l'échéance prévue.">
-                                            <i class="fas fa-info-circle"></i>
-                                        </span>
-                                    </label>
-                                    <input type="number" id="early-repayment-amount" value="10000" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-                                </div>
-                                
-                                <!-- Mois du remboursement anticipé -->
-                                <div class="parameter-row">
-                                    <label class="loan-option-label">
-                                        Mois du remboursement anticipé
-                                        <span class="loan-option-info cursor-help" title="Le mois auquel vous effectuerez le remboursement anticipé.">
-                                            <i class="fas fa-info-circle"></i>
-                                        </span>
-                                    </label>
-                                    <div class="flex items-center gap-4">
-                                        <input type="range" id="early-repayment-month-slider" min="1" max="120" value="36" step="1" class="loan-slider">
-                                        <span id="early-repayment-month-value" class="loan-slider-value">36</span>
+
+                                <!-- Section pour le mode "Réduire la durée" -->
+                                <div id="section-reduire-duree" class="remboursement-section">
+                                    <!-- Montant du remboursement anticipé -->
+                                    <div class="parameter-row">
+                                        <label class="loan-option-label">
+                                            Montant à rembourser par anticipation
+                                            <span class="loan-option-info cursor-help" title="Le montant que vous souhaitez rembourser en une fois, avant l'échéance prévue.">
+                                                <i class="fas fa-info-circle"></i>
+                                            </span>
+                                        </label>
+                                        <input type="number" id="early-repayment-amount-duree" value="10000" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                    </div>
+                                    
+                                    <!-- Mois du remboursement anticipé -->
+                                    <div class="parameter-row">
+                                        <label class="loan-option-label">
+                                            Mois du remboursement anticipé
+                                            <span class="loan-option-info cursor-help" title="Le mois auquel vous effectuerez le remboursement anticipé.">
+                                                <i class="fas fa-info-circle"></i>
+                                            </span>
+                                        </label>
+                                        <div class="flex items-center gap-4">
+                                            <input type="range" id="early-repayment-month-slider-duree" min="1" max="120" value="36" step="1" class="loan-slider">
+                                            <span id="early-repayment-month-value-duree" class="loan-slider-value">36</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Indemnités de remboursement anticipé -->
+                                    <div class="parameter-row">
+                                        <label class="loan-option-label">
+                                            Indemnités de remboursement anticipé (mois)
+                                            <span class="loan-option-info cursor-help" title="Nombre de mois d'intérêts servant de base au calcul des indemnités de remboursement anticipé (généralement entre 0 et 6 mois). Les IRA sont légalement plafonnées à 6 mois d'intérêts ou 3% du capital remboursé.">
+                                                <i class="fas fa-info-circle"></i>
+                                            </span>
+                                        </label>
+                                        <div class="flex items-center gap-4">
+                                            <input type="range" id="penalty-months-slider-duree" min="0" max="6" value="3" step="1" class="loan-slider">
+                                            <span id="penalty-months-value-duree" class="loan-slider-value">3 mois</span>
+                                        </div>
                                     </div>
                                 </div>
-                                
-                                <!-- Nouveau taux après renégociation -->
+
+                                <!-- Section pour le mode "Réduire la mensualité" -->
+                                <div id="section-reduire-mensualite" class="remboursement-section hidden">
+                                    <!-- Montant du remboursement anticipé -->
+                                    <div class="parameter-row">
+                                        <label class="loan-option-label">
+                                            Montant à rembourser par anticipation
+                                            <span class="loan-option-info cursor-help" title="Le montant que vous souhaitez rembourser en une fois, avant l'échéance prévue.">
+                                                <i class="fas fa-info-circle"></i>
+                                            </span>
+                                        </label>
+                                        <input type="number" id="early-repayment-amount-mensualite" value="10000" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                    </div>
+                                    
+                                    <!-- Mois du remboursement anticipé -->
+                                    <div class="parameter-row">
+                                        <label class="loan-option-label">
+                                            Mois du remboursement anticipé
+                                            <span class="loan-option-info cursor-help" title="Le mois auquel vous effectuerez le remboursement anticipé.">
+                                                <i class="fas fa-info-circle"></i>
+                                            </span>
+                                        </label>
+                                        <div class="flex items-center gap-4">
+                                            <input type="range" id="early-repayment-month-slider-mensualite" min="1" max="120" value="36" step="1" class="loan-slider">
+                                            <span id="early-repayment-month-value-mensualite" class="loan-slider-value">36</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Indemnités de remboursement anticipé -->
+                                    <div class="parameter-row">
+                                        <label class="loan-option-label">
+                                            Indemnités de remboursement anticipé (mois)
+                                            <span class="loan-option-info cursor-help" title="Nombre de mois d'intérêts servant de base au calcul des indemnités de remboursement anticipé (généralement entre 0 et 6 mois). Les IRA sont légalement plafonnées à 6 mois d'intérêts ou 3% du capital remboursé.">
+                                                <i class="fas fa-info-circle"></i>
+                                            </span>
+                                        </label>
+                                        <div class="flex items-center gap-4">
+                                            <input type="range" id="penalty-months-slider-mensualite" min="0" max="6" value="3" step="1" class="loan-slider">
+                                            <span id="penalty-months-value-mensualite" class="loan-slider-value">3 mois</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Nouveau taux après renégociation (commun aux deux modes) -->
                                 <div class="parameter-row">
                                     <label class="loan-option-label">
                                         Nouveau taux après renégociation (%)
@@ -723,20 +787,6 @@
                                     <div class="flex items-center gap-4">
                                         <input type="range" id="new-interest-rate-slider" min="0.5" max="7" value="2.3" step="0.01" class="loan-slider">
                                         <span id="new-interest-rate-value" class="loan-slider-value">2.3%</span>
-                                    </div>
-                                </div>
-                                
-                                <!-- Indemnités de remboursement anticipé -->
-                                <div class="parameter-row">
-                                    <label class="loan-option-label">
-                                        Indemnités de remboursement anticipé (mois)
-                                        <span class="loan-option-info cursor-help" title="Nombre de mois d'intérêts servant de base au calcul des indemnités de remboursement anticipé (généralement entre 0 et 6 mois). Les IRA sont légalement plafonnées à 6 mois d'intérêts ou 3% du capital remboursé.">
-                                            <i class="fas fa-info-circle"></i>
-                                        </span>
-                                    </label>
-                                    <div class="flex items-center gap-4">
-                                        <input type="range" id="penalty-months-slider" min="0" max="6" value="3" step="1" class="loan-slider">
-                                        <span id="penalty-months-value" class="loan-slider-value">3 mois</span>
                                     </div>
                                 </div>
                             </div>
