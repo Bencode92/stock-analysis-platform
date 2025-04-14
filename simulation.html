@@ -753,6 +753,8 @@
                                 
                                 <!-- Input caché pour le mode -->
                                 <input type="hidden" id="remboursement-mode" value="duree">
+                                <!-- Input caché pour earlyRepaymentAmount en mode durée -->
+                                <input type="hidden" id="early-repayment-amount-duree" value="10000">
                                 
                                 <!-- Liste des remboursements anticipés -->
                                 <div id="repayments-list" class="mb-4">
@@ -854,6 +856,14 @@
                                         <button id="add-repayment-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-medium py-2 px-4 rounded-lg transition">
                                             <i class="fas fa-plus mr-2"></i>Ajouter ce remboursement
                                         </button>
+                                    </div>
+                                    
+                                    <!-- Alerte pour seuil minimum non respecté -->
+                                    <div id="min-threshold-alert" class="hidden mt-3 bg-red-900 bg-opacity-20 border-l-4 border-red-500 p-3 rounded">
+                                        <div class="flex items-start">
+                                            <i class="fas fa-exclamation-triangle text-red-500 mr-2 mt-1"></i>
+                                            <p class="text-sm">Le remboursement anticipé doit être d'au moins <span id="min-threshold-amount">10 000 €</span> (10% du capital initial ou 1000€).</p>
+                                        </div>
                                     </div>
                                     
                                     <!-- Message d'information sur les seuils minimums -->
@@ -1171,6 +1181,31 @@
             }
         }
         
+        // Fonction améliorée pour vérifier si le remboursement anticipé est un remboursement total
+        function checkTotalRepayment(montant) {
+            const loanAmount = parseFloat(document.getElementById('loan-amount').value);
+            const interestRate = parseFloat(document.getElementById('interest-rate-slider').value) / 100 / 12;
+            const loanDurationYears = parseInt(document.getElementById('loan-duration-slider').value);
+            const currentMonth = parseInt(document.getElementById('early-repayment-month-slider-mensualite').value);
+            
+            // Calcul approximatif du capital restant dû au mois du remboursement
+            const mensualite = loanAmount * interestRate / (1 - Math.pow(1 + interestRate, -(loanDurationYears * 12)));
+            let capitalRestant = loanAmount;
+            
+            for (let i = 1; i < currentMonth; i++) {
+                const interetMois = capitalRestant * interestRate;
+                capitalRestant -= (mensualite - interetMois);
+            }
+            
+            // Vérification si le montant est proche du capital restant dû
+            const notice = document.getElementById('total-repayment-notice');
+            if (notice && montant >= capitalRestant * 0.95) { // Si le montant représente au moins 95% du capital restant
+                notice.classList.remove('hidden');
+            } else if (notice) {
+                notice.classList.add('hidden');
+            }
+        }
+        
         // Gestion des remboursements anticipés multiples
         document.addEventListener('DOMContentLoaded', function() {
             const addRepaymentBtn = document.getElementById('add-repayment-btn');
@@ -1184,26 +1219,72 @@
                 addRepaymentBtn.addEventListener('click', function() {
                     const mode = document.getElementById('remboursement-mode').value;
                     let repayment = {};
+                    let montant = 0;
+                    
+                    // Calculer le seuil minimum (10% du capital initial ou 1000€)
+                    const loanAmount = parseFloat(document.getElementById('loan-amount').value);
+                    const seuilMinimum = Math.max(1000, loanAmount * 0.10);
                     
                     if (mode === 'duree') {
+                        // Mode durée: estimer le montant à partir des mois à réduire
+                        const moisAReduire = parseInt(document.getElementById('reduction-duree-mois').value);
+                        // Estimation du montant à partir du nombre de mois (approximatif)
+                        const tauxMensuel = parseFloat(document.getElementById('interest-rate-slider').value) / 100 / 12;
+                        const dureeMois = parseInt(document.getElementById('loan-duration-slider').value) * 12;
+                        const mensualite = loanAmount * tauxMensuel / (1 - Math.pow(1 + tauxMensuel, -dureeMois));
+                        
+                        montant = mensualite * moisAReduire * 0.8; // 80% de la mensualité * nb mois (approximation)
+                        
+                        // Mettre à jour le champ caché pour la compatibilité
+                        document.getElementById('early-repayment-amount-duree').value = montant.toString();
+                        
                         repayment = {
                             id: 'repayment-' + (++repaymentsCount),
                             mode: 'duree',
-                            moisAReduire: parseInt(document.getElementById('reduction-duree-mois').value),
+                            moisAReduire: moisAReduire,
                             mois: parseInt(document.getElementById('early-repayment-month-slider-duree').value),
-                            indemnitesMois: parseInt(document.getElementById('penalty-months-slider-duree').value)
+                            indemnitesMois: parseInt(document.getElementById('penalty-months-slider-duree').value),
+                            montant: montant // Ajout du montant estimé pour vérification
                         };
                     } else {
+                        montant = parseFloat(document.getElementById('early-repayment-amount-mensualite').value);
+                        
                         repayment = {
                             id: 'repayment-' + (++repaymentsCount),
                             mode: 'mensualite',
-                            montant: parseFloat(document.getElementById('early-repayment-amount-mensualite').value),
+                            montant: montant,
                             mois: parseInt(document.getElementById('early-repayment-month-slider-mensualite').value),
                             indemnitesMois: parseInt(document.getElementById('penalty-months-slider-mensualite').value)
                         };
+                    }
+                    
+                    // Vérifier que le montant est suffisant
+                    const alertElement = document.getElementById('min-threshold-alert');
+                    const thresholdElement = document.getElementById('min-threshold-amount');
+                    
+                    if (montant < seuilMinimum) {
+                        // Afficher l'alerte
+                        if (thresholdElement) 
+                            thresholdElement.textContent = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(seuilMinimum);
                         
-                        // Vérifier si c'est un remboursement total
-                        checkTotalRepayment(repayment.montant);
+                        if (alertElement) {
+                            alertElement.classList.remove('hidden');
+                            // Faire disparaître l'alerte après 5 secondes
+                            setTimeout(() => {
+                                alertElement.classList.add('hidden');
+                            }, 5000);
+                        }
+                        
+                        // Changer temporairement la couleur du bouton en rouge
+                        this.classList.remove('bg-green-500', 'hover:bg-green-400');
+                        this.classList.add('bg-red-500', 'hover:bg-red-400');
+                        
+                        setTimeout(() => {
+                            this.classList.remove('bg-red-500', 'hover:bg-red-400');
+                            this.classList.add('bg-green-500', 'hover:bg-green-400');
+                        }, 1000);
+                        
+                        return; // Ne pas ajouter le remboursement
                     }
                     
                     // Ajouter au tableau des remboursements
@@ -1211,6 +1292,12 @@
                     
                     // Mettre à jour l'affichage
                     updateRepaymentsList();
+                    
+                    // Vérifier si c'est un remboursement total
+                    checkTotalRepayment(repayment.montant);
+                    
+                    // Déclencher automatiquement le calcul
+                    document.getElementById('calculate-loan-button').click();
                 });
                 
                 // Fonctions de gestion des repayments
@@ -1225,17 +1312,6 @@
                     window.storedRepayments = window.storedRepayments.filter(r => r.id !== id);
                     updateRepaymentsList();
                 };
-                
-                // Fonction pour vérifier si le montant est suffisant pour un remboursement total
-                function checkTotalRepayment(montant) {
-                    // Cette fonction sera complétée par le JS pour vérifier si le montant est suffisant
-                    // pour un remboursement total du capital restant
-                    const notice = document.getElementById('total-repayment-notice');
-                    // Pour l'instant, on le cache toujours
-                    if (notice) {
-                        notice.classList.add('hidden');
-                    }
-                }
                 
                 // Fonction pour mettre à jour la liste des remboursements anticipés
                 function updateRepaymentsList() {
