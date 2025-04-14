@@ -85,6 +85,65 @@
         .hidden {
             display: none;
         }
+        
+        /* Styles pour les remboursements anticipés multiples */
+        .repayment-item {
+            transition: all 0.3s ease;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 0.5rem;
+            margin-bottom: 0.75rem;
+            background-color: rgba(30, 64, 175, 0.15);
+        }
+        
+        .repayment-item:hover {
+            background-color: rgba(30, 64, 175, 0.25);
+        }
+        
+        .repayment-item-header {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .repayment-item-body {
+            padding: 0 1rem 0.75rem 1rem;
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 0.3s ease;
+        }
+        
+        .repayment-item.expanded .repayment-item-body {
+            max-height: 300px;
+        }
+        
+        .remove-repayment {
+            opacity: 0.6;
+            transition: all 0.2s;
+        }
+        
+        .remove-repayment:hover {
+            opacity: 1;
+            color: rgba(239, 68, 68, 0.8);
+        }
+        
+        /* Notification de remboursement total */
+        .loan-total-repayment-notice {
+            background-color: rgba(52, 211, 153, 0.2);
+            border-left: 4px solid rgba(52, 211, 153, 1);
+            padding: 0.75rem;
+            margin-top: 0.75rem;
+            border-radius: 0.25rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .loan-total-repayment-notice i {
+            color: rgba(52, 211, 153, 1);
+            margin-right: 0.75rem;
+            font-size: 1.25rem;
+        }
     </style>
 </head>
 <body class="dark">
@@ -654,10 +713,10 @@
                             <div class="parameters-section">
                                 <h5 class="parameters-section-title">
                                     <i class="fas fa-hand-holding-usd"></i>
-                                    Remboursement anticipé
+                                    Remboursements anticipés
                                 </h5>
                                 
-                                <!-- Comparaison avec/sans remboursement anticipé - DÉPLACÉ ICI -->
+                                <!-- Comparaison avec/sans remboursement anticipé -->
                                 <div class="mt-3 mb-4 flex items-center">
                                     <input id="compare-scenarios" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
                                     <label for="compare-scenarios" class="ml-2 text-sm font-medium text-gray-300">
@@ -668,17 +727,34 @@
                                     </label>
                                 </div>
                                 
-                                <!-- Sections pour les deux modes de remboursement anticipé (côte à côte) -->
-                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
-                                    <!-- Section Réduire la durée -->
-                                    <div id="section-reduire-duree" class="remboursement-section bg-blue-800 bg-opacity-20 p-4 rounded-lg">
-                                        <h5 class="text-lg font-semibold mb-3 text-white flex items-center">
-                                            <i class="fas fa-calendar-day text-green-400 mr-2"></i>
-                                            Réduire la durée
-                                        </h5>
-                                        <p class="text-sm text-gray-300 mb-3">Garder la même mensualité et réduire la durée totale du prêt</p>
-                                        
-                                        <!-- Nombre de mois à réduire (nouveau champ) -->
+                                <!-- Choix du mode (onglets) -->
+                                <div class="flex bg-blue-800 bg-opacity-20 rounded-lg mb-4 overflow-hidden">
+                                    <button id="mode-duree" class="flex-1 py-2 px-3 text-sm font-medium text-green-400 active" onclick="switchRepaymentMode('duree')">
+                                        <i class="fas fa-calendar-day mr-1"></i> Réduire la durée
+                                    </button>
+                                    <button id="mode-mensualite" class="flex-1 py-2 px-3 text-sm font-medium text-white" onclick="switchRepaymentMode('mensualite')">
+                                        <i class="fas fa-money-bill-wave mr-1"></i> Réduire la mensualité
+                                    </button>
+                                </div>
+                                
+                                <!-- Input caché pour le mode -->
+                                <input type="hidden" id="remboursement-mode" value="duree">
+                                
+                                <!-- Liste des remboursements anticipés -->
+                                <div id="repayments-list" class="mb-4">
+                                    <!-- Sera rempli dynamiquement -->
+                                </div>
+                                
+                                <!-- Section pour ajouter un nouveau remboursement -->
+                                <div id="section-add-repayment" class="bg-blue-800 bg-opacity-30 p-4 rounded-lg mb-4">
+                                    <h5 class="text-lg font-semibold mb-3 text-white flex items-center">
+                                        <i class="fas fa-plus-circle text-green-400 mr-2"></i>
+                                        Ajouter un remboursement anticipé
+                                    </h5>
+                                    
+                                    <!-- Contenu pour le mode "Réduire la durée" -->
+                                    <div id="section-reduire-duree">
+                                        <!-- Nombre de mois à réduire (mode durée) -->
                                         <div class="parameter-row">
                                             <label class="loan-option-label">
                                                 Nombre de mois à réduire
@@ -689,7 +765,7 @@
                                             <input type="number" id="reduction-duree-mois" value="12" min="1" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
                                         </div>
                                         
-                                        <!-- Mois du remboursement anticipé -->
+                                        <!-- Mois du remboursement anticipé (mode durée) -->
                                         <div class="parameter-row">
                                             <label class="loan-option-label">
                                                 Mois du remboursement
@@ -703,7 +779,7 @@
                                             </div>
                                         </div>
                                         
-                                        <!-- Indemnités de remboursement anticipé -->
+                                        <!-- Indemnités de remboursement anticipé (mode durée) -->
                                         <div class="parameter-row">
                                             <label class="loan-option-label">
                                                 Indemnités (mois)
@@ -716,33 +792,22 @@
                                                 <span id="penalty-months-value-duree" class="loan-slider-value">3 mois</span>
                                             </div>
                                         </div>
-                                        
-                                        <input type="checkbox" id="apply-duree" class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 mt-3">
-                                        <label for="apply-duree" class="ml-2 text-sm font-medium text-green-400">
-                                            Appliquer ce remboursement
-                                        </label>
                                     </div>
                                     
-                                    <!-- Section Réduire la mensualité -->
-                                    <div id="section-reduire-mensualite" class="remboursement-section bg-blue-800 bg-opacity-20 p-4 rounded-lg">
-                                        <h5 class="text-lg font-semibold mb-3 text-white flex items-center">
-                                            <i class="fas fa-money-bill-wave text-green-400 mr-2"></i>
-                                            Réduire la mensualité
-                                        </h5>
-                                        <p class="text-sm text-gray-300 mb-3">Garder la même durée et réduire le montant des mensualités</p>
-                                        
-                                        <!-- Montant du remboursement anticipé -->
+                                    <!-- Contenu pour le mode "Réduire la mensualité" -->
+                                    <div id="section-reduire-mensualite" class="hidden">
+                                        <!-- Montant du remboursement anticipé (mode mensualité) -->
                                         <div class="parameter-row">
                                             <label class="loan-option-label">
                                                 Montant à rembourser
-                                                <span class="loan-option-info cursor-help" title="Le montant que vous souhaitez rembourser en une fois, avant l'échéance prévue.">
+                                                <span class="loan-option-info cursor-help" title="Le montant que vous souhaitez rembourser en une fois, avant l'échéance prévue. Minimum 10% du capital initial ou 1000€.">
                                                     <i class="fas fa-info-circle"></i>
                                                 </span>
                                             </label>
-                                            <input type="number" id="early-repayment-amount-mensualite" value="10000" min="0" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                            <input type="number" id="early-repayment-amount-mensualite" value="10000" min="1000" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
                                         </div>
                                         
-                                        <!-- Mois du remboursement anticipé -->
+                                        <!-- Mois du remboursement anticipé (mode mensualité) -->
                                         <div class="parameter-row">
                                             <label class="loan-option-label">
                                                 Mois du remboursement
@@ -756,7 +821,7 @@
                                             </div>
                                         </div>
                                         
-                                        <!-- Indemnités de remboursement anticipé -->
+                                        <!-- Indemnités de remboursement anticipé (mode mensualité) -->
                                         <div class="parameter-row">
                                             <label class="loan-option-label">
                                                 Indemnités (mois)
@@ -769,11 +834,26 @@
                                                 <span id="penalty-months-value-mensualite" class="loan-slider-value">3 mois</span>
                                             </div>
                                         </div>
-                                        
-                                        <input type="checkbox" id="apply-mensualite" class="w-4 h-4 text-green-600 bg-gray-100 border-gray-300 rounded focus:ring-green-500 mt-3">
-                                        <label for="apply-mensualite" class="ml-2 text-sm font-medium text-green-400">
-                                            Appliquer ce remboursement
-                                        </label>
+                                    </div>
+                                    
+                                    <div class="text-center mt-4">
+                                        <button id="add-repayment-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-medium py-2 px-4 rounded-lg transition">
+                                            <i class="fas fa-plus mr-2"></i>Ajouter ce remboursement
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Message d'information sur les seuils minimums -->
+                                    <div class="mt-3 text-xs text-gray-400 italic">
+                                        <i class="fas fa-info-circle mr-1"></i> Les banques imposent généralement un seuil minimum de 10% du capital initial ou 1000€ pour les remboursements anticipés.
+                                    </div>
+                                </div>
+                                
+                                <!-- Notification pour le remboursement total -->
+                                <div id="total-repayment-notice" class="loan-total-repayment-notice hidden">
+                                    <i class="fas fa-check-circle"></i>
+                                    <div>
+                                        <h6 class="font-semibold text-green-400">Remboursement total</h6>
+                                        <p class="text-sm text-gray-300">Ce montant permettra de solder intégralement votre prêt.</p>
                                     </div>
                                 </div>
                             </div>
@@ -1051,9 +1131,153 @@
             }
         }
         
-        // Écouter le changement sur les éléments de budget
+        // Fonction pour basculer entre les modes de remboursement
+        function switchRepaymentMode(mode) {
+            const modeDureeBtn = document.getElementById('mode-duree');
+            const modeMensualiteBtn = document.getElementById('mode-mensualite');
+            const sectionDuree = document.getElementById('section-reduire-duree');
+            const sectionMensualite = document.getElementById('section-reduire-mensualite');
+            
+            document.getElementById('remboursement-mode').value = mode;
+            
+            if (mode === 'duree') {
+                modeDureeBtn.classList.add('active');
+                modeDureeBtn.classList.add('text-green-400');
+                modeMensualiteBtn.classList.remove('active');
+                modeMensualiteBtn.classList.remove('text-green-400');
+                sectionDuree.classList.remove('hidden');
+                sectionMensualite.classList.add('hidden');
+            } else {
+                modeMensualiteBtn.classList.add('active');
+                modeMensualiteBtn.classList.add('text-green-400');
+                modeDureeBtn.classList.remove('active');
+                modeDureeBtn.classList.remove('text-green-400');
+                sectionMensualite.classList.remove('hidden');
+                sectionDuree.classList.add('hidden');
+            }
+        }
+        
+        // Gestion des remboursements anticipés multiples
         document.addEventListener('DOMContentLoaded', function() {
-            // Vérifier si l'URL contient un ancre pour l'onglet budget
+            const addRepaymentBtn = document.getElementById('add-repayment-btn');
+            const repaymentsList = document.getElementById('repayments-list');
+            let repaymentsCount = 0;
+            
+            // Remboursements anticipés stockés
+            window.storedRepayments = [];
+            
+            if (addRepaymentBtn && repaymentsList) {
+                addRepaymentBtn.addEventListener('click', function() {
+                    const mode = document.getElementById('remboursement-mode').value;
+                    let repayment = {};
+                    
+                    if (mode === 'duree') {
+                        repayment = {
+                            id: 'repayment-' + (++repaymentsCount),
+                            mode: 'duree',
+                            moisAReduire: parseInt(document.getElementById('reduction-duree-mois').value),
+                            mois: parseInt(document.getElementById('early-repayment-month-slider-duree').value),
+                            indemnitesMois: parseInt(document.getElementById('penalty-months-slider-duree').value)
+                        };
+                    } else {
+                        repayment = {
+                            id: 'repayment-' + (++repaymentsCount),
+                            mode: 'mensualite',
+                            montant: parseFloat(document.getElementById('early-repayment-amount-mensualite').value),
+                            mois: parseInt(document.getElementById('early-repayment-month-slider-mensualite').value),
+                            indemnitesMois: parseInt(document.getElementById('penalty-months-slider-mensualite').value)
+                        };
+                        
+                        // Vérifier si c'est un remboursement total
+                        checkTotalRepayment(repayment.montant);
+                    }
+                    
+                    // Ajouter au tableau des remboursements
+                    window.storedRepayments.push(repayment);
+                    
+                    // Mettre à jour l'affichage
+                    updateRepaymentsList();
+                });
+                
+                // Fonctions de gestion des repayments
+                window.toggleRepaymentDetails = function(id) {
+                    const item = document.getElementById(id);
+                    if (item) {
+                        item.classList.toggle('expanded');
+                    }
+                };
+                
+                window.removeRepayment = function(id) {
+                    window.storedRepayments = window.storedRepayments.filter(r => r.id !== id);
+                    updateRepaymentsList();
+                };
+                
+                // Fonction pour vérifier si le montant est suffisant pour un remboursement total
+                function checkTotalRepayment(montant) {
+                    // Cette fonction sera complétée par le JS pour vérifier si le montant est suffisant
+                    // pour un remboursement total du capital restant
+                    const notice = document.getElementById('total-repayment-notice');
+                    // Pour l'instant, on le cache toujours
+                    if (notice) {
+                        notice.classList.add('hidden');
+                    }
+                }
+                
+                // Fonction pour mettre à jour la liste des remboursements anticipés
+                function updateRepaymentsList() {
+                    repaymentsList.innerHTML = '';
+                    
+                    if (window.storedRepayments.length === 0) {
+                        repaymentsList.innerHTML = '<p class="text-sm text-gray-400 italic">Aucun remboursement anticipé configuré. Utilisez le formulaire ci-dessous pour en ajouter.</p>';
+                        return;
+                    }
+                    
+                    // Trier les remboursements par mois
+                    window.storedRepayments.sort((a, b) => a.mois - b.mois);
+                    
+                    window.storedRepayments.forEach(repayment => {
+                        const repaymentItem = document.createElement('div');
+                        repaymentItem.id = repayment.id;
+                        repaymentItem.className = 'repayment-item';
+                        
+                        let headerContent = '';
+                        if (repayment.mode === 'duree') {
+                            headerContent = `<strong>Mois ${repayment.mois}</strong> - Réduction de ${repayment.moisAReduire} mois`;
+                        } else {
+                            headerContent = `<strong>Mois ${repayment.mois}</strong> - ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(repayment.montant)}`;
+                        }
+                        
+                        repaymentItem.innerHTML = `
+                            <div class="repayment-item-header" onclick="toggleRepaymentDetails('${repayment.id}')">
+                                <div>${headerContent}</div>
+                                <div>
+                                    <button class="remove-repayment" onclick="event.stopPropagation(); removeRepayment('${repayment.id}')">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="repayment-item-body">
+                                <div class="grid grid-cols-2 gap-2 text-sm">
+                                    <div><span class="text-gray-400">Mode:</span> ${repayment.mode === 'duree' ? 'Réduction de durée' : 'Réduction de mensualité'}</div>
+                                    <div><span class="text-gray-400">Mois:</span> ${repayment.mois}</div>
+                                    ${repayment.mode === 'duree' ? 
+                                        `<div><span class="text-gray-400">Mois à réduire:</span> ${repayment.moisAReduire}</div>` : 
+                                        `<div><span class="text-gray-400">Montant:</span> ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(repayment.montant)}</div>`
+                                    }
+                                    <div><span class="text-gray-400">Indemnités:</span> ${repayment.indemnitesMois} mois</div>
+                                </div>
+                            </div>
+                        `;
+                        
+                        repaymentsList.appendChild(repaymentItem);
+                    });
+                }
+                
+                // Initialisation de la liste
+                updateRepaymentsList();
+            }
+            
+            // Gestion des onglets de simulation
             if (window.location.hash === '#budget-planner') {
                 // Trouver tous les onglets et masquer tous les contenus
                 const tabs = document.querySelectorAll('.simulation-tab');
