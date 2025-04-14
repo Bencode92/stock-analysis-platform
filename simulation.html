@@ -721,6 +721,17 @@
                                         <span id="renegotiation-month-value" class="loan-slider-value">36</span>
                                     </div>
                                 </div>
+                                
+                                <!-- NOUVELLE OPTION: Appliquer la renégociation -->
+                                <div class="mt-3 flex items-center">
+                                    <input id="apply-renegotiation" type="checkbox" checked class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500">
+                                    <label for="apply-renegotiation" class="ml-2 text-sm font-medium text-gray-300">
+                                        Appliquer la renégociation
+                                        <span class="loan-option-info cursor-help" title="Si activé, le nouveau taux sera appliqué à partir du mois de renégociation. Sinon, le taux initial sera conservé sur toute la durée du prêt.">
+                                            <i class="fas fa-info-circle"></i>
+                                        </span>
+                                    </label>
+                                </div>
                             </div>
                             
                             <!-- Paramètres de remboursement anticipé -->
@@ -1508,26 +1519,6 @@
                 currentDateElement.textContent = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
             }
         });
-        
-        // Fonction pour basculer entre les vues simplifiée et détaillée
-        window.toggleBudgetView = function(mode) {
-            const detailedView = document.getElementById('detailed-view');
-            const simpleView = document.getElementById('simple-view');
-            
-            if (mode === 'detailed') {
-                detailedView.style.display = 'block';
-                simpleView.style.display = 'none';
-            } else {
-                detailedView.style.display = 'none';
-                simpleView.style.display = 'block';
-            }
-        };
-        
-        // Fonction pour calculer automatiquement une recommandation de versement PER
-        function calculerRecommandationPER(salaireBrut) {
-            // Par défaut, recommandation de 10% du salaire brut
-            return Math.min(salaireBrut * 0.1, 32909);
-        }
     </script>
 </body>
 </html>
