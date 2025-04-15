@@ -423,6 +423,184 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Nouvelle fonction pour calculer l'équivalence entre baisse de taux et remboursement anticipé
+    function calculerCapitalEquivalent(simulateur, tauxBaisseList, moisRenegociation = 1) {
+        try {
+            // Calcul du scénario de base
+            const resultBase = simulateur.tableauAmortissement({});
+            const economieBase = resultBase.totalInterets;
+            
+            // Pour chaque baisse de taux demandée
+            const equivalents = [];
+            for (const baisse of tauxBaisseList) {
+                // Calculer le nouveau taux après baisse
+                const tauxActuel = simulateur.tauxMensuel * 12 * 100;
+                const nouveauTaux = Math.max(0.1, tauxActuel - baisse); // Minimum 0.1%
+                
+                // Simuler avec la baisse de taux
+                const resultBaisse = simulateur.tableauAmortissement({ 
+                    nouveauTaux: nouveauTaux, 
+                    moisRenegociation: moisRenegociation,
+                    appliquerRenegociation: true
+                });
+                
+                // Calculer l'économie réalisée
+                const economieInterets = economieBase - resultBaisse.totalInterets;
+                
+                // Recherche optimisée du capital équivalent (par dichotomie)
+                let min = 1000;
+                let max = simulateur.capital;
+                let capitalEquiv = 0;
+                let economieCap = 0;
+                
+                // Si l'économie est négative ou nulle, pas besoin de chercher
+                if (economieInterets <= 0) {
+                    equivalents.push({
+                        baisseTaux: baisse,
+                        economieInterets: economieInterets,
+                        capitalEquivalent: 0,
+                        pourcentageCapital: 0
+                    });
+                    continue;
+                }
+                
+                // Recherche par dichotomie pour plus d'efficacité
+                while (max - min > 1000) {
+                    const mid = Math.floor((min + max) / 2);
+                    
+                    const resultCap = simulateur.tableauAmortissement({
+                        remboursementsAnticipes: [{ 
+                            mois: moisRenegociation, 
+                            montant: mid,
+                            mode: 'duree' // Mode réduction de durée pour comparaison équitable
+                        }]
+                    });
+                    
+                    economieCap = economieBase - resultCap.totalInterets;
+                    
+                    if (economieCap < economieInterets) {
+                        min = mid;
+                    } else {
+                        max = mid;
+                        capitalEquiv = mid;
+                    }
+                }
+                
+                // Affiner le résultat avec une recherche linéaire sur un intervalle plus petit
+                for (let cap = min; cap <= max; cap += 500) {
+                    const resultCap = simulateur.tableauAmortissement({
+                        remboursementsAnticipes: [{ 
+                            mois: moisRenegociation, 
+                            montant: cap,
+                            mode: 'duree'
+                        }]
+                    });
+                    
+                    economieCap = economieBase - resultCap.totalInterets;
+                    if (economieCap >= economieInterets) {
+                        capitalEquiv = cap;
+                        break;
+                    }
+                }
+                
+                // Calculer le pourcentage du capital total
+                const pourcentageCapital = (capitalEquiv / simulateur.capital) * 100;
+                
+                equivalents.push({
+                    baisseTaux: baisse,
+                    economieInterets: economieInterets,
+                    capitalEquivalent: capitalEquiv,
+                    pourcentageCapital: pourcentageCapital
+                });
+            }
+            
+            return equivalents;
+        } catch (error) {
+            console.error("Erreur lors du calcul des équivalences:", error);
+            return [];
+        }
+    }
+
+    // Fonction pour afficher le tableau de sensibilité
+    function afficherTableauSensibilite(data) {
+        try {
+            // D'abord vérifier si le conteneur existe, sinon le créer
+            let sensibilityContainer = document.getElementById('sensitivity-container');
+            if (!sensibilityContainer) {
+                // Trouver où insérer le tableau (après le graphique)
+                const chartContainer = document.querySelector('.chart-container');
+                if (!chartContainer) return;
+                
+                // Créer le conteneur
+                sensibilityContainer = document.createElement('div');
+                sensibilityContainer.id = 'sensitivity-container';
+                sensibilityContainer.className = 'mt-6 bg-blue-900 bg-opacity-20 p-4 rounded-lg';
+                chartContainer.after(sensibilityContainer);
+                
+                // Ajouter le titre et la description
+                const title = document.createElement('h5');
+                title.className = 'text-lg font-semibold mb-3 flex items-center';
+                title.innerHTML = '<i class="fas fa-exchange-alt text-green-400 mr-2"></i> Équivalence baisse de taux vs remboursement anticipé';
+                
+                const description = document.createElement('p');
+                description.className = 'text-sm text-gray-300 mb-4';
+                description.textContent = 'Ce tableau montre, pour différentes baisses de taux, le montant de capital qu\'il faudrait rembourser par anticipation pour obtenir la même économie d\'intérêts.';
+                
+                // Créer la structure du tableau
+                const tableContainer = document.createElement('div');
+                tableContainer.className = 'overflow-auto max-h-60 bg-blue-800 bg-opacity-20 rounded-lg';
+                
+                const table = document.createElement('table');
+                table.className = 'min-w-full text-sm';
+                
+                const thead = document.createElement('thead');
+                thead.className = 'bg-blue-900 bg-opacity-50 sticky top-0';
+                thead.innerHTML = `
+                    <tr>
+                        <th class="px-3 py-2 text-left">Baisse de taux</th>
+                        <th class="px-3 py-2 text-right">Économie d'intérêts</th>
+                        <th class="px-3 py-2 text-right">Capital équivalent</th>
+                        <th class="px-3 py-2 text-right">% du capital initial</th>
+                    </tr>
+                `;
+                
+                const tbody = document.createElement('tbody');
+                tbody.id = 'sensitivity-table-body';
+                
+                // Assembler le tableau
+                table.appendChild(thead);
+                table.appendChild(tbody);
+                tableContainer.appendChild(table);
+                
+                // Assembler le conteneur
+                sensibilityContainer.appendChild(title);
+                sensibilityContainer.appendChild(description);
+                sensibilityContainer.appendChild(tableContainer);
+            }
+            
+            // Remplir le tableau avec les données
+            const tbody = document.getElementById('sensitivity-table-body');
+            if (!tbody) return;
+            
+            tbody.innerHTML = '';
+            data.forEach((row, index) => {
+                const tr = document.createElement('tr');
+                tr.className = index % 2 === 0 ? 'bg-blue-800 bg-opacity-10' : 'bg-blue-900 bg-opacity-10';
+                
+                tr.innerHTML = `
+                    <td class="px-3 py-2 text-left">${row.baisseTaux.toFixed(2)}%</td>
+                    <td class="px-3 py-2 text-right">${formatMontant(row.economieInterets)}</td>
+                    <td class="px-3 py-2 text-right">${formatMontant(row.capitalEquivalent)}</td>
+                    <td class="px-3 py-2 text-right">${row.pourcentageCapital.toFixed(1)}%</td>
+                `;
+                
+                tbody.appendChild(tr);
+            });
+        } catch (error) {
+            console.error("Erreur lors de l'affichage du tableau de sensibilité:", error);
+        }
+    }
+
     // Fonction pour calculer et afficher les résultats
     function calculateLoan() {
         try {
@@ -587,6 +765,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Affichage du tableau de comparaison si l'option est cochée
             updateComparisonTable(result, modeRemboursement);
+            
+            // Calcul et affichage du tableau de sensibilité taux/capital
+            const tauxBaisseList = [0.25, 0.5, 0.75, 1.0]; // Valeurs à afficher
+            const sensitivite = calculerCapitalEquivalent(simulator, tauxBaisseList, renegotiationMonth);
+            afficherTableauSensibilite(sensitivite);
             
             return true;
         } catch (error) {
@@ -1101,6 +1284,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
             `;
             
+            // Ajouter le tableau d'équivalence entre baisse de taux et remboursement anticipé
+            const sensitivityContainer = document.getElementById('sensitivity-container');
+            if (sensitivityContainer) {
+                element.innerHTML += `
+                    <div class="mt-3 mb-6 p-4 border-l-4 border-blue-500 bg-blue-50 pl-4">
+                        <h3 class="font-bold mb-2 text-blue-700">Équivalence baisse de taux vs remboursement anticipé</h3>
+                        <div class="text-sm">
+                            ${sensitivityContainer.innerHTML.replace(/class=\\\"[^\\\"]*\\\"/g, '').replace(/<i[^>]*><\\/i>/g, '•')}
+                        </div>
+                    </div>
+                `;
+            }
+            
             // Ajouter la section des remboursements anticipés multiples
             if (window.storedRepayments && window.storedRepayments.length > 0) {
                 element.innerHTML += `
@@ -1228,7 +1424,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mt-3 mb-6 p-4 border-l-4 border-green-500 bg-green-50 pl-4">
                         <h3 class="font-bold mb-2 text-green-700">Économies réalisées</h3>
                         <div class="text-sm">
-                            ${savingsSummary.innerHTML.replace(/class=\"[^\"]*\"/g, '').replace(/<i[^>]*><\/i>/g, '•')}
+                            ${savingsSummary.innerHTML.replace(/class=\\\"[^\\\"]*\\\"/g, '').replace(/<i[^>]*><\\/i>/g, '•')}
                         </div>
                     </div>
                 `;
