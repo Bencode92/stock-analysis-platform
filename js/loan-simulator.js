@@ -81,10 +81,16 @@ class LoanSimulator {
             }
         }
         
+        // MODIFICATION : Ne prendre en compte le moisAReduire que si aucun remboursement anticipé n'a été ajouté
         // Définir la durée finale en fonction du mode
         let dureeFinale = this.dureeMois;
-        if (modeRemboursement === 'duree' && moisAReduire > 0) {
-            dureeFinale = Math.max(1, this.dureeMois - moisAReduire);
+        
+        // On vérifie s'il y a des remboursements anticipés et on n'applique moisAReduire que si aucun remboursement 
+        // n'a été ajouté et si on est en mode durée
+        if (modeRemboursement === 'duree' && remboursementsAnticipes.length === 0 && moisAReduire > 0) {
+            // On n'applique plus la réduction de durée ici, elle doit être explicitement ajoutée
+            // via le bouton "Ajouter ce remboursement"
+            dureeFinale = this.dureeMois; // MODIFIÉ : on garde la durée initiale
         }
         
         // Suivi avant remboursement anticipé
@@ -191,8 +197,9 @@ class LoanSimulator {
             if (capitalRestant <= 0) break;
         }
         
+        // MODIFICATION : Ne calculer les indemnités que s'il y a effectivement des remboursements anticipés
         // Indemnités pour le mode durée si aucun remboursement anticipé n'est défini
-        if (modeRemboursement === 'duree' && moisAReduire > 0 && indemnites === 0) {
+        if (modeRemboursement === 'duree' && remboursementsAnticipes.length > 0 && indemnites === 0) {
             // Pour le mode durée, estimer le capital qui serait remboursé pour les mois réduits
             // pour calculer les indemnités
             const capitalEstime = mensualite * moisAReduire * 0.8; // Estimation approximative (80% de la mensualité * nb mois)
