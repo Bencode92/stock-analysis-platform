@@ -247,6 +247,7 @@
                     <div class="simulation-tab" data-target="tax-optimizer">Optimisation fiscale PER</div>
                     <div class="simulation-tab" data-target="budget-planner">Budget & Épargne</div>
                     <div class="simulation-tab" data-target="loan-simulator">Gestion de dette</div>
+                    <div class="simulation-tab" data-target="ptz-simulator">Simulateur PTZ</div>
                 </div>
                 
                 <div id="investment-simulator" class="simulation-content">
@@ -1013,6 +1014,209 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Contenu pour l'onglet Simulateur PTZ -->
+                <div id="ptz-simulator" class="simulation-content" style="display: none;">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                        <!-- Paramètres du PTZ -->
+                        <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                            <h4 class="text-xl font-semibold mb-4 flex items-center">
+                                <i class="fas fa-home text-green-400 mr-2"></i>
+                                Paramètres du Prêt à Taux Zéro
+                            </h4>
+                            
+                            <!-- Type de projet -->
+                            <div class="mb-4">
+                                <label class="loan-option-label">
+                                    Type de projet
+                                    <span class="loan-option-info cursor-help" title="Sélectionnez le type de projet immobilier concerné par votre demande de PTZ.">
+                                        <i class="fas fa-info-circle"></i>
+                                    </span>
+                                </label>
+                                <select id="ptz-project-type" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                    <option value="neuf">Logement neuf</option>
+                                    <option value="ancien">Logement ancien avec travaux (zones B2/C)</option>
+                                    <option value="social">Achat du logement social occupé</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Zone géographique -->
+                            <div class="mb-4">
+                                <label class="loan-option-label">
+                                    Zone géographique
+                                    <span class="loan-option-info cursor-help" title="La zone géographique détermine les plafonds de revenus et le montant maximum du PTZ.">
+                                        <i class="fas fa-info-circle"></i>
+                                    </span>
+                                </label>
+                                <select id="ptz-zone" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                    <option value="A">Zone A ou A bis</option>
+                                    <option value="B1">Zone B1</option>
+                                    <option value="B2">Zone B2</option>
+                                    <option value="C">Zone C</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Recherche de ville -->
+                            <div class="mb-4">
+                                <label class="loan-option-label">
+                                    Recherche par ville
+                                    <span class="loan-option-info cursor-help" title="Recherchez votre ville pour déterminer automatiquement sa zone.">
+                                        <i class="fas fa-info-circle"></i>
+                                    </span>
+                                </label>
+                                <input type="text" id="ptz-city-search" placeholder="Saisissez le nom de votre ville" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                <p id="ptz-zone-info" class="text-sm text-green-400 mt-1 hidden"></p>
+                            </div>
+                            
+                            <!-- Revenu fiscal de référence -->
+                            <div class="mb-4">
+                                <label class="loan-option-label">
+                                    Revenu fiscal de référence
+                                    <span class="loan-option-info cursor-help" title="Indiquez le revenu fiscal de référence de l'ensemble des personnes qui occuperont le logement (année N-2).">
+                                        <i class="fas fa-info-circle"></i>
+                                    </span>
+                                </label>
+                                <input type="number" id="ptz-income" placeholder="Ex: 35000" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                            </div>
+                            
+                            <!-- Nombre de personnes dans le foyer -->
+                            <div class="mb-4">
+                                <label class="loan-option-label">
+                                    Nombre de personnes dans le foyer
+                                    <span class="loan-option-info cursor-help" title="Indiquez le nombre de personnes qui occuperont le logement, vous y compris.">
+                                        <i class="fas fa-info-circle"></i>
+                                    </span>
+                                </label>
+                                <input type="number" id="ptz-household-size" min="1" value="1" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                            </div>
+                            
+                            <!-- Coût total de l'opération -->
+                            <div class="mb-4">
+                                <label class="loan-option-label">
+                                    Coût total de l'opération (TTC)
+                                    <span class="loan-option-info cursor-help" title="Indiquez le coût total de votre acquisition, incluant le prix d'achat et les travaux éventuels.">
+                                        <i class="fas fa-info-circle"></i>
+                                    </span>
+                                </label>
+                                <input type="number" id="ptz-total-cost" placeholder="Ex: 200000" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                            </div>
+                            
+                            <!-- Bouton de simulation -->
+                            <button id="calculate-ptz-button" class="loan-action-button w-full mt-6">
+                                <i class="fas fa-play-circle mr-2"></i> 
+                                Simuler le PTZ
+                            </button>
+                        </div>
+                        
+                        <!-- Résultats du PTZ -->
+                        <div class="bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                            <h4 class="text-xl font-semibold mb-4 flex items-center">
+                                <i class="fas fa-chart-line text-green-400 mr-2"></i>
+                                Résultats de la simulation PTZ
+                            </h4>
+                            
+                            <div id="ptz-results-container">
+                                <div class="text-center py-8">
+                                    <i class="fas fa-hand-point-left text-3xl text-gray-500 mb-4"></i>
+                                    <p class="text-gray-400">Veuillez renseigner les paramètres et cliquer sur "Simuler le PTZ" pour obtenir une estimation de votre prêt à taux zéro.</p>
+                                </div>
+                            </div>
+                            
+                            <button id="integrate-ptz-to-loan" class="loan-action-button w-full mt-6 hidden">
+                                <i class="fas fa-link mr-2"></i> 
+                                Intégrer ce PTZ à mon prêt principal
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Résultats combinés prêt principal + PTZ -->
+                    <div id="combined-loan-ptz-results" class="hidden"></div>
+                    
+                    <!-- Tableau comparatif -->
+                    <div class="mt-8 bg-blue-900 bg-opacity-20 p-6 rounded-lg">
+                        <h4 class="text-xl font-semibold mb-4 flex items-center">
+                            <i class="fas fa-table text-green-400 mr-2"></i>
+                            Comparatif des différents types de PTZ
+                        </h4>
+                        
+                        <div class="overflow-x-auto">
+                            <table id="ptz-comparison-table" class="min-w-full text-sm">
+                                <thead class="bg-blue-900 bg-opacity-50">
+                                    <tr>
+                                        <th class="px-4 py-2 text-left">Critère</th>
+                                        <th class="px-4 py-2 text-center">Logement neuf</th>
+                                        <th class="px-4 py-2 text-center">Logement ancien avec travaux</th>
+                                        <th class="px-4 py-2 text-center">Logement social occupé</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Le contenu sera généré par JavaScript -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- Section informative -->
+                    <div class="mt-8 bg-green-900 bg-opacity-20 p-6 rounded-lg">
+                        <h4 class="text-xl font-semibold mb-4 flex items-center">
+                            <i class="fas fa-info-circle text-green-400 mr-2"></i>
+                            Informations importantes sur le PTZ
+                        </h4>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h5 class="text-lg font-semibold text-green-400 mb-2">Avantages du PTZ</h5>
+                                <ul class="space-y-2 ml-4">
+                                    <li class="flex items-start">
+                                        <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                                        <span>Prêt sans intérêts ni frais de dossier</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                                        <span>Possibilité de différé de remboursement jusqu'à 15 ans selon les revenus</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                                        <span>Peut représenter jusqu'à 50% du coût de l'opération</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                                        <span>Compatible avec d'autres aides (PAS, prêt Action Logement, etc.)</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <div>
+                                <h5 class="text-lg font-semibold text-green-400 mb-2">Conditions principales</h5>
+                                <ul class="space-y-2 ml-4">
+                                    <li class="flex items-start">
+                                        <i class="fas fa-exclamation-circle text-amber-400 mr-2 mt-1"></i>
+                                        <span>Ne pas avoir été propriétaire de sa résidence principale au cours des 2 dernières années</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-exclamation-circle text-amber-400 mr-2 mt-1"></i>
+                                        <span>Respect des plafonds de ressources selon la zone</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-exclamation-circle text-amber-400 mr-2 mt-1"></i>
+                                        <span>Le logement doit être votre résidence principale (occupation min. 8 mois/an)</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-exclamation-circle text-amber-400 mr-2 mt-1"></i>
+                                        <span>Ne peut être accordé qu'un seul PTZ par opération immobilière</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6 text-center">
+                            <p class="text-sm text-gray-400">
+                                Les simulations réalisées sont données à titre indicatif et n'engagent pas les établissements financiers.
+                                Consultez votre banque pour une offre de prêt personnalisée.
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Bannière de guide des placements -->
@@ -1166,6 +1370,7 @@
     <script src="js/budget-epargne.js"></script>
     <script src="js/loan-simulator.js"></script>
     <script src="js/loan-sensitivity.js"></script>
+    <script src="js/ptz-simulator.js"></script>
     <script>
         // Ajouter une animation lorsque les totaux sont mis à jour
         function animateTotalUpdate(elementId) {
@@ -1471,6 +1676,22 @@
                 if (loanTab) {
                     loanTab.classList.add('active');
                     document.getElementById('loan-simulator').style.display = 'block';
+                }
+            }
+            // Vérifier si l'URL contient un ancre pour l'onglet du simulateur PTZ
+            else if (window.location.hash === '#ptz-simulator') {
+                // Trouver tous les onglets et masquer tous les contenus
+                const tabs = document.querySelectorAll('.simulation-tab');
+                const contents = document.querySelectorAll('.simulation-content');
+                
+                tabs.forEach(tab => tab.classList.remove('active'));
+                contents.forEach(content => content.style.display = 'none');
+                
+                // Activer l'onglet du simulateur PTZ
+                const ptzTab = document.querySelector('[data-target="ptz-simulator"]');
+                if (ptzTab) {
+                    ptzTab.classList.add('active');
+                    document.getElementById('ptz-simulator').style.display = 'block';
                 }
             }
             
