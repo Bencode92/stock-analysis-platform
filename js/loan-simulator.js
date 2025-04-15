@@ -442,18 +442,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const fraisDossier = parseFloat(document.getElementById('frais-dossier')?.value || 2000);
             const fraisTenueCompte = parseFloat(document.getElementById('frais-tenue-compte')?.value || 710);
             
-            // Récupérer les frais de garantie (valeur saisie ou calculée)
+            // MODIFICATION: Toujours recalculer les frais de garantie estimés
             const fraisGarantieInput = document.getElementById('frais-garantie');
             let fraisGarantie = null;
             if (fraisGarantieInput) {
-                if (fraisGarantieInput.value && fraisGarantieInput.value.trim() !== '') {
-                    fraisGarantie = parseFloat(fraisGarantieInput.value);
-                } else {
-                    // Calculer automatiquement si vide
-                    fraisGarantie = Math.round(loanAmount * 0.013709);
-                    // Mettre la valeur directement dans le champ au lieu du placeholder
-                    fraisGarantieInput.value = fraisGarantie;
-                }
+                // Calculer automatiquement à chaque fois
+                fraisGarantie = Math.round(loanAmount * 0.013709);
+                // Mettre à jour la valeur dans le champ
+                fraisGarantieInput.value = fraisGarantie;
             }
             
             const typeGarantie = document.getElementById('type-garantie')?.value || 'caution';
