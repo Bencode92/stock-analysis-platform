@@ -417,7 +417,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Ajout d'un écouteur pour la case à cocher "Appliquer la renégociation"
     if (applyRenegotiationCheckbox) {
-        applyRenegociationCheckbox.addEventListener('change', function() {
+        applyRenegotiationCheckbox.addEventListener('change', function() {
             // Recalculer lorsque la case est cochée/décochée
             calculateLoan();
         });
@@ -587,10 +587,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Affichage du tableau de comparaison si l'option est cochée
             updateComparisonTable(result, modeRemboursement);
-
-            // Calculer et afficher le tableau de sensibilité taux-capital
-            const sensitivite = calculerCapitalEquivalent(simulator, [0.25, 0.5, 0.75, 1.0]);
-            afficherTableauSensibilite(sensitivite);
             
             return true;
         } catch (error) {
@@ -1232,7 +1228,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mt-3 mb-6 p-4 border-l-4 border-green-500 bg-green-50 pl-4">
                         <h3 class="font-bold mb-2 text-green-700">Économies réalisées</h3>
                         <div class="text-sm">
-                            ${savingsSummary.innerHTML.replace(/class=\\\"[^\\\"]*\\\"/g, '').replace(/<i[^>]*><\\/i>/g, '•')}
+                            ${savingsSummary.innerHTML.replace(/class=\"[^\"]*\"/g, '').replace(/<i[^>]*><\/i>/g, '•')}
                         </div>
                     </div>
                 `;
@@ -1392,157 +1388,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    /**
-     * Calcule l'équivalence entre une baisse de taux et un remboursement anticipé de capital
-     * @param {LoanSimulator} simulateur - L'instance du simulateur de prêt
-     * @param {Array<number>} tauxBaisseList - Liste des baisses de taux à tester (en pourcentage)
-     * @returns {Array<Object>} Tableau d'équivalences
-     */
-    function calculerCapitalEquivalent(simulateur, tauxBaisseList) {
-        // Calcul du scénario de base
-        const resultBase = simulateur.tableauAmortissement({});
-        const economieBase = resultBase.totalInterets;
-        
-        // Pour chaque baisse de taux, calculer l'équivalent en capital
-        const equivalents = tauxBaisseList.map(baisse => {
-            // Calculer le nouveau taux après baisse
-            const tauxAnnuel = (simulateur.tauxMensuel * 12 * 100);
-            const nouveauTaux = tauxAnnuel - baisse;
-            
-            // Simuler avec le nouveau taux
-            const resultBaisse = simulateur.tableauAmortissement({ 
-                nouveauTaux: nouveauTaux, 
-                moisRenegociation: 1 // dès le début pour avoir l'effet maximal
-            });
-
-            // Calculer l'économie d'intérêts grâce à la baisse de taux
-            const economieInterets = economieBase - resultBaisse.totalInterets;
-
-            // Chercher le capital qu'il faudrait rembourser en anticipé pour obtenir la même économie
-            let capitalEquiv = 0;
-            let economieCap = 0;
-            
-            // Recherche par incréments progressifs pour optimiser
-            for (let cap = 1000; cap <= simulateur.capital; cap += 1000) {
-                const resultCap = simulateur.tableauAmortissement({
-                    remboursementsAnticipes: [{ mois: 1, montant: cap }]
-                });
-
-                economieCap = economieBase - resultCap.totalInterets;
-                if (economieCap >= economieInterets) {
-                    capitalEquiv = cap;
-                    break;
-                }
-            }
-
-            // Affiner la recherche pour plus de précision
-            if (capitalEquiv > 1000) {
-                const capitalPrecedent = capitalEquiv - 1000;
-                for (let cap = capitalPrecedent; cap <= capitalEquiv; cap += 100) {
-                    const resultCap = simulateur.tableauAmortissement({
-                        remboursementsAnticipes: [{ mois: 1, montant: cap }]
-                    });
-
-                    economieCap = economieBase - resultCap.totalInterets;
-                    if (economieCap >= economieInterets) {
-                        capitalEquiv = cap;
-                        break;
-                    }
-                }
-            }
-
-            return {
-                baisseTaux: baisse,
-                economieInterets: Math.round(economieInterets),
-                capitalEquivalent: Math.round(capitalEquiv)
-            };
-        });
-
-        return equivalents;
-    }
-
-    /**
-     * Affiche le tableau de sensibilité dans l'interface
-     * @param {Array<Object>} data - Données d'équivalence
-     */
-    function afficherTableauSensibilite(data) {
-        // Vérifier si le tableau existe déjà, sinon le créer
-        let tableContainer = document.getElementById('sensibility-table-container');
-        if (!tableContainer) {
-            // Créer le conteneur pour le tableau
-            tableContainer = document.createElement('div');
-            tableContainer.id = 'sensibility-table-container';
-            tableContainer.className = 'mt-6 mb-4';
-            
-            // Ajouter un titre
-            const title = document.createElement('h3');
-            title.className = 'text-lg font-semibold mb-2';
-            title.textContent = 'Équivalence baisse de taux vs remboursement anticipé';
-            tableContainer.appendChild(title);
-            
-            // Créer le tableau
-            const table = document.createElement('table');
-            table.className = 'w-full text-sm text-left border border-gray-300';
-            
-            // Créer l'en-tête
-            const thead = document.createElement('thead');
-            thead.innerHTML = `
-                <tr class="bg-blue-900 bg-opacity-50">
-                    <th class="px-3 py-2 border-b">Baisse de taux</th>
-                    <th class="px-3 py-2 border-b text-right">Économie d'intérêts</th>
-                    <th class="px-3 py-2 border-b text-right">Capital équivalent</th>
-                </tr>
-            `;
-            
-            // Créer le corps du tableau
-            const tbody = document.createElement('tbody');
-            tbody.id = 'sensibility-table-body';
-            
-            // Assembler le tableau
-            table.appendChild(thead);
-            table.appendChild(tbody);
-            tableContainer.appendChild(table);
-            
-            // Ajouter une note explicative
-            const note = document.createElement('p');
-            note.className = 'text-xs text-gray-400 mt-1';
-            note.textContent = 'Ce tableau montre le capital à rembourser par anticipation pour obtenir le même gain qu\'une baisse de taux.';
-            tableContainer.appendChild(note);
-            
-            // Ajouter le tableau au DOM, juste avant les options du tableau d'amortissement
-            const comparisonTable = document.getElementById('comparison-table');
-            if (comparisonTable) {
-                comparisonTable.parentNode.insertBefore(tableContainer, comparisonTable);
-            } else {
-                const chartContainer = document.querySelector('.chart-container');
-                if (chartContainer) {
-                    chartContainer.parentNode.insertBefore(tableContainer, chartContainer.nextSibling);
-                }
-            }
-        }
-        
-        // Mettre à jour le contenu du tableau
-        const tbody = document.getElementById('sensibility-table-body');
-        tbody.innerHTML = '';
-        
-        // Formatter les montants
-        const formatMontant = (montant) => {
-            return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(montant);
-        };
-        
-        // Ajouter les lignes
-        data.forEach((row, index) => {
-            const tr = document.createElement('tr');
-            tr.className = index % 2 === 0 ? 'bg-blue-800 bg-opacity-10' : 'bg-blue-900 bg-opacity-10';
-            tr.innerHTML = `
-                <td class="px-3 py-2">${row.baisseTaux.toFixed(2)}%</td>
-                <td class="px-3 py-2 text-right">${formatMontant(row.economieInterets)}</td>
-                <td class="px-3 py-2 text-right">${formatMontant(row.capitalEquivalent)}</td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-
     // Calculer les résultats initiaux au chargement de la page
     if (document.getElementById('loan-amount')) {
         // Initialiser la mise à jour des valeurs max des sliders
