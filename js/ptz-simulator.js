@@ -792,8 +792,28 @@ document.addEventListener('DOMContentLoaded', function() {
         // Si l'URL contient #ptz-simulator, activer l'onglet
         if (window.location.hash === '#ptz-simulator') {
             ptzSimulatorTab.click();
+        } else {
+            // Initialiser également si l'onglet PTZ est déjà actif
+            if (document.querySelector('#ptz-simulator').style.display !== 'none') {
+                setTimeout(initPTZSimulator, 100);
+            }
         }
     }
 });
+
+// Force l'initialisation du simulateur quand la page est chargée
+window.onload = function() {
+    if (document.querySelector('#ptz-simulator')) {
+        console.log("Initialisation du simulateur PTZ au chargement de la page...");
+        initPTZSimulator();
+    }
+};
+
+// Mettre les fonctions à disposition globalement pour le debugging
+window.PTZSimulator = PTZSimulator;
+window.createCityIndex = createCityIndex;
+window.searchCity = searchCity;
+window.loadCitiesDatabase = loadCitiesDatabase;
+window.initPTZSimulator = initPTZSimulator;
 
 export { PTZSimulator, initPTZSimulator };
