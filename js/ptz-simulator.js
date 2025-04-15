@@ -277,14 +277,25 @@ async function loadCitiesDatabase() {
     
     // Au lieu de charger depuis un fichier JSON, on définit directement les données
     citiesDB = {
-        "A bis": ["Paris", "Neuilly-sur-Seine", "Levallois-Perret", "Boulogne-Billancourt", "Saint-Mandé", "Vincennes", "Versailles", "Le Chesnay-Rocquencourt", "Chatou", "Divonne-les-Bains", "Ferney-Voltaire", "Saint-Genis-Pouilly"],
-        "A": ["Lyon", "Nice", "Marseille", "Cannes", "Antibes", "Aix-en-Provence", "Bordeaux", "Toulouse", "Lille", "Rennes", "Nantes", "Grenoble", "Montpellier", "Strasbourg"],
-        "B1": ["Dijon", "Metz", "Nancy", "Angers", "Le Mans", "Tours", "Orléans", "Caen", "Rouen", "Amiens", "Reims", "Saint-Étienne", "Toulon", "Perpignan", "Bayonne", "Annecy", "Chambéry"],
-        "B2": ["Clermont-Ferrand", "Besançon", "Brest", "Le Havre", "Poitiers", "Limoges", "Mulhouse", "Pau", "Valence", "Bourges", "Charleville-Mézières", "Belfort", "Colmar", "Épinal"],
-        "C": ["Saint-Nazaire", "Tarbes", "Cahors", "Albi", "Montauban", "Agen", "Périgueux", "Bergerac", "Guéret", "Aurillac", "Moulins", "Nevers", "Sens", "Vesoul", "Dole", "Lons-le-Saunier"]
+        "A bis": ["Paris", "Neuilly-sur-Seine", "Levallois-Perret", "Boulogne-Billancourt", "Saint-Mandé", "Vincennes", "Versailles", "Le Chesnay-Rocquencourt", "Chatou", "Divonne-les-Bains", "Ferney-Voltaire", "Saint-Genis-Pouilly", "Beausoleil", "Cap-d'Ail", "Puteaux", "Courbevoie", "Issy-les-Moulineaux"],
+        "A": ["Lyon", "Nice", "Marseille", "Cannes", "Antibes", "Aix-en-Provence", "Bordeaux", "Toulouse", "Lille", "Rennes", "Nantes", "Grenoble", "Montpellier", "Strasbourg", "Toulon", "Annecy", "Cagnes-sur-Mer", "Menton", "Saint-Laurent-du-Var", "Villeurbanne", "Biot", "Valbonne", "Juan-les-Pins", "Vallauris", "Villeneuve-Loubet", "Hyères"],
+        "B1": ["Dijon", "Metz", "Nancy", "Angers", "Le Mans", "Tours", "Orléans", "Caen", "Rouen", "Amiens", "Reims", "Saint-Étienne", "Perpignan", "Bayonne", "Chambéry", "Avignon", "Nîmes", "Pau", "La Rochelle", "Biarritz", "Brest", "Valence", "Lorient", "Vannes", "Anglet", "Aix-les-Bains", "Clermont-Ferrand"],
+        "B2": ["Besançon", "Le Havre", "Poitiers", "Limoges", "Mulhouse", "Bourges", "Charleville-Mézières", "Belfort", "Colmar", "Épinal", "Cherbourg", "Troyes", "Angoulême", "Périgueux", "Agen", "Béziers", "Sète", "Niort", "Cholet", "Montélimar", "Beauvais", "Bergerac", "Alès", "Arles", "Saintes", "Montauban", "Laval"],
+        "C": ["Saint-Nazaire", "Tarbes", "Cahors", "Albi", "Auch", "Périgueux", "Bergerac", "Guéret", "Aurillac", "Moulins", "Nevers", "Sens", "Vesoul", "Dole", "Lons-le-Saunier", "Auxerre", "Mâcon", "Roanne", "Châteauroux", "Vichy", "Montluçon", "Tulle", "Châtellerault", "Rochefort", "Brive-la-Gaillarde", "Rodez", "Castres", "Alençon", "Abbeville", "Verdun", "Bar-le-Duc", "Saint-Quentin", "Cambrai", "Vitry-le-François", "Sarrebourg", "Sedan"]
     };
     
     console.log("Données des villes chargées directement en mémoire:", Object.keys(citiesDB).length, "zones");
+    
+    // Créer un index plat pour accélérer les recherches
+    cityIndex = {};
+    for (const [zone, cities] of Object.entries(citiesDB)) {
+        for (const city of cities) {
+            cityIndex[city.toLowerCase()] = {
+                city: city,
+                zone: zone
+            };
+        }
+    }
     
     citiesLoaded = true;
     return true;
@@ -301,54 +312,48 @@ function searchCity(query) {
         .toLowerCase()
         .trim();
     
-    if (normalizedQuery.length < 2) return [];
+    // Permettre la recherche dès le premier caractère
+    if (normalizedQuery.length < 1) return [];
     
     const results = [];
     
-    // Parcourir toutes les zones et toutes les villes
-    for (const [zone, cities] of Object.entries(citiesDB)) {
-        // Chercher dans la liste des villes de cette zone
-        const matchingCities = cities.filter(city => {
-            const normalizedCity = city
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .toLowerCase();
-            
-            return normalizedCity.includes(normalizedQuery);
-        });
+    // Recherche optimisée avec index
+    for (const [cityKey, cityData] of Object.entries(cityIndex)) {
+        // Critères de correspondance
+        const exactMatch = cityKey === normalizedQuery;
+        const startsWithMatch = cityKey.startsWith(normalizedQuery);
+        const includesMatch = cityKey.includes(normalizedQuery);
         
-        // Ajouter les résultats
-        matchingCities.forEach(city => {
-            const normalizedCity = city
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .toLowerCase();
-            
-            const exactMatch = normalizedCity === normalizedQuery;
-            const startsWithMatch = normalizedCity.startsWith(normalizedQuery);
-            
+        // Prioriser les résultats
+        if (exactMatch || startsWithMatch || includesMatch) {
             results.push({
-                city: city,
-                zone: zone,
+                city: cityData.city,
+                zone: cityData.zone,
                 exactMatch: exactMatch,
-                startsWithMatch: startsWithMatch
+                startsWithMatch: startsWithMatch,
+                includesMatch: includesMatch
             });
-        });
+        }
     }
     
     console.log(`Trouvé ${results.length} résultats pour "${normalizedQuery}"`);
     
-    // Trier les résultats
+    // Trier les résultats par pertinence
     results.sort((a, b) => {
+        // Priorité 1: Correspondance exacte
         if (a.exactMatch && !b.exactMatch) return -1;
         if (!a.exactMatch && b.exactMatch) return 1;
+        
+        // Priorité 2: Commence par la requête
         if (a.startsWithMatch && !b.startsWithMatch) return -1;
         if (!a.startsWithMatch && b.startsWithMatch) return 1;
+        
+        // Priorité 3: Ordre alphabétique
         return a.city.localeCompare(b.city);
     });
     
-    // Limiter le nombre de résultats
-    return results.slice(0, 10);
+    // Limiter le nombre de résultats (plus élevé pour une meilleure expérience)
+    return results.slice(0, 20);
 }
 
 // Fonction pour mettre à jour l'interface utilisateur avec les résultats
@@ -478,20 +483,21 @@ async function initPTZSimulator() {
     
     // Gestion de l'autocomplétion des villes
     if (ptzCityInput) {
-        // Création du conteneur de suggestions
+        // Création du conteneur de suggestions avec style amélioré
         const suggestionsList = document.createElement('div');
-        suggestionsList.className = 'city-suggestions bg-blue-800 bg-opacity-30 rounded-lg mt-1 absolute w-full z-10 max-h-60 overflow-y-auto';
+        suggestionsList.className = 'city-suggestions bg-blue-800 bg-opacity-30 rounded-lg mt-1 absolute w-full z-10 max-h-60 overflow-y-auto shadow-lg';
         suggestionsList.style.display = 'none';
         
         // Ajouter la liste après l'input
         ptzCityInput.parentNode.style.position = 'relative';
         ptzCityInput.parentNode.insertBefore(suggestionsList, ptzCityInput.nextSibling);
         
-        // Gérer la saisie dans le champ
+        // Gérer la saisie dans le champ avec réponse immédiate
         ptzCityInput.addEventListener('input', function() {
             const query = this.value.trim();
             
-            if (query.length < 2) {
+            // Réagir dès le premier caractère
+            if (query.length < 1) {
                 suggestionsList.style.display = 'none';
                 return;
             }
@@ -501,22 +507,34 @@ async function initPTZSimulator() {
                 const results = searchCity(query);
                 
                 if (results.length > 0) {
-                    // Afficher les suggestions
+                    // Afficher les suggestions avec des styles améliorés
                     suggestionsList.innerHTML = '';
+                    
                     results.forEach(result => {
                         const item = document.createElement('div');
-                        item.className = 'city-suggestion p-2 hover:bg-blue-700 cursor-pointer text-white';
+                        item.className = 'city-suggestion p-3 hover:bg-blue-700 cursor-pointer text-white transition-colors duration-150 border-b border-blue-700 border-opacity-30 flex justify-between items-center';
+                        
                         if (result.exactMatch) {
                             item.classList.add('bg-blue-700', 'bg-opacity-50', 'font-medium');
+                        } else if (result.startsWithMatch) {
+                            item.classList.add('bg-blue-800', 'bg-opacity-40');
                         }
                         
-                        item.innerHTML = `${result.city} <span class="text-green-400">(Zone ${result.zone})</span>`;
+                        const cityText = document.createElement('span');
+                        cityText.innerHTML = result.city;
+                        
+                        const zoneTag = document.createElement('span');
+                        zoneTag.className = 'text-green-400 text-sm px-2 py-1 rounded bg-green-900 bg-opacity-20 ml-2';
+                        zoneTag.innerHTML = `Zone ${result.zone}`;
+                        
+                        item.appendChild(cityText);
+                        item.appendChild(zoneTag);
                         
                         // Au clic sur une suggestion
                         item.addEventListener('click', function() {
                             ptzCityInput.value = result.city;
                             
-                            // Mettre à jour la zone PTZ
+                            // Mettre à jour la zone PTZ automatiquement
                             if (ptzZoneSelect) {
                                 // Ajuster la valeur pour correspondre aux options disponibles
                                 let zoneValue = result.zone;
@@ -524,6 +542,10 @@ async function initPTZSimulator() {
                                     zoneValue = "A"; // Car dans le select vous avez "Zone A ou A bis"
                                 }
                                 ptzZoneSelect.value = zoneValue;
+                                
+                                // Déclencher un événement change pour mettre à jour les scripts qui pourraient écouter
+                                const event = new Event('change');
+                                ptzZoneSelect.dispatchEvent(event);
                             }
                             
                             // Afficher un message de confirmation
@@ -539,15 +561,22 @@ async function initPTZSimulator() {
                         
                         suggestionsList.appendChild(item);
                     });
+                    
+                    // Ajouter un style d'animation
                     suggestionsList.style.display = 'block';
+                    suggestionsList.style.animation = 'fadeIn 0.2s ease-in-out';
                 } else {
-                    // Afficher "Aucun résultat"
-                    suggestionsList.innerHTML = '<div class="no-results p-2">Aucun résultat trouvé</div>';
+                    // Afficher "Aucun résultat" avec style amélioré
+                    suggestionsList.innerHTML = '<div class="no-results p-3 text-gray-400 text-center italic">Aucun résultat trouvé</div>';
                     suggestionsList.style.display = 'block';
                 }
             } else {
-                // Afficher le chargement
-                suggestionsList.innerHTML = '<div class="loading-indicator p-2"><div class="spinner mr-2 inline-block"></div>Chargement...</div>';
+                // Afficher le chargement avec spinner
+                suggestionsList.innerHTML = `
+                    <div class="loading-indicator p-3 text-center">
+                        <div class="spinner inline-block w-4 h-4 mr-2 border-2 border-t-2 border-blue-500 rounded-full animate-spin"></div>
+                        Chargement...
+                    </div>`;
                 suggestionsList.style.display = 'block';
                 
                 // Essayer de charger la base de données
@@ -557,7 +586,7 @@ async function initPTZSimulator() {
                         ptzCityInput.dispatchEvent(new Event('input'));
                     } else {
                         // Afficher une erreur
-                        suggestionsList.innerHTML = '<div class="no-results p-2 text-red-400">Erreur de chargement des données</div>';
+                        suggestionsList.innerHTML = '<div class="no-results p-3 text-red-400 text-center">Erreur de chargement des données</div>';
                     }
                 });
             }
@@ -570,7 +599,7 @@ async function initPTZSimulator() {
             }
         });
         
-        // Navigation au clavier
+        // Navigation au clavier améliorée
         ptzCityInput.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
                 suggestionsList.style.display = 'none';
@@ -579,13 +608,13 @@ async function initPTZSimulator() {
                 const firstItem = suggestionsList.querySelector('.city-suggestion');
                 if (firstItem) {
                     firstItem.focus();
-                    firstItem.classList.add('selected');
+                    firstItem.classList.add('selected', 'bg-blue-600');
                 }
                 e.preventDefault();
             }
         });
         
-        // Navigation clavier dans la liste
+        // Navigation clavier dans la liste améliorée
         suggestionsList.addEventListener('keydown', function(e) {
             const selected = suggestionsList.querySelector('.city-suggestion.selected');
             
@@ -595,9 +624,10 @@ async function initPTZSimulator() {
                     // Passer au suivant
                     const next = selected.nextElementSibling;
                     if (next && next.classList.contains('city-suggestion')) {
-                        selected.classList.remove('selected');
-                        next.classList.add('selected');
+                        selected.classList.remove('selected', 'bg-blue-600');
+                        next.classList.add('selected', 'bg-blue-600');
                         next.focus();
+                        next.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     }
                 }
             } else if (e.key === 'ArrowUp') {
@@ -606,12 +636,13 @@ async function initPTZSimulator() {
                     // Passer au précédent
                     const prev = selected.previousElementSibling;
                     if (prev && prev.classList.contains('city-suggestion')) {
-                        selected.classList.remove('selected');
-                        prev.classList.add('selected');
+                        selected.classList.remove('selected', 'bg-blue-600');
+                        prev.classList.add('selected', 'bg-blue-600');
                         prev.focus();
+                        prev.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     } else {
                         // Revenir à l'input
-                        selected.classList.remove('selected');
+                        selected.classList.remove('selected', 'bg-blue-600');
                         ptzCityInput.focus();
                     }
                 }
@@ -785,6 +816,22 @@ window.onload = function() {
         initPTZSimulator();
     }
 };
+
+// Ajouter des styles CSS pour l'animation
+const style = document.createElement('style');
+style.textContent = `
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.city-suggestion:hover {
+    background-color: rgba(59, 130, 246, 0.5) !important;
+}
+.city-suggestion.selected {
+    background-color: rgba(59, 130, 246, 0.5) !important;
+}
+`;
+document.head.appendChild(style);
 
 // Mettre les fonctions à disposition globalement pour le debugging
 window.PTZSimulator = PTZSimulator;
