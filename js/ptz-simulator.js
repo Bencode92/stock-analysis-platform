@@ -360,12 +360,33 @@ let citiesDB = {};
 let cityIndex = {};
 let citiesLoaded = false;
 
+// Données minimales de secours pour les villes
+const fallbackCitiesDB = {
+    "A bis": ["Paris", "Versailles", "Nice", "Boulogne-Billancourt", "Neuilly-sur-Seine"],
+    "A": ["Lyon", "Marseille", "Toulouse", "Bordeaux", "Montpellier"],
+    "B1": ["Strasbourg", "Nantes", "Lille", "Rennes", "Grenoble"],
+    "B2": ["Dijon", "Tours", "Angers", "Le Mans", "Reims"],
+    "C": ["Limoges", "Guéret", "Aurillac", "Le Puy-en-Velay", "Rodez"]
+};
+
 // Fonction pour charger la base de données des villes de manière asynchrone
 async function loadCitiesDatabase() {
     if (citiesLoaded) return true;
     
     try {
-        const response = await fetch('/data/cities-zones-ptz.json');
+        // Essayer avec différents chemins
+        let response;
+        try {
+            response = await fetch('./data/cities-zones-ptz.json');
+        } catch (error) {
+            try {
+                response = await fetch('/data/cities-zones-ptz.json');
+            } catch (innerError) {
+                // Tentative avec le chemin complet
+                response = await fetch(window.location.origin + '/data/cities-zones-ptz.json');
+            }
+        }
+        
         if (!response.ok) throw new Error('Erreur de chargement des données des villes');
         
         citiesDB = await response.json();
@@ -375,7 +396,22 @@ async function loadCitiesDatabase() {
         return true;
     } catch (error) {
         console.error('Erreur lors du chargement de la base de villes:', error);
-        return false;
+        
+        // Solution de secours - utiliser un ensemble minimal de villes
+        console.warn('Utilisation des données de secours pour les villes');
+        citiesDB = fallbackCitiesDB;
+        cityIndex = createCityIndex(citiesDB);
+        citiesLoaded = true;
+        
+        // Ajouter un message dans l'interface utilisateur
+        const zoneInfoElement = document.getElementById('ptz-zone-info');
+        if (zoneInfoElement) {
+            zoneInfoElement.textContent = 'Mode simplifié : base complète des villes non disponible';
+            zoneInfoElement.classList.remove('hidden');
+            zoneInfoElement.classList.add('text-amber-400');
+        }
+        
+        return true;
     }
 }
 
@@ -555,6 +591,7 @@ async function initPTZSimulator() {
                                 zoneInfoElement.textContent = `Ville trouvée: ${result.city} (Zone ${result.zone})`;
                                 zoneInfoElement.classList.remove('hidden');
                                 zoneInfoElement.classList.add('text-green-400');
+                                zoneInfoElement.classList.remove('text-amber-400');
                             }
                             
                             suggestionsList.style.display = 'none';
@@ -570,7 +607,7 @@ async function initPTZSimulator() {
                 }
             } else {
                 // Afficher le chargement
-                suggestionsList.innerHTML = '<div class="loading-indicator"><div class="spinner"></div>Chargement...</div>';
+                suggestionsList.innerHTML = '<div class="loading-indicator p-2"><div class="spinner mr-2 inline-block"></div>Chargement...</div>';
                 suggestionsList.style.display = 'block';
                 
                 // Essayer de charger la base de données
