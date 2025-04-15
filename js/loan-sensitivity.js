@@ -100,11 +100,17 @@
     
     // Fonction pour afficher le tableau de sensibilité
     function afficherTableauSensibilite(data, formatMontant) {
+        // CORRECTION: Vérifier qu'on est bien dans l'onglet "Gestion de dette"
+        const loanSimulatorTab = doc.getElementById('loan-simulator');
+        if (!loanSimulatorTab || loanSimulatorTab.style.display === 'none') {
+            return; // Ne rien faire si on n'est pas dans l'onglet du simulateur de prêt
+        }
+        
         // D'abord vérifier si le conteneur existe, sinon le créer
         let sensibilityContainer = doc.getElementById('sensitivity-container');
         if (!sensibilityContainer) {
-            // Trouver où insérer le tableau (après le graphique)
-            const chartContainer = doc.querySelector('.chart-container');
+            // CORRECTION: Trouver spécifiquement le graphique dans l'onglet "Gestion de dette"
+            const chartContainer = loanSimulatorTab.querySelector('.chart-container');
             if (!chartContainer) return;
             
             // Créer le conteneur
@@ -194,6 +200,12 @@
                     
                     // Ensuite, ajouter notre fonctionnalité
                     try {
+                        // CORRECTION: Vérifier qu'on est bien dans l'onglet de gestion de dette
+                        const loanSimulatorTab = document.getElementById('loan-simulator');
+                        if (!loanSimulatorTab || loanSimulatorTab.style.display === 'none') {
+                            return true; // Ne rien faire si on n'est pas dans l'onglet du simulateur de prêt
+                        }
+                        
                         // Récupérer les valeurs nécessaires du formulaire
                         const loanAmount = parseFloat(document.getElementById('loan-amount').value);
                         const interestRate = parseFloat(document.getElementById('interest-rate-slider').value);
