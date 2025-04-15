@@ -266,50 +266,39 @@ class PTZSimulator {
     }
 }
 
-/**
- * Crée un index optimisé pour la recherche de villes par préfixe
- * @param {Object} citiesDB - Base de données des villes
- * @return {Object} Index optimisé
- */
-function createCityIndex(citiesDB) {
-    const index = {};
+// Variables pour stocker les données des villes et l'index
+let citiesDB = {};
+let cityIndex = {};
+let citiesLoaded = false;
+
+// Fonction pour charger la base de données des villes de manière asynchrone
+async function loadCitiesDatabase() {
+    if (citiesLoaded) return true;
     
-    // Parcourir toutes les zones
-    for (const [zone, cities] of Object.entries(citiesDB)) {
-        // Ajouter chaque ville à l'index
-        cities.forEach(city => {
-            // Normaliser le nom (retirer les accents, mettre en minuscules)
-            const normalizedCity = city
-                .normalize("NFD")
-                .replace(/[\u0300-\u036f]/g, "")
-                .toLowerCase();
-            
-            // Indexer par préfixe (3 premières lettres)
-            const prefix = normalizedCity.substring(0, 3);
-            
-            if (!index[prefix]) {
-                index[prefix] = [];
-            }
-            
-            // Stocker la ville et sa zone
-            index[prefix].push({
-                city: city,
-                zone: zone,
-                normalized: normalizedCity
-            });
-        });
+    try {
+        // Chemin exact selon votre structure
+        const response = await fetch('./data/cities-zones-ptz.json');
+        
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP: ${response.status}`);
+        }
+        
+        citiesDB = await response.json();
+        console.log("Fichier JSON chargé avec succès:", Object.keys(citiesDB));
+        
+        // Ne pas créer d'index - nous allons chercher directement dans l'objet
+        citiesLoaded = true;
+        return true;
+    } catch (error) {
+        console.error("Erreur de chargement du fichier JSON:", error);
+        return false;
     }
-    
-    return index;
 }
 
-/**
- * Recherche une ville dans l'index
- * @param {string} query - Requête de recherche
- * @param {Object} cityIndex - Index des villes
- * @return {Array} Résultats de recherche
- */
-function searchCity(query, cityIndex) {
+// Fonction de recherche de ville améliorée
+function searchCity(query) {
+    console.log("Recherche pour:", query);
+    
     // Normaliser la requête
     const normalizedQuery = query
         .normalize("NFD")
@@ -319,30 +308,42 @@ function searchCity(query, cityIndex) {
     
     if (normalizedQuery.length < 2) return [];
     
-    // Obtenir le préfixe pour l'index
-    const prefix = normalizedQuery.substring(0, Math.min(3, normalizedQuery.length));
     const results = [];
     
-    // Si le préfixe existe dans l'index
-    if (cityIndex[prefix]) {
-        // Filtrer les résultats qui correspondent à la requête
-        cityIndex[prefix].forEach(item => {
-            if (item.normalized.includes(normalizedQuery)) {
-                // Vérifier si la ville commence par la requête (priorité plus élevée)
-                const exactMatch = item.normalized === normalizedQuery;
-                const startsWithMatch = item.normalized.startsWith(normalizedQuery);
-                
-                results.push({
-                    city: item.city,
-                    zone: item.zone,
-                    exactMatch: exactMatch,
-                    startsWithMatch: startsWithMatch
-                });
-            }
+    // Parcourir toutes les zones et toutes les villes
+    for (const [zone, cities] of Object.entries(citiesDB)) {
+        // Chercher dans la liste des villes de cette zone
+        const matchingCities = cities.filter(city => {
+            const normalizedCity = city
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase();
+            
+            return normalizedCity.includes(normalizedQuery);
+        });
+        
+        // Ajouter les résultats
+        matchingCities.forEach(city => {
+            const normalizedCity = city
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase();
+            
+            const exactMatch = normalizedCity === normalizedQuery;
+            const startsWithMatch = normalizedCity.startsWith(normalizedQuery);
+            
+            results.push({
+                city: city,
+                zone: zone,
+                exactMatch: exactMatch,
+                startsWithMatch: startsWithMatch
+            });
         });
     }
     
-    // Trier les résultats : exactMatch > startsWithMatch > autres
+    console.log(`Trouvé ${results.length} résultats pour "${normalizedQuery}"`);
+    
+    // Trier les résultats
     results.sort((a, b) => {
         if (a.exactMatch && !b.exactMatch) return -1;
         if (!a.exactMatch && b.exactMatch) return 1;
@@ -353,66 +354,6 @@ function searchCity(query, cityIndex) {
     
     // Limiter le nombre de résultats
     return results.slice(0, 10);
-}
-
-// Variables pour stocker les données des villes et l'index
-let citiesDB = {};
-let cityIndex = {};
-let citiesLoaded = false;
-
-// Données minimales de secours pour les villes
-const fallbackCitiesDB = {
-    "A bis": ["Paris", "Versailles", "Nice", "Boulogne-Billancourt", "Neuilly-sur-Seine"],
-    "A": ["Lyon", "Marseille", "Toulouse", "Bordeaux", "Montpellier"],
-    "B1": ["Strasbourg", "Nantes", "Lille", "Rennes", "Grenoble"],
-    "B2": ["Dijon", "Tours", "Angers", "Le Mans", "Reims"],
-    "C": ["Limoges", "Guéret", "Aurillac", "Le Puy-en-Velay", "Rodez"]
-};
-
-// Fonction pour charger la base de données des villes de manière asynchrone
-async function loadCitiesDatabase() {
-    if (citiesLoaded) return true;
-    
-    try {
-        // Essayer avec différents chemins
-        let response;
-        try {
-            response = await fetch('./data/cities-zones-ptz.json');
-        } catch (error) {
-            try {
-                response = await fetch('/data/cities-zones-ptz.json');
-            } catch (innerError) {
-                // Tentative avec le chemin complet
-                response = await fetch(window.location.origin + '/data/cities-zones-ptz.json');
-            }
-        }
-        
-        if (!response.ok) throw new Error('Erreur de chargement des données des villes');
-        
-        citiesDB = await response.json();
-        cityIndex = createCityIndex(citiesDB);
-        citiesLoaded = true;
-        console.log('Base de données des villes chargée avec succès');
-        return true;
-    } catch (error) {
-        console.error('Erreur lors du chargement de la base de villes:', error);
-        
-        // Solution de secours - utiliser un ensemble minimal de villes
-        console.warn('Utilisation des données de secours pour les villes');
-        citiesDB = fallbackCitiesDB;
-        cityIndex = createCityIndex(citiesDB);
-        citiesLoaded = true;
-        
-        // Ajouter un message dans l'interface utilisateur
-        const zoneInfoElement = document.getElementById('ptz-zone-info');
-        if (zoneInfoElement) {
-            zoneInfoElement.textContent = 'Mode simplifié : base complète des villes non disponible';
-            zoneInfoElement.classList.remove('hidden');
-            zoneInfoElement.classList.add('text-amber-400');
-        }
-        
-        return true;
-    }
 }
 
 // Fonction pour mettre à jour l'interface utilisateur avec les résultats
@@ -526,8 +467,7 @@ function generatePTZComparisonTable() {
 
 // Fonction pour initialiser et configurer le simulateur PTZ
 async function initPTZSimulator() {
-    // Chargement de la base de données des villes
-    await loadCitiesDatabase();
+    console.log("Initialisation du simulateur PTZ...");
     
     // Éléments du formulaire PTZ
     const ptzProjectTypeSelect = document.getElementById('ptz-project-type');
@@ -537,6 +477,9 @@ async function initPTZSimulator() {
     const ptzHouseholdSizeInput = document.getElementById('ptz-household-size');
     const ptzTotalCostInput = document.getElementById('ptz-total-cost');
     const calculatePTZButton = document.getElementById('calculate-ptz-button');
+    
+    // Chargement de la base de données des villes
+    await loadCitiesDatabase();
     
     // Gestion de l'autocomplétion des villes
     if (ptzCityInput) {
@@ -560,7 +503,7 @@ async function initPTZSimulator() {
             
             // Rechercher les villes correspondantes
             if (citiesLoaded) {
-                const results = searchCity(query, cityIndex);
+                const results = searchCity(query);
                 
                 if (results.length > 0) {
                     // Afficher les suggestions
@@ -581,7 +524,10 @@ async function initPTZSimulator() {
                             // Mettre à jour la zone PTZ
                             if (ptzZoneSelect) {
                                 // Ajuster la valeur pour correspondre aux options disponibles
-                                let zoneValue = result.zone.replace(' bis', '');
+                                let zoneValue = result.zone;
+                                if (result.zone === "A bis") {
+                                    zoneValue = "A"; // Car dans le select vous avez "Zone A ou A bis"
+                                }
                                 ptzZoneSelect.value = zoneValue;
                             }
                             
@@ -591,7 +537,6 @@ async function initPTZSimulator() {
                                 zoneInfoElement.textContent = `Ville trouvée: ${result.city} (Zone ${result.zone})`;
                                 zoneInfoElement.classList.remove('hidden');
                                 zoneInfoElement.classList.add('text-green-400');
-                                zoneInfoElement.classList.remove('text-amber-400');
                             }
                             
                             suggestionsList.style.display = 'none';
@@ -848,7 +793,6 @@ window.onload = function() {
 
 // Mettre les fonctions à disposition globalement pour le debugging
 window.PTZSimulator = PTZSimulator;
-window.createCityIndex = createCityIndex;
 window.searchCity = searchCity;
 window.loadCitiesDatabase = loadCitiesDatabase;
 window.initPTZSimulator = initPTZSimulator;
