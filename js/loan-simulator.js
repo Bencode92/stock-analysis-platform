@@ -708,6 +708,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Fonction pour ajouter un résumé des économies
     function updateSavingsSummary(result, modeRemboursement) {
+        // CORRECTION: Vérifier qu'on est bien dans l'onglet "Gestion de dette"
+        const loanSimulatorTab = document.getElementById('loan-simulator');
+        if (!loanSimulatorTab || loanSimulatorTab.style.display === 'none') {
+            return; // Ne rien faire si on n'est pas dans l'onglet du simulateur de prêt
+        }
+        
         // Rechercher ou créer la section de résumé
         let savingsSummary = document.getElementById('savings-summary');
         
@@ -717,7 +723,7 @@ document.addEventListener('DOMContentLoaded', function() {
             savingsSummary.className = 'bg-blue-900 bg-opacity-20 p-4 rounded-lg border-l-4 border-green-400 mt-6';
             
             // Ajouter après le graphique
-            const chartContainer = document.querySelector('.chart-container');
+            const chartContainer = loanSimulatorTab.querySelector('.chart-container');
             if (chartContainer) {
                 chartContainer.after(savingsSummary);
             }
