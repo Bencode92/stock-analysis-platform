@@ -275,24 +275,19 @@ let citiesLoaded = false;
 async function loadCitiesDatabase() {
     if (citiesLoaded) return true;
     
-    try {
-        // Chemin exact selon votre structure
-        const response = await fetch('./data/cities-zones-ptz.json');
-        
-        if (!response.ok) {
-            throw new Error(`Erreur HTTP: ${response.status}`);
-        }
-        
-        citiesDB = await response.json();
-        console.log("Fichier JSON chargé avec succès:", Object.keys(citiesDB));
-        
-        // Ne pas créer d'index - nous allons chercher directement dans l'objet
-        citiesLoaded = true;
-        return true;
-    } catch (error) {
-        console.error("Erreur de chargement du fichier JSON:", error);
-        return false;
-    }
+    // Au lieu de charger depuis un fichier JSON, on définit directement les données
+    citiesDB = {
+        "A bis": ["Paris", "Neuilly-sur-Seine", "Levallois-Perret", "Boulogne-Billancourt", "Saint-Mandé", "Vincennes", "Versailles", "Le Chesnay-Rocquencourt", "Chatou", "Divonne-les-Bains", "Ferney-Voltaire", "Saint-Genis-Pouilly"],
+        "A": ["Lyon", "Nice", "Marseille", "Cannes", "Antibes", "Aix-en-Provence", "Bordeaux", "Toulouse", "Lille", "Rennes", "Nantes", "Grenoble", "Montpellier", "Strasbourg"],
+        "B1": ["Dijon", "Metz", "Nancy", "Angers", "Le Mans", "Tours", "Orléans", "Caen", "Rouen", "Amiens", "Reims", "Saint-Étienne", "Toulon", "Perpignan", "Bayonne", "Annecy", "Chambéry"],
+        "B2": ["Clermont-Ferrand", "Besançon", "Brest", "Le Havre", "Poitiers", "Limoges", "Mulhouse", "Pau", "Valence", "Bourges", "Charleville-Mézières", "Belfort", "Colmar", "Épinal"],
+        "C": ["Saint-Nazaire", "Tarbes", "Cahors", "Albi", "Montauban", "Agen", "Périgueux", "Bergerac", "Guéret", "Aurillac", "Moulins", "Nevers", "Sens", "Vesoul", "Dole", "Lons-le-Saunier"]
+    };
+    
+    console.log("Données des villes chargées directement en mémoire:", Object.keys(citiesDB).length, "zones");
+    
+    citiesLoaded = true;
+    return true;
 }
 
 // Fonction de recherche de ville améliorée
