@@ -275,7 +275,7 @@ let citiesLoaded = false;
 async function loadCitiesDatabase() {
     if (citiesLoaded) return true;
     
-    // Au lieu de charger depuis un fichier JSON, on définit directement les données
+    // Base de données des villes par zone
     citiesDB = {
         "A bis": ["Paris", "Neuilly-sur-Seine", "Levallois-Perret", "Boulogne-Billancourt", "Saint-Mandé", "Vincennes", "Versailles", "Le Chesnay-Rocquencourt", "Chatou", "Divonne-les-Bains", "Ferney-Voltaire", "Saint-Genis-Pouilly", "Beausoleil", "Cap-d'Ail", "Puteaux", "Courbevoie", "Issy-les-Moulineaux"],
         "A": ["Lyon", "Nice", "Marseille", "Cannes", "Antibes", "Aix-en-Provence", "Bordeaux", "Toulouse", "Lille", "Rennes", "Nantes", "Grenoble", "Montpellier", "Strasbourg", "Toulon", "Annecy", "Cagnes-sur-Mer", "Menton", "Saint-Laurent-du-Var", "Villeurbanne", "Biot", "Valbonne", "Juan-les-Pins", "Vallauris", "Villeneuve-Loubet", "Hyères"],
@@ -290,7 +290,13 @@ async function loadCitiesDatabase() {
     cityIndex = {};
     for (const [zone, cities] of Object.entries(citiesDB)) {
         for (const city of cities) {
-            cityIndex[city.toLowerCase()] = {
+            // Stocker en minuscules sans accents pour faciliter la recherche
+            const normalizedCity = city
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase();
+                
+            cityIndex[normalizedCity] = {
                 city: city,
                 zone: zone
             };
@@ -305,7 +311,7 @@ async function loadCitiesDatabase() {
 function searchCity(query) {
     console.log("Recherche pour:", query);
     
-    // Normaliser la requête
+    // Normaliser la requête (supprimer accents et mettre en minuscules)
     const normalizedQuery = query
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
@@ -483,6 +489,12 @@ async function initPTZSimulator() {
     
     // Gestion de l'autocomplétion des villes
     if (ptzCityInput) {
+        // Suppression d'un ancien conteneur de suggestions s'il existe
+        const existingSuggestions = document.querySelector('.city-suggestions');
+        if (existingSuggestions) {
+            existingSuggestions.remove();
+        }
+        
         // Création du conteneur de suggestions avec style amélioré
         const suggestionsList = document.createElement('div');
         suggestionsList.className = 'city-suggestions bg-blue-800 bg-opacity-30 rounded-lg mt-1 absolute w-full z-10 max-h-60 overflow-y-auto shadow-lg';
@@ -521,11 +533,11 @@ async function initPTZSimulator() {
                         }
                         
                         const cityText = document.createElement('span');
-                        cityText.innerHTML = result.city;
+                        cityText.textContent = result.city;
                         
                         const zoneTag = document.createElement('span');
                         zoneTag.className = 'text-green-400 text-sm px-2 py-1 rounded bg-green-900 bg-opacity-20 ml-2';
-                        zoneTag.innerHTML = `Zone ${result.zone}`;
+                        zoneTag.textContent = `Zone ${result.zone}`;
                         
                         item.appendChild(cityText);
                         item.appendChild(zoneTag);
@@ -553,7 +565,6 @@ async function initPTZSimulator() {
                             if (zoneInfoElement) {
                                 zoneInfoElement.textContent = `Ville trouvée: ${result.city} (Zone ${result.zone})`;
                                 zoneInfoElement.classList.remove('hidden');
-                                zoneInfoElement.classList.add('text-green-400');
                             }
                             
                             suggestionsList.style.display = 'none';
