@@ -2,37 +2,6 @@
   "themes": {
     "weekly": {
       "macroeconomics": {
-        "recession": {
-          "count": 4,
-          "articles": [
-            "Tariffs, recession fears cast pall over US media earnings",
-            "US bond funds hit by heavy outflows as recession, inflation fears mount",
-            "Japan exports growth misses expectations, rising by a modest 3.9% in March as tariffs bite",
-            "U.S. economy could see shallower, more traditional recession, says JPMorgan's Joyce Chang"
-          ],
-          "keywords": {
-            "recession": {
-              "count": 3,
-              "examples": [
-                "Tariffs, recession fears cast pall over US media earnings",
-                "US bond funds hit by heavy outflows as recession, inflation fears mount",
-                "U.S. economy could see shallower, more traditional recession, says JPMorgan's Joyce Chang"
-              ]
-            },
-            "growth": {
-              "count": 1,
-              "examples": [
-                "Japan exports growth misses expectations, rising by a modest 3.9% in March as tariffs bite"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 25.0,
-            "negative": 75.0
-          },
-          "gpt_summary": "📰 The theme **recession** was detected in **4 articles** during the period, mainly through topics like: recession (3), growth (1). Sentiment is mostly negative (75.0% vs 0.0% positive). Examples of articles: « Tariffs, recession fears cast pall over US media earnings », « US bond funds hit by heavy outflows as recession, inflation fears mount », « Japan exports growth misses expectations, rising by a modest 3.9% in March as tariffs bite »."
-        },
         "inflation": {
           "count": 4,
           "articles": [
@@ -81,10 +50,11 @@
           "gpt_summary": "📰 The theme **inflation** was detected in **4 articles** during the period, mainly through topics like: price (1), prices (1), yield (1), yields (1), inflation (1). Sentiment is mostly negative (75.0% vs 0.0% positive). Examples of articles: « Even with tariffs looming, Jim Cramer says consumer companies must cut prices », « Treasury yields fall after a wild week as traders assess unexpected U.S. tariff exemptions », « US bond funds hit by heavy outflows as recession, inflation fears mount »."
         },
         "geopolitics": {
-          "count": 3,
+          "count": 4,
           "articles": [
             "US chipmakers outsourcing manufacturing will escape China's tariffs",
             "Apple is left without a life raft as Trump's China trade war intensifies, analysts warn",
+            "Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns",
             "Trump's trade war ripples through the business world, hits stocks again"
           ],
           "keywords": {
@@ -101,18 +71,46 @@
               ]
             },
             "war": {
-              "count": 1,
+              "count": 2,
               "examples": [
+                "Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns",
                 "Trump's trade war ripples through the business world, hits stocks again"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 100.0,
+            "positive": 25.0,
+            "neutral": 75.0,
             "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **geopolitics** was detected in **3 articles** during the period, mainly through topics like: taiwan (1), china (1), war (1). Sentiment is mixed (0.0% positive, 0.0% negative). Examples of articles: « US chipmakers outsourcing manufacturing will escape China's tariffs », « Apple is left without a life raft as Trump's China trade war intensifies, analysts warn », « Trump's trade war ripples through the business world, hits stocks again »."
+          "gpt_summary": "📰 The theme **geopolitics** was detected in **4 articles** during the period, mainly through topics like: war (2), taiwan (1), china (1). Sentiment is mostly positive (25.0% vs 0.0% negative). Examples of articles: « US chipmakers outsourcing manufacturing will escape China's tariffs », « Apple is left without a life raft as Trump's China trade war intensifies, analysts warn », « Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns »."
+        },
+        "recession": {
+          "count": 2,
+          "articles": [
+            "US bond funds hit by heavy outflows as recession, inflation fears mount",
+            "Japan exports growth misses expectations, rising by a modest 3.9% in March as tariffs bite"
+          ],
+          "keywords": {
+            "recession": {
+              "count": 1,
+              "examples": [
+                "US bond funds hit by heavy outflows as recession, inflation fears mount"
+              ]
+            },
+            "growth": {
+              "count": 1,
+              "examples": [
+                "Japan exports growth misses expectations, rising by a modest 3.9% in March as tariffs bite"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 0.0,
+            "neutral": 50.0,
+            "negative": 50.0
+          },
+          "gpt_summary": "📰 The theme **recession** was detected in **2 articles** during the period, mainly through topics like: recession (1), growth (1). Sentiment is mostly negative (50.0% vs 0.0% positive). Examples of articles: « US bond funds hit by heavy outflows as recession, inflation fears mount », « Japan exports growth misses expectations, rising by a modest 3.9% in March as tariffs bite »."
         },
         "monetary_policy": {
           "count": 2,
@@ -139,23 +137,25 @@
       },
       "sectors": {
         "technology": {
-          "count": 7,
+          "count": 9,
           "articles": [
+            "US banks flag risks to consumer spending from tariff policy uncertainties",
             "CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine",
             "Bullish trade in Apple options reaps gains as shares jump on tariff exemption",
             "US retail sales surge in March due to motor vehicle buying ahead of tariffs",
             "Apple regains $3 trillion market cap after Trump exempts tariffs on iPhones",
             "Apple airlifted iPhones worth a record $2 billion from India in March as Trump tariffs loomed",
+            "Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns",
             "Trump's trade war ripples through the business world, hits stocks again",
             "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty"
           ],
           "keywords": {
             "ai": {
-              "count": 4,
+              "count": 5,
               "examples": [
                 "US retail sales surge in March due to motor vehicle buying ahead of tariffs",
                 "Apple airlifted iPhones worth a record $2 billion from India in March as Trump tariffs loomed",
-                "Trump's trade war ripples through the business world, hits stocks again"
+                "Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns"
               ]
             },
             "data": {
@@ -167,21 +167,37 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 57.1,
-            "neutral": 28.6,
-            "negative": 14.3
+            "positive": 55.6,
+            "neutral": 33.3,
+            "negative": 11.1
           },
-          "gpt_summary": "📰 The theme **technology** was detected in **7 articles** during the period, mainly through topics like: ai (4), data (2). Sentiment is mostly positive (57.1% vs 14.3% negative). Examples of articles: « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « Bullish trade in Apple options reaps gains as shares jump on tariff exemption », « US retail sales surge in March due to motor vehicle buying ahead of tariffs »."
+          "gpt_summary": "📰 The theme **technology** was detected in **9 articles** during the period, mainly through topics like: ai (5), data (2). Sentiment is mostly positive (55.6% vs 11.1% negative). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « Bullish trade in Apple options reaps gains as shares jump on tariff exemption »."
         },
         "consumer": {
-          "count": 4,
+          "count": 5,
           "articles": [
+            "US banks flag risks to consumer spending from tariff policy uncertainties",
             "CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine",
             "US retail sales surge in March due to motor vehicle buying ahead of tariffs",
             "Even with tariffs looming, Jim Cramer says consumer companies must cut prices",
             "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty"
           ],
           "keywords": {
+            "consumer": {
+              "count": 3,
+              "examples": [
+                "US banks flag risks to consumer spending from tariff policy uncertainties",
+                "Even with tariffs looming, Jim Cramer says consumer companies must cut prices",
+                "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty"
+              ]
+            },
+            "spending": {
+              "count": 2,
+              "examples": [
+                "US banks flag risks to consumer spending from tariff policy uncertainties",
+                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
+              ]
+            },
             "retail": {
               "count": 1,
               "examples": [
@@ -194,32 +210,40 @@
                 "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
               ]
             },
-            "spending": {
-              "count": 1,
-              "examples": [
-                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
-              ]
-            },
             "sales": {
               "count": 1,
               "examples": [
                 "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
               ]
-            },
-            "consumer": {
-              "count": 2,
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 40.0,
+            "neutral": 20.0,
+            "negative": 40.0
+          },
+          "gpt_summary": "📰 The theme **consumer** was detected in **5 articles** during the period, mainly through topics like: consumer (3), spending (2), retail (1), purchase (1), sales (1). Sentiment is mixed (40.0% positive, 40.0% negative). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « US retail sales surge in March due to motor vehicle buying ahead of tariffs »."
+        },
+        "finance": {
+          "count": 2,
+          "articles": [
+            "US banks flag risks to consumer spending from tariff policy uncertainties",
+            "Treasury yields fall after a wild week as traders assess unexpected U.S. tariff exemptions"
+          ],
+          "keywords": {
+            "treasury": {
+              "count": 1,
               "examples": [
-                "Even with tariffs looming, Jim Cramer says consumer companies must cut prices",
-                "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty"
+                "Treasury yields fall after a wild week as traders assess unexpected U.S. tariff exemptions"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 50.0,
-            "neutral": 0.0,
-            "negative": 50.0
+            "positive": 0.0,
+            "neutral": 100.0,
+            "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **consumer** was detected in **4 articles** during the period, mainly through topics like: consumer (2), retail (1), purchase (1), spending (1), sales (1). Sentiment is mixed (50.0% positive, 50.0% negative). Examples of articles: « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « US retail sales surge in March due to motor vehicle buying ahead of tariffs », « Even with tariffs looming, Jim Cramer says consumer companies must cut prices »."
+          "gpt_summary": "📰 The theme **finance** was detected in **2 articles** during the period, mainly through topics like: treasury (1). Sentiment is mixed (0.0% positive, 0.0% negative). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « Treasury yields fall after a wild week as traders assess unexpected U.S. tariff exemptions »."
         },
         "transport": {
           "count": 2,
@@ -242,26 +266,6 @@
             "negative": 0.0
           },
           "gpt_summary": "📰 The theme **transport** was detected in **2 articles** during the period, mainly through topics like: port (2). Sentiment is mixed (0.0% positive, 0.0% negative). Examples of articles: « Japan's exports expand in March ahead of US tariffs », « Japan exports growth misses expectations, rising by a modest 3.9% in March as tariffs bite »."
-        },
-        "finance": {
-          "count": 1,
-          "articles": [
-            "Treasury yields fall after a wild week as traders assess unexpected U.S. tariff exemptions"
-          ],
-          "keywords": {
-            "treasury": {
-              "count": 1,
-              "examples": [
-                "Treasury yields fall after a wild week as traders assess unexpected U.S. tariff exemptions"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 100.0,
-            "negative": 0.0
-          },
-          "gpt_summary": "📰 The theme **finance** was detected in **1 articles** during the period, mainly through topics like: treasury (1). Sentiment is mixed (0.0% positive, 0.0% negative). Examples of articles: « Treasury yields fall after a wild week as traders assess unexpected U.S. tariff exemptions »."
         },
         "industry": {
           "count": 1,
@@ -318,27 +322,35 @@
           "gpt_summary": "📰 The theme **asia** was detected in **6 articles** during the period, mainly through topics like: japan (3), china (1), india (1). Sentiment is mixed (0.0% positive, 16.7% negative). Examples of articles: « US chipmakers outsourcing manufacturing will escape China's tariffs », « Apple is left without a life raft as Trump's China trade war intensifies, analysts warn », « Japan manufacturers turn cautious about business outlook due to Trump tariffs: Reuters poll »."
         },
         "global": {
-          "count": 3,
+          "count": 4,
           "articles": [
+            "Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns",
             "Trump's trade war ripples through the business world, hits stocks again",
             "What the Weak Dollar Means for the Global Economy",
             "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty"
           ],
           "keywords": {
-            "global": {
-              "count": 2,
+            "world": {
+              "count": 1,
               "examples": [
+                "Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns"
+              ]
+            },
+            "global": {
+              "count": 3,
+              "examples": [
+                "Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns",
                 "Trump's trade war ripples through the business world, hits stocks again",
                 "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 33.3,
-            "neutral": 33.3,
-            "negative": 33.3
+            "positive": 50.0,
+            "neutral": 25.0,
+            "negative": 25.0
           },
-          "gpt_summary": "📰 The theme **global** was detected in **3 articles** during the period, mainly through topics like: global (2). Sentiment is mixed (33.3% positive, 33.3% negative). Examples of articles: « Trump's trade war ripples through the business world, hits stocks again », « What the Weak Dollar Means for the Global Economy », « Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty »."
+          "gpt_summary": "📰 The theme **global** was detected in **4 articles** during the period, mainly through topics like: global (3), world (1). Sentiment is mostly positive (50.0% vs 25.0% negative). Examples of articles: « Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns », « Trump's trade war ripples through the business world, hits stocks again », « What the Weak Dollar Means for the Global Economy »."
         },
         "europe": {
           "count": 2,
@@ -401,7 +413,7 @@
     "monthly": {
       "macroeconomics": {
         "geopolitics": {
-          "count": 16,
+          "count": 17,
           "articles": [
             "Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout",
             "Automakers warn new Trump tariffs will boost costs, cut vehicle sales",
@@ -416,13 +428,14 @@
             "Trump threatens additional tariffs on China, terminates talks",
             "Apple is left without a life raft as Trump's China trade war intensifies, analysts warn",
             "Trump widens trade war as he targets Venezuela's energy sector, eyes sectoral tariffs soon",
+            "Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns",
             "Trump's trade war ripples through the business world, hits stocks again",
             "'WORST OF BOTH WORLDS': Expert warns inflation expectations have the Fed spooked",
             "Investors stay cautious as Trump tariffs spark trade war"
           ],
           "keywords": {
             "war": {
-              "count": 7,
+              "count": 8,
               "examples": [
                 "Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout",
                 "Automakers warn new Trump tariffs will boost costs, cut vehicle sales",
@@ -451,53 +464,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 68.8,
-            "negative": 31.2
+            "positive": 5.9,
+            "neutral": 64.7,
+            "negative": 29.4
           },
-          "gpt_summary": "📰 The theme **geopolitics** was detected in **16 articles** during the period, mainly through topics like: china (8), war (7), tensions (1), taiwan (1). Sentiment is mostly negative (31.2% vs 0.0% positive). Examples of articles: « Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout », « Automakers warn new Trump tariffs will boost costs, cut vehicle sales », « As Trump ramps up tariffs, a U.S. french-fry exporter still bears scars from the last trade war »."
-        },
-        "recession": {
-          "count": 13,
-          "articles": [
-            "Tariffs, recession fears cast pall over US media earnings",
-            "Fmr. Fed President on navigating inflation and economic slowdown",
-            "US bank earnings likely to be overshadowed by recession concerns",
-            "Recession Risks Have Moved Up, But It's Not High, Says Fed Chair Powell",
-            "Jim Cramer says a recession is likely but investors shouldn't panic sell",
-            "March BoE Meeting: Balancing Inflation And Growth Risks",
-            "US bond funds hit by heavy outflows as recession, inflation fears mount",
-            "Wall Street starts to cut China growth forecasts as trade tensions with U.S. escalate",
-            "Japan's Nikkei falls to track Wall Street amid growth worries",
-            "Japan exports growth misses expectations, rising by a modest 3.9% in March as tariffs bite",
-            "U.S. economy could see shallower, more traditional recession, says JPMorgan's Joyce Chang",
-            "Goldman Sachs expects a recession if tariffs take effect on Wednesday",
-            "Expert reveals recession odds as world comes to table on tariffs talks"
-          ],
-          "keywords": {
-            "recession": {
-              "count": 7,
-              "examples": [
-                "Tariffs, recession fears cast pall over US media earnings",
-                "Recession Risks Have Moved Up, But It's Not High, Says Fed Chair Powell",
-                "Jim Cramer says a recession is likely but investors shouldn't panic sell"
-              ]
-            },
-            "growth": {
-              "count": 4,
-              "examples": [
-                "Fmr. Fed President on navigating inflation and economic slowdown",
-                "Wall Street starts to cut China growth forecasts as trade tensions with U.S. escalate",
-                "Japan's Nikkei falls to track Wall Street amid growth worries"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 7.7,
-            "negative": 92.3
-          },
-          "gpt_summary": "📰 The theme **recession** was detected in **13 articles** during the period, mainly through topics like: recession (7), growth (4). Sentiment is mostly negative (92.3% vs 0.0% positive). Examples of articles: « Tariffs, recession fears cast pall over US media earnings », « Fmr. Fed President on navigating inflation and economic slowdown », « US bank earnings likely to be overshadowed by recession concerns »."
+          "gpt_summary": "📰 The theme **geopolitics** was detected in **17 articles** during the period, mainly through topics like: war (8), china (8), tensions (1), taiwan (1). Sentiment is mostly negative (29.4% vs 5.9% positive). Examples of articles: « Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout », « Automakers warn new Trump tariffs will boost costs, cut vehicle sales », « As Trump ramps up tariffs, a U.S. french-fry exporter still bears scars from the last trade war »."
         },
         "inflation": {
           "count": 13,
@@ -617,12 +588,53 @@
             "negative": 36.4
           },
           "gpt_summary": "📰 The theme **monetary_policy** was detected in **11 articles** during the period, mainly through topics like: fed (9), central bank (4), monetary (1). Sentiment is mixed (27.3% positive, 36.4% negative). Examples of articles: « Fed's Barkin: Auto firms under tariffs will face tough choices on pricing, margins », « Fmr. Fed President on navigating inflation and economic slowdown », « Recession Risks Have Moved Up, But It's Not High, Says Fed Chair Powell »."
+        },
+        "recession": {
+          "count": 11,
+          "articles": [
+            "Fmr. Fed President on navigating inflation and economic slowdown",
+            "US bank earnings likely to be overshadowed by recession concerns",
+            "Recession Risks Have Moved Up, But It's Not High, Says Fed Chair Powell",
+            "Jim Cramer says a recession is likely but investors shouldn't panic sell",
+            "March BoE Meeting: Balancing Inflation And Growth Risks",
+            "US bond funds hit by heavy outflows as recession, inflation fears mount",
+            "Wall Street starts to cut China growth forecasts as trade tensions with U.S. escalate",
+            "Japan's Nikkei falls to track Wall Street amid growth worries",
+            "Japan exports growth misses expectations, rising by a modest 3.9% in March as tariffs bite",
+            "Goldman Sachs expects a recession if tariffs take effect on Wednesday",
+            "Expert reveals recession odds as world comes to table on tariffs talks"
+          ],
+          "keywords": {
+            "growth": {
+              "count": 4,
+              "examples": [
+                "Fmr. Fed President on navigating inflation and economic slowdown",
+                "Wall Street starts to cut China growth forecasts as trade tensions with U.S. escalate",
+                "Japan's Nikkei falls to track Wall Street amid growth worries"
+              ]
+            },
+            "recession": {
+              "count": 5,
+              "examples": [
+                "Recession Risks Have Moved Up, But It's Not High, Says Fed Chair Powell",
+                "Jim Cramer says a recession is likely but investors shouldn't panic sell",
+                "US bond funds hit by heavy outflows as recession, inflation fears mount"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 0.0,
+            "neutral": 9.1,
+            "negative": 90.9
+          },
+          "gpt_summary": "📰 The theme **recession** was detected in **11 articles** during the period, mainly through topics like: recession (5), growth (4). Sentiment is mostly negative (90.9% vs 0.0% positive). Examples of articles: « Fmr. Fed President on navigating inflation and economic slowdown », « US bank earnings likely to be overshadowed by recession concerns », « Recession Risks Have Moved Up, But It's Not High, Says Fed Chair Powell »."
         }
       },
       "sectors": {
         "technology": {
-          "count": 18,
+          "count": 20,
           "articles": [
+            "US banks flag risks to consumer spending from tariff policy uncertainties",
             "CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine",
             "Bullish trade in Apple options reaps gains as shares jump on tariff exemption",
             "Recession Risks Have Moved Up, But It's Not High, Says Fed Chair Powell",
@@ -635,6 +647,7 @@
             "Apple airlifts 600 tons of iPhones from India 'to beat' Trump tariffs, sources say",
             "Apple airlifted iPhones worth a record $2 billion from India in March as Trump tariffs loomed",
             "Apple Supplier Luxshare to Maintain Vietnam Production Hub to Support U.S. Market",
+            "Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns",
             "Trump's trade war ripples through the business world, hits stocks again",
             "Tech stocks sink after Trump tariff rollout — Apple heads for worst drop in 5 years",
             "Apple Leads Premarket Slide In Tech Stocks As Trump's Reciprocal Tariffs Trigger Global Selloff",
@@ -644,7 +657,7 @@
           ],
           "keywords": {
             "ai": {
-              "count": 11,
+              "count": 12,
               "examples": [
                 "Recession Risks Have Moved Up, But It's Not High, Says Fed Chair Powell",
                 "US retail sales surge in March due to motor vehicle buying ahead of tariffs",
@@ -681,10 +694,62 @@
           },
           "sentiment_distribution": {
             "positive": 50.0,
-            "neutral": 16.7,
+            "neutral": 20.0,
+            "negative": 30.0
+          },
+          "gpt_summary": "📰 The theme **technology** was detected in **20 articles** during the period, mainly through topics like: ai (12), tech (5), data (2), artificial intelligence (1), semiconductor (1). Sentiment is mixed (50.0% positive, 30.0% negative). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « Bullish trade in Apple options reaps gains as shares jump on tariff exemption »."
+        },
+        "consumer": {
+          "count": 6,
+          "articles": [
+            "US banks flag risks to consumer spending from tariff policy uncertainties",
+            "CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine",
+            "Automakers warn new Trump tariffs will boost costs, cut vehicle sales",
+            "US retail sales surge in March due to motor vehicle buying ahead of tariffs",
+            "Even with tariffs looming, Jim Cramer says consumer companies must cut prices",
+            "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty"
+          ],
+          "keywords": {
+            "consumer": {
+              "count": 4,
+              "examples": [
+                "US banks flag risks to consumer spending from tariff policy uncertainties",
+                "Automakers warn new Trump tariffs will boost costs, cut vehicle sales",
+                "Even with tariffs looming, Jim Cramer says consumer companies must cut prices"
+              ]
+            },
+            "spending": {
+              "count": 2,
+              "examples": [
+                "US banks flag risks to consumer spending from tariff policy uncertainties",
+                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
+              ]
+            },
+            "retail": {
+              "count": 1,
+              "examples": [
+                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
+              ]
+            },
+            "purchase": {
+              "count": 1,
+              "examples": [
+                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
+              ]
+            },
+            "sales": {
+              "count": 1,
+              "examples": [
+                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 33.3,
+            "neutral": 33.3,
             "negative": 33.3
           },
-          "gpt_summary": "📰 The theme **technology** was detected in **18 articles** during the period, mainly through topics like: ai (11), tech (5), data (2), artificial intelligence (1), semiconductor (1). Sentiment is mixed (50.0% positive, 33.3% negative). Examples of articles: « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « Bullish trade in Apple options reaps gains as shares jump on tariff exemption », « Recession Risks Have Moved Up, But It's Not High, Says Fed Chair Powell »."
+          "gpt_summary": "📰 The theme **consumer** was detected in **6 articles** during the period, mainly through topics like: consumer (4), spending (2), retail (1), purchase (1), sales (1). Sentiment is mixed (33.3% positive, 33.3% negative). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « Automakers warn new Trump tariffs will boost costs, cut vehicle sales »."
         },
         "transport": {
           "count": 6,
@@ -713,55 +778,35 @@
           },
           "gpt_summary": "📰 The theme **transport** was detected in **6 articles** during the period, mainly through topics like: port (6). Sentiment is mixed (0.0% positive, 0.0% negative). Examples of articles: « Visa bids $100 million to replace Mastercard as Apple's new credit card partner, WSJ reports », « As Trump ramps up tariffs, a U.S. french-fry exporter still bears scars from the last trade war », « German online broker Trade Republic suffers outage as stocks tank, media report »."
         },
-        "consumer": {
-          "count": 5,
+        "finance": {
+          "count": 4,
           "articles": [
-            "CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine",
-            "Automakers warn new Trump tariffs will boost costs, cut vehicle sales",
-            "US retail sales surge in March due to motor vehicle buying ahead of tariffs",
-            "Even with tariffs looming, Jim Cramer says consumer companies must cut prices",
-            "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty"
+            "US banks flag risks to consumer spending from tariff policy uncertainties",
+            "2-year Treasury yield drops to lowest level since 2022 as Trump tariffs spark flight to safety",
+            "Trump leaves emerging market central banks with no clean choices",
+            "Treasury yields fall after a wild week as traders assess unexpected U.S. tariff exemptions"
           ],
           "keywords": {
-            "consumer": {
-              "count": 3,
+            "treasury": {
+              "count": 2,
               "examples": [
-                "Automakers warn new Trump tariffs will boost costs, cut vehicle sales",
-                "Even with tariffs looming, Jim Cramer says consumer companies must cut prices",
-                "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty"
+                "2-year Treasury yield drops to lowest level since 2022 as Trump tariffs spark flight to safety",
+                "Treasury yields fall after a wild week as traders assess unexpected U.S. tariff exemptions"
               ]
             },
-            "retail": {
+            "banks": {
               "count": 1,
               "examples": [
-                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
-              ]
-            },
-            "purchase": {
-              "count": 1,
-              "examples": [
-                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
-              ]
-            },
-            "spending": {
-              "count": 1,
-              "examples": [
-                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
-              ]
-            },
-            "sales": {
-              "count": 1,
-              "examples": [
-                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
+                "Trump leaves emerging market central banks with no clean choices"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 40.0,
-            "neutral": 20.0,
-            "negative": 40.0
+            "positive": 0.0,
+            "neutral": 75.0,
+            "negative": 25.0
           },
-          "gpt_summary": "📰 The theme **consumer** was detected in **5 articles** during the period, mainly through topics like: consumer (3), retail (1), purchase (1), spending (1), sales (1). Sentiment is mixed (40.0% positive, 40.0% negative). Examples of articles: « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « Automakers warn new Trump tariffs will boost costs, cut vehicle sales », « US retail sales surge in March due to motor vehicle buying ahead of tariffs »."
+          "gpt_summary": "📰 The theme **finance** was detected in **4 articles** during the period, mainly through topics like: treasury (2), banks (1). Sentiment is mostly negative (25.0% vs 0.0% positive). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « 2-year Treasury yield drops to lowest level since 2022 as Trump tariffs spark flight to safety », « Trump leaves emerging market central banks with no clean choices »."
         },
         "energy": {
           "count": 4,
@@ -799,35 +844,6 @@
             "negative": 25.0
           },
           "gpt_summary": "📰 The theme **energy** was detected in **4 articles** during the period, mainly through topics like: oil (3), energy (1), gas (1). Sentiment is mostly negative (25.0% vs 0.0% positive). Examples of articles: « Oil slides nearly 4% as US kicks off 104% tariffs on China », « Apple announces $99 million new clean energy fund in China », « Trump tariffs on Venezuela crude buyers are a potent new tool of US pressure »."
-        },
-        "finance": {
-          "count": 3,
-          "articles": [
-            "2-year Treasury yield drops to lowest level since 2022 as Trump tariffs spark flight to safety",
-            "Trump leaves emerging market central banks with no clean choices",
-            "Treasury yields fall after a wild week as traders assess unexpected U.S. tariff exemptions"
-          ],
-          "keywords": {
-            "treasury": {
-              "count": 2,
-              "examples": [
-                "2-year Treasury yield drops to lowest level since 2022 as Trump tariffs spark flight to safety",
-                "Treasury yields fall after a wild week as traders assess unexpected U.S. tariff exemptions"
-              ]
-            },
-            "banks": {
-              "count": 1,
-              "examples": [
-                "Trump leaves emerging market central banks with no clean choices"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 66.7,
-            "negative": 33.3
-          },
-          "gpt_summary": "📰 The theme **finance** was detected in **3 articles** during the period, mainly through topics like: treasury (2), banks (1). Sentiment is mostly negative (33.3% vs 0.0% positive). Examples of articles: « 2-year Treasury yield drops to lowest level since 2022 as Trump tariffs spark flight to safety », « Trump leaves emerging market central banks with no clean choices », « Treasury yields fall after a wild week as traders assess unexpected U.S. tariff exemptions »."
         },
         "industry": {
           "count": 3,
@@ -968,12 +984,13 @@
           "gpt_summary": "📰 The theme **asia** was detected in **18 articles** during the period, mainly through topics like: china (8), japan (4), india (4), beijing (2). Sentiment is mostly negative (33.3% vs 11.1% positive). Examples of articles: « Trump's worldwide tariffs come into effect today - with China facing 104% levy », « Apple shares drop 7% in Frankfurt after Trump tariffs on China », « Oil slides nearly 4% as US kicks off 104% tariffs on China »."
         },
         "global": {
-          "count": 13,
+          "count": 14,
           "articles": [
             "U.S. Stock Meltdown Gives Way to Global Rout",
             "Trump's worldwide tariffs come into effect today - with China facing 104% levy",
             "Defense stocks plummet as Trump's tariffs send shockwaves through global markets",
             "Global deal activity disappoints, M&A revenue falls as Trump pursues tariffs",
+            "Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns",
             "Trump's trade war ripples through the business world, hits stocks again",
             "'WORST OF BOTH WORLDS': Expert warns inflation expectations have the Fed spooked",
             "Apple to hold Worldwide Developers Conference from June 9",
@@ -986,9 +1003,10 @@
           ],
           "keywords": {
             "world": {
-              "count": 2,
+              "count": 3,
               "examples": [
                 "U.S. Stock Meltdown Gives Way to Global Rout",
+                "Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns",
                 "Apple to hold Worldwide Developers Conference from June 9"
               ]
             },
@@ -1000,11 +1018,11 @@
               ]
             },
             "global": {
-              "count": 5,
+              "count": 6,
               "examples": [
                 "Global deal activity disappoints, M&A revenue falls as Trump pursues tariffs",
-                "Trump's trade war ripples through the business world, hits stocks again",
-                "Apple Leads Premarket Slide In Tech Stocks As Trump's Reciprocal Tariffs Trigger Global Selloff"
+                "Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns",
+                "Trump's trade war ripples through the business world, hits stocks again"
               ]
             },
             "international": {
@@ -1015,11 +1033,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 23.1,
-            "neutral": 23.1,
-            "negative": 53.8
+            "positive": 28.6,
+            "neutral": 21.4,
+            "negative": 50.0
           },
-          "gpt_summary": "📰 The theme **global** was detected in **13 articles** during the period, mainly through topics like: global (5), world (2), worldwide (2), international (1). Sentiment is mostly negative (53.8% vs 23.1% positive). Examples of articles: « U.S. Stock Meltdown Gives Way to Global Rout », « Trump's worldwide tariffs come into effect today - with China facing 104% levy », « Defense stocks plummet as Trump's tariffs send shockwaves through global markets »."
+          "gpt_summary": "📰 The theme **global** was detected in **14 articles** during the period, mainly through topics like: global (6), world (3), worldwide (2), international (1). Sentiment is mostly negative (50.0% vs 28.6% positive). Examples of articles: « U.S. Stock Meltdown Gives Way to Global Rout », « Trump's worldwide tariffs come into effect today - with China facing 104% levy », « Defense stocks plummet as Trump's tariffs send shockwaves through global markets »."
         },
         "usa": {
           "count": 11,
@@ -1126,7 +1144,7 @@
     "quarterly": {
       "macroeconomics": {
         "geopolitics": {
-          "count": 16,
+          "count": 17,
           "articles": [
             "Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout",
             "Automakers warn new Trump tariffs will boost costs, cut vehicle sales",
@@ -1141,13 +1159,14 @@
             "Trump threatens additional tariffs on China, terminates talks",
             "Apple is left without a life raft as Trump's China trade war intensifies, analysts warn",
             "Trump widens trade war as he targets Venezuela's energy sector, eyes sectoral tariffs soon",
+            "Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns",
             "Trump's trade war ripples through the business world, hits stocks again",
             "'WORST OF BOTH WORLDS': Expert warns inflation expectations have the Fed spooked",
             "Investors stay cautious as Trump tariffs spark trade war"
           ],
           "keywords": {
             "war": {
-              "count": 7,
+              "count": 8,
               "examples": [
                 "Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout",
                 "Automakers warn new Trump tariffs will boost costs, cut vehicle sales",
@@ -1176,53 +1195,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 68.8,
-            "negative": 31.2
+            "positive": 5.9,
+            "neutral": 64.7,
+            "negative": 29.4
           },
-          "gpt_summary": "📰 The theme **geopolitics** was detected in **16 articles** during the period, mainly through topics like: china (8), war (7), tensions (1), taiwan (1). Sentiment is mostly negative (31.2% vs 0.0% positive). Examples of articles: « Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout », « Automakers warn new Trump tariffs will boost costs, cut vehicle sales », « As Trump ramps up tariffs, a U.S. french-fry exporter still bears scars from the last trade war »."
-        },
-        "recession": {
-          "count": 13,
-          "articles": [
-            "Tariffs, recession fears cast pall over US media earnings",
-            "Fmr. Fed President on navigating inflation and economic slowdown",
-            "US bank earnings likely to be overshadowed by recession concerns",
-            "Recession Risks Have Moved Up, But It's Not High, Says Fed Chair Powell",
-            "Jim Cramer says a recession is likely but investors shouldn't panic sell",
-            "March BoE Meeting: Balancing Inflation And Growth Risks",
-            "US bond funds hit by heavy outflows as recession, inflation fears mount",
-            "Wall Street starts to cut China growth forecasts as trade tensions with U.S. escalate",
-            "Japan's Nikkei falls to track Wall Street amid growth worries",
-            "Japan exports growth misses expectations, rising by a modest 3.9% in March as tariffs bite",
-            "U.S. economy could see shallower, more traditional recession, says JPMorgan's Joyce Chang",
-            "Goldman Sachs expects a recession if tariffs take effect on Wednesday",
-            "Expert reveals recession odds as world comes to table on tariffs talks"
-          ],
-          "keywords": {
-            "recession": {
-              "count": 7,
-              "examples": [
-                "Tariffs, recession fears cast pall over US media earnings",
-                "Recession Risks Have Moved Up, But It's Not High, Says Fed Chair Powell",
-                "Jim Cramer says a recession is likely but investors shouldn't panic sell"
-              ]
-            },
-            "growth": {
-              "count": 4,
-              "examples": [
-                "Fmr. Fed President on navigating inflation and economic slowdown",
-                "Wall Street starts to cut China growth forecasts as trade tensions with U.S. escalate",
-                "Japan's Nikkei falls to track Wall Street amid growth worries"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 7.7,
-            "negative": 92.3
-          },
-          "gpt_summary": "📰 The theme **recession** was detected in **13 articles** during the period, mainly through topics like: recession (7), growth (4). Sentiment is mostly negative (92.3% vs 0.0% positive). Examples of articles: « Tariffs, recession fears cast pall over US media earnings », « Fmr. Fed President on navigating inflation and economic slowdown », « US bank earnings likely to be overshadowed by recession concerns »."
+          "gpt_summary": "📰 The theme **geopolitics** was detected in **17 articles** during the period, mainly through topics like: war (8), china (8), tensions (1), taiwan (1). Sentiment is mostly negative (29.4% vs 5.9% positive). Examples of articles: « Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout », « Automakers warn new Trump tariffs will boost costs, cut vehicle sales », « As Trump ramps up tariffs, a U.S. french-fry exporter still bears scars from the last trade war »."
         },
         "inflation": {
           "count": 13,
@@ -1342,12 +1319,53 @@
             "negative": 36.4
           },
           "gpt_summary": "📰 The theme **monetary_policy** was detected in **11 articles** during the period, mainly through topics like: fed (9), central bank (4), monetary (1). Sentiment is mixed (27.3% positive, 36.4% negative). Examples of articles: « Fed's Barkin: Auto firms under tariffs will face tough choices on pricing, margins », « Fmr. Fed President on navigating inflation and economic slowdown », « Recession Risks Have Moved Up, But It's Not High, Says Fed Chair Powell »."
+        },
+        "recession": {
+          "count": 11,
+          "articles": [
+            "Fmr. Fed President on navigating inflation and economic slowdown",
+            "US bank earnings likely to be overshadowed by recession concerns",
+            "Recession Risks Have Moved Up, But It's Not High, Says Fed Chair Powell",
+            "Jim Cramer says a recession is likely but investors shouldn't panic sell",
+            "March BoE Meeting: Balancing Inflation And Growth Risks",
+            "US bond funds hit by heavy outflows as recession, inflation fears mount",
+            "Wall Street starts to cut China growth forecasts as trade tensions with U.S. escalate",
+            "Japan's Nikkei falls to track Wall Street amid growth worries",
+            "Japan exports growth misses expectations, rising by a modest 3.9% in March as tariffs bite",
+            "Goldman Sachs expects a recession if tariffs take effect on Wednesday",
+            "Expert reveals recession odds as world comes to table on tariffs talks"
+          ],
+          "keywords": {
+            "growth": {
+              "count": 4,
+              "examples": [
+                "Fmr. Fed President on navigating inflation and economic slowdown",
+                "Wall Street starts to cut China growth forecasts as trade tensions with U.S. escalate",
+                "Japan's Nikkei falls to track Wall Street amid growth worries"
+              ]
+            },
+            "recession": {
+              "count": 5,
+              "examples": [
+                "Recession Risks Have Moved Up, But It's Not High, Says Fed Chair Powell",
+                "Jim Cramer says a recession is likely but investors shouldn't panic sell",
+                "US bond funds hit by heavy outflows as recession, inflation fears mount"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 0.0,
+            "neutral": 9.1,
+            "negative": 90.9
+          },
+          "gpt_summary": "📰 The theme **recession** was detected in **11 articles** during the period, mainly through topics like: recession (5), growth (4). Sentiment is mostly negative (90.9% vs 0.0% positive). Examples of articles: « Fmr. Fed President on navigating inflation and economic slowdown », « US bank earnings likely to be overshadowed by recession concerns », « Recession Risks Have Moved Up, But It's Not High, Says Fed Chair Powell »."
         }
       },
       "sectors": {
         "technology": {
-          "count": 18,
+          "count": 20,
           "articles": [
+            "US banks flag risks to consumer spending from tariff policy uncertainties",
             "CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine",
             "Bullish trade in Apple options reaps gains as shares jump on tariff exemption",
             "Recession Risks Have Moved Up, But It's Not High, Says Fed Chair Powell",
@@ -1360,6 +1378,7 @@
             "Apple airlifts 600 tons of iPhones from India 'to beat' Trump tariffs, sources say",
             "Apple airlifted iPhones worth a record $2 billion from India in March as Trump tariffs loomed",
             "Apple Supplier Luxshare to Maintain Vietnam Production Hub to Support U.S. Market",
+            "Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns",
             "Trump's trade war ripples through the business world, hits stocks again",
             "Tech stocks sink after Trump tariff rollout — Apple heads for worst drop in 5 years",
             "Apple Leads Premarket Slide In Tech Stocks As Trump's Reciprocal Tariffs Trigger Global Selloff",
@@ -1369,7 +1388,7 @@
           ],
           "keywords": {
             "ai": {
-              "count": 11,
+              "count": 12,
               "examples": [
                 "Recession Risks Have Moved Up, But It's Not High, Says Fed Chair Powell",
                 "US retail sales surge in March due to motor vehicle buying ahead of tariffs",
@@ -1406,10 +1425,62 @@
           },
           "sentiment_distribution": {
             "positive": 50.0,
-            "neutral": 16.7,
+            "neutral": 20.0,
+            "negative": 30.0
+          },
+          "gpt_summary": "📰 The theme **technology** was detected in **20 articles** during the period, mainly through topics like: ai (12), tech (5), data (2), artificial intelligence (1), semiconductor (1). Sentiment is mixed (50.0% positive, 30.0% negative). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « Bullish trade in Apple options reaps gains as shares jump on tariff exemption »."
+        },
+        "consumer": {
+          "count": 6,
+          "articles": [
+            "US banks flag risks to consumer spending from tariff policy uncertainties",
+            "CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine",
+            "Automakers warn new Trump tariffs will boost costs, cut vehicle sales",
+            "US retail sales surge in March due to motor vehicle buying ahead of tariffs",
+            "Even with tariffs looming, Jim Cramer says consumer companies must cut prices",
+            "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty"
+          ],
+          "keywords": {
+            "consumer": {
+              "count": 4,
+              "examples": [
+                "US banks flag risks to consumer spending from tariff policy uncertainties",
+                "Automakers warn new Trump tariffs will boost costs, cut vehicle sales",
+                "Even with tariffs looming, Jim Cramer says consumer companies must cut prices"
+              ]
+            },
+            "spending": {
+              "count": 2,
+              "examples": [
+                "US banks flag risks to consumer spending from tariff policy uncertainties",
+                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
+              ]
+            },
+            "retail": {
+              "count": 1,
+              "examples": [
+                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
+              ]
+            },
+            "purchase": {
+              "count": 1,
+              "examples": [
+                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
+              ]
+            },
+            "sales": {
+              "count": 1,
+              "examples": [
+                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 33.3,
+            "neutral": 33.3,
             "negative": 33.3
           },
-          "gpt_summary": "📰 The theme **technology** was detected in **18 articles** during the period, mainly through topics like: ai (11), tech (5), data (2), artificial intelligence (1), semiconductor (1). Sentiment is mixed (50.0% positive, 33.3% negative). Examples of articles: « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « Bullish trade in Apple options reaps gains as shares jump on tariff exemption », « Recession Risks Have Moved Up, But It's Not High, Says Fed Chair Powell »."
+          "gpt_summary": "📰 The theme **consumer** was detected in **6 articles** during the period, mainly through topics like: consumer (4), spending (2), retail (1), purchase (1), sales (1). Sentiment is mixed (33.3% positive, 33.3% negative). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « Automakers warn new Trump tariffs will boost costs, cut vehicle sales »."
         },
         "transport": {
           "count": 6,
@@ -1438,55 +1509,35 @@
           },
           "gpt_summary": "📰 The theme **transport** was detected in **6 articles** during the period, mainly through topics like: port (6). Sentiment is mixed (0.0% positive, 0.0% negative). Examples of articles: « Visa bids $100 million to replace Mastercard as Apple's new credit card partner, WSJ reports », « As Trump ramps up tariffs, a U.S. french-fry exporter still bears scars from the last trade war », « German online broker Trade Republic suffers outage as stocks tank, media report »."
         },
-        "consumer": {
-          "count": 5,
+        "finance": {
+          "count": 4,
           "articles": [
-            "CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine",
-            "Automakers warn new Trump tariffs will boost costs, cut vehicle sales",
-            "US retail sales surge in March due to motor vehicle buying ahead of tariffs",
-            "Even with tariffs looming, Jim Cramer says consumer companies must cut prices",
-            "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty"
+            "US banks flag risks to consumer spending from tariff policy uncertainties",
+            "2-year Treasury yield drops to lowest level since 2022 as Trump tariffs spark flight to safety",
+            "Trump leaves emerging market central banks with no clean choices",
+            "Treasury yields fall after a wild week as traders assess unexpected U.S. tariff exemptions"
           ],
           "keywords": {
-            "consumer": {
-              "count": 3,
+            "treasury": {
+              "count": 2,
               "examples": [
-                "Automakers warn new Trump tariffs will boost costs, cut vehicle sales",
-                "Even with tariffs looming, Jim Cramer says consumer companies must cut prices",
-                "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty"
+                "2-year Treasury yield drops to lowest level since 2022 as Trump tariffs spark flight to safety",
+                "Treasury yields fall after a wild week as traders assess unexpected U.S. tariff exemptions"
               ]
             },
-            "retail": {
+            "banks": {
               "count": 1,
               "examples": [
-                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
-              ]
-            },
-            "purchase": {
-              "count": 1,
-              "examples": [
-                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
-              ]
-            },
-            "spending": {
-              "count": 1,
-              "examples": [
-                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
-              ]
-            },
-            "sales": {
-              "count": 1,
-              "examples": [
-                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
+                "Trump leaves emerging market central banks with no clean choices"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 40.0,
-            "neutral": 20.0,
-            "negative": 40.0
+            "positive": 0.0,
+            "neutral": 75.0,
+            "negative": 25.0
           },
-          "gpt_summary": "📰 The theme **consumer** was detected in **5 articles** during the period, mainly through topics like: consumer (3), retail (1), purchase (1), spending (1), sales (1). Sentiment is mixed (40.0% positive, 40.0% negative). Examples of articles: « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « Automakers warn new Trump tariffs will boost costs, cut vehicle sales », « US retail sales surge in March due to motor vehicle buying ahead of tariffs »."
+          "gpt_summary": "📰 The theme **finance** was detected in **4 articles** during the period, mainly through topics like: treasury (2), banks (1). Sentiment is mostly negative (25.0% vs 0.0% positive). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « 2-year Treasury yield drops to lowest level since 2022 as Trump tariffs spark flight to safety », « Trump leaves emerging market central banks with no clean choices »."
         },
         "energy": {
           "count": 4,
@@ -1524,35 +1575,6 @@
             "negative": 25.0
           },
           "gpt_summary": "📰 The theme **energy** was detected in **4 articles** during the period, mainly through topics like: oil (3), energy (1), gas (1). Sentiment is mostly negative (25.0% vs 0.0% positive). Examples of articles: « Oil slides nearly 4% as US kicks off 104% tariffs on China », « Apple announces $99 million new clean energy fund in China », « Trump tariffs on Venezuela crude buyers are a potent new tool of US pressure »."
-        },
-        "finance": {
-          "count": 3,
-          "articles": [
-            "2-year Treasury yield drops to lowest level since 2022 as Trump tariffs spark flight to safety",
-            "Trump leaves emerging market central banks with no clean choices",
-            "Treasury yields fall after a wild week as traders assess unexpected U.S. tariff exemptions"
-          ],
-          "keywords": {
-            "treasury": {
-              "count": 2,
-              "examples": [
-                "2-year Treasury yield drops to lowest level since 2022 as Trump tariffs spark flight to safety",
-                "Treasury yields fall after a wild week as traders assess unexpected U.S. tariff exemptions"
-              ]
-            },
-            "banks": {
-              "count": 1,
-              "examples": [
-                "Trump leaves emerging market central banks with no clean choices"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 66.7,
-            "negative": 33.3
-          },
-          "gpt_summary": "📰 The theme **finance** was detected in **3 articles** during the period, mainly through topics like: treasury (2), banks (1). Sentiment is mostly negative (33.3% vs 0.0% positive). Examples of articles: « 2-year Treasury yield drops to lowest level since 2022 as Trump tariffs spark flight to safety », « Trump leaves emerging market central banks with no clean choices », « Treasury yields fall after a wild week as traders assess unexpected U.S. tariff exemptions »."
         },
         "industry": {
           "count": 3,
@@ -1693,12 +1715,13 @@
           "gpt_summary": "📰 The theme **asia** was detected in **18 articles** during the period, mainly through topics like: china (8), japan (4), india (4), beijing (2). Sentiment is mostly negative (33.3% vs 11.1% positive). Examples of articles: « Trump's worldwide tariffs come into effect today - with China facing 104% levy », « Apple shares drop 7% in Frankfurt after Trump tariffs on China », « Oil slides nearly 4% as US kicks off 104% tariffs on China »."
         },
         "global": {
-          "count": 13,
+          "count": 14,
           "articles": [
             "U.S. Stock Meltdown Gives Way to Global Rout",
             "Trump's worldwide tariffs come into effect today - with China facing 104% levy",
             "Defense stocks plummet as Trump's tariffs send shockwaves through global markets",
             "Global deal activity disappoints, M&A revenue falls as Trump pursues tariffs",
+            "Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns",
             "Trump's trade war ripples through the business world, hits stocks again",
             "'WORST OF BOTH WORLDS': Expert warns inflation expectations have the Fed spooked",
             "Apple to hold Worldwide Developers Conference from June 9",
@@ -1711,9 +1734,10 @@
           ],
           "keywords": {
             "world": {
-              "count": 2,
+              "count": 3,
               "examples": [
                 "U.S. Stock Meltdown Gives Way to Global Rout",
+                "Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns",
                 "Apple to hold Worldwide Developers Conference from June 9"
               ]
             },
@@ -1725,11 +1749,11 @@
               ]
             },
             "global": {
-              "count": 5,
+              "count": 6,
               "examples": [
                 "Global deal activity disappoints, M&A revenue falls as Trump pursues tariffs",
-                "Trump's trade war ripples through the business world, hits stocks again",
-                "Apple Leads Premarket Slide In Tech Stocks As Trump's Reciprocal Tariffs Trigger Global Selloff"
+                "Global trade outlook has 'deteriorated sharply' amid Trump tariff uncertainty, WTO warns",
+                "Trump's trade war ripples through the business world, hits stocks again"
               ]
             },
             "international": {
@@ -1740,11 +1764,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 23.1,
-            "neutral": 23.1,
-            "negative": 53.8
+            "positive": 28.6,
+            "neutral": 21.4,
+            "negative": 50.0
           },
-          "gpt_summary": "📰 The theme **global** was detected in **13 articles** during the period, mainly through topics like: global (5), world (2), worldwide (2), international (1). Sentiment is mostly negative (53.8% vs 23.1% positive). Examples of articles: « U.S. Stock Meltdown Gives Way to Global Rout », « Trump's worldwide tariffs come into effect today - with China facing 104% levy », « Defense stocks plummet as Trump's tariffs send shockwaves through global markets »."
+          "gpt_summary": "📰 The theme **global** was detected in **14 articles** during the period, mainly through topics like: global (6), world (3), worldwide (2), international (1). Sentiment is mostly negative (50.0% vs 28.6% positive). Examples of articles: « U.S. Stock Meltdown Gives Way to Global Rout », « Trump's worldwide tariffs come into effect today - with China facing 104% levy », « Defense stocks plummet as Trump's tariffs send shockwaves through global markets »."
         },
         "usa": {
           "count": 11,
@@ -1849,6 +1873,6 @@
       }
     }
   },
-  "lastUpdated": "2025-04-17T00:59:31.957208",
+  "lastUpdated": "2025-04-17T01:16:29.878699",
   "analysisCount": 100
 }
