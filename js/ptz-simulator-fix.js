@@ -1,17 +1,18 @@
 /**
  * Correctif pour résoudre les problèmes de validation dans le simulateur PTZ
- * Version: 1.0.0
+ * Version: 1.1.0
  * Date: 22/04/2025
  */
 
 // Fonction principale du correctif
 window.fixPTZSimulator = function() {
-    console.log("Application du correctif PTZ (v1.0.0)");
+    console.log("Application du correctif PTZ (v1.1.0)");
     
     try {
         // Références aux éléments clés du simulateur
         const projectTypeSelect = document.getElementById('ptz-project-type');
         const zoneSelect = document.getElementById('ptz-zone');
+        const cityInput = document.getElementById('ptz-city-search');
         
         if (!projectTypeSelect || !zoneSelect) {
             console.warn("Éléments du simulateur PTZ non trouvés, correctif non appliqué");
@@ -62,7 +63,57 @@ window.fixPTZSimulator = function() {
             }
         }
         
-        // 2. Remplacer les gestionnaires d'événements existants
+        // 2. Correction du problème de mise à jour de zone lors de la sélection de ville
+        function fixCityZoneUpdate() {
+            if (!cityInput) return;
+            
+            // Remplacer la fonction original de sélection de ville si nécessaire
+            if (typeof window.selectCity === 'function') {
+                const originalSelectCity = window.selectCity;
+                
+                window.selectCity = function(result, ptzCityInput, ptzZoneSelect) {
+                    // Appeler la fonction originale d'abord
+                    originalSelectCity(result, ptzCityInput, ptzZoneSelect);
+                    
+                    // S'assurer que la zone est correctement mise à jour
+                    if (ptzZoneSelect) {
+                        // Convertir la zone pour correspondre aux options du select
+                        let zoneValue = result.zone;
+                        if (result.zone === "A bis") {
+                            zoneValue = "A"; // Car dans le select nous avons "Zone A ou A bis"
+                        }
+                        
+                        console.log("[Correctif] Vérification de la mise à jour de zone:", zoneValue);
+                        
+                        // Recherche plus robuste de l'option correspondante
+                        let found = false;
+                        for (let i = 0; i < ptzZoneSelect.options.length; i++) {
+                            const option = ptzZoneSelect.options[i];
+                            if (option.value === zoneValue || 
+                                option.textContent.includes(zoneValue) ||
+                                option.value.includes(zoneValue)) {
+                                ptzZoneSelect.selectedIndex = i;
+                                ptzZoneSelect.value = option.value; 
+                                
+                                // Déclencher les événements pour s'assurer que le changement est pris en compte
+                                ptzZoneSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                                console.log("[Correctif] Zone mise à jour avec succès:", option.textContent);
+                                found = true;
+                                break;
+                            }
+                        }
+                        
+                        if (!found) {
+                            console.warn("[Correctif] Zone non trouvée dans les options:", zoneValue);
+                        }
+                    }
+                };
+                
+                console.log("Fonction selectCity remplacée par version corrigée");
+            }
+        }
+        
+        // 3. Remplacer les gestionnaires d'événements existants
         function replaceEventListeners() {
             // Supprimer les anciens gestionnaires en clonant les éléments
             const newProjectTypeSelect = projectTypeSelect.cloneNode(true);
@@ -102,7 +153,7 @@ window.fixPTZSimulator = function() {
             });
         }
         
-        // 3. Appliquer le correctif à la fonction de simulation PTZ
+        // 4. Appliquer le correctif à la fonction de simulation PTZ
         const originalSimulerPTZ = window.simulerPTZ;
         if (typeof originalSimulerPTZ === 'function') {
             window.simulerPTZ = function() {
@@ -125,6 +176,7 @@ window.fixPTZSimulator = function() {
         // Appliquer immédiatement les correctifs
         replaceEventListeners();
         enforceZoneRestrictions();
+        fixCityZoneUpdate();
         
         console.log("Correctif PTZ appliqué avec succès");
         return true;
