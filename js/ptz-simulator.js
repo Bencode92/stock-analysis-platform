@@ -278,6 +278,8 @@ const citiesDB = {
 // Créer l'index de recherche une seule fois
 const cityIndex = {};
 let hasInitializedCityIndex = false;
+// Variable globale pour stocker la ville sélectionnée
+window.selectedCity = null;
 
 function initializeCityIndex() {
     if (hasInitializedCityIndex) return;
@@ -318,6 +320,7 @@ function searchCity(query) {
     // Permettre la recherche dès le premier caractère
     if (normalizedQuery.length < 1) return [];
     
+    console.log(`Recherche de ville: "${normalizedQuery}"`);
     const results = [];
     
     // Recherche avec l'index
@@ -353,8 +356,8 @@ function searchCity(query) {
         return a.city.localeCompare(b.city);
     });
     
-    // Limiter le nombre de résultats pour les performances
-    return results.slice(0, 20);
+    console.log(`${results.length} résultats trouvés pour "${query}"`);
+    return results.slice(0, 20); // Limiter à 20 résultats
 }
 
 // Fonction pour mettre à jour l'interface utilisateur avec les résultats
@@ -537,10 +540,16 @@ function updateSuggestionsList(results, suggestionsList, ptzCityInput, ptzZoneSe
 function selectCity(result, ptzCityInput, ptzZoneSelect) {
     if (!ptzCityInput) return;
     
-    console.log("Sélection de la ville:", result.city, "- Zone:", result.zone);
+    console.log(`Sélection de la ville: ${result.city} - Zone: ${result.zone}`);
     
     // Mettre à jour la valeur de l'input
     ptzCityInput.value = result.city;
+    
+    // Stocker la ville et sa zone dans une variable globale pour pouvoir y accéder ailleurs
+    window.selectedCity = {
+        name: result.city,
+        zone: result.zone
+    };
     
     // Mettre à jour la zone géographique
     if (ptzZoneSelect) {
@@ -550,32 +559,27 @@ function selectCity(result, ptzCityInput, ptzZoneSelect) {
             zoneValue = "A"; // Car dans le select nous avons "Zone A ou A bis"
         }
         
-        console.log("Mise à jour du select de zone avec la valeur:", zoneValue);
+        console.log(`Mise à jour du select de zone avec la valeur: ${zoneValue}`);
         
-        // Mettre à jour le select en adaptant au format des options
-        // Les options de select ont généralement un format comme "Zone A ou A bis"
-        const options = Array.from(ptzZoneSelect.options);
-        let found = false;
-        
-        for (let i = 0; i < options.length; i++) {
-            const optionText = options[i].textContent || options[i].innerText;
-            if (optionText.includes(`Zone ${zoneValue}`) || 
-                (zoneValue === "A" && optionText.includes("Zone A ou A bis"))) {
-                ptzZoneSelect.selectedIndex = i;
-                found = true;
-                console.log("Option correspondante trouvée:", optionText);
+        // Trouver l'index de l'option correspondante
+        let selectedIndex = -1;
+        for (let i = 0; i < ptzZoneSelect.options.length; i++) {
+            const option = ptzZoneSelect.options[i];
+            if (option.value === zoneValue) {
+                selectedIndex = i;
+                console.log(`Option correspondante trouvée à l'index ${i}: ${option.textContent}`);
                 break;
             }
         }
         
-        if (!found) {
-            console.warn("Aucune option correspondant à la zone", zoneValue, "n'a été trouvée");
-            // Fallback: essayer de sélectionner directement par valeur
-            ptzZoneSelect.value = zoneValue;
+        // Si on a trouvé l'option correspondante, la sélectionner
+        if (selectedIndex >= 0) {
+            ptzZoneSelect.selectedIndex = selectedIndex;
+            ptzZoneSelect.dispatchEvent(new Event('change')); // Déclencher l'événement change
+            console.log(`Zone mise à jour avec succès à ${zoneValue}`);
+        } else {
+            console.warn(`Aucune option correspondant à la zone ${zoneValue} n'a été trouvée`);
         }
-        
-        // Déclencher l'événement change pour notifier les écouteurs
-        ptzZoneSelect.dispatchEvent(new Event('change'));
     } else {
         console.warn("Le select de zone n'est pas disponible");
     }
@@ -585,6 +589,15 @@ function selectCity(result, ptzCityInput, ptzZoneSelect) {
     if (zoneInfoElement) {
         zoneInfoElement.textContent = `Ville trouvée: ${result.city} (Zone ${result.zone})`;
         zoneInfoElement.classList.remove('hidden');
+        
+        // Ajouter une animation pour attirer l'attention
+        zoneInfoElement.style.animation = 'fadeIn 0.3s ease-out';
+        zoneInfoElement.style.color = '#4ade80'; // Vert clair pour indiquer le succès
+        
+        // Revenir à la couleur normale après 2 secondes
+        setTimeout(() => {
+            zoneInfoElement.style.color = '';
+        }, 2000);
     }
     
     // Masquer la liste des suggestions
@@ -592,6 +605,75 @@ function selectCity(result, ptzCityInput, ptzZoneSelect) {
     if (suggestionsList) {
         suggestionsList.style.display = 'none';
     }
+}
+
+// Navigation au clavier dans les suggestions de villes
+function setupKeyboardNavigation(ptzCityInput, suggestionsList) {
+    if (!ptzCityInput || !suggestionsList) return;
+    
+    ptzCityInput.addEventListener('keydown', function(e) {
+        if (suggestionsList.style.display === 'none') return;
+        
+        const suggestions = suggestionsList.querySelectorAll('.city-suggestion');
+        if (suggestions.length === 0) return;
+        
+        const currentFocus = document.activeElement;
+        const isInSuggestionsList = currentFocus.classList && currentFocus.classList.contains('city-suggestion');
+        
+        switch (e.key) {
+            case 'ArrowDown':
+                e.preventDefault();
+                if (!isInSuggestionsList) {
+                    // Focus sur le premier élément de la liste
+                    suggestions[0].focus();
+                } else {
+                    // Focus sur l'élément suivant
+                    const currentIndex = Array.from(suggestions).indexOf(currentFocus);
+                    if (currentIndex < suggestions.length - 1) {
+                        suggestions[currentIndex + 1].focus();
+                    }
+                }
+                break;
+                
+            case 'ArrowUp':
+                if (isInSuggestionsList) {
+                    e.preventDefault();
+                    const currentIndex = Array.from(suggestions).indexOf(currentFocus);
+                    if (currentIndex > 0) {
+                        // Focus sur l'élément précédent
+                        suggestions[currentIndex - 1].focus();
+                    } else {
+                        // Retour au champ de recherche
+                        ptzCityInput.focus();
+                    }
+                }
+                break;
+                
+            case 'Enter':
+                if (!isInSuggestionsList && suggestions.length > 0) {
+                    // Sélectionner le premier élément si on est dans l'input
+                    e.preventDefault();
+                    suggestions[0].click();
+                }
+                // Si on est déjà sur un élément, le click est géré par l'event listener de cet élément
+                break;
+                
+            case 'Escape':
+                e.preventDefault();
+                suggestionsList.style.display = 'none';
+                ptzCityInput.focus();
+                break;
+        }
+    });
+    
+    // Propager la navigation au clavier aux éléments de suggestion
+    suggestionsList.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            suggestionsList.style.display = 'none';
+            ptzCityInput.focus();
+        }
+    });
 }
 
 // Fonction pour initialiser le simulateur PTZ
@@ -639,6 +721,9 @@ function initPTZSimulator() {
         // Positionner le conteneur de suggestions
         ptzCityInput.parentNode.style.position = 'relative';
         ptzCityInput.parentNode.appendChild(suggestionsList);
+        
+        // Configurer la navigation au clavier
+        setupKeyboardNavigation(ptzCityInput, suggestionsList);
         
         // Événement input pour la recherche dynamique
         ptzCityInput.addEventListener('input', function() {
@@ -702,6 +787,24 @@ function initPTZSimulator() {
         calculatePTZButton.parentNode.replaceChild(newButton, calculatePTZButton);
         
         newButton.addEventListener('click', function() {
+            // Si une ville a été sélectionnée, s'assurer que la zone est correcte
+            if (window.selectedCity && ptzZoneSelect) {
+                // Vérifier si la zone actuelle correspond à la ville sélectionnée
+                let zoneValue = window.selectedCity.zone;
+                if (zoneValue === "A bis") zoneValue = "A";
+                
+                if (ptzZoneSelect.value !== zoneValue) {
+                    console.log(`Correction de la zone: ${ptzZoneSelect.value} -> ${zoneValue}`);
+                    // Trouver l'option correspondante et la sélectionner
+                    for (let i = 0; i < ptzZoneSelect.options.length; i++) {
+                        if (ptzZoneSelect.options[i].value === zoneValue) {
+                            ptzZoneSelect.selectedIndex = i;
+                            break;
+                        }
+                    }
+                }
+            }
+            
             // Récupérer les valeurs du formulaire
             const projectType = ptzProjectTypeSelect ? ptzProjectTypeSelect.value : 'neuf';
             const zone = ptzZoneSelect ? ptzZoneSelect.value : 'A';
@@ -925,15 +1028,34 @@ style.textContent = `
     from { opacity: 0; transform: translateY(-5px); }
     to { opacity: 1; transform: translateY(0); }
 }
-.city-suggestion:hover {
-    background-color: rgba(59, 130, 246, 0.5) !important;
+
+.city-suggestions {
+    animation: fadeIn 0.2s ease-in-out;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(59, 130, 246, 0.3);
 }
-.city-suggestion.selected {
-    background-color: rgba(59, 130, 246, 0.5) !important;
+
+.city-suggestion {
+    transition: all 0.15s ease-in-out;
+    padding: 8px 12px;
+    cursor: pointer;
 }
+
+.city-suggestion:hover,
 .city-suggestion:focus {
-    outline: 2px solid rgba(59, 130, 246, 0.7);
     background-color: rgba(59, 130, 246, 0.5) !important;
+    outline: 1px solid rgba(59, 130, 246, 0.8);
+}
+
+#ptz-zone-info {
+    transition: color 0.3s ease;
+    padding: 4px 8px;
+    margin-top: 6px;
+    font-weight: 500;
+}
+
+#ptz-zone-info.success {
+    color: #4ade80;
 }
 `;
 document.head.appendChild(style);
