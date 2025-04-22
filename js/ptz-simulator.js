@@ -1,6 +1,6 @@
 // Fichier JS pour simulateur de PTZ
 
-console.log("PTZ Simulator version 1.9 chargé ! - " + new Date().toISOString());
+console.log("PTZ Simulator version 1.8 chargé ! - " + new Date().toISOString());
 
 class PTZSimulator {
     constructor({
@@ -1144,10 +1144,21 @@ window.setTimeout(function() {
     }
 }, 600);
 
-// Rendre disponible globalement
+// Ajouter un bouton d'urgence accessible directement depuis la console
 window.simulatePTZ = simulerPTZ;
 window.initPTZSimulator = initPTZSimulator;
 window.searchCity = searchCity;
 window.PTZSimulator = PTZSimulator;
 
 console.log("Fonction d'urgence window.simulatePTZ disponible");
+
+// Rendre disponible globalement si en mode non-module
+if (typeof window !== 'undefined') {
+    window.PTZSimulator = PTZSimulator;
+    window.initPTZSimulator = initPTZSimulator;
+    window.searchCity = searchCity;
+    window.simulerPTZ = simulerPTZ;
+}
+
+// Exporter les fonctions nécessaires pour l'utilisation en mode module
+export { PTZSimulator, initPTZSimulator, searchCity, simulerPTZ };
