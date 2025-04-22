@@ -1,6 +1,6 @@
 // Fichier JS pour simulateur de PTZ
 
-console.log("PTZ Simulator version 1.6 chargé ! - " + new Date().toISOString());
+console.log("PTZ Simulator version 1.7 chargé ! - " + new Date().toISOString());
 
 class PTZSimulator {
     constructor({
@@ -727,19 +727,41 @@ function simulerPTZ() {
     console.log("Simulation PTZ en cours...");
     
     try {
-        // Récupérer les valeurs du formulaire
-        const projectType = document.getElementById('ptz-project-type')?.value || 'neuf';
-        const zone = document.getElementById('ptz-zone')?.value || 'A';
-        const income = parseFloat(document.getElementById('ptz-income')?.value || '0');
-        const householdSize = parseInt(document.getElementById('ptz-household-size')?.value || '1');
-        const totalCost = parseFloat(document.getElementById('ptz-total-cost')?.value || '0');
-        const cityName = document.getElementById('ptz-city-search')?.value || null;
+        // Récupérer les valeurs du formulaire avec vérification de présence d'élément
+        const projectTypeElem = document.getElementById('ptz-project-type');
+        const zoneElem = document.getElementById('ptz-zone');
+        const incomeElem = document.getElementById('ptz-income');
+        const householdSizeElem = document.getElementById('ptz-household-size');
+        const totalCostElem = document.getElementById('ptz-total-cost');
+        const citySearchElem = document.getElementById('ptz-city-search');
+        
+        const projectType = projectTypeElem ? projectTypeElem.value : 'neuf';
+        const zone = zoneElem ? zoneElem.value : 'A';
+        const income = incomeElem ? parseFloat(incomeElem.value || '0') : 0;
+        const householdSize = householdSizeElem ? parseInt(householdSizeElem.value || '1') : 1;
+        const totalCost = totalCostElem ? parseFloat(totalCostElem.value || '0') : 0;
+        const cityName = citySearchElem ? citySearchElem.value : null;
         
         console.log("Valeurs récupérées:", {projectType, zone, income, householdSize, totalCost, cityName});
         
-        // Valider les entrées
-        if (isNaN(income) || isNaN(householdSize) || isNaN(totalCost) || income <= 0 || totalCost <= 0) {
-            alert('Veuillez remplir correctement tous les champs du formulaire.');
+        // Valider les entrées avec des messages spécifiques
+        if (isNaN(income)) {
+            alert('Le revenu fiscal de référence doit être un nombre valide.');
+            return false;
+        }
+        
+        if (isNaN(totalCost)) {
+            alert('Le coût total de l\'opération doit être un nombre valide.');
+            return false;
+        }
+        
+        if (income <= 0) {
+            alert('Le revenu fiscal de référence doit être supérieur à 0.');
+            return false;
+        }
+        
+        if (totalCost <= 0) {
+            alert('Le coût total de l\'opération doit être supérieur à 0.');
             return false;
         }
         
@@ -758,14 +780,14 @@ function simulerPTZ() {
         return true;
     } catch (error) {
         console.error("Erreur lors de la simulation:", error);
-        alert("Une erreur s'est produite: " + error.message);
+        alert("Une erreur s'est produite lors de la simulation: " + error.message);
         return false;
     }
 }
 
-// Fonction simplifiée pour initialiser le simulateur PTZ
+// Code corrigé pour initPTZSimulator avec une meilleure gestion des événements
 function initPTZSimulator() {
-    console.log("Initialisation du simulateur PTZ avec code optimisé");
+    console.log("Initialisation du simulateur PTZ avec code corrigé");
     
     // Initialiser l'index de villes
     initializeCityIndex();
@@ -775,39 +797,7 @@ function initPTZSimulator() {
     const ptzZoneSelect = document.getElementById('ptz-zone');
     const zoneInfoElement = document.getElementById('ptz-zone-info');
     
-    // NOUVEAU: Préparer la colonne de droite pour l'affichage des résultats
-    const rightColumn = document.querySelector('.grid.grid-cols-1.md\\:grid-cols-2.gap-6.mt-8 > div:nth-child(2)');
-    if (rightColumn) {
-        // Vérifier si le conteneur de résultats existe déjà
-        if (!document.getElementById('ptz-results-container')) {
-            console.log("Préparation de la colonne de droite pour les résultats");
-            
-            // Sauvegarder le contenu original pour le réutiliser si nécessaire
-            if (!rightColumn.hasAttribute('data-original-content')) {
-                rightColumn.setAttribute('data-original-content', rightColumn.innerHTML);
-            }
-            
-            // Créer le conteneur de résultats
-            const resultsContainer = document.createElement('div');
-            resultsContainer.id = 'ptz-results-container';
-            
-            // Message d'attente
-            resultsContainer.innerHTML = `
-                <div class="flex flex-col items-center justify-center text-center py-8">
-                    <svg class="animate-pulse w-16 h-16 text-blue-500 mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <p class="text-lg text-gray-300">Veuillez renseigner les paramètres et cliquer sur "Simuler le PTZ" pour obtenir une estimation de votre prêt à taux zéro.</p>
-                </div>
-            `;
-            
-            // Remplacer le contenu de la colonne
-            rightColumn.innerHTML = '';
-            rightColumn.appendChild(resultsContainer);
-        }
-    }
-    
-    // Configurer l'autocomplétion pour la recherche de villes
+    // Configurer la recherche de villes
     if (ptzCityInput) {
         // Trouver ou créer le conteneur de suggestions
         let suggestionsList = document.getElementById('city-suggestions-container');
@@ -836,8 +826,6 @@ function initPTZSimulator() {
                     suggestionsList.classList.add('hidden');
                 }
             });
-        } else {
-            console.log("Conteneur de suggestions non trouvé");
         }
         
         // Afficher l'élément d'information sur la zone dès le début
@@ -846,39 +834,32 @@ function initPTZSimulator() {
         }
     }
     
-    // Trouver le bouton PTZ et lui attacher un gestionnaire d'événement direct
-    const ptzButton = document.querySelector('button[id="calculate-ptz-button"]') || 
-                     document.querySelector('button:has(.fa-play-circle)') ||
-                     document.querySelector('button:has(.fas.fa-play-circle)');
-    
-    if (ptzButton) {
-        console.log("Bouton PTZ trouvé:", ptzButton);
-        
-        // Supprimer les gestionnaires d'événements existants
-        const newButton = ptzButton.cloneNode(true);
-        ptzButton.parentNode.replaceChild(newButton, ptzButton);
-        
-        // Ajouter un nouveau gestionnaire
-        newButton.addEventListener('click', function(event) {
-            event.preventDefault();
-            console.log("Clic sur bouton de simulation PTZ");
-            simulerPTZ();
-            return false;
-        });
-        
-        console.log("✅ Gestionnaire d'événement installé avec succès sur le bouton PTZ");
-    } else {
-        console.error("⚠️ Bouton de simulation PTZ non trouvé");
-    }
-    
     // Gérer les boutons d'augmentation et diminution du nombre de personnes
+    setupHouseholdControls();
+    
+    // Générer le tableau comparatif
+    generatePTZComparisonTable();
+    
+    // CORRECTION: Fonctionnalité principale - trouver et configurer le bouton de simulation
+    setupPtzSimulationButton();
+}
+
+// Fonction pour configurer les contrôles du nombre de personnes dans le foyer
+function setupHouseholdControls() {
     const increaseHouseholdBtn = document.getElementById('increase-household');
     const decreaseHouseholdBtn = document.getElementById('decrease-household');
     const householdSizeInput = document.getElementById('ptz-household-size');
     const householdDescription = document.getElementById('household-description');
     
     if (increaseHouseholdBtn && decreaseHouseholdBtn && householdSizeInput && householdDescription) {
-        increaseHouseholdBtn.addEventListener('click', function() {
+        // Réinitialiser les gestionnaires d'événements existants
+        const newIncreaseBtn = increaseHouseholdBtn.cloneNode(true);
+        const newDecreaseBtn = decreaseHouseholdBtn.cloneNode(true);
+        increaseHouseholdBtn.parentNode.replaceChild(newIncreaseBtn, increaseHouseholdBtn);
+        decreaseHouseholdBtn.parentNode.replaceChild(newDecreaseBtn, decreaseHouseholdBtn);
+        
+        // Ajouter de nouveaux gestionnaires
+        newIncreaseBtn.addEventListener('click', function() {
             let currentValue = parseInt(householdSizeInput.value);
             if (!isNaN(currentValue)) {
                 householdSizeInput.value = currentValue + 1;
@@ -886,7 +867,7 @@ function initPTZSimulator() {
             }
         });
         
-        decreaseHouseholdBtn.addEventListener('click', function() {
+        newDecreaseBtn.addEventListener('click', function() {
             let currentValue = parseInt(householdSizeInput.value);
             if (!isNaN(currentValue) && currentValue > 1) {
                 householdSizeInput.value = currentValue - 1;
@@ -904,218 +885,128 @@ function initPTZSimulator() {
             }
         });
         
-        function updateHouseholdDescription(count) {
-            if (count === 1) {
-                householdDescription.textContent = "1 personne";
-            } else {
-                householdDescription.textContent = count + " personnes";
-            }
-        }
+        // Mettre à jour la description initiale
+        updateHouseholdDescription(parseInt(householdSizeInput.value) || 1);
     }
-    
-    // Générer le tableau comparatif
-    generatePTZComparisonTable();
 }
 
-// Solution alternative directe - ajouter un clic forcé au bouton
-function fixSimulateurPTZ() {
-    // Essayer de trouver le bouton de simulation PTZ par différentes méthodes
-    let ptzButton = document.querySelector('button[id="calculate-ptz-button"]');
+// Fonction pour mettre à jour la description du nombre de personnes
+function updateHouseholdDescription(count) {
+    const householdDescription = document.getElementById('household-description');
+    if (householdDescription) {
+        if (count === 1) {
+            householdDescription.textContent = "1 personne";
+        } else {
+            householdDescription.textContent = count + " personnes";
+        }
+    }
+}
+
+// CORRECTION: Fonction fiable pour configurer le bouton de simulation
+function setupPtzSimulationButton() {
+    // Récupérer la référence au bouton de différentes manières
+    let ptzButton = document.getElementById('calculate-ptz-button');
     
     if (!ptzButton) {
-        // Recherche alternative par contenu
-        const allButtons = Array.from(document.querySelectorAll('button'));
-        ptzButton = allButtons.find(button => {
-            return button.textContent.includes('Simuler le PTZ') || 
-                  button.innerHTML.includes('fa-play-circle');
-        });
-    }
-    
-    if (ptzButton) {
-        console.log("Bouton PTZ trouvé pour correction:", ptzButton);
-        
-        // Supprimer tous les gestionnaires d'événements existants (solution radicale)
-        const newButton = ptzButton.cloneNode(true);
-        ptzButton.parentNode.replaceChild(newButton, ptzButton);
-        
-        // Ajouter un nouveau gestionnaire d'événement direct
-        newButton.addEventListener('click', function(event) {
-            event.preventDefault();
-            console.log("Clic sur bouton de simulation PTZ via fonction de correction");
-            
-            // Forcer l'affichage visible
-            const ptzTab = document.querySelector('.simulation-tab[data-target="ptz-simulator"]');
-            if (ptzTab && !ptzTab.classList.contains('active')) {
-                ptzTab.click();
-            }
-            
-            setTimeout(() => {
-                simulerPTZ();
-            }, 100);
-            
-            return false;
-        });
-        
-        console.log("✅ Solution de correction appliquée avec succès au bouton PTZ");
-    } else {
-        console.error("⚠️ Impossible de trouver le bouton pour appliquer la correction");
-    }
-}
-
-// Fonction de secours pour forcer la simulation en urgence
-window.forcerSimulationPTZ = function() {
-    console.log("Forçage manuel de la simulation PTZ");
-    return simulerPTZ();
-};
-
-// NOUVEAU: Fonction de recherche directe du bouton et application de l'événement
-function trouverEtFixerBouton() {
-    let boutonTrouve = false;
-    
-    // Méthode 1: Par ID
-    let ptzButton = document.getElementById('calculate-ptz-button');
-    if (ptzButton) {
-        boutonTrouve = true;
-    }
-    
-    // Méthode 2: Par texte contenu
-    if (!boutonTrouve) {
-        const allButtons = Array.from(document.querySelectorAll('button'));
-        ptzButton = allButtons.find(b => b.textContent.includes('Simuler le PTZ'));
-        if (ptzButton) {
-            boutonTrouve = true;
-        }
-    }
-    
-    // Méthode 3: Par icône
-    if (!boutonTrouve) {
-        ptzButton = document.querySelector('button:has(.fa-play-circle)');
-        if (ptzButton) {
-            boutonTrouve = true;
-        }
-    }
-    
-    // Méthode 4: Par parent
-    if (!boutonTrouve) {
+        // Recherche alternative dans le contenu du simulateur PTZ
         const ptzSimulator = document.getElementById('ptz-simulator');
         if (ptzSimulator) {
-            ptzButton = ptzSimulator.querySelector('button');
-            if (ptzButton) {
-                boutonTrouve = true;
-            }
+            ptzButton = ptzSimulator.querySelector('button[id="calculate-ptz-button"]') ||
+                       ptzSimulator.querySelector('button:has(i.fa-play-circle)') ||
+                       ptzSimulator.querySelector('button');
         }
     }
     
-    // Méthode 5: Recherche profonde dans le DOM
-    if (!boutonTrouve) {
-        document.querySelectorAll('button').forEach(button => {
-            if (button.innerHTML.includes('Simuler') && button.innerHTML.includes('PTZ')) {
-                ptzButton = button;
-                boutonTrouve = true;
-            }
-        });
-    }
-    
-    // Si on a trouvé le bouton, on applique la correction
-    if (boutonTrouve && ptzButton) {
-        console.log("Bouton 'Simuler le PTZ' trouvé:", ptzButton);
+    if (ptzButton) {
+        console.log("Bouton PTZ trouvé, application de correctifs...");
         
-        // Supprimer les gestionnaires existants
+        // Créer un nouveau bouton pour éviter les problèmes de gestionnaires multiples
         const newButton = ptzButton.cloneNode(true);
-        ptzButton.parentNode.replaceChild(newButton, ptzButton);
+        if (ptzButton.parentNode) {
+            ptzButton.parentNode.replaceChild(newButton, ptzButton);
+        }
         
-        // Appliquer le gestionnaire direct
-        newButton.addEventListener('click', function(event) {
+        // NOUVELLE APPROCHE: utiliser un écouteur d'événements direct
+        newButton.onclick = function(event) {
             event.preventDefault();
-            console.log("Clic forcé sur bouton PTZ");
+            console.log("Clic sur bouton PTZ avec le gestionnaire corrigé");
             simulerPTZ();
             return false;
-        });
+        };
         
-        console.log("✅ Correction appliquée avec succès");
-        return true;
+        console.log("Correctif du bouton PTZ appliqué avec succès");
+    } else {
+        console.error("Bouton PTZ non trouvé, création d'un bouton de secours");
+        
+        // Chercher le conteneur PTZ pour ajouter un bouton de secours
+        const ptzContent = document.getElementById('ptz-simulator');
+        if (ptzContent) {
+            const formSection = ptzContent.querySelector('.bg-blue-900.bg-opacity-20.p-6.rounded-lg');
+            if (formSection) {
+                // Créer un bouton de secours et l'ajouter
+                const rescueButton = document.createElement('button');
+                rescueButton.id = 'rescue-ptz-button';
+                rescueButton.className = 'loan-action-button w-full mt-6';
+                rescueButton.innerHTML = '<i class="fas fa-play-circle mr-2"></i> Simuler le PTZ (bouton de secours)';
+                rescueButton.onclick = function(event) {
+                    event.preventDefault();
+                    console.log("Clic sur bouton de secours PTZ");
+                    simulerPTZ();
+                    return false;
+                };
+                
+                formSection.appendChild(rescueButton);
+                console.log("Bouton de secours PTZ ajouté");
+            }
+        }
     }
-    
-    console.error("❌ Aucun bouton 'Simuler le PTZ' trouvé");
-    return false;
 }
+
+// Méthode directe pour forcer la simulation en cas de besoin
+window.forceSimulatePTZ = simulerPTZ;
 
 // Initialiser quand la page est chargée
 document.addEventListener('DOMContentLoaded', function() {
     console.log("DOM chargé, initialisation du simulateur PTZ...");
     
-    // Utiliser un délai pour s'assurer que tous les éléments sont chargés
+    // Utiliser un délai court pour s'assurer que tous les éléments sont chargés
     setTimeout(function() {
         initPTZSimulator();
-        
-        // Pour être certain que le bouton est bien corrigé
-        setTimeout(trouverEtFixerBouton, 300);
-    }, 500);
+    }, 300);
 });
 
 // S'assurer que le simulateur est initialisé après le chargement complet
 window.addEventListener('load', function() {
     console.log("Fenêtre chargée, vérification du simulateur PTZ...");
+    
+    // Réinitialiser pour être sûr
     setTimeout(function() {
-        fixSimulateurPTZ();
-        
-        // Double vérification après un peu plus de temps
-        setTimeout(trouverEtFixerBouton, 800);
-    }, 400);
+        setupPtzSimulationButton();
+    }, 500);
 });
 
 // Attacher la fonction de correction au clic de l'onglet PTZ
 window.setTimeout(function() {
     const ptzTab = document.querySelector('.simulation-tab[data-target="ptz-simulator"]');
     if (ptzTab) {
-        console.log("Onglet PTZ trouvé, ajout d'un gestionnaire supplémentaire");
-        ptzTab.addEventListener('click', function() {
+        console.log("Onglet PTZ trouvé, ajout d'un gestionnaire pour réinitialisation");
+        
+        // Créer une nouvelle copie pour éviter les gestionnaires multiples
+        const newPtzTab = ptzTab.cloneNode(true);
+        ptzTab.parentNode.replaceChild(newPtzTab, ptzTab);
+        
+        newPtzTab.addEventListener('click', function() {
+            console.log("Onglet PTZ cliqué, réinitialisation du simulateur");
             setTimeout(function() {
                 initPTZSimulator();
-                setTimeout(trouverEtFixerBouton, 300);
             }, 200);
         });
     }
 }, 600);
 
-// Approche radicale: injecter un script inline pour intercepter tous les clics
-window.setTimeout(function() {
-    const script = document.createElement('script');
-    script.textContent = `
-        // Intercepter tous les clics sur le document
-        document.addEventListener('click', function(event) {
-            // Vérifier si l'élément cliqué est un bouton qui concerne le PTZ
-            if (event.target.tagName === 'BUTTON' && 
-                (event.target.textContent.includes('Simuler le PTZ') || 
-                 event.target.id === 'calculate-ptz-button')) {
-                console.log("Clic intercepté sur le bouton PTZ");
-                event.preventDefault();
-                window.forcerSimulationPTZ();
-                return false;
-            }
-            
-            // Vérifier si un parent est le bouton PTZ (pour l'icône)
-            let parent = event.target.parentElement;
-            for (let i = 0; i < 3; i++) {
-                if (parent && parent.tagName === 'BUTTON' && 
-                    (parent.textContent.includes('Simuler le PTZ') || 
-                     parent.id === 'calculate-ptz-button')) {
-                    console.log("Clic intercepté sur un enfant du bouton PTZ");
-                    event.preventDefault();
-                    window.forcerSimulationPTZ();
-                    return false;
-                }
-                if (parent) parent = parent.parentElement;
-            }
-        }, true);
-    `;
-    document.head.appendChild(script);
-}, 1000);
-
-// Forcer la vérification au focus de la fenêtre
-window.addEventListener('focus', function() {
-    setTimeout(trouverEtFixerBouton, 200);
-});
+// Ajouter un bouton d'urgence accessible directement depuis la console
+window.simulatePTZ = simulerPTZ;
+console.log("Fonction d'urgence window.simulatePTZ disponible");
 
 // Exporter les fonctions nécessaires
-export { PTZSimulator, initPTZSimulator, searchCity };
+export { PTZSimulator, initPTZSimulator, searchCity, simulerPTZ };
