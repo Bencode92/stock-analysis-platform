@@ -1144,15 +1144,18 @@ window.setTimeout(function() {
     }
 }, 600);
 
-// Ajouter un bouton d'urgence accessible directement depuis la console
-window.simulatePTZ = simulerPTZ;
+// IMPORTANT: Exposer explicitement ces fonctions au scope global
+window.simulerPTZ = simulerPTZ;
 window.initPTZSimulator = initPTZSimulator;
 window.searchCity = searchCity;
 window.PTZSimulator = PTZSimulator;
+window.updatePTZResults = updatePTZResults;
+window.generatePTZComparisonTable = generatePTZComparisonTable;
+window.setupPtzSimulationButton = setupPtzSimulationButton;
 
-console.log("Fonction d'urgence window.simulatePTZ disponible");
+console.log("Fonction d'urgence window.simulerPTZ disponible");
 
-// Rendre disponible globalement si en mode non-module
+// Rendre disponible globalement (assuré explicitement)
 if (typeof window !== 'undefined') {
     window.PTZSimulator = PTZSimulator;
     window.initPTZSimulator = initPTZSimulator;
@@ -1160,5 +1163,12 @@ if (typeof window !== 'undefined') {
     window.simulerPTZ = simulerPTZ;
 }
 
-// Exporter les fonctions nécessaires pour l'utilisation en mode module
-export { PTZSimulator, initPTZSimulator, searchCity, simulerPTZ };
+// Exposer les fonctions pour l'utilisation en module si nécessaire
+// Mais cette partie est maintenant optionnelle car nous avons exposé explicitement au scope global
+try {
+    if (typeof module !== 'undefined' && module.exports) {
+        module.exports = { PTZSimulator, initPTZSimulator, searchCity, simulerPTZ };
+    }
+} catch (e) {
+    console.log("Mode module non disponible, utilisation du mode global uniquement");
+}
