@@ -1417,51 +1417,65 @@
     <script src="js/budget-epargne.js"></script>
     <script src="js/loan-simulator.js"></script>
     <script src="js/loan-sensitivity.js"></script>
+    <!-- Chargement du script PTZ avec les fonctions clés disponibles immédiatement -->
+    <script>
+        // Définir la fonction simulerPTZ temporaire pour éviter l'erreur pendant le chargement
+        window.simulerPTZ = function() {
+            console.log("Fonction temporaire - en attente du chargement complet");
+            alert("Le simulateur PTZ est en cours de chargement. Veuillez patienter quelques secondes et réessayer.");
+        };
+    </script>
     <script src="js/ptz-simulator.js"></script>
     
-    <!-- Script d'initialisation du simulateur PTZ -->
+    <!-- Script d'initialisation direct du simulateur PTZ -->
     <script>
-        // Attacher une fonction directe au bouton de simulation PTZ lors du chargement de la page
+        // Attacher le comportement du bouton PTZ directement sans délai
         document.addEventListener('DOMContentLoaded', function() {
-            // Fonction d'attache du gestionnaire au bouton PTZ
-            function attachPTZButtonHandler() {
-                const ptzButton = document.getElementById('calculate-ptz-button');
-                if (ptzButton) {
-                    // Utiliser un gestionnaire direct
-                    ptzButton.onclick = function(e) {
-                        e.preventDefault();
-                        console.log("Bouton PTZ cliqué, appel direct à simulerPTZ()");
-                        
-                        // Appeler la fonction de simulation directement dans le scope global
-                        if (typeof window.simulerPTZ === 'function') {
-                            window.simulerPTZ();
-                        } else {
-                            console.error("Fonction simulerPTZ non disponible");
-                            alert("Erreur: La fonction de simulation n'est pas disponible. Rafraîchissez la page et réessayez.");
-                        }
-                        return false;
-                    };
-                    console.log("Gestionnaire attaché au bouton PTZ");
-                }
+            console.log("Initialisation directe du simulateur PTZ");
+            
+            // Attacher le gestionnaire d'événements au bouton
+            const ptzButton = document.getElementById('calculate-ptz-button');
+            if (ptzButton) {
+                ptzButton.onclick = function(e) {
+                    e.preventDefault();
+                    console.log("Bouton PTZ cliqué");
+                    
+                    // Appel direct de la fonction simulerPTZ
+                    simulerPTZ();
+                    
+                    return false;
+                };
+                console.log("Gestionnaire attaché au bouton PTZ avec succès");
             }
             
-            // Attacher le gestionnaire avec un délai pour s'assurer que le script est bien chargé
-            setTimeout(attachPTZButtonHandler, 500);
+            // S'assurer que l'initialisation est appelée quand le script est chargé
+            if (typeof window.initPTZSimulator === 'function') {
+                window.initPTZSimulator();
+                console.log("Simulateur PTZ initialisé");
+            }
             
-            // Attacher aussi lors du clic sur l'onglet PTZ pour s'assurer que ça fonctionne
+            // Attacher le gestionnaire aussi lors du changement d'onglet
             const ptzTab = document.querySelector('.simulation-tab[data-target="ptz-simulator"]');
             if (ptzTab) {
                 ptzTab.addEventListener('click', function() {
                     console.log("Onglet PTZ cliqué");
-                    setTimeout(attachPTZButtonHandler, 300);
                     
-                    // S'assurer que l'initialisation est appelée
-                    setTimeout(function() {
-                        if (typeof window.initPTZSimulator === 'function') {
-                            window.initPTZSimulator();
-                            console.log("Simulateur PTZ initialisé depuis onglet");
-                        }
-                    }, 300);
+                    // Rafraîchir le simulateur
+                    if (typeof window.initPTZSimulator === 'function') {
+                        window.initPTZSimulator();
+                        console.log("Simulateur PTZ rafraîchi");
+                    }
+                    
+                    // Réattacher le gestionnaire au bouton
+                    const ptzButton = document.getElementById('calculate-ptz-button');
+                    if (ptzButton) {
+                        ptzButton.onclick = function(e) {
+                            e.preventDefault();
+                            console.log("Bouton PTZ cliqué depuis l'onglet");
+                            simulerPTZ();
+                            return false;
+                        };
+                    }
                 });
             }
         });
