@@ -653,7 +653,7 @@ function updateSuggestionsList(results, suggestionsList, ptzCityInput, ptzZoneSe
     }
 }
 
-// Fonction corrigée pour sélectionner une ville et mettre à jour la zone géographique
+// Fonction pour sélectionner une ville et mettre à jour la zone géographique
 function selectCity(result, ptzCityInput, ptzZoneSelect) {
     if (!ptzCityInput) return;
     
@@ -677,26 +677,14 @@ function selectCity(result, ptzCityInput, ptzZoneSelect) {
         // AJOUT: Log pour débogage
         console.log("Mise à jour de la zone à:", zoneValue);
         
-        // Recherche plus robuste de l'option correspondante
-        let found = false;
+        // Mise à jour du select de zone
         for (let i = 0; i < ptzZoneSelect.options.length; i++) {
             const option = ptzZoneSelect.options[i];
-            if (option.value === zoneValue || 
-                option.textContent.includes(zoneValue) ||
-                option.value.includes(zoneValue)) {
+            if (option.value === zoneValue) {
                 ptzZoneSelect.selectedIndex = i;
-                ptzZoneSelect.value = option.value; // Forcer l'attribution explicite
-                // Déclencher les événements nécessaires pour s'assurer que le changement est pris en compte
-                ptzZoneSelect.dispatchEvent(new Event('change', { bubbles: true }));
-                console.log("Zone mise à jour avec succès sur l'option:", option.textContent);
-                found = true;
+                ptzZoneSelect.dispatchEvent(new Event('change')); // Déclencher l'événement change
                 break;
             }
-        }
-        
-        if (!found) {
-            console.warn("Zone non trouvée dans les options disponibles:", zoneValue);
-            console.log("Options disponibles:", Array.from(ptzZoneSelect.options).map(o => o.value));
         }
     }
     
@@ -1156,18 +1144,15 @@ window.setTimeout(function() {
     }
 }, 600);
 
-// IMPORTANT: Exposer explicitement ces fonctions au scope global
-window.simulerPTZ = simulerPTZ;
+// Ajouter un bouton d'urgence accessible directement depuis la console
+window.simulatePTZ = simulerPTZ;
 window.initPTZSimulator = initPTZSimulator;
 window.searchCity = searchCity;
 window.PTZSimulator = PTZSimulator;
-window.updatePTZResults = updatePTZResults;
-window.generatePTZComparisonTable = generatePTZComparisonTable;
-window.setupPtzSimulationButton = setupPtzSimulationButton;
 
-console.log("Fonction d'urgence window.simulerPTZ disponible");
+console.log("Fonction d'urgence window.simulatePTZ disponible");
 
-// Rendre disponible globalement (assuré explicitement)
+// Rendre disponible globalement si en mode non-module
 if (typeof window !== 'undefined') {
     window.PTZSimulator = PTZSimulator;
     window.initPTZSimulator = initPTZSimulator;
@@ -1175,12 +1160,5 @@ if (typeof window !== 'undefined') {
     window.simulerPTZ = simulerPTZ;
 }
 
-// Exposer les fonctions pour l'utilisation en module si nécessaire
-// Mais cette partie est maintenant optionnelle car nous avons exposé explicitement au scope global
-try {
-    if (typeof module !== 'undefined' && module.exports) {
-        module.exports = { PTZSimulator, initPTZSimulator, searchCity, simulerPTZ };
-    }
-} catch (e) {
-    console.log("Mode module non disponible, utilisation du mode global uniquement");
-}
+// Exporter les fonctions nécessaires pour l'utilisation en mode module
+export { PTZSimulator, initPTZSimulator, searchCity, simulerPTZ };
