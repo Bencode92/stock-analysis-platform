@@ -1,6 +1,6 @@
 // Fichier JS pour simulateur de PTZ
 
-console.log("PTZ Simulator version 1.8 chargé ! - " + new Date().toISOString());
+console.log("PTZ Simulator version 1.9 chargé ! - " + new Date().toISOString());
 
 class PTZSimulator {
     constructor({
@@ -935,57 +935,20 @@ function setupPtzSimulationButton() {
     if (ptzButton) {
         console.log("Bouton PTZ trouvé, application de correctifs...");
         
-        // Créer un nouveau bouton pour éviter les problèmes de gestionnaires multiples
-        const newButton = ptzButton.cloneNode(true);
-        if (ptzButton.parentNode) {
-            ptzButton.parentNode.replaceChild(newButton, ptzButton);
-        }
-        
-        // Utiliser un gestionnaire d'événements direct
-        newButton.onclick = function(event) {
+        // CORRECTION: Utiliser un gestionnaire direct sans cloner le bouton
+        ptzButton.onclick = function(event) {
             event.preventDefault();
             console.log("Clic sur bouton PTZ avec le gestionnaire corrigé");
-            
-            // Mettre en évidence le projet de type social si sélectionné
-            const projectTypeSelect = document.getElementById('ptz-project-type');
-            if (projectTypeSelect && projectTypeSelect.value === 'social') {
-                console.log("Simulation pour un logement social (HLM)");
-                // On pourrait ajouter une animation ou un effet visuel ici
-            }
-            
             simulerPTZ();
             return false;
         };
         
-        // Ajouter une classe pour styles personnalisés
-        newButton.classList.add('ptz-simulator-button');
-        if (!newButton.id) newButton.id = 'calculate-ptz-button';
+        // CORRECTION: Forcer l'ID
+        if (!ptzButton.id) ptzButton.id = 'calculate-ptz-button';
         
         console.log("Correctif du bouton PTZ appliqué avec succès");
     } else {
-        console.error("Bouton PTZ non trouvé, création d'un bouton de secours");
-        
-        // Chercher le conteneur PTZ pour ajouter un bouton de secours
-        const ptzContent = document.getElementById('ptz-simulator');
-        if (ptzContent) {
-            const formSection = ptzContent.querySelector('.bg-blue-900.bg-opacity-20.p-6.rounded-lg');
-            if (formSection) {
-                // Créer un bouton de secours et l'ajouter
-                const rescueButton = document.createElement('button');
-                rescueButton.id = 'rescue-ptz-button';
-                rescueButton.className = 'loan-action-button w-full mt-6';
-                rescueButton.innerHTML = '<i class="fas fa-play-circle mr-2"></i> Simuler le PTZ (bouton de secours)';
-                rescueButton.onclick = function(event) {
-                    event.preventDefault();
-                    console.log("Clic sur bouton de secours PTZ");
-                    simulerPTZ();
-                    return false;
-                };
-                
-                formSection.appendChild(rescueButton);
-                console.log("Bouton de secours PTZ ajouté");
-            }
-        }
+        console.error("Bouton PTZ non trouvé");
     }
     
     // Adapter l'interface en fonction du type de projet sélectionné actuellement
@@ -1093,8 +1056,16 @@ function initPTZSimulator() {
     // Générer le tableau comparatif
     generatePTZComparisonTable();
     
-    // Configurer le bouton de simulation et l'interface selon le type de projet
-    setupPtzSimulationButton();
+    // CORRECTION: Configurer le bouton de simulation directement ici
+    const ptzButton = document.getElementById('calculate-ptz-button');
+    if (ptzButton) {
+        console.log("Attachement direct de la fonction simulerPTZ au bouton");
+        ptzButton.onclick = function(e) {
+            e.preventDefault();
+            simulerPTZ();
+            return false;
+        };
+    }
     
     // S'assurer que le tableau de comparaison est à jour avec les données actuelles
     setTimeout(generatePTZComparisonTable, 500);
@@ -1102,55 +1073,30 @@ function initPTZSimulator() {
     console.log("Initialisation du simulateur PTZ terminée avec succès");
 }
 
-// Méthode directe pour forcer la simulation en cas de besoin
-window.forceSimulatePTZ = simulerPTZ;
+// Exposer la fonction simulerPTZ à la portée globale
+window.simulerPTZ = simulerPTZ;
+window.initPTZSimulator = initPTZSimulator;
 
-// Initialiser quand la page est chargée
+// Initialiser quand la page est chargée - CORRECTION: code simplifié
 document.addEventListener('DOMContentLoaded', function() {
     console.log("DOM chargé, initialisation du simulateur PTZ...");
     
-    // Utiliser un délai court pour s'assurer que tous les éléments sont chargés
-    setTimeout(function() {
-        initPTZSimulator();
-    }, 300);
-});
-
-// S'assurer que le simulateur est initialisé après le chargement complet
-window.addEventListener('load', function() {
-    console.log("Fenêtre chargée, vérification du simulateur PTZ...");
+    // Initialiser immédiatement
+    initPTZSimulator();
     
-    // Réinitialiser pour être sûr
-    setTimeout(function() {
-        setupPtzSimulationButton();
-    }, 500);
+    // CORRECTION: Attacher directement la fonction au bouton
+    const ptzButton = document.getElementById('calculate-ptz-button');
+    if (ptzButton) {
+        ptzButton.onclick = function(e) {
+            e.preventDefault();
+            simulerPTZ();
+            return false;
+        };
+    }
 });
 
-// Attacher la fonction de correction au clic de l'onglet PTZ
-window.setTimeout(function() {
-    const ptzTab = document.querySelector('.simulation-tab[data-target="ptz-simulator"]');
-    if (ptzTab) {
-        console.log("Onglet PTZ trouvé, ajout d'un gestionnaire pour réinitialisation");
-        
-        // Créer une nouvelle copie pour éviter les gestionnaires multiples
-        const newPtzTab = ptzTab.cloneNode(true);
-        ptzTab.parentNode.replaceChild(newPtzTab, ptzTab);
-        
-        newPtzTab.addEventListener('click', function() {
-            console.log("Onglet PTZ cliqué, réinitialisation du simulateur");
-            setTimeout(function() {
-                initPTZSimulator();
-            }, 200);
-        });
-    }
-}, 600);
-
-// Ajouter un bouton d'urgence accessible directement depuis la console
-window.simulatePTZ = simulerPTZ;
-window.initPTZSimulator = initPTZSimulator;
-window.searchCity = searchCity;
-window.PTZSimulator = PTZSimulator;
-
-console.log("Fonction d'urgence window.simulatePTZ disponible");
+// CORRECTION: Exposer explicitement la fonction dans la portée globale
+window.simulerPTZ = simulerPTZ;
 
 // Rendre disponible globalement si en mode non-module
 if (typeof window !== 'undefined') {
