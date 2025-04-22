@@ -1,5 +1,7 @@
+
 <!DOCTYPE html>
 <html lang="fr" class="dark">
+<!-- Head content remains the same -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1421,45 +1423,91 @@
     
     <!-- Script d'initialisation du simulateur PTZ -->
     <script>
-        // Forcer l'initialisation du simulateur PTZ après le chargement complet
+        // Fonction pour vérifier que le simulateur PTZ est correctement chargé
+        function ensurePTZSimulatorLoaded() {
+            if (typeof window.simulerPTZ !== 'function') {
+                console.log("La fonction simulerPTZ n'est pas disponible, attente...");
+                // Attendre que la fonction soit disponible (max 5 secondes)
+                setTimeout(function() {
+                    if (typeof window.simulerPTZ === 'function') {
+                        console.log("La fonction simulerPTZ est maintenant disponible!");
+                        attachPTZHandlers();
+                    } else {
+                        console.error("La fonction simulerPTZ n'est toujours pas disponible après délai!");
+                    }
+                }, 1000);
+            } else {
+                console.log("La fonction simulerPTZ est déjà disponible");
+                attachPTZHandlers();
+            }
+        }
+
+        // Fonction pour attacher les gestionnaires d'événements
+        function attachPTZHandlers() {
+            const ptzButton = document.getElementById('calculate-ptz-button');
+            if (ptzButton) {
+                ptzButton.onclick = function(e) {
+                    e.preventDefault();
+                    console.log("Clic sur bouton PTZ détecté");
+                    
+                    if (typeof window.simulerPTZ === 'function') {
+                        window.simulerPTZ();
+                        console.log("Fonction simulerPTZ exécutée avec succès");
+                    } else {
+                        console.error("La fonction simulerPTZ n'est toujours pas disponible!");
+                        alert("Erreur: La fonction de simulation n'est pas disponible. Rafraîchissez la page et réessayez.");
+                    }
+                    return false;
+                };
+                console.log("Gestionnaire de clic ajouté au bouton PTZ");
+            } else {
+                console.error("Bouton PTZ non trouvé!");
+            }
+        }
+
+        // Initialiser le simulateur PTZ dès que la page est chargée
         document.addEventListener('DOMContentLoaded', function() {
-            // Initialiser le simulateur PTZ avec un délai pour s'assurer que le DOM est prêt
+            // Attendre un peu pour s'assurer que tous les scripts sont chargés
             setTimeout(function() {
-                // Initialisation simple
+                console.log("Initialisation du simulateur PTZ...");
+                
+                // S'assurer que la fonction d'initialisation existe
                 if (typeof window.initPTZSimulator === 'function') {
                     window.initPTZSimulator();
-                    console.log("Simulateur PTZ initialisé via script inline");
-                }
-                
-                // Attacher directement un gestionnaire de clic au bouton Simuler PTZ
-                const ptzButton = document.getElementById('calculate-ptz-button');
-                if (ptzButton) {
-                    ptzButton.onclick = function(e) {
-                        e.preventDefault();
-                        console.log("Clic sur bouton PTZ détecté");
-                        
-                        if (typeof window.simulerPTZ === 'function') {
-                            window.simulerPTZ();
-                            console.log("Fonction simulerPTZ exécutée");
-                        } else {
-                            console.error("La fonction simulerPTZ n'est pas disponible!");
-                            alert("Erreur: La fonction de simulation n'est pas disponible. Rafraîchissez la page et réessayez.");
+                    console.log("Simulateur PTZ initialisé avec succès");
+                    
+                    // Vérifier que la fonction de simulation est disponible
+                    ensurePTZSimulatorLoaded();
+                } else {
+                    console.error("La fonction initPTZSimulator n'est pas disponible!");
+                    
+                    // Essayer à nouveau après un court délai
+                    setTimeout(function() {
+                        if (typeof window.initPTZSimulator === 'function') {
+                            window.initPTZSimulator();
+                            console.log("Simulateur PTZ initialisé après délai");
+                            ensurePTZSimulatorLoaded();
                         }
-                        return false;
-                    };
-                    console.log("Gestionnaire de clic ajouté au bouton PTZ");
+                    }, 1000);
                 }
             }, 500);
         });
 
         // S'assurer que le simulateur s'initialise aussi lors du clic sur son onglet
-        document.querySelector('.simulation-tab[data-target="ptz-simulator"]')?.addEventListener('click', function() {
-            setTimeout(function() {
-                if (typeof window.initPTZSimulator === 'function') {
-                    window.initPTZSimulator();
-                    console.log("Simulateur PTZ réinitialisé suite au clic sur l'onglet");
-                }
-            }, 300);
+        document.addEventListener('DOMContentLoaded', function() {
+            const ptzTab = document.querySelector('.simulation-tab[data-target="ptz-simulator"]');
+            if (ptzTab) {
+                ptzTab.addEventListener('click', function() {
+                    console.log("Clic sur onglet PTZ détecté");
+                    setTimeout(function() {
+                        if (typeof window.initPTZSimulator === 'function') {
+                            window.initPTZSimulator();
+                            console.log("Simulateur PTZ réinitialisé suite au clic sur l'onglet");
+                            ensurePTZSimulatorLoaded();
+                        }
+                    }, 300);
+                });
+            }
         });
     </script>
 </body>
