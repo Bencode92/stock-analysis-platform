@@ -653,7 +653,7 @@ function updateSuggestionsList(results, suggestionsList, ptzCityInput, ptzZoneSe
     }
 }
 
-// Fonction pour sélectionner une ville et mettre à jour la zone géographique
+// Fonction corrigée pour sélectionner une ville et mettre à jour la zone géographique
 function selectCity(result, ptzCityInput, ptzZoneSelect) {
     if (!ptzCityInput) return;
     
@@ -677,14 +677,26 @@ function selectCity(result, ptzCityInput, ptzZoneSelect) {
         // AJOUT: Log pour débogage
         console.log("Mise à jour de la zone à:", zoneValue);
         
-        // Mise à jour du select de zone
+        // Recherche plus robuste de l'option correspondante
+        let found = false;
         for (let i = 0; i < ptzZoneSelect.options.length; i++) {
             const option = ptzZoneSelect.options[i];
-            if (option.value === zoneValue) {
+            if (option.value === zoneValue || 
+                option.textContent.includes(zoneValue) ||
+                option.value.includes(zoneValue)) {
                 ptzZoneSelect.selectedIndex = i;
-                ptzZoneSelect.dispatchEvent(new Event('change')); // Déclencher l'événement change
+                ptzZoneSelect.value = option.value; // Forcer l'attribution explicite
+                // Déclencher les événements nécessaires pour s'assurer que le changement est pris en compte
+                ptzZoneSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                console.log("Zone mise à jour avec succès sur l'option:", option.textContent);
+                found = true;
                 break;
             }
+        }
+        
+        if (!found) {
+            console.warn("Zone non trouvée dans les options disponibles:", zoneValue);
+            console.log("Options disponibles:", Array.from(ptzZoneSelect.options).map(o => o.value));
         }
     }
     
