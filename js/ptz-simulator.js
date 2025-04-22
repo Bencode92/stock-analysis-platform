@@ -1,6 +1,6 @@
 // Fichier JS pour simulateur de PTZ
 
-console.log("PTZ Simulator version 1.9 chargé ! - " + new Date().toISOString());
+console.log("PTZ Simulator version 1.8 chargé ! - " + new Date().toISOString());
 
 class PTZSimulator {
     constructor({
@@ -773,9 +773,9 @@ function setupKeyboardNavigation(ptzCityInput, suggestionsList) {
     });
 }
 
-// Fonction améliorée pour simuler un PTZ - Version optimisée et corrigée
+// Fonction améliorée pour simuler un PTZ - Version optimisée pour HLM
 function simulerPTZ() {
-    console.log("Simulation PTZ en cours - Version avec validation améliorée");
+    console.log("Simulation PTZ en cours - Version avec support HLM amélioré");
     
     try {
         // Récupérer les valeurs du formulaire avec vérification de présence d'élément
@@ -795,25 +795,6 @@ function simulerPTZ() {
         const cityName = citySearchElem ? citySearchElem.value : null;
         
         console.log("Valeurs récupérées:", {projectType, zone, income, householdSize, totalCost, cityName});
-        
-        // MODIFICATION: Ajout d'une vérification stricte des contraintes d'éligibilité avant simulation
-        if (projectType === 'ancien' && (zone === 'A' || zone === 'B1')) {
-            alert('Combinaison non éligible : Pour un logement ancien avec travaux, seules les zones B2 et C sont éligibles.');
-            
-            // Proposer de corriger automatiquement la zone
-            if (confirm('Voulez-vous passer automatiquement en zone B2 pour continuer la simulation?')) {
-                if (zoneElem) {
-                    zoneElem.value = 'B2';
-                    // Déclencher l'événement change pour mettre à jour l'interface
-                    zoneElem.dispatchEvent(new Event('change'));
-                    // Exécuter à nouveau la simulation avec les valeurs corrigées
-                    setTimeout(simulerPTZ, 100);
-                }
-                return false; // Empêcher de continuer avec des paramètres invalides
-            } else {
-                return false; // Empêcher de continuer avec des paramètres invalides
-            }
-        }
         
         // Valider les entrées avec des messages spécifiques
         if (isNaN(income)) {
@@ -1016,9 +997,11 @@ function updateUIForProjectType() {
     const projectTypeSelect = document.getElementById('ptz-project-type');
     const zoneSelect = document.getElementById('ptz-zone');
     
-    if (!projectTypeSelect || !zoneSelect) return;
+    if (!projectTypeSelect) return;
     
-    // Gestionnaire d'événements pour le changement de type de projet
+    const projectType = projectTypeSelect.value;
+    
+    // Écouter les changements du type de projet
     projectTypeSelect.addEventListener('change', function() {
         const newProjectType = this.value;
         console.log("Type de projet changé:", newProjectType);
@@ -1036,57 +1019,26 @@ function updateUIForProjectType() {
                 zoneInfoElement.classList.remove('hidden');
                 zoneInfoElement.style.animation = 'pulse 0.5s';
             }
-            
-            // Réinitialiser les styles pour toutes les zones
-            for (let i = 0; i < zoneSelect.options.length; i++) {
-                zoneSelect.options[i].style.color = '';
-                zoneSelect.options[i].disabled = false;
-            }
         } else if (newProjectType === 'ancien') {
-            // MODIFICATION: Forcer la zone compatible pour les logements anciens
+            // Pour les logements anciens, vérifier la zone
             if (zoneSelect && (zoneSelect.value === 'A' || zoneSelect.value === 'B1')) {
-                alert("Pour un logement ancien avec travaux, seules les zones B2 et C sont éligibles. La zone sera modifiée automatiquement.");
-                zoneSelect.value = 'B2'; // Définir automatiquement une zone compatible
-                zoneSelect.dispatchEvent(new Event('change')); // Déclencher l'événement change
-            }
-            
-            // Mettre en évidence les options de zone valides
-            for (let i = 0; i < zoneSelect.options.length; i++) {
-                if (zoneSelect.options[i].value === 'B2' || zoneSelect.options[i].value === 'C') {
-                    zoneSelect.options[i].style.color = 'green';
-                } else {
-                    zoneSelect.options[i].style.color = 'red';
-                    zoneSelect.options[i].disabled = true; // NOUVEAU: Désactiver les options incompatibles
+                alert("Pour un logement ancien avec travaux, seules les zones B2 et C sont éligibles.");
+                // Mettre en évidence les options de zone valides
+                for (let i = 0; i < zoneSelect.options.length; i++) {
+                    if (zoneSelect.options[i].value === 'B2' || zoneSelect.options[i].value === 'C') {
+                        zoneSelect.options[i].style.color = 'green';
+                    } else {
+                        zoneSelect.options[i].style.color = '';
+                    }
                 }
-            }
-            
-            // Afficher un message d'information
-            const zoneInfoElement = document.getElementById('ptz-zone-info');
-            if (zoneInfoElement) {
-                zoneInfoElement.innerHTML = `<strong>Information:</strong> Pour un logement ancien avec travaux, seules les zones B2 et C sont éligibles.`;
-                zoneInfoElement.classList.remove('hidden');
-                zoneInfoElement.style.animation = 'pulse 0.5s';
             }
         } else {
             // Réinitialiser les styles pour les autres types
             if (zoneSelect) {
                 for (let i = 0; i < zoneSelect.options.length; i++) {
                     zoneSelect.options[i].style.color = '';
-                    zoneSelect.options[i].disabled = false; // Réactiver toutes les options
                 }
             }
-        }
-    });
-    
-    // NOUVEAU: Ajouter un gestionnaire pour les changements de zone
-    zoneSelect.addEventListener('change', function() {
-        const currentZone = this.value;
-        const currentProjectType = projectTypeSelect.value;
-        
-        // Vérifier si la combinaison est valide
-        if (currentProjectType === 'ancien' && (currentZone === 'A' || currentZone === 'B1')) {
-            alert("Combinaison invalide: pour un logement ancien avec travaux, seules les zones B2 et C sont éligibles.");
-            this.value = 'B2'; // Forcer une valeur valide
         }
     });
     
@@ -1097,7 +1049,7 @@ function updateUIForProjectType() {
 
 // Fonction principale pour initialiser le simulateur PTZ
 function initPTZSimulator() {
-    console.log("Initialisation du simulateur PTZ avec validation améliorée");
+    console.log("Initialisation du simulateur PTZ avec support HLM amélioré");
     
     // Initialiser l'index de villes
     initializeCityIndex();
