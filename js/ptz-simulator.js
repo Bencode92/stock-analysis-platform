@@ -303,7 +303,7 @@ function initializeCityIndex() {
     console.log("Index de villes initialisé avec", Object.keys(cityIndex).length, "villes");
 }
 
-// Fonction de recherche de ville optimisée
+// Fonction de recherche de ville optimisée - commence dès la première lettre
 function searchCity(query) {
     // S'assurer que l'index est initialisé
     if (!hasInitializedCityIndex) {
@@ -317,47 +317,48 @@ function searchCity(query) {
         .toLowerCase()
         .trim();
     
-    // Permettre la recherche dès le premier caractère
+    // Recherche active dès la première lettre
     if (normalizedQuery.length < 1) return [];
     
-    console.log(`Recherche de ville: "${normalizedQuery}"`);
     const results = [];
     
     // Recherche avec l'index
     Object.entries(cityIndex).forEach(([key, data]) => {
-        // Critères de correspondance
-        const exactMatch = key === normalizedQuery;
-        const startsWithMatch = key.startsWith(normalizedQuery);
-        const includesMatch = !startsWithMatch && key.includes(normalizedQuery);
-        
-        // Ajouter uniquement si un des critères est satisfait
-        if (exactMatch || startsWithMatch || includesMatch) {
+        // Critères de correspondance - priorité aux débuts de mots
+        if (key.startsWith(normalizedQuery)) {
             results.push({
                 city: data.city,
                 zone: data.zone,
-                exactMatch: exactMatch,
-                startsWithMatch: startsWithMatch,
-                includesMatch: includesMatch
+                exactMatch: key === normalizedQuery,
+                startsWithMatch: true,
+                includesMatch: false
+            });
+        } else if (key.includes(normalizedQuery)) {
+            results.push({
+                city: data.city,
+                zone: data.zone,
+                exactMatch: false,
+                startsWithMatch: false,
+                includesMatch: true
             });
         }
     });
     
     // Trier les résultats par pertinence
     results.sort((a, b) => {
-        // Priorité 1: Correspondance exacte
-        if (a.exactMatch && !b.exactMatch) return -1;
-        if (!a.exactMatch && b.exactMatch) return 1;
-        
-        // Priorité 2: Commence par la requête
+        // Priorité 1: Commence par la requête
         if (a.startsWithMatch && !b.startsWithMatch) return -1;
         if (!a.startsWithMatch && b.startsWithMatch) return 1;
         
+        // Priorité 2: Correspondance exacte
+        if (a.exactMatch && !b.exactMatch) return -1;
+        if (!a.exactMatch && b.exactMatch) return 1;
+        
         // Priorité 3: Ordre alphabétique
-        return a.city.localeCompare(b.city);
+        return a.city.localeString ? a.city.localeCompare(b.city) : 0;
     });
     
-    console.log(`${results.length} résultats trouvés pour "${query}"`);
-    return results.slice(0, 20); // Limiter à 20 résultats
+    return results.slice(0, 10); // Limiter à 10 résultats pour plus de clarté
 }
 
 // Fonction pour mettre à jour l'interface utilisateur avec les résultats
@@ -482,40 +483,62 @@ function generatePTZComparisonTable() {
 function updateSuggestionsList(results, suggestionsList, ptzCityInput, ptzZoneSelect) {
     if (!suggestionsList) return;
     
+    // Vider la liste existante
+    suggestionsList.innerHTML = '';
+    
     if (results.length > 0) {
-        // Vider la liste existante
-        suggestionsList.innerHTML = '';
+        // Afficher les suggestions avec une animation d'apparition
+        suggestionsList.classList.remove('hidden');
+        suggestionsList.style.animation = 'fadeIn 0.2s ease-in-out';
         
-        // Ajouter chaque résultat à la liste
+        // Récupérer la requête pour la mise en surbrillance
+        const query = ptzCityInput.value.toLowerCase();
+        
+        // Ajouter chaque résultat à la liste avec une apparence améliorée
         results.forEach(result => {
             const item = document.createElement('div');
-            item.className = 'city-suggestion p-3 hover:bg-blue-700 cursor-pointer text-white transition-colors duration-150 border-b border-blue-700 border-opacity-30 flex justify-between items-center';
+            item.className = 'city-suggestion';
             item.tabIndex = 0; // Pour permettre le focus via clavier
             
-            // Mettre en évidence les correspondances exactes ou commençant par la requête
-            if (result.exactMatch) {
-                item.classList.add('bg-blue-700', 'bg-opacity-50', 'font-medium');
-            } else if (result.startsWithMatch) {
-                item.classList.add('bg-blue-800', 'bg-opacity-40');
+            // Mise en évidence des correspondances
+            if (result.startsWithMatch) {
+                item.classList.add('highlighted');
             }
             
-            // Contenu de l'élément
-            const cityText = document.createElement('span');
-            cityText.textContent = result.city;
+            // Contenu de l'élément avec mise en surbrillance de la partie recherchée
+            const cityName = result.city;
+            let cityNameWithHighlight = cityName;
             
-            const zoneTag = document.createElement('span');
-            zoneTag.className = 'text-green-400 text-sm px-2 py-1 rounded bg-green-900 bg-opacity-20 ml-2';
-            zoneTag.textContent = `Zone ${result.zone}`;
+            if (query.length > 0) {
+                const index = cityName.toLowerCase().indexOf(query.toLowerCase());
+                if (index >= 0) {
+                    const before = cityName.substring(0, index);
+                    const match = cityName.substring(index, index + query.length);
+                    const after = cityName.substring(index + query.length);
+                    cityNameWithHighlight = `${before}<span class="city-suggestion-highlight">${match}</span>${after}`;
+                }
+            }
             
-            item.appendChild(cityText);
-            item.appendChild(zoneTag);
+            // Créer la partie gauche avec le nom de la ville
+            const leftPart = document.createElement('div');
+            leftPart.className = 'city-suggestion-name';
+            leftPart.innerHTML = cityNameWithHighlight;
+            
+            // Créer la partie droite avec la zone
+            const rightPart = document.createElement('div');
+            rightPart.className = 'city-zone-tag';
+            rightPart.innerHTML = `Zone ${result.zone}`;
+            
+            // Assembler l'élément
+            item.appendChild(leftPart);
+            item.appendChild(rightPart);
             
             // Gestionnaire de clic pour sélectionner la ville
             item.addEventListener('click', function() {
                 selectCity(result, ptzCityInput, ptzZoneSelect);
             });
             
-            // Gestionnaire de touche Enter pour sélectionner la ville via clavier
+            // Gestionnaire de touche pour la navigation au clavier
             item.addEventListener('keydown', function(e) {
                 if (e.key === 'Enter') {
                     e.preventDefault();
@@ -525,22 +548,20 @@ function updateSuggestionsList(results, suggestionsList, ptzCityInput, ptzZoneSe
             
             suggestionsList.appendChild(item);
         });
-        
-        // Afficher la liste avec une animation
-        suggestionsList.style.display = 'block';
-        suggestionsList.style.animation = 'fadeIn 0.2s ease-in-out';
     } else {
-        // Message "Aucun résultat"
-        suggestionsList.innerHTML = '<div class="no-results p-3 text-gray-400 text-center italic">Aucun résultat trouvé</div>';
-        suggestionsList.style.display = 'block';
+        // Afficher un message "Aucun résultat" si la recherche ne donne rien
+        if (ptzCityInput.value.trim().length > 0) {
+            suggestionsList.classList.remove('hidden');
+            suggestionsList.innerHTML = '<div class="no-results p-3 text-gray-400 text-center italic">Aucun résultat trouvé</div>';
+        } else {
+            suggestionsList.classList.add('hidden');
+        }
     }
 }
 
 // Fonction pour sélectionner une ville et mettre à jour la zone géographique
 function selectCity(result, ptzCityInput, ptzZoneSelect) {
     if (!ptzCityInput) return;
-    
-    console.log(`Sélection de la ville: ${result.city} - Zone: ${result.zone}`);
     
     // Mettre à jour la valeur de l'input
     ptzCityInput.value = result.city;
@@ -559,29 +580,15 @@ function selectCity(result, ptzCityInput, ptzZoneSelect) {
             zoneValue = "A"; // Car dans le select nous avons "Zone A ou A bis"
         }
         
-        console.log(`Mise à jour du select de zone avec la valeur: ${zoneValue}`);
-        
-        // Trouver l'index de l'option correspondante
-        let selectedIndex = -1;
+        // Mise à jour du select de zone
         for (let i = 0; i < ptzZoneSelect.options.length; i++) {
             const option = ptzZoneSelect.options[i];
             if (option.value === zoneValue) {
-                selectedIndex = i;
-                console.log(`Option correspondante trouvée à l'index ${i}: ${option.textContent}`);
+                ptzZoneSelect.selectedIndex = i;
+                ptzZoneSelect.dispatchEvent(new Event('change')); // Déclencher l'événement change
                 break;
             }
         }
-        
-        // Si on a trouvé l'option correspondante, la sélectionner
-        if (selectedIndex >= 0) {
-            ptzZoneSelect.selectedIndex = selectedIndex;
-            ptzZoneSelect.dispatchEvent(new Event('change')); // Déclencher l'événement change
-            console.log(`Zone mise à jour avec succès à ${zoneValue}`);
-        } else {
-            console.warn(`Aucune option correspondant à la zone ${zoneValue} n'a été trouvée`);
-        }
-    } else {
-        console.warn("Le select de zone n'est pas disponible");
     }
     
     // Afficher un message de confirmation
@@ -590,20 +597,18 @@ function selectCity(result, ptzCityInput, ptzZoneSelect) {
         zoneInfoElement.textContent = `Ville trouvée: ${result.city} (Zone ${result.zone})`;
         zoneInfoElement.classList.remove('hidden');
         
-        // Ajouter une animation pour attirer l'attention
-        zoneInfoElement.style.animation = 'fadeIn 0.3s ease-out';
-        zoneInfoElement.style.color = '#4ade80'; // Vert clair pour indiquer le succès
-        
-        // Revenir à la couleur normale après 2 secondes
+        // Animation pour retour visuel
+        zoneInfoElement.style.animation = 'pulse 0.5s';
+        zoneInfoElement.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
         setTimeout(() => {
-            zoneInfoElement.style.color = '';
-        }, 2000);
+            zoneInfoElement.style.backgroundColor = '';
+        }, 1000);
     }
     
     // Masquer la liste des suggestions
-    const suggestionsList = document.querySelector('.city-suggestions');
+    const suggestionsList = document.querySelector('#city-suggestions-container');
     if (suggestionsList) {
-        suggestionsList.style.display = 'none';
+        suggestionsList.classList.add('hidden');
     }
 }
 
@@ -612,7 +617,7 @@ function setupKeyboardNavigation(ptzCityInput, suggestionsList) {
     if (!ptzCityInput || !suggestionsList) return;
     
     ptzCityInput.addEventListener('keydown', function(e) {
-        if (suggestionsList.style.display === 'none') return;
+        if (suggestionsList.classList.contains('hidden')) return;
         
         const suggestions = suggestionsList.querySelectorAll('.city-suggestion');
         if (suggestions.length === 0) return;
@@ -626,11 +631,14 @@ function setupKeyboardNavigation(ptzCityInput, suggestionsList) {
                 if (!isInSuggestionsList) {
                     // Focus sur le premier élément de la liste
                     suggestions[0].focus();
+                    suggestions[0].classList.add('selected');
                 } else {
                     // Focus sur l'élément suivant
                     const currentIndex = Array.from(suggestions).indexOf(currentFocus);
                     if (currentIndex < suggestions.length - 1) {
+                        currentFocus.classList.remove('selected');
                         suggestions[currentIndex + 1].focus();
+                        suggestions[currentIndex + 1].classList.add('selected');
                     }
                 }
                 break;
@@ -639,9 +647,11 @@ function setupKeyboardNavigation(ptzCityInput, suggestionsList) {
                 if (isInSuggestionsList) {
                     e.preventDefault();
                     const currentIndex = Array.from(suggestions).indexOf(currentFocus);
+                    currentFocus.classList.remove('selected');
                     if (currentIndex > 0) {
                         // Focus sur l'élément précédent
                         suggestions[currentIndex - 1].focus();
+                        suggestions[currentIndex - 1].classList.add('selected');
                     } else {
                         // Retour au champ de recherche
                         ptzCityInput.focus();
@@ -655,30 +665,20 @@ function setupKeyboardNavigation(ptzCityInput, suggestionsList) {
                     e.preventDefault();
                     suggestions[0].click();
                 }
-                // Si on est déjà sur un élément, le click est géré par l'event listener de cet élément
                 break;
                 
             case 'Escape':
                 e.preventDefault();
-                suggestionsList.style.display = 'none';
+                suggestionsList.classList.add('hidden');
                 ptzCityInput.focus();
                 break;
-        }
-    });
-    
-    // Propager la navigation au clavier aux éléments de suggestion
-    suggestionsList.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            e.preventDefault();
-            suggestionsList.style.display = 'none';
-            ptzCityInput.focus();
         }
     });
 }
 
 // Fonction pour initialiser le simulateur PTZ
 function initPTZSimulator() {
-    console.log("Initialisation du simulateur PTZ...");
+    console.log("Initialisation du simulateur PTZ avec la nouvelle version...");
     
     // Éléments du formulaire
     const ptzProjectTypeSelect = document.getElementById('ptz-project-type');
@@ -693,34 +693,18 @@ function initPTZSimulator() {
     // Initialiser l'index de villes
     initializeCityIndex();
     
-    // Afficher les IDs des éléments pour le débogage
-    console.log("Éléments trouvés:", {
-        "ptzProjectTypeSelect": ptzProjectTypeSelect ? ptzProjectTypeSelect.id : "non trouvé",
-        "ptzZoneSelect": ptzZoneSelect ? ptzZoneSelect.id : "non trouvé",
-        "ptzCityInput": ptzCityInput ? ptzCityInput.id : "non trouvé",
-        "ptzIncomeInput": ptzIncomeInput ? ptzIncomeInput.id : "non trouvé",
-        "ptzHouseholdSizeInput": ptzHouseholdSizeInput ? ptzHouseholdSizeInput.id : "non trouvé",
-        "ptzTotalCostInput": ptzTotalCostInput ? ptzTotalCostInput.id : "non trouvé",
-        "calculatePTZButton": calculatePTZButton ? calculatePTZButton.id : "non trouvé",
-        "zoneInfoElement": zoneInfoElement ? zoneInfoElement.id : "non trouvé"
-    });
-    
     // Configurer l'autocomplétion pour la recherche de villes
     if (ptzCityInput) {
-        // Supprimer l'ancien conteneur de suggestions s'il existe
-        const existingSuggestions = document.querySelector('.city-suggestions');
-        if (existingSuggestions) {
-            existingSuggestions.remove();
+        // Créer et insérer le conteneur de suggestions s'il n'existe pas déjà
+        let suggestionsList = document.getElementById('city-suggestions-container');
+        if (!suggestionsList) {
+            suggestionsList = document.createElement('div');
+            suggestionsList.id = 'city-suggestions-container';
+            suggestionsList.className = 'city-suggestions rounded-lg overflow-hidden shadow-xl mt-1 border border-blue-600 z-30 hidden';
+            
+            // Positionner le conteneur de suggestions
+            ptzCityInput.parentNode.parentNode.appendChild(suggestionsList);
         }
-        
-        // Créer et insérer le conteneur de suggestions
-        const suggestionsList = document.createElement('div');
-        suggestionsList.className = 'city-suggestions bg-blue-800 bg-opacity-30 rounded-lg mt-1 absolute w-full z-10 max-h-60 overflow-y-auto shadow-lg';
-        suggestionsList.style.display = 'none';
-        
-        // Positionner le conteneur de suggestions
-        ptzCityInput.parentNode.style.position = 'relative';
-        ptzCityInput.parentNode.appendChild(suggestionsList);
         
         // Configurer la navigation au clavier
         setupKeyboardNavigation(ptzCityInput, suggestionsList);
@@ -729,55 +713,30 @@ function initPTZSimulator() {
         ptzCityInput.addEventListener('input', function() {
             const query = this.value.trim();
             
-            if (query.length < 1) {
-                suggestionsList.style.display = 'none';
-                return;
-            }
-            
-            // Rechercher les villes correspondantes
+            // Rechercher même avec une seule lettre
             const results = searchCity(query);
-            console.log(`Recherche pour "${query}": ${results.length} résultats trouvés`);
             updateSuggestionsList(results, suggestionsList, ptzCityInput, ptzZoneSelect);
         });
         
-        // Afficher les suggestions au focus
-        ptzCityInput.addEventListener('focus', function() {
+        // Afficher les suggestions au clic dans le champ
+        ptzCityInput.addEventListener('click', function() {
             if (this.value.trim().length > 0) {
                 const results = searchCity(this.value);
                 updateSuggestionsList(results, suggestionsList, ptzCityInput, ptzZoneSelect);
             }
         });
         
-        // Navigation au clavier
-        ptzCityInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                suggestionsList.style.display = 'none';
-            } else if (e.key === 'ArrowDown' && suggestionsList.style.display !== 'none') {
-                e.preventDefault();
-                const firstItem = suggestionsList.querySelector('.city-suggestion');
-                if (firstItem) {
-                    firstItem.focus();
-                }
-            } else if (e.key === 'Enter' && suggestionsList.style.display !== 'none') {
-                e.preventDefault();
-                // Sélectionner automatiquement le premier résultat s'il existe
-                const firstItem = suggestionsList.querySelector('.city-suggestion');
-                if (firstItem) {
-                    firstItem.click();
-                }
-            }
-        });
-        
         // Masquer les suggestions au clic ailleurs
         document.addEventListener('click', function(e) {
             if (e.target !== ptzCityInput && !suggestionsList.contains(e.target)) {
-                suggestionsList.style.display = 'none';
+                suggestionsList.classList.add('hidden');
             }
         });
         
-        console.log("Autocomplétion configurée pour le champ de recherche par ville");
-    } else {
-        console.warn("Champ de recherche par ville non trouvé");
+        // Afficher l'élément d'information sur la zone dès le début
+        if (zoneInfoElement && zoneInfoElement.classList.contains('hidden')) {
+            zoneInfoElement.classList.remove('hidden');
+        }
     }
     
     // Calculer le PTZ au clic sur le bouton
@@ -794,7 +753,6 @@ function initPTZSimulator() {
                 if (zoneValue === "A bis") zoneValue = "A";
                 
                 if (ptzZoneSelect.value !== zoneValue) {
-                    console.log(`Correction de la zone: ${ptzZoneSelect.value} -> ${zoneValue}`);
                     // Trouver l'option correspondante et la sélectionner
                     for (let i = 0; i < ptzZoneSelect.options.length; i++) {
                         if (ptzZoneSelect.options[i].value === zoneValue) {
@@ -813,15 +771,6 @@ function initPTZSimulator() {
             const totalCost = parseFloat(ptzTotalCostInput ? ptzTotalCostInput.value : 0);
             const cityName = ptzCityInput ? ptzCityInput.value : null;
             
-            console.log("Valeurs du formulaire pour le calcul:", {
-                projectType,
-                zone,
-                income,
-                householdSize,
-                totalCost,
-                cityName
-            });
-            
             // Valider les entrées
             if (isNaN(income) || isNaN(householdSize) || isNaN(totalCost) || income <= 0 || totalCost <= 0) {
                 alert('Veuillez remplir correctement tous les champs du formulaire.');
@@ -839,7 +788,6 @@ function initPTZSimulator() {
             });
             
             const result = simulator.calculatePTZAmount();
-            console.log("Résultat du calcul PTZ:", result);
             
             // Afficher les résultats
             updatePTZResults(result);
@@ -931,20 +879,12 @@ function initPTZSimulator() {
     
     // Générer le tableau comparatif
     generatePTZComparisonTable();
-    
-    // Configure le champ zoneInfo pour qu'il soit visible dès le début
-    if (zoneInfoElement && zoneInfoElement.classList.contains('hidden')) {
-        zoneInfoElement.classList.remove('hidden');
-        zoneInfoElement.textContent = "Saisissez une ville pour déterminer automatiquement sa zone";
-    }
 }
 
 // Vérifier si l'onglet est actif et initialiser le simulateur
 function checkAndInitializeSimulator() {
     const ptzSimulator = document.getElementById('ptz-simulator');
     const isVisible = ptzSimulator && window.getComputedStyle(ptzSimulator).display !== 'none';
-    
-    console.log("Vérification de la visibilité du simulateur PTZ:", isVisible);
     
     if (isVisible) {
         initPTZSimulator();
@@ -955,16 +895,12 @@ function checkAndInitializeSimulator() {
 
 // Activer l'onglet PTZ et initialiser le simulateur
 function activatePTZSimulator() {
-    console.log("Activation de l'onglet PTZ");
-    
     // Trouver l'onglet PTZ
     const ptzTab = document.querySelector('.simulation-tab[data-target="ptz-simulator"]');
     if (ptzTab) {
         // Simuler un clic sur l'onglet
         ptzTab.click();
     } else {
-        console.warn("Onglet PTZ non trouvé");
-        
         // Tentative alternative d'initialisation directe
         const ptzSimulator = document.getElementById('ptz-simulator');
         if (ptzSimulator) {
@@ -984,11 +920,8 @@ function activatePTZSimulator() {
 
 // Initialisation au chargement du DOM
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("DOMContentLoaded - Configuration du simulateur PTZ");
-    
     // Vérifier si l'URL contient #ptz-simulator
     if (window.location.hash === '#ptz-simulator') {
-        console.log("URL avec hash #ptz-simulator détectée, activation de l'onglet PTZ");
         setTimeout(activatePTZSimulator, 200);
     } else {
         // Vérifier si l'onglet PTZ est déjà actif et l'initialiser si nécessaire
@@ -1000,7 +933,6 @@ document.addEventListener('DOMContentLoaded', function() {
         tab.addEventListener('click', function() {
             const targetId = this.getAttribute('data-target');
             if (targetId === 'ptz-simulator') {
-                console.log("Onglet PTZ cliqué");
                 setTimeout(initPTZSimulator, 200);
             }
         });
@@ -1010,14 +942,12 @@ document.addEventListener('DOMContentLoaded', function() {
 // Écouter les changements de hash pour activer l'onglet PTZ si nécessaire
 window.addEventListener('hashchange', function() {
     if (window.location.hash === '#ptz-simulator') {
-        console.log("Navigation vers #ptz-simulator via hash, activation de l'onglet");
         setTimeout(activatePTZSimulator, 200);
     }
 });
 
 // Initialisation immédiate si le document est déjà chargé
 if (document.readyState === "complete" || document.readyState === "interactive") {
-    console.log("Document déjà chargé, vérification de l'onglet actif");
     setTimeout(checkAndInitializeSimulator, 100);
 }
 
@@ -1029,33 +959,58 @@ style.textContent = `
     to { opacity: 1; transform: translateY(0); }
 }
 
+@keyframes pulse {
+    0% { background-color: rgba(16, 185, 129, 0.4); }
+    50% { background-color: rgba(16, 185, 129, 0.6); }
+    100% { background-color: rgba(16, 185, 129, 0.2); }
+}
+
+/* Styles améliorés pour les suggestions de ville */
 .city-suggestions {
-    animation: fadeIn 0.2s ease-in-out;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(59, 130, 246, 0.3);
+    max-height: 300px;
+    background-color: rgba(13, 25, 42, 0.95);
+    backdrop-filter: blur(5px);
+    transition: all 0.2s ease;
 }
 
 .city-suggestion {
-    transition: all 0.15s ease-in-out;
-    padding: 8px 12px;
-    cursor: pointer;
+    padding: 0.75rem 1rem;
+    border-left: 3px solid transparent;
+    transition: all 0.15s ease;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.city-suggestion:hover,
-.city-suggestion:focus {
-    background-color: rgba(59, 130, 246, 0.5) !important;
-    outline: 1px solid rgba(59, 130, 246, 0.8);
+.city-suggestion:hover, .city-suggestion.selected {
+    background-color: rgba(59, 130, 246, 0.3);
+    border-left-color: #10b981;
 }
 
-#ptz-zone-info {
-    transition: color 0.3s ease;
-    padding: 4px 8px;
-    margin-top: 6px;
+.city-suggestion-name {
     font-weight: 500;
 }
 
-#ptz-zone-info.success {
-    color: #4ade80;
+.city-suggestion-highlight {
+    color: #10b981;
+    font-weight: 600;
+}
+
+.city-zone-tag {
+    background-color: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    padding: 0.2rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.highlighted {
+    background-color: rgba(30, 64, 175, 0.2);
 }
 `;
 document.head.appendChild(style);
