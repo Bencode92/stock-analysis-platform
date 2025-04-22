@@ -203,7 +203,7 @@
     }
     
     /**
-     * Sélectionne une ville et met à jour la zone
+     * Sélectionne une ville et met à jour la zone - Version corrigée
      */
     function selectCity(result, cityInput, zoneSelect) {
         if (!cityInput || !zoneSelect) return;
@@ -217,18 +217,35 @@
             zoneValue = "A"; // Car dans le select nous avons "Zone A ou A bis"
         }
         
-        // Parcourir les options du select pour trouver la correspondance
+        console.log("Mise à jour de la zone à:", zoneValue);
+        
+        // Recherche plus robuste de l'option correspondante
+        let found = false;
         for (let i = 0; i < zoneSelect.options.length; i++) {
-            if (zoneSelect.options[i].value === zoneValue) {
+            const option = zoneSelect.options[i];
+            if (option.value === zoneValue || 
+                option.textContent.includes(zoneValue) ||
+                option.value.includes(zoneValue)) {
                 zoneSelect.selectedIndex = i;
+                zoneSelect.value = option.value; // Forcer l'attribution explicite
+                // Déclencher les événements nécessaires pour s'assurer que le changement est pris en compte
+                zoneSelect.dispatchEvent(new Event('change', { bubbles: true }));
+                console.log("Zone mise à jour avec succès sur l'option:", option.textContent);
+                found = true;
                 break;
             }
+        }
+        
+        if (!found) {
+            console.warn("Zone non trouvée dans les options disponibles:", zoneValue);
+            console.log("Options disponibles:", Array.from(zoneSelect.options).map(o => o.value));
         }
         
         // Afficher un message de confirmation
         const zoneInfoElement = document.getElementById('ptz-zone-info');
         if (zoneInfoElement) {
             zoneInfoElement.textContent = `Ville trouvée: ${result.city} (Zone ${result.zone})`;
+            zoneInfoElement.classList.remove('hidden');
         }
     }
     
