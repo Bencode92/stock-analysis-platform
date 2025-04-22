@@ -1,6 +1,92 @@
 // Fichier JS pour simulateur de PTZ
 
-console.log("PTZ Simulator version 1.9 chargé ! - " + new Date().toISOString());
+console.log("PTZ Simulator version 2.0 chargé ! - " + new Date().toISOString());
+
+// IMPORTANT: Définir simulerPTZ immédiatement pour qu'elle soit disponible dès le chargement du script
+window.simulerPTZ = function() {
+    console.log("Simulation PTZ en cours - Version avec support HLM amélioré");
+    
+    try {
+        // Récupérer les valeurs du formulaire avec vérification de présence d'élément
+        const projectTypeElem = document.getElementById('ptz-project-type');
+        const zoneElem = document.getElementById('ptz-zone');
+        const incomeElem = document.getElementById('ptz-income');
+        const householdSizeElem = document.getElementById('ptz-household-size');
+        const totalCostElem = document.getElementById('ptz-total-cost');
+        const citySearchElem = document.getElementById('ptz-city-search');
+        
+        // Récupérer les valeurs avec valeurs par défaut sécurisées
+        const projectType = projectTypeElem ? projectTypeElem.value : 'neuf';
+        const zone = zoneElem ? zoneElem.value : 'A';
+        const income = incomeElem ? parseFloat(incomeElem.value || '0') : 0;
+        const householdSize = householdSizeElem ? parseInt(householdSizeElem.value || '1') : 1;
+        const totalCost = totalCostElem ? parseFloat(totalCostElem.value || '0') : 0;
+        const cityName = citySearchElem ? citySearchElem.value : null;
+        
+        console.log("Valeurs récupérées:", {projectType, zone, income, householdSize, totalCost, cityName});
+        
+        // Valider les entrées avec des messages spécifiques
+        if (isNaN(income)) {
+            alert('Le revenu fiscal de référence doit être un nombre valide.');
+            if (incomeElem) incomeElem.focus();
+            return false;
+        }
+        
+        if (isNaN(totalCost)) {
+            alert('Le coût total de l\'opération doit être un nombre valide.');
+            if (totalCostElem) totalCostElem.focus();
+            return false;
+        }
+        
+        if (income <= 0) {
+            alert('Le revenu fiscal de référence doit être supérieur à 0.');
+            if (incomeElem) incomeElem.focus();
+            return false;
+        }
+        
+        if (totalCost <= 0) {
+            alert('Le coût total de l\'opération doit être supérieur à 0.');
+            if (totalCostElem) totalCostElem.focus();
+            return false;
+        }
+        
+        // Vérifications spécifiques selon le type de projet
+        if (projectType === 'ancien') {
+            // Pour les logements anciens avec travaux, vérifier que le coût des travaux représente au moins 25% du coût total
+            // Cette vérification pourrait être implémentée avec un champ supplémentaire mais nous l'ignorons pour l'instant
+        } else if (projectType === 'social') {
+            // Vérifications spécifiques pour les logements sociaux (HLM)
+            // Ici, nous pourrions ajouter des vérifications d'éligibilité spécifiques aux logements sociaux
+        }
+        
+        // Créer l'instance du simulateur et calculer
+        const simulator = new PTZSimulator({
+            projectType, zone, income, householdSize, totalCost, cityName
+        });
+        
+        const result = simulator.calculatePTZAmount();
+        console.log("Résultat du calcul:", result);
+        
+        // Afficher les résultats avec le support amélioré pour HLM
+        updatePTZResults(result);
+        
+        // Mettre en évidence le bouton d'intégration au prêt principal après une simulation réussie
+        const integratePTZButton = document.getElementById('integrate-ptz-to-loan');
+        if (integratePTZButton && !integratePTZButton.classList.contains('hidden')) {
+            integratePTZButton.classList.add('pulse-animation');
+            setTimeout(() => {
+                integratePTZButton.classList.remove('pulse-animation');
+            }, 1500);
+        }
+        
+        console.log("Simulation PTZ terminée avec succès!");
+        return true;
+    } catch (error) {
+        console.error("Erreur lors de la simulation:", error);
+        alert("Une erreur s'est produite lors de la simulation: " + error.message);
+        return false;
+    }
+};
 
 class PTZSimulator {
     constructor({
@@ -773,92 +859,6 @@ function setupKeyboardNavigation(ptzCityInput, suggestionsList) {
     });
 }
 
-// Fonction améliorée pour simuler un PTZ - Version optimisée pour HLM
-function simulerPTZ() {
-    console.log("Simulation PTZ en cours - Version avec support HLM amélioré");
-    
-    try {
-        // Récupérer les valeurs du formulaire avec vérification de présence d'élément
-        const projectTypeElem = document.getElementById('ptz-project-type');
-        const zoneElem = document.getElementById('ptz-zone');
-        const incomeElem = document.getElementById('ptz-income');
-        const householdSizeElem = document.getElementById('ptz-household-size');
-        const totalCostElem = document.getElementById('ptz-total-cost');
-        const citySearchElem = document.getElementById('ptz-city-search');
-        
-        // Récupérer les valeurs avec valeurs par défaut sécurisées
-        const projectType = projectTypeElem ? projectTypeElem.value : 'neuf';
-        const zone = zoneElem ? zoneElem.value : 'A';
-        const income = incomeElem ? parseFloat(incomeElem.value || '0') : 0;
-        const householdSize = householdSizeElem ? parseInt(householdSizeElem.value || '1') : 1;
-        const totalCost = totalCostElem ? parseFloat(totalCostElem.value || '0') : 0;
-        const cityName = citySearchElem ? citySearchElem.value : null;
-        
-        console.log("Valeurs récupérées:", {projectType, zone, income, householdSize, totalCost, cityName});
-        
-        // Valider les entrées avec des messages spécifiques
-        if (isNaN(income)) {
-            alert('Le revenu fiscal de référence doit être un nombre valide.');
-            if (incomeElem) incomeElem.focus();
-            return false;
-        }
-        
-        if (isNaN(totalCost)) {
-            alert('Le coût total de l\'opération doit être un nombre valide.');
-            if (totalCostElem) totalCostElem.focus();
-            return false;
-        }
-        
-        if (income <= 0) {
-            alert('Le revenu fiscal de référence doit être supérieur à 0.');
-            if (incomeElem) incomeElem.focus();
-            return false;
-        }
-        
-        if (totalCost <= 0) {
-            alert('Le coût total de l\'opération doit être supérieur à 0.');
-            if (totalCostElem) totalCostElem.focus();
-            return false;
-        }
-        
-        // Vérifications spécifiques selon le type de projet
-        if (projectType === 'ancien') {
-            // Pour les logements anciens avec travaux, vérifier que le coût des travaux représente au moins 25% du coût total
-            // Cette vérification pourrait être implémentée avec un champ supplémentaire mais nous l'ignorons pour l'instant
-        } else if (projectType === 'social') {
-            // Vérifications spécifiques pour les logements sociaux (HLM)
-            // Ici, nous pourrions ajouter des vérifications d'éligibilité spécifiques aux logements sociaux
-        }
-        
-        // Créer l'instance du simulateur et calculer
-        const simulator = new PTZSimulator({
-            projectType, zone, income, householdSize, totalCost, cityName
-        });
-        
-        const result = simulator.calculatePTZAmount();
-        console.log("Résultat du calcul:", result);
-        
-        // Afficher les résultats avec le support amélioré pour HLM
-        updatePTZResults(result);
-        
-        // Mettre en évidence le bouton d'intégration au prêt principal après une simulation réussie
-        const integratePTZButton = document.getElementById('integrate-ptz-to-loan');
-        if (integratePTZButton && !integratePTZButton.classList.contains('hidden')) {
-            integratePTZButton.classList.add('pulse-animation');
-            setTimeout(() => {
-                integratePTZButton.classList.remove('pulse-animation');
-            }, 1500);
-        }
-        
-        console.log("Simulation PTZ terminée avec succès!");
-        return true;
-    } catch (error) {
-        console.error("Erreur lors de la simulation:", error);
-        alert("Une erreur s'est produite lors de la simulation: " + error.message);
-        return false;
-    }
-}
-
 // Fonction optimisée pour configurer les contrôles du nombre de personnes dans le foyer
 function setupHouseholdControls() {
     const increaseHouseholdBtn = document.getElementById('increase-household');
@@ -1073,11 +1073,10 @@ function initPTZSimulator() {
     console.log("Initialisation du simulateur PTZ terminée avec succès");
 }
 
-// Exposer la fonction simulerPTZ à la portée globale
-window.simulerPTZ = simulerPTZ;
+// Exposer explicitement la fonction dans la portée globale
 window.initPTZSimulator = initPTZSimulator;
 
-// Initialiser quand la page est chargée - CORRECTION: code simplifié
+// Initialiser quand la page est chargée
 document.addEventListener('DOMContentLoaded', function() {
     console.log("DOM chargé, initialisation du simulateur PTZ...");
     
@@ -1087,19 +1086,25 @@ document.addEventListener('DOMContentLoaded', function() {
     // CORRECTION: Attacher directement la fonction au bouton
     const ptzButton = document.getElementById('calculate-ptz-button');
     if (ptzButton) {
+        console.log("Attachement direct au bouton depuis l'événement DOMContentLoaded");
         ptzButton.onclick = function(e) {
             e.preventDefault();
             simulerPTZ();
             return false;
         };
     }
+    
+    // Vérifier si l'onglet PTZ est déjà actif et initialiser
+    const ptzTab = document.querySelector('.simulation-tab[data-target="ptz-simulator"]');
+    if (ptzTab && ptzTab.classList.contains('active')) {
+        console.log("L'onglet PTZ est actif au chargement, initialisation immédiate");
+        initPTZSimulator();
+    }
 });
-
-// CORRECTION: Exposer explicitement la fonction dans la portée globale
-window.simulerPTZ = simulerPTZ;
 
 // Rendre disponible globalement si en mode non-module
 if (typeof window !== 'undefined') {
+    // Ces définitions sont redondantes mais assurent que la fonction est accessible de n'importe où
     window.PTZSimulator = PTZSimulator;
     window.initPTZSimulator = initPTZSimulator;
     window.searchCity = searchCity;
