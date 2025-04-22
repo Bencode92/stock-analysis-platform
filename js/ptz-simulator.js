@@ -1,6 +1,6 @@
 // Fichier JS pour simulateur de PTZ
 
-console.log("PTZ Simulator version 1.7 chargé ! - " + new Date().toISOString());
+console.log("PTZ Simulator version 1.8 chargé ! - " + new Date().toISOString());
 
 class PTZSimulator {
     constructor({
@@ -152,7 +152,8 @@ class PTZSimulator {
             adjustedIncome: incomeBracket.adjustedIncome,
             incomeBracket: incomeBracket.bracket,
             coefficient: incomeBracket.coefficient,
-            repaymentPeriods: repaymentPeriods
+            repaymentPeriods: repaymentPeriods,
+            projectType: this.projectType // Ajout du type de projet pour personnaliser l'affichage
         };
     }
     
@@ -363,7 +364,7 @@ function searchCity(query) {
     return results.slice(0, 10); // Limiter à 10 résultats pour plus de clarté
 }
 
-// Fonction pour mettre à jour l'interface utilisateur avec les résultats
+// Fonction améliorée pour mettre à jour l'interface utilisateur avec les résultats
 function updatePTZResults(result) {
     console.log("Mise à jour des résultats PTZ:", result);
     
@@ -402,7 +403,7 @@ function updatePTZResults(result) {
         }
     }
     
-    // 2. Afficher les résultats appropriés
+    // 2. Afficher les résultats appropriés en cas de non-éligibilité
     if (!result.eligible) {
         resultsContainer.innerHTML = `
             <div class="bg-red-800 bg-opacity-30 p-4 rounded-lg border-l-4 border-red-500">
@@ -413,7 +414,48 @@ function updatePTZResults(result) {
         return;
     }
     
-    // 3. Afficher les résultats d'éligibilité
+    // 3. Personnaliser certains éléments selon le type de projet
+    let projectTypeInfo = '';
+    let projectTypeDetails = '';
+    
+    // Adapter les informations selon le type de projet
+    if (result.projectType === 'social') {
+        projectTypeInfo = `
+            <div class="result-card bg-blue-700 bg-opacity-30">
+                <p class="result-value">Logement social</p>
+                <p class="result-label">Type de projet</p>
+            </div>
+        `;
+        projectTypeDetails = `
+            <li class="bg-blue-900 bg-opacity-30 p-2 rounded-lg">
+                <span class="text-white font-medium">Information HLM:</span> 
+                Le PTZ permet aux locataires d'acquérir leur logement social avec des conditions avantageuses.
+            </li>
+        `;
+    } else if (result.projectType === 'ancien') {
+        projectTypeInfo = `
+            <div class="result-card bg-blue-700 bg-opacity-30">
+                <p class="result-value">Logement ancien avec travaux</p>
+                <p class="result-label">Type de projet</p>
+            </div>
+        `;
+        projectTypeDetails = `
+            <li class="bg-blue-900 bg-opacity-30 p-2 rounded-lg">
+                <span class="text-white font-medium">Travaux obligatoires:</span> 
+                Les travaux doivent représenter au minimum 25% du coût total de l'opération.
+            </li>
+        `;
+    } else {
+        // Type neuf
+        projectTypeInfo = `
+            <div class="result-card bg-blue-700 bg-opacity-30">
+                <p class="result-value">Logement neuf</p>
+                <p class="result-label">Type de projet</p>
+            </div>
+        `;
+    }
+    
+    // 3. Afficher les résultats d'éligibilité avec les personnalisations
     resultsContainer.innerHTML = `
         <div class="grid grid-cols-2 gap-4 mb-6">
             <div class="result-card">
@@ -432,6 +474,7 @@ function updatePTZResults(result) {
                 <p class="result-value">${result.repaymentPeriods.deferralPeriod} ans</p>
                 <p class="result-label">Période de différé</p>
             </div>
+            ${projectTypeInfo}
         </div>
         
         <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg border-l-4 border-blue-500 mb-6">
@@ -440,6 +483,7 @@ function updatePTZResults(result) {
                 <li><span class="text-gray-400">Coût total de l'opération:</span> ${result.consideredCost.toLocaleString('fr-FR')} € (sur un maximum de ${result.maxCost.toLocaleString('fr-FR')} €)</li>
                 <li><span class="text-gray-400">Tranche de revenus:</span> ${result.incomeBracket.replace('tranche', 'Tranche ')}</li>
                 <li><span class="text-gray-400">Revenu ajusté:</span> ${Math.round(result.adjustedIncome).toLocaleString('fr-FR')} € (coefficient: ${result.coefficient})</li>
+                ${projectTypeDetails}
             </ul>
         </div>
         
@@ -463,9 +507,10 @@ function updatePTZResults(result) {
         integratePTZButton.setAttribute('data-ptz-amount', result.amount);
         integratePTZButton.setAttribute('data-ptz-duration', result.repaymentPeriods.totalDuration);
         integratePTZButton.setAttribute('data-ptz-deferral', result.repaymentPeriods.deferralPeriod);
+        integratePTZButton.setAttribute('data-ptz-type', result.projectType);
     }
     
-    console.log("Résultats PTZ affichés avec succès");
+    console.log("Résultats PTZ affichés avec succès pour le type de projet:", result.projectType);
 }
 
 // Fonction pour générer le tableau comparatif des types de PTZ
@@ -515,6 +560,12 @@ function generatePTZComparisonTable() {
             <td class="px-4 py-2 text-center">Possible (départ max 6 ans après achat)</td>
             <td class="px-4 py-2 text-center">Possible (idem)</td>
             <td class="px-4 py-2 text-center">Possible (idem)</td>
+        </tr>
+        <tr class="bg-green-800 bg-opacity-20">
+            <td class="px-4 py-2 font-medium">Avantage principal</td>
+            <td class="px-4 py-2 text-center">Accès simplifié à la propriété neuve</td>
+            <td class="px-4 py-2 text-center">Revitalisation des zones rurales</td>
+            <td class="px-4 py-2 text-center">Permet aux locataires HLM de devenir propriétaires</td>
         </tr>
     `;
 }
@@ -722,9 +773,9 @@ function setupKeyboardNavigation(ptzCityInput, suggestionsList) {
     });
 }
 
-// Fonction simplifiée et corrigée pour simuler un PTZ
+// Fonction améliorée pour simuler un PTZ - Version optimisée pour HLM
 function simulerPTZ() {
-    console.log("Simulation PTZ en cours...");
+    console.log("Simulation PTZ en cours - Version avec support HLM amélioré");
     
     try {
         // Récupérer les valeurs du formulaire avec vérification de présence d'élément
@@ -735,6 +786,7 @@ function simulerPTZ() {
         const totalCostElem = document.getElementById('ptz-total-cost');
         const citySearchElem = document.getElementById('ptz-city-search');
         
+        // Récupérer les valeurs avec valeurs par défaut sécurisées
         const projectType = projectTypeElem ? projectTypeElem.value : 'neuf';
         const zone = zoneElem ? zoneElem.value : 'A';
         const income = incomeElem ? parseFloat(incomeElem.value || '0') : 0;
@@ -747,22 +799,35 @@ function simulerPTZ() {
         // Valider les entrées avec des messages spécifiques
         if (isNaN(income)) {
             alert('Le revenu fiscal de référence doit être un nombre valide.');
+            if (incomeElem) incomeElem.focus();
             return false;
         }
         
         if (isNaN(totalCost)) {
             alert('Le coût total de l\'opération doit être un nombre valide.');
+            if (totalCostElem) totalCostElem.focus();
             return false;
         }
         
         if (income <= 0) {
             alert('Le revenu fiscal de référence doit être supérieur à 0.');
+            if (incomeElem) incomeElem.focus();
             return false;
         }
         
         if (totalCost <= 0) {
             alert('Le coût total de l\'opération doit être supérieur à 0.');
+            if (totalCostElem) totalCostElem.focus();
             return false;
+        }
+        
+        // Vérifications spécifiques selon le type de projet
+        if (projectType === 'ancien') {
+            // Pour les logements anciens avec travaux, vérifier que le coût des travaux représente au moins 25% du coût total
+            // Cette vérification pourrait être implémentée avec un champ supplémentaire mais nous l'ignorons pour l'instant
+        } else if (projectType === 'social') {
+            // Vérifications spécifiques pour les logements sociaux (HLM)
+            // Ici, nous pourrions ajouter des vérifications d'éligibilité spécifiques aux logements sociaux
         }
         
         // Créer l'instance du simulateur et calculer
@@ -773,8 +838,17 @@ function simulerPTZ() {
         const result = simulator.calculatePTZAmount();
         console.log("Résultat du calcul:", result);
         
-        // Afficher les résultats
+        // Afficher les résultats avec le support amélioré pour HLM
         updatePTZResults(result);
+        
+        // Mettre en évidence le bouton d'intégration au prêt principal après une simulation réussie
+        const integratePTZButton = document.getElementById('integrate-ptz-to-loan');
+        if (integratePTZButton && !integratePTZButton.classList.contains('hidden')) {
+            integratePTZButton.classList.add('pulse-animation');
+            setTimeout(() => {
+                integratePTZButton.classList.remove('pulse-animation');
+            }, 1500);
+        }
         
         console.log("Simulation PTZ terminée avec succès!");
         return true;
@@ -785,66 +859,7 @@ function simulerPTZ() {
     }
 }
 
-// Code corrigé pour initPTZSimulator avec une meilleure gestion des événements
-function initPTZSimulator() {
-    console.log("Initialisation du simulateur PTZ avec code corrigé");
-    
-    // Initialiser l'index de villes
-    initializeCityIndex();
-    
-    // Éléments du formulaire
-    const ptzCityInput = document.getElementById('ptz-city-search');
-    const ptzZoneSelect = document.getElementById('ptz-zone');
-    const zoneInfoElement = document.getElementById('ptz-zone-info');
-    
-    // Configurer la recherche de villes
-    if (ptzCityInput) {
-        // Trouver ou créer le conteneur de suggestions
-        let suggestionsList = document.getElementById('city-suggestions-container');
-        if (suggestionsList) {
-            // Configurer la navigation au clavier
-            setupKeyboardNavigation(ptzCityInput, suggestionsList);
-            
-            // Événement input pour la recherche dynamique
-            ptzCityInput.addEventListener('input', function() {
-                const query = this.value.trim();
-                const results = searchCity(query);
-                updateSuggestionsList(results, suggestionsList, ptzCityInput, ptzZoneSelect);
-            });
-            
-            // Afficher les suggestions au clic dans le champ
-            ptzCityInput.addEventListener('click', function() {
-                if (this.value.trim().length > 0) {
-                    const results = searchCity(this.value);
-                    updateSuggestionsList(results, suggestionsList, ptzCityInput, ptzZoneSelect);
-                }
-            });
-            
-            // Masquer les suggestions au clic ailleurs
-            document.addEventListener('click', function(e) {
-                if (e.target !== ptzCityInput && !suggestionsList.contains(e.target)) {
-                    suggestionsList.classList.add('hidden');
-                }
-            });
-        }
-        
-        // Afficher l'élément d'information sur la zone dès le début
-        if (zoneInfoElement && zoneInfoElement.classList.contains('hidden')) {
-            zoneInfoElement.classList.remove('hidden');
-        }
-    }
-    
-    // Gérer les boutons d'augmentation et diminution du nombre de personnes
-    setupHouseholdControls();
-    
-    // Générer le tableau comparatif
-    generatePTZComparisonTable();
-    
-    // CORRECTION: Fonctionnalité principale - trouver et configurer le bouton de simulation
-    setupPtzSimulationButton();
-}
-
-// Fonction pour configurer les contrôles du nombre de personnes dans le foyer
+// Fonction optimisée pour configurer les contrôles du nombre de personnes dans le foyer
 function setupHouseholdControls() {
     const increaseHouseholdBtn = document.getElementById('increase-household');
     const decreaseHouseholdBtn = document.getElementById('decrease-household');
@@ -902,7 +917,7 @@ function updateHouseholdDescription(count) {
     }
 }
 
-// CORRECTION: Fonction fiable pour configurer le bouton de simulation
+// Fonction optimisée pour configurer le bouton de simulation
 function setupPtzSimulationButton() {
     // Récupérer la référence au bouton de différentes manières
     let ptzButton = document.getElementById('calculate-ptz-button');
@@ -926,13 +941,25 @@ function setupPtzSimulationButton() {
             ptzButton.parentNode.replaceChild(newButton, ptzButton);
         }
         
-        // NOUVELLE APPROCHE: utiliser un écouteur d'événements direct
+        // Utiliser un gestionnaire d'événements direct
         newButton.onclick = function(event) {
             event.preventDefault();
             console.log("Clic sur bouton PTZ avec le gestionnaire corrigé");
+            
+            // Mettre en évidence le projet de type social si sélectionné
+            const projectTypeSelect = document.getElementById('ptz-project-type');
+            if (projectTypeSelect && projectTypeSelect.value === 'social') {
+                console.log("Simulation pour un logement social (HLM)");
+                // On pourrait ajouter une animation ou un effet visuel ici
+            }
+            
             simulerPTZ();
             return false;
         };
+        
+        // Ajouter une classe pour styles personnalisés
+        newButton.classList.add('ptz-simulator-button');
+        if (!newButton.id) newButton.id = 'calculate-ptz-button';
         
         console.log("Correctif du bouton PTZ appliqué avec succès");
     } else {
@@ -960,6 +987,119 @@ function setupPtzSimulationButton() {
             }
         }
     }
+    
+    // Adapter l'interface en fonction du type de projet sélectionné actuellement
+    updateUIForProjectType();
+}
+
+// Fonction pour mettre à jour l'interface en fonction du type de projet sélectionné
+function updateUIForProjectType() {
+    const projectTypeSelect = document.getElementById('ptz-project-type');
+    const zoneSelect = document.getElementById('ptz-zone');
+    
+    if (!projectTypeSelect) return;
+    
+    const projectType = projectTypeSelect.value;
+    
+    // Écouter les changements du type de projet
+    projectTypeSelect.addEventListener('change', function() {
+        const newProjectType = this.value;
+        console.log("Type de projet changé:", newProjectType);
+        
+        // Adapter l'interface en fonction du type de projet
+        if (newProjectType === 'social') {
+            // Pour les logements sociaux, mettre en évidence l'option
+            this.classList.add('bg-blue-600');
+            setTimeout(() => this.classList.remove('bg-blue-600'), 500);
+            
+            // Afficher un conseil pour les logements sociaux
+            const zoneInfoElement = document.getElementById('ptz-zone-info');
+            if (zoneInfoElement) {
+                zoneInfoElement.innerHTML = `<strong>Logement social:</strong> Le PTZ permet aux locataires HLM d'acquérir leur logement dans des conditions avantageuses.`;
+                zoneInfoElement.classList.remove('hidden');
+                zoneInfoElement.style.animation = 'pulse 0.5s';
+            }
+        } else if (newProjectType === 'ancien') {
+            // Pour les logements anciens, vérifier la zone
+            if (zoneSelect && (zoneSelect.value === 'A' || zoneSelect.value === 'B1')) {
+                alert("Pour un logement ancien avec travaux, seules les zones B2 et C sont éligibles.");
+                // Mettre en évidence les options de zone valides
+                for (let i = 0; i < zoneSelect.options.length; i++) {
+                    if (zoneSelect.options[i].value === 'B2' || zoneSelect.options[i].value === 'C') {
+                        zoneSelect.options[i].style.color = 'green';
+                    } else {
+                        zoneSelect.options[i].style.color = '';
+                    }
+                }
+            }
+        } else {
+            // Réinitialiser les styles pour les autres types
+            if (zoneSelect) {
+                for (let i = 0; i < zoneSelect.options.length; i++) {
+                    zoneSelect.options[i].style.color = '';
+                }
+            }
+        }
+    });
+    
+    // Déclencher l'événement change initial pour configurer l'interface au chargement
+    const event = new Event('change');
+    projectTypeSelect.dispatchEvent(event);
+}
+
+// Fonction principale pour initialiser le simulateur PTZ
+function initPTZSimulator() {
+    console.log("Initialisation du simulateur PTZ avec support HLM amélioré");
+    
+    // Initialiser l'index de villes
+    initializeCityIndex();
+    
+    // Éléments du formulaire
+    const ptzCityInput = document.getElementById('ptz-city-search');
+    const ptzZoneSelect = document.getElementById('ptz-zone');
+    const suggestionsList = document.getElementById('city-suggestions-container');
+    
+    // Configurer la recherche de villes
+    if (ptzCityInput && suggestionsList) {
+        // Configurer la navigation au clavier
+        setupKeyboardNavigation(ptzCityInput, suggestionsList);
+        
+        // Événement input pour la recherche dynamique
+        ptzCityInput.addEventListener('input', function() {
+            const query = this.value.trim();
+            const results = searchCity(query);
+            updateSuggestionsList(results, suggestionsList, ptzCityInput, ptzZoneSelect);
+        });
+        
+        // Afficher les suggestions au clic dans le champ
+        ptzCityInput.addEventListener('click', function() {
+            if (this.value.trim().length > 0) {
+                const results = searchCity(this.value);
+                updateSuggestionsList(results, suggestionsList, ptzCityInput, ptzZoneSelect);
+            }
+        });
+        
+        // Masquer les suggestions au clic ailleurs
+        document.addEventListener('click', function(e) {
+            if (e.target !== ptzCityInput && !suggestionsList.contains(e.target)) {
+                suggestionsList.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Configurer les contrôles de household
+    setupHouseholdControls();
+    
+    // Générer le tableau comparatif
+    generatePTZComparisonTable();
+    
+    // Configurer le bouton de simulation et l'interface selon le type de projet
+    setupPtzSimulationButton();
+    
+    // S'assurer que le tableau de comparaison est à jour avec les données actuelles
+    setTimeout(generatePTZComparisonTable, 500);
+    
+    console.log("Initialisation du simulateur PTZ terminée avec succès");
 }
 
 // Méthode directe pour forcer la simulation en cas de besoin
