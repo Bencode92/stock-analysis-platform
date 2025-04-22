@@ -1111,5 +1111,4 @@ if (typeof window !== 'undefined') {
     window.simulerPTZ = simulerPTZ;
 }
 
-// Exporter les fonctions nécessaires pour l'utilisation en mode module
-export { PTZSimulator, initPTZSimulator, searchCity, simulerPTZ };
+// SUPPRESSION de l'instruction export qui causait le problème
