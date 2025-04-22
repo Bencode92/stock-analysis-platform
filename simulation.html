@@ -151,30 +151,55 @@
         }
         
         .city-suggestions {
-            background-color: rgba(30, 64, 175, 0.3);
+            max-height: 300px;
+            background-color: rgba(13, 25, 42, 0.95);
+            backdrop-filter: blur(5px);
             border-radius: 0.5rem;
-            max-height: 15rem;
             overflow-y: auto;
             position: absolute;
             width: 100%;
             z-index: 20;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.3);
             border: 1px solid rgba(59, 130, 246, 0.3);
+            transition: all 0.2s ease;
         }
         
         .city-suggestion {
             padding: 0.75rem 1rem;
             cursor: pointer;
+            border-left: 3px solid transparent;
             border-bottom: 1px solid rgba(30, 64, 175, 0.2);
             transition: all 0.15s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
-        .city-suggestion:hover {
-            background-color: rgba(59, 130, 246, 0.5);
+        .city-suggestion:hover, .city-suggestion.selected {
+            background-color: rgba(59, 130, 246, 0.3);
+            border-left-color: #10b981;
         }
         
         .city-suggestion:last-child {
             border-bottom: none;
+        }
+        
+        .city-suggestion-name {
+            font-weight: 500;
+        }
+        
+        .city-suggestion-highlight {
+            color: #10b981;
+            font-weight: 600;
+        }
+        
+        .city-zone-tag {
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.8rem;
+            font-weight: 500;
         }
         
         .zone-info-badge {
@@ -186,6 +211,12 @@
             font-weight: 500;
             margin-top: 0.5rem;
             animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes pulse {
+            0% { background-color: rgba(16, 185, 129, 0.4); }
+            50% { background-color: rgba(16, 185, 129, 0.6); }
+            100% { background-color: rgba(16, 185, 129, 0.2); }
         }
     </style>
 </head>
@@ -1109,10 +1140,14 @@
                                 </label>
                                 <div class="city-search-container relative">
                                     <div class="relative">
-                                        <input type="text" id="ptz-city-search" placeholder="Saisissez le nom de votre ville" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full pr-10">
-                                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                        <input type="text" id="ptz-city-search" placeholder="Saisissez le nom de votre ville" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full pr-10 focus:ring-2 focus:ring-green-400 focus:border-green-400">
+                                        <div class="absolute inset-y-0 right-0 flex items-center pr-3">
                                             <i class="fas fa-search text-gray-500"></i>
                                         </div>
+                                    </div>
+                                    <!-- Nouveau conteneur stylisé pour les suggestions -->
+                                    <div id="city-suggestions-container" class="city-suggestions hidden rounded-lg overflow-hidden shadow-xl mt-1 border border-blue-600 z-30">
+                                        <!-- Les suggestions seront injectées ici par JS -->
                                     </div>
                                     <div id="ptz-zone-info" class="zone-info-badge mt-2">
                                         Saisissez une ville pour déterminer automatiquement sa zone
@@ -1465,139 +1500,365 @@
     <script src="js/budget-epargne.js"></script>
     <script src="js/loan-simulator.js"></script>
     <script src="js/loan-sensitivity.js"></script>
-    <script src="js/ptz-simulator.js"></script>
+    <script src="js/ptz-simulator.js?v=1.1"></script>
     <script>
         // Ajouter une animation lorsque les totaux sont mis à jour
-        function animateTotalUpdate(elementId) {
-            const element = document.getElementById(elementId);
-            if (element) {
-                element.classList.add('total-updated');
-                setTimeout(() => {
-                    element.classList.remove('total-updated');
-                }, 1000);
-            }
-        }
-        
-        // Fonction pour basculer entre les modes de remboursement
-        function switchRepaymentMode(mode) {
-            const modeDureeBtn = document.getElementById('mode-duree');
-            const modeMensualiteBtn = document.getElementById('mode-mensualite');
-            const sectionDuree = document.getElementById('section-reduire-duree');
-            const sectionMensualite = document.getElementById('section-reduire-mensualite');
+        function animateValue(element, start, end, duration) {
+            if (!element) return;
             
-            document.getElementById('remboursement-mode').value = mode;
-            
-            if (mode === 'duree') {
-                modeDureeBtn.classList.add('active');
-                modeDureeBtn.classList.add('text-green-400');
-                modeMensualiteBtn.classList.remove('active');
-                modeMensualiteBtn.classList.remove('text-green-400');
-                sectionDuree.classList.remove('hidden');
-                sectionMensualite.classList.add('hidden');
-            } else {
-                modeMensualiteBtn.classList.add('active');
-                modeMensualiteBtn.classList.add('text-green-400');
-                modeDureeBtn.classList.remove('active');
-                modeDureeBtn.classList.remove('text-green-400');
-                sectionMensualite.classList.remove('hidden');
-                sectionDuree.classList.add('hidden');
-            }
-        }
-        
-        // Fonction améliorée pour vérifier si le remboursement anticipé est un remboursement total
-        function checkTotalRepayment(montant) {
-            const loanAmount = parseFloat(document.getElementById('loan-amount').value);
-            const interestRate = parseFloat(document.getElementById('interest-rate-slider').value) / 100 / 12;
-            const loanDurationYears = parseInt(document.getElementById('loan-duration-slider').value);
-            const currentMonth = parseInt(document.getElementById('early-repayment-month-slider-mensualite').value);
-            
-            // Calcul approximatif du capital restant dû au mois du remboursement
-            const mensualite = loanAmount * interestRate / (1 - Math.pow(1 + interestRate, -(loanDurationYears * 12)));
-            let capitalRestant = loanAmount;
-            
-            for (let i = 1; i < currentMonth; i++) {
-                const interetMois = capitalRestant * interestRate;
-                capitalRestant -= (mensualite - interetMois);
-            }
-            
-            // Vérification si le montant est proche du capital restant dû
-            const notice = document.getElementById('total-repayment-notice');
-            const totalRepaymentCheckbox = document.getElementById('total-repayment');
-            
-            if (notice) {
-                // Afficher la notification uniquement si la case est cochée
-                if (totalRepaymentCheckbox && totalRepaymentCheckbox.checked) {
-                    notice.classList.remove('hidden');
-                    
-                    // Mettre à jour le montant de remboursement avec le capital restant
-                    const earlyRepaymentAmountInput = document.getElementById('early-repayment-amount-mensualite');
-                    if (earlyRepaymentAmountInput) {
-                        earlyRepaymentAmountInput.value = Math.ceil(capitalRestant);
-                    }
-                } else {
-                    notice.classList.add('hidden');
+            let startTimestamp = null;
+            const step = (timestamp) => {
+                if (!startTimestamp) startTimestamp = timestamp;
+                const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+                const value = Math.floor(progress * (end - start) + start);
+                element.textContent = value.toLocaleString('fr-FR');
+                if (progress < 1) {
+                    window.requestAnimationFrame(step);
                 }
-            }
+            };
+            window.requestAnimationFrame(step);
         }
         
-        // Gestion des boutons + et - pour le nombre de personnes dans le foyer
+        // Mettre à jour la date actuelle
         document.addEventListener('DOMContentLoaded', function() {
-            const decreaseBtn = document.getElementById('decrease-household');
-            const increaseBtn = document.getElementById('increase-household');
-            const householdInput = document.getElementById('ptz-household-size');
-            const householdDesc = document.getElementById('household-description');
-            
-            function updateHouseholdDescription() {
-                const value = parseInt(householdInput.value);
-                householdDesc.textContent = value === 1 ? '1 personne' : value + ' personnes';
+            const dateElement = document.getElementById('currentDate');
+            if (dateElement) {
+                const currentDate = new Date();
+                const options = { year: 'numeric', month: 'long', day: 'numeric' };
+                dateElement.textContent = currentDate.toLocaleDateString('fr-FR', options).toUpperCase();
             }
             
-            if (decreaseBtn && increaseBtn && householdInput) {
-                decreaseBtn.addEventListener('click', function() {
-                    const currentVal = parseInt(householdInput.value);
-                    if (currentVal > 1) {
-                        householdInput.value = currentVal - 1;
-                        updateHouseholdDescription();
-                    }
-                });
+            // Simuler l'heure du marché
+            const marketTimeElement = document.getElementById('marketTime');
+            if (marketTimeElement) {
+                const updateMarketTime = () => {
+                    const now = new Date();
+                    const hours = now.getHours().toString().padStart(2, '0');
+                    const minutes = now.getMinutes().toString().padStart(2, '0');
+                    const seconds = now.getSeconds().toString().padStart(2, '0');
+                    marketTimeElement.textContent = `${hours}:${minutes}:${seconds}`;
+                };
                 
-                increaseBtn.addEventListener('click', function() {
-                    const currentVal = parseInt(householdInput.value);
-                    householdInput.value = currentVal + 1;
-                    updateHouseholdDescription();
-                });
-                
-                householdInput.addEventListener('change', updateHouseholdDescription);
+                updateMarketTime();
+                setInterval(updateMarketTime, 1000);
             }
+            
+            // Mise à jour de l'heure dans le footer
+            const updateTimeElements = document.querySelectorAll('.update-time');
+            updateTimeElements.forEach(element => {
+                const date = new Date();
+                const options = { 
+                    day: '2-digit', 
+                    month: '2-digit', 
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                };
+                element.textContent = date.toLocaleDateString('fr-FR', options);
+            });
         });
         
-        // Gestion des remboursements anticipés multiples
+        // Gestion des onglets
+        document.querySelectorAll('.simulation-tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Retirer la classe active de tous les onglets
+                document.querySelectorAll('.simulation-tab').forEach(t => t.classList.remove('active'));
+                
+                // Ajouter la classe active à l'onglet cliqué
+                this.classList.add('active');
+                
+                // Masquer tous les contenus
+                document.querySelectorAll('.simulation-content').forEach(content => {
+                    content.style.display = 'none';
+                });
+                
+                // Afficher le contenu correspondant à l'onglet
+                const targetId = this.getAttribute('data-target');
+                const targetContent = document.getElementById(targetId);
+                if (targetContent) {
+                    targetContent.style.display = 'block';
+                }
+            });
+        });
+        
+        // Gestion du mode d'investissement (unique ou périodique)
+        function toggleInvestmentMode(mode) {
+            const uniqueBtn = document.getElementById('unique-investment');
+            const periodicBtn = document.getElementById('periodic-investment');
+            const frequencyContainer = document.getElementById('frequency-container');
+            
+            if (mode === 'unique') {
+                uniqueBtn.classList.add('text-green-400', 'bg-green-900', 'bg-opacity-30', 'selected');
+                uniqueBtn.classList.remove('text-gray-300');
+                
+                periodicBtn.classList.remove('text-green-400', 'bg-green-900', 'bg-opacity-30', 'selected');
+                periodicBtn.classList.add('text-gray-300');
+                
+                frequencyContainer.style.display = 'none';
+            } else {
+                periodicBtn.classList.add('text-green-400', 'bg-green-900', 'bg-opacity-30', 'selected');
+                periodicBtn.classList.remove('text-gray-300');
+                
+                uniqueBtn.classList.remove('text-green-400', 'bg-green-900', 'bg-opacity-30', 'selected');
+                uniqueBtn.classList.add('text-gray-300');
+                
+                frequencyContainer.style.display = 'block';
+            }
+        }
+        
+        // Mise à jour des valeurs des sliders
         document.addEventListener('DOMContentLoaded', function() {
-            const addRepaymentBtn = document.getElementById('add-repayment-btn');
-            const repaymentsList = document.getElementById('repayments-list');
-            let repaymentsCount = 0;
+            const durationSlider = document.getElementById('duration-slider');
+            const durationValue = durationSlider?.nextElementSibling;
             
-            // Remboursements anticipés stockés
-            window.storedRepayments = [];
-            
-            // Gestion de la case à cocher pour le remboursement total
-            const totalRepaymentCheckbox = document.getElementById('total-repayment');
-            if (totalRepaymentCheckbox) {
-                totalRepaymentCheckbox.addEventListener('change', function() {
-                    // Appeler checkTotalRepayment avec le montant actuel lorsque la case est cochée/décochée
-                    const earlyRepaymentAmountInput = document.getElementById('early-repayment-amount-mensualite');
-                    const montant = earlyRepaymentAmountInput ? parseFloat(earlyRepaymentAmountInput.value) : 0;
-                    checkTotalRepayment(montant);
+            if (durationSlider && durationValue) {
+                durationSlider.addEventListener('input', function() {
+                    durationValue.textContent = `${this.value} ans`;
                 });
             }
             
-            if (addRepaymentBtn && repaymentsList) {
-                addRepaymentBtn.addEventListener('click', function() {
-                    const mode = document.getElementById('remboursement-mode').value;
-                    let repayment = {};
-                    let montant = 0;
+            const returnSlider = document.getElementById('return-slider');
+            const returnValue = returnSlider?.nextElementSibling;
+            
+            if (returnSlider && returnValue) {
+                returnSlider.addEventListener('input', function() {
+                    returnValue.textContent = `${this.value}%`;
                 });
             }
+            
+            // Comportement des exemples de taux prédéfinis
+            document.querySelectorAll('.flex-wrap.gap-2 a').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Extraire le taux du texte (par exemple "Livret A (2%)" -> 2)
+                    const text = this.textContent;
+                    const match = text.match(/\((\d+)%\)/);
+                    
+                    if (match && match[1] && returnSlider) {
+                        const rate = parseInt(match[1]);
+                        returnSlider.value = rate;
+                        
+                        if (returnValue) {
+                            returnValue.textContent = `${rate}%`;
+                        }
+                    }
+                });
+            });
+            
+            // Mise à jour des informations fiscales en fonction de l'enveloppe sélectionnée
+            const vehicleSelect = document.getElementById('investment-vehicle');
+            const taxInfo = document.getElementById('tax-info');
+            
+            if (vehicleSelect && taxInfo) {
+                vehicleSelect.addEventListener('change', function() {
+                    const vehicle = this.value;
+                    let title, description, limit;
+                    
+                    switch(vehicle) {
+                        case 'pea':
+                            title = 'Fiscalité du PEA';
+                            description = 'Le Plan d\'Épargne en Actions (PEA) offre une exonération d\'impôt sur les plus-values après 5 ans de détention (hors prélèvements sociaux de 17,2%).';
+                            limit = 'Plafond: 150 000€ par personne';
+                            break;
+                        case 'cto':
+                            title = 'Fiscalité du Compte-Titres';
+                            description = 'Les plus-values sont soumises au Prélèvement Forfaitaire Unique (PFU) de 30% (12,8% d\'impôt + 17,2% de prélèvements sociaux) ou au barème progressif de l\'impôt sur le revenu.';
+                            limit = 'Pas de plafond de versement';
+                            break;
+                        case 'assurance-vie':
+                            title = 'Fiscalité de l\'Assurance-Vie';
+                            description = 'Après 8 ans, abattement de 4 600€ (9 200€ pour un couple) sur les gains, puis PFU de 7,5% + 17,2% de prélèvements sociaux.';
+                            limit = 'Pas de plafond de versement';
+                            break;
+                        case 'per':
+                            title = 'Fiscalité du PER';
+                            description = 'Versements déductibles du revenu imposable. Imposition à la sortie selon le barème progressif (capital exonéré si sortie en rente).';
+                            limit = 'Déduction limitée à 10% des revenus professionnels';
+                            break;
+                        case 'scpi':
+                            title = 'Fiscalité des SCPI';
+                            description = 'Revenus imposés comme des revenus fonciers. Plus-values soumises au régime des plus-values immobilières avec abattement progressif.';
+                            limit = 'Pas de plafond de versement';
+                            break;
+                        case 'fcpi':
+                            title = 'Fiscalité des FCPI / FIP';
+                            description = 'Réduction d\'impôt sur le revenu de 18% à l\'entrée. Plus-values exonérées d\'impôt (hors prélèvements sociaux) si conservation pendant 5 ans.';
+                            limit = 'Plafond: 12 000€ (24 000€ pour un couple)';
+                            break;
+                    }
+                    
+                    // Mettre à jour le contenu
+                    const titleElement = taxInfo.querySelector('h5');
+                    const descriptionElement = taxInfo.querySelector('p:first-of-type');
+                    const limitElement = taxInfo.querySelector('p:last-of-type');
+                    
+                    if (titleElement) titleElement.innerHTML = `<i class="fas fa-chart-pie mr-2"></i>${title}`;
+                    if (descriptionElement) descriptionElement.textContent = description;
+                    if (limitElement) limitElement.textContent = limit;
+                });
+            }
+            
+            // Logique de simulation simplifiée
+            const simulateButton = document.getElementById('simulate-button');
+            if (simulateButton) {
+                simulateButton.addEventListener('click', simulateInvestment);
+            }
+            
+            function simulateInvestment() {
+                // Récupérer les valeurs
+                const amount = parseFloat(document.getElementById('investment-amount')?.value || 1000);
+                const years = parseInt(document.getElementById('duration-slider')?.value || 10);
+                const annualReturn = parseFloat(document.getElementById('return-slider')?.value || 7) / 100;
+                const isPeridodic = document.getElementById('periodic-investment')?.classList.contains('selected') || false;
+                const frequency = document.getElementById('investment-frequency')?.value || 'monthly';
+                
+                // Calcul du résultat
+                let finalAmount, totalInvested, gains;
+                
+                if (isPeridodic) {
+                    // Versements périodiques
+                    const paymentsPerYear = frequency === 'monthly' ? 12 : frequency === 'quarterly' ? 4 : 1;
+                    const periodicAmount = amount / paymentsPerYear;
+                    const periodsTotal = years * paymentsPerYear;
+                    const periodicRate = Math.pow(1 + annualReturn, 1 / paymentsPerYear) - 1;
+                    
+                    finalAmount = periodicAmount * ((Math.pow(1 + periodicRate, periodsTotal) - 1) / periodicRate) * (1 + periodicRate);
+                    totalInvested = amount * years;
+                } else {
+                    // Versement unique
+                    finalAmount = amount * Math.pow(1 + annualReturn, years);
+                    totalInvested = amount;
+                }
+                
+                gains = finalAmount - totalInvested;
+                
+                // Calcul simplifié du montant net d'impôts (simulation basique PFU à 30%)
+                // Pour un calcul précis, il faudrait prendre en compte l'enveloppe fiscale et sa durée de détention
+                const taxRate = 0.3; // PFU simplifié (30%)
+                const netAmount = totalInvested + gains * (1 - taxRate);
+                
+                // Mettre à jour l'interface
+                const resultValues = document.querySelectorAll('.result-value');
+                resultValues[0].textContent = finalAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 });
+                resultValues[1].textContent = totalInvested.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 });
+                resultValues[2].textContent = gains.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 });
+                resultValues[3].textContent = netAmount.toLocaleString('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 });
+                
+                // Mettre à jour le graphique
+                updateChart(years, totalInvested, gains);
+            }
+            
+            function updateChart(years, totalInvested, gains) {
+                const ctx = document.getElementById('investment-chart');
+                if (!ctx) return;
+                
+                // Détruire le graphique existant s'il existe
+                if (window.investmentChart instanceof Chart) {
+                    window.investmentChart.destroy();
+                }
+                
+                // Créer les données pour le graphique
+                const yearLabels = Array.from({length: years + 1}, (_, i) => `Année ${i}`);
+                
+                // Simuler l'évolution de l'investissement
+                const initialAmount = totalInvested / (years > 0 ? years : 1);
+                const annualReturn = parseFloat(document.getElementById('return-slider')?.value || 7) / 100;
+                
+                let capitalData = [initialAmount];
+                let gainsData = [0];
+                let currentCapital = initialAmount;
+                let currentGains = 0;
+                
+                for (let i = 1; i <= years; i++) {
+                    // Ajouter le versement annuel (sauf si versement unique)
+                    if (i < years) {
+                        currentCapital += initialAmount;
+                    }
+                    
+                    // Calculer les intérêts de l'année
+                    const yearGains = (currentCapital + currentGains) * annualReturn;
+                    currentGains += yearGains;
+                    
+                    capitalData.push(currentCapital);
+                    gainsData.push(currentGains);
+                }
+                
+                // Créer le graphique
+                window.investmentChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: yearLabels,
+                        datasets: [
+                            {
+                                label: 'Capital investi',
+                                data: capitalData,
+                                backgroundColor: 'rgba(0, 128, 255, 0.5)',
+                                borderColor: 'rgba(0, 128, 255, 1)',
+                                borderWidth: 1
+                            },
+                            {
+                                label: 'Gains cumulés',
+                                data: gainsData,
+                                backgroundColor: 'rgba(50, 205, 50, 0.5)',
+                                borderColor: 'rgba(50, 205, 50, 1)',
+                                borderWidth: 1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            x: {
+                                stacked: true,
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: 'rgba(255, 255, 255, 0.7)'
+                                }
+                            },
+                            y: {
+                                stacked: true,
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.1)'
+                                },
+                                ticks: {
+                                    color: 'rgba(255, 255, 255, 0.7)',
+                                    callback: function(value) {
+                                        return value.toLocaleString('fr-FR') + ' €';
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: 'rgba(255, 255, 255, 0.7)'
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        let label = context.dataset.label || '';
+                                        label += ': ' + context.parsed.y.toLocaleString('fr-FR') + ' €';
+                                        return label;
+                                    },
+                                    footer: function(tooltipItems) {
+                                        const total = tooltipItems.reduce((sum, item) => sum + item.parsed.y, 0);
+                                        return 'Total: ' + total.toLocaleString('fr-FR') + ' €';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Initialiser avec les valeurs par défaut
+            setTimeout(simulateInvestment, 500);
         });
     </script>
 </body>
