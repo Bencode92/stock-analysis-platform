@@ -144,6 +144,49 @@
             margin-right: 0.75rem;
             font-size: 1.25rem;
         }
+        
+        /* Styles spécifiques pour le simulateur PTZ */
+        .city-search-container {
+            position: relative;
+        }
+        
+        .city-suggestions {
+            background-color: rgba(30, 64, 175, 0.3);
+            border-radius: 0.5rem;
+            max-height: 15rem;
+            overflow-y: auto;
+            position: absolute;
+            width: 100%;
+            z-index: 20;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .city-suggestion {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid rgba(30, 64, 175, 0.2);
+            transition: all 0.15s ease;
+        }
+        
+        .city-suggestion:hover {
+            background-color: rgba(59, 130, 246, 0.5);
+        }
+        
+        .city-suggestion:last-child {
+            border-bottom: none;
+        }
+        
+        .zone-info-badge {
+            display: inline-block;
+            background-color: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+            padding: 0.25rem 0.75rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            margin-top: 0.5rem;
+            animation: fadeIn 0.3s ease;
+        }
     </style>
 </head>
 <body class="dark">
@@ -1057,15 +1100,24 @@
                             </div>
                             
                             <!-- Recherche de ville -->
-                            <div class="mb-4">
+                            <div class="mb-5">
                                 <label class="loan-option-label">
                                     Recherche par ville
                                     <span class="loan-option-info cursor-help" title="Recherchez votre ville pour déterminer automatiquement sa zone.">
                                         <i class="fas fa-info-circle"></i>
                                     </span>
                                 </label>
-                                <input type="text" id="ptz-city-search" placeholder="Saisissez le nom de votre ville" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
-                                <p id="ptz-zone-info" class="text-sm text-green-400 mt-1 hidden"></p>
+                                <div class="city-search-container relative">
+                                    <div class="relative">
+                                        <input type="text" id="ptz-city-search" placeholder="Saisissez le nom de votre ville" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full pr-10">
+                                        <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                            <i class="fas fa-search text-gray-500"></i>
+                                        </div>
+                                    </div>
+                                    <div id="ptz-zone-info" class="zone-info-badge mt-2">
+                                        Saisissez une ville pour déterminer automatiquement sa zone
+                                    </div>
+                                </div>
                             </div>
                             
                             <!-- Revenu fiscal de référence -->
@@ -1076,7 +1128,12 @@
                                         <i class="fas fa-info-circle"></i>
                                     </span>
                                 </label>
-                                <input type="number" id="ptz-income" placeholder="Ex: 35000" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                <div class="relative">
+                                    <input type="number" id="ptz-income" placeholder="Ex: 35000" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                        <span class="text-gray-500">€</span>
+                                    </div>
+                                </div>
                             </div>
                             
                             <!-- Nombre de personnes dans le foyer -->
@@ -1087,7 +1144,18 @@
                                         <i class="fas fa-info-circle"></i>
                                     </span>
                                 </label>
-                                <input type="number" id="ptz-household-size" min="1" value="1" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                <div class="flex items-center">
+                                    <button type="button" id="decrease-household" class="bg-blue-700 bg-opacity-40 hover:bg-blue-600 p-2 rounded-l-lg border-r border-blue-600">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                    <input type="number" id="ptz-household-size" min="1" value="1" class="bg-blue-800 bg-opacity-30 border-y border-blue-700 text-white p-2.5 text-center w-16">
+                                    <button type="button" id="increase-household" class="bg-blue-700 bg-opacity-40 hover:bg-blue-600 p-2 rounded-r-lg border-l border-blue-600">
+                                        <i class="fas fa-plus"></i>
+                                    </button>
+                                    <div class="ml-3 bg-blue-700 bg-opacity-30 px-2 py-1 rounded text-sm">
+                                        <i class="fas fa-user-friends mr-1"></i> <span id="household-description">1 personne</span>
+                                    </div>
+                                </div>
                             </div>
                             
                             <!-- Coût total de l'opération -->
@@ -1098,7 +1166,12 @@
                                         <i class="fas fa-info-circle"></i>
                                     </span>
                                 </label>
-                                <input type="number" id="ptz-total-cost" placeholder="Ex: 200000" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                <div class="relative">
+                                    <input type="number" id="ptz-total-cost" placeholder="Ex: 200000" class="bg-blue-800 bg-opacity-30 border border-blue-700 text-white rounded-lg p-2.5 w-full">
+                                    <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                                        <span class="text-gray-500">€</span>
+                                    </div>
+                                </div>
                             </div>
                             
                             <!-- Bouton de simulation -->
@@ -1106,6 +1179,28 @@
                                 <i class="fas fa-play-circle mr-2"></i> 
                                 Simuler le PTZ
                             </button>
+                            
+                            <!-- Guide d'aide PTZ -->
+                            <div class="mt-4 bg-blue-900 bg-opacity-30 p-3 rounded-lg border-l-4 border-blue-400">
+                                <h5 class="text-blue-400 font-medium mb-2 flex items-center">
+                                    <i class="fas fa-info-circle mr-2"></i>
+                                    Aide sur le PTZ
+                                </h5>
+                                <ul class="text-sm text-gray-300 space-y-1">
+                                    <li class="flex items-start">
+                                        <i class="fas fa-check-circle text-blue-400 mr-2 mt-1 text-xs"></i>
+                                        <span>Recherchez votre ville pour déterminer automatiquement sa zone</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-check-circle text-blue-400 mr-2 mt-1 text-xs"></i>
+                                        <span>La zone géographique influence directement le montant du PTZ</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <i class="fas fa-check-circle text-blue-400 mr-2 mt-1 text-xs"></i>
+                                        <span>Vous pouvez intégrer le PTZ à votre simulation de prêt principal</span>
+                                    </li>
+                                </ul>
+                            </div>
                         </div>
                         
                         <!-- Résultats du PTZ -->
@@ -1445,6 +1540,37 @@
             }
         }
         
+        // Gestion des boutons + et - pour le nombre de personnes dans le foyer
+        document.addEventListener('DOMContentLoaded', function() {
+            const decreaseBtn = document.getElementById('decrease-household');
+            const increaseBtn = document.getElementById('increase-household');
+            const householdInput = document.getElementById('ptz-household-size');
+            const householdDesc = document.getElementById('household-description');
+            
+            function updateHouseholdDescription() {
+                const value = parseInt(householdInput.value);
+                householdDesc.textContent = value === 1 ? '1 personne' : value + ' personnes';
+            }
+            
+            if (decreaseBtn && increaseBtn && householdInput) {
+                decreaseBtn.addEventListener('click', function() {
+                    const currentVal = parseInt(householdInput.value);
+                    if (currentVal > 1) {
+                        householdInput.value = currentVal - 1;
+                        updateHouseholdDescription();
+                    }
+                });
+                
+                increaseBtn.addEventListener('click', function() {
+                    const currentVal = parseInt(householdInput.value);
+                    householdInput.value = currentVal + 1;
+                    updateHouseholdDescription();
+                });
+                
+                householdInput.addEventListener('change', updateHouseholdDescription);
+            }
+        });
+        
         // Gestion des remboursements anticipés multiples
         document.addEventListener('DOMContentLoaded', function() {
             const addRepaymentBtn = document.getElementById('add-repayment-btn');
@@ -1470,253 +1596,8 @@
                     const mode = document.getElementById('remboursement-mode').value;
                     let repayment = {};
                     let montant = 0;
-                    
-                    if (mode === 'duree') {
-                        // Mode durée: estimer le montant à partir des mois à réduire
-                        const moisAReduire = parseInt(document.getElementById('reduction-duree-mois').value);
-                        // Obtenir le montant du prêt depuis le champ existant
-                        const loanAmount = parseFloat(document.getElementById('loan-amount').value);
-                        // Estimation du montant à partir du nombre de mois (approximatif)
-                        const tauxMensuel = parseFloat(document.getElementById('interest-rate-slider').value) / 100 / 12;
-                        const dureeMois = parseInt(document.getElementById('loan-duration-slider').value) * 12;
-                        const mensualite = loanAmount * tauxMensuel / (1 - Math.pow(1 + tauxMensuel, -dureeMois));
-                        
-                        montant = mensualite * moisAReduire * 0.8; // 80% de la mensualité * nb mois (approximation)
-                        
-                        // Mettre à jour le champ caché pour la compatibilité
-                        document.getElementById('early-repayment-amount-duree').value = montant.toString();
-                        
-                        repayment = {
-                            id: 'repayment-' + (++repaymentsCount),
-                            mode: 'duree',
-                            moisAReduire: moisAReduire,
-                            mois: parseInt(document.getElementById('early-repayment-month-slider-duree').value),
-                            indemnitesMois: parseInt(document.getElementById('penalty-months-slider-duree').value),
-                            montant: montant // Ajout du montant estimé pour vérification
-                        };
-                    } else {
-                        montant = parseFloat(document.getElementById('early-repayment-amount-mensualite').value);
-                        const totalRepayment = document.getElementById('total-repayment')?.checked || false;
-                        
-                        repayment = {
-                            id: 'repayment-' + (++repaymentsCount),
-                            mode: 'mensualite',
-                            montant: montant,
-                            mois: parseInt(document.getElementById('early-repayment-month-slider-mensualite').value),
-                            indemnitesMois: parseInt(document.getElementById('penalty-months-slider-mensualite').value),
-                            isRemboursementTotal: totalRepayment // Nouvelle propriété
-                        };
-                    }
-                    
-                    // Vérifier que le montant est suffisant
-                    const alertElement = document.getElementById('min-threshold-alert');
-                    
-                    if (montant <= 0) {
-                        // Afficher l'alerte
-                        if (alertElement) {
-                            alertElement.classList.remove('hidden');
-                            // Faire disparaître l'alerte après 5 secondes
-                            setTimeout(() => {
-                                alertElement.classList.add('hidden');
-                            }, 5000);
-                        }
-                        
-                        // Changer temporairement la couleur du bouton en rouge
-                        this.classList.remove('bg-green-500', 'hover:bg-green-400');
-                        this.classList.add('bg-red-500', 'hover:bg-red-400');
-                        
-                        setTimeout(() => {
-                            this.classList.remove('bg-red-500', 'hover:bg-red-400');
-                            this.classList.add('bg-green-500', 'hover:bg-green-400');
-                        }, 1000);
-                        
-                        return; // Ne pas ajouter le remboursement
-                    }
-                    
-                    // Ajouter au tableau des remboursements
-                    window.storedRepayments.push(repayment);
-                    
-                    // Mettre à jour l'affichage
-                    updateRepaymentsList();
-                    
-                    // Réinitialiser la case à cocher de remboursement total
-                    if (totalRepaymentCheckbox) {
-                        totalRepaymentCheckbox.checked = false;
-                        const notice = document.getElementById('total-repayment-notice');
-                        if (notice) notice.classList.add('hidden');
-                    }
-                    
-                    // Déclencher automatiquement le calcul
-                    document.getElementById('calculate-loan-button').click();
                 });
-                
-                // Fonctions de gestion des repayments
-                window.toggleRepaymentDetails = function(id) {
-                    const item = document.getElementById(id);
-                    if (item) {
-                        item.classList.toggle('expanded');
-                    }
-                };
-                
-                window.removeRepayment = function(id) {
-                    window.storedRepayments = window.storedRepayments.filter(r => r.id !== id);
-                    updateRepaymentsList();
-                };
-                
-                // Fonction pour mettre à jour la liste des remboursements anticipés
-                function updateRepaymentsList() {
-                    repaymentsList.innerHTML = '';
-                    
-                    if (window.storedRepayments.length === 0) {
-                        repaymentsList.innerHTML = '<p class="text-sm text-gray-400 italic">Aucun remboursement anticipé configuré. Utilisez le formulaire ci-dessous pour en ajouter.</p>';
-                        return;
-                    }
-                    
-                    // Trier les remboursements par mois
-                    window.storedRepayments.sort((a, b) => a.mois - b.mois);
-                    
-                    window.storedRepayments.forEach(repayment => {
-                        const repaymentItem = document.createElement('div');
-                        repaymentItem.id = repayment.id;
-                        repaymentItem.className = 'repayment-item';
-                        
-                        let headerContent = '';
-                        if (repayment.mode === 'duree') {
-                            headerContent = `<strong>Mois ${repayment.mois}</strong> - Réduction de ${repayment.moisAReduire} mois`;
-                        } else {
-                            const totalText = repayment.isRemboursementTotal ? ' (Remboursement total)' : '';
-                            headerContent = `<strong>Mois ${repayment.mois}</strong> - ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(repayment.montant)}${totalText}`;
-                        }
-                        
-                        repaymentItem.innerHTML = `
-                            <div class="repayment-item-header" onclick="toggleRepaymentDetails('${repayment.id}')">
-                                <div>${headerContent}</div>
-                                <div>
-                                    <button class="remove-repayment" onclick="event.stopPropagation(); removeRepayment('${repayment.id}')">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-                            <div class="repayment-item-body">
-                                <div class="grid grid-cols-2 gap-2 text-sm">
-                                    <div><span class="text-gray-400">Mode:</span> ${repayment.mode === 'duree' ? 'Réduction de durée' : 'Réduction de mensualité'}</div>
-                                    <div><span class="text-gray-400">Mois:</span> ${repayment.mois}</div>
-                                    ${repayment.mode === 'duree' ? 
-                                        `<div><span class="text-gray-400">Mois à réduire:</span> ${repayment.moisAReduire}</div>` : 
-                                        `<div><span class="text-gray-400">Montant:</span> ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(repayment.montant)}</div>`
-                                    }
-                                    <div><span class="text-gray-400">Indemnités:</span> ${repayment.indemnitesMois} mois</div>
-                                    ${repayment.isRemboursementTotal ? 
-                                        `<div class="col-span-2 mt-2 text-green-400"><i class="fas fa-check-circle mr-1"></i> Ce remboursement soldera intégralement votre prêt</div>` : 
-                                        ''
-                                    }
-                                </div>
-                            </div>
-                        `;
-                        
-                        repaymentsList.appendChild(repaymentItem);
-                    });
-                }
-                
-                // Initialisation de la liste
-                updateRepaymentsList();
             }
-            
-            // Gestion des onglets de simulation
-            if (window.location.hash === '#budget-planner') {
-                // Trouver tous les onglets et masquer tous les contenus
-                const tabs = document.querySelectorAll('.simulation-tab');
-                const contents = document.querySelectorAll('.simulation-content');
-                
-                tabs.forEach(tab => tab.classList.remove('active'));
-                contents.forEach(content => content.style.display = 'none');
-                
-                // Activer l'onglet Budget
-                const budgetTab = document.querySelector('[data-target="budget-planner"]');
-                if (budgetTab) {
-                    budgetTab.classList.add('active');
-                    document.getElementById('budget-planner').style.display = 'block';
-                }
-            }
-            // Vérifier si l'URL contient un ancre pour l'onglet d'optimisation fiscale
-            else if (window.location.hash === '#tax-optimizer') {
-                // Trouver tous les onglets et masquer tous les contenus
-                const tabs = document.querySelectorAll('.simulation-tab');
-                const contents = document.querySelectorAll('.simulation-content');
-                
-                tabs.forEach(tab => tab.classList.remove('active'));
-                contents.forEach(content => content.style.display = 'none');
-                
-                // Activer l'onglet d'optimisation fiscale
-                const taxTab = document.querySelector('[data-target="tax-optimizer"]');
-                if (taxTab) {
-                    taxTab.classList.add('active');
-                    document.getElementById('tax-optimizer').style.display = 'block';
-                    
-                    // Focus sur le champ de salaire brut
-                    setTimeout(() => {
-                        const salaireBrutInput = document.getElementById('salaire-brut-simple');
-                        if (salaireBrutInput) {
-                            salaireBrutInput.focus();
-                        }
-                    }, 500);
-                }
-            }
-            // Vérifier si l'URL contient un ancre pour l'onglet de gestion de dette
-            else if (window.location.hash === '#loan-simulator') {
-                // Trouver tous les onglets et masquer tous les contenus
-                const tabs = document.querySelectorAll('.simulation-tab');
-                const contents = document.querySelectorAll('.simulation-content');
-                
-                tabs.forEach(tab => tab.classList.remove('active'));
-                contents.forEach(content => content.style.display = 'none');
-                
-                // Activer l'onglet de gestion de dette
-                const loanTab = document.querySelector('[data-target="loan-simulator"]');
-                if (loanTab) {
-                    loanTab.classList.add('active');
-                    document.getElementById('loan-simulator').style.display = 'block';
-                }
-            }
-            // Vérifier si l'URL contient un ancre pour l'onglet du simulateur PTZ
-            else if (window.location.hash === '#ptz-simulator') {
-                // Trouver tous les onglets et masquer tous les contenus
-                const tabs = document.querySelectorAll('.simulation-tab');
-                const contents = document.querySelectorAll('.simulation-content');
-                
-                tabs.forEach(tab => tab.classList.remove('active'));
-                contents.forEach(content => content.style.display = 'none');
-                
-                // Activer l'onglet du simulateur PTZ
-                const ptzTab = document.querySelector('[data-target="ptz-simulator"]');
-                if (ptzTab) {
-                    ptzTab.classList.add('active');
-                    document.getElementById('ptz-simulator').style.display = 'block';
-                }
-            }
-            
-            // Gestion des onglets de simulation
-            const simulationTabs = document.querySelectorAll('.simulation-tab');
-            simulationTabs.forEach(tab => {
-                tab.addEventListener('click', function() {
-                    // Enlever la classe 'active' de tous les onglets
-                    simulationTabs.forEach(t => t.classList.remove('active'));
-                    // Ajouter la classe 'active' à l'onglet cliqué
-                    this.classList.add('active');
-                    
-                    // Masquer tous les contenus de simulation
-                    const contents = document.querySelectorAll('.simulation-content');
-                    contents.forEach(content => content.style.display = 'none');
-                    
-                    // Afficher le contenu correspondant à l'onglet cliqué
-                    const targetId = this.getAttribute('data-target');
-                    document.getElementById(targetId).style.display = 'block';
-                    
-                    // Mettre à jour l'URL avec un hash pour permettre les liens directs
-                    window.location.hash = targetId;
-                });
-            });
-            
         });
     </script>
 </body>
