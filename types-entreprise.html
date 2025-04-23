@@ -569,6 +569,151 @@
         .hidden {
             display: none;
         }
+
+        /* NOUVEL AJOUT: Barre de progression globale */
+        .progress-bar-container {
+            position: relative;
+            background: rgba(1, 42, 74, 0.4);
+            height: 8px;
+            border-radius: 4px;
+            margin: 15px 0 25px;
+            overflow: hidden;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), #00bfa5);
+            transition: width 0.5s ease;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0, 255, 135, 0.4);
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .progress-percentage {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .time-estimate {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* NOUVEL AJOUT: Glossaire */
+        .glossary-term {
+            border-bottom: 1px dashed var(--primary-color);
+            cursor: help;
+            position: relative;
+            color: var(--primary-color);
+        }
+
+        .glossary-panel {
+            position: fixed;
+            right: -400px;
+            top: 100px;
+            width: 380px;
+            background-color: rgba(1, 22, 39, 0.95);
+            border-left: 3px solid var(--primary-color);
+            border-radius: 8px 0 0 8px;
+            padding: 20px;
+            transition: right 0.3s ease;
+            z-index: 1000;
+            box-shadow: -5px 0 25px rgba(0, 0, 0, 0.3);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .glossary-panel.visible {
+            right: 0;
+        }
+
+        .glossary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .glossary-close {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            font-size: 18px;
+            transition: color 0.2s;
+        }
+
+        .glossary-close:hover {
+            color: var(--primary-color);
+        }
+
+        .glossary-title {
+            color: var(--primary-color);
+            font-weight: 700;
+            font-size: 20px;
+            margin: 0 0 5px 0;
+        }
+
+        .glossary-definition {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .glossary-example {
+            font-style: italic;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            padding: 10px;
+            background-color: rgba(0, 255, 135, 0.05);
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        /* NOUVEL AJOUT: Style pour l'affichage des résultats (première recommandation uniquement) */
+        .primary-result {
+            border: 2px solid var(--primary-color);
+            box-shadow: 0 5px 25px rgba(0, 255, 135, 0.2);
+            position: relative;
+        }
+        
+        .secondary-results {
+            margin-top: 30px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+        
+        .secondary-results:hover {
+            opacity: 1;
+        }
+        
+        .results-toggle {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .recommended-badge {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background-color: var(--primary-color);
+            color: #011627;
+            font-weight: bold;
+            padding: 5px 15px;
+            border-radius: 20px;
+            box-shadow: 0 3px 10px rgba(0, 255, 135, 0.3);
+            z-index: 5;
+        }
     </style>
 </head>
 <body class="dark">
@@ -699,8 +844,17 @@
                 </div>
             </div>
 
+            <!-- NOUVEL AJOUT: Barre de progression globale -->
+            <div class="progress-info">
+                <span class="progress-percentage" id="progress-percentage">0% complété</span>
+                <span class="time-estimate" id="time-estimate">Temps estimé: 5 minutes</span>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+            </div>
+
             <!-- Progress Steps -->
-            <div class="progress-steps mb-12">
+            <div class="progress-steps mb-8">
                 <div class="progress-step active" id="step1">
                     1
                     <div class="progress-label">Profil</div>
@@ -752,7 +906,7 @@
                             <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="investisseurs">
                                 <i class="fas fa-chart-line text-3xl mb-3 text-green-400"></i>
                                 <span class="font-semibold text-lg">Levée de fonds</span>
-                                <span class="text-sm opacity-80 mt-2 text-center">Je prévois d'attirer des investisseurs</span>
+                                <span class="text-sm opacity-80 mt-2 text-center">Je prévois d'attirer des <span class="glossary-term" data-term="Levée de fonds">investisseurs</span></span>
                             </button>
                         </div>
                     </div>
@@ -768,7 +922,7 @@
                             <input type="range" min="1" max="5" value="3" class="slider" id="patrimoine-slider">
                             <div class="flex justify-between mt-2">
                                 <span class="text-sm opacity-70">Je peux engager mes biens personnels</span>
-                                <span class="text-sm opacity-70">Séparation totale nécessaire</span>
+                                <span class="text-sm opacity-70">Séparation totale nécessaire (<span class="glossary-term" data-term="Responsabilité limitée">responsabilité limitée</span>)</span>
                             </div>
                         </div>
                     </div>
@@ -777,6 +931,12 @@
                         <button id="next1" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center">
                             Étape suivante <i class="fas fa-arrow-right ml-2"></i>
                         </button>
+                    </div>
+
+                    <!-- Affichage de la progression et du temps restant -->
+                    <div class="text-center mt-8 text-sm text-gray-400">
+                        <span id="question-progress">Question 2 sur 9</span> • 
+                        <span id="time-remaining">Environ 4 minutes restantes</span>
                     </div>
                 </div>
 
@@ -855,6 +1015,12 @@
                             Étape suivante <i class="fas fa-arrow-right ml-2"></i>
                         </button>
                     </div>
+
+                    <!-- Affichage de la progression et du temps restant -->
+                    <div class="text-center mt-8 text-sm text-gray-400">
+                        <span id="question-progress-2">Question 4 sur 9</span> • 
+                        <span id="time-remaining-2">Environ 3 minutes restantes</span>
+                    </div>
                 </div>
 
                 <!-- Étape 3: Objectifs -->
@@ -878,7 +1044,7 @@
                             <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="fiscalite" data-multi="true">
                                 <i class="fas fa-percentage text-3xl mb-3 text-green-400"></i>
                                 <span class="font-semibold text-lg">Optimisation fiscale</span>
-                                <span class="text-sm opacity-80 mt-2 text-center">Réduire l'imposition sur les bénéfices</span>
+                                <span class="text-sm opacity-80 mt-2 text-center">Réduire l'imposition sur les bénéfices (<span class="glossary-term" data-term="IR">IR</span>/<span class="glossary-term" data-term="IS">IS</span>)</span>
                             </button>
                             
                             <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="protection" data-multi="true">
@@ -913,13 +1079,13 @@
                             <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="salaire">
                                 <i class="fas fa-money-bill-wave text-3xl mb-3 text-green-400"></i>
                                 <span class="font-semibold text-lg">Par salaire</span>
-                                <span class="text-sm opacity-80 mt-2 text-center">Rémunération régulière en tant que salarié</span>
+                                <span class="text-sm opacity-80 mt-2 text-center">Rémunération régulière en tant que <span class="glossary-term" data-term="Assimilé salarié">salarié</span></span>
                             </button>
                             
                             <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="dividendes">
                                 <i class="fas fa-hand-holding-usd text-3xl mb-3 text-green-400"></i>
                                 <span class="font-semibold text-lg">Par dividendes</span>
-                                <span class="text-sm opacity-80 mt-2 text-center">Distribution des bénéfices selon résultats</span>
+                                <span class="text-sm opacity-80 mt-2 text-center">Distribution des bénéfices selon résultats (<span class="glossary-term" data-term="Dividendes">dividendes</span>)</span>
                             </button>
                             
                             <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="mixte">
@@ -943,6 +1109,12 @@
                         <button id="next3" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center">
                             Étape suivante <i class="fas fa-arrow-right ml-2"></i>
                         </button>
+                    </div>
+
+                    <!-- Affichage de la progression et du temps restant -->
+                    <div class="text-center mt-8 text-sm text-gray-400">
+                        <span id="question-progress-3">Question 6 sur 9</span> • 
+                        <span id="time-remaining-3">Environ 2 minutes restantes</span>
                     </div>
                 </div>
 
@@ -970,13 +1142,13 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                             <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="ir">
                                 <i class="fas fa-user-tie text-3xl mb-3 text-green-400"></i>
-                                <span class="font-semibold text-lg">Impôt sur le Revenu (IR)</span>
+                                <span class="font-semibold text-lg">Impôt sur le Revenu (<span class="glossary-term" data-term="IR">IR</span>)</span>
                                 <span class="text-sm opacity-80 mt-2 text-center">Les bénéfices sont imposés directement sur votre déclaration personnelle</span>
                             </button>
                             
                             <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="is">
                                 <i class="fas fa-building text-3xl mb-3 text-green-400"></i>
-                                <span class="font-semibold text-lg">Impôt sur les Sociétés (IS)</span>
+                                <span class="font-semibold text-lg">Impôt sur les Sociétés (<span class="glossary-term" data-term="IS">IS</span>)</span>
                                 <span class="text-sm opacity-80 mt-2 text-center">Les bénéfices sont imposés au niveau de l'entreprise</span>
                             </button>
                             
@@ -1001,13 +1173,13 @@
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                             <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="tns">
                                 <i class="fas fa-user-tie text-3xl mb-3 text-green-400"></i>
-                                <span class="font-semibold text-lg">Indépendant (TNS)</span>
+                                <span class="font-semibold text-lg">Indépendant (<span class="glossary-term" data-term="TNS">TNS</span>)</span>
                                 <span class="text-sm opacity-80 mt-2 text-center">Charges sociales calculées sur les bénéfices</span>
                             </button>
                             
                             <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="salarie">
                                 <i class="fas fa-id-card text-3xl mb-3 text-green-400"></i>
-                                <span class="font-semibold text-lg">Assimilé salarié</span>
+                                <span class="font-semibold text-lg"><span class="glossary-term" data-term="Assimilé salarié">Assimilé salarié</span></span>
                                 <span class="text-sm opacity-80 mt-2 text-center">Protection sociale similaire aux salariés</span>
                             </button>
                         </div>
@@ -1021,13 +1193,19 @@
                             Obtenir les résultats <i class="fas fa-check-circle ml-2"></i>
                         </button>
                     </div>
+
+                    <!-- Affichage de la progression et du temps restant -->
+                    <div class="text-center mt-8 text-sm text-gray-400">
+                        <span id="question-progress-4">Question 9 sur 9</span> • 
+                        <span id="time-remaining-4">Moins d'une minute restante</span>
+                    </div>
                 </div>
 
                 <!-- Étape 5: Résultats -->
                 <div id="section5" class="question-section hidden">
                     <div class="p-6 text-center mb-8">
                         <h3 class="text-2xl font-bold text-green-400 mb-4">Votre forme juridique recommandée</h3>
-                        <p class="text-lg opacity-80">Basé sur votre profil et vos réponses, voici les formes juridiques qui correspondent le mieux à vos besoins :</p>
+                        <p class="text-lg opacity-80">Basé sur votre profil et vos réponses, voici la forme juridique qui correspond le mieux à vos besoins :</p>
                     </div>
                     
                     <div id="results-container">
@@ -1035,6 +1213,16 @@
                         <div class="flex justify-center items-center py-10">
                             <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-400"></div>
                         </div>
+                    </div>
+
+                    <div class="results-toggle hidden" id="show-more-results">
+                        <button class="bg-blue-900 bg-opacity-30 hover:bg-opacity-50 text-white py-2 px-4 rounded-lg transition flex items-center mx-auto">
+                            <i class="fas fa-chevron-down mr-2"></i> Voir les autres options compatibles
+                        </button>
+                    </div>
+
+                    <div id="secondary-results" class="secondary-results hidden">
+                        <!-- Les résultats secondaires seront injectés ici -->
                     </div>
 
                     <div class="bg-blue-900 bg-opacity-20 p-6 rounded-xl mt-10">
@@ -1116,7 +1304,22 @@
         </button>
     </div>
 
+    <!-- NOUVEL AJOUT: Panneau de glossaire juridique -->
+    <div id="glossary-panel" class="glossary-panel">
+        <div class="glossary-header">
+            <h3 class="glossary-title">Lexique juridique</h3>
+            <button class="glossary-close" id="glossary-close"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="glossary-content">
+            <h4 id="glossary-term-title" class="text-green-400 font-bold text-lg mb-1"></h4>
+            <p id="glossary-definition" class="glossary-definition"></p>
+            <div id="glossary-example" class="glossary-example"></div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="js/types-entreprise.js"></script>
+    <!-- NOUVEL AJOUT: Script du glossaire -->
+    <script src="js/glossaire-juridique.js"></script>
 </body>
 </html>
