@@ -541,6 +541,10 @@ function updatePTZResults(result) {
         `;
     }
     
+    // Calcul de la mensualité PTZ (nouvelle fonctionnalité)
+    const dureeRemboursementMois = (result.repaymentPeriods.totalDuration - result.repaymentPeriods.deferralPeriod) * 12;
+    const mensualitePTZ = dureeRemboursementMois > 0 ? (result.amount / dureeRemboursementMois).toFixed(2) : 0;
+    
     // 3. Afficher les résultats d'éligibilité avec les personnalisations
     resultsContainer.innerHTML = `
         <div class="grid grid-cols-2 gap-4 mb-6">
@@ -560,6 +564,10 @@ function updatePTZResults(result) {
                 <p class="result-value">${result.repaymentPeriods.deferralPeriod} ans</p>
                 <p class="result-label">Période de différé</p>
             </div>
+            <div class="result-card bg-green-700 bg-opacity-30">
+                <p class="result-value">${mensualitePTZ.replace('.', ',')} €</p>
+                <p class="result-label">Mensualité PTZ</p>
+            </div>
             ${projectTypeInfo}
         </div>
         
@@ -570,6 +578,7 @@ function updatePTZResults(result) {
                 <li><span class="text-gray-400">Tranche de revenus:</span> ${result.incomeBracket.replace('tranche', 'Tranche ')}</li>
                 <li><span class="text-gray-400">Revenu ajusté:</span> ${Math.round(result.adjustedIncome).toLocaleString('fr-FR')} € (coefficient: ${result.coefficient})</li>
                 ${projectTypeDetails}
+                <li><span class="text-gray-400">Calcul mensualité PTZ:</span> ${result.amount.toLocaleString('fr-FR')} € ÷ ${dureeRemboursementMois} mois = ${mensualitePTZ.replace('.', ',')} €/mois</li>
             </ul>
         </div>
         
@@ -594,6 +603,7 @@ function updatePTZResults(result) {
         integratePTZButton.setAttribute('data-ptz-duration', result.repaymentPeriods.totalDuration);
         integratePTZButton.setAttribute('data-ptz-deferral', result.repaymentPeriods.deferralPeriod);
         integratePTZButton.setAttribute('data-ptz-type', result.projectType);
+        integratePTZButton.setAttribute('data-ptz-monthly', mensualitePTZ);
     }
     
     console.log("Résultats PTZ affichés avec succès pour le type de projet:", result.projectType);
