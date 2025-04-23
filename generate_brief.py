@@ -75,7 +75,7 @@ def call_openai_api(prompt):
         }
         
         data = {
-            "model": "gpt-4o", # Utilisation de gpt-4o ou autre modèle disponible
+            "model": "gpt-4o-mini", # Utilisation de gpt-4o ou autre modèle disponible
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.4
         }
