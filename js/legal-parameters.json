@@ -1,0 +1,74 @@
+{
+  "lastUpdate": "2025-04-15",
+  "microEntrepriseSeuils": {
+    "vente": 188700,
+    "service": 77700
+  },
+  "isTaux": {
+    "reduit": { "seuil": 42500, "taux": 0.15 },
+    "normal": { "taux": 0.25 }
+  },
+  "baremeIR": [
+    {"tranche": 10777, "taux": 0},
+    {"tranche": 27478, "taux": 0.11},
+    {"tranche": 78570, "taux": 0.30},
+    {"tranche": 168994, "taux": 0.41},
+    {"tranche": null, "taux": 0.45}
+  ],
+  "chargesSociales": {
+    "tns": 0.45,
+    "assimileSalarie": 0.82
+  },
+  "abattementsForfaitaires": {
+    "microBIC_vente": 0.71,
+    "microBIC_service": 0.5,
+    "microBNC": 0.34
+  },
+  "seuils": {
+    "tva": {
+      "franchise": {
+        "vente": 85800,
+        "service": 34400  
+      }
+    },
+    "isTauxReduit": 10000000,
+    "socialIndependant": {
+      "reductionDebutActivite": {
+        "annee1": 0.25,
+        "annee2": 0.5,
+        "annee3": 0.75
+      }
+    }
+  },
+  "pfu": 0.30,
+  "regimesCompatibilite": {
+    "micro-entreprise": {
+      "formesSociales": ["EI"],
+      "formesFiscales": ["IR"],
+      "maxCA": {
+        "vente": 188700,
+        "service": 77700
+      }
+    },
+    "ei": {
+      "formesSociales": ["TNS"],
+      "formesFiscales": ["IR"]
+    },
+    "eurl": {
+      "formesSociales": ["TNS"],
+      "formesFiscales": ["IR", "IS"]
+    },
+    "sasu": {
+      "formesSociales": ["Assimilé salarié"],
+      "formesFiscales": ["IS", "IR"]
+    },
+    "sarl": {
+      "formesSociales": ["TNS", "Assimilé salarié"],
+      "formesFiscales": ["IS", "IR"]
+    },
+    "sas": {
+      "formesSociales": ["Assimilé salarié"],
+      "formesFiscales": ["IS", "IR"]
+    }
+  }
+}
