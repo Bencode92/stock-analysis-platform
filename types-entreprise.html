@@ -487,6 +487,24 @@
             opacity: 1;
         }
 
+        /* AMÉLIORATION: Badge de priorité pour les objectifs */
+        .priority-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: var(--primary-color);
+            color: #011627;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            z-index: 5;
+        }
+
         /* Theme toggle button */
         .theme-toggle {
             position: fixed;
@@ -532,6 +550,20 @@
 
         #comparatif-complet table tr:hover {
             background-color: rgba(1, 42, 74, 0.4);
+        }
+
+        /* AMÉLIORATION: Style pour le détail du calcul */
+        .score-details {
+            background-color: rgba(1, 22, 39, 0.9);
+            border-radius: 8px;
+            border: 1px solid rgba(0, 255, 135, 0.2);
+            padding: 10px;
+            margin-top: 8px;
+        }
+
+        .score-details ul {
+            margin: 0;
+            padding: 0;
         }
 
         .hidden {
@@ -870,7 +902,7 @@
 
                         <div class="text-sm text-yellow-400 mt-4 flex items-center">
                             <i class="fas fa-exclamation-circle mr-2"></i>
-                            <span id="objectif-count">Sélectionnez jusqu'à 3 objectifs principaux</span>
+                            <span id="objectif-count">Sélectionnez jusqu'à 3 objectifs principaux (par ordre de priorité)</span>
                         </div>
                     </div>
 
@@ -958,6 +990,25 @@
                                 <i class="fas fa-question-circle text-3xl mb-3 text-green-400"></i>
                                 <span class="font-semibold text-lg">Je ne sais pas</span>
                                 <span class="text-sm opacity-80 mt-2 text-center">Besoin de conseil sur le régime le plus adapté</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- AMÉLIORATION: Ajout de la question sur le régime social -->
+                    <div class="question-card p-6 mt-6" id="regime-social-question">
+                        <h3 class="text-xl font-bold text-green-400 mb-4">9. Quel régime social préférez-vous ?</h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                            <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="tns">
+                                <i class="fas fa-user-tie text-3xl mb-3 text-green-400"></i>
+                                <span class="font-semibold text-lg">Indépendant (TNS)</span>
+                                <span class="text-sm opacity-80 mt-2 text-center">Charges sociales calculées sur les bénéfices</span>
+                            </button>
+                            
+                            <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="salarie">
+                                <i class="fas fa-id-card text-3xl mb-3 text-green-400"></i>
+                                <span class="font-semibold text-lg">Assimilé salarié</span>
+                                <span class="text-sm opacity-80 mt-2 text-center">Protection sociale similaire aux salariés</span>
                             </button>
                         </div>
                     </div>
