@@ -750,7 +750,7 @@
         }
 
         .advanced-params-content.visible {
-            max-height: 500px;
+            max-height: 900px;
             opacity: 1;
         }
 
@@ -817,6 +817,71 @@
             border-radius: 20px;
             box-shadow: 0 3px 10px rgba(255, 58, 84, 0.3);
             z-index: 5;
+        }
+        
+        /* NOUVELLE FONCTIONNALITÉ: Badges du mode optimisé (micro vs réel) */
+        .regime-badge {
+            position: absolute;
+            top: -15px;
+            right: 20px;
+            background-color: #3A9BFF;
+            color: #fff;
+            font-weight: bold;
+            padding: 5px 15px;
+            border-radius: 20px;
+            box-shadow: 0 3px 10px rgba(58, 155, 255, 0.3);
+            z-index: 5;
+        }
+        
+        /* NOUVELLE FONCTIONNALITÉ: Style pour le tableau de sensibilité (micro vs réel) */
+        .sensitivity-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 15px;
+            background-color: rgba(1, 42, 74, 0.4);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .sensitivity-table th,
+        .sensitivity-table td {
+            padding: 8px 12px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .sensitivity-table th {
+            background-color: rgba(0, 255, 135, 0.1);
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .sensitivity-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .sensitivity-table .better-option {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        /* NOUVELLE FONCTIONNALITÉ: Badge ACRE */
+        .acre-badge {
+            display: inline-flex;
+            align-items: center;
+            background-color: rgba(0, 255, 135, 0.15);
+            color: var(--primary-color);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        .acre-badge i {
+            margin-right: 4px;
+            font-size: 10px;
         }
     </style>
 </head>
@@ -1289,6 +1354,27 @@
                         </div>
                     </div>
 
+                    <!-- NOUVELLE SECTION: Options de création -->
+                    <div class="question-card p-6 mt-6">
+                        <h3 class="text-xl font-bold text-green-400 mb-4">Options de création d'entreprise</h3>
+                        
+                        <div class="flex items-center mb-4">
+                            <input type="checkbox" id="entreprise-creation" class="h-5 w-5 rounded bg-blue-900 bg-opacity-30 border-gray-600 text-green-400 focus:ring-green-400">
+                            <label for="entreprise-creation" class="ml-2">Je suis en cours de création d'entreprise</label>
+                        </div>
+                        
+                        <div id="options-acre" class="pl-8 mt-2 hidden">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="option-acre" class="h-5 w-5 rounded bg-blue-900 bg-opacity-30 border-gray-600 text-green-400 focus:ring-green-400">
+                                <label for="option-acre" class="ml-2">Je bénéficie de l'ACRE (−50% charges sociales 1ère année)</label>
+                                <span class="tooltip-container">
+                                    <i class="fas fa-info-circle text-green-400"></i>
+                                    <span class="tooltip-text">L'ACRE (Aide aux Créateurs et Repreneurs d'Entreprise) permet une exonération partielle de charges sociales pendant les 3 premières années d'activité (50% la 1ère année, 25% la 2ème année, 10% la 3ème année).</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex justify-between mt-6">
                         <button id="prev4" class="border border-green-400 text-green-400 hover:bg-green-900 hover:bg-opacity-30 font-semibold py-3 px-6 rounded-lg transition flex items-center">
                             <i class="fas fa-arrow-left mr-2"></i> Précédent
@@ -1355,11 +1441,47 @@
                                 </div>
                             </div>
                             
+                            <!-- NOUVELLE SECTION: Options micro-entreprise -->
+                            <div class="mt-4 border-t border-gray-700 pt-4" id="micro-entreprise-options">
+                                <label class="block mb-2 font-semibold">Options pour micro-entreprise</label>
+                                <div class="flex items-center mt-2">
+                                    <span class="text-sm mr-4">Frais réels estimés :</span>
+                                    <div class="relative flex items-center">
+                                        <input type="number" id="frais-reels" min="0" max="100" value="35" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-20">
+                                        <span class="ml-2">%</span>
+                                        <span class="tooltip-container ml-2">
+                                            <i class="fas fa-info-circle text-green-400"></i>
+                                            <span class="tooltip-text">Pourcentage de votre CA représentant vos frais et charges réels. Permet de comparer le régime micro avec le régime réel.</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            
                             <div class="mt-4">
                                 <label class="block mb-2 font-semibold">Chiffre d'affaires précis pour la simulation</label>
                                 <div class="flex items-center">
                                     <input type="number" id="ca-simulation" min="1000" max="10000000" value="50000" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-40">
                                     <span class="ml-2">€</span>
+                                </div>
+                            </div>
+                            
+                            <!-- NOUVELLE SECTION: Options ACRE -->
+                            <div class="mt-4 border-t border-gray-700 pt-4" id="acre-options">
+                                <label class="block mb-2 font-semibold">Options ACRE</label>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="acre-checkbox" class="h-5 w-5 rounded bg-blue-900 bg-opacity-30 border-gray-600 text-green-400 focus:ring-green-400">
+                                    <label for="acre-checkbox" class="ml-2">Inclure l'ACRE dans la simulation</label>
+                                    <span class="tooltip-container ml-2">
+                                        <i class="fas fa-info-circle text-green-400"></i>
+                                        <span class="tooltip-text">L'ACRE permet une réduction de charges sociales de 50% pendant la première année.</span>
+                                    </span>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <div class="flex items-center">
+                                        <input type="checkbox" id="projections-pluriannuelles" class="h-5 w-5 rounded bg-blue-900 bg-opacity-30 border-gray-600 text-green-400 focus:ring-green-400">
+                                        <label for="projections-pluriannuelles" class="ml-2">Afficher les projections sur 3 ans</label>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -1495,5 +1617,97 @@
     <script src="js/types-entreprise.js"></script>
     <!-- NOUVEL AJOUT: Script du glossaire -->
     <script src="js/glossaire-juridique.js"></script>
+    
+    <!-- Script pour gérer les nouvelles options ACRE et micro vs réel -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Afficher/masquer les options ACRE quand "entreprise en création" est coché
+        const entrepriseCreation = document.getElementById('entreprise-creation');
+        const optionsAcre = document.getElementById('options-acre');
+        
+        if (entrepriseCreation && optionsAcre) {
+            entrepriseCreation.addEventListener('change', function() {
+                optionsAcre.classList.toggle('hidden', !this.checked);
+            });
+        }
+        
+        // Synchroniser l'état des options ACRE entre les sections
+        const optionAcre = document.getElementById('option-acre');
+        const acreCheckbox = document.getElementById('acre-checkbox');
+        
+        if (optionAcre && acreCheckbox) {
+            optionAcre.addEventListener('change', function() {
+                acreCheckbox.checked = this.checked;
+            });
+            
+            acreCheckbox.addEventListener('change', function() {
+                optionAcre.checked = this.checked;
+            });
+        }
+        
+        // Gérer les interactions avec les résultats de comparaison micro vs réel
+        document.addEventListener('resultsLoaded', function() {
+            const microComparaison = document.querySelectorAll('.micro-comparaison-toggle');
+            microComparaison.forEach(toggle => {
+                toggle.addEventListener('click', function() {
+                    const detailsId = this.getAttribute('data-target');
+                    const details = document.getElementById(detailsId);
+                    if (details) {
+                        details.classList.toggle('hidden');
+                        
+                        // Mise à jour de l'icône
+                        const icon = this.querySelector('i');
+                        if (icon) {
+                            if (details.classList.contains('hidden')) {
+                                icon.classList.remove('fa-chevron-up');
+                                icon.classList.add('fa-chevron-down');
+                            } else {
+                                icon.classList.remove('fa-chevron-down');
+                                icon.classList.add('fa-chevron-up');
+                            }
+                        }
+                    }
+                });
+            });
+        });
+        
+        // Intercepter le formulaire pour appliquer les nouvelles options lors du calcul des résultats
+        const applyParamsButton = document.getElementById('apply-params');
+        if (applyParamsButton) {
+            applyParamsButton.addEventListener('click', function() {
+                // Récupérer les valeurs des paramètres avancés
+                const parametres = {};
+                parametres.ratioSalaire = parseInt(document.getElementById('ratio-salaire').value);
+                parametres.ratioDividendes = 100 - parametres.ratioSalaire;
+                parametres.capitalSocial = parseInt(document.getElementById('capital-social').value);
+                parametres.capitalLibere = parseInt(document.getElementById('capital-libere').value);
+                parametres.caSimulation = parseInt(document.getElementById('ca-simulation').value);
+                
+                // Options ACRE et projection
+                parametres.premiereAnnee = document.getElementById('acre-checkbox').checked;
+                parametres.afficherProjection = document.getElementById('projections-pluriannuelles').checked;
+                
+                // Options micro-entreprise (frais réels)
+                const fraisReelsInput = document.getElementById('frais-reels');
+                if (fraisReelsInput) {
+                    parametres.fraisReels = parseInt(fraisReelsInput.value) / 100 * parametres.caSimulation;
+                }
+                
+                // Récupérer le type d'activité depuis les réponses sauvegardées
+                const savedResponses = JSON.parse(localStorage.getItem('entreprise-form-progress') || '{}');
+                if (savedResponses.typeActivite) {
+                    parametres.natureActivite = savedResponses.typeActivite;
+                }
+                
+                // Déclencher le recalcul des résultats
+                if (typeof generateResults === 'function') {
+                    generateResults(parametres);
+                } else {
+                    console.error("La fonction generateResults n'est pas disponible");
+                }
+            });
+        }
+    });
+    </script>
 </body>
 </html>
