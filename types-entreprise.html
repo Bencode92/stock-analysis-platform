@@ -1389,16 +1389,163 @@
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- Ajout direct du contenu de expert-mode-template.html -->
+    <div id="expert-mode-template-content">
+    <!-- Mode Expert et Simulation Financière Avancée (à intégrer dans types-entreprise.html) -->
+    <!-- Insérer après la section de simulation fiscale du fichier types-entreprise.html -->
+
+    <div class="bg-blue-900 bg-opacity-30 p-6 rounded-xl mt-8">
+      <h4 class="text-xl font-bold text-green-400 mb-4 flex items-center">
+        <i class="fas fa-chart-bar mr-3"></i>
+        Mode Expert - Simulation détaillée
+      </h4>
+      
+      <div class="flex items-center gap-2 mb-4">
+        <div class="w-16 h-8 bg-blue-900 bg-opacity-50 rounded-full relative cursor-pointer" id="expert-mode-toggle">
+          <div class="expert-toggle-handle absolute top-1 left-1 w-6 h-6 bg-gray-400 rounded-full transition-all"></div>
+        </div>
+        <span>Mode expert</span>
+      </div>
+      
+      <div id="expert-mode-panel" class="hidden">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          <div>
+            <h5 class="font-semibold mb-3">Ventilation des revenus</h5>
+            
+            <div class="mb-4">
+              <label class="block text-sm mb-1">Ratio salaire/dividendes</label>
+              <div class="flex items-center">
+                <input type="range" min="0" max="100" value="50" class="slider flex-grow" id="ventilation-salaire">
+                <span class="ml-2 w-16" id="ventilation-salaire-value">50%</span>
+              </div>
+              <div class="flex justify-between text-xs opacity-70 mt-1">
+                <span>100% dividendes</span>
+                <span>100% salaire</span>
+              </div>
+            </div>
+            
+            <div class="mb-4">
+              <label class="block text-sm mb-1">Répartition mensuelle du CA</label>
+              <select id="monthly-distribution" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
+                <option value="equal">Égal sur 12 mois</option>
+                <option value="seasonal">Saisonnier (pic été/hiver)</option>
+                <option value="growth">Croissance progressive</option>
+                <option value="custom">Personnalisé</option>
+              </select>
+            </div>
+            
+            <div id="custom-monthly-container" class="hidden mt-4">
+              <!-- Contrôles pour la répartition mensuelle personnalisée -->
+            </div>
+          </div>
+          
+          <div>
+            <h5 class="font-semibold mb-3">Paramètres avancés</h5>
+            
+            <div class="mb-4">
+              <label class="block text-sm mb-1">% des bénéfices réinvestis</label>
+              <div class="flex items-center">
+                <input type="range" min="0" max="100" value="0" class="slider flex-grow" id="investment-ratio">
+                <span class="ml-2 w-16" id="investment-ratio-value">0%</span>
+              </div>
+            </div>
+            
+            <div class="mb-4">
+              <label class="block text-sm mb-1">Emprunt/investissement initial</label>
+              <input type="number" id="initial-investment" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full" placeholder="0" min="0" step="1000">
+            </div>
+          </div>
+        </div>
+        
+        <div class="flex justify-center mt-4">
+          <button id="run-advanced-simulation" class="bg-green-500 hover:bg-green-400 text-gray-900 px-4 py-2 rounded flex items-center">
+            <i class="fas fa-calculator mr-2"></i> Lancer la simulation avancée
+          </button>
+        </div>
+      </div>
+      
+      <div class="mt-6">
+        <h5 class="font-semibold mb-3">Résultats de la simulation</h5>
+        <div class="aspect-w-16 aspect-h-9 bg-blue-900 bg-opacity-40 rounded-lg h-80" id="simulation-chart-container">
+          <canvas id="simulation-chart"></canvas>
+        </div>
+        
+        <div class="mt-4 overflow-x-auto">
+          <table class="w-full border-collapse" id="monthly-data-table">
+            <thead>
+              <tr class="bg-blue-900 bg-opacity-40">
+                <th class="p-2 text-left">Mois</th>
+                <th class="p-2 text-right">Revenus</th>
+                <th class="p-2 text-right">Charges</th>
+                <th class="p-2 text-right">Ch. sociales</th>
+                <th class="p-2 text-right">Taxes</th>
+                <th class="p-2 text-right">Cash-flow</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Sera rempli par JavaScript -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Comparaison "what-if" entre statuts -->
+    <div class="mt-10 p-6 bg-blue-900 bg-opacity-30 rounded-xl">
+      <h4 class="text-xl font-bold text-green-400 mb-4 flex items-center">
+        <i class="fas fa-exchange-alt mr-3"></i>
+        Comparaison "what-if" entre statuts
+      </h4>
+      
+      <div class="flex flex-wrap items-center gap-4 mb-4">
+        <div>
+          <label class="block text-sm mb-1">Statut actuel</label>
+          <select id="current-status" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2">
+            <!-- Options générées dynamiquement -->
+          </select>
+        </div>
+        
+        <div>
+          <label class="block text-sm mb-1">Alternatives à comparer</label>
+          <div id="alternative-statuses" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mt-1">
+            <!-- Options générées dynamiquement -->
+          </div>
+        </div>
+      </div>
+      
+      <div class="flex justify-center mt-4">
+        <button id="compare-statuses-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 px-4 py-2 rounded flex items-center">
+          <i class="fas fa-calculator mr-2"></i> Comparer les statuts
+        </button>
+      </div>
+      
+      <div id="comparison-results" class="mt-6">
+        <!-- Résultats de la comparaison générés par JavaScript -->
+      </div>
+    </div>
+    </div>
+
+    <!-- Scripts avec ordre de chargement modifié -->
     <!-- Script Principal -->
     <script src="js/types-entreprise.js"></script>
     
-    <!-- Scripts Phase 2 (robustesse) -->
-    <script src="js/rules-engine.js"></script>
-    <script src="js/advanced-simulation.js"></script>
-    <script src="js/phase2-integration.js"></script>
-    
     <!-- Script du glossaire -->
     <script src="js/glossaire-juridique.js"></script>
+    
+    <!-- Scripts Phase 2 (robustesse) chargés après les scripts principaux -->
+    <script src="js/rules-engine.js"></script>
+    <script src="js/advanced-simulation.js"></script>
+    <script>
+        // Attendre que le DOM soit complètement chargé et les scripts principaux exécutés
+        document.addEventListener('DOMContentLoaded', function() {
+            // Attendre un court instant pour que types-entreprise.js initialise ses variables
+            setTimeout(function() {
+                // Charger phase2-integration.js en dernier
+                const script = document.createElement('script');
+                script.src = 'js/phase2-integration.js';
+                document.body.appendChild(script);
+            }, 500);
+        });
+    </script>
 </body>
 </html>
