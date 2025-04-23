@@ -5,7 +5,7 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Base de données des formes juridiques (à partir du fichier CSV fourni)
+    // Base de données des formes juridiques (à partir du fichier CSV fourni, avec corrections)
     const formesJuridiques = [
         {
             id: 'micro-entreprise',
@@ -13,11 +13,11 @@ document.addEventListener('DOMContentLoaded', function() {
             categorie: 'Commerciale/Civile',
             associes: '1',
             capital: 'Aucun',
-            responsabilite: 'Illimitée (sauf résidence principale protégée)',
+            responsabilite: 'Limitée aux biens affectés à l\'activité professionnelle',
             fiscalite: 'IR',
             fiscaliteOption: 'Non',
             regimeSocial: 'TNS',
-            protectionPatrimoine: 'Partielle',
+            protectionPatrimoine: 'Oui (depuis 2022)',
             chargesSociales: 'Simplifiées',
             fiscal: 'Non applicable (pas de distribution, IR sur bénéfices)',
             regimeTVA: 'Franchise en base (TVA uniquement si dépassement seuils)',
@@ -28,10 +28,11 @@ document.addEventListener('DOMContentLoaded', function() {
             entreeAssocies: 'Non',
             profilOptimal: 'Entrepreneur solo',
             avantages: 'Simplicité, coût réduit',
-            inconvenients: 'Plafond CA, pas de déduction de charges',
+            inconvenients: 'Plafond CA (188 700 € vente ou 77 700 € services), abattement forfaitaire au lieu de déduction réelle',
             casConseille: 'Début d\'activité, test',
             casDeconseille: 'Développement ambitieux',
             transmission: 'Non',
+            plafondCA: '188 700 € (vente/hébergement) ou 77 700 € (services/libérales)',
             icone: 'fa-rocket'
         },
         {
@@ -40,7 +41,7 @@ document.addEventListener('DOMContentLoaded', function() {
             categorie: 'Commerciale/Civile',
             associes: '1',
             capital: 'Aucun',
-            responsabilite: 'Illimitée sauf patrimoine pro',
+            responsabilite: 'Limitée au patrimoine professionnel',
             fiscalite: 'IR',
             fiscaliteOption: 'Non',
             regimeSocial: 'TNS',
@@ -55,10 +56,11 @@ document.addEventListener('DOMContentLoaded', function() {
             entreeAssocies: 'Non',
             profilOptimal: 'Entrepreneur solo',
             avantages: 'Simplicité, coût réduit',
-            inconvenients: 'Responsabilité, peu de protection',
+            inconvenients: 'Peu de protection en cas de faute de gestion',
             casConseille: 'Artisan, commerçant',
             casDeconseille: 'Projet à risque élevé',
             transmission: 'Non',
+            plafondCA: 'Aucun plafond',
             icone: 'fa-user'
         },
         {
@@ -66,11 +68,11 @@ document.addEventListener('DOMContentLoaded', function() {
             nom: 'EURL',
             categorie: 'Commerciale',
             associes: '1',
-            capital: 'Libre',
-            responsabilite: 'Limitée aux apports',
+            capital: 'Libre (1€ suffit)',
+            responsabilite: 'Limitée aux apports sauf faute de gestion',
             fiscalite: 'IR (IS option)',
             fiscaliteOption: 'Oui',
-            regimeSocial: 'TNS',
+            regimeSocial: 'TNS obligatoire',
             protectionPatrimoine: 'Oui',
             chargesSociales: 'Sur bénéfices ou rémunération',
             fiscal: 'Oui, selon IS/IR',
@@ -86,6 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
             casConseille: 'PME, activité récurrente',
             casDeconseille: 'Projet risqué seul',
             transmission: 'Oui',
+            plafondCA: 'Aucun plafond',
             icone: 'fa-building'
         },
         {
@@ -93,11 +96,11 @@ document.addEventListener('DOMContentLoaded', function() {
             nom: 'SASU',
             categorie: 'Commerciale',
             associes: '1',
-            capital: '37 000 € (50% libéré à la constitution, solde dans les 5 ans)',
-            responsabilite: 'Limitée aux apports',
+            capital: 'Libre (1€ suffit)',
+            responsabilite: 'Limitée aux apports sauf faute de gestion',
             fiscalite: 'IS (IR option 5 ans)',
             fiscaliteOption: 'Oui',
-            regimeSocial: 'Assimilé salarié',
+            regimeSocial: 'Assimilé salarié obligatoire',
             protectionPatrimoine: 'Oui',
             chargesSociales: 'Sur rémunération',
             fiscal: 'Oui, selon IS/IR',
@@ -113,6 +116,7 @@ document.addEventListener('DOMContentLoaded', function() {
             casConseille: 'Start-up, levée de fonds',
             casDeconseille: 'Projets à très faibles revenus ou où les charges sociales doivent être minimisées',
             transmission: 'Oui',
+            plafondCA: 'Aucun plafond (taux IS réduit à 15% sur les premiers 42 500€ de bénéfices si CA < 10M€)',
             icone: 'fa-chart-line'
         },
         {
@@ -120,11 +124,11 @@ document.addEventListener('DOMContentLoaded', function() {
             nom: 'SARL',
             categorie: 'Commerciale',
             associes: '2-100',
-            capital: '37 000 € (50% libéré à la constitution, solde dans les 5 ans)',
-            responsabilite: 'Limitée aux apports',
+            capital: 'Libre (1€ suffit)',
+            responsabilite: 'Limitée aux apports sauf faute de gestion',
             fiscalite: 'IS (IR option 5 ans)',
             fiscaliteOption: 'Oui',
-            regimeSocial: 'TNS (gérant majoritaire), Assimilé salarié (gérant minoritaire/égalitaire)',
+            regimeSocial: 'TNS si gérant majoritaire, Assimilé salarié si gérant minoritaire/égalitaire',
             protectionPatrimoine: 'Oui',
             chargesSociales: 'Selon statut gérant',
             fiscal: 'Oui, selon IS/IR',
@@ -140,6 +144,7 @@ document.addEventListener('DOMContentLoaded', function() {
             casConseille: 'PME, activité familiale',
             casDeconseille: 'Start-up, levée de fonds',
             transmission: 'Oui',
+            plafondCA: 'Aucun plafond (régime réel obligatoire si CA > 188 700 €/77 700 €)',
             icone: 'fa-users'
         },
         {
@@ -147,8 +152,8 @@ document.addEventListener('DOMContentLoaded', function() {
             nom: 'SAS',
             categorie: 'Commerciale',
             associes: '2+',
-            capital: '37 000 € (50% libéré à la constitution, solde dans les 5 ans)',
-            responsabilite: 'Limitée aux apports',
+            capital: 'Libre (1€ suffit)',
+            responsabilite: 'Limitée aux apports sauf faute de gestion',
             fiscalite: 'IS (IR option 5 ans)',
             fiscaliteOption: 'Oui',
             regimeSocial: 'Assimilé salarié',
@@ -167,6 +172,7 @@ document.addEventListener('DOMContentLoaded', function() {
             casConseille: 'Start-up, levée de fonds',
             casDeconseille: 'Professions réglementées',
             transmission: 'Oui',
+            plafondCA: 'Aucun plafond',
             icone: 'fa-rocket'
         },
         {
@@ -175,10 +181,10 @@ document.addEventListener('DOMContentLoaded', function() {
             categorie: 'Civile',
             associes: '2+',
             capital: 'Libre',
-            responsabilite: 'Indéfinie',
+            responsabilite: 'Indéfinie pour les associés gérants',
             fiscalite: 'IR (IS option)',
             fiscaliteOption: 'Oui',
-            regimeSocial: 'TNS ou assimilé salarié',
+            regimeSocial: 'TNS pour gérants associés',
             protectionPatrimoine: 'Non',
             chargesSociales: 'Selon statut',
             fiscal: 'Non concerné',
@@ -194,6 +200,7 @@ document.addEventListener('DOMContentLoaded', function() {
             casConseille: 'Gestion immobilière',
             casDeconseille: 'Activité commerciale',
             transmission: 'Oui',
+            plafondCA: 'Aucun plafond (fiscalité à l\'IR par défaut, option IS possible sans restriction CA)',
             icone: 'fa-home'
         },
         {
@@ -202,7 +209,7 @@ document.addEventListener('DOMContentLoaded', function() {
             categorie: 'Libérale',
             associes: '2+',
             capital: 'Libre',
-            responsabilite: 'Limitée aux apports',
+            responsabilite: 'Limitée aux apports sauf faute de gestion',
             fiscalite: 'IS',
             fiscaliteOption: 'Non',
             regimeSocial: 'TNS ou assimilé salarié',
@@ -221,6 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
             casConseille: 'Professions libérales',
             casDeconseille: 'Activité commerciale',
             transmission: 'Oui',
+            plafondCA: 'Aucun plafond (régime IS obligatoire)',
             icone: 'fa-user-md'
         },
         {
@@ -229,7 +237,7 @@ document.addEventListener('DOMContentLoaded', function() {
             categorie: 'Libérale',
             associes: '2+',
             capital: 'Libre',
-            responsabilite: 'Limitée aux apports',
+            responsabilite: 'Limitée aux apports sauf faute de gestion',
             fiscalite: 'IS',
             fiscaliteOption: 'Non',
             regimeSocial: 'Assimilé salarié',
@@ -248,15 +256,16 @@ document.addEventListener('DOMContentLoaded', function() {
             casConseille: 'Professions libérales',
             casDeconseille: 'Activité commerciale',
             transmission: 'Oui',
+            plafondCA: 'Aucun plafond (régime IS obligatoire)',
             icone: 'fa-user-md'
         },
         {
             id: 'earl',
             nom: 'EARL',
             categorie: 'Agricole',
-            associes: '1+',
-            capital: 'Libre',
-            responsabilite: 'Limitée aux apports',
+            associes: '1-10',
+            capital: 'Minimum 7 500 €',
+            responsabilite: 'Limitée aux apports sauf faute de gestion',
             fiscalite: 'IR (IS option)',
             fiscaliteOption: 'Oui',
             regimeSocial: 'TNS',
@@ -275,6 +284,7 @@ document.addEventListener('DOMContentLoaded', function() {
             casConseille: 'Exploitation agricole',
             casDeconseille: 'Hors agriculture',
             transmission: 'Oui',
+            plafondCA: 'Aucun plafond (régime IR/IS selon option sans seuil CA)',
             icone: 'fa-tractor'
         }
     ];
@@ -615,7 +625,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (userResponses.risque <= 2 && forme.responsabilite.includes('Limitée')) {
                 score += 10;
                 details.push('Limitation des risques personnels');
-            } else if (userResponses.risque >= 4 && forme.responsabilite.includes('Illimitée')) {
+            } else if (userResponses.risque >= 4 && forme.responsabilite.includes('Indéfinie')) {
                 score += 5;
                 details.push('Vous acceptez une part de risque plus importante');
             }
@@ -691,6 +701,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <li><i class="fas fa-shield-alt text-blue-400"></i> Responsabilité: ${forme.responsabilite}</li>
                             <li><i class="fas fa-percentage text-blue-400"></i> Fiscalité: ${forme.fiscalite}</li>
                             <li><i class="fas fa-user-tie text-blue-400"></i> Régime social: ${forme.regimeSocial}</li>
+                            ${forme.plafondCA ? `<li><i class="fas fa-chart-line text-blue-400"></i> Plafond CA: ${forme.plafondCA}</li>` : ''}
                         </ul>
                     </div>
                 </div>
