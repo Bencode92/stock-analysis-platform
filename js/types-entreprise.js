@@ -65,6 +65,62 @@ document.addEventListener('DOMContentLoaded', function() {
             plafondCA: 'Aucun plafond',
             icone: 'fa-user'
         },
+        {
+            id: 'eurl',
+            nom: 'EURL',
+            categorie: 'Commerciale',
+            associes: '1',
+            capital: '1€ minimum',
+            responsabilite: 'Limitée aux apports',
+            fiscalite: 'IR ou IS',
+            fiscaliteOption: 'Oui',
+            regimeSocial: 'TNS ou Assimilé salarié',
+            protectionPatrimoine: 'Oui',
+            chargesSociales: 'Sur rémunération',
+            fiscal: 'Dividendes possibles',
+            regimeTVA: 'Oui',
+            publicationComptes: 'Oui',
+            formalites: 'Modérées',
+            activite: 'Toutes',
+            leveeFonds: 'Limité',
+            entreeAssocies: 'Possible',
+            profilOptimal: 'Entrepreneur solo cherchant séparation patrimoine',
+            avantages: 'Protection du patrimoine personnel, flexibilité fiscale',
+            inconvenients: 'Formalisme, coûts de création',
+            casConseille: 'Activité avec risques',
+            casDeconseille: 'Petit CA sans risque',
+            transmission: 'Oui',
+            plafondCA: 'Aucun plafond',
+            icone: 'fa-shield-alt'
+        },
+        {
+            id: 'sasu',
+            nom: 'SASU',
+            categorie: 'Commerciale',
+            associes: '1',
+            capital: '1€ minimum',
+            responsabilite: 'Limitée aux apports',
+            fiscalite: 'IS',
+            fiscaliteOption: 'Non',
+            regimeSocial: 'Assimilé salarié',
+            protectionPatrimoine: 'Oui',
+            chargesSociales: 'Sur rémunération',
+            fiscal: 'Dividendes possibles',
+            regimeTVA: 'Oui',
+            publicationComptes: 'Oui',
+            formalites: 'Modérées',
+            activite: 'Toutes',
+            leveeFonds: 'Oui',
+            entreeAssocies: 'Facile',
+            profilOptimal: 'Entrepreneur solo cherchant statut salarié',
+            avantages: 'Protection sociale du régime général, flexibilité statutaire',
+            inconvenients: 'IS obligatoire, charges sociales élevées',
+            casConseille: 'Salaire élevé, levée de fonds',
+            casDeconseille: 'Petit CA',
+            transmission: 'Oui',
+            plafondCA: 'Aucun plafond',
+            icone: 'fa-chart-line'
+        }
         // ... autres formes juridiques existantes maintenues à l'identique
     ];
 
@@ -811,8 +867,140 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // PARTIE STRUCTURELLE (60%)
-            // (Code existant pour calculer les scores selon différents critères)
-            // ...
+            // Profil entrepreneur
+            if (userResponses.profilEntrepreneur === 'solo' && forme.associes === '1') {
+                scoreCriteresStructurels += 20 * coefficients.profilEntrepreneur;
+                details.push('Forme adaptée aux entrepreneurs solos');
+            } else if (userResponses.profilEntrepreneur === 'associes' && parseInt(forme.associes) > 1) {
+                scoreCriteresStructurels += 20 * coefficients.profilEntrepreneur;
+                details.push('Forme adaptée aux projets avec associés');
+            } else if (userResponses.profilEntrepreneur === 'famille' && forme.id.includes('sarl')) {
+                scoreCriteresStructurels += 20 * coefficients.profilEntrepreneur;
+                details.push('Forme particulièrement adaptée aux projets familiaux');
+            } else if (userResponses.profilEntrepreneur === 'investisseurs' && forme.leveeFonds === 'Oui') {
+                scoreCriteresStructurels += 20 * coefficients.profilEntrepreneur;
+                details.push('Structure idéale pour accueillir des investisseurs');
+            }
+            
+            // Protection patrimoniale
+            if (userResponses.protectionPatrimoine >= 4 && forme.protectionPatrimoine === 'Oui') {
+                scoreCriteresStructurels += 20 * coefficients.protectionPatrimoine;
+                details.push('Excellente protection du patrimoine personnel');
+            } else if (userResponses.protectionPatrimoine >= 3 && forme.protectionPatrimoine.includes('Oui')) {
+                scoreCriteresStructurels += 15 * coefficients.protectionPatrimoine;
+                details.push('Bonne protection du patrimoine personnel');
+            } else if (userResponses.protectionPatrimoine <= 2 && forme.protectionPatrimoine === 'Non') {
+                scoreCriteresStructurels += 10; // Le coefficient n'est pas appliqué car c'est moins important
+                details.push('Protection patrimoniale limitée (conforme à vos besoins)');
+            }
+
+            // Type d'activité
+            if (userResponses.typeActivite && forme.activite.includes(userResponses.typeActivite)) {
+                scoreCriteresStructurels += 15 * coefficients.typeActivite;
+                details.push(`Adapté aux activités ${userResponses.typeActivite}s`);
+            }
+            
+            // Activité réglementée
+            if (userResponses.activiteReglementee && forme.id.includes('sel')) {
+                scoreCriteresStructurels += 25;
+                details.push('Structure spécifique pour activités réglementées');
+            }
+            
+            // Chiffre d'affaires
+            if (userResponses.chiffreAffaires === 'faible' && forme.id === 'micro-entreprise') {
+                scoreCriteresStructurels += 20 * coefficients.chiffreAffaires;
+                details.push('Parfait pour les petits chiffres d\'affaires');
+            } else if (userResponses.chiffreAffaires === 'moyen' && 
+                      (forme.id === 'eurl' || forme.id === 'sasu' || forme.id === 'ei')) {
+                scoreCriteresStructurels += 15 * coefficients.chiffreAffaires;
+                details.push('Bien adapté aux chiffres d\'affaires moyens');
+            } else if (userResponses.chiffreAffaires === 'eleve' && 
+                      (forme.id === 'sas' || forme.id === 'sarl' || forme.id === 'sa')) {
+                scoreCriteresStructurels += 20 * coefficients.chiffreAffaires;
+                details.push('Structure idéale pour les chiffres d\'affaires élevés');
+            }
+            
+            // PARTIE OBJECTIFS (40%)
+            // Remuneration
+            if (userResponses.remuneration === 'salaire' && forme.regimeSocial.includes('salarié')) {
+                scoreObjectifs += 20;
+                details.push('Permet une rémunération par salaire');
+            } else if (userResponses.remuneration === 'dividendes' && forme.fiscalite === 'IS') {
+                scoreObjectifs += 20;
+                details.push('Permet une distribution de dividendes optimisée');
+            } else if (userResponses.remuneration === 'mixte' && 
+                      (forme.id === 'sasu' || forme.id === 'sas' || forme.id === 'sarl')) {
+                scoreObjectifs += 25;
+                details.push('Permet un mix optimal salaire/dividendes');
+            }
+            
+            // Objectifs spécifiques
+            userResponses.objectifs.forEach(objectif => {
+                if (objectif === 'simplicite' && 
+                   (forme.formalites === 'Très simplifiées' || forme.formalites === 'Simplifiées')) {
+                    scoreObjectifs += 15;
+                    details.push('Formalités simplifiées, gestion facile');
+                } else if (objectif === 'economie' && forme.id === 'micro-entreprise') {
+                    scoreObjectifs += 15;
+                    details.push('Coûts de création et de gestion très réduits');
+                } else if (objectif === 'fiscalite' && forme.fiscaliteOption === 'Oui') {
+                    scoreObjectifs += 15;
+                    details.push('Flexibilité fiscale (choix entre IR et IS)');
+                } else if (objectif === 'protection' && forme.protectionPatrimoine === 'Oui') {
+                    scoreObjectifs += 15;
+                    details.push('Excellente protection du patrimoine personnel');
+                } else if (objectif === 'croissance' && 
+                          (forme.leveeFonds === 'Oui' || forme.id === 'sas' || forme.id === 'sa')) {
+                    scoreObjectifs += 15;
+                    details.push('Structure adaptée à la croissance et levée de fonds');
+                } else if (objectif === 'credibilite' && 
+                          (forme.id === 'sas' || forme.id === 'sarl' || forme.id === 'sa')) {
+                    scoreObjectifs += 15;
+                    details.push('Forte crédibilité auprès des partenaires et clients');
+                }
+            });
+            
+            // Régime fiscal souhaité
+            if (userResponses.regimeFiscal === 'ir' && forme.fiscalite === 'IR') {
+                scoreObjectifs += 15 * coefficients.regimeFiscal;
+                details.push('Correspond à votre préférence pour l\'IR');
+            } else if (userResponses.regimeFiscal === 'is' && forme.fiscalite === 'IS') {
+                scoreObjectifs += 15 * coefficients.regimeFiscal;
+                details.push('Correspond à votre préférence pour l\'IS');
+            } else if (userResponses.regimeFiscal === 'flexible' && forme.fiscaliteOption === 'Oui') {
+                scoreObjectifs += 20 * coefficients.regimeFiscal;
+                details.push('Offre la flexibilité fiscale souhaitée');
+            }
+            
+            // Régime social souhaité
+            if (userResponses.regimeSocial === 'tns' && forme.regimeSocial.includes('TNS')) {
+                scoreObjectifs += 15 * coefficients.regimeSocial;
+                details.push('Correspond à votre préférence pour le statut TNS');
+            } else if (userResponses.regimeSocial === 'salarie' && forme.regimeSocial.includes('salarié')) {
+                scoreObjectifs += 15 * coefficients.regimeSocial;
+                details.push('Correspond à votre préférence pour le statut assimilé-salarié');
+            }
+            
+            // Niveau de risque acceptable
+            if (userResponses.risque >= 4 && 
+               (forme.id === 'ei' || forme.id === 'micro-entreprise' || forme.id === 'snc')) {
+                scoreObjectifs += 10;
+                details.push('Conforme à votre tolérance élevée au risque');
+            } else if (userResponses.risque <= 2 && forme.protectionPatrimoine === 'Oui') {
+                scoreObjectifs += 15;
+                details.push('Sécurité maximale adaptée à votre profil prudent');
+            }
+            
+            // Score total
+            score = scoreCriteresStructurels + scoreObjectifs;
+            
+            // Stocker les scores détaillés pour l'affichage
+            scoreDetails = {
+                criteres: scoreCriteresStructurels,
+                objectifs: scoreObjectifs,
+                total: score,
+                pourcentage: Math.round((score / SCORE_MAX_POSSIBLE) * 100)
+            };
 
             // Déterminer la catégorie de compatibilité
             let compatibilite;
@@ -899,17 +1087,248 @@ document.addEventListener('DOMContentLoaded', function() {
         
         resultsContainer.innerHTML = '';
         
-        // Ajouter les éléments d'interface pour afficher les résultats
-        // Le code existant pour l'affichage des résultats...
+        // Si aucun résultat trouvé
+        if (results.length === 0) {
+            resultsContainer.innerHTML = `
+                <div class="p-6 text-center">
+                    <h3 class="text-xl font-bold text-red-400 mb-4">Aucun résultat compatible trouvé</h3>
+                    <p class="mb-4">Vos critères ne correspondent à aucune forme juridique recommandée. Essayez de modifier vos réponses.</p>
+                    <button id="restart-form" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center mx-auto">
+                        <i class="fas fa-redo mr-2"></i> Recommencer la simulation
+                    </button>
+                </div>
+            `;
+            
+            // Ajouter un écouteur d'événement au bouton de redémarrage
+            const restartForm = document.getElementById('restart-form');
+            if (restartForm) {
+                restartForm.addEventListener('click', resetSimulation);
+            }
+            
+            return;
+        }
+        
+        // Résultat principal (le premier comme recommandation principale)
+        const recommended = results[0];
+        
+        // Calculer le score en pourcentage pour la visualisation
+        const scorePercentage = Math.round((recommended.scoreDetails.pourcentage || 85));
+        
+        let htmlPrimary = `
+            <div class="result-card primary-result visible p-6 mb-6 relative">
+                ${recommended.compatibilite === 'RECOMMANDÉ' ? '<div class="recommended-badge">Recommandé</div>' : ''}
+                <h3 class="text-2xl font-bold text-green-400 mb-3">${recommended.forme.nom}</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <p class="text-lg mb-3">Score de compatibilité: <strong class="text-green-400">${scorePercentage}%</strong></p>
+                        
+                        <div class="match-indicator mb-4">
+                            <div class="match-fill" style="width: ${scorePercentage}%;"></div>
+                        </div>
+                        
+                        <h4 class="font-semibold mb-2">Caractéristiques principales</h4>
+                        <ul class="feature-list">
+                            <li><i class="fas fa-users text-green-400"></i> <strong>Associés:</strong> ${recommended.forme.associes}</li>
+                            <li><i class="fas fa-coins text-green-400"></i> <strong>Capital:</strong> ${recommended.forme.capital}</li>
+                            <li><i class="fas fa-shield-alt text-green-400"></i> <strong>Responsabilité:</strong> ${recommended.forme.responsabilite}</li>
+                            <li><i class="fas fa-percentage text-green-400"></i> <strong>Fiscalité:</strong> ${recommended.forme.fiscalite}</li>
+                            <li><i class="fas fa-id-card text-green-400"></i> <strong>Régime social:</strong> ${recommended.forme.regimeSocial}</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold mb-2">Points forts pour votre profil</h4>
+                        <ul class="feature-list">
+        `;
+        
+        // Ajouter les points forts (détails)
+        recommended.details.slice(0, 5).forEach(detail => {
+            htmlPrimary += `<li><i class="fas fa-check text-green-400"></i> ${detail}</li>`;
+        });
+        
+        htmlPrimary += `
+                        </ul>
+                        
+                        <h4 class="font-semibold mt-4 mb-2">Impact fiscal estimé</h4>
+                        <div class="bg-blue-900 bg-opacity-30 p-3 rounded-lg">
+                            <div class="flex justify-between mb-2">
+                                <span>Revenu brut simulé:</span>
+                                <span>${parametresAvances.caSimulation.toLocaleString('fr-FR')} €</span>
+                            </div>
+                            <div class="flex justify-between mb-2">
+                                <span>Charges sociales:</span>
+                                <span>${Math.round(recommended.simulation.chargesSociales || 0).toLocaleString('fr-FR')} €</span>
+                            </div>
+                            <div class="flex justify-between mb-2">
+                                <span>Impôts:</span>
+                                <span>${Math.round(recommended.simulation.impot || 0).toLocaleString('fr-FR')} €</span>
+                            </div>
+                            <div class="flex justify-between font-semibold text-green-400">
+                                <span>Revenu net estimé:</span>
+                                <span>${Math.round(recommended.simulation.revenueNet || 0).toLocaleString('fr-FR')} €</span>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <button id="show-score-details" class="text-green-400 hover:text-green-300 text-sm flex items-center">
+                                <i class="fas fa-calculator mr-1"></i> Voir le détail du score
+                            </button>
+                            <div id="score-details" class="score-details hidden mt-2">
+                                <ul>
+                                    <li>Score critères structurels: ${recommended.scoreCriteresStructurels} pts (60%)</li>
+                                    <li>Score objectifs: ${recommended.scoreObjectifs} pts (40%)</li>
+                                    <li>Score total: ${recommended.score} / ${SCORE_MAX_POSSIBLE}</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Ajouter les autres résultats si disponibles
+        let secondaryHtml = '';
+        if (results.length > 1) {
+            // Afficher le bouton pour montrer plus de résultats
+            if (showMoreResults) {
+                showMoreResults.classList.remove('hidden');
+            }
+            
+            // Créer le contenu des résultats secondaires
+            secondaryHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">';
+            
+            results.slice(1).forEach(result => {
+                const resultScore = Math.round((result.scoreDetails.pourcentage || 75));
+                
+                secondaryHtml += `
+                    <div class="result-card visible p-5 relative">
+                        <h3 class="text-xl font-bold text-green-400 mb-2">${result.forme.nom}</h3>
+                        <p class="mb-2">Compatibilité: <strong>${resultScore}%</strong></p>
+                        
+                        <div class="match-indicator mb-3">
+                            <div class="match-fill" style="width: ${resultScore}%;"></div>
+                        </div>
+                        
+                        <h4 class="font-semibold text-sm mb-2">Points clés</h4>
+                        <ul class="text-sm">
+                            <li><strong>Fiscalité:</strong> ${result.forme.fiscalite}</li>
+                            <li><strong>Régime social:</strong> ${result.forme.regimeSocial}</li>
+                            <li><strong>Points forts:</strong> ${result.details.slice(0, 2).join(', ')}</li>
+                        </ul>
+                        
+                        <div class="mt-3 grid grid-cols-2 gap-2">
+                            <div class="text-sm">
+                                <div class="text-xs opacity-70">Charges</div>
+                                <div>${Math.round(result.simulation.chargesSociales || 0).toLocaleString('fr-FR')} €</div>
+                            </div>
+                            <div class="text-sm">
+                                <div class="text-xs opacity-70">Revenu net</div>
+                                <div>${Math.round(result.simulation.revenueNet || 0).toLocaleString('fr-FR')} €</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            secondaryHtml += '</div>';
+            
+            // Ajouter le contenu secondaire au container
+            if (secondaryResults) {
+                secondaryResults.innerHTML = secondaryHtml;
+            }
+        }
+        
+        // Ajouter les incompatibilités si présentes
+        const incompatibilitesHtml = displayIncompatibilites(incompatibles);
+        
+        // Ajouter le tout au container
+        resultsContainer.innerHTML = htmlPrimary + incompatibilitesHtml;
+        
+        // Activer le bouton de détail du score
+        const showScoreDetails = document.getElementById('show-score-details');
+        const scoreDetails = document.getElementById('score-details');
+        
+        if (showScoreDetails && scoreDetails) {
+            showScoreDetails.addEventListener('click', function() {
+                scoreDetails.classList.toggle('hidden');
+                showScoreDetails.innerHTML = scoreDetails.classList.contains('hidden') 
+                    ? '<i class="fas fa-calculator mr-1"></i> Voir le détail du score' 
+                    : '<i class="fas fa-calculator mr-1"></i> Masquer le détail';
+            });
+        }
+        
+        // Déclencher un événement pour indiquer que les résultats sont chargés
+        document.dispatchEvent(new CustomEvent('resultsLoaded'));
     }
 
     /**
      * Affiche les formes juridiques incompatibles
      */
     function displayIncompatibilites(incompatibles) {
-        if (incompatibles.length === 0) return '';
+        if (!incompatibles || incompatibles.length === 0) return '';
         
-        // Le code existant pour afficher les incompatibilités...
+        let html = `
+            <div class="mt-8 mb-6">
+                <h3 class="text-xl font-bold text-red-400 mb-4 flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-2"></i> 
+                    Formes juridiques incompatibles avec votre profil
+                </h3>
+                <div class="bg-blue-900 bg-opacity-20 p-4 rounded-xl">
+                    <p class="mb-4">Les structures suivantes présentent des incompatibilités majeures avec vos critères :</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        `;
+        
+        // Regrouper les incompatibilités par forme juridique
+        const incompatibiliteParForme = {};
+        incompatibles.forEach(inc => {
+            const forme = formesJuridiques.find(f => f.id === inc.formeId);
+            if (forme) {
+                if (!incompatibiliteParForme[forme.id]) {
+                    incompatibiliteParForme[forme.id] = {
+                        forme: forme,
+                        raisons: []
+                    };
+                }
+                
+                // Vérifier si cette raison n'est pas déjà listée
+                const raisonExiste = incompatibiliteParForme[forme.id].raisons.some(r => r.code === inc.code);
+                if (!raisonExiste) {
+                    incompatibiliteParForme[forme.id].raisons.push({
+                        code: inc.code,
+                        message: inc.message,
+                        details: inc.details
+                    });
+                }
+            }
+        });
+        
+        // Générer le HTML pour chaque forme incompatible
+        Object.values(incompatibiliteParForme).forEach(item => {
+            html += `
+                <div class="bg-red-900 bg-opacity-20 p-4 rounded-lg border border-red-800">
+                    <h4 class="font-semibold text-red-400 mb-2">${item.forme.nom}</h4>
+                    <ul class="text-sm">
+            `;
+            
+            item.raisons.forEach(raison => {
+                html += `<li class="mb-1 flex items-start">
+                    <i class="fas fa-times text-red-400 mr-2 mt-1"></i>
+                    <span>${raison.message}</span>
+                </li>`;
+            });
+            
+            html += `
+                    </ul>
+                </div>
+            `;
+        });
+        
+        html += `
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        return html;
     }
 
     /**
@@ -918,24 +1337,73 @@ document.addEventListener('DOMContentLoaded', function() {
     function prepareComparatifTable(formesJuridiques) {
         if (!comparatifTableBody) return;
         
-        // Le code existant pour préparer le tableau comparatif...
+        // Vider le tableau existant
+        comparatifTableBody.innerHTML = '';
+        
+        // Créer une ligne pour chaque forme juridique
+        formesJuridiques.forEach(forme => {
+            const row = document.createElement('tr');
+            row.className = 'hover:bg-blue-900 hover:bg-opacity-40';
+            
+            // Créer les cellules
+            row.innerHTML = `
+                <td class="p-3">
+                    <div class="font-semibold">${forme.nom}</div>
+                    <div class="text-xs text-gray-400">${forme.categorie}</div>
+                </td>
+                <td class="p-3">${forme.associes}</td>
+                <td class="p-3">${forme.capital}</td>
+                <td class="p-3">${forme.responsabilite}</td>
+                <td class="p-3">${forme.fiscalite}${forme.fiscaliteOption === 'Oui' ? ' (option)' : ''}</td>
+                <td class="p-3">${forme.regimeSocial}</td>
+                <td class="p-3">
+                    <ul class="text-sm list-disc pl-4">
+                        <li>${forme.avantages.split(',')[0]}</li>
+                        ${forme.avantages.includes(',') ? `<li>${forme.avantages.split(',')[1]}</li>` : ''}
+                    </ul>
+                </td>
+                <td class="p-3">
+                    <ul class="text-sm list-disc pl-4">
+                        <li>${forme.inconvenients.split(',')[0]}</li>
+                        ${forme.inconvenients.includes(',') ? `<li>${forme.inconvenients.split(',')[1]}</li>` : ''}
+                    </ul>
+                </td>
+            `;
+            
+            // Ajouter la ligne au tableau
+            comparatifTableBody.appendChild(row);
+        });
     }
 
     /**
      * Affiche le tableau comparatif complet
      */
     function showComparatifComplet() {
-        if (!comparatifComplet) return;
+        if (!comparatifComplet || !resultsContainer) return;
         
-        // Le code existant pour afficher le tableau comparatif...
+        // Masquer les résultats
+        resultsContainer.classList.add('hidden');
+        
+        // Afficher le tableau comparatif
+        comparatifComplet.classList.remove('hidden');
+        
+        // Scroll vers le haut
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     /**
      * Cache le tableau comparatif complet
      */
     function hideComparatifComplet() {
-        if (!comparatifComplet) return;
+        if (!comparatifComplet || !resultsContainer) return;
         
-        // Le code existant pour cacher le tableau comparatif...
+        // Masquer le tableau comparatif
+        comparatifComplet.classList.add('hidden');
+        
+        // Afficher les résultats
+        resultsContainer.classList.remove('hidden');
+        
+        // Scroll vers le haut
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 });
