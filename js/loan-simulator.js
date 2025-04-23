@@ -430,6 +430,44 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Fonction pour intégrer le PTZ au prêt principal
+    function integrePTZ(ptzAmount, ptzDuration, ptzDeferral, ptzMonthly) {
+        if (!ptzAmount) return false;
+        
+        // Récupération des éléments du DOM
+        const ptzAmountInput = document.getElementById('ptz-amount');
+        const ptzDetails = document.getElementById('ptz-details');
+        const ptzMonthlySpan = document.getElementById('ptz-monthly');
+        const ptzDeferralSpan = document.getElementById('ptz-deferral');
+        const ptzDurationBadge = document.getElementById('ptz-duration-badge');
+        const ptzBadge = document.getElementById('ptz-badge');
+        
+        if (!ptzAmountInput || !ptzDetails) {
+            console.error("Éléments PTZ non trouvés dans le DOM");
+            return false;
+        }
+        
+        // Stockage des attributs data pour référence ultérieure
+        ptzDetails.setAttribute('data-duration', ptzDuration);
+        ptzDetails.setAttribute('data-deferral', ptzDeferral);
+        ptzDetails.setAttribute('data-monthly', ptzMonthly);
+        
+        // Mise à jour des champs
+        ptzAmountInput.value = ptzAmount;
+        ptzMonthlySpan.textContent = formatMontant(ptzMonthly);
+        ptzDeferralSpan.textContent = ptzDeferral + ' ans';
+        ptzDurationBadge.textContent = ptzDuration + ' ans';
+        
+        // Affichage des détails du PTZ
+        ptzDetails.classList.remove('hidden');
+        ptzBadge.classList.remove('hidden');
+        
+        // Recalculer le prêt avec le PTZ intégré
+        calculateLoan();
+        
+        return true;
+    }
+
     // Fonction pour calculer et afficher les résultats
     function calculateLoan() {
         try {
@@ -441,6 +479,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const insuranceRate = parseFloat(document.getElementById('insurance-rate-slider').value);
             const newInterestRate = parseFloat(document.getElementById('new-interest-rate-slider').value);
             const renegotiationMonth = parseInt(document.getElementById('renegotiation-month-slider').value);
+            
+            // Récupération du montant du PTZ
+            const ptzAmountInput = document.getElementById('ptz-amount');
+            const ptzAmount = ptzAmountInput ? parseFloat(ptzAmountInput.value || 0) : 0;
+            
+            // Calcul du montant ajusté (principal - PTZ)
+            const adjustedLoanAmount = Math.max(0, loanAmount - ptzAmount);
             
             // Récupérer l'état de la case à cocher "Appliquer la renégociation"
             const applyRenegotiation = document.getElementById('apply-renegotiation')?.checked || false;
@@ -454,7 +499,7 @@ document.addEventListener('DOMContentLoaded', function() {
             let fraisGarantie = null;
             if (fraisGarantieInput) {
                 // Calculer automatiquement à chaque fois
-                fraisGarantie = Math.round(loanAmount * 0.013709);
+                fraisGarantie = Math.round(adjustedLoanAmount * 0.013709);
                 // Mettre à jour la valeur dans le champ
                 fraisGarantieInput.value = fraisGarantie;
             }
@@ -481,6 +526,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             console.log("Remboursements anticipés:", remboursementsAnticipes);
             console.log("Appliquer renégociation:", applyRenegotiation);
+            console.log("Montant du prêt ajusté (avec PTZ déduit):", adjustedLoanAmount);
             
             // Appliquer le nouveau taux à tous les remboursements si spécifié
             if (newInterestRate && remboursementsAnticipes.length > 0) {
@@ -491,7 +537,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Création du simulateur
             const simulator = new LoanSimulator({
-                capital: loanAmount,
+                capital: adjustedLoanAmount, // Utiliser le montant ajusté qui tient compte du PTZ
                 tauxAnnuel: interestRate,
                 dureeMois: loanDurationYears * 12,
                 assuranceAnnuelle: insuranceRate,
@@ -531,8 +577,93 @@ document.addEventListener('DOMContentLoaded', function() {
             if (taegElement) taegElement.textContent = result.taeg.toFixed(2) + '%';
             if (coutGlobalElement) coutGlobalElement.textContent = formatMontant(result.coutGlobalTotal);
             if (ratioCoutElement) {
-                const ratioCout = (result.coutGlobalTotal / loanAmount).toFixed(3);
+                const ratioCout = (result.coutGlobalTotal / adjustedLoanAmount).toFixed(3);
                 ratioCoutElement.textContent = ratioCout;
+            }
+            
+            // Calcul et affichage des données du PTZ si applicable
+            if (ptzAmount > 0) {
+                // Récupérer les détails du PTZ
+                const ptzDetails = document.getElementById('ptz-details');
+                const ptzDuration = parseFloat(ptzDetails?.getAttribute('data-duration') || 15);
+                const ptzDeferral = parseFloat(ptzDetails?.getAttribute('data-deferral') || 0);
+                
+                // Calcul de la mensualité PTZ
+                let ptzMonthly = 0;
+                if (ptzDuration > ptzDeferral) {
+                    const remainingDuration = (ptzDuration - ptzDeferral) * 12;
+                    ptzMonthly = ptzAmount / remainingDuration;
+                }
+                
+                // Mise à jour de l'affichage
+                const ptzMonthlySpan = document.getElementById('ptz-monthly');
+                if (ptzMonthlySpan) {
+                    ptzMonthlySpan.textContent = formatMontant(ptzMonthly);
+                }
+                
+                // Calcul de la mensualité totale (prêt principal + PTZ)
+                // Pendant la période où le PTZ est remboursé
+                let totalMonthlyWithPTZ = result.mensualiteInitiale;
+                if (ptzDeferral === 0) {
+                    totalMonthlyWithPTZ += ptzMonthly;
+                }
+                
+                // Mise à jour de l'affichage de la mensualité
+                const monthlyPaymentElement = document.getElementById('monthly-payment');
+                if (monthlyPaymentElement) {
+                    // Afficher la mensualité totale avec indication du PTZ
+                    monthlyPaymentElement.innerHTML = `${formatMontant(result.mensualiteInitiale)} <span class="text-xs text-green-400">(+${formatMontant(ptzMonthly)} après différé)</span>`;
+                }
+                
+                // Ajouter une note explicative sur le PTZ
+                let ptzImpactSummary = document.getElementById('ptz-impact-summary');
+                if (!ptzImpactSummary) {
+                    ptzImpactSummary = document.createElement('div');
+                    ptzImpactSummary.id = 'ptz-impact-summary';
+                    ptzImpactSummary.className = 'bg-green-900 bg-opacity-20 p-4 rounded-lg border-l-4 border-green-400 mt-6';
+                    
+                    // Insérer après le graphique ou après le résumé des économies
+                    const insertAfter = document.getElementById('savings-summary') || document.querySelector('.chart-container');
+                    if (insertAfter && insertAfter.parentNode) {
+                        insertAfter.parentNode.insertBefore(ptzImpactSummary, insertAfter.nextSibling);
+                    }
+                }
+                
+                // Contenu explicatif
+                ptzImpactSummary.innerHTML = `
+                    <h5 class="text-green-400 font-medium flex items-center mb-2">
+                        <i class="fas fa-home mr-2"></i>
+                        Impact du PTZ sur votre prêt
+                    </h5>
+                    <ul class="text-sm text-gray-300 space-y-2 pl-4">
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                            <span>Montant du PTZ: ${formatMontant(ptzAmount)} (déduit du capital principal)</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                            <span>Mensualité de remboursement du PTZ: ${formatMontant(ptzMonthly)}</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                            <span>Période de différé: ${ptzDeferral} ans (pas de remboursement pendant cette période)</span>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                            <span>Durée totale du PTZ: ${ptzDuration} ans</span>
+                        </li>
+                        <li class="flex items-start bg-blue-900 bg-opacity-30 p-2 rounded-lg my-2">
+                            <i class="fas fa-info-circle text-blue-400 mr-2 mt-1"></i>
+                            <span>Mensualité initiale: ${formatMontant(result.mensualiteInitiale)}, puis ${formatMontant(totalMonthlyWithPTZ)} après la période de différé</span>
+                        </li>
+                    </ul>
+                `;
+            } else {
+                // Si pas de PTZ, supprimer le résumé d'impact
+                const ptzImpactSummary = document.getElementById('ptz-impact-summary');
+                if (ptzImpactSummary) {
+                    ptzImpactSummary.remove();
+                }
             }
 
             // Génération du tableau d'amortissement
@@ -608,6 +739,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (compareCheckbox && comparisonTable && comparisonTableBody) {
             if (compareCheckbox.checked) {
                 comparisonTable.classList.remove('hidden');
+                
+                // Recuperer le montant du PTZ si présent
+                const ptzAmount = parseFloat(document.getElementById('ptz-amount')?.value || 0);
                 
                 // Calculer les mêmes paramètres sans remboursement anticipé
                 const simulator = new LoanSimulator({
@@ -692,6 +826,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 `;
                 comparisonTableBody.appendChild(trFrais);
                 
+                // Ligne pour le PTZ si présent
+                if (ptzAmount > 0) {
+                    const trPTZ = document.createElement('tr');
+                    trPTZ.classList.add('bg-green-900', 'bg-opacity-10');
+                    trPTZ.innerHTML = `
+                        <td class="px-3 py-2 font-medium">PTZ</td>
+                        <td class="px-3 py-2 text-right">0 €</td>
+                        <td class="px-3 py-2 text-right">${formatMontant(ptzAmount)}</td>
+                        <td class="px-3 py-2 text-right text-green-400">+${formatMontant(ptzAmount)}</td>
+                    `;
+                    comparisonTableBody.appendChild(trPTZ);
+                }
+                
                 // Ligne pour le coût global total
                 const trCoutGlobal = document.createElement('tr');
                 trCoutGlobal.classList.add('bg-green-900', 'bg-opacity-10', 'font-bold');
@@ -764,6 +911,18 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         }
         
+        // Vérifier si un PTZ est présent
+        const ptzAmount = parseFloat(document.getElementById('ptz-amount')?.value || 0);
+        let ptzText = '';
+        if (ptzAmount > 0) {
+            ptzText = `
+                <li class="flex items-start">
+                    <i class="fas fa-home text-green-400 mr-2 mt-1"></i>
+                    <span>PTZ intégré : ${formatMontant(ptzAmount)} déduit du montant principal</span>
+                </li>
+            `;
+        }
+        
         // Préparer le contenu HTML
         let htmlContent = `
             <h5 class="text-green-400 font-medium flex items-center mb-2">
@@ -784,7 +943,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
                     <span>${modeText}</span>
                 </li>
-                ${renégociationText}`;
+                ${renégociationText}
+                ${ptzText}`;
                 
         // Affichage spécial pour le prêt soldé avant terme
         if (result.pretSoldeAvantTerme) {
@@ -1045,6 +1205,40 @@ document.addEventListener('DOMContentLoaded', function() {
             const renegotiationMonth = document.getElementById('renegotiation-month-slider').value;
             const applyRenegotiation = document.getElementById('apply-renegotiation')?.checked || false;
             
+            // Vérifier si PTZ est présent
+            const ptzAmount = parseFloat(document.getElementById('ptz-amount')?.value || 0);
+            let ptzSection = '';
+            if (ptzAmount > 0) {
+                const ptzDetails = document.getElementById('ptz-details');
+                const ptzDuration = parseFloat(ptzDetails?.getAttribute('data-duration') || 15);
+                const ptzDeferral = parseFloat(ptzDetails?.getAttribute('data-deferral') || 0);
+                const ptzMonthly = document.getElementById('ptz-monthly')?.textContent || '';
+                
+                ptzSection = `
+                    <div class="mt-3 mb-6 p-4 border border-gray-300 rounded">
+                        <h3 class="font-bold mb-2">Informations PTZ intégré</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <p class="font-bold">Montant du PTZ:</p>
+                                <p>${formatMontant(ptzAmount)}</p>
+                            </div>
+                            <div>
+                                <p class="font-bold">Durée du PTZ:</p>
+                                <p>${ptzDuration} ans</p>
+                            </div>
+                            <div>
+                                <p class="font-bold">Période de différé:</p>
+                                <p>${ptzDeferral} ans</p>
+                            </div>
+                            <div>
+                                <p class="font-bold">Mensualité PTZ:</p>
+                                <p>${ptzMonthly}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
             // En-tête du PDF
             element.innerHTML = `
                 <div class="text-center mb-6">
@@ -1087,6 +1281,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <p>${document.getElementById('total-cost').textContent}</p>
                     </div>
                 </div>
+                ${ptzSection}
             `;
             
             // Ajouter les infos de renégociation
@@ -1237,7 +1432,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mt-3 mb-6 p-4 border-l-4 border-green-500 bg-green-50 pl-4">
                         <h3 class="font-bold mb-2 text-green-700">Économies réalisées</h3>
                         <div class="text-sm">
-                            ${savingsSummary.innerHTML.replace(/class=\"[^\"]*\"/g, '').replace(/<i[^>]*><\/i>/g, '•')}
+                            ${savingsSummary.innerHTML.replace(/class=\\\"[^\\\"]*\\\"/g, '').replace(/<i[^>]*><\\/i>/g, '•')}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Ajouter l'impact du PTZ si applicable
+            const ptzImpactSummary = document.getElementById('ptz-impact-summary');
+            if (ptzImpactSummary) {
+                element.innerHTML += `
+                    <div class="mt-3 mb-6 p-4 border-l-4 border-blue-500 bg-blue-50 pl-4">
+                        <h3 class="font-bold mb-2 text-blue-700">Impact du PTZ</h3>
+                        <div class="text-sm">
+                            ${ptzImpactSummary.innerHTML.replace(/class=\\\"[^\\\"]*\\\"/g, '').replace(/<i[^>]*><\\/i>/g, '•')}
                         </div>
                     </div>
                 `;
@@ -1397,6 +1605,62 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
+    // Gestion du bouton d'intégration du PTZ au prêt principal
+    const integratePTZButton = document.getElementById('integrate-ptz-to-loan');
+    if (integratePTZButton) {
+        integratePTZButton.addEventListener('click', function() {
+            // Récupérer les données du PTZ depuis les attributs data-*
+            const ptzAmount = parseFloat(this.getAttribute('data-ptz-amount') || 0);
+            const ptzDuration = parseInt(this.getAttribute('data-ptz-duration') || 15);
+            const ptzDeferral = parseInt(this.getAttribute('data-ptz-deferral') || 0);
+            const ptzMonthly = parseFloat(this.getAttribute('data-ptz-monthly') || 0);
+            
+            // Stocker les données PTZ en session pour les retrouver même en changeant d'onglet
+            sessionStorage.setItem('ptz-amount', ptzAmount);
+            sessionStorage.setItem('ptz-duration', ptzDuration);
+            sessionStorage.setItem('ptz-deferral', ptzDeferral);
+            sessionStorage.setItem('ptz-monthly', ptzMonthly);
+            
+            // Passer à l'onglet "Gestion de dette"
+            const debtTab = document.querySelector('.simulation-tab[data-target="loan-simulator"]');
+            if (debtTab) {
+                debtTab.click();
+                
+                // Laisser le temps à l'onglet de s'afficher
+                setTimeout(() => {
+                    // Intégrer le PTZ
+                    integrePTZ(ptzAmount, ptzDuration, ptzDeferral, ptzMonthly);
+                }, 300);
+            }
+        });
+    }
+    
+    // Bouton pour réinitialiser le PTZ
+    const resetPTZButton = document.getElementById('reset-ptz');
+    if (resetPTZButton) {
+        resetPTZButton.addEventListener('click', function() {
+            // Réinitialiser les valeurs
+            document.getElementById('ptz-amount').value = 0;
+            document.getElementById('ptz-details').classList.add('hidden');
+            document.getElementById('ptz-badge').classList.add('hidden');
+            
+            // Effacer le résumé d'impact
+            const ptzImpactSummary = document.getElementById('ptz-impact-summary');
+            if (ptzImpactSummary) {
+                ptzImpactSummary.remove();
+            }
+            
+            // Recalculer le prêt sans PTZ
+            calculateLoan();
+            
+            // Effacer les données en session
+            sessionStorage.removeItem('ptz-amount');
+            sessionStorage.removeItem('ptz-duration');
+            sessionStorage.removeItem('ptz-deferral');
+            sessionStorage.removeItem('ptz-monthly');
+        });
+    }
+    
     // Calculer les résultats initiaux au chargement de la page
     if (document.getElementById('loan-amount')) {
         // Initialiser la mise à jour des valeurs max des sliders
@@ -1408,6 +1672,19 @@ document.addEventListener('DOMContentLoaded', function() {
         // S'assurer que window.storedRepayments existe
         if (!window.storedRepayments) {
             window.storedRepayments = [];
+        }
+        
+        // Restaurer le PTZ si des données sont en session
+        if (sessionStorage.getItem('ptz-amount')) {
+            const ptzAmount = parseFloat(sessionStorage.getItem('ptz-amount'));
+            const ptzDuration = parseInt(sessionStorage.getItem('ptz-duration'));
+            const ptzDeferral = parseInt(sessionStorage.getItem('ptz-deferral'));
+            const ptzMonthly = parseFloat(sessionStorage.getItem('ptz-monthly'));
+            
+            // Intégrer le PTZ avec un petit délai pour s'assurer que tout est chargé
+            setTimeout(() => {
+                integrePTZ(ptzAmount, ptzDuration, ptzDeferral, ptzMonthly);
+            }, 500);
         }
         
         // Lancer le calcul initial
