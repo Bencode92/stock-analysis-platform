@@ -8,6 +8,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- AMÉLIORATION: Ajout des bibliothèques pour l'export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         :root {
             --primary-color: #00FF87;
@@ -714,6 +717,107 @@
             box-shadow: 0 3px 10px rgba(0, 255, 135, 0.3);
             z-index: 5;
         }
+
+        /* AMÉLIORATION: Styles pour les paramètres avancés */
+        .advanced-params-panel {
+            background-color: rgba(1, 42, 74, 0.7);
+            border-radius: 12px;
+            border: 1px solid rgba(0, 255, 135, 0.2);
+            padding: 16px;
+            margin-top: 20px;
+        }
+
+        .advanced-params-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+        }
+
+        .advanced-params-toggle:hover {
+            background-color: rgba(1, 42, 74, 0.8);
+        }
+
+        .advanced-params-content {
+            margin-top: 12px;
+            transition: max-height 0.3s, opacity 0.2s;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+        }
+
+        .advanced-params-content.visible {
+            max-height: 500px;
+            opacity: 1;
+        }
+
+        .parameter-slider-container {
+            display: flex;
+            align-items: center;
+            margin: 12px 0;
+        }
+
+        .parameter-slider-container .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 4px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .parameter-value {
+            width: 60px;
+            text-align: center;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        /* AMÉLIORATION: Styles pour les boutons d'export */
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .export-button {
+            background-color: rgba(1, 42, 74, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px 15px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .export-button:hover {
+            background-color: rgba(0, 255, 135, 0.2);
+            border-color: var(--primary-color);
+        }
+
+        .export-button i {
+            margin-right: 8px;
+        }
+
+        /* AMÉLIORATION: Bulle d'incompatibilités majeures */
+        .incompatibility-badge {
+            position: absolute;
+            top: -15px;
+            right: 20px;
+            background-color: #FF3A54;
+            color: #fff;
+            font-weight: bold;
+            padding: 5px 15px;
+            border-radius: 20px;
+            box-shadow: 0 3px 10px rgba(255, 58, 84, 0.3);
+            z-index: 5;
+        }
     </style>
 </head>
 <body class="dark">
@@ -1208,11 +1312,80 @@
                         <p class="text-lg opacity-80">Basé sur votre profil et vos réponses, voici la forme juridique qui correspond le mieux à vos besoins :</p>
                     </div>
                     
+                    <!-- AMÉLIORATION: Panneau de paramètres avancés pour la simulation -->
+                    <div class="advanced-params-panel mt-4 mb-8">
+                        <div class="advanced-params-toggle" id="advanced-params-toggle">
+                            <div class="flex items-center">
+                                <i class="fas fa-sliders-h text-green-400 mr-2"></i>
+                                <span class="font-semibold">Paramètres avancés de simulation</span>
+                            </div>
+                            <i class="fas fa-chevron-down text-green-400" id="params-toggle-icon"></i>
+                        </div>
+                        
+                        <div class="advanced-params-content" id="advanced-params-content">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                                <div>
+                                    <label class="block mb-2 font-semibold">Répartition de la rémunération</label>
+                                    <div class="parameter-slider-container">
+                                        <span class="text-sm">Salaire</span>
+                                        <input type="range" id="ratio-salaire" min="0" max="100" value="50" class="mx-4">
+                                        <span class="parameter-value" id="ratio-salaire-value">50%</span>
+                                    </div>
+                                    <div class="parameter-slider-container">
+                                        <span class="text-sm">Dividendes</span>
+                                        <input type="range" id="ratio-dividendes" min="0" max="100" value="50" class="mx-4" disabled>
+                                        <span class="parameter-value" id="ratio-dividendes-value">50%</span>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block mb-2 font-semibold">Capital social</label>
+                                    <div class="flex items-center">
+                                        <input type="number" id="capital-social" min="0" value="10000" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-32">
+                                        <span class="ml-2">€</span>
+                                    </div>
+                                    
+                                    <div class="mt-4">
+                                        <label class="block mb-2 font-semibold">Pourcentage libéré</label>
+                                        <div class="parameter-slider-container">
+                                            <input type="range" id="capital-libere" min="20" max="100" value="100" class="mx-4">
+                                            <span class="parameter-value" id="capital-libere-value">100%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <label class="block mb-2 font-semibold">Chiffre d'affaires précis pour la simulation</label>
+                                <div class="flex items-center">
+                                    <input type="number" id="ca-simulation" min="1000" max="10000000" value="50000" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-40">
+                                    <span class="ml-2">€</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-6 flex justify-end">
+                                <button id="apply-params" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-2 px-4 rounded-lg transition flex items-center">
+                                    <i class="fas fa-sync-alt mr-2"></i> Recalculer les résultats
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <div id="results-container">
                         <!-- Les résultats seront injectés ici par le JavaScript -->
                         <div class="flex justify-center items-center py-10">
                             <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-400"></div>
                         </div>
+                    </div>
+
+                    <!-- AMÉLIORATION: Boutons d'export des résultats -->
+                    <div class="export-buttons flex justify-center mt-6" id="export-buttons" style="display: none;">
+                        <button id="export-pdf" class="export-button">
+                            <i class="fas fa-file-pdf"></i> Exporter en PDF
+                        </button>
+                        <button id="export-excel" class="export-button">
+                            <i class="fas fa-file-excel"></i> Exporter en Excel
+                        </button>
                     </div>
 
                     <div class="results-toggle hidden" id="show-more-results">
