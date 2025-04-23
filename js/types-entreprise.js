@@ -136,9 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
         remuneration: null,
         risque: 3,
         regimeFiscal: null,
-        regimeSocial: null, // AMÉLIORATION: Ajout du régime social préféré
-        ACRE: false,        // NOUVELLE OPTION: ACRE
-        entrepriseCreation: false // NOUVELLE OPTION: Entreprise en création
+        regimeSocial: null // AMÉLIORATION: Ajout du régime social préféré
     };
 
     // Paramètres avancés pour les simulations
@@ -147,12 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
         ratioDividendes: 50,
         capitalSocial: 10000,
         capitalLibere: 100,
-        caSimulation: 50000,
-        fraisReels: null,    // NOUVELLE OPTION: Frais réels pour micro vs réel
-        premiereAnnee: false, // NOUVELLE OPTION: ACRE première année
-        deuxiemeAnnee: false, // NOUVELLE OPTION: ACRE deuxième année
-        troisiemeAnnee: false, // NOUVELLE OPTION: ACRE troisième année
-        afficherProjection: false // NOUVELLE OPTION: Afficher projection pluriannuelle
+        caSimulation: 50000
     };
 
     // Score maximal possible pour le calcul des pourcentages
@@ -194,13 +187,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const capitalLibereValue = document.getElementById('capital-libere-value');
     const caSimulationInput = document.getElementById('ca-simulation');
     const applyParamsButton = document.getElementById('apply-params');
-    
-    // NOUVELLE SECTION: Options ACRE et création d'entreprise
-    const entrepriseCreation = document.getElementById('entreprise-creation');
-    const optionAcre = document.getElementById('option-acre');
-    const acreCheckbox = document.getElementById('acre-checkbox');
-    const projectionsPlurianuellesCheckbox = document.getElementById('projections-pluriannuelles');
-    const fraisReelsInput = document.getElementById('frais-reels');
     
     // Conteneurs
     const resultsContainer = document.getElementById('results-container');
@@ -312,55 +298,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         
         // Gestion du checkbox d'activité réglementée
-        if (checkboxReglementee) {
-            checkboxReglementee.addEventListener('change', function() {
-                userResponses.activiteReglementee = this.checked;
-            });
-        }
-        
-        // NOUVELLE SECTION: Options ACRE et création d'entreprise
-        if (entrepriseCreation) {
-            entrepriseCreation.addEventListener('change', function() {
-                userResponses.entrepriseCreation = this.checked;
-                if (optionsAcre) {
-                    optionsAcre.classList.toggle('hidden', !this.checked);
-                }
-            });
-        }
-        
-        if (optionAcre) {
-            optionAcre.addEventListener('change', function() {
-                userResponses.ACRE = this.checked;
-                if (acreCheckbox) {
-                    acreCheckbox.checked = this.checked;
-                }
-            });
-        }
-        
-        if (acreCheckbox) {
-            acreCheckbox.addEventListener('change', function() {
-                parametresAvances.premiereAnnee = this.checked;
-                if (optionAcre) {
-                    optionAcre.checked = this.checked;
-                }
-                userResponses.ACRE = this.checked;
-            });
-        }
-        
-        if (projectionsPlurianuellesCheckbox) {
-            projectionsPlurianuellesCheckbox.addEventListener('change', function() {
-                parametresAvances.afficherProjection = this.checked;
-            });
-        }
-        
-        if (fraisReelsInput) {
-            fraisReelsInput.addEventListener('input', function() {
-                const fraisReelsPct = parseInt(this.value);
-                if (!isNaN(fraisReelsPct) && fraisReelsPct >= 0 && fraisReelsPct <= 100) {
-                    parametresAvances.fraisReels = fraisReelsPct / 100 * (parametresAvances.caSimulation || 50000);
-                }
-            });
-        }
+        checkboxReglementee.addEventListener('change', function() {
+            userResponses.activiteReglementee = this.checked;
+        });
         
         // Boutons de navigation
         nextStep1.addEventListener('click', function() {
@@ -514,19 +454,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (caSimulationInput) {
             caSimulationInput.value = parametresAvances.caSimulation;
         }
-        
-        // NOUVELLE SECTION: Initialiser les options micro-entreprise et ACRE
-        if (fraisReelsInput) {
-            fraisReelsInput.value = 35; // Valeur par défaut de 35%
-        }
-        
-        if (acreCheckbox) {
-            acreCheckbox.checked = userResponses.ACRE;
-        }
-        
-        if (projectionsPlurianuellesCheckbox) {
-            projectionsPlurianuellesCheckbox.checked = parametresAvances.afficherProjection;
-        }
     }
 
     /**
@@ -584,25 +511,8 @@ document.addEventListener('DOMContentLoaded', function() {
         parametresAvances.capitalLibere = parseInt(capitalLibereSlider.value);
         parametresAvances.caSimulation = parseInt(caSimulationInput.value);
         
-        // NOUVELLE SECTION: Options ACRE et microentreprise
-        if (acreCheckbox) {
-            parametresAvances.premiereAnnee = acreCheckbox.checked;
-        }
-        
-        if (projectionsPlurianuellesCheckbox) {
-            parametresAvances.afficherProjection = projectionsPlurianuellesCheckbox.checked;
-        }
-        
-        if (fraisReelsInput) {
-            const fraisReelsPct = parseInt(fraisReelsInput.value);
-            parametresAvances.fraisReels = fraisReelsPct / 100 * parametresAvances.caSimulation;
-        }
-        
-        // Récupérer le type d'activité depuis les réponses utilisateur
-        parametresAvances.natureActivite = userResponses.typeActivite;
-        
         // Recalculer les résultats avec les nouveaux paramètres
-        generateResults(parametresAvances);
+        generateResults();
         
         // Notification à l'utilisateur
         const notification = document.createElement('div');
@@ -778,9 +688,7 @@ document.addEventListener('DOMContentLoaded', function() {
             remuneration: null,
             risque: 3,
             regimeFiscal: null,
-            regimeSocial: null,
-            ACRE: false,
-            entrepriseCreation: false
+            regimeSocial: null
         };
         
         // Réinitialiser l'interface
@@ -796,12 +704,8 @@ document.addEventListener('DOMContentLoaded', function() {
         if (patrimoineSlider) patrimoineSlider.value = 3;
         if (risqueSlider) risqueSlider.value = 3;
         
-        // Réinitialiser les checkboxes
+        // Réinitialiser le checkbox
         if (checkboxReglementee) checkboxReglementee.checked = false;
-        if (entrepriseCreation) entrepriseCreation.checked = false;
-        if (optionAcre) optionAcre.checked = false;
-        if (acreCheckbox) acreCheckbox.checked = false;
-        if (projectionsPlurianuellesCheckbox) projectionsPlurianuellesCheckbox.checked = false;
         
         // Supprimer le localStorage
         localStorage.removeItem('entreprise-form-progress');
@@ -882,35 +786,17 @@ document.addEventListener('DOMContentLoaded', function() {
         if (selectedRegimeSocial) {
             userResponses.regimeSocial = selectedRegimeSocial.getAttribute('data-value');
         }
-        
-        // NOUVELLE SECTION: Options ACRE et création d'entreprise
-        if (entrepriseCreation) {
-            userResponses.entrepriseCreation = entrepriseCreation.checked;
-        }
-        
-        if (optionAcre) {
-            userResponses.ACRE = optionAcre.checked;
-        }
     }
 
     /**
      * Génère les résultats en fonction des réponses
-     * @param {Object} params - Paramètres avancés pour la simulation (optionnel)
      */
-    function generateResults(params = {}) {
+    function generateResults() {
         // Vérifier si le module fiscal est chargé
         if (!window.checkHardFails || !window.SimulationsFiscales) {
             console.error('Module fiscal-simulation.js non chargé');
             alert('Erreur: Module de simulation fiscale non disponible.');
             return;
-        }
-        
-        // Fusionner les paramètres avancés avec ceux passés en argument
-        const simulationParams = {...parametresAvances, ...params};
-        
-        // Mettre à jour les paramètres avancés pour la prochaine simulation
-        if (params) {
-            Object.assign(parametresAvances, params);
         }
         
         // Vérifier d'abord les incompatibilités majeures
@@ -1131,39 +1017,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 compatibilite = 'RECOMMANDÉ';
             }
             
-            // NOUVELLE SECTION: Simulation fiscale avec paramètres avancés et options ACRE
-            // Préparer les paramètres spécifiques pour cette forme juridique
-            const simSpecificParams = {
-                ...simulationParams,
-                natureActivite: userResponses.typeActivite,
-                ACRE: userResponses.ACRE || simulationParams.premiereAnnee
-            };
-            
-            // Exécuter la simulation fiscale
-            const simulation = window.SimulationsFiscales.simulerImpactFiscal(forme, simulationParams.caSimulation, simSpecificParams);
-
-            // NOUVELLE SECTION: Comparaison micro vs réel si applicable
-            let microComparaison = null;
-            if (forme.id === 'micro-entreprise') {
-                microComparaison = window.SimulationsFiscales.comparerMicroVsReel(
-                    simulationParams.caSimulation,
-                    userResponses.typeActivite,
-                    {
-                        fraisReels: simulationParams.fraisReels,
-                        premiereAnnee: userResponses.ACRE || simulationParams.premiereAnnee,
-                        ACRE: userResponses.ACRE || simulationParams.premiereAnnee
-                    }
-                );
-            }
-            
-            // NOUVELLE SECTION: Impact ACRE si applicable
-            let impactACRE = null;
-            if (userResponses.ACRE || simulationParams.premiereAnnee) {
-                impactACRE = window.SimulationsFiscales.simulerImpactACRE(
-                    simulationParams.caSimulation,
-                    forme.regimeSocial.includes('TNS') ? 'TNS' : 'Assimilé salarié'
-                );
-            }
+            // Simulation fiscale avec les paramètres avancés
+            const simulation = window.SimulationsFiscales.simulerImpactFiscal(forme, parametresAvances.caSimulation, {
+                ratioSalaire: parametresAvances.ratioSalaire,
+                ratioDividendes: parametresAvances.ratioDividendes,
+                capitalSocial: parametresAvances.capitalSocial,
+                capitalLibere: parametresAvances.capitalLibere
+            });
 
             // Retourner l'objet avec les scores calculés et les détails
             return {
@@ -1177,9 +1037,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 compatibilite: compatibilite,
                 incompatibilites: incompatibilites,
                 incompatibiliteMajeure: incompatibiliteMajeure,
-                simulation: simulation,
-                microComparaison: microComparaison,  // NOUVEAU: Ajout de la comparaison micro vs réel
-                impactACRE: impactACRE              // NOUVEAU: Ajout de l'impact ACRE
+                simulation: simulation
             };
         });
 
@@ -1201,7 +1059,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const resultatsAffichage = [...resultatsRecommandes, ...resultatsCompatibles, ...resultatsPeuAdaptes].slice(0, 3);
 
         // Afficher les résultats
-        displayResults(resultatsAffichage, resultatsIncompatibles, simulationParams);
+        displayResults(resultatsAffichage, resultatsIncompatibles);
         
         // Préparer les données du tableau comparatif complet
         prepareComparatifTable(formesJuridiques);
@@ -1223,11 +1081,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * Affiche les résultats à l'utilisateur
-     * @param {Array} results - Liste des résultats à afficher
-     * @param {Array} incompatibles - Liste des formes incompatibles
-     * @param {Object} params - Paramètres de la simulation
      */
-    function displayResults(results, incompatibles, params = {}) {
+    function displayResults(results, incompatibles) {
         if (!resultsContainer) return;
         
         resultsContainer.innerHTML = '';
@@ -1259,155 +1114,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Calculer le score en pourcentage pour la visualisation
         const scorePercentage = Math.round((recommended.scoreDetails.pourcentage || 85));
         
-        // NOUVELLE SECTION: Afficher le badge ACRE si applicable
-        const acreBadge = (params.premiereAnnee || userResponses.ACRE) ? 
-            `<span class="acre-badge"><i class="fas fa-certificate"></i> ACRE</span>` : '';
-        
-        // NOUVELLE SECTION: Construire l'affichage pour la comparaison micro vs réel
-        let microComparaisonHTML = '';
-        if (recommended.microComparaison && recommended.microComparaison.eligible) {
-            const microComp = recommended.microComparaison;
-            const regimeConseille = microComp.regimeConseille;
-            const differenceFormatted = Math.abs(microComp.difference).toLocaleString('fr-FR');
-            const badgeClass = regimeConseille === 'micro-entreprise' ? 'bg-blue-500' : 'bg-green-500';
-            
-            microComparaisonHTML = `
-                <div class="mt-4 p-4 bg-blue-900 bg-opacity-20 rounded-lg">
-                    <h4 class="font-semibold flex items-center text-lg mb-3">
-                        <i class="fas fa-balance-scale text-green-400 mr-2"></i>
-                        Comparaison Micro vs Réel
-                        <div class="regime-badge ${badgeClass}">${regimeConseille}</div>
-                    </h4>
-                    
-                    <p class="mb-2">Régime conseillé: <strong class="text-green-400">${regimeConseille}</strong></p>
-                    <p class="mb-3">Différence de revenu net: <strong class="text-green-400">+${differenceFormatted} €</strong></p>
-                    
-                    <button class="micro-comparaison-toggle text-green-400 text-sm flex items-center" data-target="micro-details-${recommended.forme.id}">
-                        <i class="fas fa-chevron-down mr-1"></i> Voir le détail de la comparaison
-                    </button>
-                    
-                    <div id="micro-details-${recommended.forme.id}" class="hidden mt-3">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                            <div class="bg-blue-900 bg-opacity-30 p-3 rounded">
-                                <h5 class="font-semibold mb-2">Régime micro-entreprise</h5>
-                                <ul class="text-sm">
-                                    <li>Chiffre d'affaires: ${params.caSimulation.toLocaleString('fr-FR')} €</li>
-                                    <li>Abattement forfaitaire: ${(microComp.detailsMicro.abattementForfaitaire * 100).toFixed(0)}%</li>
-                                    <li>Bénéfice imposable: ${microComp.detailsMicro.beneficeImposable.toLocaleString('fr-FR')} €</li>
-                                    <li>Charges sociales: ${microComp.detailsMicro.chargesSociales.toLocaleString('fr-FR')} €</li>
-                                    <li>Impôt: ${microComp.detailsMicro.impot.toLocaleString('fr-FR')} €</li>
-                                    <li class="font-semibold text-white">Revenu net: ${microComp.revenuNetMicro.toLocaleString('fr-FR')} €</li>
-                                </ul>
-                            </div>
-                            
-                            <div class="bg-blue-900 bg-opacity-30 p-3 rounded">
-                                <h5 class="font-semibold mb-2">Régime réel simplifié</h5>
-                                <ul class="text-sm">
-                                    <li>Chiffre d'affaires: ${params.caSimulation.toLocaleString('fr-FR')} €</li>
-                                    <li>Frais réels: ${microComp.detailsReel.fraisReels.toLocaleString('fr-FR')} € (${(microComp.detailsReel.fraisReels / params.caSimulation * 100).toFixed(0)}%)</li>
-                                    <li>Bénéfice imposable: ${microComp.detailsReel.beneficeImposable.toLocaleString('fr-FR')} €</li>
-                                    <li>Charges sociales: ${microComp.detailsReel.chargesSociales.toLocaleString('fr-FR')} €</li>
-                                    <li>Impôt: ${microComp.detailsReel.impot.toLocaleString('fr-FR')} €</li>
-                                    <li class="font-semibold text-white">Revenu net: ${microComp.revenuNetReel.toLocaleString('fr-FR')} €</li>
-                                </ul>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-4">
-                            <h5 class="font-semibold mb-2">Simulation selon différents CA</h5>
-                            <table class="sensitivity-table">
-                                <thead>
-                                    <tr>
-                                        <th>CA</th>
-                                        <th>Net Micro</th>
-                                        <th>Net Réel</th>
-                                        <th>Différence</th>
-                                        <th>Régime conseillé</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-            `;
-            
-            // Ajouter les lignes du tableau de sensibilité
-            microComp.projectionSelonCA.forEach(projection => {
-                const meilleurRegime = projection.regimeConseille === 'micro-entreprise' ? 'Micro' : 'Réel';
-                const differenceClass = meilleurRegime === 'Micro' ? 'text-blue-400' : 'text-green-400';
-                
-                microComparaisonHTML += `
-                    <tr>
-                        <td>${projection.ca.toLocaleString('fr-FR')} €</td>
-                        <td>${projection.netMicro.toLocaleString('fr-FR')} €</td>
-                        <td>${projection.netReel.toLocaleString('fr-FR')} €</td>
-                        <td class="${differenceClass}">${projection.difference.toLocaleString('fr-FR')} €</td>
-                        <td class="better-option">${meilleurRegime}</td>
-                    </tr>
-                `;
-            });
-            
-            microComparaisonHTML += `
-                                </tbody>
-                            </table>
-                            <p class="text-sm mt-3 text-yellow-400">
-                                <i class="fas fa-lightbulb mr-1"></i>
-                                Seuil de rentabilité estimé: ${microComp.seuilRentabilite.toLocaleString('fr-FR')} € de CA
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
-        // NOUVELLE SECTION: Construire l'affichage pour l'impact ACRE
-        let acreImpactHTML = '';
-        if (recommended.impactACRE) {
-            const acreImpact = recommended.impactACRE;
-            const economieTotale = acreImpact.economie.total.toLocaleString('fr-FR');
-            
-            acreImpactHTML = `
-                <div class="mt-4 p-4 bg-blue-900 bg-opacity-20 rounded-lg">
-                    <h4 class="font-semibold flex items-center text-lg mb-3">
-                        <i class="fas fa-certificate text-green-400 mr-2"></i>
-                        Impact de l'ACRE sur 3 ans
-                    </h4>
-                    
-                    <p class="mb-2">Économie totale: <strong class="text-green-400">${economieTotale} €</strong> (${acreImpact.pourcentageEconomie.toFixed(0)}% sur 3 ans)</p>
-                    
-                    <button class="acre-impact-toggle text-green-400 text-sm flex items-center" data-target="acre-details-${recommended.forme.id}">
-                        <i class="fas fa-chevron-down mr-1"></i> Voir le détail par année
-                    </button>
-                    
-                    <div id="acre-details-${recommended.forme.id}" class="hidden mt-3">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-                            <div class="bg-blue-900 bg-opacity-30 p-3 rounded">
-                                <h5 class="font-semibold mb-2">Année 1 (-50%)</h5>
-                                <p>Charges normales: ${acreImpact.sansACRE.annee1.toLocaleString('fr-FR')} €</p>
-                                <p>Avec ACRE: ${acreImpact.avecACRE.annee1.toLocaleString('fr-FR')} €</p>
-                                <p class="font-semibold text-green-400">Économie: ${acreImpact.economie.annee1.toLocaleString('fr-FR')} €</p>
-                            </div>
-                            
-                            <div class="bg-blue-900 bg-opacity-30 p-3 rounded">
-                                <h5 class="font-semibold mb-2">Année 2 (-25%)</h5>
-                                <p>Charges normales: ${acreImpact.sansACRE.annee2.toLocaleString('fr-FR')} €</p>
-                                <p>Avec ACRE: ${acreImpact.avecACRE.annee2.toLocaleString('fr-FR')} €</p>
-                                <p class="font-semibold text-green-400">Économie: ${acreImpact.economie.annee2.toLocaleString('fr-FR')} €</p>
-                            </div>
-                            
-                            <div class="bg-blue-900 bg-opacity-30 p-3 rounded">
-                                <h5 class="font-semibold mb-2">Année 3 (-10%)</h5>
-                                <p>Charges normales: ${acreImpact.sansACRE.annee3.toLocaleString('fr-FR')} €</p>
-                                <p>Avec ACRE: ${acreImpact.avecACRE.annee3.toLocaleString('fr-FR')} €</p>
-                                <p class="font-semibold text-green-400">Économie: ${acreImpact.economie.annee3.toLocaleString('fr-FR')} €</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-        
         let htmlPrimary = `
             <div class="result-card primary-result visible p-6 mb-6 relative">
                 ${recommended.compatibilite === 'RECOMMANDÉ' ? '<div class="recommended-badge">Recommandé</div>' : ''}
-                <h3 class="text-2xl font-bold text-green-400 mb-3">${recommended.forme.nom} ${acreBadge}</h3>
+                <h3 class="text-2xl font-bold text-green-400 mb-3">${recommended.forme.nom}</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <p class="text-lg mb-3">Score de compatibilité: <strong class="text-green-400">${scorePercentage}%</strong></p>
@@ -1442,7 +1152,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <div class="bg-blue-900 bg-opacity-30 p-3 rounded-lg">
                             <div class="flex justify-between mb-2">
                                 <span>Revenu brut simulé:</span>
-                                <span>${params.caSimulation.toLocaleString('fr-FR')} €</span>
+                                <span>${parametresAvances.caSimulation.toLocaleString('fr-FR')} €</span>
                             </div>
                             <div class="flex justify-between mb-2">
                                 <span>Charges sociales:</span>
@@ -1472,12 +1182,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
                 </div>
-                
-                <!-- NOUVELLE SECTION: Comparaison micro vs réel si applicable -->
-                ${microComparaisonHTML}
-                
-                <!-- NOUVELLE SECTION: Impact ACRE si applicable -->
-                ${acreImpactHTML}
             </div>
         `;
         
@@ -1495,13 +1199,9 @@ document.addEventListener('DOMContentLoaded', function() {
             results.slice(1).forEach(result => {
                 const resultScore = Math.round((result.scoreDetails.pourcentage || 75));
                 
-                // NOUVELLE SECTION: Badge ACRE pour résultats secondaires
-                const secAcreBadge = (params.premiereAnnee || userResponses.ACRE) ? 
-                    `<span class="acre-badge"><i class="fas fa-certificate"></i> ACRE</span>` : '';
-                
                 secondaryHtml += `
                     <div class="result-card visible p-5 relative">
-                        <h3 class="text-xl font-bold text-green-400 mb-2">${result.forme.nom} ${secAcreBadge}</h3>
+                        <h3 class="text-xl font-bold text-green-400 mb-2">${result.forme.nom}</h3>
                         <p class="mb-2">Compatibilité: <strong>${resultScore}%</strong></p>
                         
                         <div class="match-indicator mb-3">
@@ -1553,58 +1253,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 showScoreDetails.innerHTML = scoreDetails.classList.contains('hidden') 
                     ? '<i class="fas fa-calculator mr-1"></i> Voir le détail du score' 
                     : '<i class="fas fa-calculator mr-1"></i> Masquer le détail';
-            });
-        }
-        
-        // NOUVELLE SECTION: Activer les boutons de détail pour micro vs réel
-        const microToggle = document.querySelector('.micro-comparaison-toggle');
-        if (microToggle) {
-            microToggle.addEventListener('click', function() {
-                const targetId = this.getAttribute('data-target');
-                const targetElement = document.getElementById(targetId);
-                if (targetElement) {
-                    targetElement.classList.toggle('hidden');
-                    
-                    // Mettre à jour l'icône
-                    const icon = this.querySelector('i');
-                    if (icon) {
-                        if (targetElement.classList.contains('hidden')) {
-                            icon.classList.remove('fa-chevron-up');
-                            icon.classList.add('fa-chevron-down');
-                            this.innerHTML = this.innerHTML.replace('Masquer', 'Voir');
-                        } else {
-                            icon.classList.remove('fa-chevron-down');
-                            icon.classList.add('fa-chevron-up');
-                            this.innerHTML = this.innerHTML.replace('Voir', 'Masquer');
-                        }
-                    }
-                }
-            });
-        }
-        
-        // NOUVELLE SECTION: Activer les boutons de détail pour ACRE
-        const acreToggle = document.querySelector('.acre-impact-toggle');
-        if (acreToggle) {
-            acreToggle.addEventListener('click', function() {
-                const targetId = this.getAttribute('data-target');
-                const targetElement = document.getElementById(targetId);
-                if (targetElement) {
-                    targetElement.classList.toggle('hidden');
-                    
-                    // Mettre à jour l'icône
-                    const icon = this.querySelector('i');
-                    if (icon) {
-                        if (targetElement.classList.contains('hidden')) {
-                            icon.classList.remove('fa-chevron-up');
-                            icon.classList.add('fa-chevron-down');
-                            this.innerHTML = this.innerHTML.replace('Masquer', 'Voir');
-                        } else {
-                            icon.classList.remove('fa-chevron-down');
-                            icon.classList.add('fa-chevron-up');
-                            this.innerHTML = this.innerHTML.replace('Voir', 'Masquer');
-                        }
-                    }
-                }
             });
         }
         
