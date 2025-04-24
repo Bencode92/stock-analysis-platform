@@ -1,8 +1,9 @@
 /**
- * Simulateur de forme juridique d'entreprise
+ * Simulateur de forme juridique d'entreprise - Version améliorée 2025
  * Ce script permet de recommander une forme juridique adaptée au profil de l'utilisateur
  * basé sur les réponses au questionnaire.
- * Améliorations: pondération adaptative, incompatibilités, transparence scoring, recalcul rapide, simulation fiscale
+ * Améliorations: progression du général au particulier, questions qualitatives précises,
+ * scoring pondéré contextuel, détection des incompatibilités, simulation pluriannuelle.
  * Dernière mise à jour : Avril 2025 - Information vérifiées pour la législation en vigueur
  */
 
@@ -124,19 +125,38 @@ document.addEventListener('DOMContentLoaded', function() {
         // ... autres formes juridiques existantes maintenues à l'identique
     ];
 
-    // Variables pour stocker les réponses de l'utilisateur
+    // Variables pour stocker les réponses de l'utilisateur - Structure améliorée
     let userResponses = {
-        profilEntrepreneur: null,
-        protectionPatrimoine: 3,
-        typeActivite: null,
+        // Section 1: Profil & Horizon Personnel
+        tmiActuel: 30, // Tranche marginale d'imposition actuelle (%)
+        autresRevenusSalaries: false,
+        horizonProjet: 'moyen', // court, moyen, long
+        revenuAnnee1: 30000,
+        revenuAnnee3: 50000,
+        bienImmobilier: false,
+        
+        // Section 2: Équipe & Gouvernance
+        profilEntrepreneur: null, // solo, famille, associes, investisseurs
+        typeInvestisseurs: [], // business-angels, vc, crowdfunding
+        
+        // Section 3: Nature de l'activité
+        typeActivite: null, // bic-vente, bic-service, bnc, artisanale, agricole
         activiteReglementee: false,
-        chiffreAffaires: null,
-        objectifs: [],
-        objectifsPriorite: [], // AMÉLIORATION: Ordre de priorité des objectifs
-        remuneration: null,
-        risque: 3,
-        regimeFiscal: null,
-        regimeSocial: null // AMÉLIORATION: Ajout du régime social préféré
+        ordreProessionnel: false,
+        risqueResponsabilite: false,
+        besoinAssurance: false,
+        
+        // Section 4: Volumétrie et finances
+        chiffreAffaires: null, // Valeur numérique précise
+        tauxMarge: 35, // en pourcentage
+        besoinRevenusImmediats: false,
+        cautionBancaire: false,
+        montantLevee: 0,
+        preferenceRemuneration: 'mixte', // salaire, dividendes, mixte, flexible
+        aides: [], // acre, jei, cir
+        transmission: null, // revente, transmission
+        regimeFiscal: null, // ir, is, flexible, optimisation
+        regimeSocial: null // tns, salarie, equilibre
     };
 
     // Paramètres avancés pour les simulations
@@ -145,23 +165,34 @@ document.addEventListener('DOMContentLoaded', function() {
         ratioDividendes: 50,
         capitalSocial: 10000,
         capitalLibere: 100,
-        caSimulation: 50000
+        caSimulation: 50000,
+        fraisReels: 35, // Pourcentage des frais réels pour comparaison micro vs réel
+        acreActif: true  // ACRE appliqué ou non dans les simulations
     };
 
-    // Score maximal possible pour le calcul des pourcentages
-    const SCORE_MAX_POSSIBLE = 150;
+    // Score maximal possible pour le calcul des pourcentages - augmenté pour plus de nuance
+    const SCORE_MAX_POSSIBLE = 200;
 
     // Sélectionner tous les éléments du DOM nécessaires
     const sections = document.querySelectorAll('.question-section');
     const progressSteps = document.querySelectorAll('.progress-step');
     const optionButtons = document.querySelectorAll('.option-btn');
-    const patrimoineSlider = document.getElementById('patrimoine-slider');
-    const risqueSlider = document.getElementById('risque-slider');
-    const checkboxReglementee = document.getElementById('activite-reglementee');
-    const objectifCount = document.getElementById('objectif-count');
-    const multiButtons = document.querySelectorAll('[data-multi="true"]');
     const progressBar = document.getElementById('progress-bar');
     const progressPercentage = document.getElementById('progress-percentage');
+    
+    // Nouveaux champs d'entrée
+    const tmiSelect = document.getElementById('tmi-actuel');
+    const revenuAnnee1Input = document.getElementById('revenu-annee1');
+    const revenuAnnee3Input = document.getElementById('revenu-annee3');
+    const bienImmobilierCheckbox = document.getElementById('bien-immobilier');
+    const checkboxReglementee = document.getElementById('activite-reglementee');
+    const ordreProCheckbox = document.getElementById('ordre-professionnel');
+    const caPrevisionnelInput = document.getElementById('ca-previsionnel');
+    const tauxMargeSlider = document.getElementById('taux-marge');
+    const tauxMargeValue = document.getElementById('taux-marge-value');
+    const besoinsRevenusCheckbox = document.getElementById('besoin-revenus-immediats');
+    const cautionBancaireCheckbox = document.getElementById('caution-bancaire');
+    const montantLeveeInput = document.getElementById('montant-levee');
     
     // Boutons de navigation
     const nextStep1 = document.getElementById('next1');
@@ -175,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const compareBtn = document.getElementById('compare-btn');
     const hideComparatifBtn = document.getElementById('hide-comparatif');
     
-    // AMÉLIORATION: Paramètres avancés
+    // Paramètres avancés
     const advancedParamsToggle = document.getElementById('advanced-params-toggle');
     const advancedParamsContent = document.getElementById('advanced-params-content');
     const ratioSalaireSlider = document.getElementById('ratio-salaire');
@@ -186,6 +217,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const capitalLibereSlider = document.getElementById('capital-libere');
     const capitalLibereValue = document.getElementById('capital-libere-value');
     const caSimulationInput = document.getElementById('ca-simulation');
+    const fraisReelsInput = document.getElementById('frais-reels');
+    const acreCheckbox = document.getElementById('acre-checkbox');
+    const projectionsCheckbox = document.getElementById('projections-pluriannuelles');
     const applyParamsButton = document.getElementById('apply-params');
     
     // Conteneurs
@@ -249,58 +283,60 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        // Gestion des boutons d'options multiples avec priorité
-        let multiSelectionCount = 0;
-        let multiSelectionOrder = []; // Pour suivre l'ordre de sélection
-        
-        multiButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const objValue = this.getAttribute('data-value');
-                
-                if (this.classList.contains('selected')) {
-                    // Désélection d'un objectif
-                    this.classList.remove('selected');
-                    multiSelectionCount--;
-                    
-                    // Mettre à jour l'ordre de sélection
-                    const index = multiSelectionOrder.indexOf(objValue);
-                    if (index > -1) {
-                        multiSelectionOrder.splice(index, 1);
+        // Nouveau: Gestion des sections d'investisseurs conditionnelles
+        const profilButtons = document.querySelectorAll('.option-btn[data-value]');
+        const investisseursSection = document.getElementById('investisseurs-section');
+
+        if (profilButtons && investisseursSection) {
+            profilButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    if (this.getAttribute('data-value') === 'investisseurs') {
+                        investisseursSection.style.display = 'block';
+                    } else {
+                        investisseursSection.style.display = 'none';
                     }
-                    
-                    // Mettre à jour l'affichage des priorités
-                    updateObjectifPriorities();
-                    
-                    objectifCount.textContent = `Sélectionnez jusqu'à 3 objectifs principaux (${multiSelectionCount}/3)`;
-                    objectifCount.classList.remove('text-red-400');
-                } else if (multiSelectionCount < 3) {
-                    // Sélection d'un nouvel objectif
-                    this.classList.add('selected');
-                    multiSelectionCount++;
-                    
-                    // Ajouter à l'ordre de sélection
-                    multiSelectionOrder.push(objValue);
-                    
-                    // Mettre à jour l'affichage des priorités
-                    updateObjectifPriorities();
-                    
-                    objectifCount.textContent = `Sélectionnez jusqu'à 3 objectifs principaux (${multiSelectionCount}/3)`;
-                    
-                    if (multiSelectionCount === 3) {
-                        objectifCount.classList.add('text-red-400');
-                    }
-                } else {
-                    // Afficher un message d'erreur
-                    objectifCount.textContent = "Maximum 3 objectifs ! Désélectionnez-en un pour changer.";
-                    objectifCount.classList.add('text-red-400');
-                }
+                });
             });
-        });
+        }
         
-        // Gestion du checkbox d'activité réglementée
-        checkboxReglementee.addEventListener('change', function() {
-            userResponses.activiteReglementee = this.checked;
-        });
+        // Gestion du taux de marge
+        if (tauxMargeSlider && tauxMargeValue) {
+            tauxMargeSlider.addEventListener('input', function() {
+                tauxMargeValue.textContent = `${this.value}%`;
+                userResponses.tauxMarge = parseInt(this.value);
+            });
+        }
+        
+        // Gestion des checkboxes
+        if (checkboxReglementee) {
+            checkboxReglementee.addEventListener('change', function() {
+                userResponses.activiteReglementee = this.checked;
+            });
+        }
+        
+        if (ordreProCheckbox) {
+            ordreProCheckbox.addEventListener('change', function() {
+                userResponses.ordreProessionnel = this.checked;
+            });
+        }
+        
+        if (besoinsRevenusCheckbox) {
+            besoinsRevenusCheckbox.addEventListener('change', function() {
+                userResponses.besoinRevenusImmediats = this.checked;
+            });
+        }
+        
+        if (cautionBancaireCheckbox) {
+            cautionBancaireCheckbox.addEventListener('change', function() {
+                userResponses.cautionBancaire = this.checked;
+            });
+        }
+        
+        if (bienImmobilierCheckbox) {
+            bienImmobilierCheckbox.addEventListener('change', function() {
+                userResponses.bienImmobilier = this.checked;
+            });
+        }
         
         // Boutons de navigation
         nextStep1.addEventListener('click', function() {
@@ -355,7 +391,7 @@ document.addEventListener('DOMContentLoaded', function() {
             hideComparatifComplet();
         });
         
-        // AMÉLIORATION: Événements pour paramètres avancés
+        // Événements pour paramètres avancés
         if (advancedParamsToggle) {
             advancedParamsToggle.addEventListener('click', toggleAdvancedParams);
         }
@@ -368,17 +404,58 @@ document.addEventListener('DOMContentLoaded', function() {
             capitalLibereSlider.addEventListener('input', updateCapitalLibereValue);
         }
         
+        if (fraisReelsInput) {
+            fraisReelsInput.addEventListener('input', function() {
+                parametresAvances.fraisReels = parseInt(this.value);
+            });
+        }
+        
+        if (acreCheckbox) {
+            acreCheckbox.addEventListener('change', function() {
+                parametresAvances.acreActif = this.checked;
+            });
+        }
+        
         if (applyParamsButton) {
             applyParamsButton.addEventListener('click', applyAdvancedParams);
         }
         
-        // AMÉLIORATION: Exportation
+        // AMÉLIORATION: Affichage des détails de calcul
+        const showCalculationDetails = document.getElementById('show-calculation-details');
+        if (showCalculationDetails) {
+            showCalculationDetails.addEventListener('change', function() {
+                document.dispatchEvent(new CustomEvent('toggleCalculationDetails', {
+                    detail: { visible: this.checked }
+                }));
+            });
+        }
+        
+        // Exportation
         if (exportPdfButton) {
             exportPdfButton.addEventListener('click', exportToPdf);
         }
         
         if (exportExcelButton) {
             exportExcelButton.addEventListener('click', exportToExcel);
+        }
+        
+        // Toggle résultats secondaires
+        if (showMoreResults) {
+            showMoreResults.addEventListener('click', function() {
+                secondaryResults.classList.toggle('hidden');
+                const icon = this.querySelector('i');
+                if (icon) {
+                    if (secondaryResults.classList.contains('hidden')) {
+                        icon.classList.remove('fa-chevron-up');
+                        icon.classList.add('fa-chevron-down');
+                        this.querySelector('span').textContent = 'Voir les autres options compatibles';
+                    } else {
+                        icon.classList.remove('fa-chevron-down');
+                        icon.classList.add('fa-chevron-up');
+                        this.querySelector('span').textContent = 'Masquer les autres options';
+                    }
+                }
+            });
         }
     }
 
@@ -406,29 +483,18 @@ document.addEventListener('DOMContentLoaded', function() {
         // Mettre à jour la progression de la question
         const questionProgress = document.getElementById(`question-progress${currentStep > 1 ? '-' + currentStep : ''}`);
         if (questionProgress) {
-            const questionNumber = currentStep === 1 ? 2 : (currentStep === 2 ? 4 : (currentStep === 3 ? 6 : (currentStep === 4 ? 9 : 9)));
-            questionProgress.textContent = `Question ${questionNumber} sur 9`;
+            // Logique améliorée pour montrer la progression réelle
+            const stepQuestionMapping = {
+                1: "1-3",  // Section 1: 3 questions
+                2: "4-5",  // Section 2: 2 questions
+                3: "6-7",  // Section 3: 2 questions
+                4: "8-9",  // Section 4: 2 questions
+                5: "9"     // Résultats
+            };
+            
+            const questionText = stepQuestionMapping[currentStep] || "1";
+            questionProgress.textContent = `Question${questionText.includes('-') ? 's' : ''} ${questionText} sur 9`;
         }
-    }
-
-    /**
-     * Mise à jour de l'affichage des priorités des objectifs
-     */
-    function updateObjectifPriorities() {
-        // Retirer toutes les badges de priorité existantes
-        document.querySelectorAll('.priority-badge').forEach(badge => badge.remove());
-        
-        // Ajouter des badges de priorité aux objectifs sélectionnés
-        multiSelectionOrder.forEach((objValue, index) => {
-            const button = document.querySelector(`.option-btn[data-value="${objValue}"]`);
-            if (button && button.classList.contains('selected')) {
-                let badge = document.createElement('div');
-                badge.classList.add('priority-badge', 'absolute', 'top-2', 'right-2', 'bg-green-500', 'text-gray-900', 'rounded-full', 'w-6', 'h-6', 'flex', 'items-center', 'justify-center', 'text-xs', 'font-bold');
-                badge.innerHTML = (index + 1);
-                button.style.position = 'relative'; // Assurer que le bouton est en position relative
-                button.appendChild(badge);
-            }
-        });
     }
 
     /**
@@ -453,6 +519,14 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (caSimulationInput) {
             caSimulationInput.value = parametresAvances.caSimulation;
+        }
+        
+        if (fraisReelsInput) {
+            fraisReelsInput.value = parametresAvances.fraisReels;
+        }
+        
+        if (acreCheckbox) {
+            acreCheckbox.checked = parametresAvances.acreActif;
         }
     }
 
@@ -510,6 +584,21 @@ document.addEventListener('DOMContentLoaded', function() {
         parametresAvances.capitalSocial = parseInt(capitalSocialInput.value);
         parametresAvances.capitalLibere = parseInt(capitalLibereSlider.value);
         parametresAvances.caSimulation = parseInt(caSimulationInput.value);
+        
+        if (fraisReelsInput) {
+            parametresAvances.fraisReels = parseInt(fraisReelsInput.value);
+        }
+        
+        if (acreCheckbox) {
+            parametresAvances.acreActif = acreCheckbox.checked;
+        }
+        
+        if (projectionsCheckbox) {
+            parametresAvances.afficherProjection = projectionsCheckbox.checked;
+        }
+        
+        // Récupérer le type d'activité depuis les réponses sauvegardées
+        parametresAvances.natureActivite = userResponses.typeActivite;
         
         // Recalculer les résultats avec les nouveaux paramètres
         generateResults();
@@ -573,7 +662,7 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             // Créer un tableau de données pour Excel
             const data = [
-                ['Forme juridique', 'Score', 'Compatibilité', 'Détails'],
+                ['Forme juridique', 'Score', 'Compatibilité', 'Fiscalité', 'Régime social', 'Protection', 'Capital', 'Revenu net estimé'],
                 // Ajouter les données des résultats ici
             ];
             
@@ -678,15 +767,34 @@ document.addEventListener('DOMContentLoaded', function() {
     function resetSimulation() {
         // Vider les réponses
         userResponses = {
+            // Section 1: Profil & Horizon Personnel
+            tmiActuel: 30,
+            autresRevenusSalaries: false,
+            horizonProjet: 'moyen',
+            revenuAnnee1: 30000,
+            revenuAnnee3: 50000,
+            bienImmobilier: false,
+            
+            // Section 2: Équipe & Gouvernance
             profilEntrepreneur: null,
-            protectionPatrimoine: 3,
+            typeInvestisseurs: [],
+            
+            // Section 3: Nature de l'activité
             typeActivite: null,
             activiteReglementee: false,
+            ordreProessionnel: false,
+            risqueResponsabilite: false,
+            besoinAssurance: false,
+            
+            // Section 4: Volumétrie et finances
             chiffreAffaires: null,
-            objectifs: [],
-            objectifsPriorite: [],
-            remuneration: null,
-            risque: 3,
+            tauxMarge: 35,
+            besoinRevenusImmediats: false,
+            cautionBancaire: false,
+            montantLevee: 0,
+            preferenceRemuneration: 'mixte',
+            aides: [],
+            transmission: null,
             regimeFiscal: null,
             regimeSocial: null
         };
@@ -696,16 +804,19 @@ document.addEventListener('DOMContentLoaded', function() {
             btn.classList.remove('selected');
         });
         
-        document.querySelectorAll('.priority-badge').forEach(badge => {
-            badge.remove();
-        });
-        
-        // Réinitialiser les sliders
-        if (patrimoineSlider) patrimoineSlider.value = 3;
-        if (risqueSlider) risqueSlider.value = 3;
-        
-        // Réinitialiser le checkbox
+        // Réinitialiser les champs de saisie
+        if (tmiSelect) tmiSelect.value = '30';
+        if (revenuAnnee1Input) revenuAnnee1Input.value = '30000';
+        if (revenuAnnee3Input) revenuAnnee3Input.value = '50000';
+        if (bienImmobilierCheckbox) bienImmobilierCheckbox.checked = false;
         if (checkboxReglementee) checkboxReglementee.checked = false;
+        if (ordreProCheckbox) ordreProCheckbox.checked = false;
+        if (caPrevisionnelInput) caPrevisionnelInput.value = '75000';
+        if (tauxMargeSlider) tauxMargeSlider.value = '35';
+        if (tauxMargeValue) tauxMargeValue.textContent = '35%';
+        if (besoinsRevenusCheckbox) besoinsRevenusCheckbox.checked = false;
+        if (cautionBancaireCheckbox) cautionBancaireCheckbox.checked = false;
+        if (montantLeveeInput) montantLeveeInput.value = '0';
         
         // Supprimer le localStorage
         localStorage.removeItem('entreprise-form-progress');
@@ -715,83 +826,170 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
-     * Collecte les données de la section 1
+     * Collecte les données de la section 1 : Profil & Horizon Personnel
      */
     function collectSection1Data() {
-        const selectedProfile = document.querySelector('#section1 .option-btn.selected');
-        if (selectedProfile) {
-            userResponses.profilEntrepreneur = selectedProfile.getAttribute('data-value');
+        // TMI actuelle
+        if (tmiSelect) {
+            userResponses.tmiActuel = parseInt(tmiSelect.value);
         }
         
-        userResponses.protectionPatrimoine = parseInt(patrimoineSlider.value);
-    }
-
-    /**
-     * Collecte les données de la section 2
-     */
-    function collectSection2Data() {
-        const selectedActivity = document.querySelector('#section2 .option-btn.selected:first-of-type');
-        if (selectedActivity) {
-            userResponses.typeActivite = selectedActivity.getAttribute('data-value');
-        }
+        // Autres revenus salariés
+        const autresRevenusBtn = document.querySelector('#section1 .option-btn[data-value="oui"].selected');
+        userResponses.autresRevenusSalaries = !!autresRevenusBtn;
         
-        userResponses.activiteReglementee = checkboxReglementee.checked;
-        
-        const selectedCA = document.querySelector('#section2 .option-btn.selected:nth-of-type(2)');
-        if (selectedCA) {
-            userResponses.chiffreAffaires = selectedCA.getAttribute('data-value');
-        }
-    }
-
-    /**
-     * Collecte les données de la section 3
-     */
-    function collectSection3Data() {
-        // Collecter objectifs avec priorité
-        userResponses.objectifs = [];
-        userResponses.objectifsPriorite = [];
-        
-        // Utiliser l'ordre de sélection pour déterminer la priorité
-        const selectedButtons = document.querySelectorAll('#section3 .option-btn.selected[data-multi="true"]');
-        selectedButtons.forEach(button => {
-            const value = button.getAttribute('data-value');
-            const badge = button.querySelector('.priority-badge');
-            const priorite = badge ? parseInt(badge.textContent) : 0;
-            
-            userResponses.objectifs.push(value);
-            userResponses.objectifsPriorite.push({
-                valeur: value,
-                priorite: priorite
-            });
+        // Horizon du projet
+        const horizonButtons = document.querySelectorAll('#section1 .option-btn[data-value^="court"], #section1 .option-btn[data-value^="moyen"], #section1 .option-btn[data-value^="long"]');
+        horizonButtons.forEach(button => {
+            if (button.classList.contains('selected')) {
+                userResponses.horizonProjet = button.getAttribute('data-value');
+            }
         });
         
-        const selectedRemuneration = document.querySelector('#section3 .option-btn.selected:not([data-multi])');
-        if (selectedRemuneration) {
-            userResponses.remuneration = selectedRemuneration.getAttribute('data-value');
+        // Objectifs de revenus
+        if (revenuAnnee1Input) {
+            userResponses.revenuAnnee1 = parseInt(revenuAnnee1Input.value);
+        }
+        
+        if (revenuAnnee3Input) {
+            userResponses.revenuAnnee3 = parseInt(revenuAnnee3Input.value);
+        }
+        
+        // Bien immobilier
+        if (bienImmobilierCheckbox) {
+            userResponses.bienImmobilier = bienImmobilierCheckbox.checked;
         }
     }
 
     /**
-     * Collecte les données de la section 4
+     * Collecte les données de la section 2 : Équipe & Gouvernance
+     */
+    function collectSection2Data() {
+        // Profil entrepreneur
+        const profilButtons = document.querySelectorAll('#section2 .option-btn[data-value]');
+        profilButtons.forEach(button => {
+            if (button.classList.contains('selected')) {
+                userResponses.profilEntrepreneur = button.getAttribute('data-value');
+            }
+        });
+        
+        // Type d'investisseurs
+        userResponses.typeInvestisseurs = [];
+        const businessAngelsCheckbox = document.getElementById('invest-business-angels');
+        const vcCheckbox = document.getElementById('invest-vc');
+        const crowdfundingCheckbox = document.getElementById('invest-crowdfunding');
+        
+        if (businessAngelsCheckbox && businessAngelsCheckbox.checked) {
+            userResponses.typeInvestisseurs.push('business-angels');
+        }
+        
+        if (vcCheckbox && vcCheckbox.checked) {
+            userResponses.typeInvestisseurs.push('vc');
+        }
+        
+        if (crowdfundingCheckbox && crowdfundingCheckbox.checked) {
+            userResponses.typeInvestisseurs.push('crowdfunding');
+        }
+    }
+
+    /**
+     * Collecte les données de la section 3 : Nature de l'activité
+     */
+    function collectSection3Data() {
+        // Type d'activité
+        const typeActiviteSelect = document.getElementById('activite-type');
+        if (typeActiviteSelect) {
+            userResponses.typeActivite = typeActiviteSelect.value;
+        }
+        
+        // Activité réglementée
+        if (checkboxReglementee) {
+            userResponses.activiteReglementee = checkboxReglementee.checked;
+        }
+        
+        // Ordre professionnel
+        if (ordreProCheckbox) {
+            userResponses.ordreProessionnel = ordreProCheckbox.checked;
+        }
+        
+        // Risques de responsabilité
+        const risqueResponsabiliteCheckbox = document.getElementById('risque-responsabilite');
+        if (risqueResponsabiliteCheckbox) {
+            userResponses.risqueResponsabilite = risqueResponsabiliteCheckbox.checked;
+        }
+        
+        // Besoin d'assurance
+        const besoinAssuranceCheckbox = document.getElementById('besoin-assurance');
+        if (besoinAssuranceCheckbox) {
+            userResponses.besoinAssurance = besoinAssuranceCheckbox.checked;
+        }
+    }
+
+    /**
+     * Collecte les données de la section 4 : Volumétrie et finances
      */
     function collectSection4Data() {
-        userResponses.risque = parseInt(risqueSlider.value);
-        
-        const selectedFiscal = document.querySelector('#section4 .option-btn.selected:first-of-type');
-        if (selectedFiscal) {
-            userResponses.regimeFiscal = selectedFiscal.getAttribute('data-value');
+        // Chiffre d'affaires prévisionnel
+        if (caPrevisionnelInput) {
+            userResponses.chiffreAffaires = parseInt(caPrevisionnelInput.value);
         }
         
-        const selectedRegimeSocial = document.querySelector('#section4 .option-btn.selected:nth-of-type(2)');
-        if (selectedRegimeSocial) {
-            userResponses.regimeSocial = selectedRegimeSocial.getAttribute('data-value');
+        // Taux de marge
+        if (tauxMargeSlider) {
+            userResponses.tauxMarge = parseInt(tauxMargeSlider.value);
         }
+        
+        // Besoin de revenus immédiats
+        if (besoinsRevenusCheckbox) {
+            userResponses.besoinRevenusImmediats = besoinsRevenusCheckbox.checked;
+        }
+        
+        // Caution bancaire
+        if (cautionBancaireCheckbox) {
+            userResponses.cautionBancaire = cautionBancaireCheckbox.checked;
+        }
+        
+        // Montant de levée
+        if (montantLeveeInput) {
+            userResponses.montantLevee = parseInt(montantLeveeInput.value);
+        }
+        
+        // Préférence de rémunération
+        const preferenceSelect = document.getElementById('preference-remuneration');
+        if (preferenceSelect) {
+            userResponses.preferenceRemuneration = preferenceSelect.value;
+        }
+        
+        // Aides et dispositifs
+        userResponses.aides = [];
+        const acreCheckbox = document.getElementById('aide-acre');
+        const jeiCheckbox = document.getElementById('aide-jei');
+        const cirCheckbox = document.getElementById('aide-cir');
+        
+        if (acreCheckbox && acreCheckbox.checked) userResponses.aides.push('acre');
+        if (jeiCheckbox && jeiCheckbox.checked) userResponses.aides.push('jei');
+        if (cirCheckbox && cirCheckbox.checked) userResponses.aides.push('cir');
+        
+        // Transmission/sortie
+        const sortieButtons = document.querySelectorAll('#section4 .option-btn[data-value^="revente"], #section4 .option-btn[data-value^="transmission"]');
+        sortieButtons.forEach(button => {
+            if (button.classList.contains('selected')) {
+                userResponses.transmission = button.getAttribute('data-value');
+            }
+        });
+        
+        // Préférences fiscales et sociales
+        const regimeFiscalSelect = document.getElementById('regime-fiscal-preference');
+        const regimeSocialSelect = document.getElementById('regime-social-preference');
+        
+        if (regimeFiscalSelect) userResponses.regimeFiscal = regimeFiscalSelect.value;
+        if (regimeSocialSelect) userResponses.regimeSocial = regimeSocialSelect.value;
     }
 
     /**
      * Génère les résultats en fonction des réponses
      */
-    function generateResults() {
+    function generateResults(customParams) {
         // Vérifier si le module fiscal est chargé
         if (!window.checkHardFails || !window.SimulationsFiscales) {
             console.error('Module fiscal-simulation.js non chargé');
@@ -799,46 +997,62 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
+        // Si des paramètres personnalisés sont fournis, les utiliser
+        if (customParams) {
+            Object.assign(parametresAvances, customParams);
+        }
+        
         // Vérifier d'abord les incompatibilités majeures
         const hardFails = window.checkHardFails(userResponses);
         
-        // NOUVELLE AMÉLIORATION: Définir des coefficients adaptés aux priorités de l'utilisateur
+        // Définir des coefficients adaptés aux priorités de l'utilisateur
         let coefficients = {
-            profilEntrepreneur: 1,
-            protectionPatrimoine: 1,
-            typeActivite: 1,
-            chiffreAffaires: 1,
-            objectifs: 1,
-            remuneration: 1,
-            risque: 1,
-            regimeFiscal: 1,
-            regimeSocial: 1
+            tmiActuel: 1.5,
+            horizonProjet: 1.5,
+            profilEntrepreneur: 1.5,
+            typeActivite: 2.0,
+            chiffreAffaires: 2.0,
+            tauxMarge: 1.3,
+            besoinRevenusImmediats: 1.5,
+            cautionBancaire: 1.2,
+            montantLevee: 1.0,
+            regimeFiscal: 1.0,
+            regimeSocial: 1.0,
+            transmission: 0.8
         };
         
-        // Ajuster les coefficients selon les priorités et réponses
-        userResponses.objectifsPriorite.forEach(obj => {
-            if (obj.priorite === 1) {
-                // Priorité 1 = coefficient x3
-                if (obj.valeur === 'protection') coefficients.protectionPatrimoine = 3;
-                if (obj.valeur === 'croissance') coefficients.leveeFonds = 3;
-                if (obj.valeur === 'simplicite') coefficients.simplicite = 3;
-                if (obj.valeur === 'fiscalite') coefficients.regimeFiscal = 3;
-                if (obj.valeur === 'credibilite') coefficients.profilEntrepreneur = 2;
-            } else if (obj.priorite === 2) {
-                // Priorité 2 = coefficient x2
-                if (obj.valeur === 'protection') coefficients.protectionPatrimoine = 2;
-                if (obj.valeur === 'croissance') coefficients.leveeFonds = 2;
-                if (obj.valeur === 'simplicite') coefficients.simplicite = 2;
-                if (obj.valeur === 'fiscalite') coefficients.regimeFiscal = 2;
-            }
-        });
+        // Facteurs d'ajustement contextuel
+        // Par exemple: TMI élevé = plus d'importance à l'optimisation fiscale
+        if (userResponses.tmiActuel >= 30) {
+            coefficients.regimeFiscal = 2.5;
+        }
+        
+        // Besoins de revenus immédiats = plus d'importance au salariat
+        if (userResponses.besoinRevenusImmediats) {
+            coefficients.besoinRevenusImmediats = 2.5;
+        }
+        
+        // Bien immobilier existant = plus d'importance à la protection patrimoniale
+        if (userResponses.bienImmobilier) {
+            coefficients.cautionBancaire = 2.0;
+        }
+        
+        // Levée de fonds importante = statut juridique adapté
+        if (userResponses.montantLevee > 50000) {
+            coefficients.montantLevee = 2.5;
+        }
+        
+        // Marges faibles = plus attention aux charges sociales
+        if (userResponses.tauxMarge < 20) {
+            coefficients.tauxMarge = 2.0;
+        }
         
         // Protection patrimoniale très importante = facteur bloquant
         const facteursBlocants = [];
-        if (userResponses.protectionPatrimoine >= 5) {
+        if (userResponses.cautionBancaire && userResponses.bienImmobilier) {
             facteursBlocants.push({
                 critere: 'protectionPatrimoine',
-                message: 'La protection du patrimoine est une priorité absolue'
+                message: 'Protection du patrimoine essentielle (bien immobilier + caution bancaire)'
             });
         }
         
@@ -861,12 +1075,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 // Récupérer les détails des incompatibilités
                 incompatibilites = hardFails.filter(fail => fail.formeId === forme.id);
-                
-                // Note: On continue quand même le calcul du score pour montrer 
-                // à quel point ce serait adapté sans cette incompatibilité
             }
             
             // PARTIE STRUCTURELLE (60%)
+            
+            // TMI actuelle et fiscalité
+            if (userResponses.tmiActuel <= 11 && forme.fiscalite === 'IR') {
+                scoreCriteresStructurels += 20 * coefficients.tmiActuel;
+                details.push('TMI faible: avantage fiscal avec régime IR');
+            } else if (userResponses.tmiActuel >= 30 && forme.fiscalite === 'IS') {
+                scoreCriteresStructurels += 20 * coefficients.tmiActuel;
+                details.push('TMI élevée: optimisation via IS recommandée');
+            } else if (userResponses.tmiActuel >= 30 && forme.fiscaliteOption === 'Oui') {
+                scoreCriteresStructurels += 15 * coefficients.tmiActuel;
+                details.push('TMI élevée: option fiscale avantageuse');
+            }
+            
+            // Horizon projet
+            if (userResponses.horizonProjet === 'court' && forme.id === 'micro-entreprise') {
+                scoreCriteresStructurels += 15 * coefficients.horizonProjet;
+                details.push('Structure idéale pour projet à court terme');
+            } else if (userResponses.horizonProjet === 'moyen' && 
+                      (forme.id === 'eurl' || forme.id === 'sasu')) {
+                scoreCriteresStructurels += 15 * coefficients.horizonProjet;
+                details.push('Structure adaptée à un développement sur 3-5 ans');
+            } else if (userResponses.horizonProjet === 'long' && 
+                      (forme.id === 'sas' || forme.id === 'sarl' || forme.id === 'sa')) {
+                scoreCriteresStructurels += 15 * coefficients.horizonProjet;
+                details.push('Structure pérenne pour projet à long terme');
+            }
+            
             // Profil entrepreneur
             if (userResponses.profilEntrepreneur === 'solo' && forme.associes === '1') {
                 scoreCriteresStructurels += 20 * coefficients.profilEntrepreneur;
@@ -882,85 +1120,155 @@ document.addEventListener('DOMContentLoaded', function() {
                 details.push('Structure idéale pour accueillir des investisseurs');
             }
             
-            // Protection patrimoniale
-            if (userResponses.protectionPatrimoine >= 4 && forme.protectionPatrimoine === 'Oui') {
-                scoreCriteresStructurels += 20 * coefficients.protectionPatrimoine;
-                details.push('Excellente protection du patrimoine personnel');
-            } else if (userResponses.protectionPatrimoine >= 3 && forme.protectionPatrimoine.includes('Oui')) {
-                scoreCriteresStructurels += 15 * coefficients.protectionPatrimoine;
-                details.push('Bonne protection du patrimoine personnel');
-            } else if (userResponses.protectionPatrimoine <= 2 && forme.protectionPatrimoine === 'Non') {
-                scoreCriteresStructurels += 10; // Le coefficient n'est pas appliqué car c'est moins important
-                details.push('Protection patrimoniale limitée (conforme à vos besoins)');
-            }
-
-            // Type d'activité
+            // Type d'activité et réglementation
             if (userResponses.typeActivite && forme.activite.includes(userResponses.typeActivite)) {
                 scoreCriteresStructurels += 15 * coefficients.typeActivite;
                 details.push(`Adapté aux activités ${userResponses.typeActivite}s`);
             }
             
-            // Activité réglementée
-            if (userResponses.activiteReglementee && forme.id.includes('sel')) {
-                scoreCriteresStructurels += 25;
-                details.push('Structure spécifique pour activités réglementées');
+            if (userResponses.activiteReglementee && userResponses.ordreProessionnel) {
+                if (forme.id.includes('sel')) {
+                    scoreCriteresStructurels += 25;
+                    details.push('Structure spécifique pour professions réglementées avec ordre');
+                } else if (forme.id === 'micro-entreprise') {
+                    scoreCriteresStructurels -= 50; // Forte pénalité
+                    details.push('Incompatible avec ordre professionnel');
+                }
+            } else if (userResponses.activiteReglementee && forme.id !== 'micro-entreprise') {
+                scoreCriteresStructurels += 15;
+                details.push('Compatible avec activité réglementée');
             }
             
-            // Chiffre d'affaires
-            if (userResponses.chiffreAffaires === 'faible' && forme.id === 'micro-entreprise') {
+            // Chiffre d'affaires et marge
+            const seuils = {
+                'bic-vente': 188700,
+                'bic-service': 77700,
+                'bnc': 77700,
+                'artisanale': 188700,
+                'agricole': 95000
+            };
+            
+            const seuil = seuils[userResponses.typeActivite] || 77700;
+            
+            if (userResponses.chiffreAffaires < seuil * 0.7 && forme.id === 'micro-entreprise') {
                 scoreCriteresStructurels += 20 * coefficients.chiffreAffaires;
-                details.push('Parfait pour les petits chiffres d\'affaires');
-            } else if (userResponses.chiffreAffaires === 'moyen' && 
+                details.push('CA compatible avec régime micro-entreprise');
+            } else if (userResponses.chiffreAffaires >= seuil && forme.id === 'micro-entreprise') {
+                scoreCriteresStructurels -= 50; // Incompatibilité forte
+                details.push('CA trop élevé pour régime micro-entreprise');
+                
+                // Ajouter une incompatibilité majeure
+                if (!incompatibiliteMajeure) {
+                    incompatibiliteMajeure = true;
+                    incompatibilites.push({
+                        code: 'ca-depasse-seuil',
+                        message: `Le CA prévu (${userResponses.chiffreAffaires.toLocaleString('fr-FR')}€) dépasse le seuil micro-entreprise (${seuil.toLocaleString('fr-FR')}€)`,
+                        details: 'Régime réel obligatoire'
+                    });
+                }
+            } else if (userResponses.chiffreAffaires >= seuil && 
                       (forme.id === 'eurl' || forme.id === 'sasu' || forme.id === 'ei')) {
                 scoreCriteresStructurels += 15 * coefficients.chiffreAffaires;
-                details.push('Bien adapté aux chiffres d\'affaires moyens');
-            } else if (userResponses.chiffreAffaires === 'eleve' && 
+                details.push('Structure adaptée à ce niveau de CA');
+            } else if (userResponses.chiffreAffaires >= seuil * 2 && 
                       (forme.id === 'sas' || forme.id === 'sarl' || forme.id === 'sa')) {
                 scoreCriteresStructurels += 20 * coefficients.chiffreAffaires;
-                details.push('Structure idéale pour les chiffres d\'affaires élevés');
+                details.push('Structure idéale pour les CA élevés');
             }
             
-            // PARTIE OBJECTIFS (40%)
-            // Remuneration
-            if (userResponses.remuneration === 'salaire' && forme.regimeSocial.includes('salarié')) {
-                scoreObjectifs += 20;
-                details.push('Permet une rémunération par salaire');
-            } else if (userResponses.remuneration === 'dividendes' && forme.fiscalite === 'IS') {
-                scoreObjectifs += 20;
-                details.push('Permet une distribution de dividendes optimisée');
-            } else if (userResponses.remuneration === 'mixte' && 
-                      (forme.id === 'sasu' || forme.id === 'sas' || forme.id === 'sarl')) {
-                scoreObjectifs += 25;
-                details.push('Permet un mix optimal salaire/dividendes');
-            }
-            
-            // Objectifs spécifiques
-            userResponses.objectifs.forEach(objectif => {
-                if (objectif === 'simplicite' && 
-                   (forme.formalites === 'Très simplifiées' || forme.formalites === 'Simplifiées')) {
-                    scoreObjectifs += 15;
-                    details.push('Formalités simplifiées, gestion facile');
-                } else if (objectif === 'economie' && forme.id === 'micro-entreprise') {
-                    scoreObjectifs += 15;
-                    details.push('Coûts de création et de gestion très réduits');
-                } else if (objectif === 'fiscalite' && forme.fiscaliteOption === 'Oui') {
-                    scoreObjectifs += 15;
-                    details.push('Flexibilité fiscale (choix entre IR et IS)');
-                } else if (objectif === 'protection' && forme.protectionPatrimoine === 'Oui') {
-                    scoreObjectifs += 15;
-                    details.push('Excellente protection du patrimoine personnel');
-                } else if (objectif === 'croissance' && 
-                          (forme.leveeFonds === 'Oui' || forme.id === 'sas' || forme.id === 'sa')) {
-                    scoreObjectifs += 15;
-                    details.push('Structure adaptée à la croissance et levée de fonds');
-                } else if (objectif === 'credibilite' && 
-                          (forme.id === 'sas' || forme.id === 'sarl' || forme.id === 'sa')) {
-                    scoreObjectifs += 15;
-                    details.push('Forte crédibilité auprès des partenaires et clients');
+            // Marge brute
+            if (userResponses.tauxMarge < 15) {
+                // Marges faibles = avantage aux formes avec charges sociales plus faibles
+                if (forme.id === 'micro-entreprise') {
+                    scoreCriteresStructurels += 15 * coefficients.tauxMarge;
+                    details.push('Charges forfaitaires avantageuses avec marge faible');
+                } else if (forme.id === 'sasu' || forme.regimeSocial.includes('salarié')) {
+                    scoreCriteresStructurels -= 10 * coefficients.tauxMarge;
+                    details.push('Charges sociales élevées avec marge faible');
                 }
-            });
+            } else if (userResponses.tauxMarge > 40) {
+                // Marges élevées = avantage aux formes avec fiscalité optimisée
+                if (forme.fiscalite === 'IS' || forme.fiscaliteOption === 'Oui') {
+                    scoreCriteresStructurels += 15 * coefficients.tauxMarge;
+                    details.push('Optimisation fiscale intéressante avec marge élevée');
+                }
+            }
             
-            // Régime fiscal souhaité
+            // Besoin de revenus immédiats
+            if (userResponses.besoinRevenusImmediats) {
+                if (forme.regimeSocial.includes('salarié')) {
+                    scoreObjectifs += 20 * coefficients.besoinRevenusImmediats;
+                    details.push('Permet une rémunération immédiate par salaire');
+                } else if (forme.id === 'micro-entreprise') {
+                    scoreObjectifs += 15 * coefficients.besoinRevenusImmediats;
+                    details.push('Versement immédiat du CA après prélèvements forfaitaires');
+                } else if (forme.fiscalite === 'IS' && !forme.regimeSocial.includes('salarié')) {
+                    scoreObjectifs -= 10 * coefficients.besoinRevenusImmediats;
+                    details.push('Moins adapté aux besoins de rémunération immédiate');
+                }
+            }
+            
+            // Protection patrimoniale et caution bancaire
+            if (userResponses.cautionBancaire || userResponses.bienImmobilier) {
+                if (forme.protectionPatrimoine === 'Oui') {
+                    scoreObjectifs += 25 * coefficients.cautionBancaire;
+                    details.push('Protection patrimoniale complète, idéale avec caution bancaire');
+                } else if (forme.id === 'micro-entreprise' || forme.id === 'ei') {
+                    if (userResponses.bienImmobilier) {
+                        scoreObjectifs -= 20 * coefficients.cautionBancaire;
+                        details.push('Protection limitée pour votre patrimoine immobilier');
+                    } else {
+                        scoreObjectifs -= 10;
+                        details.push('Protection patrimoniale partielle depuis 2022');
+                    }
+                }
+            }
+            
+            // Montant de levée de fonds
+            if (userResponses.montantLevee > 50000) {
+                if (forme.leveeFonds === 'Oui') {
+                    scoreObjectifs += 20 * coefficients.montantLevee;
+                    details.push('Structure adaptée à la levée de fonds envisagée');
+                } else {
+                    scoreObjectifs -= 15 * coefficients.montantLevee;
+                    details.push('Structure peu adaptée à la levée de fonds');
+                }
+            }
+            
+            // Type d'investisseurs
+            if (userResponses.typeInvestisseurs.includes('vc') && forme.id === 'sas') {
+                scoreObjectifs += 15;
+                details.push('Structure privilégiée par les fonds de capital-risque');
+            } else if (userResponses.typeInvestisseurs.includes('business-angels') && 
+                      (forme.id === 'sas' || forme.id === 'sasu')) {
+                scoreObjectifs += 10;
+                details.push('Structure appréciée des business angels');
+            }
+            
+            // Aides et dispositifs spécifiques
+            if (userResponses.aides.includes('jei') && forme.fiscalite === 'IS') {
+                scoreObjectifs += 15;
+                details.push('Éligible au statut JEI');
+            }
+            
+            if (userResponses.aides.includes('cir') && 
+               (forme.id !== 'micro-entreprise' && forme.id !== 'ei')) {
+                scoreObjectifs += 10;
+                details.push('Structure compatible avec CIR/CII');
+            }
+            
+            // Transmission/sortie
+            if (userResponses.transmission === 'revente' && 
+               (forme.id === 'sas' || forme.id === 'sa')) {
+                scoreObjectifs += 15 * coefficients.transmission;
+                details.push('Structure favorable à la revente future');
+            } else if (userResponses.transmission === 'transmission' && 
+                      (forme.id === 'sarl' || forme.id.includes('ei'))) {
+                scoreObjectifs += 10 * coefficients.transmission;
+                details.push('Structure adaptée à la transmission familiale');
+            }
+            
+            // Régime fiscal préféré
             if (userResponses.regimeFiscal === 'ir' && forme.fiscalite === 'IR') {
                 scoreObjectifs += 15 * coefficients.regimeFiscal;
                 details.push('Correspond à votre préférence pour l\'IR');
@@ -972,23 +1280,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 details.push('Offre la flexibilité fiscale souhaitée');
             }
             
-            // Régime social souhaité
+            // Régime social préféré
             if (userResponses.regimeSocial === 'tns' && forme.regimeSocial.includes('TNS')) {
                 scoreObjectifs += 15 * coefficients.regimeSocial;
                 details.push('Correspond à votre préférence pour le statut TNS');
             } else if (userResponses.regimeSocial === 'salarie' && forme.regimeSocial.includes('salarié')) {
                 scoreObjectifs += 15 * coefficients.regimeSocial;
                 details.push('Correspond à votre préférence pour le statut assimilé-salarié');
-            }
-            
-            // Niveau de risque acceptable
-            if (userResponses.risque >= 4 && 
-               (forme.id === 'ei' || forme.id === 'micro-entreprise' || forme.id === 'snc')) {
-                scoreObjectifs += 10;
-                details.push('Conforme à votre tolérance élevée au risque');
-            } else if (userResponses.risque <= 2 && forme.protectionPatrimoine === 'Oui') {
-                scoreObjectifs += 15;
-                details.push('Sécurité maximale adaptée à votre profil prudent');
             }
             
             // Score total
@@ -1022,7 +1320,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 ratioSalaire: parametresAvances.ratioSalaire,
                 ratioDividendes: parametresAvances.ratioDividendes,
                 capitalSocial: parametresAvances.capitalSocial,
-                capitalLibere: parametresAvances.capitalLibere
+                capitalLibere: parametresAvances.capitalLibere,
+                fraisReels: parametresAvances.fraisReels,
+                acreActif: parametresAvances.acreActif,
+                tmiActuel: userResponses.tmiActuel,
+                tauxMarge: userResponses.tauxMarge,
+                typeActivite: userResponses.typeActivite
             });
 
             // Retourner l'objet avec les scores calculés et les détails
@@ -1081,6 +1384,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * Affiche les résultats à l'utilisateur
+     * Version améliorée avec 3 niveaux de présentation
      */
     function displayResults(results, incompatibles) {
         if (!resultsContainer) return;
@@ -1114,6 +1418,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Calculer le score en pourcentage pour la visualisation
         const scorePercentage = Math.round((recommended.scoreDetails.pourcentage || 85));
         
+        // Version améliorée avec badge "RECOMMANDÉ"
         let htmlPrimary = `
             <div class="result-card primary-result visible p-6 mb-6 relative">
                 ${recommended.compatibilite === 'RECOMMANDÉ' ? '<div class="recommended-badge">Recommandé</div>' : ''}
@@ -1185,7 +1490,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         `;
         
-        // Ajouter les autres résultats si disponibles
+        // Ajouter les autres résultats si disponibles comme "challengers crédibles"
         let secondaryHtml = '';
         if (results.length > 1) {
             // Afficher le bouton pour montrer plus de résultats
@@ -1193,8 +1498,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 showMoreResults.classList.remove('hidden');
             }
             
-            // Créer le contenu des résultats secondaires
-            secondaryHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">';
+            // Titre pour les challengers
+            secondaryHtml = `
+                <h3 class="text-xl font-semibold mb-4 flex items-center">
+                    <i class="fas fa-medal text-blue-400 mr-2"></i>
+                    Autres options compatibles
+                </h3>
+            `;
+            
+            // Créer le contenu des résultats secondaires en grid
+            secondaryHtml += '<div class="grid grid-cols-1 md:grid-cols-2 gap-6">';
             
             results.slice(1).forEach(result => {
                 const resultScore = Math.round((result.scoreDetails.pourcentage || 75));
@@ -1234,6 +1547,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Ajouter le contenu secondaire au container
             if (secondaryResults) {
                 secondaryResults.innerHTML = secondaryHtml;
+                secondaryResults.classList.add('hidden'); // Caché par défaut
             }
         }
         
@@ -1262,6 +1576,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /**
      * Affiche les formes juridiques incompatibles
+     * Version améliorée avec solution de repli
      */
     function displayIncompatibilites(incompatibles) {
         if (!incompatibles || incompatibles.length === 0) return '';
@@ -1285,7 +1600,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (!incompatibiliteParForme[forme.id]) {
                     incompatibiliteParForme[forme.id] = {
                         forme: forme,
-                        raisons: []
+                        raisons: [],
+                        solution: getSolutionDeRepli(forme.id, inc.code)
                     };
                 }
                 
@@ -1316,6 +1632,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 </li>`;
             });
             
+            // Ajouter la solution de repli si disponible
+            if (item.solution) {
+                html += `
+                    <li class="mt-3 pt-2 border-t border-red-800 flex items-start">
+                        <i class="fas fa-lightbulb text-yellow-400 mr-2 mt-1"></i>
+                        <span><strong>Alternative :</strong> ${item.solution}</span>
+                    </li>
+                `;
+            }
+            
             html += `
                     </ul>
                 </div>
@@ -1329,6 +1655,31 @@ document.addEventListener('DOMContentLoaded', function() {
         `;
         
         return html;
+    }
+
+    /**
+     * Renvoie une solution de repli adaptée selon le type d'incompatibilité
+     */
+    function getSolutionDeRepli(formeId, codeErreur) {
+        const solutions = {
+            'micro-entreprise': {
+                'ca-depasse-seuil': 'Optez pour une EURL ou SASU permettant des volumes d\'activité plus importants',
+                'ordre-professionnel': 'Choisissez une SEL ou SELAS adaptée aux professions réglementées',
+                'investisseurs': 'Considérez une SAS pour accueillir des investisseurs'
+            },
+            'ei': {
+                'protection-patrimoine': 'Privilégiez une EURL qui offre une meilleure protection patrimoniale',
+                'levee-fonds': 'Optez pour une SAS ou SASU plus adaptée à la levée de fonds'
+            },
+            'sasu': {
+                'charges-elevees': 'Envisagez une EURL à l\'IR pour optimiser les charges sociales avec un CA faible',
+                'formalisme': 'Si la simplicité est prioritaire, considérez la micro-entreprise (si CA compatible)'
+            }
+        };
+        
+        return solutions[formeId] && solutions[formeId][codeErreur] 
+            ? solutions[formeId][codeErreur] 
+            : 'Consultez les autres formes recommandées dans les résultats';
     }
 
     /**
@@ -1406,4 +1757,17 @@ document.addEventListener('DOMContentLoaded', function() {
         // Scroll vers le haut
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
+
+    // Écouter les évènements pour les détails de calcul
+    document.addEventListener('toggleCalculationDetails', function(e) {
+        const scoreDetails = document.querySelectorAll('.score-details');
+        
+        scoreDetails.forEach(detail => {
+            if (e.detail.visible) {
+                detail.classList.remove('hidden');
+            } else {
+                detail.classList.add('hidden');
+            }
+        });
+    });
 });
