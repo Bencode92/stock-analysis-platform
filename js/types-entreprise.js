@@ -173,189 +173,6 @@ document.addEventListener('DOMContentLoaded', function() {
     // Score maximal possible pour le calcul des pourcentages - augmenté pour plus de nuance
     const SCORE_MAX_POSSIBLE = 200;
 
-    /**
-     * Synchronise le chiffre d'affaires du questionnaire avec le paramètre avancé
-     */
-    function synchronizeCA() {
-        const caPrevisionnelInput = document.getElementById('ca-previsionnel');
-        const caSimulationInput = document.getElementById('ca-simulation');
-        
-        if (caPrevisionnelInput && caSimulationInput) {
-            caSimulationInput.value = caPrevisionnelInput.value;
-            
-            // Garder les valeurs synchronisées dans les deux sens
-            caPrevisionnelInput.addEventListener('change', function() {
-                caSimulationInput.value = this.value;
-            });
-            
-            caSimulationInput.addEventListener('change', function() {
-                caPrevisionnelInput.value = this.value;
-            });
-        }
-    }
-
-    /**
-     * Affiche l'impact de l'ACRE sur le revenu net
-     */
-    function calculerImpactACRE() {
-        const caSimulation = parseFloat(document.getElementById('ca-simulation').value) || 50000;
-        const formeId = getCurrentFormId();
-        const formeJuridique = formesJuridiques.find(f => f.id === formeId);
-        
-        if (!formeJuridique) return;
-        
-        // Calculer sans ACRE
-        const resultSansACRE = window.SimulationsFiscales.simulerImpactFiscal(formeJuridique, caSimulation, {
-            ratioSalaire: parametresAvances.ratioSalaire,
-            ratioDividendes: parametresAvances.ratioDividendes,
-            acreActif: false
-        });
-        
-        // Calculer avec ACRE
-        const resultAvecACRE = window.SimulationsFiscales.simulerImpactFiscal(formeJuridique, caSimulation, {
-            ratioSalaire: parametresAvances.ratioSalaire,
-            ratioDividendes: parametresAvances.ratioDividendes,
-            acreActif: true
-        });
-        
-        // Mettre à jour l'affichage
-        const revenuSansAcre = document.getElementById('revenu-sans-acre');
-        const revenuAvecAcre = document.getElementById('revenu-avec-acre');
-        const acreGain = document.getElementById('acre-gain');
-        
-        if (revenuSansAcre && revenuAvecAcre && acreGain) {
-            const netSansACRE = resultSansACRE.revenueNet;
-            const netAvecACRE = resultAvecACRE.revenueNet;
-            const gain = netAvecACRE - netSansACRE;
-            
-            revenuSansAcre.textContent = netSansACRE.toLocaleString('fr-FR') + ' €';
-            revenuAvecAcre.textContent = netAvecACRE.toLocaleString('fr-FR') + ' €';
-            acreGain.textContent = '+' + gain.toLocaleString('fr-FR') + ' €';
-        }
-    }
-
-    /**
-     * Obtient l'ID de la forme juridique actuellement affichée
-     */
-    function getCurrentFormId() {
-        const titleElement = document.querySelector('.result-card h3');
-        if (!titleElement) return null;
-        
-        const formeName = titleElement.textContent.trim();
-        const forme = formesJuridiques.find(f => f.nom === formeName);
-        
-        return forme ? forme.id : null;
-    }
-
-    /**
-     * Met en évidence les changements de valeur avec une animation
-     */
-    function highlightValueChange(element) {
-        if (!element) return;
-        
-        element.classList.remove('value-changed');
-        void element.offsetWidth; // Force reflow
-        element.classList.add('value-changed');
-    }
-
-    /**
-     * Met à jour les conseils sur les frais réels pour micro-entreprise
-     */
-    function updateFraisReelsAdvice() {
-        const fraisReels = parseFloat(document.getElementById('frais-reels').value) || 35;
-        const typeActivite = userResponses.typeActivite || 'bic-service';
-        
-        let abattementForfaitaire;
-        if (typeActivite === 'bic-vente' || typeActivite === 'artisanale') {
-            abattementForfaitaire = 71;
-        } else { // bic-service, bnc
-            abattementForfaitaire = 34;
-        }
-        
-        const abattementElement = document.getElementById('abattement-forfaitaire');
-        const impactElement = document.getElementById('frais-reels-impact');
-        
-        if (abattementElement && impactElement) {
-            abattementElement.textContent = abattementForfaitaire + '%';
-            
-            if (fraisReels < abattementForfaitaire) {
-                impactElement.className = 'ml-4 text-sm bg-green-900 bg-opacity-30 px-3 py-1 rounded-lg text-green-300';
-                impactElement.innerHTML = 'Régime micro <strong>avantageux</strong> (frais < abattement)';
-            } else {
-                impactElement.className = 'ml-4 text-sm bg-blue-900 bg-opacity-30 px-3 py-1 rounded-lg text-blue-300';
-                impactElement.innerHTML = 'Régime réel <strong>recommandé</strong> (frais > abattement)';
-            }
-        }
-    }
-
-    /**
-     * Affiche la comparaison des régimes fiscaux (IR vs IS)
-     */
-    function renderTaxRegimeComparison(forme, caSimulation, tauxMarge) {
-        // Vérifier que la forme juridique a l'option fiscale
-        if (!forme.fiscaliteOption || forme.fiscaliteOption !== 'Oui') {
-            return '';
-        }
-        
-        const benefice = caSimulation * (tauxMarge/100);
-        
-        // Calculer les résultats pour IR et IS
-        const irParams = {
-            fiscalite: 'IR',
-            ratioSalaire: 100,
-            ratioDividendes: 0
-        };
-        
-        const isParams = {
-            fiscalite: 'IS',
-            ratioSalaire: 50,
-            ratioDividendes: 50
-        };
-        
-        const irResult = window.SimulationsFiscales.simulerImpactFiscal(forme, caSimulation, irParams);
-        const isResult = window.SimulationsFiscales.simulerImpactFiscal(forme, caSimulation, isParams);
-        
-        return `
-        <div class="mt-6">
-            <h3 class="text-xl font-bold text-green-400 mb-4">Comparaison des régimes fiscaux IR vs IS</h3>
-            <table class="comparison-table">
-                <thead>
-                    <tr>
-                        <th>Critère</th>
-                        <th>IR (Impôt sur le Revenu)</th>
-                        <th>IS (Impôt sur les Sociétés)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td>Imposition des bénéfices</td>
-                        <td>Barème progressif (TMI: ${userResponses.tmiActuel}%)</td>
-                        <td>15% jusqu'à 42.5K€, 25% au-delà</td>
-                    </tr>
-                    <tr>
-                        <td>Montant net après impôt</td>
-                        <td class="${irResult.revenueNet > isResult.revenueNet ? 'better-option' : ''}">${irResult.revenueNet.toLocaleString('fr-FR')} €</td>
-                        <td class="${isResult.revenueNet > irResult.revenueNet ? 'better-option' : ''}">${isResult.revenueNet.toLocaleString('fr-FR')} €</td>
-                    </tr>
-                    <tr>
-                        <td>Charges sociales</td>
-                        <td>Sur la totalité du bénéfice</td>
-                        <td>Uniquement sur la rémunération</td>
-                    </tr>
-                    <tr>
-                        <td>Flexibilité rémunération</td>
-                        <td>Limitée (prélèvements personnels)</td>
-                        <td>Élevée (salaire + dividendes)</td>
-                    </tr>
-                </tbody>
-            </table>
-            <div class="text-sm text-gray-400 mt-2">
-                <strong>Recommandation:</strong> ${isResult.revenueNet > irResult.revenueNet ? 'Le régime IS semble plus avantageux financièrement dans votre situation.' : 'Le régime IR semble plus avantageux financièrement dans votre situation.'}
-            </div>
-        </div>
-        `;
-    }
-    
     // Sélectionner tous les éléments du DOM nécessaires
     const sections = document.querySelectorAll('.question-section');
     const progressSteps = document.querySelectorAll('.progress-step');
@@ -579,58 +396,23 @@ document.addEventListener('DOMContentLoaded', function() {
             advancedParamsToggle.addEventListener('click', toggleAdvancedParams);
         }
         
-        // Gestion de la répartition salaire/dividendes
         if (ratioSalaireSlider) {
-            ratioSalaireSlider.addEventListener('input', function() {
-                updateRatioValues();
-                
-                // Mise à jour visuelle immédiate
-                const impactElement = document.getElementById('repartition-impact');
-                if (impactElement) {
-                    impactElement.innerHTML = 
-                        '<i class="fas fa-sync-alt animate-spin mr-1"></i> Déplacez le curseur pour voir l\'impact...';
-                    impactElement.className = 
-                        'text-xs text-green-400 mt-1 bg-green-900 bg-opacity-30 p-2 rounded-lg';
-                }
-            });
-            
-            ratioSalaireSlider.addEventListener('change', function() {
-                // Valeur finale au relâchement du curseur
-                const impactElement = document.getElementById('repartition-impact');
-                if (impactElement) {
-                    impactElement.innerHTML = 
-                        '<i class="fas fa-check mr-1"></i> Impact calculé - Cliquez sur "Recalculer les résultats"';
-                }
-            });
+            ratioSalaireSlider.addEventListener('input', updateRatioValues);
         }
         
         if (capitalLibereSlider) {
             capitalLibereSlider.addEventListener('input', updateCapitalLibereValue);
         }
         
-        // Gestion des frais réels
         if (fraisReelsInput) {
             fraisReelsInput.addEventListener('input', function() {
                 parametresAvances.fraisReels = parseInt(this.value);
-                updateFraisReelsAdvice();
             });
         }
         
-        // Gestion de l'ACRE
         if (acreCheckbox) {
             acreCheckbox.addEventListener('change', function() {
                 parametresAvances.acreActif = this.checked;
-                
-                // Afficher/masquer la comparaison d'impact
-                const acreImpact = document.getElementById('acre-impact');
-                if (acreImpact) {
-                    acreImpact.classList.toggle('hidden', !this.checked);
-                    
-                    // Calculer l'impact si visible
-                    if (this.checked) {
-                        calculerImpactACRE();
-                    }
-                }
             });
         }
         
@@ -675,12 +457,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-        
-        // Initialisation des conseils frais réels au chargement
-        updateFraisReelsAdvice();
-        
-        // Synchronisation du CA avec les réponses du questionnaire
-        synchronizeCA();
     }
 
     /**
@@ -824,48 +600,18 @@ document.addEventListener('DOMContentLoaded', function() {
         // Récupérer le type d'activité depuis les réponses sauvegardées
         parametresAvances.natureActivite = userResponses.typeActivite;
         
-        // Enregistrer les valeurs actuelles pour comparaison
-        const revenusElements = document.querySelectorAll('.result-card .text-green-400');
-        const oldValues = Array.from(revenusElements).map(el => el.textContent);
-        
         // Recalculer les résultats avec les nouveaux paramètres
         generateResults();
         
-        // Mettre en évidence les changements
-        setTimeout(() => {
-            const newRevenusElements = document.querySelectorAll('.result-card .text-green-400');
-            newRevenusElements.forEach((el, index) => {
-                if (index < oldValues.length && el.textContent !== oldValues[index]) {
-                    highlightValueChange(el);
-                }
-            });
-        }, 300);
-        
-        // Mettre à jour l'impact ACRE si activé
-        if (acreCheckbox && acreCheckbox.checked) {
-            calculerImpactACRE();
-        }
-        
         // Notification à l'utilisateur
         const notification = document.createElement('div');
-        notification.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50 flex items-center';
-        notification.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Paramètres appliqués et résultats recalculés';
+        notification.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+        notification.textContent = 'Paramètres appliqués et résultats recalculés';
         document.body.appendChild(notification);
         
-        // Effet de fondu
-        notification.style.opacity = '0';
-        notification.style.transition = 'opacity 0.3s ease';
-        
+        // Disparaitre après 3 secondes
         setTimeout(() => {
-            notification.style.opacity = '1';
-        }, 10);
-        
-        // Disparaître après 3 secondes avec effet de fondu
-        setTimeout(() => {
-            notification.style.opacity = '0';
-            setTimeout(() => {
-                notification.remove();
-            }, 300);
+            notification.remove();
         }, 3000);
     }
 
@@ -1747,6 +1493,17 @@ document.addEventListener('DOMContentLoaded', function() {
         // Ajouter le tableau comparatif des régimes fiscaux (IR vs IS)
         htmlPrimary += renderTaxRegimeComparison(recommended.forme, parametresAvances.caSimulation, userResponses.tauxMarge);
         
+        // Ajouter la simulation salaire/dividendes
+        htmlPrimary += renderSalaryDividendSimulation(recommended.forme, parametresAvances.caSimulation, userResponses.tauxMarge);
+        
+        // Ajouter la projection pluriannuelle si activée
+        if (parametresAvances.afficherProjection) {
+            htmlPrimary += renderMultiYearSimulation(recommended.forme, parametresAvances.caSimulation, userResponses.tauxMarge);
+        }
+        
+        // Ajouter les stratégies optimales pour cette forme juridique
+        htmlPrimary += renderOptimalStrategies(recommended.forme, userResponses);
+        
         // Ajouter les autres résultats si disponibles comme "challengers crédibles"
         let secondaryHtml = '';
         if (results.length > 1) {
@@ -1827,31 +1584,28 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         }
         
+        // Gérer les onglets d'années si la projection est active
+        if (parametresAvances.afficherProjection) {
+            const yearTabs = document.querySelectorAll('.year-tab');
+            const yearContents = document.querySelectorAll('.year-content');
+            
+            yearTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    const year = this.getAttribute('data-year');
+                    
+                    // Désactiver tous les onglets et contenus
+                    yearTabs.forEach(t => t.classList.remove('active'));
+                    yearContents.forEach(c => c.classList.remove('active'));
+                    
+                    // Activer l'onglet cliqué et le contenu correspondant
+                    this.classList.add('active');
+                    document.getElementById(`year-content-${year}`).classList.add('active');
+                });
+            });
+        }
+        
         // Déclencher un événement pour indiquer que les résultats sont chargés
         document.dispatchEvent(new CustomEvent('resultsLoaded'));
-        
-        // Après avoir ajouté le contenu HTML principal, ajoutez ceci :
-        if (recommended) {
-            // Récupérer les éléments nécessaires pour la comparaison
-            const caSimulation = parametresAvances.caSimulation || userResponses.chiffreAffaires || 50000;
-            const tauxMarge = userResponses.tauxMarge || 35;
-            
-            // Créer le comparatif des régimes fiscaux si la forme juridique a l'option
-            if (recommended.forme.fiscaliteOption === 'Oui') {
-                const taxComparison = renderTaxRegimeComparison(recommended.forme, caSimulation, tauxMarge);
-                
-                // Ajouter après le résultat principal
-                const comparisonContainer = document.createElement('div');
-                comparisonContainer.className = 'tax-comparison mt-8';
-                comparisonContainer.innerHTML = taxComparison;
-                
-                // Insérer le comparatif après la carte principale
-                const resultsCard = document.querySelector('.result-card');
-                if (resultsCard && resultsCard.parentNode) {
-                    resultsCard.parentNode.insertBefore(comparisonContainer, resultsCard.nextSibling);
-                }
-            }
-        }
     }
 
     /**
@@ -2039,11 +1793,312 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
-     * Rendements optimisés - Représente une visualisation des stratégies optimales
+     * Génère un tableau comparatif IR vs IS
      */
-    function renderOptimalStrategies(forme, userResponses) {
-        // Fonctionnalité à implémenter selon les besoins spécifiques
-        return '';
+    function renderTaxRegimeComparison(forme, caSimulation, tauxMarge) {
+        // Calculer le bénéfice (revenu imposable avant impôt)
+        const benefice = caSimulation * (tauxMarge / 100);
+        
+        // Calculer les résultats pour l'IR
+        const irResult = {
+            tauxEffectif: 30, // Valeur par défaut
+            netApreesImpot: Math.round(benefice * 0.7) // Estimation simplifiée
+        };
+        
+        // Calculer les résultats pour l'IS
+        const isResult = {
+            tauxIS: benefice <= 42500 ? 15 : 25,
+            netApreesImpot: Math.round(benefice * (benefice <= 42500 ? 0.85 : 0.75)) // Estimation simplifiée
+        };
+        
+        // Déterminer le régime le plus avantageux
+        const irMeilleur = irResult.netApreesImpot > isResult.netApreesImpot;
+        const difference = Math.abs(irResult.netApreesImpot - isResult.netApreesImpot);
+        
+        return `
+        <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-4">
+            <h4 class="font-semibold text-green-400 mb-3">Comparaison des régimes fiscaux IR vs IS</h4>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-700">
+                            <th class="text-left p-2">Critère</th>
+                            <th class="text-left p-2">IR (Impôt sur le Revenu)</th>
+                            <th class="text-left p-2">IS (Impôt sur les Sociétés)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="border-b border-gray-700">
+                            <td class="p-2">Imposition des bénéfices</td>
+                            <td class="p-2">Barème progressif (TMI: ${irResult.tauxEffectif}%)</td>
+                            <td class="p-2">${isResult.tauxIS}% ${isResult.tauxIS === 15 ? '(taux réduit PME)' : ''}</td>
+                        </tr>
+                        <tr class="border-b border-gray-700">
+                            <td class="p-2">Montant net après impôt</td>
+                            <td class="p-2 ${irMeilleur ? 'text-green-400 font-semibold' : ''}">${irResult.netApreesImpot.toLocaleString('fr-FR')} €</td>
+                            <td class="p-2 ${!irMeilleur ? 'text-green-400 font-semibold' : ''}">${isResult.netApreesImpot.toLocaleString('fr-FR')} €</td>
+                        </tr>
+                        <tr class="border-b border-gray-700">
+                            <td class="p-2">Charges sociales</td>
+                            <td class="p-2">Sur la totalité du bénéfice</td>
+                            <td class="p-2">Uniquement sur la rémunération</td>
+                        </tr>
+                        <tr class="border-b border-gray-700">
+                            <td class="p-2">Flexibilité de rémunération</td>
+                            <td class="p-2">Limitée (prélèvements personnels)</td>
+                            <td class="p-2">Élevée (salaire + dividendes)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="mt-4 p-3 ${irMeilleur ? 'bg-green-900' : 'bg-blue-900'} bg-opacity-30 rounded-lg">
+                <p class="flex items-center">
+                    <i class="fas fa-info-circle mr-2 ${irMeilleur ? 'text-green-400' : 'text-blue-400'}"></i>
+                    <span>
+                        <strong>Pour votre situation actuelle:</strong> 
+                        Le régime ${irMeilleur ? 'IR semble plus avantageux' : 'IS semble plus avantageux'} 
+                        fiscalement (différence de ${difference.toLocaleString('fr-FR')} €).
+                        ${forme.fiscaliteOption === 'Oui' ? 
+                            `<strong class="text-green-400">Votre forme juridique (${forme.nom}) vous permet de choisir entre les deux régimes.</strong>` : 
+                            ''}
+                    </span>
+                </p>
+            </div>
+        </div>`;
+    }
+
+    /**
+     * Génère une simulation comparative de répartition salaire/dividendes
+     */
+    function renderSalaryDividendSimulation(forme, caSimulation, tauxMarge) {
+        // Vérifier si la forme juridique permet les dividendes
+        if (forme.fiscalite !== 'IS' && !forme.fiscaliteOption === 'Oui') {
+            return ''; // Ne pas afficher pour les formes qui ne permettent pas la distribution de dividendes
+        }
+        
+        // Calculer le bénéfice (revenu imposable avant impôt)
+        const benefice = caSimulation * (tauxMarge / 100);
+        
+        // Créer les données pour plusieurs scénarios
+        const scenarios = [
+            { salaire: 100, dividendes: 0 },
+            { salaire: 75, dividendes: 25 },
+            { salaire: 50, dividendes: 50 },
+            { salaire: 25, dividendes: 75 },
+            { salaire: 0, dividendes: 100 }
+        ];
+        
+        // Générer les résultats pour chaque scénario
+        const results = scenarios.map(scenario => {
+            const salaireAmount = benefice * (scenario.salaire / 100);
+            const dividendesAmount = benefice * (scenario.dividendes / 100);
+            
+            // Calculs simplifiés
+            const chargesSalaire = salaireAmount * 0.45; // ~45% de charges sur salaire
+            const impotSalaire = salaireAmount * 0.1; // ~10% d'impôt sur le salaire (approximation)
+            
+            const impotSociete = dividendesAmount * 0.25; // 25% d'IS
+            const chargesDividendes = (dividendesAmount - impotSociete) * 0.172; // 17.2% de prélèvements sociaux sur dividendes nets d'IS
+            const impotDividendes = (dividendesAmount - impotSociete) * 0.12; // ~12% d'impôt sur dividendes (approximation PFU - prélèvements sociaux)
+            
+            const totalCharges = chargesSalaire + chargesDividendes;
+            const totalImpots = impotSalaire + impotSociete + impotDividendes;
+            const netTotal = salaireAmount + dividendesAmount - totalCharges - totalImpots;
+            
+            return {
+                ...scenario,
+                netTotal: Math.round(netTotal),
+                charges: Math.round(totalCharges),
+                impots: Math.round(totalImpots)
+            };
+        });
+        
+        // Trouver le scénario optimal
+        const maxNet = Math.max(...results.map(r => r.netTotal));
+        const optimalScenario = results.find(r => r.netTotal === maxNet);
+        
+        return `
+        <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-4">
+            <h4 class="font-semibold text-green-400 mb-3">Impact de la répartition salaire/dividendes</h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <h5 class="font-medium mb-2">Simulation sur un bénéfice de ${Math.round(benefice).toLocaleString('fr-FR')} €</h5>
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-700">
+                                <th class="text-left p-2">Répartition</th>
+                                <th class="text-right p-2">Charges</th>
+                                <th class="text-right p-2">Impôts</th>
+                                <th class="text-right p-2">Revenu net</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${results.map(r => `
+                            <tr class="border-b border-gray-700 ${r.netTotal === maxNet ? 'bg-green-900 bg-opacity-20' : ''}">
+                                <td class="p-2">${r.salaire}% / ${r.dividendes}%</td>
+                                <td class="p-2 text-right">${r.charges.toLocaleString('fr-FR')} €</td>
+                                <td class="p-2 text-right">${r.impots.toLocaleString('fr-FR')} €</td>
+                                <td class="p-2 text-right font-semibold ${r.netTotal === maxNet ? 'text-green-400' : ''}">${r.netTotal.toLocaleString('fr-FR')} €</td>
+                            </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="bg-blue-800 bg-opacity-40 p-4 rounded-lg">
+                    <h5 class="font-medium text-green-400 mb-3">Stratégie optimale pour votre situation</h5>
+                    <div class="mb-4">
+                        <div class="text-xl font-bold">${optimalScenario.salaire}% salaire / ${optimalScenario.dividendes}% dividendes</div>
+                        <div class="text-sm text-gray-400 mt-1">Revenu net estimé: ${optimalScenario.netTotal.toLocaleString('fr-FR')} €</div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h6 class="font-medium mb-1">Pourquoi cette répartition ?</h6>
+                        <ul class="text-sm">
+                            ${optimalScenario.salaire === 100 ? 
+                                '<li class="mb-1">• Votre TMI actuelle est faible, privilégiez le salaire</li>' : 
+                                ''}
+                            ${optimalScenario.dividendes === 100 ? 
+                                '<li class="mb-1">• Charges sociales très élevées sur salaire, privilégiez les dividendes</li>' : 
+                                ''}
+                            ${optimalScenario.salaire > 0 && optimalScenario.dividendes > 0 ? 
+                                '<li class="mb-1">• Une répartition mixte optimise votre fiscalité globale</li>' : 
+                                ''}
+                            <li class="mb-1">• Cette répartition réduit votre pression fiscale et sociale</li>
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h6 class="font-medium mb-1">Considérations importantes</h6>
+                        <ul class="text-sm">
+                            <li class="mb-1">• Protection sociale plus faible avec dividendes</li>
+                            <li class="mb-1">• Besoin d'une trésorerie suffisante pour les dividendes</li>
+                            <li class="mb-1">• Impact différent sur votre crédit immobilier futur</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>`;
+    }
+
+    /**
+     * Génère une simulation pluriannuelle
+     */
+    function renderMultiYearSimulation(forme, caSimulation, tauxMarge) {
+        // Définir progression de CA sur 3 ans
+        const caYear1 = caSimulation;
+        const caYear2 = Math.round(caSimulation * 1.2); // +20%
+        const caYear3 = Math.round(caYear2 * 1.2); // +20% supplémentaire
+        
+        // Calculer les résultats pour chaque année (version simplifiée)
+        const resultYear1 = simulateYearResult(forme, caYear1, tauxMarge, true); // ACRE 1ère année
+        const resultYear2 = simulateYearResult(forme, caYear2, tauxMarge, false);
+        const resultYear3 = simulateYearResult(forme, caYear3, tauxMarge, false);
+        
+        return `
+        <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-4">
+            <h4 class="font-semibold text-green-400 mb-3">Projection sur 3 ans</h4>
+            
+            <div class="year-tabs flex border-b border-gray-700 mb-4">
+                <div class="year-tab active px-4 py-2 cursor-pointer" data-year="1">Année 1</div>
+                <div class="year-tab px-4 py-2 cursor-pointer" data-year="2">Année 2</div>
+                <div class="year-tab px-4 py-2 cursor-pointer" data-year="3">Année 3</div>
+            </div>
+            
+            <div class="year-content active" id="year-content-1">
+                <h5 class="font-medium mb-2">Année 1 ${resultYear1.acre ? '<span class="acre-badge"><i class="fas fa-star"></i> ACRE</span>' : ''}</h5>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                        <div class="text-xs text-gray-400">Chiffre d'affaires</div>
+                        <div class="text-xl font-semibold">${caYear1.toLocaleString('fr-FR')} €</div>
+                    </div>
+                    <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                        <div class="text-xs text-gray-400">Charges sociales</div>
+                        <div class="text-xl font-semibold">${resultYear1.charges.toLocaleString('fr-FR')} €</div>
+                        ${resultYear1.acre ? '<div class="text-xs text-green-400">Réduction ACRE appliquée (-50%)</div>' : ''}
+                    </div>
+                    <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                        <div class="text-xs text-gray-400">Impôts</div>
+                        <div class="text-xl font-semibold">${resultYear1.impots.toLocaleString('fr-FR')} €</div>
+                    </div>
+                    <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                        <div class="text-xs text-gray-400">Revenu net</div>
+                        <div class="text-xl font-semibold text-green-400">${resultYear1.net.toLocaleString('fr-FR')} €</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="year-content hidden" id="year-content-2">
+                <h5 class="font-medium mb-2">Année 2</h5>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                        <div class="text-xs text-gray-400">Chiffre d'affaires</div>
+                        <div class="text-xl font-semibold">${caYear2.toLocaleString('fr-FR')} €</div>
+                        <div class="text-xs text-green-400">+20% vs année 1</div>
+                    </div>
+                    <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                        <div class="text-xs text-gray-400">Charges sociales</div>
+                        <div class="text-xl font-semibold">${resultYear2.charges.toLocaleString('fr-FR')} €</div>
+                    </div>
+                    <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                        <div class="text-xs text-gray-400">Impôts</div>
+                        <div class="text-xl font-semibold">${resultYear2.impots.toLocaleString('fr-FR')} €</div>
+                    </div>
+                    <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                        <div class="text-xs text-gray-400">Revenu net</div>
+                        <div class="text-xl font-semibold text-green-400">${resultYear2.net.toLocaleString('fr-FR')} €</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="year-content hidden" id="year-content-3">
+                <h5 class="font-medium mb-2">Année 3</h5>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                        <div class="text-xs text-gray-400">Chiffre d'affaires</div>
+                        <div class="text-xl font-semibold">${caYear3.toLocaleString('fr-FR')} €</div>
+                        <div class="text-xs text-green-400">+44% vs année 1</div>
+                    </div>
+                    <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                        <div class="text-xs text-gray-400">Charges sociales</div>
+                        <div class="text-xl font-semibold">${resultYear3.charges.toLocaleString('fr-FR')} €</div>
+                    </div>
+                    <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                        <div class="text-xs text-gray-400">Impôts</div>
+                        <div class="text-xl font-semibold">${resultYear3.impots.toLocaleString('fr-FR')} €</div>
+                    </div>
+                    <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                        <div class="text-xs text-gray-400">Revenu net</div>
+                        <div class="text-xl font-semibold text-green-400">${resultYear3.net.toLocaleString('fr-FR')} €</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4 pt-4 border-t border-gray-700">
+                <h5 class="font-medium mb-2">Résumé sur 3 ans</h5>
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                        <div class="text-sm text-gray-400">Année 1</div>
+                        <div class="font-semibold text-lg">${resultYear1.net.toLocaleString('fr-FR')} €</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-400">Année 2</div>
+                        <div class="font-semibold text-lg">${resultYear2.net.toLocaleString('fr-FR')} €</div>
+                    </div>
+                    <div>
+                        <div class="text-sm text-gray-400">Année 3</div>
+                        <div class="font-semibold text-lg">${resultYear3.net.toLocaleString('fr-FR')} €</div>
+                    </div>
+                </div>
+                <div class="mt-2 text-center">
+                    <div class="text-sm text-gray-400">Total sur 3 ans</div>
+                    <div class="font-semibold text-xl text-green-400">${(resultYear1.net + resultYear2.net + resultYear3.net).toLocaleString('fr-FR')} €</div>
+                </div>
+            </div>
+        </div>`;
     }
 
     /**
@@ -2054,165 +2109,174 @@ document.addEventListener('DOMContentLoaded', function() {
         let charges = 0;
         let impots = 0;
         
-        // Calculer charges selon le type de structure (calcul simplifié)
+        // Calculer charges selon le type de structure
         if (forme.id === 'micro-entreprise') {
-            charges = benefice * 0.22 * (withAcre ? 0.5 : 1); // Réduction ACRE si applicable
-            impots = benefice * 0.15; // TMI approximative
+            // Micro-entreprise: taux forfaitaire
+            const tauxChargesMicro = forme.fiscalite === 'IR' ? 0.22 : 0.22; // Pour simplifier, même taux
+            charges = ca * tauxChargesMicro * (withAcre ? 0.5 : 1); // Réduction ACRE si applicable
+            impots = (ca * 0.66 - charges) * 0.15; // Abattement 34% et TMI estimée à 15%
         } else if (forme.regimeSocial.includes('TNS')) {
-            charges = benefice * 0.45 * (withAcre ? 0.5 : 1); // TNS charges
-            impots = (benefice - charges) * 0.15; // IR approximatif
+            // TNS: charges sur bénéfice
+            charges = benefice * 0.45 * (withAcre ? 0.5 : 1); // Réduction ACRE si applicable
+            impots = (benefice - charges) * 0.2; // TMI estimée à 20%
         } else {
-            charges = benefice * 0.60; // Assimilé salarié
-            impots = (benefice - charges) * 0.20; // IS + impôt sur dividendes approximatif
+            // Assimilé salarié: split salaire/dividendes selon paramètres
+            const salaireRatio = parametresAvances.ratioSalaire / 100;
+            const dividendesRatio = parametresAvances.ratioDividendes / 100;
+            
+            const salaire = benefice * salaireRatio;
+            const dividendes = benefice * dividendesRatio;
+            
+            charges = salaire * 0.45; // Charges sur salaire
+            
+            // IS sur bénéfice non distribué
+            const is = dividendes * 0.25;
+            
+            // Prélèvements sociaux et impôt sur dividendes
+            const chargesDividendes = dividendes * (1 - 0.25) * 0.172;
+            const impotDividendes = dividendes * (1 - 0.25) * 0.12;
+            
+            // Impôt sur le salaire
+            const impotSalaire = (salaire - charges) * 0.15;
+            
+            charges += chargesDividendes;
+            impots = is + impotDividendes + impotSalaire;
         }
         
-        const net = benefice - charges - impots;
-        
         return {
+            ca: ca,
+            benefice: Math.round(benefice),
             charges: Math.round(charges),
             impots: Math.round(impots),
-            net: Math.round(net),
+            net: Math.round(benefice - charges - impots),
             acre: withAcre
         };
     }
+
+    /**
+     * Génère une liste de stratégies optimales pour la forme juridique
+     */
+    function renderOptimalStrategies(forme, profile) {
+        // Déterminer les stratégies selon le profil et la forme juridique
+        const strategies = [];
+        
+        // Stratégies spécifiques selon la forme juridique
+        if (forme.id === 'micro-entreprise') {
+            strategies.push({
+                name: "Optimisation du régime micro",
+                description: "Maximisez votre rentabilité en restant sous les seuils",
+                impact: "Économie potentielle: jusqu'à 30% en charges et impôts",
+                steps: [
+                    "Suivez attentivement votre CA pour rester sous le seuil",
+                    "Optimisez vos dépenses professionnelles non déductibles",
+                    "Anticipez la sortie du régime micro si CA en croissance"
+                ]
+            });
+        } else if (forme.id === 'eurl') {
+            strategies.push({
+                name: "Optimisation fiscale IR/IS",
+                description: "Utilisez le régime fiscal le plus avantageux",
+                impact: "Économie potentielle: 5 000€ à 10 000€ par an",
+                steps: [
+                    "Démarrez à l'IR et passez à l'IS quand votre TMI augmente",
+                    "Répartissez judicieusement entre salaire et dividendes",
+                    "Utilisez la flexibilité fiscale pour optimiser vos prélèvements"
+                ]
+            });
+        } else if (forme.id === 'sasu') {
+            strategies.push({
+                name: "Stratégie salaire/dividendes",
+                description: "Optimisez votre rémunération pour réduire la pression fiscale",
+                impact: "Économie potentielle: jusqu'à 15% sur votre revenu net",
+                steps: [
+                    "Fixez un salaire modéré mais suffisant pour la protection sociale",
+                    "Complétez avec des dividendes moins chargés socialement",
+                    "Adaptez la répartition chaque année selon vos résultats"
+                ]
+            });
+        }
+        
+        // Stratégies génériques
+        if (profile.aides.includes('acre')) {
+            strategies.push({
+                name: "Stratégie ACRE",
+                description: "Profitez de l'exonération de charges la première année",
+                impact: "Économie année 1: environ 50% sur vos charges sociales",
+                steps: [
+                    "Maximisez votre revenu la première année pour optimiser l'ACRE",
+                    "Anticipez la fin de l'exonération dans votre trésorerie",
+                    "Consultez un expert-comptable pour vérifier votre éligibilité"
+                ]
+            });
+        }
+        
+        if (profile.tauxMarge > 30) {
+            strategies.push({
+                name: "Optimisation forte marge",
+                description: "Stratégie adaptée à votre activité à forte valeur ajoutée",
+                impact: "Optimisation globale de votre rémunération nette",
+                steps: [
+                    "Structurez votre rémunération pour maîtriser les charges",
+                    "Investissez dans des actifs professionnels déductibles",
+                    "Pensez à la rémunération différée (PEE, PERCO, assurance-vie)"
+                ]
+            });
+        }
+        
+        if (profile.chiffreAffaires > 70000) {
+            strategies.push({
+                name: "Stratégie CA élevé",
+                description: "Optimisez votre structure face à un volume d'activité important",
+                impact: "Sécurisation et optimisation de votre activité",
+                steps: [
+                    "Mettez en place une comptabilité rigoureuse",
+                    "Anticipez les seuils de TVA et les obligations comptables",
+                    "Prévoyez une évolution de structure si croissance continue"
+                ]
+            });
+        }
+        
+        // Limiter à 2 stratégies maximum pour l'affichage
+        const displayedStrategies = strategies.slice(0, 2);
+        
+        if (displayedStrategies.length === 0) {
+            return ''; // Ne rien afficher s'il n'y a pas de stratégies
+        }
+        
+        return `
+        <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-4">
+            <h4 class="font-semibold text-green-400 mb-3">Stratégies optimales pour ${forme.nom}</h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                ${displayedStrategies.map(strategy => `
+                <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                    <h5 class="font-medium text-green-400 mb-2">${strategy.name}</h5>
+                    <p class="text-sm mb-2">${strategy.description}</p>
+                    <ul class="text-sm">
+                        ${strategy.steps.map(step => `<li class="flex items-start mb-1">
+                            <i class="fas fa-check-circle text-green-400 mr-2 mt-1"></i>
+                            <span>${step}</span>
+                        </li>`).join('')}
+                    </ul>
+                    <div class="mt-2 pt-2 border-t border-gray-700">
+                        <div class="text-sm">${strategy.impact}</div>
+                    </div>
+                </div>
+                `).join('')}
+            </div>
+        </div>`;
+    }
+
+    // Écouter les évènements pour les détails de calcul
+    document.addEventListener('toggleCalculationDetails', function(e) {
+        const scoreDetails = document.querySelectorAll('.score-details');
+        
+        scoreDetails.forEach(detail => {
+            if (e.detail.visible) {
+                detail.classList.remove('hidden');
+            } else {
+                detail.classList.add('hidden');
+            }
+        });
+    });
 });
-
-// Ajout de styles CSS pour les nouvelles fonctionnalités
-const styleElement = document.createElement('style');
-styleElement.textContent = `
-/* Animation pour les valeurs modifiées */
-@keyframes flash-green {
-    0% { background-color: rgba(74, 222, 128, 0); }
-    20% { background-color: rgba(74, 222, 128, 0.4); }
-    100% { background-color: rgba(74, 222, 128, 0); }
-}
-
-.value-changed {
-    animation: flash-green 1.5s ease-out;
-}
-
-/* Styles pour la comparaison des régimes fiscaux */
-.comparison-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.comparison-table th, 
-.comparison-table td {
-    padding: 8px 12px;
-    text-align: left;
-    border-bottom: 1px solid rgba(75, 85, 99, 0.5);
-}
-
-.comparison-table th {
-    background-color: rgba(30, 58, 138, 0.3);
-    font-weight: 600;
-}
-
-.comparison-table tr:hover {
-    background-color: rgba(30, 58, 138, 0.1);
-}
-
-.better-option {
-    color: #4ADE80 !important;
-    font-weight: bold;
-}
-
-/* Style pour les onglets d'années */
-.year-tabs {
-    display: flex;
-    border-bottom: 1px solid rgba(75, 85, 99, 0.5);
-    margin-bottom: 1rem;
-}
-
-.year-tab {
-    padding: 0.5rem 1rem;
-    cursor: pointer;
-    opacity: 0.7;
-    transition: all 0.2s ease;
-}
-
-.year-tab.active {
-    border-bottom: 2px solid #4ADE80;
-    opacity: 1;
-    font-weight: 600;
-}
-
-.year-content {
-    display: none;
-}
-
-.year-content.active {
-    display: block;
-}
-
-.acre-badge {
-    display: inline-block;
-    background-color: rgba(74, 222, 128, 0.2);
-    color: #4ADE80;
-    font-size: 0.8rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    margin-left: 0.5rem;
-}
-
-/* Styles pour les tooltips améliorés */
-.tooltip-container {
-    position: relative;
-    display: inline-block;
-}
-
-.tooltip-text {
-    visibility: hidden;
-    width: 250px;
-    background-color: rgba(30, 41, 59, 0.95);
-    color: #fff;
-    text-align: left;
-    border-radius: 6px;
-    padding: 8px 12px;
-    position: absolute;
-    z-index: 1000;
-    bottom: 125%;
-    left: 50%;
-    margin-left: -125px;
-    opacity: 0;
-    transition: opacity 0.3s;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(74, 222, 128, 0.3);
-    font-size: 0.85rem;
-    line-height: 1.4;
-}
-
-.tooltip-text::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    margin-left: -5px;
-    border-width: 5px;
-    border-style: solid;
-    border-color: rgba(30, 41, 59, 0.95) transparent transparent transparent;
-}
-
-.tooltip-container:hover .tooltip-text {
-    visibility: visible;
-    opacity: 1;
-}
-
-/* Badge recommandé */
-.recommended-badge {
-    position: absolute;
-    top: -10px;
-    right: -10px;
-    background-color: #4ADE80;
-    color: #1E293B;
-    font-weight: bold;
-    font-size: 0.8rem;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    transform: rotate(10deg);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-`;
-
-document.head.appendChild(styleElement);
