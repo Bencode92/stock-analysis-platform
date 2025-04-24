@@ -3,12 +3,32 @@
  * Gestion du questionnaire interactif pour le choix de forme juridique d'entreprise
  */
 
+// Assurons-nous que le StorageManager existe
+if (typeof window.StorageManager === 'undefined') {
+    window.StorageManager = {
+        saveProgress: function() {
+            // Sauvegarde les réponses dans localStorage
+            localStorage.setItem('entreprise-form-progress', JSON.stringify(window.userResponses));
+        },
+        loadProgress: function() {
+            // Charge les réponses depuis localStorage
+            const savedData = localStorage.getItem('entreprise-form-progress');
+            if (savedData) {
+                window.userResponses = JSON.parse(savedData);
+                return true;
+            }
+            return false;
+        }
+    };
+}
+
 // Gestionnaire de formulaire - gère la navigation entre les sections
 const FormManager = {
     currentSection: 1,
     totalSections: 6, // Mise à jour pour le nouveau questionnaire à 6 sections
     
     init: function() {
+        console.log("FormManager initializing...");
         this.setupEventListeners();
         this.updateProgressBar(1);
         this.setupConditionalDisplays();
@@ -31,6 +51,7 @@ const FormManager = {
     
     // Affiche une section spécifique et masque les autres
     showSection: function(sectionNumber) {
+        console.log("Showing section:", sectionNumber);
         for (let i = 1; i <= this.totalSections + 1; i++) {
             const section = document.getElementById(`section${i}`);
             if (section) {
@@ -47,6 +68,7 @@ const FormManager = {
     
     // Configure les écouteurs d'événements pour les boutons de navigation
     setupEventListeners: function() {
+        console.log("Setting up event listeners...");
         // Boutons de navigation
         const nextStep1 = document.getElementById('next1');
         const nextStep2 = document.getElementById('next2');
@@ -61,7 +83,16 @@ const FormManager = {
         const submitBtn = document.getElementById('submit-btn');
         
         // Navigation entre sections
-        if (nextStep1) nextStep1.addEventListener('click', () => this.navigateToSection(1, 2));
+        if (nextStep1) {
+            console.log("Found next1 button");
+            nextStep1.addEventListener('click', () => {
+                console.log("next1 clicked");
+                this.navigateToSection(1, 2);
+            });
+        } else {
+            console.log("next1 button not found");
+        }
+        
         if (nextStep2) nextStep2.addEventListener('click', () => this.navigateToSection(2, 3));
         if (nextStep3) nextStep3.addEventListener('click', () => this.navigateToSection(3, 4));
         if (nextStep4) nextStep4.addEventListener('click', () => this.navigateToSection(4, 5));
@@ -87,7 +118,7 @@ const FormManager = {
         optionButtons.forEach(button => {
             button.addEventListener('click', function() {
                 // Trouver le groupe de boutons
-                const group = this.closest('.option-group');
+                const group = this.closest('.option-group') || this.parentElement.parentElement;
                 const isMultiSelect = group.getAttribute('data-multi-select') === 'true';
                 
                 if (!isMultiSelect) {
@@ -111,10 +142,21 @@ const FormManager = {
         
         // Écouteurs pour les mises à jour en temps réel
         this.setupRealTimeUpdates();
+        
+        // Ajouter un gestionnaire pour le bouton "Étape suivante" standard
+        const nextStepButton = document.querySelector('.next-step-btn') || document.querySelector('[id^="next"]');
+        if (nextStepButton) {
+            console.log("Found generic next step button");
+            nextStepButton.addEventListener('click', () => {
+                console.log("Generic next button clicked");
+                this.navigateToSection(this.currentSection, this.currentSection + 1);
+            });
+        }
     },
     
     // Navigue entre les sections avec collecte de données
     navigateToSection: function(fromSection, toSection) {
+        console.log(`Navigating from section ${fromSection} to ${toSection}`);
         // Collecter les données de la section actuelle
         if (typeof DataCollector[`collectSection${fromSection}Data`] === 'function') {
             DataCollector[`collectSection${fromSection}Data`]();
@@ -488,6 +530,8 @@ const seuils = {
 
 // Initialiser le gestionnaire de formulaire quand le DOM est chargé
 document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM loaded - initializing entreprise-qcm.js");
+    
     // S'assurer que userResponses existe
     if (typeof window.userResponses === 'undefined') {
         window.userResponses = {};
@@ -498,4 +542,17 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Afficher la première section
     FormManager.showSection(1);
+    
+    // Récupérer le bouton étape suivante par son sélecteur exact et ajouter un gestionnaire spécifique
+    const etapeSuivanteBtn = document.querySelector('.bg-green-500.hover\\:bg-green-400') || document.querySelector('button[id^="next"]');
+    if (etapeSuivanteBtn) {
+        console.log("Found the exact next step button!");
+        etapeSuivanteBtn.addEventListener('click', function(e) {
+            console.log("Next step button clicked!");
+            e.preventDefault();
+            FormManager.navigateToSection(FormManager.currentSection, FormManager.currentSection + 1);
+        });
+    } else {
+        console.log("Could not find the next step button with specific selectors");
+    }
 });
