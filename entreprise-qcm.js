@@ -22,6 +22,10 @@ const SEUILS_FISCAUX = {
     'agricole': 95000     // Valeur de l'ancien code
 };
 
+// Exposer les constantes globalement pour que types-entreprise.js puisse y accéder
+window.TRANCHES_IMPOT = TRANCHES_IMPOT;
+window.SEUILS_FISCAUX = SEUILS_FISCAUX;
+
 // Assurons-nous que le StorageManager existe
 if (typeof window.StorageManager === 'undefined') {
     window.StorageManager = {
@@ -87,6 +91,45 @@ window.checkHardFails = function(userResponses) {
 // Vérifier si une forme juridique a une incompatibilité majeure
 window.hasHardFail = function(formeId, failsList) {
     return failsList.some(fail => fail.formeId === formeId);
+};
+
+// Utilitaires pour les calculs fiscaux, partagés entre les modules
+window.UtilitairesFiscaux = {
+    // Calcule le taux marginal d'imposition pour un revenu donné
+    calculerTauxMarginal: function(revenuImposable) {
+        for (let i = TRANCHES_IMPOT.length - 1; i >= 0; i--) {
+            if (revenuImposable > TRANCHES_IMPOT[i].min) {
+                return TRANCHES_IMPOT[i].taux * 100;
+            }
+        }
+        return 0;
+    },
+    
+    // Formate un montant en euros
+    formaterMontant: function(montant, decimales = 0) {
+        return new Intl.NumberFormat('fr-FR', {
+            style: 'currency',
+            currency: 'EUR',
+            maximumFractionDigits: decimales
+        }).format(montant);
+    },
+    
+    // Calcule l'impôt sur le revenu selon le barème progressif
+    calculerImpot: function(revenuImposable) {
+        let impot = 0;
+        
+        for (let i = 1; i < TRANCHES_IMPOT.length; i++) {
+            const tranche = TRANCHES_IMPOT[i];
+            const tranchePrecedente = TRANCHES_IMPOT[i-1];
+            
+            if (revenuImposable > tranchePrecedente.max) {
+                const montantImposableDansTranche = Math.min(revenuImposable, tranche.max) - tranchePrecedente.max;
+                impot += montantImposableDansTranche * tranche.taux;
+            }
+        }
+        
+        return Math.round(impot * 100) / 100;
+    }
 };
 
 // Gestionnaire de formulaire - gère la navigation entre les sections
@@ -176,7 +219,9 @@ const FormManager = {
                 DataCollector.collectSection6Data();
                 StorageManager.saveProgress();
                 this.showSection(7); // Afficher les résultats (section 7)
-                ResultsManager.generateResults();
+                if (typeof ResultsManager !== 'undefined' && ResultsManager.generateResults) {
+                    ResultsManager.generateResults();
+                }
             });
         }
         
@@ -199,7 +244,9 @@ const FormManager = {
                 
                 // Si temps réel activé, mettre à jour la comparaison
                 if (window.realTimeComparison) {
-                    ResultsManager.generateQuickComparison();
+                    if (typeof ResultsManager !== 'undefined' && ResultsManager.generateQuickComparison) {
+                        ResultsManager.generateQuickComparison();
+                    }
                 }
             });
         });
@@ -232,7 +279,7 @@ const FormManager = {
         this.showSection(toSection);
         
         // Mise à jour en temps réel si activée
-        if (window.realTimeComparison) {
+        if (window.realTimeComparison && typeof ResultsManager !== 'undefined' && ResultsManager.generateQuickComparison) {
             ResultsManager.generateQuickComparison();
         }
     },
@@ -313,15 +360,39 @@ const FormManager = {
             if (field) {
                 const eventType = field.type === 'checkbox' ? 'change' : 'input';
                 field.addEventListener(eventType, function() {
-                    if (window.realTimeComparison) {
+                    if (window.realTimeComparison && typeof ResultsManager !== 'undefined' && ResultsManager.generateQuickComparison) {
                         // Mettre à jour l'affichage du tableau comparatif en temps réel
                         ResultsManager.generateQuickComparison();
                     }
                 });
             }
         });
+    },
+
+    // Utilitaire pour valider la section courante
+    validateCurrentSection: function() {
+        // Check requis sur les champs obligatoires de la section courante
+        const currentSection = document.getElementById(`section${this.currentSection}`);
+        if (!currentSection) return true;
+        
+        const requiredFields = currentSection.querySelectorAll('[required]');
+        let isValid = true;
+        
+        requiredFields.forEach(field => {
+            if (!field.value) {
+                isValid = false;
+                field.classList.add('error');
+            } else {
+                field.classList.remove('error');
+            }
+        });
+        
+        return isValid;
     }
 };
+
+// Exposer FormManager globalement
+window.FormManager = FormManager;
 
 // Gestionnaire de collecte des données utilisateur
 const DataCollector = {
@@ -394,6 +465,16 @@ const DataCollector = {
         }
     },
     
+    // Collecte toutes les données du formulaire
+    collectAllData: function() {
+        for (let i = 1; i <= 6; i++) {
+            if (typeof this[`collectSection${i}Data`] === 'function') {
+                this[`collectSection${i}Data`]();
+            }
+        }
+        return window.userResponses;
+    },
+    
     // Méthodes utilitaires
     getSelectValue: function(id) {
         const select = document.getElementById(id);
@@ -412,6 +493,9 @@ const DataCollector = {
         return selected ? selected.getAttribute('data-value') : null;
     }
 };
+
+// Exposer DataCollector globalement
+window.DataCollector = DataCollector;
 
 // Extension du ResultsManager pour la comparaison en temps réel
 if (typeof ResultsManager === 'undefined') {
@@ -497,6 +581,21 @@ ResultsManager.generateQuickComparison = function() {
     
     quickComparisonDiv.innerHTML = html;
     quickComparisonDiv.style.display = 'block';
+};
+
+// API publique pour types-entreprise.js
+window.EntrepriseQCM = {
+    collectUserData: function() {
+        return DataCollector.collectAllData();
+    },
+    validateForm: function() {
+        return FormManager.validateCurrentSection();
+    },
+    checkCompatibility: window.checkHardFails,
+    getSelectedValue: function(selector) {
+        return FormManager.getSelectedOptionValue(selector);
+    },
+    utilFiscaux: window.UtilitairesFiscaux
 };
 
 // Initialiser le gestionnaire de formulaire quand le DOM est chargé
@@ -612,10 +711,10 @@ if (!document.querySelector('button:contains("Étape suivante")')) {
     document.querySelector = (function(_querySelector) {
         return function(selector) {
             if (selector.includes(':contains(')) {
-                const match = selector.match(/:contains\(\"(.+?)\"\)/);
+                const match = selector.match(/:contains\\(\\\"(.+?)\\\"\\)/);
                 if (match) {
                     const text = match[1];
-                    const cleanSelector = selector.replace(/:contains\(\"(.+?)\"\)/, '');
+                    const cleanSelector = selector.replace(/:contains\\(\\\"(.+?)\\\"\\)/, '');
                     const elements = document.querySelectorAll(cleanSelector || '*');
                     for (let i = 0; i < elements.length; i++) {
                         if (elements[i].textContent.includes(text)) {
