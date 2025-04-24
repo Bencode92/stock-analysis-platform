@@ -1,7 +1,26 @@
 /**
  * entreprise-qcm.js
  * Gestion du questionnaire interactif pour le choix de forme juridique d'entreprise
+ * Version restructurée - Avril 2025
  */
+
+// Constantes fiscales (France 2024-2025)
+const TRANCHES_IMPOT = [
+    { min: 0, max: 11294, taux: 0 },
+    { min: 11294, max: 28787, taux: 0.11 },
+    { min: 28787, max: 82341, taux: 0.30 },
+    { min: 82341, max: 177106, taux: 0.41 },
+    { min: 177106, max: Infinity, taux: 0.45 }
+];
+
+// Seuils fiscaux pour les différents régimes
+const SEUILS_FISCAUX = {
+    'bic-vente': 203100,  // Nouveau seuil 2025
+    'bic-service': 81500, // Nouveau seuil 2025
+    'bnc': 81500,         // Nouveau seuil 2025
+    'artisanale': 203100, // Nouveau seuil 2025
+    'agricole': 95000     // Valeur de l'ancien code
+};
 
 // Assurons-nous que le StorageManager existe
 if (typeof window.StorageManager === 'undefined') {
@@ -21,6 +40,54 @@ if (typeof window.StorageManager === 'undefined') {
         }
     };
 }
+
+// Vérification des incompatibilités majeures (hardFails)
+window.checkHardFails = function(userResponses) {
+    const fails = [];
+    
+    // Vérifier les seuils de CA pour la micro-entreprise
+    if (userResponses.activiteType && userResponses.caYear1) {
+        const seuilMax = SEUILS_FISCAUX[userResponses.activiteType] || 0;
+        
+        if (userResponses.caYear1 > seuilMax) {
+            fails.push({
+                formeId: 'micro-entreprise',
+                code: 'ca-depasse-seuil',
+                message: `CA prévu (${userResponses.caYear1.toLocaleString('fr-FR')}€) > seuil micro (${seuilMax.toLocaleString('fr-FR')}€)`,
+                details: 'Régime micro-entreprise impossible'
+            });
+        }
+    }
+    
+    // Vérifier les incompatibilités avec les profils multi-associés
+    if (userResponses.profilEntrepreneur === 'equipe' || userResponses.profilEntrepreneur === 'investisseurs') {
+        ['micro-entreprise', 'ei', 'eurl', 'sasu'].forEach(formeId => {
+            fails.push({
+                formeId: formeId,
+                code: 'structure-mono-associe',
+                message: 'Structure limitée à un seul associé',
+                details: 'Incompatible avec une équipe ou des investisseurs'
+            });
+        });
+    }
+    
+    // Vérifier les incompatibilités avec activités réglementées
+    if (userResponses.activiteReglementee) {
+        fails.push({
+            formeId: 'micro-entreprise',
+            code: 'activite-reglementee',
+            message: 'Peu adaptée aux activités réglementées',
+            details: 'Limitations pour certaines professions réglementées'
+        });
+    }
+    
+    return fails;
+};
+
+// Vérifier si une forme juridique a une incompatibilité majeure
+window.hasHardFail = function(formeId, failsList) {
+    return failsList.some(fail => fail.formeId === formeId);
+};
 
 // Gestionnaire de formulaire - gère la navigation entre les sections
 const FormManager = {
@@ -195,20 +262,7 @@ const FormManager = {
                 const seuilsDiv = document.getElementById('seuils-info');
                 
                 if (seuilsDiv) {
-                    let seuilValue = 0;
-                    switch(typeActivite) {
-                        case 'bic-vente':
-                        case 'artisanale':
-                            seuilValue = 203100; // Nouveau seuil 2025
-                            break;
-                        case 'bic-service':
-                        case 'bnc':
-                            seuilValue = 81500; // Nouveau seuil 2025
-                            break;
-                        case 'agricole':
-                            seuilValue = 95000;
-                            break;
-                    }
+                    let seuilValue = SEUILS_FISCAUX[typeActivite] || 0;
                     
                     if (seuilValue > 0) {
                         seuilsDiv.innerHTML = `<p class="text-sm text-blue-300 mt-2">Plafond de CA: ${seuilValue.toLocaleString('fr-FR')} € pour ce type d'activité</p>`;
@@ -330,12 +384,14 @@ const DataCollector = {
         userResponses.besoinFinancement = this.getInputValue('besoin-financement', 'number');
     },
     
-    // Section 6: Fiscalité
+    // Section 6: Fiscalité (si présente)
     collectSection6Data: function() {
-        userResponses.optimisationFiscale = this.getSelectedOptionValue('#section6 .option-btn[data-value^="optimisation"]');
-        userResponses.importanceProtectionPatrimoine = this.getSelectValue('importance-protection-patrimoine');
-        userResponses.previsionBenefices = this.getInputValue('prevision-benefices', 'number');
-        userResponses.preferenceRemuneration = this.getSelectedOptionValue('#section6 .option-btn[data-value^="dividendes"], #section6 .option-btn[data-value^="salaire"]');
+        if (document.getElementById('section6')) {
+            userResponses.optimisationFiscale = this.getSelectedOptionValue('#section6 .option-btn[data-value^="optimisation"]');
+            userResponses.importanceProtectionPatrimoine = this.getSelectValue('importance-protection-patrimoine');
+            userResponses.previsionBenefices = this.getInputValue('prevision-benefices', 'number');
+            userResponses.preferenceRemuneration = this.getSelectedOptionValue('#section6 .option-btn[data-value^="dividendes"], #section6 .option-btn[data-value^="salaire"]');
+        }
     },
     
     // Méthodes utilitaires
@@ -443,81 +499,6 @@ ResultsManager.generateQuickComparison = function() {
     quickComparisonDiv.style.display = 'block';
 };
 
-// Référence à la base de données des formes juridiques (définie dans types-entreprise.js)
-// Ne pas dupliquer la base de données ici pour éviter les problèmes de mise à jour
-
-// Fonctions utilitaires pour vérifier les incompatibilités (utilisées par ResultsManager.generateQuickComparison)
-// Ces fonctions proviennent de types-entreprise.js mais doivent être accessibles ici
-
-// Vérification des incompatibilités majeures (hardFails)
-if (typeof window.checkHardFails === 'undefined') {
-    window.checkHardFails = function(userResponses) {
-        const fails = [];
-        
-        // Vérifier les seuils de CA pour la micro-entreprise
-        if (userResponses.activiteType && userResponses.caYear1) {
-            const seuilsMax = {
-                'bic-vente': 203100,  // Nouveau seuil 2025
-                'bic-service': 81500, // Nouveau seuil 2025
-                'bnc': 81500,         // Nouveau seuil 2025
-                'artisanale': 203100, // Nouveau seuil 2025
-                'agricole': 95000     // Valeur de l'ancien code
-            };
-            
-            const seuilMax = seuilsMax[userResponses.activiteType] || 0;
-            
-            if (userResponses.caYear1 > seuilMax) {
-                fails.push({
-                    formeId: 'micro-entreprise',
-                    code: 'ca-depasse-seuil',
-                    message: `CA prévu (${userResponses.caYear1.toLocaleString('fr-FR')}€) > seuil micro (${seuilMax.toLocaleString('fr-FR')}€)`,
-                    details: 'Régime micro-entreprise impossible'
-                });
-            }
-        }
-        
-        // Vérifier les incompatibilités avec les profils multi-associés
-        if (userResponses.profilEntrepreneur === 'equipe' || userResponses.profilEntrepreneur === 'investisseurs') {
-            ['micro-entreprise', 'ei', 'eurl', 'sasu'].forEach(formeId => {
-                fails.push({
-                    formeId: formeId,
-                    code: 'structure-mono-associe',
-                    message: 'Structure limitée à un seul associé',
-                    details: 'Incompatible avec une équipe ou des investisseurs'
-                });
-            });
-        }
-        
-        // Vérifier les incompatibilités avec activités réglementées
-        if (userResponses.activiteReglementee) {
-            fails.push({
-                formeId: 'micro-entreprise',
-                code: 'activite-reglementee',
-                message: 'Peu adaptée aux activités réglementées',
-                details: 'Limitations pour certaines professions réglementées'
-            });
-        }
-        
-        return fails;
-    };
-}
-
-// Vérifier si une forme juridique a une incompatibilité majeure
-if (typeof window.hasHardFail === 'undefined') {
-    window.hasHardFail = function(formeId, failsList) {
-        return failsList.some(fail => fail.formeId === formeId);
-    };
-}
-
-// Mettre à jour les seuils fiscaux pour 2025
-const seuils = {
-    'bic-vente': 203100,  // Nouveau seuil 2025
-    'bic-service': 81500, // Nouveau seuil 2025
-    'bnc': 81500,         // Nouveau seuil 2025
-    'artisanale': 203100, // Nouveau seuil 2025
-    'agricole': 95000     // Valeur de l'ancien code
-};
-
 // Initialiser le gestionnaire de formulaire quand le DOM est chargé
 document.addEventListener('DOMContentLoaded', function() {
     console.log("DOM loaded - initializing entreprise-qcm.js");
@@ -620,15 +601,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Observer les changements dans le corps du document
     observer.observe(document.body, { childList: true, subtree: true });
-    
-    // Code de débogage spécifique pour aider à identifier le bouton "Étape suivante"
-    console.log("All buttons on page:");
-    document.querySelectorAll('button').forEach((btn, index) => {
-        console.log(`Button ${index}:`, btn);
-        console.log(`  Text: "${btn.textContent || btn.innerText}"`);
-        console.log(`  Classes: ${btn.className}`);
-        console.log(`  Background: ${getComputedStyle(btn).backgroundColor}`);
-    });
 });
 
 // Helper function to add :contains selector to jQuery-less environments
@@ -640,10 +612,10 @@ if (!document.querySelector('button:contains("Étape suivante")')) {
     document.querySelector = (function(_querySelector) {
         return function(selector) {
             if (selector.includes(':contains(')) {
-                const match = selector.match(/:contains\("(.+?)"\)/);
+                const match = selector.match(/:contains\(\"(.+?)\"\)/);
                 if (match) {
                     const text = match[1];
-                    const cleanSelector = selector.replace(/:contains\("(.+?)"\)/, '');
+                    const cleanSelector = selector.replace(/:contains\(\"(.+?)\"\)/, '');
                     const elements = document.querySelectorAll(cleanSelector || '*');
                     for (let i = 0; i < elements.length; i++) {
                         if (elements[i].textContent.includes(text)) {
