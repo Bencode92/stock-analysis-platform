@@ -1733,35 +1733,33 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>`;
         },
         
-        // Génère une simulation pluriannuelle
+        // Génère une simulation pluriannuelle avec prise en compte de la répartition salaire/dividendes
         renderMultiYearSimulation: function(forme, caSimulation, tauxMarge) {
             // Définir progression de CA sur 3 ans
             const caYear1 = caSimulation;
             const caYear2 = Math.round(caSimulation * 1.2); // +20%
             const caYear3 = Math.round(caYear2 * 1.2); // +20% supplémentaire
             
-            // Calculer les résultats pour chaque année (version simplifiée)
-            // NOTE: remplacer par appel à SimulationsFiscales dans la version réelle
-            const resultYear1 = { 
-                net: Math.round(caYear1 * tauxMarge / 100 * 0.65),
-                charges: Math.round(caYear1 * tauxMarge / 100 * 0.25),
-                impots: Math.round(caYear1 * tauxMarge / 100 * 0.10),
-                acre: true
-            };
+            // Calculer les résultats pour chaque année
+            let resultYear1, resultYear2, resultYear3;
             
-            const resultYear2 = { 
-                net: Math.round(caYear2 * tauxMarge / 100 * 0.60),
-                charges: Math.round(caYear2 * tauxMarge / 100 * 0.30),
-                impots: Math.round(caYear2 * tauxMarge / 100 * 0.10),
-                acre: false
-            };
+            // Appliquer les calculs selon le type de structure juridique
+            if (forme.id === 'micro-entreprise' || forme.id === 'ei') {
+                // Pour micro-entreprise et EI, pas de distinction salaire/dividendes
+                resultYear1 = this.calculateMicroEntrepriseYear(beneficeYear1, 1, forme.id);
+                resultYear2 = this.calculateMicroEntrepriseYear(beneficeYear2, 2, forme.id);
+                resultYear3 = this.calculateMicroEntrepriseYear(beneficeYear3, 3, forme.id);
+            } else {
+                // Pour EURL, SASU, SAS, etc. avec IS ou option IS
+                resultYear1 = this.calculateSocietyWithISYear(beneficeYear1, 1, forme.id, this.simulationParams.ratioSalaire, this.simulationParams.ratioDividendes);
+                resultYear2 = this.calculateSocietyWithISYear(beneficeYear2, 2, forme.id, this.simulationParams.ratioSalaire, this.simulationParams.ratioDividendes);
+                resultYear3 = this.calculateSocietyWithISYear(beneficeYear3, 3, forme.id, this.simulationParams.ratioSalaire, this.simulationParams.ratioDividendes);
+            }
             
-            const resultYear3 = { 
-                net: Math.round(caYear3 * tauxMarge / 100 * 0.60),
-                charges: Math.round(caYear3 * tauxMarge / 100 * 0.30),
-                impots: Math.round(caYear3 * tauxMarge / 100 * 0.10),
-                acre: false
-            };
+            // Calcul du bénéfice pour chaque année
+            const beneficeYear1 = caYear1 * (tauxMarge / 100);
+            const beneficeYear2 = caYear2 * (tauxMarge / 100);
+            const beneficeYear3 = caYear3 * (tauxMarge / 100);
             
             return `
             <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-4">
@@ -1794,6 +1792,20 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="text-xl font-semibold text-green-400">${resultYear1.net.toLocaleString('fr-FR')} €</div>
                         </div>
                     </div>
+                    ${forme.fiscalite === 'IS' || forme.fiscaliteOption === 'Oui' ? `
+                    <div class="mt-3 bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                        <p class="text-sm mb-2">Répartition appliquée: ${this.simulationParams.ratioSalaire}% salaire / ${this.simulationParams.ratioDividendes}% dividendes</p>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                                <div class="text-xs opacity-70">Salaire net</div>
+                                <div>${Math.round(resultYear1.salaireNet || 0).toLocaleString('fr-FR')} €</div>
+                            </div>
+                            <div>
+                                <div class="text-xs opacity-70">Dividendes nets</div>
+                                <div>${Math.round(resultYear1.dividendesNet || 0).toLocaleString('fr-FR')} €</div>
+                            </div>
+                        </div>
+                    </div>` : ''}
                 </div>
                 
                 <div class="year-content hidden" id="year-content-2">
@@ -1817,6 +1829,20 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="text-xl font-semibold text-green-400">${resultYear2.net.toLocaleString('fr-FR')} €</div>
                         </div>
                     </div>
+                    ${forme.fiscalite === 'IS' || forme.fiscaliteOption === 'Oui' ? `
+                    <div class="mt-3 bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                        <p class="text-sm mb-2">Répartition appliquée: ${this.simulationParams.ratioSalaire}% salaire / ${this.simulationParams.ratioDividendes}% dividendes</p>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                                <div class="text-xs opacity-70">Salaire net</div>
+                                <div>${Math.round(resultYear2.salaireNet || 0).toLocaleString('fr-FR')} €</div>
+                            </div>
+                            <div>
+                                <div class="text-xs opacity-70">Dividendes nets</div>
+                                <div>${Math.round(resultYear2.dividendesNet || 0).toLocaleString('fr-FR')} €</div>
+                            </div>
+                        </div>
+                    </div>` : ''}
                 </div>
                 
                 <div class="year-content hidden" id="year-content-3">
@@ -1840,6 +1866,20 @@ document.addEventListener('DOMContentLoaded', function() {
                             <div class="text-xl font-semibold text-green-400">${resultYear3.net.toLocaleString('fr-FR')} €</div>
                         </div>
                     </div>
+                    ${forme.fiscalite === 'IS' || forme.fiscaliteOption === 'Oui' ? `
+                    <div class="mt-3 bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                        <p class="text-sm mb-2">Répartition appliquée: ${this.simulationParams.ratioSalaire}% salaire / ${this.simulationParams.ratioDividendes}% dividendes</p>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                                <div class="text-xs opacity-70">Salaire net</div>
+                                <div>${Math.round(resultYear3.salaireNet || 0).toLocaleString('fr-FR')} €</div>
+                            </div>
+                            <div>
+                                <div class="text-xs opacity-70">Dividendes nets</div>
+                                <div>${Math.round(resultYear3.dividendesNet || 0).toLocaleString('fr-FR')} €</div>
+                            </div>
+                        </div>
+                    </div>` : ''}
                 </div>
                 
                 <div class="mt-4 pt-4 border-t border-gray-700">
@@ -1866,6 +1906,125 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>`;
         },
         
+        // Nouvelle méthode pour calculer les résultats d'une année en Micro-entreprise
+        calculateMicroEntrepriseYear: function(benefice, yearNumber, formeId) {
+            // Abattement forfaitaire selon le type d'activité
+            const abattement = this.getAbattement(userResponses.typeActivite);
+            
+            // Prendre en compte l'ACRE si activé (seulement première année)
+            const acreReduction = (this.simulationParams.acreActif && yearNumber === 1) ? 0.5 : 1;
+            
+            // Calculer les charges sociales (22% en moyenne, -50% avec ACRE année 1)
+            const chargesSociales = benefice * 0.22 * acreReduction;
+            
+            // Calculer le revenu après charges sociales
+            const revenuApresCharges = benefice - chargesSociales;
+            
+            // Calculer le revenu fiscal (après abattement forfaitaire)
+            const revenuFiscal = revenuApresCharges * (1 - abattement);
+            
+            // Calculer l'impôt (simplifié, devrait utiliser le barème progressif)
+            const impot = this.calculerImpotProgressif(revenuFiscal);
+            
+            // Revenu net final
+            const revenuNet = revenuApresCharges - impot;
+            
+            return {
+                benefice: Math.round(benefice),
+                charges: Math.round(chargesSociales),
+                impots: Math.round(impot),
+                net: Math.round(revenuNet),
+                acre: (this.simulationParams.acreActif && yearNumber === 1)
+            };
+        },
+        
+        // Nouvelle méthode pour calculer les résultats d'une année pour société avec IS
+        calculateSocietyWithISYear: function(benefice, yearNumber, formeId, ratioSalaire, ratioDividendes) {
+            // Répartition du bénéfice selon les ratios choisis
+            const montantSalaire = benefice * (ratioSalaire / 100);
+            const montantDividendesBrut = benefice * (ratioDividendes / 100);
+            
+            // Prendre en compte l'ACRE si activé (seulement première année)
+            const acreReduction = (this.simulationParams.acreActif && yearNumber === 1 && 
+                                  (formeId === 'eurl' || formeId === 'sasu')) ? 0.5 : 1;
+            
+            // 1. Calcul pour la part salaire
+            // Charges patronales (environ 42% en moyenne)
+            const chargesPatronales = montantSalaire * 0.42 * acreReduction;
+            
+            // Charges salariales (environ 22% en moyenne)
+            const chargesSalariales = montantSalaire * 0.22;
+            
+            // Salaire net avant impôt
+            const salaireNetAvantImpot = montantSalaire - chargesSalariales;
+            
+            // Impôt sur le revenu sur salaire (simplifié)
+            const impotSalaire = this.calculerImpotProgressif(salaireNetAvantImpot);
+            
+            // Salaire net après impôt
+            const salaireNetApresImpot = salaireNetAvantImpot - impotSalaire;
+            
+            // 2. Calcul pour la part dividendes
+            // Impôt sur les sociétés (25% standard, 15% taux réduit jusqu'à 42.5K€)
+            const tauxIS = (benefice <= 42500) ? 0.15 : 0.25;
+            const impotSociete = montantDividendesBrut * tauxIS;
+            
+            // Dividendes nets d'IS
+            const dividendesNetsIS = montantDividendesBrut - impotSociete;
+            
+            // Prélèvements sociaux sur dividendes (17.2%)
+            const prelevementsSociauxDividendes = dividendesNetsIS * 0.172;
+            
+            // PFU ou barème progressif sur dividendes (simplifié avec PFU à 12.8%)
+            const impotDividendes = dividendesNetsIS * 0.128;
+            
+            // Dividendes nets après fiscalité
+            const dividendesNetsApresImpot = dividendesNetsIS - prelevementsSociauxDividendes - impotDividendes;
+            
+            // 3. Total des charges et impôts
+            const totalCharges = chargesPatronales + chargesSalariales + prelevementsSociauxDividendes;
+            const totalImpots = impotSalaire + impotSociete + impotDividendes;
+            
+            // 4. Revenu net total
+            const revenuNetTotal = salaireNetApresImpot + dividendesNetsApresImpot;
+            
+            return {
+                benefice: Math.round(benefice),
+                charges: Math.round(totalCharges),
+                impots: Math.round(totalImpots),
+                net: Math.round(revenuNetTotal),
+                acre: (this.simulationParams.acreActif && yearNumber === 1),
+                salaireNet: Math.round(salaireNetApresImpot),
+                dividendesNet: Math.round(dividendesNetsApresImpot)
+            };
+        },
+        
+        // Méthode auxiliaire pour obtenir l'abattement forfaitaire selon type d'activité
+        getAbattement: function(typeActivite) {
+            switch(typeActivite) {
+                case 'bic-vente':
+                    return 0.71; // 71% d'abattement pour vente de marchandises
+                case 'bic-service':
+                    return 0.50; // 50% pour prestations de services BIC
+                case 'bnc':
+                    return 0.34; // 34% pour professions libérales BNC
+                case 'artisanale':
+                    return 0.50; // 50% pour artisans
+                default:
+                    return 0.34; // Valeur par défaut
+            }
+        },
+        
+        // Méthode pour calculer l'impôt sur le revenu avec barème progressif
+        calculerImpotProgressif: function(revenuImposable) {
+            // Récupérer la TMI de l'utilisateur
+            const tmi = userResponses.tmiActuel || 30;
+            
+            // Calculer l'impôt selon la TMI (très simplifié)
+            // Dans une vraie implémentation, il faudrait appliquer les tranches complètes
+            return revenuImposable * (tmi / 100);
+        },
+        
         // Génère des conseils stratégiques personnalisés
         renderOptimalStrategies: function(forme, userResponses) {
             let strategies = [];
@@ -1887,236 +2046,208 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 
                 strategies.push({
-                    titre: "Prévoir l'évolution du statut",
-                    description: "Anticipez un changement de statut si votre CA approche des seuils (77 700€ ou 188 700€).",
+                    titre: "Surveillance du seuil",
+                    description: `Surveillez votre CA pour ne pas dépasser le seuil de ${forme.plafondCA}.`,
                     icon: "fa-chart-line"
                 });
-            } 
-            else if (forme.id === 'eurl') {
-                if (userResponses.tmiActuel >= 30) {
+            } else if (forme.id === 'ei') {
+                strategies.push({
+                    titre: "Déduction des charges réelles",
+                    description: "Optimisez votre fiscalité en déduisant toutes vos charges réelles.",
+                    icon: "fa-receipt"
+                });
+                
+                strategies.push({
+                    titre: "Protection patrimoniale",
+                    description: "Envisagez une déclaration d'insaisissabilité pour renforcer la protection de votre patrimoine personnel.",
+                    icon: "fa-home"
+                });
+            } else if (forme.id === 'eurl') {
+                if (forme.fiscaliteOption === 'Oui') {
                     strategies.push({
-                        titre: "Option pour l'IS recommandée",
-                        description: "Avec votre TMI élevée, l'option pour l'IS permettrait une optimisation fiscale significative.",
+                        titre: "Optimisation fiscale",
+                        description: `Adaptez votre régime fiscal (IR/IS) selon l'évolution de votre activité et de votre TMI.`,
                         icon: "fa-balance-scale"
                     });
                 }
                 
                 strategies.push({
-                    titre: "Constitution d'une réserve",
-                    description: "Constituez une réserve dans la société pour financer vos futurs investissements sans recourir à l'emprunt.",
-                    icon: "fa-piggy-bank"
+                    titre: "Gestion de la rémunération",
+                    description: `Répartissez judicieusement entre salaire et dividendes (ratio optimal: ${this.simulationParams.ratioSalaire}/${this.simulationParams.ratioDividendes}).`,
+                    icon: "fa-percentage"
                 });
-            }
-            else if (forme.id === 'sasu') {
+            } else if (forme.id === 'sasu') {
                 strategies.push({
                     titre: "Optimisation salaire/dividendes",
-                    description: "Ajustez votre mix salaire/dividendes selon vos besoins de trésorerie et d'optimisation fiscale.",
-                    icon: "fa-sliders-h"
+                    description: `Adaptez votre rémunération entre salaire et dividendes selon votre TMI (${userResponses.tmiActuel}%).`,
+                    icon: "fa-coins"
                 });
                 
-                if (userResponses.montantLevee > 0) {
-                    strategies.push({
-                        titre: "Structure de capital pour investisseurs",
-                        description: "Définissez clairement les catégories d'actions et droits attachés pour faciliter l'entrée d'investisseurs.",
-                        icon: "fa-users"
-                    });
-                }
-            }
-            
-            // Stratégies communes
-            if (forme.protectionPatrimoine === 'Oui') {
                 strategies.push({
-                    titre: "Sécurisation patrimoniale",
-                    description: "Maintenez une séparation stricte entre comptes personnels et professionnels pour garantir la protection patrimoniale.",
-                    icon: "fa-shield-alt"
+                    titre: "Prestations TNS",
+                    description: "Profitez des prestations du régime général (chômage, retraite, etc.) de votre statut assimilé-salarié.",
+                    icon: "fa-user-shield"
+                });
+                
+                strategies.push({
+                    titre: "Préparation levée de fonds",
+                    description: "Structure idéale pour accueillir des investisseurs, préparez une documentation adaptée.",
+                    icon: "fa-chart-line"
                 });
             }
             
-            // Générer l'HTML pour les stratégies
-            return `
-            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-4">
-                <h4 class="font-semibold text-green-400 mb-3">Stratégies optimales avec ${forme.nom}</h4>
+            if (userResponses.aides.includes('acre')) {
+                strategies.push({
+                    titre: "ACRE",
+                    description: "Profitez de l'exonération partielle de charges sociales pendant la première année.",
+                    icon: "fa-star"
+                });
+            }
+            
+            // Générer le HTML pour les stratégies
+            let html = `
+            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-6">
+                <h4 class="font-semibold text-green-400 mb-4">Stratégies optimales pour votre ${forme.nom}</h4>
                 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    ${strategies.map((strategy, index) => `
-                    <div class="bg-blue-800 bg-opacity-40 p-4 rounded-lg relative">
-                        ${index === 0 ? '<div class="priority-badge">1</div>' : ''}
-                        <h5 class="font-medium text-lg mb-2 flex items-center">
-                            <i class="fas ${strategy.icon} text-green-400 mr-2"></i>
-                            ${strategy.titre}
-                        </h5>
-                        <p>${strategy.description}</p>
+            `;
+            
+            strategies.forEach(strategy => {
+                html += `
+                <div class="bg-blue-800 bg-opacity-20 p-4 rounded-lg">
+                    <div class="flex items-start">
+                        <div class="bg-green-900 bg-opacity-30 rounded-full p-3 mr-3">
+                            <i class="fas ${strategy.icon} text-green-400"></i>
+                        </div>
+                        <div>
+                            <h5 class="font-semibold mb-1">${strategy.titre}</h5>
+                            <p class="text-sm">${strategy.description}</p>
+                        </div>
                     </div>
-                    `).join('')}
                 </div>
-            </div>`;
-        },
-        
-        // Export en PDF
-        exportToPdf: function() {
-            // Vérifier si la bibliothèque jsPDF est disponible
-            if (typeof window.jspdf === 'undefined') {
-                alert('La bibliothèque jsPDF n\'est pas chargée. Impossible de générer le PDF.');
-                return;
-            }
+                `;
+            });
             
-            try {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
-                
-                // En-tête
-                doc.setFontSize(20);
-                doc.text("Résultats du simulateur de forme juridique", 20, 20);
-                doc.setFontSize(12);
-                doc.text(`Simulation réalisée le ${new Date().toLocaleDateString()}`, 20, 30);
-                
-                // Contenu principal - à personnaliser selon les résultats
-                doc.text("Résultats de la simulation", 20, 50);
-                
-                // Enregistrer le PDF
-                doc.save("simulation-forme-juridique.pdf");
-                
-                // Notification à l'utilisateur
-                alert('Le PDF a été généré avec succès !');
-            } catch (error) {
-                console.error('Erreur lors de la génération du PDF:', error);
-                alert('Une erreur est survenue lors de la génération du PDF.');
-            }
-        },
-        
-        // Export en Excel
-        exportToExcel: function() {
-            // Vérifier si la bibliothèque XLSX est disponible
-            if (typeof XLSX === 'undefined') {
-                alert('La bibliothèque XLSX n\'est pas chargée. Impossible de générer le fichier Excel.');
-                return;
-            }
+            html += `
+                </div>
+            </div>
+            `;
             
-            try {
-                // Créer un tableau de données pour Excel
-                const data = [
-                    ['Forme juridique', 'Score', 'Compatibilité', 'Fiscalité', 'Régime social', 'Protection', 'Capital', 'Revenu net estimé'],
-                    // Ajouter les données des résultats ici
-                ];
-                
-                // Créer un workbook et une worksheet
-                const wb = XLSX.utils.book_new();
-                const ws = XLSX.utils.aoa_to_sheet(data);
-                
-                // Ajouter la worksheet au workbook
-                XLSX.utils.book_append_sheet(wb, ws, "Résultats");
-                
-                // Générer le fichier Excel
-                XLSX.writeFile(wb, "simulation-forme-juridique.xlsx");
-                
-                // Notification à l'utilisateur
-                alert('Le fichier Excel a été généré avec succès !');
-            } catch (error) {
-                console.error('Erreur lors de la génération du fichier Excel:', error);
-                alert('Une erreur est survenue lors de la génération du fichier Excel.');
-            }
+            return html;
         }
     };
 
-    // ===== MODULE 6: GESTIONNAIRE DE STOCKAGE =====
+    // Gestionnaire de stockage pour sauvegarder la progression
     const StorageManager = {
-        // Sauvegarde les progrès dans localStorage
+        // Sauvegarde la progression dans le localStorage
         saveProgress: function() {
             localStorage.setItem('entreprise-form-progress', JSON.stringify(userResponses));
         },
         
-        // Charge les progrès depuis localStorage
+        // Récupère la progression depuis le localStorage
         loadProgress: function() {
-            const saved = localStorage.getItem('entreprise-form-progress');
-            if (saved) {
-                try {
-                    return JSON.parse(saved);
-                } catch (e) {
-                    console.error("Erreur lors du chargement des données sauvegardées:", e);
-                    return null;
-                }
+            const savedProgress = localStorage.getItem('entreprise-form-progress');
+            if (savedProgress) {
+                userResponses = JSON.parse(savedProgress);
+                return true;
             }
-            return null;
+            return false;
         }
     };
 
-    // Variables pour stocker les réponses de l'utilisateur - Structure améliorée
+    // Initialisation des réponses utilisateur
     let userResponses = {
         // Section 1: Profil & Horizon Personnel
-        tmiActuel: 30, // Tranche marginale d'imposition actuelle (%)
+        tmiActuel: 30,
         autresRevenusSalaries: false,
-        horizonProjet: 'moyen', // court, moyen, long
+        horizonProjet: 'moyen',
         revenuAnnee1: 30000,
         revenuAnnee3: 50000,
         bienImmobilier: false,
         
         // Section 2: Équipe & Gouvernance
-        profilEntrepreneur: null, // solo, famille, associes, investisseurs
-        typeInvestisseurs: [], // business-angels, vc, crowdfunding
+        profilEntrepreneur: null,
+        typeInvestisseurs: [],
         
         // Section 3: Nature de l'activité
-        typeActivite: null, // bic-vente, bic-service, bnc, artisanale, agricole
+        typeActivite: null,
         activiteReglementee: false,
         ordreProessionnel: false,
         risqueResponsabilite: false,
         besoinAssurance: false,
         
         // Section 4: Volumétrie et finances
-        chiffreAffaires: null, // Valeur numérique précise
-        tauxMarge: 35, // en pourcentage
+        chiffreAffaires: null,
+        tauxMarge: 35,
         besoinRevenusImmediats: false,
         cautionBancaire: false,
         montantLevee: 0,
-        preferenceRemuneration: 'mixte', // salaire, dividendes, mixte, flexible
-        aides: [], // acre, jei, cir
-        transmission: null, // revente, transmission
-        regimeFiscal: null, // ir, is, flexible, optimisation
-        regimeSocial: null // tns, salarie, equilibre
+        preferenceRemuneration: 'mixte',
+        aides: [],
+        transmission: null,
+        regimeFiscal: null,
+        regimeSocial: null
     };
 
-    // Initialisation générale
-    function initSimulator() {
-        // Mettre à jour la date du jour
-        updateLastUpdateDate();
-        
-        // Initialiser l'horloge
-        updateMarketClock();
-        setInterval(updateMarketClock, 1000);
-        
-        // Initialiser les modules
-        FormManager.init();
-        ResultsManager.init();
-        
-        // Charger les données sauvegardées si disponibles
-        const savedProgress = StorageManager.loadProgress();
-        if (savedProgress) {
-            userResponses = savedProgress;
-            // TODO: Appliquer les réponses sauvegardées à l'UI
-        }
+    // Tenter de restaurer la progression
+    if (StorageManager.loadProgress()) {
+        console.log('Progression restaurée depuis le localStorage');
     }
 
-    // Mettre à jour la date de dernière mise à jour
-    function updateLastUpdateDate() {
-        const lastUpdateDate = document.getElementById('lastUpdateDate');
-        if (lastUpdateDate) {
+    // Initialisation de l'application
+    FormManager.init();
+    ResultsManager.init();
+    
+    // Affichage de la première section
+    FormManager.showSection(1);
+    
+    // Mise à jour de la date de dernière mise à jour
+    const lastUpdateDateElement = document.getElementById('lastUpdateDate');
+    if (lastUpdateDateElement) {
+        lastUpdateDateElement.textContent = '24/04/2025';
+    }
+    
+    // Mise à jour du temps actuel de marché
+    const marketTimeElement = document.getElementById('marketTime');
+    if (marketTimeElement) {
+        const updateMarketTime = () => {
             const now = new Date();
-            const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
-            lastUpdateDate.textContent = now.toLocaleDateString('fr-FR', options);
-        }
+            marketTimeElement.textContent = now.toLocaleTimeString('fr-FR');
+        };
+        
+        updateMarketTime();
+        setInterval(updateMarketTime, 1000);
     }
-
-    // Mettre à jour l'horloge de marché
-    function updateMarketClock() {
-        const marketTime = document.getElementById('marketTime');
-        if (marketTime) {
-            const now = new Date();
-            const hours = now.getHours().toString().padStart(2, '0');
-            const minutes = now.getMinutes().toString().padStart(2, '0');
-            const seconds = now.getSeconds().toString().padStart(2, '0');
-            marketTime.textContent = `${hours}:${minutes}:${seconds}`;
-        }
+    
+    // Écouteur pour le bouton "Voir les autres options"
+    const showMoreResults = document.getElementById('show-more-results');
+    const secondaryResults = document.getElementById('secondary-results');
+    
+    if (showMoreResults && secondaryResults) {
+        showMoreResults.addEventListener('click', function() {
+            if (secondaryResults.classList.contains('hidden')) {
+                secondaryResults.classList.remove('hidden');
+                this.querySelector('i').classList.remove('fa-chevron-down');
+                this.querySelector('i').classList.add('fa-chevron-up');
+                this.querySelector('span').textContent = 'Masquer les autres options';
+            } else {
+                secondaryResults.classList.add('hidden');
+                this.querySelector('i').classList.remove('fa-chevron-up');
+                this.querySelector('i').classList.add('fa-chevron-down');
+                this.querySelector('span').textContent = 'Voir les autres options compatibles';
+            }
+        });
     }
-
-    // Démarrer le simulateur
-    initSimulator();
+    
+    // Écouteur pour afficher/masquer les détails de calcul
+    document.addEventListener('toggleCalculationDetails', function(e) {
+        const calculationDetails = document.querySelectorAll('.calculation-details');
+        calculationDetails.forEach(detail => {
+            if (e.detail.visible) {
+                detail.classList.remove('hidden');
+            } else {
+                detail.classList.add('hidden');
+            }
+        });
+    });
 });
