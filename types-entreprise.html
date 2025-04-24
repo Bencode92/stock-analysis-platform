@@ -1137,128 +1137,100 @@
             <div class="progress-steps mb-8">
                 <div class="progress-step active" id="step1">
                     1
-                    <div class="progress-label">Profil & Horizon</div>
+                    <div class="progress-label">Profil</div>
                 </div>
                 <div class="progress-step" id="step2">
                     2
-                    <div class="progress-label">Équipe</div>
+                    <div class="progress-label">Projet</div>
                 </div>
                 <div class="progress-step" id="step3">
                     3
-                    <div class="progress-label">Activité</div>
+                    <div class="progress-label">Équipe</div>
                 </div>
                 <div class="progress-step" id="step4">
                     4
-                    <div class="progress-label">Finance</div>
+                    <div class="progress-label">Activité</div>
                 </div>
                 <div class="progress-step" id="step5">
                     5
-                    <div class="progress-label">Résultats</div>
+                    <div class="progress-label">Finances</div>
+                </div>
+                <div class="progress-step" id="step6">
+                    6
+                    <div class="progress-label">Préférences</div>
                 </div>
             </div>
 
             <!-- Questions du simulateur -->
             <div id="question-container" class="max-w-4xl mx-auto mb-12">
-                <!-- Étape 1: Profil & Horizon Personnel (NOUVELLE VERSION) -->
+                <!-- Étape 1: Profil du porteur -->
                 <div id="section1" class="question-section active">
                     <div class="question-card p-6">
                         <h3 class="text-xl font-bold text-green-400 mb-4">
-                            <span class="section-tag">étape 1/9</span>
-                            Votre profil et horizon personnel
+                            <span class="section-tag">étape 1/6</span>
+                            Profil du porteur de projet
                         </h3>
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
                             <div>
-                                <label class="block mb-2 font-semibold">Tranche marginale d'imposition actuelle</label>
-                                <select id="tmi-actuel" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
-                                    <option value="0">0% (Non imposable)</option>
-                                    <option value="11">11% (Jusqu'à 27 478€)</option>
-                                    <option value="30" selected>30% (Jusqu'à 78 570€)</option>
-                                    <option value="41">41% (Jusqu'à 168 994€)</option>
-                                    <option value="45">45% (Au-delà)</option>
+                                <label class="block mb-2 font-semibold">Nationalité</label>
+                                <select id="nationalite" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
+                                    <option value="france" selected>France</option>
+                                    <option value="ue">Union Européenne</option>
+                                    <option value="hors-ue">Hors Union Européenne</option>
                                 </select>
-                                <p class="text-xs mt-1 opacity-70">Votre taux d'imposition personnel actuel</p>
                             </div>
                             
                             <div>
-                                <label class="block mb-2 font-semibold">Avez-vous d'autres revenus salariés?</label>
-                                <div class="flex mt-2">
-                                    <button class="option-btn flex-1 p-3 rounded-l-lg bg-blue-900 bg-opacity-30" data-value="oui">
-                                        Oui
-                                    </button>
-                                    <button class="option-btn flex-1 p-3 rounded-r-lg bg-blue-900 bg-opacity-30" data-value="non">
-                                        Non
-                                    </button>
-                                </div>
+                                <label class="block mb-2 font-semibold">Résidence fiscale</label>
+                                <select id="residence-fiscale" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
+                                    <option value="france" selected>France</option>
+                                    <option value="ue">Union Européenne</option>
+                                    <option value="hors-ue">Hors Union Européenne</option>
+                                </select>
                             </div>
                         </div>
                         
                         <div class="mt-6">
-                            <label class="block mb-2 font-semibold">Horizon de votre projet</label>
+                            <label class="block mb-2 font-semibold">Régime matrimonial</label>
+                            <select id="regime-matrimonial" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
+                                <option value="celibataire">Célibataire</option>
+                                <option value="communaute">Communauté de biens</option>
+                                <option value="separation">Séparation de biens</option>
+                                <option value="pacs">PACS</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <label class="block mb-2 font-semibold">Situation professionnelle actuelle</label>
                             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <button class="option-btn flex flex-col items-center p-4 rounded-xl bg-blue-900 bg-opacity-30" data-value="court">
-                                    <i class="fas fa-hourglass-start text-2xl mb-2 text-green-400"></i>
-                                    <span class="font-semibold">Court terme</span>
-                                    <span class="text-sm opacity-80 mt-1">1-2 ans</span>
+                                <button class="option-btn flex flex-col items-center p-4 rounded-xl bg-blue-900 bg-opacity-30" data-value="salarie">
+                                    <i class="fas fa-briefcase text-2xl mb-2 text-green-400"></i>
+                                    <span class="font-semibold">Salarié</span>
                                 </button>
                                 
-                                <button class="option-btn flex flex-col items-center p-4 rounded-xl bg-blue-900 bg-opacity-30" data-value="moyen">
-                                    <i class="fas fa-hourglass-half text-2xl mb-2 text-green-400"></i>
-                                    <span class="font-semibold">Moyen terme</span>
-                                    <span class="text-sm opacity-80 mt-1">3-5 ans</span>
+                                <button class="option-btn flex flex-col items-center p-4 rounded-xl bg-blue-900 bg-opacity-30" data-value="are">
+                                    <i class="fas fa-file-invoice-dollar text-2xl mb-2 text-green-400"></i>
+                                    <span class="font-semibold">Allocation chômage (ARE)</span>
                                 </button>
                                 
-                                <button class="option-btn flex flex-col items-center p-4 rounded-xl bg-blue-900 bg-opacity-30" data-value="long">
-                                    <i class="fas fa-hourglass-end text-2xl mb-2 text-green-400"></i>
-                                    <span class="font-semibold">Long terme</span>
-                                    <span class="text-sm opacity-80 mt-1">Plus de 5 ans</span>
+                                <button class="option-btn flex flex-col items-center p-4 rounded-xl bg-blue-900 bg-opacity-30" data-value="rsa">
+                                    <i class="fas fa-hand-holding-usd text-2xl mb-2 text-green-400"></i>
+                                    <span class="font-semibold">RSA/Minimas sociaux</span>
                                 </button>
                             </div>
                         </div>
                         
                         <div class="mt-6">
-                            <label class="block mb-2 font-semibold">Objectif de revenu net annuel</label>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="text-sm">Première année</label>
-                                    <div class="flex items-center mt-1">
-                                        <input type="number" id="revenu-annee1" min="0" step="1000" value="30000" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
-                                        <span class="ml-2">€</span>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label class="text-sm">Troisième année</label>
-                                    <div class="flex items-center mt-1">
-                                        <input type="number" id="revenu-annee3" min="0" step="1000" value="50000" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
-                                        <span class="ml-2">€</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-6">
-                            <label class="block mb-2 font-semibold">Protection du patrimoine personnel</label>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="protection-patrimoine">
-                                        <div class="ml-2">
-                                            <div class="font-medium">Je souhaite protéger mon patrimoine personnel</div>
-                                            <div class="text-xs opacity-70">Séparation des patrimoines personnel et professionnel</div>
-                                        </div>
-                                    </label>
-                                </div>
-                                
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="bien-immobilier">
-                                        <div class="ml-2">
-                                            <div class="font-medium">Je possède déjà un bien immobilier</div>
-                                            <div class="text-xs opacity-70">Maison, appartement ou autres investissements</div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
+                            <label class="block mb-2 font-semibold">Tranche marginale d'imposition actuelle</label>
+                            <select id="tmi-actuel" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
+                                <option value="0">0% (Non imposable)</option>
+                                <option value="11">11% (Jusqu'à 27 478€)</option>
+                                <option value="30" selected>30% (Jusqu'à 78 570€)</option>
+                                <option value="41">41% (Jusqu'à 168 994€)</option>
+                                <option value="45">45% (Au-delà)</option>
+                            </select>
+                            <p class="text-xs mt-1 opacity-70">Votre taux d'imposition personnel actuel</p>
                         </div>
                     </div>
 
@@ -1270,584 +1242,14 @@
 
                     <!-- Affichage de la progression et du temps restant -->
                     <div class="text-center mt-8 text-sm text-gray-400">
-                        <span id="question-progress">Question 1 sur 9</span> • 
-                        <span id="time-remaining">Environ 4 minutes restantes</span>
+                        <span id="question-progress">Question 1 sur 6</span> • 
+                        <span id="time-remaining">Environ 5 minutes restantes</span>
                     </div>
                 </div>
 
-                <!-- Étape 2: Équipe & Gouvernance (NOUVELLE VERSION) -->
-                <div id="section2" class="question-section hidden">
-                    <div class="question-card p-6">
-                        <h3 class="text-xl font-bold text-green-400 mb-4">
-                            <span class="section-tag">étape 2/9</span>
-                            Équipe et gouvernance
-                        </h3>
-                        
-                        <div class="mt-4">
-                            <label class="block mb-2 font-semibold">Structure d'équipe envisagée</label>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                                <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="solo">
-                                    <i class="fas fa-user text-3xl mb-3 text-green-400"></i>
-                                    <span class="font-semibold text-lg">Entrepreneur solo</span>
-                                    <span class="text-sm opacity-80 mt-2 text-center">Je serai le seul dirigeant et associé</span>
-                                </button>
-                                
-                                <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="famille">
-                                    <i class="fas fa-users text-3xl mb-3 text-green-400"></i>
-                                    <span class="font-semibold text-lg">Projet familial</span>
-                                    <span class="text-sm opacity-80 mt-2 text-center">Avec des membres de ma famille</span>
-                                </button>
-                                
-                                <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="associes">
-                                    <i class="fas fa-handshake text-3xl mb-3 text-green-400"></i>
-                                    <span class="font-semibold text-lg">Avec associés</span>
-                                    <span class="text-sm opacity-80 mt-2 text-center">Plusieurs associés avec partage du capital</span>
-                                </button>
-                                
-                                <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="investisseurs">
-                                    <i class="fas fa-chart-line text-3xl mb-3 text-green-400"></i>
-                                    <span class="font-semibold text-lg">Avec investisseurs</span>
-                                    <span class="text-sm opacity-80 mt-2 text-center">Ouverture du capital à des investisseurs</span>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-6" id="investisseurs-section" style="display: none;">
-                            <label class="block mb-2 font-semibold">Type d'investisseurs envisagés</label>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="invest-business-angels">
-                                        <div class="ml-2">
-                                            <div class="font-medium">Business Angels</div>
-                                            <div class="text-xs opacity-70">Investisseurs individuels</div>
-                                        </div>
-                                    </label>
-                                </div>
-                                
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="invest-vc">
-                                        <div class="ml-2">
-                                            <div class="font-medium">Capital-risque (VC)</div>
-                                            <div class="text-xs opacity-70">Fonds d'investissement</div>
-                                        </div>
-                                    </label>
-                                </div>
-                                
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="invest-crowdfunding">
-                                        <div class="ml-2">
-                                            <div class="font-medium">Crowdfunding</div>
-                                            <div class="text-xs opacity-70">Financement participatif</div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                <!-- Les autres sections seront ici... -->
 
-                    <div class="flex justify-between mt-6">
-                        <button id="prev2" class="border border-green-400 text-green-400 hover:bg-green-900 hover:bg-opacity-30 font-semibold py-3 px-6 rounded-lg transition flex items-center">
-                            <i class="fas fa-arrow-left mr-2"></i> Précédent
-                        </button>
-                        <button id="next2" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center">
-                            Étape suivante <i class="fas fa-arrow-right ml-2"></i>
-                        </button>
-                    </div>
-
-                    <!-- Affichage de la progression et du temps restant -->
-                    <div class="text-center mt-8 text-sm text-gray-400">
-                        <span id="question-progress-2">Question 2 sur 9</span> • 
-                        <span id="time-remaining-2">Environ 3 minutes restantes</span>
-                    </div>
-                </div>
-
-                <!-- Étape 3: Activité (NOUVELLE VERSION) -->
-                <div id="section3" class="question-section hidden">
-                    <div class="question-card p-6">
-                        <h3 class="text-xl font-bold text-green-400 mb-4">
-                            <span class="section-tag">étape 3/9</span>
-                            Nature de l'activité
-                        </h3>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                            <div>
-                                <label class="block mb-2 font-semibold">Type d'activité</label>
-                                <select id="activite-type" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
-                                    <option value="bic-vente">Vente de biens, commerce (BIC)</option>
-                                    <option value="bic-service">Service commercial (BIC)</option>
-                                    <option value="bnc">Profession libérale, conseil (BNC)</option>
-                                    <option value="artisanale">Artisanat</option>
-                                    <option value="agricole">Activité agricole</option>
-                                </select>
-                            </div>
-                            
-                            <div>
-                                <label class="block mb-2 font-semibold">Réglementation</label>
-                                <div class="flex flex-col space-y-2">
-                                    <label class="flex items-start p-2 rounded hover:bg-blue-900 hover:bg-opacity-20">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="activite-reglementee">
-                                        <div class="ml-2">
-                                            <div class="font-medium">Activité réglementée</div>
-                                            <div class="text-xs opacity-70">Diplôme ou qualification spécifique exigée</div>
-                                        </div>
-                                    </label>
-                                    
-                                    <label class="flex items-start p-2 rounded hover:bg-blue-900 hover:bg-opacity-20">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="ordre-professionnel">
-                                        <div class="ml-2">
-                                            <div class="font-medium">Ordre professionnel</div>
-                                            <div class="text-xs opacity-70">Avocat, médecin, expert-comptable, etc.</div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-6">
-                            <label class="block mb-2 font-semibold">Risques liés à l'activité</label>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="risque-responsabilite">
-                                        <div class="ml-2">
-                                            <div class="font-medium">Responsabilité professionnelle</div>
-                                            <div class="text-xs opacity-70">Risques de dommages aux clients, conseils</div>
-                                        </div>
-                                    </label>
-                                </div>
-                                
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="besoin-assurance">
-                                        <div class="ml-2">
-                                            <div class="font-medium">Besoin d'assurance pro</div>
-                                            <div class="text-xs opacity-70">RC Pro, multirisque, etc.</div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-between mt-6">
-                        <button id="prev3" class="border border-green-400 text-green-400 hover:bg-green-900 hover:bg-opacity-30 font-semibold py-3 px-6 rounded-lg transition flex items-center">
-                            <i class="fas fa-arrow-left mr-2"></i> Précédent
-                        </button>
-                        <button id="next3" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center">
-                            Étape suivante <i class="fas fa-arrow-right ml-2"></i>
-                        </button>
-                    </div>
-
-                    <!-- Affichage de la progression et du temps restant -->
-                    <div class="text-center mt-8 text-sm text-gray-400">
-                        <span id="question-progress-3">Question 3 sur 9</span> • 
-                        <span id="time-remaining-3">Environ 3 minutes restantes</span>
-                    </div>
-                </div>
-
-                <!-- Étape 4: Finance (NOUVELLE VERSION) -->
-                <div id="section4" class="question-section hidden">
-                    <div class="question-card p-6">
-                        <h3 class="text-xl font-bold text-green-400 mb-4">
-                            <span class="section-tag">étape 4/9</span>
-                            Volumétrie et finances
-                        </h3>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                            <div>
-                                <label class="block mb-2 font-semibold">Chiffre d'affaires prévisionnel annuel</label>
-                                <div class="flex items-center">
-                                    <input type="number" id="ca-previsionnel" min="0" step="1000" value="75000" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
-                                    <span class="ml-2">€</span>
-                                </div>
-                                <p class="text-xs mt-1 opacity-70 flex items-center">
-                                    <i class="fas fa-info-circle mr-1"></i>
-                                    Seuil micro-entreprise: 77 700€ (services) ou 188 700€ (vente)
-                                </p>
-                            </div>
-                            
-                            <div>
-                                <label class="block mb-2 font-semibold">Taux de marge brute estimé</label>
-                                <div class="flex items-center">
-                                    <input type="range" id="taux-marge" min="5" max="95" value="35" class="w-full">
-                                    <span class="ml-2 w-12 text-center" id="taux-marge-value">35%</span>
-                                </div>
-                                <p class="text-xs mt-1 opacity-70">
-                                    Bénéfice avant impôt / Chiffre d'affaires
-                                </p>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-6">
-                            <h4 class="font-semibold mb-3">Besoins de financement et trésorerie</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="block mb-2">Besoin de revenus immédiats</label>
-                                    <div class="flex items-center">
-                                        <label class="switch calculation-switch">
-                                            <input type="checkbox" id="besoin-revenus-immediats">
-                                            <span class="switch-slider"></span>
-                                        </label>
-                                        <span class="text-sm">Je dois me salarier dès le 1er mois</span>
-                                    </div>
-                                </div>
-                                
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="block mb-2">Caution bancaire envisagée</label>
-                                    <div class="flex items-center">
-                                        <label class="switch calculation-switch">
-                                            <input type="checkbox" id="caution-bancaire">
-                                            <span class="switch-slider"></span>
-                                        </label>
-                                        <span class="text-sm">Prêt professionnel à cautionner</span>
-                                    </div>
-                                </div>
-                                
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="block mb-2">Besoin de lever des fonds</label>
-                                    <div class="flex items-center gap-3">
-                                        <input type="number" id="montant-levee" min="0" step="10000" value="0" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-24">
-                                        <span>€</span>
-                                    </div>
-                                </div>
-                                
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="block mb-2">Préférence de rémunération</label>
-                                    <select id="preference-remuneration" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
-                                        <option value="salaire">Salaire régulier</option>
-                                        <option value="dividendes">Dividendes (performance)</option>
-                                        <option value="mixte" selected>Mixte (optimisation)</option>
-                                        <option value="flexible">Selon évolution</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-6">
-                            <h4 class="font-semibold mb-3">Aides et dispositifs</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="aide-acre">
-                                        <div class="ml-2">
-                                            <div class="font-medium">ACRE</div>
-                                            <div class="text-xs opacity-70">Exonération charges sociales</div>
-                                        </div>
-                                    </label>
-                                </div>
-                                
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="aide-jei">
-                                        <div class="ml-2">
-                                            <div class="font-medium">JEI</div>
-                                            <div class="text-xs opacity-70">Jeune Entreprise Innovante</div>
-                                        </div>
-                                    </label>
-                                </div>
-                                
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="aide-cir">
-                                        <div class="ml-2">
-                                            <div class="font-medium">CIR/CII</div>
-                                            <div class="text-xs opacity-70">Crédit d'impôt recherche/innovation</div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-6">
-                            <h4 class="font-semibold mb-3">Sortie et transmission</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <button class="option-btn flex flex-col items-center p-4 rounded-xl bg-blue-900 bg-opacity-30" data-value="revente">
-                                    <i class="fas fa-handshake text-2xl mb-2 text-green-400"></i>
-                                    <span class="font-semibold">Revente à terme</span>
-                                    <span class="text-sm opacity-80 mt-1">Cession de l'entreprise</span>
-                                </button>
-                                
-                                <button class="option-btn flex flex-col items-center p-4 rounded-xl bg-blue-900 bg-opacity-30" data-value="transmission">
-                                    <i class="fas fa-exchange-alt text-2xl mb-2 text-green-400"></i>
-                                    <span class="font-semibold">Transmission familiale</span>
-                                    <span class="text-sm opacity-80 mt-1">Passage aux descendants</span>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-6">
-                            <h4 class="font-semibold mb-3">Préférences fiscales et sociales</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block mb-2">Régime fiscal préféré</label>
-                                    <select id="regime-fiscal-preference" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
-                                        <option value="ir">Impôt sur le Revenu (IR)</option>
-                                        <option value="is">Impôt sur les Sociétés (IS)</option>
-                                        <option value="flexible" selected>Flexible/Option possible</option>
-                                        <option value="optimisation">Optimisation maximum</option>
-                                    </select>
-                                </div>
-                                
-                                <div>
-                                    <label class="block mb-2">Régime social préféré</label>
-                                    <select id="regime-social-preference" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
-                                        <option value="tns">Indépendant (TNS)</option>
-                                        <option value="salarie">Assimilé salarié</option>
-                                        <option value="equilibre" selected>Équilibre coût/protection</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-between mt-6">
-                        <button id="prev4" class="border border-green-400 text-green-400 hover:bg-green-900 hover:bg-opacity-30 font-semibold py-3 px-6 rounded-lg transition flex items-center">
-                            <i class="fas fa-arrow-left mr-2"></i> Précédent
-                        </button>
-                        <button id="submit-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center">
-                            Obtenir les résultats <i class="fas fa-check-circle ml-2"></i>
-                        </button>
-                    </div>
-
-                    <!-- Affichage de la progression et du temps restant -->
-                    <div class="text-center mt-8 text-sm text-gray-400">
-                        <span id="question-progress-4">Question 9 sur 9</span> • 
-                        <span id="time-remaining-4">Moins d'une minute restante</span>
-                    </div>
-                </div>
-
-                <!-- Étape 5: Résultats -->
-                <div id="section5" class="question-section hidden">
-                    <div class="p-6 text-center mb-8">
-                        <h3 class="text-2xl font-bold text-green-400 mb-4">Votre forme juridique recommandée</h3>
-                        <p class="text-lg opacity-80">Basé sur votre profil et vos réponses, voici la forme juridique qui correspond le mieux à vos besoins :</p>
-                    </div>
-                    
-                    <!-- Bouton de méthode de calcul -->
-                    <div class="flex justify-center mb-4">
-                        <label class="calculation-label">
-                            <span class="mr-2">Afficher la méthode de calcul</span>
-                            <label class="switch calculation-switch">
-                                <input type="checkbox" id="show-calculation-details">
-                                <span class="switch-slider"></span>
-                            </label>
-                        </label>
-                    </div>
-                    
-                    <!-- AMÉLIORATION: Panneau de paramètres avancés pour la simulation -->
-                    <div class="advanced-params-panel mt-4 mb-8">
-                        <div class="advanced-params-toggle" id="advanced-params-toggle">
-                            <div class="flex items-center">
-                                <i class="fas fa-sliders-h text-green-400 mr-2"></i>
-                                <span class="font-semibold">Paramètres avancés de simulation</span>
-                            </div>
-                            <i class="fas fa-chevron-down text-green-400" id="params-toggle-icon"></i>
-                        </div>
-                        
-                        <div class="advanced-params-content" id="advanced-params-content">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                                <div>
-                                    <label class="block mb-2 font-semibold">Répartition de la rémunération</label>
-                                    <div class="parameter-slider-container">
-                                        <span class="text-sm">Salaire</span>
-                                        <input type="range" id="ratio-salaire" min="0" max="100" value="50" class="mx-4">
-                                        <span class="parameter-value" id="ratio-salaire-value">50%</span>
-                                    </div>
-                                    <div class="parameter-slider-container">
-                                        <span class="text-sm">Dividendes</span>
-                                        <input type="range" id="ratio-dividendes" min="0" max="100" value="50" class="mx-4" disabled>
-                                        <span class="parameter-value" id="ratio-dividendes-value">50%</span>
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <label class="block mb-2 font-semibold">Capital social</label>
-                                    <div class="flex items-center">
-                                        <input type="number" id="capital-social" min="0" value="10000" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-32">
-                                        <span class="ml-2">€</span>
-                                    </div>
-                                    
-                                    <div class="mt-4">
-                                        <label class="block mb-2 font-semibold">Pourcentage libéré</label>
-                                        <div class="parameter-slider-container">
-                                            <input type="range" id="capital-libere" min="20" max="100" value="100" class="mx-4">
-                                            <span class="parameter-value" id="capital-libere-value">100%</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- NOUVELLE SECTION: Options micro-entreprise -->
-                            <div class="mt-4 border-t border-gray-700 pt-4" id="micro-entreprise-options">
-                                <label class="block mb-2 font-semibold">Options pour micro-entreprise</label>
-                                <div class="flex items-center mt-2">
-                                    <span class="text-sm mr-4">Frais réels estimés :</span>
-                                    <div class="relative flex items-center">
-                                        <input type="number" id="frais-reels" min="0" max="100" value="35" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-20">
-                                        <span class="ml-2">%</span>
-                                        <span class="tooltip-container ml-2">
-                                            <i class="fas fa-info-circle text-green-400"></i>
-                                            <span class="tooltip-text">Pourcentage de votre CA représentant vos frais et charges réels. Permet de comparer le régime micro avec le régime réel.</span>
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="mt-4">
-                                <label class="block mb-2 font-semibold">Chiffre d'affaires précis pour la simulation</label>
-                                <div class="flex items-center">
-                                    <input type="number" id="ca-simulation" min="1000" max="10000000" value="50000" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-40">
-                                    <span class="ml-2">€</span>
-                                </div>
-                            </div>
-                            
-                            <!-- NOUVELLE SECTION: Options ACRE -->
-                            <div class="mt-4 border-t border-gray-700 pt-4" id="acre-options">
-                                <label class="block mb-2 font-semibold">Options ACRE</label>
-                                <div class="flex items-center">
-                                    <input type="checkbox" id="acre-checkbox" class="h-5 w-5 rounded bg-blue-900 bg-opacity-30 border-gray-600 text-green-400 focus:ring-green-400">
-                                    <label for="acre-checkbox" class="ml-2">Inclure l'ACRE dans la simulation</label>
-                                    <span class="tooltip-container ml-2">
-                                        <i class="fas fa-info-circle text-green-400"></i>
-                                        <span class="tooltip-text">L'ACRE permet une réduction de charges sociales de 50% pendant la première année.</span>
-                                    </span>
-                                </div>
-                                
-                                <div class="mt-3">
-                                    <div class="flex items-center">
-                                        <input type="checkbox" id="projections-pluriannuelles" class="h-5 w-5 rounded bg-blue-900 bg-opacity-30 border-gray-600 text-green-400 focus:ring-green-400">
-                                        <label for="projections-pluriannuelles" class="ml-2">Afficher les projections sur 3 ans</label>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="mt-6 flex justify-end">
-                                <button id="apply-params" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-2 px-4 rounded-lg transition flex items-center">
-                                    <i class="fas fa-sync-alt mr-2"></i> Recalculer les résultats
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div id="results-container">
-                        <!-- Les résultats seront injectés ici par le JavaScript -->
-                        <div class="flex justify-center items-center py-10">
-                            <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-400"></div>
-                        </div>
-                    </div>
-
-                    <!-- AMÉLIORATION: Boutons d'export des résultats -->
-                    <div class="export-buttons flex justify-center mt-6" id="export-buttons" style="display: none;">
-                        <button id="export-pdf" class="export-button">
-                            <i class="fas fa-file-pdf"></i> Exporter en PDF
-                        </button>
-                        <button id="export-excel" class="export-button">
-                            <i class="fas fa-file-excel"></i> Exporter en Excel
-                        </button>
-                    </div>
-
-                    <div class="results-toggle hidden" id="show-more-results">
-                        <button class="bg-blue-900 bg-opacity-30 hover:bg-opacity-50 text-white py-2 px-4 rounded-lg transition flex items-center mx-auto">
-                            <i class="fas fa-chevron-down mr-2"></i> Voir les autres options compatibles
-                        </button>
-                    </div>
-
-                    <div id="secondary-results" class="secondary-results hidden">
-                        <!-- Les résultats secondaires seront injectés ici -->
-                    </div>
-
-                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-xl mt-10">
-                        <h4 class="font-bold text-lg text-green-400 mb-3">Important</h4>
-                        <p class="mb-4">Ce simulateur fournit des indications générales basées sur vos réponses. Pour un conseil personnalisé et adapté à votre situation précise, il est recommandé de consulter un expert-comptable ou un avocat spécialisé.</p>
-                        
-                        <div class="flex flex-wrap gap-4 mt-6">
-                            <a href="#" id="restart-btn" class="border border-green-400 text-green-400 hover:bg-green-900 hover:bg-opacity-30 font-semibold py-3 px-6 rounded-lg transition flex items-center">
-                                <i class="fas fa-redo mr-2"></i> Recommencer la simulation
-                            </a>
-                            <a href="#" id="compare-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center">
-                                <i class="fas fa-table mr-2"></i> Voir le comparatif complet
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                
             </div>
-
-            <!-- Comparatif complet (caché par défaut) -->
-            <div id="comparatif-complet" class="hidden mb-16">
-                <h3 class="text-2xl font-bold text-green-400 mb-6 flex items-center">
-                    <i class="fas fa-table mr-3"></i>
-                    Comparatif complet des formes juridiques
-                </h3>
-                
-                <div class="overflow-x-auto">
-                    <table class="w-full border-collapse">
-                        <thead>
-                            <tr class="bg-blue-900 bg-opacity-40">
-                                <th class="p-3 text-left">Forme juridique</th>
-                                <th class="p-3 text-left">Nb associés</th>
-                                <th class="p-3 text-left">Capital social</th>
-                                <th class="p-3 text-left">Responsabilité</th>
-                                <th class="p-3 text-left">Fiscalité</th>
-                                <th class="p-3 text-left">Régime social</th>
-                                <th class="p-3 text-left">Avantages clés</th>
-                                <th class="p-3 text-left">Inconvénients</th>
-                            </tr>
-                        </thead>
-                        <tbody id="comparatif-table-body">
-                            <!-- Le tableau sera rempli via JavaScript -->
-                        </tbody>
-                    </table>
-                </div>
-                
-                <div class="flex justify-center mt-6">
-                    <button id="hide-comparatif" class="border border-green-400 text-green-400 hover:bg-green-900 hover:bg-opacity-30 font-semibold py-3 px-6 rounded-lg transition flex items-center">
-                        <i class="fas fa-arrow-up mr-2"></i> Retour aux résultats
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Footer -->
-        <footer class="bg-blue-900 bg-opacity-40 backdrop-blur-md border-t border-gray-800 py-4 px-6 text-center mt-12">
-            <div class="flex justify-around flex-wrap gap-4 text-sm text-gray-400">
-                <p class="flex items-center">
-                    <i class="fas fa-building text-green-400 mr-2"></i>
-                    Simulateur développé par l'équipe TradePulse
-                </p>
-                <p class="flex items-center">
-                    <i class="fas fa-sync-alt text-green-400 mr-2"></i>
-                    Informations juridiques mises à jour régulièrement
-                </p>
-                <p class="flex items-center">
-                    <i class="fas fa-clock text-green-400 mr-2"></i>
-                    Dernière mise à jour: <span class="text-green-400 font-medium ml-1 update-time" id="lastUpdateDate">10/04/2025</span>
-                </p>
-            </div>
-        </footer>
-    </div>
-
-    <!-- Bouton du sélecteur de thème -->
-    <div class="theme-toggle">
-        <button id="theme-toggle-btn" class="theme-toggle-btn">
-            <i class="fas fa-moon" id="dark-icon"></i>
-            <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
-        </button>
-    </div>
-
-    <!-- NOUVEL AJOUT: Panneau de glossaire juridique -->
-    <div id="glossary-panel" class="glossary-panel">
-        <div class="glossary-header">
-            <h3 class="glossary-title">Lexique juridique</h3>
-            <button class="glossary-close" id="glossary-close"><i class="fas fa-times"></i></button>
-        </div>
-        <div id="glossary-content">
-            <h4 id="glossary-term-title" class="text-green-400 font-bold text-lg mb-1"></h4>
-            <p id="glossary-definition" class="glossary-definition"></p>
-            <div id="glossary-example" class="glossary-example"></div>
         </div>
     </div>
 
@@ -1860,126 +1262,10 @@
     <!-- Script pour gérer les nouvelles options ACRE et micro vs réel -->
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Afficher/masquer les options ACRE quand "entreprise en création" est coché
-        const entrepriseCreation = document.getElementById('entreprise-creation');
-        const optionsAcre = document.getElementById('options-acre');
-        
-        if (entrepriseCreation && optionsAcre) {
-            entrepriseCreation.addEventListener('change', function() {
-                optionsAcre.classList.toggle('hidden', !this.checked);
-            });
+        // Mise à jour du nombre total de sections pour la navigation
+        if (window.FormManager) {
+            window.FormManager.totalSections = 6; // Changé de 5 à 6 sections
         }
-        
-        // Synchroniser l'état des options ACRE entre les sections
-        const optionAcre = document.getElementById('option-acre');
-        const acreCheckbox = document.getElementById('acre-checkbox');
-        
-        if (optionAcre && acreCheckbox) {
-            optionAcre.addEventListener('change', function() {
-                acreCheckbox.checked = this.checked;
-            });
-            
-            acreCheckbox.addEventListener('change', function() {
-                optionAcre.checked = this.checked;
-            });
-        }
-        
-        // Gérer les interactions avec les résultats de comparaison micro vs réel
-        document.addEventListener('resultsLoaded', function() {
-            const microComparaison = document.querySelectorAll('.micro-comparaison-toggle');
-            microComparaison.forEach(toggle => {
-                toggle.addEventListener('click', function() {
-                    const detailsId = this.getAttribute('data-target');
-                    const details = document.getElementById(detailsId);
-                    if (details) {
-                        details.classList.toggle('hidden');
-                        
-                        // Mise à jour de l'icône
-                        const icon = this.querySelector('i');
-                        if (icon) {
-                            if (details.classList.contains('hidden')) {
-                                icon.classList.remove('fa-chevron-up');
-                                icon.classList.add('fa-chevron-down');
-                            } else {
-                                icon.classList.remove('fa-chevron-down');
-                                icon.classList.add('fa-chevron-up');
-                            }
-                        }
-                    }
-                });
-            });
-        });
-        
-        // Intercepter le formulaire pour appliquer les nouvelles options lors du calcul des résultats
-        const applyParamsButton = document.getElementById('apply-params');
-        if (applyParamsButton) {
-            applyParamsButton.addEventListener('click', function() {
-                // Récupérer les valeurs des paramètres avancés
-                const parametres = {};
-                parametres.ratioSalaire = parseInt(document.getElementById('ratio-salaire').value);
-                parametres.ratioDividendes = 100 - parametres.ratioSalaire;
-                parametres.capitalSocial = parseInt(document.getElementById('capital-social').value);
-                parametres.capitalLibere = parseInt(document.getElementById('capital-libere').value);
-                parametres.caSimulation = parseInt(document.getElementById('ca-simulation').value);
-                
-                // Options ACRE et projection
-                parametres.premiereAnnee = document.getElementById('acre-checkbox').checked;
-                parametres.afficherProjection = document.getElementById('projections-pluriannuelles').checked;
-                
-                // Options micro-entreprise (frais réels)
-                const fraisReelsInput = document.getElementById('frais-reels');
-                if (fraisReelsInput) {
-                    parametres.fraisReels = parseInt(fraisReelsInput.value) / 100 * parametres.caSimulation;
-                }
-                
-                // Récupérer le type d'activité depuis les réponses sauvegardées
-                const savedResponses = JSON.parse(localStorage.getItem('entreprise-form-progress') || '{}');
-                if (savedResponses.typeActivite) {
-                    parametres.natureActivite = savedResponses.typeActivite;
-                }
-                
-                // Déclencher le recalcul des résultats
-                if (typeof generateResults === 'function') {
-                    generateResults(parametres);
-                } else {
-                    console.error("La fonction generateResults n'est pas disponible");
-                }
-            });
-        }
-
-        // Gestion du taux de marge
-        const tauxMarge = document.getElementById('taux-marge');
-        const tauxMargeValue = document.getElementById('taux-marge-value');
-        
-        if (tauxMarge && tauxMargeValue) {
-            tauxMarge.addEventListener('input', function() {
-                tauxMargeValue.textContent = `${this.value}%`;
-            });
-        }
-
-        // Afficher les détails du calcul
-        const showCalculationDetails = document.getElementById('show-calculation-details');
-        if (showCalculationDetails) {
-            showCalculationDetails.addEventListener('change', function() {
-                document.dispatchEvent(new CustomEvent('toggleCalculationDetails', {
-                    detail: { visible: this.checked }
-                }));
-            });
-        }
-
-        // Gérer l'affichage des investisseurs
-        const profilButtons = document.querySelectorAll('.option-btn[data-value]');
-        const investisseursSection = document.getElementById('investisseurs-section');
-
-        profilButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                if (this.getAttribute('data-value') === 'investisseurs' && investisseursSection) {
-                    investisseursSection.style.display = 'block';
-                } else if (investisseursSection) {
-                    investisseursSection.style.display = 'none';
-                }
-            });
-        });
     });
     </script>
 </body>
