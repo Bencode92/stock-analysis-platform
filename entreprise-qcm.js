@@ -411,6 +411,72 @@ ResultsManager.generateQuickComparison = function() {
     quickComparisonDiv.style.display = 'block';
 };
 
+// Référence à la base de données des formes juridiques (définie dans types-entreprise.js)
+// Ne pas dupliquer la base de données ici pour éviter les problèmes de mise à jour
+
+// Fonctions utilitaires pour vérifier les incompatibilités (utilisées par ResultsManager.generateQuickComparison)
+// Ces fonctions proviennent de types-entreprise.js mais doivent être accessibles ici
+
+// Vérification des incompatibilités majeures (hardFails)
+if (typeof window.checkHardFails === 'undefined') {
+    window.checkHardFails = function(userResponses) {
+        const fails = [];
+        
+        // Vérifier les seuils de CA pour la micro-entreprise
+        if (userResponses.activiteType && userResponses.caYear1) {
+            const seuilsMax = {
+                'bic-vente': 203100,  // Nouveau seuil 2025
+                'bic-service': 81500, // Nouveau seuil 2025
+                'bnc': 81500,         // Nouveau seuil 2025
+                'artisanale': 203100, // Nouveau seuil 2025
+                'agricole': 95000     // Valeur de l'ancien code
+            };
+            
+            const seuilMax = seuilsMax[userResponses.activiteType] || 0;
+            
+            if (userResponses.caYear1 > seuilMax) {
+                fails.push({
+                    formeId: 'micro-entreprise',
+                    code: 'ca-depasse-seuil',
+                    message: `CA prévu (${userResponses.caYear1.toLocaleString('fr-FR')}€) > seuil micro (${seuilMax.toLocaleString('fr-FR')}€)`,
+                    details: 'Régime micro-entreprise impossible'
+                });
+            }
+        }
+        
+        // Vérifier les incompatibilités avec les profils multi-associés
+        if (userResponses.profilEntrepreneur === 'equipe' || userResponses.profilEntrepreneur === 'investisseurs') {
+            ['micro-entreprise', 'ei', 'eurl', 'sasu'].forEach(formeId => {
+                fails.push({
+                    formeId: formeId,
+                    code: 'structure-mono-associe',
+                    message: 'Structure limitée à un seul associé',
+                    details: 'Incompatible avec une équipe ou des investisseurs'
+                });
+            });
+        }
+        
+        // Vérifier les incompatibilités avec activités réglementées
+        if (userResponses.activiteReglementee) {
+            fails.push({
+                formeId: 'micro-entreprise',
+                code: 'activite-reglementee',
+                message: 'Peu adaptée aux activités réglementées',
+                details: 'Limitations pour certaines professions réglementées'
+            });
+        }
+        
+        return fails;
+    };
+}
+
+// Vérifier si une forme juridique a une incompatibilité majeure
+if (typeof window.hasHardFail === 'undefined') {
+    window.hasHardFail = function(formeId, failsList) {
+        return failsList.some(fail => fail.formeId === formeId);
+    };
+}
+
 // Mettre à jour les seuils fiscaux pour 2025
 const seuils = {
     'bic-vente': 203100,  // Nouveau seuil 2025
