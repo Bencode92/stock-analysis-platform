@@ -67,6 +67,119 @@ const baremesFiscaux = {
 };
 
 /**
+ * Moteur de règles métier pour appliquer les exclusions et requis avant le scoring
+ */
+const BusinessRules = {
+    // Fonction pour déterminer le seuil micro selon l'activité
+    seuilMicro: function(activite) {
+        const bareme = baremesFiscaux["2025"].micro_entreprise.plafonds;
+        if (activite === 'bic-vente' || activite === 'artisanale') {
+            return bareme.BIC; // Commerce/artisanat
+        } else if (activite === 'bic-service' || activite === 'bnc') {
+            return bareme.BNC; // Services/libéral
+        }
+        return bareme.BNC; // Valeur par défaut
+    },
+    
+    // Règles métier centralisées
+    rules: [
+        // Règles de CA
+        { 
+            id: "ca-micro", 
+            when: function(r) { return r.chiffreAffaires > this.seuilMicro(r.typeActivite); },
+            exclude: ['micro-entreprise'],
+            reason: "Chiffre d'affaires trop élevé pour le régime micro-entreprise"
+        },
+        // Règles d'activité réglementée
+        { 
+            id: "ordre-pro", 
+            when: function(r) { return r.ordreProessionnel; },
+            require: ['sel', 'selas', 'selarl'],
+            exclude: ['micro-entreprise', 'ei'],
+            reason: "Profession réglementée avec ordre professionnel"
+        },
+        // Règles d'équipe
+        { 
+            id: "multi-associes", 
+            when: function(r) { return r.profilEntrepreneur === 'associes' || r.profilEntrepreneur === 'famille'; },
+            exclude: ['micro-entreprise', 'ei', 'eurl', 'sasu'],
+            reason: "Structure avec plusieurs associés nécessaire"
+        },
+        // Règles d'investisseurs
+        { 
+            id: "investisseurs", 
+            when: function(r) { return r.profilEntrepreneur === 'investisseurs' || r.montantLevee > 50000; },
+            exclude: ['micro-entreprise', 'ei', 'eurl'],
+            prefer: ['sas', 'sasu'],
+            reason: "Structure adaptée aux investisseurs externes nécessaire"
+        },
+        // Règles de protection patrimoniale
+        { 
+            id: "protection-patrimoine", 
+            when: function(r) { return r.cautionBancaire && r.bienImmobilier; },
+            exclude: ['micro-entreprise', 'ei'],
+            reason: "Protection patrimoniale complète requise"
+        }
+    ],
+    
+    /**
+     * Applique toutes les règles métier aux formes juridiques
+     */
+    applyRules: function(userResponses, formesJuridiques) {
+        // Structures exclues et requises par les règles
+        const excluded = new Set();
+        const required = new Set();
+        const preferred = new Set();
+        const appliedRules = [];
+        
+        // Référence pour l'utilisation dans les callbacks
+        const self = this;
+
+        // Appliquer chaque règle
+        this.rules.forEach(rule => {
+            // Utiliser bind pour conserver le contexte
+            if (rule.when.call(self, userResponses)) {
+                // Traiter les exclusions
+                if (rule.exclude) {
+                    rule.exclude.forEach(formId => excluded.add(formId));
+                }
+                
+                // Traiter les formes requises
+                if (rule.require) {
+                    rule.require.forEach(formId => required.add(formId));
+                }
+                
+                // Traiter les formes préférées
+                if (rule.prefer) {
+                    rule.prefer.forEach(formId => preferred.add(formId));
+                }
+                
+                // Enregistrer la règle appliquée
+                appliedRules.push({
+                    ruleId: rule.id,
+                    reason: rule.reason
+                });
+            }
+        });
+
+        // Filtrer les formes juridiques
+        const filteredForms = formesJuridiques.filter(form => {
+            if (excluded.has(form.id)) return false;
+            if (required.size > 0 && !required.has(form.id)) return false;
+            return true;
+        });
+
+        return {
+            filteredForms,
+            excluded: Array.from(excluded),
+            required: Array.from(required),
+            preferred: Array.from(preferred),
+            appliedRules
+        };
+    }
+};
+
+/**
  * Objet principal pour les simulations fiscales
  * Contient toutes les méthodes pour calculer l'impôt et les charges sociales
  */
@@ -924,82 +1037,32 @@ const SimulationsFiscales = {
 
 /**
  * Vérifie les incompatibilités majeures qui empêcheraient certaines formes juridiques
- * @param {Object} userResponses - Les réponses de l'utilisateur au questionnaire
- * @return {Array} - Liste des incompatibilités détectées
+ * Version améliorée utilisant le moteur de règles
  */
 function checkHardFails(userResponses) {
-    const fails = [];
+    // Appliquer les règles métier (simulation pour obtenir les règles appliquées)
+    // Note: la liste complète des formes n'est pas disponible ici, donc on utilise un tableau vide
+    const rulesResult = BusinessRules.applyRules(userResponses, []);
     
-    // Vérifications pour la micro-entreprise
-    if (userResponses.chiffreAffaires === 'eleve') {
-        fails.push({
-            formeId: 'micro-entreprise',
-            code: 'CA_TROP_ELEVE',
-            message: 'Le chiffre d\'affaires prévu dépasse les plafonds autorisés pour une micro-entreprise.',
-            details: 'Le régime micro-entreprise est limité à 176.200€ pour le commerce et 72.600€ pour les services et professions libérales.'
-        });
-    }
-    
-    // Vérifications pour les activités réglementées
-    if (userResponses.activiteReglementee) {
-        ['micro-entreprise', 'ei'].forEach(forme => {
-            fails.push({
-                formeId: forme,
-                code: 'ACTIVITE_REGLEMENTEE',
-                message: 'Cette forme juridique n\'est pas optimale pour une activité réglementée nécessitant des diplômes spécifiques.',
-                details: 'Les activités réglementées nécessitent généralement une structure plus formelle et complète.'
-            });
-        });
-    }
-    
-    // Vérifications pour les projets avec investisseurs
-    if (userResponses.profilEntrepreneur === 'investisseurs') {
-        ['micro-entreprise', 'ei', 'eirl'].forEach(forme => {
-            fails.push({
-                formeId: forme,
-                code: 'BESOIN_INVESTISSEURS',
-                message: 'Cette forme juridique ne permet pas d\'accueillir des investisseurs externes.',
-                details: 'Pour attirer des investisseurs, privilégiez des structures comme la SAS, SASU ou SA.'
-            });
-        });
-    }
-    
-    // Vérifications pour la protection patrimoniale comme priorité absolue
-    if (userResponses.protectionPatrimoine >= 5) {
-        ['snc', 'sci', 'scp', 'scm', 'sccv'].forEach(forme => {
-            fails.push({
-                formeId: forme,
-                code: 'PROTECTION_REQUISE',
-                message: 'La responsabilité des associés n\'est pas suffisamment limitée.',
-                details: 'Vous avez indiqué que la protection de votre patrimoine personnel est une priorité absolue.'
-            });
-        });
-    }
-    
-    // Vérifications pour les activités agricoles
-    if (userResponses.typeActivite === 'agricole') {
-        // Tous les statuts qui ne sont pas adaptés à l'agriculture
-        ['micro-entreprise', 'sas', 'sa', 'selarl', 'selas'].forEach(forme => {
-            fails.push({
-                formeId: forme,
-                code: 'ACTIVITE_AGRICOLE',
-                message: 'Cette forme juridique n\'est pas adaptée aux activités agricoles.',
-                details: 'Pour une activité agricole, privilégiez une structure spécifique comme le GAEC ou l\'EARL.'
-            });
-        });
-    }
-    
-    // Vérifications du TMI pour la stratégie fiscale
-    if (userResponses.tmiActuel && userResponses.tmiActuel >= 30 && userResponses.prioriteOptimisationFiscale) {
-        ['micro-entreprise', 'ei'].forEach(forme => {
-            fails.push({
-                formeId: forme,
-                code: 'TMI_ELEVEE',
-                message: 'Avec votre tranche marginale d\'imposition élevée, cette forme est fiscalement défavorable.',
-                details: 'Avec un TMI à ' + userResponses.tmiActuel + '%, privilégiez les structures à l\'IS comme la SASU ou EURL-IS.'
-            });
-        });
-    }
+    // Convertir les résultats au format attendu par le reste du code
+    const fails = rulesResult.appliedRules.map(rule => {
+        let formeIds = [];
+        
+        // Associer les bonnes formes exclues à chaque règle
+        if (rule.ruleId === "ca-micro") formeIds = ['micro-entreprise'];
+        else if (rule.ruleId === "ordre-pro") formeIds = ['micro-entreprise', 'ei'];
+        else if (rule.ruleId === "investisseurs") formeIds = ['micro-entreprise', 'ei', 'eurl'];
+        else if (rule.ruleId === "protection-patrimoine") formeIds = ['micro-entreprise', 'ei'];
+        else if (rule.ruleId === "multi-associes") formeIds = ['micro-entreprise', 'ei', 'eurl', 'sasu'];
+        
+        // Créer un tableau d'échecs pour chaque forme concernée
+        return formeIds.map(formeId => ({
+            formeId: formeId,
+            code: rule.ruleId,
+            message: rule.reason,
+            details: `Cette forme juridique n'est pas compatible avec vos besoins: ${rule.reason}`
+        }));
+    }).flat(); // Aplatir le tableau de tableaux
     
     return fails;
 }
@@ -1072,6 +1135,65 @@ function getAlternativesRecommandees(formeId, raison, formesJuridiques) {
     return alternatives;
 }
 
+/**
+ * Génère une explication en langage naturel pour la forme juridique recommandée
+ */
+function generateNaturalExplanation(forme, userResponses, simulation) {
+    // Détermine le niveau de compatibilité
+    const score = simulation.scoreDetails ? simulation.scoreDetails.pourcentage : 85;
+    const compatibilityLevel = score >= 90 ? "idéale" : 
+                               score >= 75 ? "très bien adaptée" : "bien adaptée";
+    
+    // Templates d'explications par type de forme juridique
+    const explanations = {
+        'micro-entreprise': `La micro-entreprise est ${compatibilityLevel} pour votre projet car elle offre simplicité administrative et coûts réduits. ${userResponses.tmiActuel <= 11 ? "Avec votre TMI actuelle de " + userResponses.tmiActuel + "%, ce régime est particulièrement avantageux fiscalement." : ""} ${userResponses.chiffreAffaires < BusinessRules.seuilMicro(userResponses.typeActivite) * 0.7 ? "Votre CA prévisionnel est confortablement sous le plafond autorisé." : "Attention, votre CA prévisionnel s'approche du plafond, une évolution du statut pourrait être nécessaire à moyen terme."}`,
+        
+        'ei': `L'Entreprise Individuelle est ${compatibilityLevel} pour votre projet car elle combine simplicité et déduction des frais réels. ${userResponses.tauxMarge > 20 ? "Avec votre taux de marge de " + userResponses.tauxMarge + "%, vous pourrez optimiser votre fiscalité grâce à la déduction des frais réels." : ""} Depuis 2022, elle offre également une meilleure protection de votre patrimoine personnel.`,
+        
+        'eurl': `L'EURL est ${compatibilityLevel} pour votre projet car elle offre une protection patrimoniale complète tout en étant adaptée à un entrepreneur solo. ${userResponses.tmiActuel >= 30 ? "Avec votre TMI actuelle de " + userResponses.tmiActuel + "%, l'option IS de l'EURL pourrait vous permettre une optimisation fiscale significative." : "Sa flexibilité fiscale (IR ou IS au choix) vous permettra d'adapter votre régime à l'évolution de votre activité."}`,
+        
+        'sasu': `La SASU est ${compatibilityLevel} pour votre projet car elle combine protection patrimoniale et statut social avantageux. ${userResponses.tmiActuel >= 30 ? "Avec votre TMI actuelle de " + userResponses.tmiActuel + "%, la fiscalité IS vous permet d'optimiser votre rémunération via l'arbitrage salaire/dividendes." : ""} ${userResponses.montantLevee > 0 ? "Sa structure est particulièrement adaptée pour accueillir des investisseurs et faciliter les levées de fonds." : ""} Le statut d'assimilé-salarié vous offre également une meilleure protection sociale.`
+    };
+    
+    // Explication par défaut si le template spécifique n'existe pas
+    const explanation = explanations[forme.id] || 
+        `La ${forme.nom} est ${compatibilityLevel} pour votre projet. Elle présente un bon équilibre entre protection juridique, optimisation fiscale et simplicité administrative pour votre situation.`;
+    
+    // Impact fiscal concret
+    const fiscalImpact = `
+        Avec un chiffre d'affaires annuel de ${simulation.simulation.revenuAnnuel.toLocaleString('fr-FR')} € 
+        et un taux de marge de ${userResponses.tauxMarge}%, vous pouvez espérer un revenu net annuel 
+        d'environ ${Math.round(simulation.simulation.revenueNet).toLocaleString('fr-FR')} € 
+        après charges sociales (${Math.round(simulation.simulation.chargesSociales).toLocaleString('fr-FR')} €) 
+        et impôts (${Math.round(simulation.simulation.impot).toLocaleString('fr-FR')} €).
+    `;
+    
+    return {
+        main: explanation,
+        fiscal: fiscalImpact,
+        tips: getFiscalOptimizationTips(forme, userResponses)
+    };
+}
+
+/**
+ * Fournit des conseils d'optimisation fiscale adaptés à la forme et au profil
+ */
+function getFiscalOptimizationTips(forme, userResponses) {
+    if (forme.id === 'sasu' || (forme.id === 'eurl' && forme.fiscalite === 'IS')) {
+        return `
+            Optimisez votre fiscalité en ajustant la répartition entre salaire et dividendes. 
+            ${userResponses.tmiActuel >= 30 ? "Avec votre TMI élevée, privilégiez les dividendes (PFU 30%) pour les revenus au-delà de vos besoins réguliers." : 
+            "Avec votre TMI modérée, un équilibre 70% salaire / 30% dividendes pourrait être optimal."}
+        `;
+    } else if (forme.id === 'micro-entreprise') {
+        return `
+            ${userResponses.tmiActuel <= 11 ? "Avec votre TMI faible, le versement libératoire de l'impôt est particulièrement avantageux." : 
+            "Surveillez régulièrement votre taux de charges réelles. Si elles dépassent l'abattement forfaitaire, envisagez de passer en EI au régime réel."}
+        `;
+    }
+    return "";
+}
+
 // Fonction de compatibilité pour garder la cohérence avec l'ancien code
 SimulationsFiscales.calculerStructureOptimale = function(profil) {
     // Adapter le format à la nouvelle méthode de calcul de scores
@@ -1098,3 +1220,5 @@ window.SimulationsFiscales = SimulationsFiscales;
 window.checkHardFails = checkHardFails;
 window.hasHardFail = hasHardFail;
 window.getAlternativesRecommandees = getAlternativesRecommandees;
+window.BusinessRules = BusinessRules;
+window.generateNaturalExplanation = generateNaturalExplanation;
