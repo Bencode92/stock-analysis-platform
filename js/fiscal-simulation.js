@@ -62,6 +62,42 @@ const baremesFiscaux = {
         "dividendes": {
             "pfu": 0.30,
             "abattement_40": true  // Abattement de 40% si option IR au lieu du PFU
+        },
+        // Ajout des exonérations par zones spécifiques
+        "exonerations_zones": {
+            "zfu": {
+                "duree_totale": 8, // 5 ans à 100%, puis dégressif sur 3 ans
+                "taux_exoneration": [1, 1, 1, 1, 1, 0.6, 0.4, 0.2]
+            },
+            "zrr": {
+                "duree_totale": 5,
+                "taux_exoneration": [1, 1, 1, 1, 1]
+            },
+            "outre_mer": {
+                "duree_totale": 10,
+                "taux_exoneration": [1, 1, 1, 1, 1, 0.9, 0.8, 0.7, 0.6, 0.5]
+            }
+        },
+        // Ajout des coûts d'assurance par profession
+        "assurances_pro": {
+            "garantie_decennale": {
+                "taux_ca": 0.05, // 5% du CA
+                "minimum": 1200   // minimum 1200€/an
+            },
+            "rcp_standard": {
+                "taux_ca": 0.01,  // 1% du CA
+                "minimum": 500    // minimum 500€/an
+            },
+            "rcp_forte": {
+                "taux_ca": 0.03,  // 3% du CA
+                "minimum": 1000   // minimum 1000€/an
+            }
+        },
+        // Ajout des données ACRE
+        "acre": {
+            "reduction_charges": 0.5, // Réduction de 50% des charges sociales
+            "duree_mois": 12,         // Sur 12 mois
+            "eligibilite": ["demandeur-emploi", "moins-30-ans", "handicap"]
         }
     }
 };
@@ -119,6 +155,75 @@ const BusinessRules = {
             when: function(r) { return r.cautionBancaire && r.bienImmobilier; },
             exclude: ['micro-entreprise', 'ei'],
             reason: "Protection patrimoniale complète requise"
+        },
+        // NOUVELLES RÈGLES AJOUTÉES
+        // Règle pour l'agrément ESUS
+        { 
+            id: "esus-statut", 
+            when: function(r) { return r.statutEsus; },
+            require: ['scic', 'scop', 'association', 'sas'],
+            exclude: ['micro-entreprise', 'ei', 'eurl', 'sasu'],
+            reason: "Agrément ESUS uniquement pour certaines structures"
+        },
+        // Règle pour les zones franches
+        { 
+            id: "zone-franche", 
+            when: function(r) { return r.zoneImplantation === 'zfu'; },
+            prefer: ['sarl', 'sa', 'sas', 'sasu'],
+            reason: "Exonérations IS en Zone Franche Urbaine"
+        },
+        // Règle pour activités nécessitant une garantie décennale
+        { 
+            id: "garantie-decennale", 
+            when: function(r) { return r.garantieDecennale; },
+            exclude: ['micro-entreprise'],
+            reason: "Garantie décennale obligatoire - risque élevé"
+        },
+        // Règle pour les holdings
+        { 
+            id: "structure-holding", 
+            when: function(r) { return r.structureHolding; },
+            require: ['sas', 'sa', 'sarl'],
+            exclude: ['micro-entreprise', 'ei', 'eurl', 'sasu'],
+            reason: "Structure de type holding avec filiales"
+        },
+        // Règle pour le régime matrimonial
+        {
+            id: "regime-communaute", 
+            when: function(r) { return r.estMarie && r.regimeMatrimonial === 'communaute-reduite'; },
+            prefer: ['sarl', 'sa', 'sas', 'sasu', 'eurl'],
+            reason: "Protection du patrimoine commun requise"
+        },
+        // Règle pour activités avec RCP obligatoire forte
+        { 
+            id: "rcp-forte", 
+            when: function(r) { return r.rcpObligatoire; },
+            exclude: ['micro-entreprise'],
+            prefer: ['sas', 'sarl', 'sa'],
+            reason: "Responsabilité civile professionnelle élevée requise"
+        },
+        // Règle pour multi-établissements
+        { 
+            id: "multi-sites", 
+            when: function(r) { return r.multiEtablissements; },
+            exclude: ['micro-entreprise', 'ei'],
+            prefer: ['sas', 'sa', 'sarl'],
+            reason: "Structure adaptée aux organisations multi-sites"
+        },
+        // Règle pour entreprise à mission
+        { 
+            id: "entreprise-mission", 
+            when: function(r) { return r.entrepriseMission; },
+            prefer: ['sas', 'scic', 'scop'],
+            reason: "Structure juridique compatible avec statut d'entreprise à mission"
+        },
+        // Règle pour apport de propriété intellectuelle
+        { 
+            id: "apport-pi", 
+            when: function(r) { return r.apportBrevet; },
+            exclude: ['micro-entreprise', 'ei'],
+            prefer: ['sas', 'sasu'],
+            reason: "Structure adaptée à l'apport de propriété intellectuelle"
         }
     ],
     
@@ -259,11 +364,34 @@ const SimulationsFiscales = {
     /**
      * Calcule l'impôt sur les sociétés
      * @param {number} benefice - Le bénéfice imposable en euros
+     * @param {Object} params - Paramètres additionnels (zone, année d'activité...)
      * @return {number} Montant de l'impôt sur les sociétés
      */
-    calculerIS: function(benefice) {
+    calculerIS: function(benefice, params = {}) {
         const bareme = this.getBaremeFiscal().IS;
         
+        // Vérifier les exonérations liées aux zones spécifiques
+        if (params.zoneImplantation && params.anneeActivite) {
+            const exonerations = this.getBaremeFiscal().exonerations_zones;
+            const zone = params.zoneImplantation; // zfu, zrr, outre_mer
+            
+            if (exonerations[zone] && params.anneeActivite <= exonerations[zone].duree_totale) {
+                const tauxExoneration = exonerations[zone].taux_exoneration[params.anneeActivite - 1];
+                
+                // Appliquer l'exonération
+                if (tauxExoneration === 1) return 0; // Exonération totale
+                
+                // Exonération partielle
+                if (benefice <= bareme.taux_reduit.jusqu_a) {
+                    return benefice * bareme.taux_reduit.taux * (1 - tauxExoneration);
+                } else {
+                    return (bareme.taux_reduit.jusqu_a * bareme.taux_reduit.taux + 
+                           (benefice - bareme.taux_reduit.jusqu_a) * bareme.taux_normal) * (1 - tauxExoneration);
+                }
+            }
+        }
+        
+        // Calcul standard sans exonération
         if (benefice <= bareme.taux_reduit.jusqu_a) {
             return benefice * bareme.taux_reduit.taux;
         } else {
@@ -276,21 +404,31 @@ const SimulationsFiscales = {
      * Calcule les charges sociales selon le régime social
      * @param {number} revenu - Le revenu en euros
      * @param {string} regimeSocial - Le régime social (TNS ou Assimilé salarié)
+     * @param {Object} params - Paramètres additionnels (ACRE, statut porteur...)
      * @return {number} Montant des charges sociales
      */
-    calculerChargesSociales: function(revenu, regimeSocial) {
+    calculerChargesSociales: function(revenu, regimeSocial, params = {}) {
         const bareme = this.getBaremeFiscal().cotisations;
+        let montantCharges = 0;
         
         if (regimeSocial === 'TNS' || regimeSocial.includes('TNS')) {
             // Taux moyen charges TNS
-            return revenu * bareme.TNS.taux_moyen;
+            montantCharges = revenu * bareme.TNS.taux_moyen;
         } else if (regimeSocial === 'Assimilé salarié' || regimeSocial.includes('salarié')) {
             // Part salariale + patronale
-            return revenu * bareme.assimile_salarie.total;
+            montantCharges = revenu * bareme.assimile_salarie.total;
+        } else {
+            // Taux par défaut
+            montantCharges = revenu * 0.65;
         }
         
-        // Taux par défaut
-        return revenu * 0.65;
+        // Appliquer l'ACRE si éligible
+        if (params.acreActif || (params.statutPorteur && bareme.acre.eligibilite.includes(params.statutPorteur))) {
+            const reductionAcre = bareme.acre.reduction_charges;
+            montantCharges = montantCharges * (1 - reductionAcre);
+        }
+        
+        return montantCharges;
     },
     
     /**
@@ -298,10 +436,18 @@ const SimulationsFiscales = {
      * @param {number} dividendes - Le montant des dividendes en euros
      * @param {boolean} optionIR - Si vrai, utilise l'option IR sinon PFU
      * @param {number} tmiActuel - Taux marginal d'imposition (optionnel)
+     * @param {Object} params - Paramètres additionnels (préférence PFU/barème)
      * @return {number} Montant de l'impôt sur les dividendes
      */
-    calculerImpotDividendes: function(dividendes, optionIR = false, tmiActuel = null) {
+    calculerImpotDividendes: function(dividendes, optionIR = false, tmiActuel = null, params = {}) {
         const bareme = this.getBaremeFiscal().dividendes;
+        
+        // Vérifier la préférence explicite pour le PFU ou barème progressif
+        if (params.preferenceDividendes === 'bareme') {
+            optionIR = true;
+        } else if (params.preferenceDividendes === 'pfu') {
+            optionIR = false;
+        }
         
         if (optionIR) {
             // Option IR avec abattement de 40%
@@ -311,6 +457,44 @@ const SimulationsFiscales = {
             // Prélèvement Forfaitaire Unique (flat tax)
             return dividendes * bareme.pfu;
         }
+    },
+    
+    /**
+     * Calcule les coûts d'assurance professionnelle obligatoire
+     * @param {Object} params - Paramètres avec les besoins d'assurance
+     * @param {number} ca - Chiffre d'affaires annuel
+     * @return {number} Coût annuel d'assurance
+     */
+    calculerCoutsAssurance: function(params, ca) {
+        const baremeAssurances = this.getBaremeFiscal().assurances_pro;
+        let coutTotal = 0;
+        
+        if (params.garantieDecennale) {
+            // Garantie décennale pour BTP
+            const coutDecennale = Math.max(
+                ca * baremeAssurances.garantie_decennale.taux_ca,
+                baremeAssurances.garantie_decennale.minimum
+            );
+            coutTotal += coutDecennale;
+        }
+        
+        if (params.rcpObligatoire) {
+            // RCP à forte couverture
+            const coutRCP = Math.max(
+                ca * baremeAssurances.rcp_forte.taux_ca,
+                baremeAssurances.rcp_forte.minimum
+            );
+            coutTotal += coutRCP;
+        } else if (params.besoinAssurance) {
+            // RCP standard
+            const coutRCPStandard = Math.max(
+                ca * baremeAssurances.rcp_standard.taux_ca,
+                baremeAssurances.rcp_standard.minimum
+            );
+            coutTotal += coutRCPStandard;
+        }
+        
+        return coutTotal;
     },
     
     /**
@@ -326,6 +510,7 @@ const SimulationsFiscales = {
             ratioSalaire: params.ratioSalaire || 50,
             ratioDividendes: params.ratioDividendes || 50,
             tmiActuel: params.tmiActuel || null,
+            anneeActivite: params.anneeActivite || 1,
             ...params
         };
         
@@ -343,12 +528,16 @@ const SimulationsFiscales = {
             regimeSocial: regimeSocial
         };
         
+        // Calcul des coûts d'assurance professionnelle
+        const coutAssurances = this.calculerCoutsAssurance(parametres, revenuAnnuel);
+        simulation.coutAssurances = coutAssurances;
+        
         // Calcul différent selon le régime fiscal
         if (regimeFiscal === 'IR') {
             // Cas de l'IR (entreprise individuelle, EURL à l'IR, etc.)
-            simulation.chargesSociales = this.calculerChargesSociales(revenuAnnuel, regimeSocial);
+            simulation.chargesSociales = this.calculerChargesSociales(revenuAnnuel, regimeSocial, parametres);
             simulation.impot = this.calculerIR(revenuAnnuel - simulation.chargesSociales, forme.id, parametres.tmiActuel);
-            simulation.revenueNet = revenuAnnuel - simulation.impot - simulation.chargesSociales;
+            simulation.revenueNet = revenuAnnuel - simulation.impot - simulation.chargesSociales - coutAssurances;
             
             // Détails pour affichage
             simulation.detailsCalcul = {
@@ -357,14 +546,22 @@ const SimulationsFiscales = {
                 tauxPrelevementsSociaux: Math.round((simulation.chargesSociales / revenuAnnuel) * 100),
                 ratioNetBrut: Math.round((simulation.revenueNet / revenuAnnuel) * 100)
             };
+            
+            // Avantages spécifiques (ACRE, zones franches)
+            if (parametres.statutPorteur === 'demandeur-emploi' && parametres.acreActif) {
+                simulation.avantageACRE = 'Réduction 50% des charges sociales (ACRE)';
+            }
         } else {
             // Cas de l'IS (SARL, SAS, SASU, etc.)
             
             // 1. Calcul du bénéfice (hypothèse: 80% du revenu)
             const benefice = revenuAnnuel * 0.8;
             
-            // 2. Calcul de l'IS sur ce bénéfice
-            simulation.impotSociete = this.calculerIS(benefice);
+            // 2. Calcul de l'IS sur ce bénéfice (avec prise en compte des zones spécifiques)
+            simulation.impotSociete = this.calculerIS(benefice, {
+                zoneImplantation: parametres.zoneImplantation,
+                anneeActivite: parametres.anneeActivite
+            });
             
             // 3. Répartition salaire/dividendes selon paramètres
             const ratioSalaire = parametres.ratioSalaire / 100;
@@ -374,17 +571,20 @@ const SimulationsFiscales = {
             const dividendes = Math.max(0, (benefice - simulation.impotSociete - salaire) * ratioDividendes);
             
             // 4. Calcul des charges sur le salaire
-            simulation.chargesSalariales = this.calculerChargesSociales(salaire, regimeSocial);
+            simulation.chargesSalariales = this.calculerChargesSociales(salaire, regimeSocial, parametres);
             simulation.impotSalaire = this.calculerIR(salaire - simulation.chargesSalariales, 'salaire', parametres.tmiActuel);
             
-            // 5. Calcul de l'impôt sur les dividendes (PFU 30%)
-            simulation.impotDividendes = this.calculerImpotDividendes(dividendes, false, parametres.tmiActuel);
+            // 5. Calcul de l'impôt sur les dividendes (PFU ou barème selon préférence)
+            simulation.impotDividendes = this.calculerImpotDividendes(dividendes, false, parametres.tmiActuel, {
+                preferenceDividendes: parametres.preferenceDividendes
+            });
             
             // Impôt total
             simulation.impot = simulation.impotSalaire + simulation.impotDividendes + simulation.impotSociete;
             
             // Revenu net
-            simulation.revenueNet = salaire - simulation.chargesSalariales - simulation.impotSalaire + dividendes - simulation.impotDividendes;
+            simulation.revenueNet = salaire - simulation.chargesSalariales - simulation.impotSalaire + 
+                                   dividendes - simulation.impotDividendes - coutAssurances;
             
             // Détails pour affichage
             simulation.detailsCalcul = {
@@ -398,6 +598,18 @@ const SimulationsFiscales = {
                 tauxImpositionGlobal: Math.round((simulation.impot / revenuAnnuel) * 100),
                 ratioNetBrut: Math.round((simulation.revenueNet / revenuAnnuel) * 100)
             };
+            
+            // Avantages spécifiques (zones franches, ESUS)
+            if (parametres.zoneImplantation === 'zfu' || parametres.zoneImplantation === 'zrr') {
+                const zone = parametres.zoneImplantation.toUpperCase();
+                simulation.avantageZone = `Exonération d'IS en ${zone}`;
+            }
+            
+            if (parametres.entrepriseMission || parametres.statutEsus) {
+                simulation.avantageStatut = parametres.entrepriseMission ? 
+                    'Entreprise à mission (engagement sociétal)' : 
+                    'Agrément ESUS (avantages fiscaux pour investisseurs)';
+            }
         }
         
         return simulation;
@@ -412,7 +624,9 @@ const SimulationsFiscales = {
         const {
             ca = 50000,
             typeMicro = 'BIC',
-            tmiActuel = null
+            tmiActuel = null,
+            statutPorteur = null,
+            zoneImplantation = null
         } = params;
         
         const bareme = this.getBaremeFiscal().micro_entreprise;
@@ -433,7 +647,14 @@ const SimulationsFiscales = {
         const beneficeImposable = ca - abattement;
         
         // Charges sociales (forfaitaires)
-        const cotisationsSociales = ca * bareme.charges_sociales[typeActivite];
+        let cotisationsSociales = ca * bareme.charges_sociales[typeActivite];
+        
+        // Appliquer l'ACRE si éligible
+        const acreEligible = statutPorteur === 'demandeur-emploi';
+        if (acreEligible) {
+            const reductionAcre = this.getBaremeFiscal().acre.reduction_charges;
+            cotisationsSociales = cotisationsSociales * (1 - reductionAcre);
+        }
         
         // Option versement libératoire pour TMI faible
         let impotRevenu = 0;
@@ -448,9 +669,12 @@ const SimulationsFiscales = {
             impotRevenu = this.calculerIR(beneficeImposable, 'standard', tmiActuel);
         }
         
+        // Calculer les coûts d'assurance (si applicable)
+        const coutAssurances = this.calculerCoutsAssurance(params, ca);
+        
         // Revenu net après prélèvements
-        const revenuNetApresImpot = ca - cotisationsSociales - impotRevenu;
-        const tauxPrelevementGlobal = (cotisationsSociales + impotRevenu) / ca;
+        const revenuNetApresImpot = ca - cotisationsSociales - impotRevenu - coutAssurances;
+        const tauxPrelevementGlobal = (cotisationsSociales + impotRevenu + coutAssurances) / ca;
         
         // Avantages et inconvénients
         const avantages = [
@@ -465,11 +689,27 @@ const SimulationsFiscales = {
             avantages.push(`Abattement forfaitaire important (${tauxAbattement * 100}%)`);
         }
         
+        if (acreEligible) {
+            avantages.push("Réduction de 50% des charges sociales (ACRE)");
+        }
+        
         const inconvenients = [
             "Protection sociale minimale",
-            "Plafond de chiffre d'affaires",
-            "Responsabilité illimitée"
+            "Plafond de chiffre d'affaires"
         ];
+        
+        // Ajouter les inconvénients spécifiques
+        if (params.garantieDecennale) {
+            inconvenients.push("Non adapté aux activités nécessitant une garantie décennale");
+        }
+        
+        if (params.multiEtablissements) {
+            inconvenients.push("Limité à un seul établissement");
+        }
+        
+        if (params.structureHolding) {
+            inconvenients.push("Incompatible avec une structure de type holding");
+        }
         
         return {
             compatible: true,
@@ -478,9 +718,11 @@ const SimulationsFiscales = {
             abattement: abattement,
             beneficeImposable: beneficeImposable,
             impotRevenu: impotRevenu,
+            coutAssurances: coutAssurances,
             revenuNetApresImpot: revenuNetApresImpot,
             tauxPrelevement: tauxPrelevementGlobal,
             optionVersementLiberatoire: optionVersementLiberatoire,
+            acreEligible: acreEligible,
             avantages: avantages,
             inconvenients: inconvenients
         };
@@ -495,7 +737,12 @@ const SimulationsFiscales = {
         const {
             ca = 50000,
             tauxMarge = 0.3,
-            tmiActuel = null
+            tmiActuel = null,
+            statutPorteur = null,
+            zoneImplantation = null,
+            garantieDecennale = false,
+            rcpObligatoire = false,
+            regimeMatrimonial = null
         } = params;
         
         // Calcul du bénéfice
@@ -503,13 +750,47 @@ const SimulationsFiscales = {
         const beneficeAvantCotisations = ca - charges;
         
         // Cotisations sociales TNS
-        const cotisationsSociales = beneficeAvantCotisations * this.getBaremeFiscal().cotisations.TNS.taux_moyen;
-        const beneficeImposable = beneficeAvantCotisations - cotisationsSociales;
+        let cotisationsSociales = beneficeAvantCotisations * this.getBaremeFiscal().cotisations.TNS.taux_moyen;
         
-        // Impôt sur le revenu
+        // Appliquer l'ACRE si éligible
+        const acreEligible = statutPorteur === 'demandeur-emploi';
+        if (acreEligible) {
+            const reductionAcre = this.getBaremeFiscal().acre.reduction_charges;
+            cotisationsSociales = cotisationsSociales * (1 - reductionAcre);
+        }
+        
+        // Calculer les coûts d'assurance
+        const coutAssurances = this.calculerCoutsAssurance({
+            garantieDecennale: garantieDecennale,
+            rcpObligatoire: rcpObligatoire
+        }, ca);
+        
+        const beneficeImposable = beneficeAvantCotisations - cotisationsSociales;
         const impotRevenu = this.calculerIR(beneficeImposable, 'standard', tmiActuel);
-        const revenuNetApresImpot = beneficeImposable - impotRevenu;
-        const tauxPrelevement = (cotisationsSociales + impotRevenu) / beneficeAvantCotisations;
+        const revenuNetApresImpot = beneficeImposable - impotRevenu - coutAssurances;
+        const tauxPrelevement = (cotisationsSociales + impotRevenu + coutAssurances) / beneficeAvantCotisations;
+        
+        // Avantages et inconvénients
+        const avantages = [
+            "Déduction des charges réelles",
+            "Comptabilité simplifiée sous certains seuils",
+            "Protection sociale TNS complète"
+        ];
+        
+        if (acreEligible) {
+            avantages.push("Réduction de 50% des charges sociales (ACRE)");
+        }
+        
+        const inconvenients = [
+            "Responsabilité sur patrimoine personnel",
+            "Imposition progressive à l'IR",
+            "Formalisme comptable plus important que micro-entreprise"
+        ];
+        
+        // Ajouter les inconvénients spécifiques au régime matrimonial
+        if (regimeMatrimonial === 'communaute-reduite' || regimeMatrimonial === 'communaute-universelle') {
+            inconvenients.push("Exposition du patrimoine commun aux risques professionnels");
+        }
         
         return {
             compatible: true,
@@ -517,20 +798,14 @@ const SimulationsFiscales = {
             charges: charges,
             beneficeAvantCotisations: beneficeAvantCotisations,
             cotisationsSociales: cotisationsSociales,
+            coutAssurances: coutAssurances,
             beneficeImposable: beneficeImposable,
             impotRevenu: impotRevenu,
             revenuNetApresImpot: revenuNetApresImpot,
             tauxPrelevement: tauxPrelevement,
-            avantages: [
-                "Déduction des charges réelles",
-                "Comptabilité simplifiée sous certains seuils",
-                "Protection sociale TNS complète"
-            ],
-            inconvenients: [
-                "Responsabilité illimitée sur patrimoine personnel",
-                "Imposition progressive à l'IR",
-                "Formalisme comptable plus important que micro-entreprise"
-            ]
+            acreEligible: acreEligible,
+            avantages: avantages,
+            inconvenients: inconvenients
         };
     },
     
@@ -546,7 +821,11 @@ const SimulationsFiscales = {
             tauxRemuneration = 0.7,
             optionIS = false,
             tmiActuel = null,
-            optionTNS = true
+            optionTNS = true,
+            statutPorteur = null,
+            zoneImplantation = null,
+            anneeActivite = 1,
+            preferenceDividendes = null
         } = params;
         
         // Calcul du résultat de la société
@@ -560,7 +839,17 @@ const SimulationsFiscales = {
         // Charges sociales selon statut
         const bareme = this.getBaremeFiscal().cotisations;
         const tauxCotisations = optionTNS ? bareme.TNS.taux_moyen : bareme.assimile_salarie.total;
-        const cotisationsSociales = remuneration * tauxCotisations;
+        let cotisationsSociales = remuneration * tauxCotisations;
+        
+        // Appliquer l'ACRE si éligible
+        const acreEligible = statutPorteur === 'demandeur-emploi';
+        if (acreEligible) {
+            const reductionAcre = this.getBaremeFiscal().acre.reduction_charges;
+            cotisationsSociales = cotisationsSociales * (1 - reductionAcre);
+        }
+        
+        // Calculer les coûts d'assurance
+        const coutAssurances = this.calculerCoutsAssurance(params, ca);
         
         // Résultats selon option fiscale (IR ou IS)
         if (optionIS) {
@@ -568,18 +857,38 @@ const SimulationsFiscales = {
             const remunerationNetteCotis = remuneration - (optionTNS ? cotisationsSociales : (remuneration * bareme.assimile_salarie.part_salariale));
             const remunerationNetteIR = remunerationNetteCotis - this.calculerIR(remunerationNetteCotis, 'standard', tmiActuel);
             
-            // IS sur résultat après rémunération
-            const tauxIS = resultatApresSalaire <= this.getBaremeFiscal().IS.taux_reduit.jusqu_a ? 
-                this.getBaremeFiscal().IS.taux_reduit.taux : this.getBaremeFiscal().IS.taux_normal;
-            const is = resultatApresSalaire * tauxIS;
+            // IS sur résultat après rémunération (avec exonérations zone)
+            const is = this.calculerIS(resultatApresSalaire, {
+                zoneImplantation: zoneImplantation,
+                anneeActivite: anneeActivite
+            });
+            
             const dividendesBruts = resultatApresSalaire - is;
             
-            // Flat tax sur dividendes
-            const prelevementForfaitaire = dividendesBruts * this.getBaremeFiscal().dividendes.pfu;
+            // Imposition dividendes selon préférence
+            const prelevementForfaitaire = this.calculerImpotDividendes(dividendesBruts, false, tmiActuel, {
+                preferenceDividendes: preferenceDividendes
+            });
+            
             const dividendesNets = dividendesBruts - prelevementForfaitaire;
             
-            const revenuNetTotal = remunerationNetteIR + dividendesNets;
+            const revenuNetTotal = remunerationNetteIR + dividendesNets - coutAssurances;
             const tauxPrelevement = 1 - (revenuNetTotal / resultatAvantRemuneration);
+            
+            // Avantages spécifiques
+            const avantages = [
+                "Responsabilité limitée au capital social",
+                "Optimisation possible via arbitrage rémunération/dividendes",
+                optionTNS ? "Protection sociale TNS" : "Statut assimilé salarié"
+            ];
+            
+            if (acreEligible) {
+                avantages.push("Réduction de 50% des charges sociales (ACRE)");
+            }
+            
+            if (zoneImplantation === 'zfu' || zoneImplantation === 'zrr') {
+                avantages.push(`Exonération d'IS en ${zoneImplantation.toUpperCase()}`);
+            }
             
             return {
                 compatible: true,
@@ -589,6 +898,7 @@ const SimulationsFiscales = {
                 resultatAvantRemuneration: resultatAvantRemuneration,
                 remuneration: remuneration,
                 cotisationsSociales: cotisationsSociales,
+                coutAssurances: coutAssurances,
                 remunerationNetteCotis: remunerationNetteCotis,
                 remunerationNetteIR: remunerationNetteIR,
                 is: is,
@@ -597,11 +907,10 @@ const SimulationsFiscales = {
                 dividendesNets: dividendesNets,
                 revenuNetTotal: revenuNetTotal,
                 tauxPrelevement: tauxPrelevement,
-                avantages: [
-                    "Responsabilité limitée au capital social",
-                    "Optimisation possible via arbitrage rémunération/dividendes",
-                    optionTNS ? "Protection sociale TNS" : "Statut assimilé salarié"
-                ],
+                acreEligible: acreEligible,
+                avantageZone: (zoneImplantation === 'zfu' || zoneImplantation === 'zrr') ? 
+                    `Exonération d'IS en ${zoneImplantation.toUpperCase()}` : null,
+                avantages: avantages,
                 inconvenients: [
                     "Double imposition des dividendes (IS + Flat tax)",
                     "Formalisme juridique et comptable plus important",
@@ -612,8 +921,19 @@ const SimulationsFiscales = {
             // EURL à l'IR (transparence fiscale)
             const beneficeImposable = resultatAvantRemuneration - cotisationsSociales;
             const impotRevenu = this.calculerIR(beneficeImposable, 'standard', tmiActuel);
-            const revenuNetApresImpot = beneficeImposable - impotRevenu;
-            const tauxPrelevement = (cotisationsSociales + impotRevenu) / resultatAvantRemuneration;
+            const revenuNetApresImpot = beneficeImposable - impotRevenu - coutAssurances;
+            const tauxPrelevement = (cotisationsSociales + impotRevenu + coutAssurances) / resultatAvantRemuneration;
+            
+            // Avantages spécifiques
+            const avantages = [
+                "Responsabilité limitée au capital social",
+                "Transparence fiscale (pas de double imposition)",
+                "Protection sociale TNS complète"
+            ];
+            
+            if (acreEligible) {
+                avantages.push("Réduction de 50% des charges sociales (ACRE)");
+            }
             
             return {
                 compatible: true,
@@ -622,15 +942,13 @@ const SimulationsFiscales = {
                 charges: charges,
                 resultatAvantRemuneration: resultatAvantRemuneration,
                 cotisationsSociales: cotisationsSociales,
+                coutAssurances: coutAssurances,
                 beneficeImposable: beneficeImposable,
                 impotRevenu: impotRevenu,
                 revenuNetApresImpot: revenuNetApresImpot,
                 tauxPrelevement: tauxPrelevement,
-                avantages: [
-                    "Responsabilité limitée au capital social",
-                    "Transparence fiscale (pas de double imposition)",
-                    "Protection sociale TNS complète"
-                ],
+                acreEligible: acreEligible,
+                avantages: avantages,
                 inconvenients: [
                     "Imposition progressive à l'IR",
                     "Formalisme juridique et comptable important",
@@ -650,7 +968,13 @@ const SimulationsFiscales = {
             ca = 50000,
             tauxMarge = 0.3,
             tauxRemuneration = 0.7,
-            tmiActuel = null
+            tmiActuel = null,
+            statutPorteur = null,
+            zoneImplantation = null,
+            anneeActivite = 1,
+            preferenceDividendes = null,
+            apportBrevet = false,
+            protectionSociale = null
         } = params;
         
         // Calcul du résultat de la société
@@ -664,34 +988,68 @@ const SimulationsFiscales = {
         // Charges sociales assimilé salarié
         const bareme = this.getBaremeFiscal().cotisations.assimile_salarie;
         const chargesPatronales = remuneration * bareme.part_patronale;
-        const chargesSalariales = remuneration * bareme.part_salariale;
+        let chargesSalariales = remuneration * bareme.part_salariale;
+        
+        // Aucune réduction ACRE pour assimilé salarié
+        
+        // Calculer les coûts d'assurance
+        const coutAssurances = this.calculerCoutsAssurance(params, ca);
+        
         const remunerationNetteCotis = remuneration - chargesSalariales;
         
         // IR sur la rémunération
         const impotRevenu = this.calculerIR(remunerationNetteCotis, 'standard', tmiActuel);
         const remunerationNetteIR = remunerationNetteCotis - impotRevenu;
         
-        // IS sur le résultat après rémunération
-        const tauxIS = resultatApresSalaire <= this.getBaremeFiscal().IS.taux_reduit.jusqu_a ? 
-            this.getBaremeFiscal().IS.taux_reduit.taux : this.getBaremeFiscal().IS.taux_normal;
-        const is = resultatApresSalaire * tauxIS;
+        // IS sur le résultat après rémunération (avec zones spécifiques)
+        const is = this.calculerIS(resultatApresSalaire, {
+            zoneImplantation: zoneImplantation,
+            anneeActivite: anneeActivite
+        });
+        
         const dividendesBruts = resultatApresSalaire - is;
         
-        // Flat tax sur dividendes
-        const prelevementForfaitaire = dividendesBruts * this.getBaremeFiscal().dividendes.pfu;
+        // Imposition dividendes selon préférence
+        const prelevementForfaitaire = this.calculerImpotDividendes(dividendesBruts, false, tmiActuel, {
+            preferenceDividendes: preferenceDividendes
+        });
+        
         const dividendesNets = dividendesBruts - prelevementForfaitaire;
         
-        const revenuNetTotal = remunerationNetteIR + dividendesNets;
+        const revenuNetTotal = remunerationNetteIR + dividendesNets - coutAssurances;
         const tauxPrelevement = 1 - (revenuNetTotal / resultatAvantRemuneration);
         
-        // Optimisation selon TMI
+        // Optimisation selon TMI et préférence pour la protection sociale
         let optimisationConseillée = "";
         if (tmiActuel !== null) {
-            if (tmiActuel >= 30) {
+            if (tmiActuel >= 30 && preferenceDividendes !== 'bareme') {
                 optimisationConseillée = "Augmenter la part des dividendes (moins taxés à la flat tax 30% que la rémunération)";
-            } else {
+            } else if (tmiActuel < 30 && preferenceDividendes !== 'pfu') {
                 optimisationConseillée = "Augmenter la part de la rémunération (moins taxée à l'IR que les dividendes avec flat tax)";
             }
+        }
+        
+        if (protectionSociale === 'retraite') {
+            optimisationConseillée += optimisationConseillée ? " • " : "";
+            optimisationConseillée += "Favoriser la rémunération en salaire pour maximiser les droits retraite";
+        } else if (protectionSociale === 'charges') {
+            optimisationConseillée += optimisationConseillée ? " • " : "";
+            optimisationConseillée += "Optimiser via dividendes pour réduire les charges sociales globales";
+        }
+        
+        // Avantages spécifiques
+        const avantages = [
+            "Responsabilité limitée au capital social",
+            "Statut d'assimilé salarié (meilleure protection sociale)",
+            "Flexibilité pour l'entrée d'investisseurs"
+        ];
+        
+        if (apportBrevet) {
+            avantages.push("Structure adaptée pour valoriser la propriété intellectuelle");
+        }
+        
+        if (zoneImplantation === 'zfu' || zoneImplantation === 'zrr') {
+            avantages.push(`Exonération d'IS en ${zoneImplantation.toUpperCase()}`);
         }
         
         return {
@@ -702,6 +1060,7 @@ const SimulationsFiscales = {
             remuneration: remuneration,
             chargesPatronales: chargesPatronales,
             chargesSalariales: chargesSalariales,
+            coutAssurances: coutAssurances,
             remunerationNetteCotis: remunerationNetteCotis,
             remunerationNetteIR: remunerationNetteIR,
             is: is,
@@ -711,11 +1070,10 @@ const SimulationsFiscales = {
             revenuNetTotal: revenuNetTotal,
             tauxPrelevement: tauxPrelevement,
             optimisationConseillée: optimisationConseillée,
-            avantages: [
-                "Responsabilité limitée au capital social",
-                "Statut d'assimilé salarié (meilleure protection sociale)",
-                "Flexibilité pour l'entrée d'investisseurs et BSPCE possible"
-            ],
+            apportBrevetAvantage: apportBrevet,
+            avantageZone: (zoneImplantation === 'zfu' || zoneImplantation === 'zrr') ? 
+                `Exonération d'IS en ${zoneImplantation.toUpperCase()}` : null,
+            avantages: avantages,
             inconvenients: [
                 "Double imposition des dividendes (IS + Flat tax)",
                 "Charges sociales élevées sur la rémunération",
@@ -737,31 +1095,53 @@ const SimulationsFiscales = {
             tmiActuel,
             typeMicro = 'BIC',
             tauxRemuneration = 0.7,
-            horizon
+            horizon,
+            statutPorteur = null,
+            zoneImplantation = null,
+            regimeMatrimonial = null,
+            garantieDecennale = false,
+            rcpObligatoire = false,
+            multiEtablissements = false,
+            preferenceDividendes = null,
+            protectionSociale = null
         } = params;
         
         // Calculer les CA intermédiaires avec une progression linéaire
         const caAnnee2 = caAnnee1 + (caAnnee3 - caAnnee1) / 2;
         
+        // Paramètres communs pour toutes les simulations
+        const parametresCommuns = {
+            tmiActuel,
+            statutPorteur,
+            zoneImplantation,
+            regimeMatrimonial,
+            garantieDecennale,
+            rcpObligatoire,
+            multiEtablissements,
+            preferenceDividendes,
+            protectionSociale,
+            tauxRemuneration
+        };
+        
         // Simulations pour chaque année
         const resultats = {
             annee1: {
-                micro: this.simulerMicroEntreprise({ca: caAnnee1, typeMicro, tmiActuel}),
-                ei: this.simulerEI({ca: caAnnee1, tauxMarge, tmiActuel}),
-                eurl: this.simulerEURL({ca: caAnnee1, tauxMarge, tauxRemuneration, tmiActuel}),
-                sasu: this.simulerSASU({ca: caAnnee1, tauxMarge, tauxRemuneration, tmiActuel})
+                micro: this.simulerMicroEntreprise({ca: caAnnee1, typeMicro, anneeActivite: 1, ...parametresCommuns}),
+                ei: this.simulerEI({ca: caAnnee1, tauxMarge, anneeActivite: 1, ...parametresCommuns}),
+                eurl: this.simulerEURL({ca: caAnnee1, tauxMarge, anneeActivite: 1, ...parametresCommuns}),
+                sasu: this.simulerSASU({ca: caAnnee1, tauxMarge, anneeActivite: 1, ...parametresCommuns})
             },
             annee2: {
-                micro: this.simulerMicroEntreprise({ca: caAnnee2, typeMicro, tmiActuel}),
-                ei: this.simulerEI({ca: caAnnee2, tauxMarge, tmiActuel}),
-                eurl: this.simulerEURL({ca: caAnnee2, tauxMarge, tauxRemuneration, tmiActuel}),
-                sasu: this.simulerSASU({ca: caAnnee2, tauxMarge, tauxRemuneration, tmiActuel})
+                micro: this.simulerMicroEntreprise({ca: caAnnee2, typeMicro, anneeActivite: 2, ...parametresCommuns}),
+                ei: this.simulerEI({ca: caAnnee2, tauxMarge, anneeActivite: 2, ...parametresCommuns}),
+                eurl: this.simulerEURL({ca: caAnnee2, tauxMarge, anneeActivite: 2, ...parametresCommuns}),
+                sasu: this.simulerSASU({ca: caAnnee2, tauxMarge, anneeActivite: 2, ...parametresCommuns})
             },
             annee3: {
-                micro: this.simulerMicroEntreprise({ca: caAnnee3, typeMicro, tmiActuel}),
-                ei: this.simulerEI({ca: caAnnee3, tauxMarge, tmiActuel}),
-                eurl: this.simulerEURL({ca: caAnnee3, tauxMarge, tauxRemuneration, tmiActuel}),
-                sasu: this.simulerSASU({ca: caAnnee3, tauxMarge, tauxRemuneration, tmiActuel})
+                micro: this.simulerMicroEntreprise({ca: caAnnee3, typeMicro, anneeActivite: 3, ...parametresCommuns}),
+                ei: this.simulerEI({ca: caAnnee3, tauxMarge, anneeActivite: 3, ...parametresCommuns}),
+                eurl: this.simulerEURL({ca: caAnnee3, tauxMarge, anneeActivite: 3, ...parametresCommuns}),
+                sasu: this.simulerSASU({ca: caAnnee3, tauxMarge, anneeActivite: 3, ...parametresCommuns})
             }
         };
         
@@ -809,9 +1189,29 @@ const SimulationsFiscales = {
             revenuMaxCumule = cumulSur3Ans.sasu.revenuNetCumule;
         }
         
-        // Adapter la recommandation selon l'horizon
+        // Facteurs spécifiques pouvant influencer la recommandation
+        const facteursSpecifiques = [];
+        
+        if (garantieDecennale || rcpObligatoire) {
+            facteursSpecifiques.push("Activité à risque nécessitant une forte couverture d'assurance");
+        }
+        
+        if (zoneImplantation === 'zfu' || zoneImplantation === 'zrr') {
+            facteursSpecifiques.push(`Implantation en zone ${zoneImplantation.toUpperCase()} (avantages fiscaux)`);
+        }
+        
+        if (multiEtablissements) {
+            facteursSpecifiques.push("Organisation multi-établissements prévue");
+        }
+        
+        if (regimeMatrimonial === 'communaute-reduite') {
+            facteursSpecifiques.push("Protection du patrimoine familial en régime de communauté");
+        }
+        
+        // Adapter la recommandation selon l'horizon et facteurs spécifiques
         let recommandationHorizon = structurePlusRentable;
-        if (horizon === 'court' && resultats.annee1.micro.compatible) {
+        
+        if (horizon === 'court' && resultats.annee1.micro.compatible && !garantieDecennale && !rcpObligatoire) {
             // Pour un horizon court, privilégier la simplicité si micro est compatible
             recommandationHorizon = 'micro';
         } else if (horizon === 'long' && (structurePlusRentable === 'eurl' || structurePlusRentable === 'sasu')) {
@@ -819,11 +1219,17 @@ const SimulationsFiscales = {
             recommandationHorizon = structurePlusRentable;
         }
         
+        // Si statut porteur est "demandeur d'emploi", ajouter avantage ACRE
+        if (statutPorteur === 'demandeur-emploi') {
+            facteursSpecifiques.push("Eligibilité à l'ACRE (réduction de charges sociales)");
+        }
+        
         return {
             resultatsAnnuels: resultats,
             cumulSur3Ans: cumulSur3Ans,
             structurePlusRentable: structurePlusRentable,
-            recommandationHorizon: recommandationHorizon
+            recommandationHorizon: recommandationHorizon,
+            facteursSpecifiques: facteursSpecifiques
         };
     },
     
@@ -847,7 +1253,21 @@ const SimulationsFiscales = {
             preferenceSimplicite = false,
             preferenceOptimisationFiscale = false,
             caAnnee1,
-            caAnnee3
+            caAnnee3,
+            // Nouveaux paramètres
+            statutPorteur = null,
+            zoneImplantation = null,
+            regimeMatrimonial = null,
+            garantieDecennale = false,
+            rcpObligatoire = false,
+            multiEtablissements = false,
+            structureHolding = false,
+            entrepriseMission = false,
+            statutEsus = false,
+            apportBrevet = false,
+            apportMateriel = false,
+            protectionSociale = null,
+            preferenceDividendes = null
         } = params;
         
         // Initialiser les scores
@@ -856,7 +1276,11 @@ const SimulationsFiscales = {
             ei: 50,
             eurl: 50,
             eurlIS: 50,
-            sasu: 50
+            sasu: 50,
+            sas: 50,
+            sarl: 50,
+            scop: 40,
+            scic: 40
         };
         
         // 1. Vérifier les seuils des régimes micro
@@ -918,6 +1342,8 @@ const SimulationsFiscales = {
             scores.eurl += 5;
             scores.eurlIS += 10;
             scores.sasu += 10;
+            scores.sarl += 15;
+            scores.sas += 15;
         }
         
         if (investisseurs) {
@@ -926,6 +1352,7 @@ const SimulationsFiscales = {
             scores.eurl -= 10;
             scores.eurlIS += 10;
             scores.sasu += 20;
+            scores.sas += 25;
         }
         
         // 6. Besoin de protection patrimoniale
@@ -978,9 +1405,97 @@ const SimulationsFiscales = {
             scores.micro -= 10;
             scores.eurlIS += 5;
             scores.sasu += 10;
+            scores.sas += 15;
         }
         
-        // 11. Plafond les scores entre 0 et 100
+        // 11. NOUVEAUX FACTEURS
+        
+        // Statut du porteur (ACRE)
+        if (statutPorteur === 'demandeur-emploi') {
+            // L'ACRE bénéficie principalement aux TNS
+            scores.micro += 10;
+            scores.ei += 10;
+            scores.eurl += 5;
+        }
+        
+        // Zone géographique spécifique
+        if (zoneImplantation === 'zfu' || zoneImplantation === 'zrr') {
+            // Avantages IS en zones franches
+            scores.eurlIS += 15;
+            scores.sasu += 15;
+            scores.sas += 15;
+            scores.sarl += 15;
+        }
+        
+        // Régime matrimonial
+        if (regimeMatrimonial === 'communaute-reduite' || regimeMatrimonial === 'communaute-universelle') {
+            // Protection du patrimoine commun importante
+            scores.micro -= 15;
+            scores.ei -= 15;
+            scores.eurl += 10;
+            scores.sasu += 10;
+            scores.sas += 10;
+        }
+        
+        // Garantie décennale ou RCP forte
+        if (garantieDecennale || rcpObligatoire) {
+            scores.micro -= 30;
+            scores.ei -= 10;
+            scores.eurlIS += 5;
+            scores.sasu += 5;
+            scores.sarl += 5;
+        }
+        
+        // Organisation multi-établissements
+        if (multiEtablissements) {
+            scores.micro -= 25;
+            scores.ei -= 20;
+            scores.eurl -= 5;
+            scores.sas += 15;
+            scores.sarl += 10;
+        }
+        
+        // Structure holding
+        if (structureHolding) {
+            scores.micro -= 50;
+            scores.ei -= 50;
+            scores.eurl -= 30;
+            scores.sasu -= 10;
+            scores.sas += 25;
+            scores.sarl += 15;
+        }
+        
+        // Entreprise à mission ou ESUS
+        if (entrepriseMission || statutEsus) {
+            scores.sas += 20;
+            scores.scic += 30;
+            scores.scop += 25;
+        }
+        
+        // Apport de brevet ou propriété intellectuelle
+        if (apportBrevet) {
+            scores.micro -= 20;
+            scores.ei -= 10;
+            scores.sasu += 15;
+            scores.sas += 15;
+        }
+        
+        // Préférence dividendes et protection sociale
+        if (preferenceDividendes === 'pfu' && tmiActuel >= 30) {
+            scores.eurlIS += 10;
+            scores.sasu += 15;
+        }
+        
+        if (protectionSociale === 'retraite') {
+            scores.sasu += 10;
+            scores.ei -= 5;
+        } else if (protectionSociale === 'charges') {
+            scores.micro += 5;
+            scores.ei += 5;
+            scores.sasu -= 10;
+        }
+        
+        // 12. Plafond les scores entre 0 et 100
         for (const structure in scores) {
             scores[structure] = Math.max(0, Math.min(100, scores[structure]));
         }
@@ -1026,6 +1541,31 @@ const SimulationsFiscales = {
             });
         }
         
+        if (garantieDecennale && (structureIdeale === 'micro' || challengers.includes('micro'))) {
+            incompatibilites.push({
+                structure: 'micro',
+                raison: 'Incompatible avec garantie décennale obligatoire',
+                solution: 'Opter pour une structure avec responsabilité limitée'
+            });
+        }
+        
+        if (multiEtablissements && (structureIdeale === 'micro' || challengers.includes('micro'))) {
+            incompatibilites.push({
+                structure: 'micro',
+                raison: 'Incompatible avec organisation multi-établissements',
+                solution: 'Opter pour SAS ou SARL'
+            });
+        }
+        
+        if (structureHolding && (structureIdeale === 'micro' || structureIdeale === 'ei' || 
+            challengers.includes('micro') || challengers.includes('ei'))) {
+            incompatibilites.push({
+                structure: 'micro/ei',
+                raison: 'Incompatible avec structure holding',
+                solution: 'Opter pour SAS ou SARL'
+            });
+        }
+        
         return {
             scores: scores,
             structureIdeale: structureIdeale,
@@ -1048,12 +1588,47 @@ function checkHardFails(userResponses) {
     const fails = rulesResult.appliedRules.map(rule => {
         let formeIds = [];
         
-        // Associer les bonnes formes exclues à chaque règle
-        if (rule.ruleId === "ca-micro") formeIds = ['micro-entreprise'];
-        else if (rule.ruleId === "ordre-pro") formeIds = ['micro-entreprise', 'ei'];
-        else if (rule.ruleId === "investisseurs") formeIds = ['micro-entreprise', 'ei', 'eurl'];
-        else if (rule.ruleId === "protection-patrimoine") formeIds = ['micro-entreprise', 'ei'];
-        else if (rule.ruleId === "multi-associes") formeIds = ['micro-entreprise', 'ei', 'eurl', 'sasu'];
+        // Associer les bonnes formes exclues à chaque règle selon l'ID de règle
+        switch(rule.ruleId) {
+            case "ca-micro":
+                formeIds = ['micro-entreprise'];
+                break;
+            case "ordre-pro":
+                formeIds = ['micro-entreprise', 'ei'];
+                break;
+            case "investisseurs":
+                formeIds = ['micro-entreprise', 'ei', 'eurl'];
+                break;
+            case "protection-patrimoine":
+                formeIds = ['micro-entreprise', 'ei'];
+                break;
+            case "multi-associes":
+                formeIds = ['micro-entreprise', 'ei', 'eurl', 'sasu'];
+                break;
+            case "esus-statut":
+                formeIds = ['micro-entreprise', 'ei', 'eurl', 'sasu'];
+                break;
+            case "garantie-decennale":
+                formeIds = ['micro-entreprise'];
+                break;
+            case "structure-holding":
+                formeIds = ['micro-entreprise', 'ei', 'eurl', 'sasu'];
+                break;
+            case "multi-sites":
+                formeIds = ['micro-entreprise', 'ei'];
+                break;
+            case "rcp-forte":
+                formeIds = ['micro-entreprise'];
+                break;
+            case "regime-communaute":
+                formeIds = ['micro-entreprise', 'ei'];
+                break;
+            case "apport-pi":
+                formeIds = ['micro-entreprise', 'ei'];
+                break;
+            default:
+                return [];
+        }
         
         // Créer un tableau d'échecs pour chaque forme concernée
         return formeIds.map(formeId => ({
@@ -1089,6 +1664,7 @@ function getAlternativesRecommandees(formeId, raison, formesJuridiques) {
     
     switch(raison) {
         case 'ACTIVITE_REGLEMENTEE':
+        case 'ordre-pro':
             alternatives = formesJuridiques.filter(f => 
                 (f.categorie.includes('Libérale') && f.responsabilite.includes('Limitée')) ||
                 ['eurl', 'sasu'].includes(f.id)
@@ -1096,18 +1672,22 @@ function getAlternativesRecommandees(formeId, raison, formesJuridiques) {
             break;
             
         case 'CA_TROP_ELEVE':
+        case 'ca-micro':
             alternatives = formesJuridiques.filter(f => 
                 f.id === 'eurl' || f.id === 'sasu'
             );
             break;
             
         case 'BESOIN_INVESTISSEURS':
+        case 'investisseurs':
             alternatives = formesJuridiques.filter(f => 
                 f.leveeFonds === 'Oui'
             ).slice(0, 2);
             break;
             
         case 'PROTECTION_REQUISE':
+        case 'protection-patrimoine':
+        case 'regime-communaute':
             alternatives = formesJuridiques.filter(f => 
                 f.protectionPatrimoine === 'Oui' && ['sarl', 'sas', 'sasu', 'eurl'].includes(f.id)
             ).slice(0, 2);
@@ -1122,6 +1702,33 @@ function getAlternativesRecommandees(formeId, raison, formesJuridiques) {
         case 'TMI_ELEVEE':
             alternatives = formesJuridiques.filter(f => 
                 f.fiscalite.includes('IS') && ['sasu', 'sas', 'eurl'].includes(f.id)
+            ).slice(0, 2);
+            break;
+            
+        case 'garantie-decennale':
+        case 'rcp-forte':
+            alternatives = formesJuridiques.filter(f => 
+                f.responsabilite.includes('Limitée') && ['eurl', 'sarl', 'sas', 'sasu'].includes(f.id)
+            ).slice(0, 2);
+            break;
+            
+        case 'multi-sites':
+        case 'structure-holding':
+            alternatives = formesJuridiques.filter(f => 
+                ['sas', 'sa', 'sarl'].includes(f.id)
+            ).slice(0, 2);
+            break;
+            
+        case 'esus-statut':
+        case 'entreprise-mission':
+            alternatives = formesJuridiques.filter(f => 
+                ['sas', 'scic', 'scop'].includes(f.id)
+            ).slice(0, 2);
+            break;
+            
+        case 'apport-pi':
+            alternatives = formesJuridiques.filter(f => 
+                ['sas', 'sasu'].includes(f.id)
             ).slice(0, 2);
             break;
             
@@ -1146,18 +1753,18 @@ function generateNaturalExplanation(forme, userResponses, simulation) {
     
     // Templates d'explications par type de forme juridique
     const explanations = {
-        'micro-entreprise': `La micro-entreprise est ${compatibilityLevel} pour votre projet car elle offre simplicité administrative et coûts réduits. ${userResponses.tmiActuel <= 11 ? "Avec votre TMI actuelle de " + userResponses.tmiActuel + "%, ce régime est particulièrement avantageux fiscalement." : ""} ${userResponses.chiffreAffaires < BusinessRules.seuilMicro(userResponses.typeActivite) * 0.7 ? "Votre CA prévisionnel est confortablement sous le plafond autorisé." : "Attention, votre CA prévisionnel s'approche du plafond, une évolution du statut pourrait être nécessaire à moyen terme."}`,
+        'micro-entreprise': `La micro-entreprise est ${compatibilityLevel} pour votre projet car elle offre simplicité administrative et coûts réduits. ${userResponses.tmiActuel <= 11 ? "Avec votre TMI actuelle de " + userResponses.tmiActuel + "%, ce régime est particulièrement avantageux fiscalement." : ""} ${userResponses.chiffreAffaires < BusinessRules.seuilMicro(userResponses.typeActivite) * 0.7 ? "Votre CA prévisionnel est confortablement sous le plafond autorisé." : "Attention, votre CA prévisionnel s'approche du plafond, une évolution du statut pourrait être nécessaire à moyen terme."}${userResponses.statutPorteur === 'demandeur-emploi' ? " En tant que demandeur d'emploi, vous êtes éligible à l'ACRE qui réduit vos charges sociales de 50% la première année." : ""}`,
         
-        'ei': `L'Entreprise Individuelle est ${compatibilityLevel} pour votre projet car elle combine simplicité et déduction des frais réels. ${userResponses.tauxMarge > 20 ? "Avec votre taux de marge de " + userResponses.tauxMarge + "%, vous pourrez optimiser votre fiscalité grâce à la déduction des frais réels." : ""} Depuis 2022, elle offre également une meilleure protection de votre patrimoine personnel.`,
+        'ei': `L'Entreprise Individuelle est ${compatibilityLevel} pour votre projet car elle combine simplicité et déduction des frais réels. ${userResponses.tauxMarge > 20 ? "Avec votre taux de marge de " + userResponses.tauxMarge + "%, vous pourrez optimiser votre fiscalité grâce à la déduction des frais réels." : ""} Depuis 2022, elle offre également une meilleure protection de votre patrimoine personnel.${userResponses.statutPorteur === 'demandeur-emploi' ? " En tant que demandeur d'emploi, l'ACRE vous permet de réduire vos charges sociales de 50% la première année." : ""}${userResponses.regimeMatrimonial === 'communaute-reduite' ? " Attention toutefois à votre régime matrimonial en communauté qui peut exposer partiellement le patrimoine commun." : ""}`,
         
-        'eurl': `L'EURL est ${compatibilityLevel} pour votre projet car elle offre une protection patrimoniale complète tout en étant adaptée à un entrepreneur solo. ${userResponses.tmiActuel >= 30 ? "Avec votre TMI actuelle de " + userResponses.tmiActuel + "%, l'option IS de l'EURL pourrait vous permettre une optimisation fiscale significative." : "Sa flexibilité fiscale (IR ou IS au choix) vous permettra d'adapter votre régime à l'évolution de votre activité."}`,
+        'eurl': `L'EURL est ${compatibilityLevel} pour votre projet car elle offre une protection patrimoniale complète tout en étant adaptée à un entrepreneur solo. ${userResponses.tmiActuel >= 30 ? "Avec votre TMI actuelle de " + userResponses.tmiActuel + "%, l'option IS de l'EURL pourrait vous permettre une optimisation fiscale significative." : "Sa flexibilité fiscale (IR ou IS au choix) vous permettra d'adapter votre régime à l'évolution de votre activité."}${userResponses.statutPorteur === 'demandeur-emploi' ? " En tant que demandeur d'emploi, vous pouvez bénéficier de l'ACRE pour réduire vos charges sociales TNS de 50% la première année." : ""}${userResponses.zoneImplantation === 'zfu' || userResponses.zoneImplantation === 'zrr' ? ` Votre implantation en zone ${userResponses.zoneImplantation.toUpperCase()} vous permet de bénéficier d'exonérations d'IS pendant plusieurs années.` : ""}`,
         
-        'sasu': `La SASU est ${compatibilityLevel} pour votre projet car elle combine protection patrimoniale et statut social avantageux. ${userResponses.tmiActuel >= 30 ? "Avec votre TMI actuelle de " + userResponses.tmiActuel + "%, la fiscalité IS vous permet d'optimiser votre rémunération via l'arbitrage salaire/dividendes." : ""} ${userResponses.montantLevee > 0 ? "Sa structure est particulièrement adaptée pour accueillir des investisseurs et faciliter les levées de fonds." : ""} Le statut d'assimilé-salarié vous offre également une meilleure protection sociale.`
+        'sasu': `La SASU est ${compatibilityLevel} pour votre projet car elle combine protection patrimoniale et statut social avantageux. ${userResponses.tmiActuel >= 30 ? "Avec votre TMI actuelle de " + userResponses.tmiActuel + "%, la fiscalité IS vous permet d'optimiser votre rémunération via l'arbitrage salaire/dividendes." : ""} ${userResponses.montantLevee > 0 ? "Sa structure est particulièrement adaptée pour accueillir des investisseurs et faciliter les levées de fonds." : ""} Le statut d'assimilé-salarié vous offre également une meilleure protection sociale.${userResponses.zoneImplantation === 'zfu' || userResponses.zoneImplantation === 'zrr' ? ` Votre implantation en zone ${userResponses.zoneImplantation.toUpperCase()} vous donne droit à des exonérations d'IS sur plusieurs années.` : ""}${userResponses.apportBrevet ? " Elle est également idéale pour valoriser votre propriété intellectuelle." : ""}${userResponses.protectionSociale === 'retraite' ? " Ce statut vous permettra de maximiser vos droits à la retraite grâce au régime général." : ""}`
     };
     
     // Explication par défaut si le template spécifique n'existe pas
     const explanation = explanations[forme.id] || 
-        `La ${forme.nom} est ${compatibilityLevel} pour votre projet. Elle présente un bon équilibre entre protection juridique, optimisation fiscale et simplicité administrative pour votre situation.`;
+        `La ${forme.nom} est ${compatibilityLevel} pour votre projet. Elle présente un bon équilibre entre protection juridique, optimisation fiscale et simplicité administrative pour votre situation.${userResponses.zoneImplantation === 'zfu' || userResponses.zoneImplantation === 'zrr' ? ` Votre implantation en zone ${userResponses.zoneImplantation.toUpperCase()} vous permet de bénéficier d'avantages fiscaux spécifiques.` : ""}${userResponses.statutPorteur === 'demandeur-emploi' && (forme.regimeSocial.includes('TNS')) ? " En tant que demandeur d'emploi, vous pourriez bénéficier de l'ACRE." : ""}`;
     
     // Impact fiscal concret
     const fiscalImpact = `
@@ -1166,6 +1773,7 @@ function generateNaturalExplanation(forme, userResponses, simulation) {
         d'environ ${Math.round(simulation.simulation.revenueNet).toLocaleString('fr-FR')} € 
         après charges sociales (${Math.round(simulation.simulation.chargesSociales).toLocaleString('fr-FR')} €) 
         et impôts (${Math.round(simulation.simulation.impot).toLocaleString('fr-FR')} €).
+        ${simulation.simulation.coutAssurances ? `Les coûts d'assurance professionnelle (${Math.round(simulation.simulation.coutAssurances).toLocaleString('fr-FR')} €) ont été intégrés à cette simulation.` : ''}
     `;
     
     return {
@@ -1180,17 +1788,49 @@ function generateNaturalExplanation(forme, userResponses, simulation) {
  */
 function getFiscalOptimizationTips(forme, userResponses) {
     if (forme.id === 'sasu' || (forme.id === 'eurl' && forme.fiscalite === 'IS')) {
-        return `
+        let tips = `
             Optimisez votre fiscalité en ajustant la répartition entre salaire et dividendes. 
             ${userResponses.tmiActuel >= 30 ? "Avec votre TMI élevée, privilégiez les dividendes (PFU 30%) pour les revenus au-delà de vos besoins réguliers." : 
             "Avec votre TMI modérée, un équilibre 70% salaire / 30% dividendes pourrait être optimal."}
         `;
+        
+        if (userResponses.zoneImplantation === 'zfu' || userResponses.zoneImplantation === 'zrr') {
+            tips += ` N'oubliez pas de valoriser l'exonération d'IS en ${userResponses.zoneImplantation.toUpperCase()} dans votre déclaration fiscale.`;
+        }
+        
+        if (userResponses.protectionSociale === 'retraite') {
+            tips += ` Pour maximiser vos droits retraite, privilégiez la rémunération en salaire plutôt qu'en dividendes.`;
+        }
+        
+        return tips;
     } else if (forme.id === 'micro-entreprise') {
-        return `
+        let tips = `
             ${userResponses.tmiActuel <= 11 ? "Avec votre TMI faible, le versement libératoire de l'impôt est particulièrement avantageux." : 
             "Surveillez régulièrement votre taux de charges réelles. Si elles dépassent l'abattement forfaitaire, envisagez de passer en EI au régime réel."}
         `;
+        
+        if (userResponses.statutPorteur === 'demandeur-emploi') {
+            tips += ` Assurez-vous de demander l'ACRE dans les 45 jours suivant votre déclaration d'activité pour bénéficier de la réduction de charges.`;
+        }
+        
+        return tips;
     }
+    
+    // Conseils pour EI
+    if (forme.id === 'ei') {
+        let tips = "Tenez une comptabilité rigoureuse pour optimiser vos déductions de charges réelles.";
+        
+        if (userResponses.regimeMatrimonial === 'communaute-reduite') {
+            tips += ` Envisagez une déclaration d'insaisissabilité pour protéger votre résidence principale.`;
+        }
+        
+        if (userResponses.statutPorteur === 'demandeur-emploi') {
+            tips += ` N'oubliez pas de demander l'ACRE pour bénéficier d'une réduction de charges sociales de 50% la première année.`;
+        }
+        
+        return tips;
+    }
+    
     return "";
 }
 
@@ -1209,7 +1849,19 @@ SimulationsFiscales.calculerStructureOptimale = function(profil) {
         besoinFinancement: profil.besoinFinancement,
         strategieSortie: profil.strategieSortie || 'aucune',
         preferenceSimplicite: profil.prioriteSimplicite,
-        preferenceOptimisationFiscale: profil.prioriteOptimisationFiscale
+        preferenceOptimisationFiscale: profil.prioriteOptimisationFiscale,
+        // Nouveaux paramètres
+        statutPorteur: profil.statutPorteur || null,
+        zoneImplantation: profil.zoneImplantation || null,
+        regimeMatrimonial: profil.regimeMatrimonial || null,
+        garantieDecennale: profil.garantieDecennale || false,
+        rcpObligatoire: profil.rcpObligatoire || false,
+        multiEtablissements: profil.multiEtablissements || false,
+        structureHolding: profil.structureHolding || false,
+        entrepriseMission: profil.entrepriseMission || false,
+        statutEsus: profil.statutEsus || false,
+        apportBrevet: profil.apportBrevet || false,
+        apportMateriel: profil.apportMateriel || false
     };
     
     return this.calculerScoresStructures(params);
