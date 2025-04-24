@@ -142,16 +142,6 @@ const FormManager = {
         
         // Écouteurs pour les mises à jour en temps réel
         this.setupRealTimeUpdates();
-        
-        // Ajouter un gestionnaire pour le bouton "Étape suivante" standard
-        const nextStepButton = document.querySelector('.next-step-btn') || document.querySelector('[id^="next"]');
-        if (nextStepButton) {
-            console.log("Found generic next step button");
-            nextStepButton.addEventListener('click', () => {
-                console.log("Generic next button clicked");
-                this.navigateToSection(this.currentSection, this.currentSection + 1);
-            });
-        }
     },
     
     // Navigue entre les sections avec collecte de données
@@ -543,16 +533,127 @@ document.addEventListener('DOMContentLoaded', function() {
     // Afficher la première section
     FormManager.showSection(1);
     
-    // Récupérer le bouton étape suivante par son sélecteur exact et ajouter un gestionnaire spécifique
-    const etapeSuivanteBtn = document.querySelector('.bg-green-500.hover\\:bg-green-400') || document.querySelector('button[id^="next"]');
+    // Ajout d'un gestionnaire d'événements spécifique pour le bouton d'étape suivante vert
+    const etapeSuivanteBtn = document.querySelector('button:contains("Étape suivante")') || 
+                            document.querySelector('a:contains("Étape suivante")') ||
+                            document.querySelectorAll('button')[document.querySelectorAll('button').length - 1];
+    
     if (etapeSuivanteBtn) {
-        console.log("Found the exact next step button!");
+        console.log("Found next step button (likely the green one)");
         etapeSuivanteBtn.addEventListener('click', function(e) {
-            console.log("Next step button clicked!");
+            console.log("Next step button clicked");
             e.preventDefault();
+            // Vérifier s'il y a du texte dans ce bouton
+            const buttonText = this.textContent || this.innerText;
+            console.log("Button text:", buttonText);
+            
             FormManager.navigateToSection(FormManager.currentSection, FormManager.currentSection + 1);
         });
     } else {
-        console.log("Could not find the next step button with specific selectors");
+        console.warn("Could not find the next step button with any selector");
+        
+        // Dernier recours: ajouter un gestionnaire à TOUS les boutons
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                console.log("Button clicked:", this);
+                console.log("Button text:", this.textContent || this.innerText);
+                
+                // Si le bouton ressemble au bouton "Étape suivante"
+                if ((this.textContent || "").includes("suivante") || 
+                    (this.textContent || "").includes("Suivant") || 
+                    this.classList.contains("next") || 
+                    this.style.backgroundColor === "rgb(34, 197, 94)" || // vert (bg-green-500)
+                    this.parentElement.classList.contains("next-container")) {
+                    
+                    e.preventDefault();
+                    console.log("Looks like a next button, navigating...");
+                    FormManager.navigateToSection(FormManager.currentSection, FormManager.currentSection + 1);
+                }
+            });
+        });
     }
+    
+    // Utiliser MutationObserver pour détecter si l'interface charge de nouveaux boutons
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.addedNodes && mutation.addedNodes.length > 0) {
+                // Vérifier si l'un des nouveaux nœuds est un bouton
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1 && (node.tagName === 'BUTTON' || node.tagName === 'A')) {
+                        console.log("New button/link detected:", node);
+                        
+                        // Vérifier si c'est le bouton "Étape suivante"
+                        if ((node.textContent || "").includes("suivante") || 
+                            (node.textContent || "").includes("Suivant") ||
+                            node.classList.contains("next") ||
+                            node.style.backgroundColor === "rgb(34, 197, 94)") {
+                            
+                            console.log("Adding click handler to newly added next button");
+                            node.addEventListener('click', function(e) {
+                                e.preventDefault();
+                                FormManager.navigateToSection(FormManager.currentSection, FormManager.currentSection + 1);
+                            });
+                        }
+                    }
+                    
+                    // Vérifier si le nœud contient d'autres éléments enfants qui sont des boutons
+                    if (node.nodeType === 1 && node.querySelectorAll) {
+                        const childButtons = node.querySelectorAll('button, a');
+                        if (childButtons.length > 0) {
+                            childButtons.forEach(function(button) {
+                                if ((button.textContent || "").includes("suivante") || 
+                                    (button.textContent || "").includes("Suivant")) {
+                                    
+                                    console.log("Adding click handler to child button");
+                                    button.addEventListener('click', function(e) {
+                                        e.preventDefault();
+                                        FormManager.navigateToSection(FormManager.currentSection, FormManager.currentSection + 1);
+                                    });
+                                }
+                            });
+                        }
+                    }
+                });
+            }
+        });
+    });
+    
+    // Observer les changements dans le corps du document
+    observer.observe(document.body, { childList: true, subtree: true });
+    
+    // Code de débogage spécifique pour aider à identifier le bouton "Étape suivante"
+    console.log("All buttons on page:");
+    document.querySelectorAll('button').forEach((btn, index) => {
+        console.log(`Button ${index}:`, btn);
+        console.log(`  Text: "${btn.textContent || btn.innerText}"`);
+        console.log(`  Classes: ${btn.className}`);
+        console.log(`  Background: ${getComputedStyle(btn).backgroundColor}`);
+    });
 });
+
+// Helper function to add :contains selector to jQuery-less environments
+if (!Element.prototype.matches) {
+    Element.prototype.matches = Element.prototype.msMatchesSelector || Element.prototype.webkitMatchesSelector;
+}
+
+if (!document.querySelector('button:contains("Étape suivante")')) {
+    document.querySelector = (function(_querySelector) {
+        return function(selector) {
+            if (selector.includes(':contains(')) {
+                const match = selector.match(/:contains\("(.+?)"\)/);
+                if (match) {
+                    const text = match[1];
+                    const cleanSelector = selector.replace(/:contains\("(.+?)"\)/, '');
+                    const elements = document.querySelectorAll(cleanSelector || '*');
+                    for (let i = 0; i < elements.length; i++) {
+                        if (elements[i].textContent.includes(text)) {
+                            return elements[i];
+                        }
+                    }
+                    return null;
+                }
+            }
+            return _querySelector.call(this, selector);
+        };
+    })(document.querySelector);
+}
