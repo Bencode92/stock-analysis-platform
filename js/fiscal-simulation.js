@@ -1,7 +1,7 @@
 /**
  * fiscal-simulation.js
  * Module dédié aux barèmes fiscaux et aux calculs de simulation pour le simulateur de forme juridique
- * Ce fichier contient la logique de calcul fiscal et d'évaluation des incompatibilités
+ * Ce fichier contient la logique de calcul fiscal, d'évaluation des incompatibilités et de scoring
  * Dernière mise à jour : Avril 2025
  */
 
@@ -47,6 +47,16 @@ const baremesFiscaux = {
                 "commercial": 0.12,
                 "service": 0.22,
                 "liberal": 0.22
+            },
+            "versement_liberatoire": {
+                "commercial": 0.01,
+                "service": 0.017,
+                "liberal": 0.022
+            },
+            "plafonds": {
+                "BIC": 176200,
+                "BNC": 72600,
+                "TVA": 85800
             }
         },
         "dividendes": {
@@ -74,9 +84,15 @@ const SimulationsFiscales = {
      * Calcule l'impôt sur le revenu selon les tranches progressives
      * @param {number} revenuImposable - Le revenu imposable en euros
      * @param {string} formeSociale - La forme sociale pour appliquer les abattements spécifiques
+     * @param {number} tmiActuel - Taux marginal d'imposition (optionnel)
      * @return {number} Montant de l'impôt sur le revenu
      */
-    calculerIR: function(revenuImposable, formeSociale) {
+    calculerIR: function(revenuImposable, formeSociale, tmiActuel = null) {
+        // Si un TMI est fourni, utiliser une approche simplifiée
+        if (tmiActuel !== null) {
+            return revenuImposable * (tmiActuel / 100);
+        }
+        
         // Logique pour les abattements spécifiques
         let abattement = 0;
         
@@ -108,6 +124,23 @@ const SimulationsFiscales = {
         }
         
         return impot;
+    },
+    
+    /**
+     * Déterminer le TMI (taux marginal d'imposition) pour un revenu donné
+     * @param {number} revenuImposable - Le revenu imposable en euros
+     * @return {number} Taux marginal d'imposition (en pourcentage)
+     */
+    determinerTMI: function(revenuImposable) {
+        const bareme = this.getBaremeFiscal().IR;
+        
+        for (let i = 0; i < bareme.tranches.length; i++) {
+            if (revenuImposable <= bareme.tranches[i].jusqu_a) {
+                return bareme.tranches[i].taux * 100;
+            }
+        }
+        
+        return bareme.tranches[bareme.tranches.length - 1].taux * 100;
     },
     
     /**
@@ -151,15 +184,16 @@ const SimulationsFiscales = {
      * Calcule l'impôt sur les dividendes
      * @param {number} dividendes - Le montant des dividendes en euros
      * @param {boolean} optionIR - Si vrai, utilise l'option IR sinon PFU
+     * @param {number} tmiActuel - Taux marginal d'imposition (optionnel)
      * @return {number} Montant de l'impôt sur les dividendes
      */
-    calculerImpotDividendes: function(dividendes, optionIR = false) {
+    calculerImpotDividendes: function(dividendes, optionIR = false, tmiActuel = null) {
         const bareme = this.getBaremeFiscal().dividendes;
         
         if (optionIR) {
             // Option IR avec abattement de 40%
             const montantImposable = dividendes * (1 - 0.4);
-            return this.calculerIR(montantImposable, 'standard');
+            return this.calculerIR(montantImposable, 'standard', tmiActuel);
         } else {
             // Prélèvement Forfaitaire Unique (flat tax)
             return dividendes * bareme.pfu;
@@ -178,6 +212,7 @@ const SimulationsFiscales = {
         const parametres = {
             ratioSalaire: params.ratioSalaire || 50,
             ratioDividendes: params.ratioDividendes || 50,
+            tmiActuel: params.tmiActuel || null,
             ...params
         };
         
@@ -199,7 +234,7 @@ const SimulationsFiscales = {
         if (regimeFiscal === 'IR') {
             // Cas de l'IR (entreprise individuelle, EURL à l'IR, etc.)
             simulation.chargesSociales = this.calculerChargesSociales(revenuAnnuel, regimeSocial);
-            simulation.impot = this.calculerIR(revenuAnnuel - simulation.chargesSociales, forme.id);
+            simulation.impot = this.calculerIR(revenuAnnuel - simulation.chargesSociales, forme.id, parametres.tmiActuel);
             simulation.revenueNet = revenuAnnuel - simulation.impot - simulation.chargesSociales;
             
             // Détails pour affichage
@@ -227,10 +262,10 @@ const SimulationsFiscales = {
             
             // 4. Calcul des charges sur le salaire
             simulation.chargesSalariales = this.calculerChargesSociales(salaire, regimeSocial);
-            simulation.impotSalaire = this.calculerIR(salaire - simulation.chargesSalariales, 'salaire');
+            simulation.impotSalaire = this.calculerIR(salaire - simulation.chargesSalariales, 'salaire', parametres.tmiActuel);
             
             // 5. Calcul de l'impôt sur les dividendes (PFU 30%)
-            simulation.impotDividendes = this.calculerImpotDividendes(dividendes);
+            simulation.impotDividendes = this.calculerImpotDividendes(dividendes, false, parametres.tmiActuel);
             
             // Impôt total
             simulation.impot = simulation.impotSalaire + simulation.impotDividendes + simulation.impotSociete;
@@ -253,6 +288,637 @@ const SimulationsFiscales = {
         }
         
         return simulation;
+    },
+    
+    /**
+     * Simulation spécifique pour micro-entreprise avec prise en compte du TMI
+     * @param {Object} params - Paramètres de simulation
+     * @return {Object} Résultat détaillé de la simulation
+     */
+    simulerMicroEntreprise: function(params) {
+        const {
+            ca = 50000,
+            typeMicro = 'BIC',
+            tmiActuel = null
+        } = params;
+        
+        const bareme = this.getBaremeFiscal().micro_entreprise;
+        const plafond = typeMicro === 'BIC' ? bareme.plafonds.BIC : bareme.plafonds.BNC;
+        
+        // Vérifier le dépassement de plafond
+        if (ca > plafond) {
+            return {
+                compatible: false,
+                message: `CA supérieur au plafond Micro-${typeMicro} (${plafond} €)`
+            };
+        }
+        
+        // Calcul de l'abattement selon le type d'activité
+        const typeActivite = typeMicro === 'BIC' ? 'commercial' : 'liberal';
+        const tauxAbattement = bareme.abattements[typeActivite];
+        const abattement = ca * tauxAbattement;
+        const beneficeImposable = ca - abattement;
+        
+        // Charges sociales (forfaitaires)
+        const cotisationsSociales = ca * bareme.charges_sociales[typeActivite];
+        
+        // Option versement libératoire pour TMI faible
+        let impotRevenu = 0;
+        let optionVersementLiberatoire = false;
+        
+        if (tmiActuel !== null && tmiActuel <= 11) {
+            // Versement libératoire plus avantageux
+            impotRevenu = ca * bareme.versement_liberatoire[typeActivite];
+            optionVersementLiberatoire = true;
+        } else {
+            // IR classique sur le bénéfice après abattement
+            impotRevenu = this.calculerIR(beneficeImposable, 'standard', tmiActuel);
+        }
+        
+        // Revenu net après prélèvements
+        const revenuNetApresImpot = ca - cotisationsSociales - impotRevenu;
+        const tauxPrelevementGlobal = (cotisationsSociales + impotRevenu) / ca;
+        
+        // Avantages et inconvénients
+        const avantages = [
+            "Simplicité administrative",
+            "Pas de comptabilité complexe",
+            "Démarrage rapide d'activité"
+        ];
+        
+        if (optionVersementLiberatoire) {
+            avantages.push("Versement libératoire avantageux (TMI ≤ 11%)");
+        } else {
+            avantages.push(`Abattement forfaitaire important (${tauxAbattement * 100}%)`);
+        }
+        
+        const inconvenients = [
+            "Protection sociale minimale",
+            "Plafond de chiffre d'affaires",
+            "Responsabilité illimitée"
+        ];
+        
+        return {
+            compatible: true,
+            ca: ca,
+            cotisationsSociales: cotisationsSociales,
+            abattement: abattement,
+            beneficeImposable: beneficeImposable,
+            impotRevenu: impotRevenu,
+            revenuNetApresImpot: revenuNetApresImpot,
+            tauxPrelevement: tauxPrelevementGlobal,
+            optionVersementLiberatoire: optionVersementLiberatoire,
+            avantages: avantages,
+            inconvenients: inconvenients
+        };
+    },
+    
+    /**
+     * Simulation spécifique pour Entreprise Individuelle
+     * @param {Object} params - Paramètres de simulation
+     * @return {Object} Résultat détaillé de la simulation
+     */
+    simulerEI: function(params) {
+        const {
+            ca = 50000,
+            tauxMarge = 0.3,
+            tmiActuel = null
+        } = params;
+        
+        // Calcul du bénéfice
+        const charges = ca * (1 - tauxMarge);
+        const beneficeAvantCotisations = ca - charges;
+        
+        // Cotisations sociales TNS
+        const cotisationsSociales = beneficeAvantCotisations * this.getBaremeFiscal().cotisations.TNS.taux_moyen;
+        const beneficeImposable = beneficeAvantCotisations - cotisationsSociales;
+        
+        // Impôt sur le revenu
+        const impotRevenu = this.calculerIR(beneficeImposable, 'standard', tmiActuel);
+        const revenuNetApresImpot = beneficeImposable - impotRevenu;
+        const tauxPrelevement = (cotisationsSociales + impotRevenu) / beneficeAvantCotisations;
+        
+        return {
+            compatible: true,
+            ca: ca,
+            charges: charges,
+            beneficeAvantCotisations: beneficeAvantCotisations,
+            cotisationsSociales: cotisationsSociales,
+            beneficeImposable: beneficeImposable,
+            impotRevenu: impotRevenu,
+            revenuNetApresImpot: revenuNetApresImpot,
+            tauxPrelevement: tauxPrelevement,
+            avantages: [
+                "Déduction des charges réelles",
+                "Comptabilité simplifiée sous certains seuils",
+                "Protection sociale TNS complète"
+            ],
+            inconvenients: [
+                "Responsabilité illimitée sur patrimoine personnel",
+                "Imposition progressive à l'IR",
+                "Formalisme comptable plus important que micro-entreprise"
+            ]
+        };
+    },
+    
+    /**
+     * Simulation spécifique pour EURL
+     * @param {Object} params - Paramètres de simulation
+     * @return {Object} Résultat détaillé de la simulation
+     */
+    simulerEURL: function(params) {
+        const {
+            ca = 50000,
+            tauxMarge = 0.3,
+            tauxRemuneration = 0.7,
+            optionIS = false,
+            tmiActuel = null,
+            optionTNS = true
+        } = params;
+        
+        // Calcul du résultat de la société
+        const charges = ca * (1 - tauxMarge);
+        const resultatAvantRemuneration = ca - charges;
+        
+        // Répartition rémunération/résultat selon option fiscale
+        const remuneration = resultatAvantRemuneration * tauxRemuneration;
+        const resultatApresSalaire = resultatAvantRemuneration - remuneration;
+        
+        // Charges sociales selon statut
+        const bareme = this.getBaremeFiscal().cotisations;
+        const tauxCotisations = optionTNS ? bareme.TNS.taux_moyen : bareme.assimile_salarie.total;
+        const cotisationsSociales = remuneration * tauxCotisations;
+        
+        // Résultats selon option fiscale (IR ou IS)
+        if (optionIS) {
+            // EURL à l'IS
+            const remunerationNetteCotis = remuneration - (optionTNS ? cotisationsSociales : (remuneration * bareme.assimile_salarie.part_salariale));
+            const remunerationNetteIR = remunerationNetteCotis - this.calculerIR(remunerationNetteCotis, 'standard', tmiActuel);
+            
+            // IS sur résultat après rémunération
+            const tauxIS = resultatApresSalaire <= this.getBaremeFiscal().IS.taux_reduit.jusqu_a ? 
+                this.getBaremeFiscal().IS.taux_reduit.taux : this.getBaremeFiscal().IS.taux_normal;
+            const is = resultatApresSalaire * tauxIS;
+            const dividendesBruts = resultatApresSalaire - is;
+            
+            // Flat tax sur dividendes
+            const prelevementForfaitaire = dividendesBruts * this.getBaremeFiscal().dividendes.pfu;
+            const dividendesNets = dividendesBruts - prelevementForfaitaire;
+            
+            const revenuNetTotal = remunerationNetteIR + dividendesNets;
+            const tauxPrelevement = 1 - (revenuNetTotal / resultatAvantRemuneration);
+            
+            return {
+                compatible: true,
+                optionIS: true,
+                ca: ca,
+                charges: charges,
+                resultatAvantRemuneration: resultatAvantRemuneration,
+                remuneration: remuneration,
+                cotisationsSociales: cotisationsSociales,
+                remunerationNetteCotis: remunerationNetteCotis,
+                remunerationNetteIR: remunerationNetteIR,
+                is: is,
+                dividendesBruts: dividendesBruts,
+                prelevementForfaitaire: prelevementForfaitaire,
+                dividendesNets: dividendesNets,
+                revenuNetTotal: revenuNetTotal,
+                tauxPrelevement: tauxPrelevement,
+                avantages: [
+                    "Responsabilité limitée au capital social",
+                    "Optimisation possible via arbitrage rémunération/dividendes",
+                    optionTNS ? "Protection sociale TNS" : "Statut assimilé salarié"
+                ],
+                inconvenients: [
+                    "Double imposition des dividendes (IS + Flat tax)",
+                    "Formalisme juridique et comptable plus important",
+                    "Coûts de constitution et de gestion plus élevés"
+                ]
+            };
+        } else {
+            // EURL à l'IR (transparence fiscale)
+            const beneficeImposable = resultatAvantRemuneration - cotisationsSociales;
+            const impotRevenu = this.calculerIR(beneficeImposable, 'standard', tmiActuel);
+            const revenuNetApresImpot = beneficeImposable - impotRevenu;
+            const tauxPrelevement = (cotisationsSociales + impotRevenu) / resultatAvantRemuneration;
+            
+            return {
+                compatible: true,
+                optionIS: false,
+                ca: ca,
+                charges: charges,
+                resultatAvantRemuneration: resultatAvantRemuneration,
+                cotisationsSociales: cotisationsSociales,
+                beneficeImposable: beneficeImposable,
+                impotRevenu: impotRevenu,
+                revenuNetApresImpot: revenuNetApresImpot,
+                tauxPrelevement: tauxPrelevement,
+                avantages: [
+                    "Responsabilité limitée au capital social",
+                    "Transparence fiscale (pas de double imposition)",
+                    "Protection sociale TNS complète"
+                ],
+                inconvenients: [
+                    "Imposition progressive à l'IR",
+                    "Formalisme juridique et comptable important",
+                    "Moins flexible pour l'entrée d'investisseurs"
+                ]
+            };
+        }
+    },
+    
+    /**
+     * Simulation spécifique pour SASU
+     * @param {Object} params - Paramètres de simulation
+     * @return {Object} Résultat détaillé de la simulation
+     */
+    simulerSASU: function(params) {
+        const {
+            ca = 50000,
+            tauxMarge = 0.3,
+            tauxRemuneration = 0.7,
+            tmiActuel = null
+        } = params;
+        
+        // Calcul du résultat de la société
+        const charges = ca * (1 - tauxMarge);
+        const resultatAvantRemuneration = ca - charges;
+        
+        // Répartition rémunération/dividendes
+        const remuneration = resultatAvantRemuneration * tauxRemuneration;
+        const resultatApresSalaire = resultatAvantRemuneration - remuneration;
+        
+        // Charges sociales assimilé salarié
+        const bareme = this.getBaremeFiscal().cotisations.assimile_salarie;
+        const chargesPatronales = remuneration * bareme.part_patronale;
+        const chargesSalariales = remuneration * bareme.part_salariale;
+        const remunerationNetteCotis = remuneration - chargesSalariales;
+        
+        // IR sur la rémunération
+        const impotRevenu = this.calculerIR(remunerationNetteCotis, 'standard', tmiActuel);
+        const remunerationNetteIR = remunerationNetteCotis - impotRevenu;
+        
+        // IS sur le résultat après rémunération
+        const tauxIS = resultatApresSalaire <= this.getBaremeFiscal().IS.taux_reduit.jusqu_a ? 
+            this.getBaremeFiscal().IS.taux_reduit.taux : this.getBaremeFiscal().IS.taux_normal;
+        const is = resultatApresSalaire * tauxIS;
+        const dividendesBruts = resultatApresSalaire - is;
+        
+        // Flat tax sur dividendes
+        const prelevementForfaitaire = dividendesBruts * this.getBaremeFiscal().dividendes.pfu;
+        const dividendesNets = dividendesBruts - prelevementForfaitaire;
+        
+        const revenuNetTotal = remunerationNetteIR + dividendesNets;
+        const tauxPrelevement = 1 - (revenuNetTotal / resultatAvantRemuneration);
+        
+        // Optimisation selon TMI
+        let optimisationConseillée = "";
+        if (tmiActuel !== null) {
+            if (tmiActuel >= 30) {
+                optimisationConseillée = "Augmenter la part des dividendes (moins taxés à la flat tax 30% que la rémunération)";
+            } else {
+                optimisationConseillée = "Augmenter la part de la rémunération (moins taxée à l'IR que les dividendes avec flat tax)";
+            }
+        }
+        
+        return {
+            compatible: true,
+            ca: ca,
+            charges: charges,
+            resultatAvantRemuneration: resultatAvantRemuneration,
+            remuneration: remuneration,
+            chargesPatronales: chargesPatronales,
+            chargesSalariales: chargesSalariales,
+            remunerationNetteCotis: remunerationNetteCotis,
+            remunerationNetteIR: remunerationNetteIR,
+            is: is,
+            dividendesBruts: dividendesBruts,
+            prelevementForfaitaire: prelevementForfaitaire,
+            dividendesNets: dividendesNets,
+            revenuNetTotal: revenuNetTotal,
+            tauxPrelevement: tauxPrelevement,
+            optimisationConseillée: optimisationConseillée,
+            avantages: [
+                "Responsabilité limitée au capital social",
+                "Statut d'assimilé salarié (meilleure protection sociale)",
+                "Flexibilité pour l'entrée d'investisseurs et BSPCE possible"
+            ],
+            inconvenients: [
+                "Double imposition des dividendes (IS + Flat tax)",
+                "Charges sociales élevées sur la rémunération",
+                "Formalisme juridique et comptable important"
+            ]
+        };
+    },
+    
+    /**
+     * Comparaison des différentes structures sur plusieurs années
+     * @param {Object} params - Paramètres de simulation
+     * @return {Object} Comparaison des différentes structures
+     */
+    comparerSurPlusieursAnnees: function(params) {
+        const {
+            caAnnee1,
+            caAnnee3,
+            tauxMarge,
+            tmiActuel,
+            typeMicro = 'BIC',
+            tauxRemuneration = 0.7,
+            horizon
+        } = params;
+        
+        // Calculer les CA intermédiaires avec une progression linéaire
+        const caAnnee2 = caAnnee1 + (caAnnee3 - caAnnee1) / 2;
+        
+        // Simulations pour chaque année
+        const resultats = {
+            annee1: {
+                micro: this.simulerMicroEntreprise({ca: caAnnee1, typeMicro, tmiActuel}),
+                ei: this.simulerEI({ca: caAnnee1, tauxMarge, tmiActuel}),
+                eurl: this.simulerEURL({ca: caAnnee1, tauxMarge, tauxRemuneration, tmiActuel}),
+                sasu: this.simulerSASU({ca: caAnnee1, tauxMarge, tauxRemuneration, tmiActuel})
+            },
+            annee2: {
+                micro: this.simulerMicroEntreprise({ca: caAnnee2, typeMicro, tmiActuel}),
+                ei: this.simulerEI({ca: caAnnee2, tauxMarge, tmiActuel}),
+                eurl: this.simulerEURL({ca: caAnnee2, tauxMarge, tauxRemuneration, tmiActuel}),
+                sasu: this.simulerSASU({ca: caAnnee2, tauxMarge, tauxRemuneration, tmiActuel})
+            },
+            annee3: {
+                micro: this.simulerMicroEntreprise({ca: caAnnee3, typeMicro, tmiActuel}),
+                ei: this.simulerEI({ca: caAnnee3, tauxMarge, tmiActuel}),
+                eurl: this.simulerEURL({ca: caAnnee3, tauxMarge, tauxRemuneration, tmiActuel}),
+                sasu: this.simulerSASU({ca: caAnnee3, tauxMarge, tauxRemuneration, tmiActuel})
+            }
+        };
+        
+        // Calculer les totaux cumulés sur 3 ans
+        const cumulSur3Ans = {
+            micro: {
+                compatible: resultats.annee1.micro.compatible && resultats.annee2.micro.compatible && resultats.annee3.micro.compatible,
+                revenuNetCumule: (resultats.annee1.micro.compatible ? resultats.annee1.micro.revenuNetApresImpot : 0) +
+                                 (resultats.annee2.micro.compatible ? resultats.annee2.micro.revenuNetApresImpot : 0) +
+                                 (resultats.annee3.micro.compatible ? resultats.annee3.micro.revenuNetApresImpot : 0)
+            },
+            ei: {
+                revenuNetCumule: resultats.annee1.ei.revenuNetApresImpot + 
+                                 resultats.annee2.ei.revenuNetApresImpot + 
+                                 resultats.annee3.ei.revenuNetApresImpot
+            },
+            eurl: {
+                revenuNetCumule: (resultats.annee1.eurl.optionIS ? resultats.annee1.eurl.revenuNetTotal : resultats.annee1.eurl.revenuNetApresImpot) + 
+                                 (resultats.annee2.eurl.optionIS ? resultats.annee2.eurl.revenuNetTotal : resultats.annee2.eurl.revenuNetApresImpot) + 
+                                 (resultats.annee3.eurl.optionIS ? resultats.annee3.eurl.revenuNetTotal : resultats.annee3.eurl.revenuNetApresImpot)
+            },
+            sasu: {
+                revenuNetCumule: resultats.annee1.sasu.revenuNetTotal + 
+                                 resultats.annee2.sasu.revenuNetTotal + 
+                                 resultats.annee3.sasu.revenuNetTotal
+            }
+        };
+        
+        // Déterminer la structure la plus rentable sur 3 ans
+        let structurePlusRentable = 'micro';
+        let revenuMaxCumule = cumulSur3Ans.micro.compatible ? cumulSur3Ans.micro.revenuNetCumule : 0;
+        
+        if (cumulSur3Ans.ei.revenuNetCumule > revenuMaxCumule) {
+            structurePlusRentable = 'ei';
+            revenuMaxCumule = cumulSur3Ans.ei.revenuNetCumule;
+        }
+        
+        if (cumulSur3Ans.eurl.revenuNetCumule > revenuMaxCumule) {
+            structurePlusRentable = 'eurl';
+            revenuMaxCumule = cumulSur3Ans.eurl.revenuNetCumule;
+        }
+        
+        if (cumulSur3Ans.sasu.revenuNetCumule > revenuMaxCumule) {
+            structurePlusRentable = 'sasu';
+            revenuMaxCumule = cumulSur3Ans.sasu.revenuNetCumule;
+        }
+        
+        // Adapter la recommandation selon l'horizon
+        let recommandationHorizon = structurePlusRentable;
+        if (horizon === 'court' && resultats.annee1.micro.compatible) {
+            // Pour un horizon court, privilégier la simplicité si micro est compatible
+            recommandationHorizon = 'micro';
+        } else if (horizon === 'long' && (structurePlusRentable === 'eurl' || structurePlusRentable === 'sasu')) {
+            // Pour un horizon long, privilégier les structures sociétaires plus pérennes
+            recommandationHorizon = structurePlusRentable;
+        }
+        
+        return {
+            resultatsAnnuels: resultats,
+            cumulSur3Ans: cumulSur3Ans,
+            structurePlusRentable: structurePlusRentable,
+            recommandationHorizon: recommandationHorizon
+        };
+    },
+    
+    /**
+     * Calculer le score de compatibilité pour chaque structure juridique
+     * @param {Object} params - Critères et préférences de l'utilisateur
+     * @return {Object} Scores pour chaque structure juridique
+     */
+    calculerScoresStructures: function(params) {
+        const {
+            ca,
+            tauxMarge,
+            typeMicro = 'BIC',
+            tmiActuel = 30,
+            horizon = 'moyen',
+            equipe = 'solo',
+            investisseurs = false,
+            besoinProtection = false,
+            besoinFinancement = false,
+            strategieSortie = 'aucune',
+            preferenceSimplicite = false,
+            preferenceOptimisationFiscale = false,
+            caAnnee1,
+            caAnnee3
+        } = params;
+        
+        // Initialiser les scores
+        const scores = {
+            micro: 50,
+            ei: 50,
+            eurl: 50,
+            eurlIS: 50,
+            sasu: 50
+        };
+        
+        // 1. Vérifier les seuils des régimes micro
+        const baremesMicro = this.getBaremeFiscal().micro_entreprise.plafonds;
+        if (typeMicro === 'BIC' && ca > baremesMicro.BIC) {
+            scores.micro = preferenceSimplicite ? -40 : -20;
+        } else if (typeMicro === 'BNC' && ca > baremesMicro.BNC) {
+            scores.micro = preferenceSimplicite ? -40 : -20;
+        }
+        
+        // 2. Impact du TMI
+        if (tmiActuel <= 11) {
+            // TMI faible avantage Micro et EURL IR
+            scores.micro += 10;
+            scores.ei += 5;
+            scores.eurl += 10;
+            scores.eurlIS -= 5;
+            scores.sasu -= 5;
+        } else if (tmiActuel >= 30) {
+            // TMI élevé avantage structures à l'IS
+            scores.micro -= 5;
+            scores.ei -= 10;
+            scores.eurl -= 5;
+            scores.eurlIS += 10;
+            scores.sasu += 15;
+        }
+        
+        // 3. Impact de la marge
+        if (tauxMarge < 0.15) {
+            // Marge faible pénalise SASU (charges sociales élevées)
+            scores.sasu -= 10;
+        } else if (tauxMarge > 0.3) {
+            // Marge élevée avantage structures permettant optimisation
+            scores.eurlIS += 5;
+            scores.sasu += 10;
+        }
+        
+        // 4. Impact de l'horizon
+        if (horizon === 'court') {
+            // Horizon court favorise simplicité
+            scores.micro += 15;
+            scores.ei += 5;
+            scores.sasu -= 5;
+        } else if (horizon === 'long') {
+            // Horizon long favorise structures pérennes
+            scores.micro -= 5;
+            scores.eurl += 5;
+            scores.eurlIS += 10;
+            scores.sasu += 15;
+        }
+        
+        // 5. Équipe et investisseurs
+        if (equipe === 'solo') {
+            scores.micro += 5;
+            scores.ei += 5;
+        } else if (equipe === 'associes' || equipe === 'famille') {
+            scores.micro = 0; // Incompatible
+            scores.ei = 0; // Incompatible
+            scores.eurl += 5;
+            scores.eurlIS += 10;
+            scores.sasu += 10;
+        }
+        
+        if (investisseurs) {
+            scores.micro -= 50; // Incompatible
+            scores.ei -= 50; // Incompatible
+            scores.eurl -= 10;
+            scores.eurlIS += 10;
+            scores.sasu += 20;
+        }
+        
+        // 6. Besoin de protection patrimoniale
+        if (besoinProtection) {
+            scores.micro -= 30;
+            scores.ei -= 30;
+            scores.eurl += 10;
+            scores.eurlIS += 10;
+            scores.sasu += 10;
+        }
+        
+        // 7. Financement
+        if (besoinFinancement) {
+            scores.micro -= 30;
+            scores.ei -= 20;
+            scores.eurl -= 5;
+            scores.eurlIS += 5;
+            scores.sasu += 20;
+        }
+        
+        // 8. Stratégie de sortie
+        if (strategieSortie === 'transmission') {
+            scores.eurlIS += 10;
+            scores.sasu += 5;
+        } else if (strategieSortie === 'revente') {
+            scores.micro -= 20;
+            scores.ei -= 10;
+            scores.sasu += 20;
+        }
+        
+        // 9. Préférences
+        if (preferenceSimplicite) {
+            scores.micro += 20;
+            scores.ei += 10;
+            scores.eurl -= 5;
+            scores.eurlIS -= 10;
+            scores.sasu -= 15;
+        }
+        
+        if (preferenceOptimisationFiscale) {
+            scores.micro -= 10;
+            scores.ei -= 5;
+            scores.eurlIS += 15;
+            scores.sasu += 20;
+        }
+        
+        // 10. Evolution du CA
+        if (caAnnee3 && caAnnee1 && caAnnee3 > caAnnee1 * 2) {
+            // Forte croissance prévue
+            scores.micro -= 10;
+            scores.eurlIS += 5;
+            scores.sasu += 10;
+        }
+        
+        // 11. Plafond les scores entre 0 et 100
+        for (const structure in scores) {
+            scores[structure] = Math.max(0, Math.min(100, scores[structure]));
+        }
+        
+        // Calculer les structures recommandées
+        const scoreEntries = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+        const structureIdeale = scoreEntries[0][0];
+        const challengers = [scoreEntries[1][0], scoreEntries[2][0]];
+        
+        // Vérifier les incompatibilités
+        const incompatibilites = [];
+        
+        if (typeMicro === 'BIC' && ca > baremesMicro.BIC && (structureIdeale === 'micro' || challengers.includes('micro'))) {
+            incompatibilites.push({
+                structure: 'micro',
+                raison: `CA supérieur au seuil Micro-${typeMicro}`,
+                solution: 'Opter pour EI au réel ou EURL'
+            });
+        } else if (typeMicro === 'BNC' && ca > baremesMicro.BNC && (structureIdeale === 'micro' || challengers.includes('micro'))) {
+            incompatibilites.push({
+                structure: 'micro',
+                raison: `CA supérieur au seuil Micro-${typeMicro}`,
+                solution: 'Opter pour EI au réel ou EURL'
+            });
+        }
+        
+        if ((equipe !== 'solo') && (structureIdeale === 'micro' || structureIdeale === 'ei' || 
+            challengers.includes('micro') || challengers.includes('ei'))) {
+            incompatibilites.push({
+                structure: 'micro/ei',
+                raison: 'Incompatible avec plusieurs associés',
+                solution: 'Opter pour EURL ou SASU'
+            });
+        }
+        
+        if (investisseurs && (structureIdeale === 'micro' || structureIdeale === 'ei' || 
+            structureIdeale === 'eurl' || challengers.includes('micro') || 
+            challengers.includes('ei') || challengers.includes('eurl'))) {
+            incompatibilites.push({
+                structure: 'micro/ei/eurl',
+                raison: 'Difficile pour attirer des investisseurs',
+                solution: 'Opter pour SASU'
+            });
+        }
+        
+        return {
+            scores: scores,
+            structureIdeale: structureIdeale,
+            challengers: challengers,
+            incompatibilites: incompatibilites
+        };
     }
 };
 
@@ -270,7 +936,7 @@ function checkHardFails(userResponses) {
             formeId: 'micro-entreprise',
             code: 'CA_TROP_ELEVE',
             message: 'Le chiffre d\'affaires prévu dépasse les plafonds autorisés pour une micro-entreprise.',
-            details: 'Le régime micro-entreprise est limité à 77.700€ pour le commerce et 36.800€ pour les services et professions libérales.'
+            details: 'Le régime micro-entreprise est limité à 176.200€ pour le commerce et 72.600€ pour les services et professions libérales.'
         });
     }
     
@@ -319,6 +985,18 @@ function checkHardFails(userResponses) {
                 code: 'ACTIVITE_AGRICOLE',
                 message: 'Cette forme juridique n\'est pas adaptée aux activités agricoles.',
                 details: 'Pour une activité agricole, privilégiez une structure spécifique comme le GAEC ou l\'EARL.'
+            });
+        });
+    }
+    
+    // Vérifications du TMI pour la stratégie fiscale
+    if (userResponses.tmiActuel && userResponses.tmiActuel >= 30 && userResponses.prioriteOptimisationFiscale) {
+        ['micro-entreprise', 'ei'].forEach(forme => {
+            fails.push({
+                formeId: forme,
+                code: 'TMI_ELEVEE',
+                message: 'Avec votre tranche marginale d\'imposition élevée, cette forme est fiscalement défavorable.',
+                details: 'Avec un TMI à ' + userResponses.tmiActuel + '%, privilégiez les structures à l\'IS comme la SASU ou EURL-IS.'
             });
         });
     }
@@ -378,6 +1056,12 @@ function getAlternativesRecommandees(formeId, raison, formesJuridiques) {
             );
             break;
             
+        case 'TMI_ELEVEE':
+            alternatives = formesJuridiques.filter(f => 
+                f.fiscalite.includes('IS') && ['sasu', 'sas', 'eurl'].includes(f.id)
+            ).slice(0, 2);
+            break;
+            
         default:
             // Par défaut, recommander des structures généralement souples
             alternatives = formesJuridiques.filter(f => 
@@ -387,6 +1071,27 @@ function getAlternativesRecommandees(formeId, raison, formesJuridiques) {
     
     return alternatives;
 }
+
+// Fonction de compatibilité pour garder la cohérence avec l'ancien code
+SimulationsFiscales.calculerStructureOptimale = function(profil) {
+    // Adapter le format à la nouvelle méthode de calcul de scores
+    const params = {
+        ca: profil.ca || 50000,
+        tauxMarge: profil.marges || 0.3,
+        typeMicro: profil.activite || 'BIC',
+        tmiActuel: profil.tmi || 30,
+        horizon: profil.horizon || 'moyen',
+        equipe: profil.profilEntrepreneur || 'solo',
+        investisseurs: profil.profilEntrepreneur === 'investisseurs',
+        besoinProtection: profil.protectionPatrimoine >= 4,
+        besoinFinancement: profil.besoinFinancement,
+        strategieSortie: profil.strategieSortie || 'aucune',
+        preferenceSimplicite: profil.prioriteSimplicite,
+        preferenceOptimisationFiscale: profil.prioriteOptimisationFiscale
+    };
+    
+    return this.calculerScoresStructures(params);
+};
 
 // Exporter les fonctions et objets pour utilisation dans types-entreprise.js
 window.SimulationsFiscales = SimulationsFiscales;
