@@ -21,7 +21,7 @@
             color: #E6E6E6;
         }
         
-        /* Styles from original file */
+        /* Sidebar styles améliorés */
         .sidebar {
             position: fixed;
             left: 0;
@@ -39,6 +39,200 @@
             align-items: center;
         }
 
+        .sidebar-logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-align: center;
+            margin: 20px 0;
+            transition: all 0.3s;
+        }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+            overflow-y: auto;
+            width: 100%;
+        }
+
+        .nav-item {
+            width: 100%;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #E6E6E6;
+            transition: background-color 0.2s;
+            position: relative;
+            margin-bottom: 5px;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(0, 255, 135, 0.1);
+            color: var(--primary-color);
+        }
+
+        .nav-item.active {
+            background-color: rgba(0, 255, 135, 0.15);
+            color: var(--primary-color);
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .nav-item i {
+            font-size: 20px;
+        }
+
+        /* Main header styles améliorés */
+        .main-header {
+            position: fixed;
+            top: 0;
+            left: 60px;
+            right: 0;
+            height: 70px;
+            background-color: var(--header-background);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 50;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            font-weight: 900;
+            font-size: 22px;
+            color: var(--primary-color);
+            margin-right: 40px;
+            position: relative;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+            margin-right: 10px;
+            position: relative;
+        }
+
+        .pulse-dot::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            width: 16px;
+            height: 16px;
+            background-color: rgba(0, 255, 135, 0.3);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .main-nav {
+            display: flex;
+            height: 100%;
+        }
+
+        .main-nav a {
+            height: 100%;
+            padding: 0 15px;
+            display: flex;
+            align-items: center;
+            color: #E6E6E6;
+            font-weight: 500;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .main-nav a:hover {
+            color: var(--primary-color);
+        }
+
+        .main-nav a.active {
+            color: var(--primary-color);
+        }
+
+        .main-nav a.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 15px;
+            right: 15px;
+            height: 3px;
+            background-color: var(--primary-color);
+        }
+
+        /* Header right */
+        .header-right {
+            display: flex;
+            align-items: center;
+        }
+
+        .market-status {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            margin-right: 20px;
+        }
+
+        .market-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .market-indicator.green {
+            background-color: #00CC6A;
+            box-shadow: 0 0 10px rgba(0, 204, 106, 0.7);
+        }
+
+        .market-time {
+            margin-left: 8px;
+            font-family: 'Inter', monospace;
+            color: var(--primary-color);
+        }
+
+        /* Button styles */
+        .search-button {
+            background-color: rgba(0, 255, 135, 0.15);
+            color: var(--primary-color);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            border-radius: 8px;
+            padding: 8px 15px;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .search-button:hover {
+            background-color: rgba(0, 255, 135, 0.25);
+        }
+
+        .search-button i {
+            margin-right: 8px;
+        }
+
+        /* Main content */
+        .main-content {
+            margin-left: 60px;
+            margin-top: 70px;
+            min-height: calc(100vh - 70px);
+            padding: 20px;
+        }
+        
+        /* Progress Steps améliorés */
         .progress-steps {
             display: flex;
             justify-content: space-between;
@@ -101,7 +295,184 @@
             color: rgba(255, 255, 255, 0.7);
         }
         
-        /* And all other styles from original CSS */
+        /* Barre de progression */
+        .progress-bar-container {
+            position: relative;
+            background: rgba(1, 42, 74, 0.4);
+            height: 8px;
+            border-radius: 4px;
+            margin: 15px 0 25px;
+            overflow: hidden;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), #00bfa5);
+            transition: width 0.5s ease;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0, 255, 135, 0.4);
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .progress-percentage {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .time-estimate {
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        /* Section tag */
+        .section-tag {
+            display: inline-block;
+            background-color: rgba(0, 255, 135, 0.15);
+            color: var(--primary-color);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-right: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        /* Question cards */
+        .question-card {
+            background-color: rgba(1, 42, 74, 0.6);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+        
+        .question-card:hover {
+            box-shadow: 0 5px 15px rgba(0, 255, 135, 0.1);
+            border-color: rgba(0, 255, 135, 0.3);
+        }
+        
+        /* Option buttons */
+        .option-btn {
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .option-btn:hover {
+            background-color: rgba(0, 255, 135, 0.15);
+            border-color: rgba(0, 255, 135, 0.3);
+            transform: translateY(-2px);
+        }
+        
+        .option-btn.selected {
+            background-color: rgba(0, 255, 135, 0.2);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px rgba(0, 255, 135, 0.2);
+        }
+        
+        .option-btn.selected::after {
+            content: '\f00c';
+            font-family: 'Font Awesome 5 Free';
+            font-weight: 900;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: var(--primary-color);
+        }
+        
+        /* Onglets horizontaux améliorés */
+        .tab-navigation {
+            display: flex;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+            overflow-x: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .tab-navigation::-webkit-scrollbar {
+            display: none;
+        }
+        
+        .tab-item {
+            padding: 12px 20px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.7);
+            position: relative;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        
+        .tab-item:hover {
+            color: var(--primary-color);
+        }
+        
+        .tab-item.active {
+            color: var(--primary-color);
+        }
+        
+        .tab-item.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 20px;
+            right: 20px;
+            height: 2px;
+            background-color: var(--primary-color);
+        }
+        
+        /* Animation pulse pour le dot */
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 0.7;
+            }
+            70% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 0;
+            }
+        }
+        
+        /* Input range customization */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0, 255, 135, 0.5);
+            transition: all 0.2s;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
     </style>
 </head>
 <body class="dark">
@@ -194,6 +565,15 @@
                 <h1 class="section-title text-4xl font-bold">SIMULATEUR DE FORME JURIDIQUE 2025</h1>
                 <p class="section-subtitle text-xl opacity-80 mt-2">TROUVEZ LE STATUT D'ENTREPRISE ADAPTÉ À VOTRE PROJET</p>
             </div>
+            
+            <!-- Onglets horizontaux (nouveaux) -->
+            <div class="tab-navigation mb-8">
+                <div class="tab-item active">Simulateur</div>
+                <div class="tab-item">Comparatif des statuts</div>
+                <div class="tab-item">Guide fiscal</div>
+                <div class="tab-item">Barèmes 2025</div>
+                <div class="tab-item">Historique</div>
+            </div>
 
             <!-- Introduction -->
             <div class="bg-blue-900 bg-opacity-20 p-8 rounded-xl mb-12">
@@ -276,6 +656,14 @@
             </p>
         </div>
     </footer>
+
+    <!-- Bouton du sélecteur de thème -->
+    <div class="fixed right-6 bottom-6 z-50">
+        <button id="theme-toggle-btn" class="w-12 h-12 bg-blue-900 bg-opacity-70 border border-green-400 rounded-full flex items-center justify-center text-green-400 hover:bg-blue-800 transition shadow-lg">
+            <i class="fas fa-moon" id="dark-icon"></i>
+            <i class="fas fa-sun hidden" id="light-icon"></i>
+        </button>
+    </div>
     
     <!-- Scripts -->
     <script type="module" src="js/question-data.js"></script>
