@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="fr" class="dark">
-<!-- Contenu du head inchangé -->
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,22 +11,1975 @@
     <!-- AMÉLIORATION: Ajout des bibliothèques pour l'export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- Le reste du head inchangé -->
-<!-- Contenu du body inchangé -->
+    <style>
+        :root {
+            --primary-color: #00FF87;
+            --primary-dark: #00CC6A;
+            --background-dark: #011627;
+            --card-background: rgba(1, 42, 74, 0.8);
+            --header-background: rgba(1, 22, 39, 0.8);
+        }
+        
+        body.dark {
+            background-color: var(--background-dark);
+            color: #E6E6E6;
+        }
+        
+        /* Sidebar styles */
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 60px;
+            background-color: rgba(1, 42, 74, 0.5);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
+            transition: width 0.3s;
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .sidebar-logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary-color);
+            text-align: center;
+            margin: 20px 0;
+            transition: all 0.3s;
+        }
+
+        .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+            overflow-y: auto;
+            width: 100%;
+        }
+
+        .nav-item {
+            width: 100%;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #E6E6E6;
+            transition: background-color 0.2s;
+            position: relative;
+            margin-bottom: 5px;
+        }
+
+        .nav-item:hover {
+            background-color: rgba(0, 255, 135, 0.1);
+            color: var(--primary-color);
+        }
+
+        .nav-item.active {
+            background-color: rgba(0, 255, 135, 0.15);
+            color: var(--primary-color);
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .nav-item i {
+            font-size: 20px;
+        }
+
+        /* Main header */
+        .main-header {
+            position: fixed;
+            top: 0;
+            left: 60px;
+            right: 0;
+            height: 70px;
+            background-color: var(--header-background);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            z-index: 50;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            font-weight: 900;
+            font-size: 22px;
+            color: var(--primary-color);
+            margin-right: 40px;
+            position: relative;
+        }
+
+        .pulse-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--primary-color);
+            border-radius: 50%;
+            margin-right: 10px;
+            position: relative;
+        }
+
+        .pulse-dot::after {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            width: 16px;
+            height: 16px;
+            background-color: rgba(0, 255, 135, 0.3);
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .main-nav {
+            display: flex;
+            height: 100%;
+        }
+
+        .main-nav a {
+            height: 100%;
+            padding: 0 15px;
+            display: flex;
+            align-items: center;
+            color: #E6E6E6;
+            font-weight: 500;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .main-nav a:hover {
+            color: var(--primary-color);
+        }
+
+        .main-nav a.active {
+            color: var(--primary-color);
+        }
+
+        .main-nav a.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 15px;
+            right: 15px;
+            height: 3px;
+            background-color: var(--primary-color);
+        }
+
+        /* Header right */
+        .header-right {
+            display: flex;
+            align-items: center;
+        }
+
+        .market-status {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            margin-right: 20px;
+        }
+
+        .market-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .market-indicator.green {
+            background-color: #00CC6A;
+            box-shadow: 0 0 10px rgba(0, 204, 106, 0.7);
+        }
+
+        .market-time {
+            margin-left: 8px;
+            font-family: 'Inter', monospace;
+            color: var(--primary-color);
+        }
+
+        /* Button styles */
+        .search-button {
+            background-color: rgba(0, 255, 135, 0.15);
+            color: var(--primary-color);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            border-radius: 8px;
+            padding: 8px 15px;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .search-button:hover {
+            background-color: rgba(0, 255, 135, 0.25);
+        }
+
+        .search-button i {
+            margin-right: 8px;
+        }
+
+        /* Main content */
+        .main-content {
+            margin-left: 60px;
+            margin-top: 70px;
+            min-height: calc(100vh - 70px);
+            padding: 20px;
+        }
+
+        .content-wrapper {
+            padding: 20px;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+                opacity: 0.7;
+            }
+            70% {
+                transform: scale(1.5);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 0;
+            }
+        }
+
+        /* Page spécifique pour types d'entreprise */
+        .form-card {
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+        
+        .form-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 255, 135, 0.2);
+        }
+        
+        .question-card {
+            background-color: rgba(1, 42, 74, 0.6);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+        
+        .question-card:hover {
+            box-shadow: 0 5px 15px rgba(0, 255, 135, 0.1);
+            border-color: rgba(0, 255, 135, 0.3);
+        }
+        
+        .option-btn {
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .option-btn:hover {
+            background-color: rgba(0, 255, 135, 0.15);
+            border-color: rgba(0, 255, 135, 0.3);
+        }
+        
+        .option-btn.selected {
+            background-color: rgba(0, 255, 135, 0.2);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px rgba(0, 255, 135, 0.2);
+        }
+        
+        .option-btn.selected::after {
+            content: '\f00c';
+            font-family: 'Font Awesome 5 Free';
+            font-weight: 900;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: var(--primary-color);
+        }
+        
+        /* Résultats */
+        .result-card {
+            background-color: rgba(1, 42, 74, 0.8);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.5s ease;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        
+        .result-card.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        .result-match {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .match-percentage {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background-color: var(--primary-color);
+            color: #011627;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 3px 10px rgba(0, 255, 135, 0.3);
+        }
+        
+        .match-indicator {
+            height: 6px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        
+        .match-fill {
+            height: 100%;
+            background-color: var(--primary-color);
+            border-radius: 3px;
+            transition: width 1s ease;
+        }
+        
+        .feature-list li {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        
+        .feature-list i {
+            margin-right: 10px;
+            margin-top: 4px;
+            flex-shrink: 0;
+        }
+        
+        /* Progression steps */
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            position: relative;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .progress-steps::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 40px;
+            right: 40px;
+            height: 2px;
+            background-color: rgba(255, 255, 255, 0.1);
+            z-index: 1;
+        }
+        
+        .progress-step {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: rgba(1, 42, 74, 0.8);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.5);
+            position: relative;
+            z-index: 2;
+            transition: all 0.3s ease;
+        }
+        
+        .progress-step.active {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            color: #011627;
+            box-shadow: 0 0 15px rgba(0, 255, 135, 0.4);
+        }
+        
+        .progress-step.completed {
+            background-color: rgba(0, 255, 135, 0.7);
+            border-color: rgba(0, 255, 135, 0.5);
+            color: #011627;
+        }
+        
+        .progress-label {
+            position: absolute;
+            top: 35px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            font-size: 12px;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        /* Range slider customization */
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 5px rgba(0, 255, 135, 0.5);
+            transition: all 0.2s;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+        }
+        
+        /* Tooltip pour les infos supplémentaires */
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+            margin-left: 5px;
+            cursor: help;
+        }
+        
+        .tooltip-text {
+            visibility: hidden;
+            position: absolute;
+            z-index: 10;
+            width: 250px;
+            background-color: rgba(1, 22, 39, 0.95);
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -125px;
+            border: 1px solid var(--primary-color);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        /* AMÉLIORATION: Badge de priorité pour les objectifs */
+        .priority-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: var(--primary-color);
+            color: #011627;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            z-index: 5;
+        }
+
+        /* Theme toggle button */
+        .theme-toggle {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            z-index: 100;
+        }
+        
+        .theme-toggle-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background-color: var(--card-background);
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .theme-toggle-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 255, 135, 0.2);
+        }
+
+        /* Comparatif table styles */
+        #comparatif-complet table {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+        }
+
+        #comparatif-complet table th,
+        #comparatif-complet table td {
+            padding: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: left;
+        }
+
+        #comparatif-complet table tr:hover {
+            background-color: rgba(1, 42, 74, 0.4);
+        }
+
+        /* AMÉLIORATION: Style pour le détail du calcul */
+        .score-details {
+            background-color: rgba(1, 22, 39, 0.9);
+            border-radius: 8px;
+            border: 1px solid rgba(0, 255, 135, 0.2);
+            padding: 10px;
+            margin-top: 8px;
+        }
+
+        .score-details ul {
+            margin: 0;
+            padding: 0;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        /* NOUVEL AJOUT: Barre de progression globale */
+        .progress-bar-container {
+            position: relative;
+            background: rgba(1, 42, 74, 0.4);
+            height: 8px;
+            border-radius: 4px;
+            margin: 15px 0 25px;
+            overflow: hidden;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), #00bfa5);
+            transition: width 0.5s ease;
+            border-radius: 4px;
+            box-shadow: 0 0 10px rgba(0, 255, 135, 0.4);
+        }
+
+        .progress-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .progress-percentage {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .time-estimate {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* NOUVEL AJOUT: Glossaire */
+        .glossary-term {
+            border-bottom: 1px dashed var(--primary-color);
+            cursor: help;
+            position: relative;
+            color: var(--primary-color);
+        }
+
+        .glossary-panel {
+            position: fixed;
+            right: -400px;
+            top: 100px;
+            width: 380px;
+            background-color: rgba(1, 22, 39, 0.95);
+            border-left: 3px solid var(--primary-color);
+            border-radius: 8px 0 0 8px;
+            padding: 20px;
+            transition: right 0.3s ease;
+            z-index: 1000;
+            box-shadow: -5px 0 25px rgba(0, 0, 0, 0.3);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .glossary-panel.visible {
+            right: 0;
+        }
+
+        .glossary-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .glossary-close {
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            cursor: pointer;
+            font-size: 18px;
+            transition: color 0.2s;
+        }
+
+        .glossary-close:hover {
+            color: var(--primary-color);
+        }
+
+        .glossary-title {
+            color: var(--primary-color);
+            font-weight: 700;
+            font-size: 20px;
+            margin: 0 0 5px 0;
+        }
+
+        .glossary-definition {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .glossary-example {
+            font-style: italic;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            padding: 10px;
+            background-color: rgba(0, 255, 135, 0.05);
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        /* NOUVEL AJOUT: Style pour l'affichage des résultats (première recommandation uniquement) */
+        .primary-result {
+            border: 2px solid var(--primary-color);
+            box-shadow: 0 5px 25px rgba(0, 255, 135, 0.2);
+            position: relative;
+        }
+        
+        .secondary-results {
+            margin-top: 30px;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+        
+        .secondary-results:hover {
+            opacity: 1;
+        }
+        
+        .results-toggle {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .recommended-badge {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background-color: var(--primary-color);
+            color: #011627;
+            font-weight: bold;
+            padding: 5px 15px;
+            border-radius: 20px;
+            box-shadow: 0 3px 10px rgba(0, 255, 135, 0.3);
+            z-index: 5;
+        }
+
+        /* AMÉLIORATION: Styles pour les paramètres avancés */
+        .advanced-params-panel {
+            background-color: rgba(1, 42, 74, 0.7);
+            border-radius: 12px;
+            border: 1px solid rgba(0, 255, 135, 0.2);
+            padding: 16px;
+            margin-top: 20px;
+        }
+
+        .advanced-params-toggle {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 6px;
+            transition: background-color 0.2s;
+        }
+
+        .advanced-params-toggle:hover {
+            background-color: rgba(1, 42, 74, 0.8);
+        }
+
+        .advanced-params-content {
+            margin-top: 12px;
+            transition: max-height 0.3s, opacity 0.2s;
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+        }
+
+        .advanced-params-content.visible {
+            max-height: 900px;
+            opacity: 1;
+        }
+
+        .parameter-slider-container {
+            display: flex;
+            align-items: center;
+            margin: 12px 0;
+        }
+
+        .parameter-slider-container .slider-labels {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-top: 4px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        .parameter-value {
+            width: 60px;
+            text-align: center;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        /* AMÉLIORATION: Styles pour les boutons d'export */
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .export-button {
+            background-color: rgba(1, 42, 74, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            padding: 8px 15px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .export-button:hover {
+            background-color: rgba(0, 255, 135, 0.2);
+            border-color: var(--primary-color);
+        }
+
+        .export-button i {
+            margin-right: 8px;
+        }
+
+        /* AMÉLIORATION: Bulle d'incompatibilités majeures */
+        .incompatibility-badge {
+            position: absolute;
+            top: -15px;
+            right: 20px;
+            background-color: #FF3A54;
+            color: #fff;
+            font-weight: bold;
+            padding: 5px 15px;
+            border-radius: 20px;
+            box-shadow: 0 3px 10px rgba(255, 58, 84, 0.3);
+            z-index: 5;
+        }
+        
+        /* NOUVELLE FONCTIONNALITÉ: Badges du mode optimisé (micro vs réel) */
+        .regime-badge {
+            position: absolute;
+            top: -15px;
+            right: 20px;
+            background-color: #3A9BFF;
+            color: #fff;
+            font-weight: bold;
+            padding: 5px 15px;
+            border-radius: 20px;
+            box-shadow: 0 3px 10px rgba(58, 155, 255, 0.3);
+            z-index: 5;
+        }
+        
+        /* NOUVELLE FONCTIONNALITÉ: Style pour le tableau de sensibilité (micro vs réel) */
+        .sensitivity-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 15px;
+            background-color: rgba(1, 42, 74, 0.4);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .sensitivity-table th,
+        .sensitivity-table td {
+            padding: 8px 12px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .sensitivity-table th {
+            background-color: rgba(0, 255, 135, 0.1);
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        .sensitivity-table tr:last-child td {
+            border-bottom: none;
+        }
+        
+        .sensitivity-table .better-option {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+        
+        /* NOUVELLE FONCTIONNALITÉ: Badge ACRE */
+        .acre-badge {
+            display: inline-flex;
+            align-items: center;
+            background-color: rgba(0, 255, 135, 0.15);
+            color: var(--primary-color);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        .acre-badge i {
+            margin-right: 4px;
+            font-size: 10px;
+        }
+
+        /* Styles pour les switchs de calcul */
+        .calculation-switch {
+            position: relative;
+            display: inline-block;
+            width: 46px;
+            height: 24px;
+            margin-right: 10px;
+        }
+
+        .calculation-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .switch-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .switch-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .switch-slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .switch-slider:before {
+            transform: translateX(22px);
+        }
+
+        .calculation-label {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        /* Nouvelles étiquettes de section */
+        .section-tag {
+            display: inline-block;
+            background-color: rgba(0, 255, 135, 0.15);
+            color: var(--primary-color);
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-right: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Style pour nouvelle projection pluriannuelle */
+        .projection-container {
+            background-color: rgba(1, 42, 74, 0.4);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .year-tabs {
+            display: flex;
+            margin-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .year-tab {
+            padding: 8px 15px;
+            cursor: pointer;
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.7);
+            position: relative;
+        }
+
+        .year-tab.active {
+            color: var(--primary-color);
+        }
+
+        .year-tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: var(--primary-color);
+        }
+
+        .year-content {
+            display: none;
+        }
+
+        .year-content.active {
+            display: block;
+        }
+    </style>
 </head>
 <body class="dark">
-    <!-- Contenu inchangé -->
+    <!-- Sidebar de navigation verticale -->
+    <aside class="sidebar">
+        <div class="sidebar-logo">TP</div>
+        <nav class="sidebar-nav">
+            <a href="actualites.html" class="nav-item" title="Actualités">
+                <i class="fas fa-newspaper"></i>
+            </a>
+            <a href="portefeuille.html" class="nav-item" title="Portefeuilles">
+                <i class="fas fa-chart-pie"></i>
+            </a>
+            <a href="dashboard.html" class="nav-item" title="Tableau de bord">
+                <i class="fas fa-tachometer-alt"></i>
+            </a>
+            <a href="marches.html" class="nav-item" title="Marchés">
+                <i class="fas fa-chart-line"></i>
+            </a>
+            <a href="secteurs.html" class="nav-item" title="Secteurs">
+                <i class="fas fa-industry"></i>
+            </a>
+            <a href="liste.html" class="nav-item" title="Listes">
+                <i class="fas fa-list"></i>
+            </a>
+            <a href="etf.html" class="nav-item" title="ETF">
+                <i class="fas fa-funnel-dollar"></i>
+            </a>
+            <a href="crypto.html" class="nav-item" title="Crypto">
+                <i class="fab fa-bitcoin"></i>
+            </a>
+            <a href="simulation.html" class="nav-item" title="Simulation">
+                <i class="fas fa-calculator"></i>
+            </a>
+            <a href="guide-placements.html" class="nav-item" title="Guide Placements">
+                <i class="fas fa-book"></i>
+            </a>
+            <a href="types-entreprise.html" class="nav-item active" title="Types d'Entreprise">
+                <i class="fas fa-building"></i>
+            </a>
+            <a href="email-preview.html" class="nav-item" title="Alertes">
+                <i class="fas fa-bell"></i>
+                <span class="notification-badge"></span>
+            </a>
+            <a href="parametres.html" class="nav-item" title="Paramètres">
+                <i class="fas fa-cog"></i>
+            </a>
+        </nav>
+    </aside>
 
-    <!-- Scripts - MODIFIÉ: Ajout du nouveau fichier JS -->
+    <!-- Header principal -->
+    <header class="main-header">
+        <div class="header-left">
+            <div class="logo-container">
+                <div class="pulse-dot"></div>
+                <a href="index.html">TRADEPULSE</a>
+            </div>
+            <nav class="main-nav">
+                <a href="actualites.html">Actualités</a>
+                <a href="portefeuille.html?type=modere">Portefeuilles</a>
+                <a href="dashboard.html">Tableau de bord</a>
+                <a href="marches.html">Marchés</a>
+                <a href="secteurs.html">Secteurs</a>
+                <a href="liste.html">Listes</a>
+                <a href="etf.html">ETF</a>
+                <a href="crypto.html">Crypto</a>
+                <a href="simulation.html">Simulation</a>
+                <a href="guide-placements.html">Guide Placements</a>
+                <a href="types-entreprise.html" class="active">Types d'Entreprise</a>
+            </nav>
+        </div>
+        <div class="header-right">
+            <div class="market-status">
+                <div class="market-indicator green"></div>
+                <span>Marché ouvert</span>
+                <span class="market-time" id="marketTime">15:52:47</span>
+            </div>
+            <a href="recherche.html" class="search-button ripple">
+                <i class="fas fa-search"></i>
+                <span>Ma question</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- Contenu principal -->
+    <div class="main-content">
+        <div class="content-wrapper max-w-7xl mx-auto">
+            <!-- En-tête de page -->
+            <div class="page-header text-center mb-12">
+                <h1 class="section-title text-4xl font-bold">SIMULATEUR DE FORME JURIDIQUE</h1>
+                <p class="section-subtitle text-xl opacity-80 mt-2">TROUVEZ LE STATUT D'ENTREPRISE ADAPTÉ À VOTRE PROJET</p>
+            </div>
+
+            <!-- Introduction -->
+            <div class="bg-blue-900 bg-opacity-20 p-8 rounded-xl mb-12">
+                <div class="max-w-4xl mx-auto">
+                    <h2 class="text-2xl font-bold text-green-400 mb-4 flex items-center">
+                        <i class="fas fa-building mr-3 text-3xl"></i>
+                        Quel statut juridique pour votre projet ?
+                    </h2>
+                    <p class="text-lg mb-6">
+                        Le choix de la forme juridique est une étape cruciale dans la création d'une entreprise. Ce simulateur vous aide à trouver le statut le plus adapté à votre situation en fonction de vos besoins, objectifs et contraintes. Répondez aux questions ci-dessous pour obtenir une recommandation personnalisée.
+                    </p>
+                    
+                    <div class="flex flex-wrap justify-center gap-4 mt-8">
+                        <div class="w-full sm:w-1/3 p-4 text-center">
+                            <div class="h-14 w-14 bg-blue-900 bg-opacity-40 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <i class="fas fa-check-circle text-2xl text-green-400"></i>
+                            </div>
+                            <h3 class="font-semibold">Simple et rapide</h3>
+                            <p class="text-sm opacity-80 mt-1">Moins de 5 minutes pour obtenir une recommandation</p>
+                        </div>
+                        <div class="w-full sm:w-1/3 p-4 text-center">
+                            <div class="h-14 w-14 bg-blue-900 bg-opacity-40 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <i class="fas fa-user-cog text-2xl text-green-400"></i>
+                            </div>
+                            <h3 class="font-semibold">Personnalisé</h3>
+                            <p class="text-sm opacity-80 mt-1">Adapté à votre profil et vos objectifs</p>
+                        </div>
+                        <div class="w-full sm:w-1/3 p-4 text-center">
+                            <div class="h-14 w-14 bg-blue-900 bg-opacity-40 rounded-full flex items-center justify-center mx-auto mb-3">
+                                <i class="fas fa-balance-scale text-2xl text-green-400"></i>
+                            </div>
+                            <h3 class="font-semibold">Comparatif complet</h3>
+                            <p class="text-sm opacity-80 mt-1">Avantages et inconvénients de chaque statut</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- NOUVEL AJOUT: Barre de progression globale -->
+            <div class="progress-info">
+                <span class="progress-percentage" id="progress-percentage">0% complété</span>
+                <span class="time-estimate" id="time-estimate">Temps estimé: 5 minutes</span>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+            </div>
+
+            <!-- Progress Steps -->
+            <div class="progress-steps mb-8">
+                <div class="progress-step active" id="step1">
+                    1
+                    <div class="progress-label">Profil & Horizon</div>
+                </div>
+                <div class="progress-step" id="step2">
+                    2
+                    <div class="progress-label">Équipe</div>
+                </div>
+                <div class="progress-step" id="step3">
+                    3
+                    <div class="progress-label">Activité</div>
+                </div>
+                <div class="progress-step" id="step4">
+                    4
+                    <div class="progress-label">Finance</div>
+                </div>
+                <div class="progress-step" id="step5">
+                    5
+                    <div class="progress-label">Résultats</div>
+                </div>
+            </div>
+
+            <!-- Questions du simulateur -->
+            <div id="question-container" class="max-w-4xl mx-auto mb-12">
+                <!-- Étape 1: Profil & Horizon Personnel (NOUVELLE VERSION) -->
+                <div id="section1" class="question-section active">
+                    <div class="question-card p-6">
+                        <h3 class="text-xl font-bold text-green-400 mb-4">
+                            <span class="section-tag">étape 1/9</span>
+                            Votre profil et horizon personnel
+                        </h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                            <div>
+                                <label class="block mb-2 font-semibold">Tranche marginale d'imposition actuelle</label>
+                                <select id="tmi-actuel" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
+                                    <option value="0">0% (Non imposable)</option>
+                                    <option value="11">11% (Jusqu'à 27 478€)</option>
+                                    <option value="30" selected>30% (Jusqu'à 78 570€)</option>
+                                    <option value="41">41% (Jusqu'à 168 994€)</option>
+                                    <option value="45">45% (Au-delà)</option>
+                                </select>
+                                <p class="text-xs mt-1 opacity-70">Votre taux d'imposition personnel actuel</p>
+                            </div>
+                            
+                            <div>
+                                <label class="block mb-2 font-semibold">Avez-vous d'autres revenus salariés?</label>
+                                <div class="flex mt-2">
+                                    <button class="option-btn flex-1 p-3 rounded-l-lg bg-blue-900 bg-opacity-30" data-value="oui">
+                                        Oui
+                                    </button>
+                                    <button class="option-btn flex-1 p-3 rounded-r-lg bg-blue-900 bg-opacity-30" data-value="non">
+                                        Non
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <label class="block mb-2 font-semibold">Horizon de votre projet</label>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <button class="option-btn flex flex-col items-center p-4 rounded-xl bg-blue-900 bg-opacity-30" data-value="court">
+                                    <i class="fas fa-hourglass-start text-2xl mb-2 text-green-400"></i>
+                                    <span class="font-semibold">Court terme</span>
+                                    <span class="text-sm opacity-80 mt-1">1-2 ans</span>
+                                </button>
+                                
+                                <button class="option-btn flex flex-col items-center p-4 rounded-xl bg-blue-900 bg-opacity-30" data-value="moyen">
+                                    <i class="fas fa-hourglass-half text-2xl mb-2 text-green-400"></i>
+                                    <span class="font-semibold">Moyen terme</span>
+                                    <span class="text-sm opacity-80 mt-1">3-5 ans</span>
+                                </button>
+                                
+                                <button class="option-btn flex flex-col items-center p-4 rounded-xl bg-blue-900 bg-opacity-30" data-value="long">
+                                    <i class="fas fa-hourglass-end text-2xl mb-2 text-green-400"></i>
+                                    <span class="font-semibold">Long terme</span>
+                                    <span class="text-sm opacity-80 mt-1">Plus de 5 ans</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <label class="block mb-2 font-semibold">Objectif de revenu net annuel</label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="text-sm">Première année</label>
+                                    <div class="flex items-center mt-1">
+                                        <input type="number" id="revenu-annee1" min="0" step="1000" value="30000" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
+                                        <span class="ml-2">€</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="text-sm">Troisième année</label>
+                                    <div class="flex items-center mt-1">
+                                        <input type="number" id="revenu-annee3" min="0" step="1000" value="50000" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
+                                        <span class="ml-2">€</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <label class="block mb-2 font-semibold">Protection du patrimoine personnel</label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
+                                    <label class="flex items-start">
+                                        <input type="checkbox" class="mt-1 h-4 w-4" id="protection-patrimoine">
+                                        <div class="ml-2">
+                                            <div class="font-medium">Je souhaite protéger mon patrimoine personnel</div>
+                                            <div class="text-xs opacity-70">Séparation des patrimoines personnel et professionnel</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
+                                    <label class="flex items-start">
+                                        <input type="checkbox" class="mt-1 h-4 w-4" id="bien-immobilier">
+                                        <div class="ml-2">
+                                            <div class="font-medium">Je possède déjà un bien immobilier</div>
+                                            <div class="text-xs opacity-70">Maison, appartement ou autres investissements</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end mt-6">
+                        <button id="next1" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center">
+                            Étape suivante <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+
+                    <!-- Affichage de la progression et du temps restant -->
+                    <div class="text-center mt-8 text-sm text-gray-400">
+                        <span id="question-progress">Question 1 sur 9</span> • 
+                        <span id="time-remaining">Environ 4 minutes restantes</span>
+                    </div>
+                </div>
+
+                <!-- Étape 2: Équipe & Gouvernance (NOUVELLE VERSION) -->
+                <div id="section2" class="question-section hidden">
+                    <div class="question-card p-6">
+                        <h3 class="text-xl font-bold text-green-400 mb-4">
+                            <span class="section-tag">étape 2/9</span>
+                            Équipe et gouvernance
+                        </h3>
+                        
+                        <div class="mt-4">
+                            <label class="block mb-2 font-semibold">Structure d'équipe envisagée</label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                                <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="solo">
+                                    <i class="fas fa-user text-3xl mb-3 text-green-400"></i>
+                                    <span class="font-semibold text-lg">Entrepreneur solo</span>
+                                    <span class="text-sm opacity-80 mt-2 text-center">Je serai le seul dirigeant et associé</span>
+                                </button>
+                                
+                                <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="famille">
+                                    <i class="fas fa-users text-3xl mb-3 text-green-400"></i>
+                                    <span class="font-semibold text-lg">Projet familial</span>
+                                    <span class="text-sm opacity-80 mt-2 text-center">Avec des membres de ma famille</span>
+                                </button>
+                                
+                                <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="associes">
+                                    <i class="fas fa-handshake text-3xl mb-3 text-green-400"></i>
+                                    <span class="font-semibold text-lg">Avec associés</span>
+                                    <span class="text-sm opacity-80 mt-2 text-center">Plusieurs associés avec partage du capital</span>
+                                </button>
+                                
+                                <button class="option-btn flex flex-col items-center p-6 rounded-xl bg-blue-900 bg-opacity-30" data-value="investisseurs">
+                                    <i class="fas fa-chart-line text-3xl mb-3 text-green-400"></i>
+                                    <span class="font-semibold text-lg">Avec investisseurs</span>
+                                    <span class="text-sm opacity-80 mt-2 text-center">Ouverture du capital à des investisseurs</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6" id="investisseurs-section" style="display: none;">
+                            <label class="block mb-2 font-semibold">Type d'investisseurs envisagés</label>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
+                                    <label class="flex items-start">
+                                        <input type="checkbox" class="mt-1 h-4 w-4" id="invest-business-angels">
+                                        <div class="ml-2">
+                                            <div class="font-medium">Business Angels</div>
+                                            <div class="text-xs opacity-70">Investisseurs individuels</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
+                                    <label class="flex items-start">
+                                        <input type="checkbox" class="mt-1 h-4 w-4" id="invest-vc">
+                                        <div class="ml-2">
+                                            <div class="font-medium">Capital-risque (VC)</div>
+                                            <div class="text-xs opacity-70">Fonds d'investissement</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
+                                    <label class="flex items-start">
+                                        <input type="checkbox" class="mt-1 h-4 w-4" id="invest-crowdfunding">
+                                        <div class="ml-2">
+                                            <div class="font-medium">Crowdfunding</div>
+                                            <div class="text-xs opacity-70">Financement participatif</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between mt-6">
+                        <button id="prev2" class="border border-green-400 text-green-400 hover:bg-green-900 hover:bg-opacity-30 font-semibold py-3 px-6 rounded-lg transition flex items-center">
+                            <i class="fas fa-arrow-left mr-2"></i> Précédent
+                        </button>
+                        <button id="next2" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center">
+                            Étape suivante <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+
+                    <!-- Affichage de la progression et du temps restant -->
+                    <div class="text-center mt-8 text-sm text-gray-400">
+                        <span id="question-progress-2">Question 2 sur 9</span> • 
+                        <span id="time-remaining-2">Environ 3 minutes restantes</span>
+                    </div>
+                </div>
+
+                <!-- Étape 3: Activité (NOUVELLE VERSION) -->
+                <div id="section3" class="question-section hidden">
+                    <div class="question-card p-6">
+                        <h3 class="text-xl font-bold text-green-400 mb-4">
+                            <span class="section-tag">étape 3/9</span>
+                            Nature de l'activité
+                        </h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                            <div>
+                                <label class="block mb-2 font-semibold">Type d'activité</label>
+                                <select id="activite-type" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
+                                    <option value="bic-vente">Vente de biens, commerce (BIC)</option>
+                                    <option value="bic-service">Service commercial (BIC)</option>
+                                    <option value="bnc">Profession libérale, conseil (BNC)</option>
+                                    <option value="artisanale">Artisanat</option>
+                                    <option value="agricole">Activité agricole</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block mb-2 font-semibold">Réglementation</label>
+                                <div class="flex flex-col space-y-2">
+                                    <label class="flex items-start p-2 rounded hover:bg-blue-900 hover:bg-opacity-20">
+                                        <input type="checkbox" class="mt-1 h-4 w-4" id="activite-reglementee">
+                                        <div class="ml-2">
+                                            <div class="font-medium">Activité réglementée</div>
+                                            <div class="text-xs opacity-70">Diplôme ou qualification spécifique exigée</div>
+                                        </div>
+                                    </label>
+                                    
+                                    <label class="flex items-start p-2 rounded hover:bg-blue-900 hover:bg-opacity-20">
+                                        <input type="checkbox" class="mt-1 h-4 w-4" id="ordre-professionnel">
+                                        <div class="ml-2">
+                                            <div class="font-medium">Ordre professionnel</div>
+                                            <div class="text-xs opacity-70">Avocat, médecin, expert-comptable, etc.</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <label class="block mb-2 font-semibold">Risques liés à l'activité</label>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
+                                    <label class="flex items-start">
+                                        <input type="checkbox" class="mt-1 h-4 w-4" id="risque-responsabilite">
+                                        <div class="ml-2">
+                                            <div class="font-medium">Responsabilité professionnelle</div>
+                                            <div class="text-xs opacity-70">Risques de dommages aux clients, conseils</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
+                                    <label class="flex items-start">
+                                        <input type="checkbox" class="mt-1 h-4 w-4" id="besoin-assurance">
+                                        <div class="ml-2">
+                                            <div class="font-medium">Besoin d'assurance pro</div>
+                                            <div class="text-xs opacity-70">RC Pro, multirisque, etc.</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between mt-6">
+                        <button id="prev3" class="border border-green-400 text-green-400 hover:bg-green-900 hover:bg-opacity-30 font-semibold py-3 px-6 rounded-lg transition flex items-center">
+                            <i class="fas fa-arrow-left mr-2"></i> Précédent
+                        </button>
+                        <button id="next3" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center">
+                            Étape suivante <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+
+                    <!-- Affichage de la progression et du temps restant -->
+                    <div class="text-center mt-8 text-sm text-gray-400">
+                        <span id="question-progress-3">Question 3 sur 9</span> • 
+                        <span id="time-remaining-3">Environ 3 minutes restantes</span>
+                    </div>
+                </div>
+
+                <!-- Étape 4: Finance (NOUVELLE VERSION) -->
+                <div id="section4" class="question-section hidden">
+                    <div class="question-card p-6">
+                        <h3 class="text-xl font-bold text-green-400 mb-4">
+                            <span class="section-tag">étape 4/9</span>
+                            Volumétrie et finances
+                        </h3>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                            <div>
+                                <label class="block mb-2 font-semibold">Chiffre d'affaires prévisionnel annuel</label>
+                                <div class="flex items-center">
+                                    <input type="number" id="ca-previsionnel" min="0" step="1000" value="75000" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
+                                    <span class="ml-2">€</span>
+                                </div>
+                                <p class="text-xs mt-1 opacity-70 flex items-center">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Seuil micro-entreprise: 77 700€ (services) ou 188 700€ (vente)
+                                </p>
+                            </div>
+                            
+                            <div>
+                                <label class="block mb-2 font-semibold">Taux de marge brute estimé</label>
+                                <div class="flex items-center">
+                                    <input type="range" id="taux-marge" min="5" max="95" value="35" class="w-full">
+                                    <span class="ml-2 w-12 text-center" id="taux-marge-value">35%</span>
+                                </div>
+                                <p class="text-xs mt-1 opacity-70">
+                                    Bénéfice avant impôt / Chiffre d'affaires
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <h4 class="font-semibold mb-3">Besoins de financement et trésorerie</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
+                                    <label class="block mb-2">Besoin de revenus immédiats</label>
+                                    <div class="flex items-center">
+                                        <label class="switch calculation-switch">
+                                            <input type="checkbox" id="besoin-revenus-immediats">
+                                            <span class="switch-slider"></span>
+                                        </label>
+                                        <span class="text-sm">Je dois me salarier dès le 1er mois</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
+                                    <label class="block mb-2">Caution bancaire envisagée</label>
+                                    <div class="flex items-center">
+                                        <label class="switch calculation-switch">
+                                            <input type="checkbox" id="caution-bancaire">
+                                            <span class="switch-slider"></span>
+                                        </label>
+                                        <span class="text-sm">Prêt professionnel à cautionner</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
+                                    <label class="block mb-2">Besoin de lever des fonds</label>
+                                    <div class="flex items-center gap-3">
+                                        <input type="number" id="montant-levee" min="0" step="10000" value="0" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-24">
+                                        <span>€</span>
+                                    </div>
+                                </div>
+                                
+                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
+                                    <label class="block mb-2">Préférence de rémunération</label>
+                                    <select id="preference-remuneration" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
+                                        <option value="salaire">Salaire régulier</option>
+                                        <option value="dividendes">Dividendes (performance)</option>
+                                        <option value="mixte" selected>Mixte (optimisation)</option>
+                                        <option value="flexible">Selon évolution</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <h4 class="font-semibold mb-3">Aides et dispositifs</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
+                                    <label class="flex items-start">
+                                        <input type="checkbox" class="mt-1 h-4 w-4" id="aide-acre">
+                                        <div class="ml-2">
+                                            <div class="font-medium">ACRE</div>
+                                            <div class="text-xs opacity-70">Exonération charges sociales</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
+                                    <label class="flex items-start">
+                                        <input type="checkbox" class="mt-1 h-4 w-4" id="aide-jei">
+                                        <div class="ml-2">
+                                            <div class="font-medium">JEI</div>
+                                            <div class="text-xs opacity-70">Jeune Entreprise Innovante</div>
+                                        </div>
+                                    </label>
+                                </div>
+                                
+                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
+                                    <label class="flex items-start">
+                                        <input type="checkbox" class="mt-1 h-4 w-4" id="aide-cir">
+                                        <div class="ml-2">
+                                            <div class="font-medium">CIR/CII</div>
+                                            <div class="text-xs opacity-70">Crédit d'impôt recherche/innovation</div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <h4 class="font-semibold mb-3">Sortie et transmission</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <button class="option-btn flex flex-col items-center p-4 rounded-xl bg-blue-900 bg-opacity-30" data-value="revente">
+                                    <i class="fas fa-handshake text-2xl mb-2 text-green-400"></i>
+                                    <span class="font-semibold">Revente à terme</span>
+                                    <span class="text-sm opacity-80 mt-1">Cession de l'entreprise</span>
+                                </button>
+                                
+                                <button class="option-btn flex flex-col items-center p-4 rounded-xl bg-blue-900 bg-opacity-30" data-value="transmission">
+                                    <i class="fas fa-exchange-alt text-2xl mb-2 text-green-400"></i>
+                                    <span class="font-semibold">Transmission familiale</span>
+                                    <span class="text-sm opacity-80 mt-1">Passage aux descendants</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <h4 class="font-semibold mb-3">Préférences fiscales et sociales</h4>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block mb-2">Régime fiscal préféré</label>
+                                    <select id="regime-fiscal-preference" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
+                                        <option value="ir">Impôt sur le Revenu (IR)</option>
+                                        <option value="is">Impôt sur les Sociétés (IS)</option>
+                                        <option value="flexible" selected>Flexible/Option possible</option>
+                                        <option value="optimisation">Optimisation maximum</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label class="block mb-2">Régime social préféré</label>
+                                    <select id="regime-social-preference" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
+                                        <option value="tns">Indépendant (TNS)</option>
+                                        <option value="salarie">Assimilé salarié</option>
+                                        <option value="equilibre" selected>Équilibre coût/protection</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between mt-6">
+                        <button id="prev4" class="border border-green-400 text-green-400 hover:bg-green-900 hover:bg-opacity-30 font-semibold py-3 px-6 rounded-lg transition flex items-center">
+                            <i class="fas fa-arrow-left mr-2"></i> Précédent
+                        </button>
+                        <button id="submit-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center">
+                            Obtenir les résultats <i class="fas fa-check-circle ml-2"></i>
+                        </button>
+                    </div>
+
+                    <!-- Affichage de la progression et du temps restant -->
+                    <div class="text-center mt-8 text-sm text-gray-400">
+                        <span id="question-progress-4">Question 9 sur 9</span> • 
+                        <span id="time-remaining-4">Moins d'une minute restante</span>
+                    </div>
+                </div>
+
+                <!-- Étape 5: Résultats -->
+                <div id="section5" class="question-section hidden">
+                    <div class="p-6 text-center mb-8">
+                        <h3 class="text-2xl font-bold text-green-400 mb-4">Votre forme juridique recommandée</h3>
+                        <p class="text-lg opacity-80">Basé sur votre profil et vos réponses, voici la forme juridique qui correspond le mieux à vos besoins :</p>
+                    </div>
+                    
+                    <!-- Bouton de méthode de calcul -->
+                    <div class="flex justify-center mb-4">
+                        <label class="calculation-label">
+                            <span class="mr-2">Afficher la méthode de calcul</span>
+                            <label class="switch calculation-switch">
+                                <input type="checkbox" id="show-calculation-details">
+                                <span class="switch-slider"></span>
+                            </label>
+                        </label>
+                    </div>
+                    
+                    <!-- AMÉLIORATION: Panneau de paramètres avancés pour la simulation -->
+                    <div class="advanced-params-panel mt-4 mb-8">
+                        <div class="advanced-params-toggle" id="advanced-params-toggle">
+                            <div class="flex items-center">
+                                <i class="fas fa-sliders-h text-green-400 mr-2"></i>
+                                <span class="font-semibold">Paramètres avancés de simulation</span>
+                            </div>
+                            <i class="fas fa-chevron-down text-green-400" id="params-toggle-icon"></i>
+                        </div>
+                        
+                        <div class="advanced-params-content" id="advanced-params-content">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                                <div>
+                                    <label class="block mb-2 font-semibold">Répartition de la rémunération</label>
+                                    <div class="parameter-slider-container">
+                                        <span class="text-sm">Salaire</span>
+                                        <input type="range" id="ratio-salaire" min="0" max="100" value="50" class="mx-4">
+                                        <span class="parameter-value" id="ratio-salaire-value">50%</span>
+                                    </div>
+                                    <div class="parameter-slider-container">
+                                        <span class="text-sm">Dividendes</span>
+                                        <input type="range" id="ratio-dividendes" min="0" max="100" value="50" class="mx-4" disabled>
+                                        <span class="parameter-value" id="ratio-dividendes-value">50%</span>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label class="block mb-2 font-semibold">Capital social</label>
+                                    <div class="flex items-center">
+                                        <input type="number" id="capital-social" min="0" value="10000" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-32">
+                                        <span class="ml-2">€</span>
+                                    </div>
+                                    
+                                    <div class="mt-4">
+                                        <label class="block mb-2 font-semibold">Pourcentage libéré</label>
+                                        <div class="parameter-slider-container">
+                                            <input type="range" id="capital-libere" min="20" max="100" value="100" class="mx-4">
+                                            <span class="parameter-value" id="capital-libere-value">100%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- NOUVELLE SECTION: Options micro-entreprise -->
+                            <div class="mt-4 border-t border-gray-700 pt-4" id="micro-entreprise-options">
+                                <label class="block mb-2 font-semibold">Options pour micro-entreprise</label>
+                                <div class="flex items-center mt-2">
+                                    <span class="text-sm mr-4">Frais réels estimés :</span>
+                                    <div class="relative flex items-center">
+                                        <input type="number" id="frais-reels" min="0" max="100" value="35" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-20">
+                                        <span class="ml-2">%</span>
+                                        <span class="tooltip-container ml-2">
+                                            <i class="fas fa-info-circle text-green-400"></i>
+                                            <span class="tooltip-text">Pourcentage de votre CA représentant vos frais et charges réels. Permet de comparer le régime micro avec le régime réel.</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <label class="block mb-2 font-semibold">Chiffre d'affaires précis pour la simulation</label>
+                                <div class="flex items-center">
+                                    <input type="number" id="ca-simulation" min="1000" max="10000000" value="50000" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-40">
+                                    <span class="ml-2">€</span>
+                                </div>
+                            </div>
+                            
+                            <!-- NOUVELLE SECTION: Options ACRE -->
+                            <div class="mt-4 border-t border-gray-700 pt-4" id="acre-options">
+                                <label class="block mb-2 font-semibold">Options ACRE</label>
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="acre-checkbox" class="h-5 w-5 rounded bg-blue-900 bg-opacity-30 border-gray-600 text-green-400 focus:ring-green-400">
+                                    <label for="acre-checkbox" class="ml-2">Inclure l'ACRE dans la simulation</label>
+                                    <span class="tooltip-container ml-2">
+                                        <i class="fas fa-info-circle text-green-400"></i>
+                                        <span class="tooltip-text">L'ACRE permet une réduction de charges sociales de 50% pendant la première année.</span>
+                                    </span>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <div class="flex items-center">
+                                        <input type="checkbox" id="projections-pluriannuelles" class="h-5 w-5 rounded bg-blue-900 bg-opacity-30 border-gray-600 text-green-400 focus:ring-green-400">
+                                        <label for="projections-pluriannuelles" class="ml-2">Afficher les projections sur 3 ans</label>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-6 flex justify-end">
+                                <button id="apply-params" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-2 px-4 rounded-lg transition flex items-center">
+                                    <i class="fas fa-sync-alt mr-2"></i> Recalculer les résultats
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="results-container">
+                        <!-- Les résultats seront injectés ici par le JavaScript -->
+                        <div class="flex justify-center items-center py-10">
+                            <div class="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-green-400"></div>
+                        </div>
+                    </div>
+
+                    <!-- AMÉLIORATION: Boutons d'export des résultats -->
+                    <div class="export-buttons flex justify-center mt-6" id="export-buttons" style="display: none;">
+                        <button id="export-pdf" class="export-button">
+                            <i class="fas fa-file-pdf"></i> Exporter en PDF
+                        </button>
+                        <button id="export-excel" class="export-button">
+                            <i class="fas fa-file-excel"></i> Exporter en Excel
+                        </button>
+                    </div>
+
+                    <div class="results-toggle hidden" id="show-more-results">
+                        <button class="bg-blue-900 bg-opacity-30 hover:bg-opacity-50 text-white py-2 px-4 rounded-lg transition flex items-center mx-auto">
+                            <i class="fas fa-chevron-down mr-2"></i> Voir les autres options compatibles
+                        </button>
+                    </div>
+
+                    <div id="secondary-results" class="secondary-results hidden">
+                        <!-- Les résultats secondaires seront injectés ici -->
+                    </div>
+
+                    <div class="bg-blue-900 bg-opacity-20 p-6 rounded-xl mt-10">
+                        <h4 class="font-bold text-lg text-green-400 mb-3">Important</h4>
+                        <p class="mb-4">Ce simulateur fournit des indications générales basées sur vos réponses. Pour un conseil personnalisé et adapté à votre situation précise, il est recommandé de consulter un expert-comptable ou un avocat spécialisé.</p>
+                        
+                        <div class="flex flex-wrap gap-4 mt-6">
+                            <a href="#" id="restart-btn" class="border border-green-400 text-green-400 hover:bg-green-900 hover:bg-opacity-30 font-semibold py-3 px-6 rounded-lg transition flex items-center">
+                                <i class="fas fa-redo mr-2"></i> Recommencer la simulation
+                            </a>
+                            <a href="#" id="compare-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center">
+                                <i class="fas fa-table mr-2"></i> Voir le comparatif complet
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+
+            <!-- Comparatif complet (caché par défaut) -->
+            <div id="comparatif-complet" class="hidden mb-16">
+                <h3 class="text-2xl font-bold text-green-400 mb-6 flex items-center">
+                    <i class="fas fa-table mr-3"></i>
+                    Comparatif complet des formes juridiques
+                </h3>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse">
+                        <thead>
+                            <tr class="bg-blue-900 bg-opacity-40">
+                                <th class="p-3 text-left">Forme juridique</th>
+                                <th class="p-3 text-left">Nb associés</th>
+                                <th class="p-3 text-left">Capital social</th>
+                                <th class="p-3 text-left">Responsabilité</th>
+                                <th class="p-3 text-left">Fiscalité</th>
+                                <th class="p-3 text-left">Régime social</th>
+                                <th class="p-3 text-left">Avantages clés</th>
+                                <th class="p-3 text-left">Inconvénients</th>
+                            </tr>
+                        </thead>
+                        <tbody id="comparatif-table-body">
+                            <!-- Le tableau sera rempli via JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="flex justify-center mt-6">
+                    <button id="hide-comparatif" class="border border-green-400 text-green-400 hover:bg-green-900 hover:bg-opacity-30 font-semibold py-3 px-6 rounded-lg transition flex items-center">
+                        <i class="fas fa-arrow-up mr-2"></i> Retour aux résultats
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="bg-blue-900 bg-opacity-40 backdrop-blur-md border-t border-gray-800 py-4 px-6 text-center mt-12">
+            <div class="flex justify-around flex-wrap gap-4 text-sm text-gray-400">
+                <p class="flex items-center">
+                    <i class="fas fa-building text-green-400 mr-2"></i>
+                    Simulateur développé par l'équipe TradePulse
+                </p>
+                <p class="flex items-center">
+                    <i class="fas fa-sync-alt text-green-400 mr-2"></i>
+                    Informations juridiques mises à jour régulièrement
+                </p>
+                <p class="flex items-center">
+                    <i class="fas fa-clock text-green-400 mr-2"></i>
+                    Dernière mise à jour: <span class="text-green-400 font-medium ml-1 update-time" id="lastUpdateDate">10/04/2025</span>
+                </p>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Bouton du sélecteur de thème -->
+    <div class="theme-toggle">
+        <button id="theme-toggle-btn" class="theme-toggle-btn">
+            <i class="fas fa-moon" id="dark-icon"></i>
+            <i class="fas fa-sun" id="light-icon" style="display: none;"></i>
+        </button>
+    </div>
+
+    <!-- NOUVEL AJOUT: Panneau de glossaire juridique -->
+    <div id="glossary-panel" class="glossary-panel">
+        <div class="glossary-header">
+            <h3 class="glossary-title">Lexique juridique</h3>
+            <button class="glossary-close" id="glossary-close"><i class="fas fa-times"></i></button>
+        </div>
+        <div id="glossary-content">
+            <h4 id="glossary-term-title" class="text-green-400 font-bold text-lg mb-1"></h4>
+            <p id="glossary-definition" class="glossary-definition"></p>
+            <div id="glossary-example" class="glossary-example"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
     <script src="js/fiscal-simulation.js"></script>
-    <script src="js/forme-juridique-data.js"></script>
     <script src="js/types-entreprise.js"></script>
+    <!-- NOUVEL AJOUT: Script du glossaire -->
     <script src="js/glossaire-juridique.js"></script>
     
     <!-- Script pour gérer les nouvelles options ACRE et micro vs réel -->
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Contenu inchangé
+        // Afficher/masquer les options ACRE quand "entreprise en création" est coché
+        const entrepriseCreation = document.getElementById('entreprise-creation');
+        const optionsAcre = document.getElementById('options-acre');
+        
+        if (entrepriseCreation && optionsAcre) {
+            entrepriseCreation.addEventListener('change', function() {
+                optionsAcre.classList.toggle('hidden', !this.checked);
+            });
+        }
+        
+        // Synchroniser l'état des options ACRE entre les sections
+        const optionAcre = document.getElementById('option-acre');
+        const acreCheckbox = document.getElementById('acre-checkbox');
+        
+        if (optionAcre && acreCheckbox) {
+            optionAcre.addEventListener('change', function() {
+                acreCheckbox.checked = this.checked;
+            });
+            
+            acreCheckbox.addEventListener('change', function() {
+                optionAcre.checked = this.checked;
+            });
+        }
+        
+        // Gérer les interactions avec les résultats de comparaison micro vs réel
+        document.addEventListener('resultsLoaded', function() {
+            const microComparaison = document.querySelectorAll('.micro-comparaison-toggle');
+            microComparaison.forEach(toggle => {
+                toggle.addEventListener('click', function() {
+                    const detailsId = this.getAttribute('data-target');
+                    const details = document.getElementById(detailsId);
+                    if (details) {
+                        details.classList.toggle('hidden');
+                        
+                        // Mise à jour de l'icône
+                        const icon = this.querySelector('i');
+                        if (icon) {
+                            if (details.classList.contains('hidden')) {
+                                icon.classList.remove('fa-chevron-up');
+                                icon.classList.add('fa-chevron-down');
+                            } else {
+                                icon.classList.remove('fa-chevron-down');
+                                icon.classList.add('fa-chevron-up');
+                            }
+                        }
+                    }
+                });
+            });
+        });
+        
+        // Intercepter le formulaire pour appliquer les nouvelles options lors du calcul des résultats
+        const applyParamsButton = document.getElementById('apply-params');
+        if (applyParamsButton) {
+            applyParamsButton.addEventListener('click', function() {
+                // Récupérer les valeurs des paramètres avancés
+                const parametres = {};
+                parametres.ratioSalaire = parseInt(document.getElementById('ratio-salaire').value);
+                parametres.ratioDividendes = 100 - parametres.ratioSalaire;
+                parametres.capitalSocial = parseInt(document.getElementById('capital-social').value);
+                parametres.capitalLibere = parseInt(document.getElementById('capital-libere').value);
+                parametres.caSimulation = parseInt(document.getElementById('ca-simulation').value);
+                
+                // Options ACRE et projection
+                parametres.premiereAnnee = document.getElementById('acre-checkbox').checked;
+                parametres.afficherProjection = document.getElementById('projections-pluriannuelles').checked;
+                
+                // Options micro-entreprise (frais réels)
+                const fraisReelsInput = document.getElementById('frais-reels');
+                if (fraisReelsInput) {
+                    parametres.fraisReels = parseInt(fraisReelsInput.value) / 100 * parametres.caSimulation;
+                }
+                
+                // Récupérer le type d'activité depuis les réponses sauvegardées
+                const savedResponses = JSON.parse(localStorage.getItem('entreprise-form-progress') || '{}');
+                if (savedResponses.typeActivite) {
+                    parametres.natureActivite = savedResponses.typeActivite;
+                }
+                
+                // Déclencher le recalcul des résultats
+                if (typeof generateResults === 'function') {
+                    generateResults(parametres);
+                } else {
+                    console.error("La fonction generateResults n'est pas disponible");
+                }
+            });
+        }
+
+        // Gestion du taux de marge
+        const tauxMarge = document.getElementById('taux-marge');
+        const tauxMargeValue = document.getElementById('taux-marge-value');
+        
+        if (tauxMarge && tauxMargeValue) {
+            tauxMarge.addEventListener('input', function() {
+                tauxMargeValue.textContent = `${this.value}%`;
+            });
+        }
+
+        // Afficher les détails du calcul
+        const showCalculationDetails = document.getElementById('show-calculation-details');
+        if (showCalculationDetails) {
+            showCalculationDetails.addEventListener('change', function() {
+                document.dispatchEvent(new CustomEvent('toggleCalculationDetails', {
+                    detail: { visible: this.checked }
+                }));
+            });
+        }
+
+        // Gérer l'affichage des investisseurs
+        const profilButtons = document.querySelectorAll('.option-btn[data-value]');
+        const investisseursSection = document.getElementById('investisseurs-section');
+
+        profilButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                if (this.getAttribute('data-value') === 'investisseurs' && investisseursSection) {
+                    investisseursSection.style.display = 'block';
+                } else if (investisseursSection) {
+                    investisseursSection.style.display = 'none';
+                }
+            });
+        });
     });
     </script>
 </body>
