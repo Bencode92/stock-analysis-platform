@@ -1139,28 +1139,20 @@
                     1
                     <div class="progress-label">Profil & Horizon</div>
                 </div>
-                <div class="progress-step" id="step1b">
-                    2
-                    <div class="progress-label">Situation</div>
-                </div>
                 <div class="progress-step" id="step2">
-                    3
+                    2
                     <div class="progress-label">Équipe</div>
                 </div>
                 <div class="progress-step" id="step3">
-                    4
+                    3
                     <div class="progress-label">Activité</div>
                 </div>
-                <div class="progress-step" id="step3b">
-                    5
-                    <div class="progress-label">Spécificités</div>
-                </div>
                 <div class="progress-step" id="step4">
-                    6
+                    4
                     <div class="progress-label">Finance</div>
                 </div>
                 <div class="progress-step" id="step5">
-                    7
+                    5
                     <div class="progress-label">Résultats</div>
                 </div>
             </div>
@@ -1283,112 +1275,11 @@
                     </div>
                 </div>
 
-                <!-- NOUVELLE SECTION: Situation personnelle et géographique -->
-                <div id="section1b" class="question-section hidden">
-                    <div class="question-card p-6">
-                        <h3 class="text-xl font-bold text-green-400 mb-4">
-                            <span class="section-tag">étape 2/9</span>
-                            Votre situation personnelle et géographique
-                        </h3>
-                        
-                        <!-- Statut du porteur -->
-                        <div class="mt-4">
-                            <label class="block mb-2 font-semibold">Votre statut actuel</label>
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
-                                <button class="option-btn flex flex-col items-center p-4 rounded-xl bg-blue-900 bg-opacity-30" data-value="salarie">
-                                    <i class="fas fa-briefcase text-2xl mb-2 text-green-400"></i>
-                                    <span class="font-semibold">Salarié</span>
-                                </button>
-                                
-                                <button class="option-btn flex flex-col items-center p-4 rounded-xl bg-blue-900 bg-opacity-30" data-value="demandeur-emploi">
-                                    <i class="fas fa-search text-2xl mb-2 text-green-400"></i>
-                                    <span class="font-semibold">Demandeur d'emploi</span>
-                                </button>
-                                
-                                <button class="option-btn flex flex-col items-center p-4 rounded-xl bg-blue-900 bg-opacity-30" data-value="autre">
-                                    <i class="fas fa-user text-2xl mb-2 text-green-400"></i>
-                                    <span class="font-semibold">Autre statut</span>
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <!-- Régime matrimonial -->
-                        <div class="mt-6">
-                            <label class="block mb-2 font-semibold">Situation matrimoniale</label>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block mb-2">Êtes-vous marié(e) ou pacsé(e)?</label>
-                                    <div class="flex mt-2">
-                                        <button class="option-btn flex-1 p-3 rounded-l-lg bg-blue-900 bg-opacity-30" data-value="oui" data-name="est-marie">
-                                            Oui
-                                        </button>
-                                        <button class="option-btn flex-1 p-3 rounded-r-lg bg-blue-900 bg-opacity-30" data-value="non" data-name="est-marie">
-                                            Non
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <div id="regime-matrimonial-container" style="display: none;">
-                                    <label class="block mb-2">Régime matrimonial</label>
-                                    <select id="regime-matrimonial" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
-                                        <option value="communaute-reduite">Communauté réduite aux acquêts</option>
-                                        <option value="separation-biens">Séparation de biens</option>
-                                        <option value="communaute-universelle">Communauté universelle</option>
-                                        <option value="participation-acquets">Participation aux acquêts</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Localisation géographique -->
-                        <div class="mt-6">
-                            <label class="block mb-2 font-semibold">Localisation géographique</label>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block mb-2">Zone d'implantation</label>
-                                    <select id="zone-implantation" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
-                                        <option value="metropole">Métropole standard</option>
-                                        <option value="zfu">Zone Franche Urbaine (ZFU-TE)</option>
-                                        <option value="zrr">Zone de Revitalisation Rurale (ZRR)</option>
-                                        <option value="corse">Corse</option>
-                                        <option value="outre-mer">Départements d'Outre-mer</option>
-                                    </select>
-                                </div>
-                                
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="aide-regionale">
-                                        <div class="ml-2">
-                                            <div class="font-medium">Aides régionales</div>
-                                            <div class="text-xs opacity-70">Je souhaite bénéficier des aides spécifiques à ma région</div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-between mt-6">
-                        <button id="prev1b" class="border border-green-400 text-green-400 hover:bg-green-900 hover:bg-opacity-30 font-semibold py-3 px-6 rounded-lg transition flex items-center">
-                            <i class="fas fa-arrow-left mr-2"></i> Précédent
-                        </button>
-                        <button id="next1b" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center">
-                            Étape suivante <i class="fas fa-arrow-right ml-2"></i>
-                        </button>
-                    </div>
-
-                    <!-- Affichage de la progression et du temps restant -->
-                    <div class="text-center mt-8 text-sm text-gray-400">
-                        <span id="question-progress-1b">Question 2 sur 9</span> • 
-                        <span id="time-remaining-1b">Environ 4 minutes restantes</span>
-                    </div>
-                </div>
-
                 <!-- Étape 2: Équipe & Gouvernance (NOUVELLE VERSION) -->
                 <div id="section2" class="question-section hidden">
                     <div class="question-card p-6">
                         <h3 class="text-xl font-bold text-green-400 mb-4">
-                            <span class="section-tag">étape 3/9</span>
+                            <span class="section-tag">étape 2/9</span>
                             Équipe et gouvernance
                         </h3>
                         
@@ -1468,7 +1359,7 @@
 
                     <!-- Affichage de la progression et du temps restant -->
                     <div class="text-center mt-8 text-sm text-gray-400">
-                        <span id="question-progress-2">Question 3 sur 9</span> • 
+                        <span id="question-progress-2">Question 2 sur 9</span> • 
                         <span id="time-remaining-2">Environ 3 minutes restantes</span>
                     </div>
                 </div>
@@ -1477,7 +1368,7 @@
                 <div id="section3" class="question-section hidden">
                     <div class="question-card p-6">
                         <h3 class="text-xl font-bold text-green-400 mb-4">
-                            <span class="section-tag">étape 4/9</span>
+                            <span class="section-tag">étape 3/9</span>
                             Nature de l'activité
                         </h3>
                         
@@ -1552,163 +1443,8 @@
 
                     <!-- Affichage de la progression et du temps restant -->
                     <div class="text-center mt-8 text-sm text-gray-400">
-                        <span id="question-progress-3">Question 4 sur 9</span> • 
+                        <span id="question-progress-3">Question 3 sur 9</span> • 
                         <span id="time-remaining-3">Environ 3 minutes restantes</span>
-                    </div>
-                </div>
-
-                <!-- NOUVELLE SECTION: Spécificités du projet -->
-                <div id="section3b" class="question-section hidden">
-                    <div class="question-card p-6">
-                        <h3 class="text-xl font-bold text-green-400 mb-4">
-                            <span class="section-tag">étape 5/9</span>
-                            Spécificités de votre projet
-                        </h3>
-                        
-                        <!-- Effectif et masse salariale -->
-                        <div class="mt-4">
-                            <label class="block mb-2 font-semibold">Ressources humaines</label>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block mb-2">Embauche prévue</label>
-                                    <select id="embauche-prevue" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
-                                        <option value="aucune">Aucune embauche prévue</option>
-                                        <option value="1-5">1 à 5 salariés</option>
-                                        <option value="6-10">6 à 10 salariés</option>
-                                        <option value="plus-10">Plus de 10 salariés</option>
-                                    </select>
-                                </div>
-                                
-                                <div>
-                                    <label class="block mb-2">Timing des recrutements</label>
-                                    <select id="timing-recrutement" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
-                                        <option value="immediate">Dès le lancement</option>
-                                        <option value="6-mois">Dans les 6 premiers mois</option>
-                                        <option value="1-an">Après 1 an d'activité</option>
-                                        <option value="plus-tard">Plus tard / Indéterminé</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Apports en nature / brevets -->
-                        <div class="mt-6">
-                            <label class="block mb-2 font-semibold">Apports spécifiques au capital</label>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="apport-brevet">
-                                        <div class="ml-2">
-                                            <div class="font-medium">Apport de brevet ou logiciel</div>
-                                            <div class="text-xs opacity-70">Je souhaite valoriser une propriété intellectuelle</div>
-                                        </div>
-                                    </label>
-                                </div>
-                                
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="apport-materiel">
-                                        <div class="ml-2">
-                                            <div class="font-medium">Apport de matériel ou immobilier</div>
-                                            <div class="text-xs opacity-70">J'apporte des biens matériels au capital</div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Assurances & responsabilité -->
-                        <div class="mt-6">
-                            <label class="block mb-2 font-semibold">Assurances professionnelles</label>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="garantie-decennale">
-                                        <div class="ml-2">
-                                            <div class="font-medium">Garantie décennale obligatoire</div>
-                                            <div class="text-xs opacity-70">BTP, construction, rénovation...</div>
-                                        </div>
-                                    </label>
-                                </div>
-                                
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="rcp-obligatoire">
-                                        <div class="ml-2">
-                                            <div class="font-medium">RCP à forte couverture</div>
-                                            <div class="text-xs opacity-70">Santé, conseil financier...</div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Pluralité d'établissements -->
-                        <div class="mt-6">
-                            <label class="block mb-2 font-semibold">Structure d'exploitation</label>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="multi-etablissements">
-                                        <div class="ml-2">
-                                            <div class="font-medium">Plusieurs établissements</div>
-                                            <div class="text-xs opacity-70">Multi-sites, franchise, réseau</div>
-                                        </div>
-                                    </label>
-                                </div>
-                                
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="structure-holding">
-                                        <div class="ml-2">
-                                            <div class="font-medium">Structure de type holding</div>
-                                            <div class="text-xs opacity-70">Société mère avec filiales</div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- RSE et environnement -->
-                        <div class="mt-6">
-                            <label class="block mb-2 font-semibold">Finalité de l'entreprise</label>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="entreprise-mission">
-                                        <div class="ml-2">
-                                            <div class="font-medium">Entreprise à mission</div>
-                                            <div class="text-xs opacity-70">Statut avec raison d'être sociale/environnementale</div>
-                                        </div>
-                                    </label>
-                                </div>
-                                
-                                <div class="p-3 rounded-lg bg-blue-900 bg-opacity-20">
-                                    <label class="flex items-start">
-                                        <input type="checkbox" class="mt-1 h-4 w-4" id="statut-esus">
-                                        <div class="ml-2">
-                                            <div class="font-medium">Agrément ESUS visé</div>
-                                            <div class="text-xs opacity-70">Entreprise Solidaire d'Utilité Sociale</div>
-                                        </div>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex justify-between mt-6">
-                        <button id="prev3b" class="border border-green-400 text-green-400 hover:bg-green-900 hover:bg-opacity-30 font-semibold py-3 px-6 rounded-lg transition flex items-center">
-                            <i class="fas fa-arrow-left mr-2"></i> Précédent
-                        </button>
-                        <button id="next3b" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition flex items-center">
-                            Étape suivante <i class="fas fa-arrow-right ml-2"></i>
-                        </button>
-                    </div>
-
-                    <!-- Affichage de la progression et du temps restant -->
-                    <div class="text-center mt-8 text-sm text-gray-400">
-                        <span id="question-progress-3b">Question 5 sur 9</span> • 
-                        <span id="time-remaining-3b">Environ 2 minutes restantes</span>
                     </div>
                 </div>
 
@@ -1716,7 +1452,7 @@
                 <div id="section4" class="question-section hidden">
                     <div class="question-card p-6">
                         <h3 class="text-xl font-bold text-green-400 mb-4">
-                            <span class="section-tag">étape 6/9</span>
+                            <span class="section-tag">étape 4/9</span>
                             Volumétrie et finances
                         </h3>
                         
@@ -1865,31 +1601,6 @@
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Nouvelle section pour les préférences de dividendes et protection sociale -->
-                        <div class="mt-6">
-                            <h4 class="font-semibold mb-3">Préférences supplémentaires</h4>
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label class="block mb-2">Préférence sur les dividendes</label>
-                                    <select id="preference-dividendes" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
-                                        <option value="pfu">Flat-tax (PFU 30%)</option>
-                                        <option value="bareme">Barème progressif de l'IR</option>
-                                        <option value="optimisation">Optimisation selon le contexte</option>
-                                    </select>
-                                    <p class="text-xs mt-1 opacity-70">Taxation des dividendes si vous optez pour l'IS</p>
-                                </div>
-                                
-                                <div>
-                                    <label class="block mb-2">Priorité en matière de protection sociale</label>
-                                    <select id="protection-sociale" class="bg-blue-900 bg-opacity-50 border border-gray-600 rounded px-3 py-2 w-full">
-                                        <option value="retraite">Maximiser les droits retraite</option>
-                                        <option value="sante">Couverture maladie optimale</option>
-                                        <option value="charges">Minimiser les charges sociales</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
                     </div>
 
                     <div class="flex justify-between mt-6">
@@ -1903,7 +1614,7 @@
 
                     <!-- Affichage de la progression et du temps restant -->
                     <div class="text-center mt-8 text-sm text-gray-400">
-                        <span id="question-progress-4">Question 6 sur 9</span> • 
+                        <span id="question-progress-4">Question 9 sur 9</span> • 
                         <span id="time-remaining-4">Moins d'une minute restante</span>
                     </div>
                 </div>
@@ -2266,43 +1977,6 @@
                     investisseursSection.style.display = 'block';
                 } else if (investisseursSection) {
                     investisseursSection.style.display = 'none';
-                }
-            });
-        });
-
-        // NOUVEAU: Gestion du régime matrimonial
-        const estMarieButtons = document.querySelectorAll('[data-name="est-marie"]');
-        const regimeMatrimonialContainer = document.getElementById('regime-matrimonial-container');
-        
-        estMarieButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                if (this.getAttribute('data-value') === 'oui' && regimeMatrimonialContainer) {
-                    regimeMatrimonialContainer.style.display = 'block';
-                } else if (regimeMatrimonialContainer) {
-                    regimeMatrimonialContainer.style.display = 'none';
-                }
-            });
-        });
-
-        // NOUVEAU: Notification ACRE pour demandeur d'emploi
-        const statutButtons = document.querySelectorAll('[data-value="salarie"], [data-value="demandeur-emploi"], [data-value="autre"]');
-        
-        statutButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                if (this.getAttribute('data-value') === 'demandeur-emploi') {
-                    // Présélectionner l'ACRE si demandeur d'emploi
-                    const acreCheckbox = document.getElementById('aide-acre');
-                    if (acreCheckbox) acreCheckbox.checked = true;
-                    
-                    // Afficher une notification
-                    const notification = document.createElement('div');
-                    notification.className = 'fixed bottom-4 right-4 bg-green-500 text-white px-4 py-2 rounded-lg shadow-lg z-50';
-                    notification.textContent = 'En tant que demandeur d\'emploi, vous êtes éligible à l\'ACRE (présélectionné)';
-                    document.body.appendChild(notification);
-                    
-                    setTimeout(() => {
-                        notification.remove();
-                    }, 5000);
                 }
             });
         });
