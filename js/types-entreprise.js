@@ -160,7 +160,12 @@ document.addEventListener('DOMContentLoaded', function() {
             montantLevee: 1.0,
             regimeFiscal: 1.0,
             regimeSocial: 1.0,
-            transmission: 0.8
+            transmission: 0.8,
+            zoneImplantation: 1.2,
+            garantieDecennale: 1.5,
+            multiEtablissements: 1.0,
+            structureHolding: 1.3,
+            regimeMatrimonial: 1.2
         },
         
         /**
@@ -193,6 +198,23 @@ document.addEventListener('DOMContentLoaded', function() {
             // Marges faibles = plus attention aux charges sociales
             if (userResponses.tauxMarge < 20) {
                 coefficients.tauxMarge = 2.0;
+            }
+
+            // Projet avec garantie décennale = importance protection
+            if (userResponses.garantieDecennale) {
+                coefficients.garantieDecennale = 2.5;
+                coefficients.cautionBancaire = 2.0;
+            }
+
+            // Structure holding = importance structure adaptée
+            if (userResponses.structureHolding) {
+                coefficients.structureHolding = 2.5;
+            }
+
+            // Régime matrimonial communauté = importance protection
+            if (userResponses.estMarie && userResponses.regimeMatrimonial === 'communaute-reduite') {
+                coefficients.regimeMatrimonial = 2.0;
+                coefficients.cautionBancaire = 2.0;
             }
             
             return coefficients;
@@ -323,6 +345,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 scoreCriteresStructurels += 20 * coefficients.chiffreAffaires;
                 details.push('Structure idéale pour les CA élevés');
             }
+
+            // Statut du porteur (ACRE)
+            if (userResponses.statutPorteur === 'demandeur-emploi') {
+                if (forme.regimeSocial.includes('TNS')) {
+                    scoreCriteresStructurels += 15;
+                    details.push('Éligible à l\'ACRE (charges sociales réduites)');
+                }
+            }
+
+            // Zone d'implantation
+            if (userResponses.zoneImplantation === 'zfu' || userResponses.zoneImplantation === 'zrr') {
+                if (forme.fiscalite === 'IS' || forme.fiscaliteOption === 'Oui') {
+                    scoreCriteresStructurels += 15 * coefficients.zoneImplantation;
+                    details.push(`Avantages fiscaux en zone ${userResponses.zoneImplantation.toUpperCase()}`);
+                }
+            }
             
             // PARTIE OBJECTIFS (40%)
             
@@ -438,6 +476,95 @@ document.addEventListener('DOMContentLoaded', function() {
                 scoreObjectifs += 15 * coefficients.regimeSocial;
                 details.push('Correspond à votre préférence pour le statut assimilé-salarié');
             }
+
+            // Régime matrimonial
+            if (userResponses.estMarie && userResponses.regimeMatrimonial === 'communaute-reduite') {
+                if (forme.protectionPatrimoine === 'Oui') {
+                    scoreObjectifs += 15 * coefficients.regimeMatrimonial;
+                    details.push('Protection du patrimoine commun en régime matrimonial de communauté');
+                } else {
+                    scoreObjectifs -= 15 * coefficients.regimeMatrimonial;
+                    details.push('Risque pour le patrimoine commun en régime matrimonial de communauté');
+                }
+            }
+
+            // Garantie décennale
+            if (userResponses.garantieDecennale && forme.id === 'micro-entreprise') {
+                scoreObjectifs -= 40 * coefficients.garantieDecennale;
+                details.push('Incompatible avec une garantie décennale obligatoire');
+                
+                if (!incompatibiliteMajeure) {
+                    incompatibiliteMajeure = true;
+                    incompatibilites.push({
+                        code: 'garantie-decennale',
+                        message: 'Activité nécessitant une garantie décennale',
+                        details: 'Structure peu adaptée aux assurances professionnelles à forte couverture'
+                    });
+                }
+            }
+
+            // Multi-établissements
+            if (userResponses.multiEtablissements) {
+                if (forme.id === 'micro-entreprise' || forme.id === 'ei') {
+                    scoreObjectifs -= 25 * coefficients.multiEtablissements;
+                    details.push('Structure peu adaptée à plusieurs établissements');
+                } else if (forme.id === 'sas' || forme.id === 'sa') {
+                    scoreObjectifs += 15 * coefficients.multiEtablissements;
+                    details.push('Structure idéale pour organisation multi-sites');
+                }
+            }
+
+            // Structure holding
+            if (userResponses.structureHolding) {
+                if (forme.id === 'micro-entreprise' || forme.id === 'ei') {
+                    scoreObjectifs -= 50 * coefficients.structureHolding;
+                    details.push('Incompatible avec structure holding');
+                    
+                    if (!incompatibiliteMajeure) {
+                        incompatibiliteMajeure = true;
+                        incompatibilites.push({
+                            code: 'structure-holding',
+                            message: 'Structure de type holding avec filiales',
+                            details: 'Ce type de structure nécessite une forme sociétaire'
+                        });
+                    }
+                } else if (forme.id === 'sas' || forme.id === 'sa') {
+                    scoreObjectifs += 25 * coefficients.structureHolding;
+                    details.push('Structure parfaitement adaptée aux holdings');
+                }
+            }
+
+            // Apport de brevets
+            if (userResponses.apportBrevet) {
+                if (forme.id === 'micro-entreprise' || forme.id === 'ei') {
+                    scoreObjectifs -= 20;
+                    details.push('Apport de PI impossible ou complexe');
+                } else if (forme.id === 'sas' || forme.id === 'sasu') {
+                    scoreObjectifs += 15;
+                    details.push('Structure adaptée à la valorisation de propriété intellectuelle');
+                }
+            }
+
+            // Préférences dividendes
+            if (userResponses.preferenceDividendes === 'pfu' && userResponses.tmiActuel >= 30) {
+                if (forme.fiscalite === 'IS' || forme.fiscaliteOption === 'Oui') {
+                    scoreObjectifs += 10;
+                    details.push('Préférence PFU optimale avec forme à l\'IS');
+                }
+            }
+
+            // Protection sociale
+            if (userResponses.protectionSociale === 'retraite') {
+                if (forme.regimeSocial.includes('salarié')) {
+                    scoreObjectifs += 15;
+                    details.push('Meilleure protection retraite avec statut assimilé-salarié');
+                }
+            } else if (userResponses.protectionSociale === 'charges') {
+                if (forme.id === 'micro-entreprise' || (forme.fiscalite === 'IR' && forme.regimeSocial.includes('TNS'))) {
+                    scoreObjectifs += 15;
+                    details.push('Optimisation des charges sociales');
+                }
+            }
             
             // Score total
             score = scoreCriteresStructurels + scoreObjectifs;
@@ -484,7 +611,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const FormManager = {
         // Variables pour le formulaire
         currentSection: 1,
-        totalSections: 5,
+        totalSections: 7, // Mise à jour à 7 sections au lieu de 5
         
         // Initialisation
         init: function() {
@@ -496,10 +623,14 @@ document.addEventListener('DOMContentLoaded', function() {
         setupEventListeners: function() {
             // Boutons de navigation
             const nextStep1 = document.getElementById('next1');
+            const nextStep1b = document.getElementById('next1b');
             const nextStep2 = document.getElementById('next2');
             const nextStep3 = document.getElementById('next3');
+            const nextStep3b = document.getElementById('next3b');
+            const prevStep1b = document.getElementById('prev1b');
             const prevStep2 = document.getElementById('prev2');
             const prevStep3 = document.getElementById('prev3');
+            const prevStep3b = document.getElementById('prev3b');
             const prevStep4 = document.getElementById('prev4');
             const submitBtn = document.getElementById('submit-btn');
             const restartBtn = document.getElementById('restart-btn');
@@ -526,15 +657,27 @@ document.addEventListener('DOMContentLoaded', function() {
                 nextStep1.addEventListener('click', () => {
                     DataCollector.collectSection1Data();
                     StorageManager.saveProgress();
-                    this.showSection(2);
+                    this.showSection(2); // Section 1b
                 });
+            }
+            
+            if (nextStep1b) {
+                nextStep1b.addEventListener('click', () => {
+                    DataCollector.collectSection1bData();
+                    StorageManager.saveProgress();
+                    this.showSection(3); // Section 2
+                });
+            }
+            
+            if (prevStep1b) {
+                prevStep1b.addEventListener('click', () => this.showSection(1)); // Retour à section 1
             }
             
             if (nextStep2) {
                 nextStep2.addEventListener('click', () => {
                     DataCollector.collectSection2Data();
                     StorageManager.saveProgress();
-                    this.showSection(3);
+                    this.showSection(4); // Section 3
                 });
             }
             
@@ -542,27 +685,39 @@ document.addEventListener('DOMContentLoaded', function() {
                 nextStep3.addEventListener('click', () => {
                     DataCollector.collectSection3Data();
                     StorageManager.saveProgress();
-                    this.showSection(4);
+                    this.showSection(5); // Section 3b
+                });
+            }
+            
+            if (nextStep3b) {
+                nextStep3b.addEventListener('click', () => {
+                    DataCollector.collectSection3bData();
+                    StorageManager.saveProgress();
+                    this.showSection(6); // Section 4
                 });
             }
             
             if (prevStep2) {
-                prevStep2.addEventListener('click', () => this.showSection(1));
+                prevStep2.addEventListener('click', () => this.showSection(2)); // Retour à section 1b
             }
             
             if (prevStep3) {
-                prevStep3.addEventListener('click', () => this.showSection(2));
+                prevStep3.addEventListener('click', () => this.showSection(3)); // Retour à section 2
+            }
+            
+            if (prevStep3b) {
+                prevStep3b.addEventListener('click', () => this.showSection(4)); // Retour à section 3
             }
             
             if (prevStep4) {
-                prevStep4.addEventListener('click', () => this.showSection(3));
+                prevStep4.addEventListener('click', () => this.showSection(5)); // Retour à section 3b
             }
             
             if (submitBtn) {
                 submitBtn.addEventListener('click', () => {
                     DataCollector.collectSection4Data();
                     StorageManager.saveProgress();
-                    this.showSection(5);
+                    this.showSection(7); // Section résultats (7)
                     ResultsManager.generateResults();
                 });
             }
@@ -573,6 +728,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     this.resetSimulation();
                 });
             }
+            
+            // Écouteurs pour les champs matrimoniaux
+            const estMarieButtons = document.querySelectorAll('[data-name="est-marie"]');
+            estMarieButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const regimeContainer = document.getElementById('regime-matrimonial-container');
+                    if (this.getAttribute('data-value') === 'oui') {
+                        regimeContainer.style.display = 'block';
+                    } else {
+                        regimeContainer.style.display = 'none';
+                    }
+                });
+            });
             
             // Autres écouteurs d'événements spécifiques aux paramètres avancés
             const advancedParamsToggle = document.getElementById('advanced-params-toggle');
@@ -648,15 +816,17 @@ document.addEventListener('DOMContentLoaded', function() {
             if (questionProgress) {
                 // Logique améliorée pour montrer la progression réelle
                 const stepQuestionMapping = {
-                    1: "1-3",  // Section 1: 3 questions
-                    2: "4-5",  // Section 2: 2 questions
-                    3: "6-7",  // Section 3: 2 questions
-                    4: "8-9",  // Section 4: 2 questions
-                    5: "9"     // Résultats
+                    1: "1-2",   // Section 1: 2 questions
+                    2: "3-4",   // Section 1b: 2 questions
+                    3: "5",     // Section 2: 1 question
+                    4: "6-7",   // Section 3: 2 questions
+                    5: "8-9",   // Section 3b: 2 questions
+                    6: "10-12", // Section 4: 3 questions
+                    7: "Résultats"
                 };
                 
                 const questionText = stepQuestionMapping[currentStep] || "1";
-                questionProgress.textContent = `Question${questionText.includes('-') ? 's' : ''} ${questionText} sur 9`;
+                questionProgress.textContent = `Question${questionText.includes('-') ? 's' : ''} ${questionText} sur 12`;
             }
         },
         
@@ -691,6 +861,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 revenuAnnee3: 50000,
                 bienImmobilier: false,
                 
+                // Section 1b: Situation personnelle et géographique
+                statutPorteur: null,
+                estMarie: false,
+                regimeMatrimonial: null,
+                zoneImplantation: 'metropole',
+                aideRegionale: false,
+                
                 // Section 2: Équipe & Gouvernance
                 profilEntrepreneur: null,
                 typeInvestisseurs: [],
@@ -702,6 +879,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 risqueResponsabilite: false,
                 besoinAssurance: false,
                 
+                // Section 3b: Spécificités du projet
+                embauchesPrevues: 'aucune',
+                apportBrevet: false,
+                apportMateriel: false,
+                garantieDecennale: false,
+                rcpObligatoire: false,
+                multiEtablissements: false,
+                structureHolding: false,
+                entrepriseMission: false,
+                statutEsus: false,
+                
                 // Section 4: Volumétrie et finances
                 chiffreAffaires: null,
                 tauxMarge: 35,
@@ -712,7 +900,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 aides: [],
                 transmission: null,
                 regimeFiscal: null,
-                regimeSocial: null
+                regimeSocial: null,
+                preferenceDividendes: null,
+                protectionSociale: null
             };
             
             // Réinitialiser l'interface
@@ -725,28 +915,74 @@ document.addEventListener('DOMContentLoaded', function() {
             const revenuAnnee1Input = document.getElementById('revenu-annee1');
             const revenuAnnee3Input = document.getElementById('revenu-annee3');
             const bienImmobilierCheckbox = document.getElementById('bien-immobilier');
+            
+            // Section 1b
+            const zoneImplantationSelect = document.getElementById('zone-implantation');
+            const aideRegionaleCheckbox = document.getElementById('aide-regionale');
+            const regimeMatrimonialSelect = document.getElementById('regime-matrimonial');
+            const regimeMatrimonialContainer = document.getElementById('regime-matrimonial-container');
+            
+            // Section 3
             const checkboxReglementee = document.getElementById('activite-reglementee');
             const ordreProCheckbox = document.getElementById('ordre-professionnel');
+            
+            // Section 3b
+            const garantieDecennaleCheckbox = document.getElementById('garantie-decennale');
+            const rcpObligatoireCheckbox = document.getElementById('rcp-obligatoire');
+            const multiEtablissementsCheckbox = document.getElementById('multi-etablissements');
+            const structureHoldingCheckbox = document.getElementById('structure-holding');
+            const entrepriseMissionCheckbox = document.getElementById('entreprise-mission');
+            const statutEsusCheckbox = document.getElementById('statut-esus');
+            const apportBrevetCheckbox = document.getElementById('apport-brevet');
+            const apportMaterielCheckbox = document.getElementById('apport-materiel');
+            const embauchePreviewSelect = document.getElementById('embauche-prevue');
+            
+            // Section 4
             const caPrevisionnelInput = document.getElementById('ca-previsionnel');
             const tauxMargeSlider = document.getElementById('taux-marge');
             const tauxMargeValue = document.getElementById('taux-marge-value');
             const besoinsRevenusCheckbox = document.getElementById('besoin-revenus-immediats');
             const cautionBancaireCheckbox = document.getElementById('caution-bancaire');
             const montantLeveeInput = document.getElementById('montant-levee');
+            const preferenceDividendesSelect = document.getElementById('preference-dividendes');
+            const protectionSocialeSelect = document.getElementById('protection-sociale');
             
-            // Réinitialiser les champs de saisie
+            // Réinitialiser les champs de saisie de la section 1
             if (tmiSelect) tmiSelect.value = '30';
             if (revenuAnnee1Input) revenuAnnee1Input.value = '30000';
             if (revenuAnnee3Input) revenuAnnee3Input.value = '50000';
             if (bienImmobilierCheckbox) bienImmobilierCheckbox.checked = false;
+            
+            // Réinitialiser les champs de la section 1b
+            if (zoneImplantationSelect) zoneImplantationSelect.value = 'metropole';
+            if (aideRegionaleCheckbox) aideRegionaleCheckbox.checked = false;
+            if (regimeMatrimonialSelect) regimeMatrimonialSelect.value = 'communaute-reduite';
+            if (regimeMatrimonialContainer) regimeMatrimonialContainer.style.display = 'none';
+            
+            // Réinitialiser les champs de la section 3
             if (checkboxReglementee) checkboxReglementee.checked = false;
             if (ordreProCheckbox) ordreProCheckbox.checked = false;
+            
+            // Réinitialiser les champs de la section 3b
+            if (garantieDecennaleCheckbox) garantieDecennaleCheckbox.checked = false;
+            if (rcpObligatoireCheckbox) rcpObligatoireCheckbox.checked = false;
+            if (multiEtablissementsCheckbox) multiEtablissementsCheckbox.checked = false;
+            if (structureHoldingCheckbox) structureHoldingCheckbox.checked = false;
+            if (entrepriseMissionCheckbox) entrepriseMissionCheckbox.checked = false;
+            if (statutEsusCheckbox) statutEsusCheckbox.checked = false;
+            if (apportBrevetCheckbox) apportBrevetCheckbox.checked = false;
+            if (apportMaterielCheckbox) apportMaterielCheckbox.checked = false;
+            if (embauchePreviewSelect) embauchePreviewSelect.value = 'aucune';
+            
+            // Réinitialiser les champs de la section 4
             if (caPrevisionnelInput) caPrevisionnelInput.value = '75000';
             if (tauxMargeSlider) tauxMargeSlider.value = '35';
             if (tauxMargeValue) tauxMargeValue.textContent = '35%';
             if (besoinsRevenusCheckbox) besoinsRevenusCheckbox.checked = false;
             if (cautionBancaireCheckbox) cautionBancaireCheckbox.checked = false;
             if (montantLeveeInput) montantLeveeInput.value = '0';
+            if (preferenceDividendesSelect) preferenceDividendesSelect.value = 'optimisation';
+            if (protectionSocialeSelect) protectionSocialeSelect.value = 'equilibre';
             
             // Supprimer le localStorage
             localStorage.removeItem('entreprise-form-progress');
@@ -796,6 +1032,41 @@ document.addEventListener('DOMContentLoaded', function() {
             const bienImmobilierCheckbox = document.getElementById('bien-immobilier');
             if (bienImmobilierCheckbox) {
                 userResponses.bienImmobilier = bienImmobilierCheckbox.checked;
+            }
+        },
+
+        /**
+         * Collecte les données de la section 1b : Situation personnelle et géographique
+         */
+        collectSection1bData: function() {
+            // Statut du porteur
+            const statutButtons = document.querySelectorAll('#section1b .option-btn[data-value]');
+            statutButtons.forEach(button => {
+                if (button.classList.contains('selected')) {
+                    userResponses.statutPorteur = button.getAttribute('data-value');
+                }
+            });
+            
+            // Situation matrimoniale
+            const estMarieBtn = document.querySelector('#section1b .option-btn[data-value="oui"][data-name="est-marie"].selected');
+            userResponses.estMarie = !!estMarieBtn;
+            
+            // Régime matrimonial
+            const regimeMatrimonialSelect = document.getElementById('regime-matrimonial');
+            if (regimeMatrimonialSelect) {
+                userResponses.regimeMatrimonial = regimeMatrimonialSelect.value;
+            }
+            
+            // Zone d'implantation
+            const zoneSelect = document.getElementById('zone-implantation');
+            if (zoneSelect) {
+                userResponses.zoneImplantation = zoneSelect.value;
+            }
+            
+            // Aide régionale
+            const aideRegionaleCheckbox = document.getElementById('aide-regionale');
+            if (aideRegionaleCheckbox) {
+                userResponses.aideRegionale = aideRegionaleCheckbox.checked;
             }
         },
 
@@ -866,6 +1137,45 @@ document.addEventListener('DOMContentLoaded', function() {
         },
 
         /**
+         * Collecte les données de la section 3b : Spécificités du projet
+         */
+        collectSection3bData: function() {
+            // Embauche prévue
+            const embaucheSelect = document.getElementById('embauche-prevue');
+            if (embaucheSelect) {
+                userResponses.embauchesPrevues = embaucheSelect.value;
+            }
+            
+            // Apports spécifiques au capital
+            const apportBrevetCheckbox = document.getElementById('apport-brevet');
+            const apportMaterielCheckbox = document.getElementById('apport-materiel');
+            
+            if (apportBrevetCheckbox) userResponses.apportBrevet = apportBrevetCheckbox.checked;
+            if (apportMaterielCheckbox) userResponses.apportMateriel = apportMaterielCheckbox.checked;
+            
+            // Assurances professionnelles
+            const garantieDecennaleCheckbox = document.getElementById('garantie-decennale');
+            const rcpObligatoireCheckbox = document.getElementById('rcp-obligatoire');
+            
+            if (garantieDecennaleCheckbox) userResponses.garantieDecennale = garantieDecennaleCheckbox.checked;
+            if (rcpObligatoireCheckbox) userResponses.rcpObligatoire = rcpObligatoireCheckbox.checked;
+            
+            // Structure d'exploitation
+            const multiEtablissementsCheckbox = document.getElementById('multi-etablissements');
+            const structureHoldingCheckbox = document.getElementById('structure-holding');
+            
+            if (multiEtablissementsCheckbox) userResponses.multiEtablissements = multiEtablissementsCheckbox.checked;
+            if (structureHoldingCheckbox) userResponses.structureHolding = structureHoldingCheckbox.checked;
+            
+            // Finalité de l'entreprise
+            const entrepriseMissionCheckbox = document.getElementById('entreprise-mission');
+            const statutEsusCheckbox = document.getElementById('statut-esus');
+            
+            if (entrepriseMissionCheckbox) userResponses.entrepriseMission = entrepriseMissionCheckbox.checked;
+            if (statutEsusCheckbox) userResponses.statutEsus = statutEsusCheckbox.checked;
+        },
+
+        /**
          * Collecte les données de la section 4 : Volumétrie et finances
          */
         collectSection4Data: function() {
@@ -929,6 +1239,13 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (regimeFiscalSelect) userResponses.regimeFiscal = regimeFiscalSelect.value;
             if (regimeSocialSelect) userResponses.regimeSocial = regimeSocialSelect.value;
+            
+            // Préférences dividendes et protection sociale
+            const preferenceDividendesSelect = document.getElementById('preference-dividendes');
+            const protectionSocialeSelect = document.getElementById('protection-sociale');
+            
+            if (preferenceDividendesSelect) userResponses.preferenceDividendes = preferenceDividendesSelect.value;
+            if (protectionSocialeSelect) userResponses.protectionSociale = protectionSocialeSelect.value;
         }
     };
 
@@ -943,7 +1260,13 @@ document.addEventListener('DOMContentLoaded', function() {
             caSimulation: 50000,
             fraisReels: 35,
             acreActif: true,
-            afficherProjection: false
+            afficherProjection: false,
+            natureActivite: null,
+            garantieDecennale: false,
+            rcpObligatoire: false,
+            zoneImplantation: 'metropole',
+            preferenceDividendes: null,
+            protectionSociale: null
         },
         
         // Initialisation
@@ -1014,6 +1337,50 @@ document.addEventListener('DOMContentLoaded', function() {
             const value = parseInt(capitalLibereSlider.value);
             capitalLibereValue.textContent = `${value}%`;
         },
+
+        // Méthode pour simuler année pour micro-entreprise
+        calculateMicroEntrepriseYear: function(benefice, year, formeId) {
+            // Taux de charges sociales
+            const tauxCharges = 0.22; // ~22% pour micro BNC
+            let reductionAcre = year === 1 && this.simulationParams.acreActif ? 0.5 : 0; // 50% réduction première année
+            
+            const charges = benefice * tauxCharges * (1 - reductionAcre);
+            const impots = benefice * 0.1; // Approximation IR
+            
+            return {
+                charges: Math.round(charges),
+                impots: Math.round(impots),
+                net: Math.round(benefice - charges - impots),
+                acre: year === 1 && this.simulationParams.acreActif
+            };
+        },
+
+        // Méthode pour simuler année pour société avec IS
+        calculateSocietyWithISYear: function(benefice, year, formeId, ratioSalaire, ratioDividendes) {
+            const salaireBrut = benefice * (ratioSalaire / 100);
+            const dividendesBrut = benefice * (ratioDividendes / 100);
+            
+            // Charges sur salaire
+            const tauxChargesSalariales = formeId === 'sasu' ? 0.45 : 0.35; // SASU: assimilé salarié, EURL: TNS
+            let reductionAcre = year === 1 && this.simulationParams.acreActif && formeId !== 'sasu' ? 0.5 : 0;
+            
+            const chargesSalaire = salaireBrut * tauxChargesSalariales * (1 - reductionAcre);
+            const impotSalaire = (salaireBrut - chargesSalaire) * 0.1; // Approximation IR sur salaire
+            
+            // IS et dividendes
+            const impotSociete = dividendesBrut * 0.25; // Taux IS à 25%
+            const dividendesNetIS = dividendesBrut - impotSociete;
+            const prelevementsDividendes = dividendesNetIS * 0.30; // PFU à 30%
+            
+            return {
+                charges: Math.round(chargesSalaire),
+                impots: Math.round(impotSalaire + impotSociete + prelevementsDividendes),
+                net: Math.round((salaireBrut - chargesSalaire - impotSalaire) + (dividendesNetIS - prelevementsDividendes)),
+                salaireNet: Math.round(salaireBrut - chargesSalaire - impotSalaire),
+                dividendesNet: Math.round(dividendesNetIS - prelevementsDividendes),
+                acre: year === 1 && this.simulationParams.acreActif && formeId !== 'sasu'
+            };
+        },
         
         // Appliquer les paramètres avancés
         applyAdvancedParams: function() {
@@ -1045,8 +1412,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 this.simulationParams.afficherProjection = projectionsCheckbox.checked;
             }
             
-            // Récupérer le type d'activité depuis les réponses sauvegardées
+            // Récupérer les valeurs depuis userResponses pour les nouveaux paramètres
             this.simulationParams.natureActivite = userResponses.typeActivite;
+            this.simulationParams.garantieDecennale = userResponses.garantieDecennale;
+            this.simulationParams.rcpObligatoire = userResponses.rcpObligatoire;
+            this.simulationParams.zoneImplantation = userResponses.zoneImplantation;
+            this.simulationParams.preferenceDividendes = userResponses.preferenceDividendes;
+            this.simulationParams.protectionSociale = userResponses.protectionSociale;
             
             // Recalculer les résultats avec les nouveaux paramètres
             this.generateResults();
@@ -1102,7 +1474,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     acreActif: this.simulationParams.acreActif,
                     tmiActuel: userResponses.tmiActuel,
                     tauxMarge: userResponses.tauxMarge,
-                    typeActivite: userResponses.typeActivite
+                    typeActivite: userResponses.typeActivite,
+                    garantieDecennale: userResponses.garantieDecennale,
+                    rcpObligatoire: userResponses.rcpObligatoire,
+                    zoneImplantation: userResponses.zoneImplantation,
+                    preferenceDividendes: userResponses.preferenceDividendes,
+                    protectionSociale: userResponses.protectionSociale
                 });
                 
                 return {
@@ -1463,11 +1840,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 'micro-entreprise': {
                     'ca-depasse-seuil': 'Optez pour une EURL ou SASU permettant des volumes d\'activité plus importants',
                     'ordre-professionnel': 'Choisissez une SEL ou SELAS adaptée aux professions réglementées',
-                    'investisseurs': 'Considérez une SAS pour accueillir des investisseurs'
+                    'investisseurs': 'Considérez une SAS pour accueillir des investisseurs',
+                    'garantie-decennale': 'Optez pour une EURL ou SASU offrant une meilleure protection juridique',
+                    'structure-holding': 'Choisissez une SAS ou SA adaptée aux structures de holding'
                 },
                 'ei': {
                     'protection-patrimoine': 'Privilégiez une EURL qui offre une meilleure protection patrimoniale',
-                    'levee-fonds': 'Optez pour une SAS ou SASU plus adaptée à la levée de fonds'
+                    'levee-fonds': 'Optez pour une SAS ou SASU plus adaptée à la levée de fonds',
+                    'garantie-decennale': 'Préférez une EURL pour les activités nécessitant des assurances importantes',
+                    'structure-holding': 'Choisissez une SAS ou SA adaptée aux structures de holding'
                 },
                 'sasu': {
                     'charges-elevees': 'Envisagez une EURL à l\'IR pour optimiser les charges sociales avec un CA faible',
@@ -1623,7 +2004,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Génère une simulation comparative de répartition salaire/dividendes
         renderSalaryDividendSimulation: function(forme, caSimulation, tauxMarge) {
             // Vérifier si la forme juridique permet les dividendes
-            if (forme.fiscalite !== 'IS' && !forme.fiscaliteOption === 'Oui') {
+            if (forme.fiscalite !== 'IS' && forme.fiscaliteOption !== 'Oui') {
                 return ''; // Ne pas afficher pour les formes qui ne permettent pas la distribution de dividendes
             }
             
@@ -1740,6 +2121,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const caYear2 = Math.round(caSimulation * 1.2); // +20%
             const caYear3 = Math.round(caYear2 * 1.2); // +20% supplémentaire
             
+            // Calcul du bénéfice pour chaque année
+            const beneficeYear1 = caYear1 * (tauxMarge / 100);
+            const beneficeYear2 = caYear2 * (tauxMarge / 100);
+            const beneficeYear3 = caYear3 * (tauxMarge / 100);
+            
             // Calculer les résultats pour chaque année
             let resultYear1, resultYear2, resultYear3;
             
@@ -1755,11 +2141,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 resultYear2 = this.calculateSocietyWithISYear(beneficeYear2, 2, forme.id, this.simulationParams.ratioSalaire, this.simulationParams.ratioDividendes);
                 resultYear3 = this.calculateSocietyWithISYear(beneficeYear3, 3, forme.id, this.simulationParams.ratioSalaire, this.simulationParams.ratioDividendes);
             }
-            
-            // Calcul du bénéfice pour chaque année
-            const beneficeYear1 = caYear1 * (tauxMarge / 100);
-            const beneficeYear2 = caYear2 * (tauxMarge / 100);
-            const beneficeYear3 = caYear3 * (tauxMarge / 100);
             
             return `
             <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-4">
@@ -1881,373 +2262,109 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>` : ''}
                 </div>
-                
-                <div class="mt-4 pt-4 border-t border-gray-700">
-                    <h5 class="font-medium mb-2">Résumé sur 3 ans</h5>
-                    <div class="grid grid-cols-3 gap-4 text-center">
-                        <div>
-                            <div class="text-sm text-gray-400">Année 1</div>
-                            <div class="font-semibold text-lg">${resultYear1.net.toLocaleString('fr-FR')} €</div>
-                        </div>
-                        <div>
-                            <div class="text-sm text-gray-400">Année 2</div>
-                            <div class="font-semibold text-lg">${resultYear2.net.toLocaleString('fr-FR')} €</div>
-                        </div>
-                        <div>
-                            <div class="text-sm text-gray-400">Année 3</div>
-                            <div class="font-semibold text-lg">${resultYear3.net.toLocaleString('fr-FR')} €</div>
-                        </div>
-                    </div>
-                    <div class="mt-2 text-center">
-                        <div class="text-sm text-gray-400">Total sur 3 ans</div>
-                        <div class="font-semibold text-xl text-green-400">${(resultYear1.net + resultYear2.net + resultYear3.net).toLocaleString('fr-FR')} €</div>
-                    </div>
-                </div>
             </div>`;
         },
         
-        // Nouvelle méthode pour calculer les résultats d'une année en Micro-entreprise
-        calculateMicroEntrepriseYear: function(benefice, yearNumber, formeId) {
-            // Abattement forfaitaire selon le type d'activité
-            const abattement = this.getAbattement(userResponses.typeActivite);
+  // Affiche les stratégies optimales pour une forme juridique
+renderOptimalStrategies: function(forme, userResponses) {
+    let strategies;
+    
+    switch (forme.id) {
+        case 'micro-entreprise':
+            strategies = [
+                'Démarrez rapidement pour tester votre concept',
+                'Optimisez votre CA en restant sous les seuils',
+                userResponses.tmiActuel <= 11 ? 'Optez pour le versement libératoire d\'impôt' : 'Anticipez le passage à une forme sociétale à terme',
+                'Évitez les activités nécessitant des assurances professionnelles coûteuses',
+                userResponses.statutPorteur === 'demandeur-emploi' ? 'Profitez de l\'ACRE pour réduire vos charges' : 'Optez pour les déclarations trimestrielles si votre activité est stable'
+            ].filter(Boolean);
+            break;
             
-            // Prendre en compte l'ACRE si activé (seulement première année)
-            const acreReduction = (this.simulationParams.acreActif && yearNumber === 1) ? 0.5 : 1;
+        case 'ei':
+            strategies = [
+                'Déduisez vos frais réels pour optimiser votre bénéfice imposable',
+                'Créez un compte bancaire dédié pour séparer professionnelle/personnelle',
+                'Pensez à la location-gérance pour transmettre votre activité',
+                userResponses.statutPorteur === 'demandeur-emploi' ? 'Profitez de l\'ACRE pour réduire vos charges' : 'Adhérez à un organisme de gestion agréé pour éviter la majoration fiscale',
+                userResponses.tauxMarge < 20 ? 'Évaluez l\'option micro-entreprise si votre CA le permet' : 'Optimisez votre trésorerie avec un bon suivi comptable'
+            ];
+            break;
             
-            // Calculer les charges sociales (22% en moyenne, -50% avec ACRE année 1)
-            const chargesSociales = benefice * 0.22 * acreReduction;
+        case 'eurl':
+            strategies = [
+                'Choisissez le statut fiscal optimal entre IR et IS selon votre TMI',
+                'Répartissez intelligemment entre rémunération et réserves',
+                userResponses.bienImmobilier ? 'Utilisez la SCI pour vos locaux professionnels' : 'Achetez vos locaux en nom propre puis louez-les à l\'EURL',
+                'Basculez vers l\'IS après 2-3 ans quand votre activité sera stabilisée',
+                userResponses.regimeMatrimonial === 'communaute-reduite' ? 'Protégez votre patrimoine familial avec un mandat de protection future' : 'Envisagez de transformer en SASU à terme pour une revente facilitée'
+            ];
+            break;
             
-            // Calculer le revenu après charges sociales
-            const revenuApresCharges = benefice - chargesSociales;
+        case 'sasu':
+            strategies = [
+                'Optimisez votre répartition salaire/dividendes annuellement',
+                userResponses.tmiActuel >= 30 ? 'Privilégiez les dividendes avec le PFU à 30%' : 'Privilégiez le salaire pour bénéficier de droits sociaux supérieurs',
+                'Utilisez la convention de portage lors d\'une levée de fonds',
+                'Profitez des dispositifs d\'épargne salariale (PEE, PERCO)',
+                userResponses.montantLevee > 50000 ? 'Créez des catégories d\'actions pour vos investisseurs' : 'Structurez votre capital pour faciliter l\'entrée d\'associés futurs'
+            ];
+            break;
             
-            // Calculer le revenu fiscal (après abattement forfaitaire)
-            const revenuFiscal = revenuApresCharges * (1 - abattement);
+        case 'sas':
+            strategies = [
+                'Élaborez des statuts sur mesure pour votre gouvernance',
+                'Mettez en place des droits de vote double pour garder le contrôle',
+                'Prévoyez des clauses d\'agrément et de sortie adaptées',
+                userResponses.typeInvestisseurs.includes('vc') ? 'Structurez votre capital avec des actions de préférence' : 'Créez un pacte d\'actionnaires solide',
+                userResponses.structureHolding ? 'Optimisez avec une holding animatrice pour l\'intégration fiscale' : 'Prévoyez une réserve spéciale de participation pour motiver vos salariés'
+            ];
+            break;
             
-            // Calculer l'impôt (simplifié, devrait utiliser le barème progressif)
-            const impot = this.calculerImpotProgressif(revenuFiscal);
+        case 'sarl':
+            strategies = [
+                'Optimisez la répartition des parts entre associés',
+                'Utilisez judicieusement le compte courant d\'associé',
+                userResponses.profilEntrepreneur === 'famille' ? 'Prévoyez la transmission familiale dans les statuts' : 'Mettez en place une convention de cession progressive',
+                'Bénéficiez de la fiscalité des dividendes pour le gérant majoritaire',
+                'Prévoyez les cas de mésentente entre associés avec des clauses adaptées'
+            ];
+            break;
             
-            // Revenu net final
-            const revenuNet = revenuApresCharges - impot;
-            
-            return {
-                benefice: Math.round(benefice),
-                charges: Math.round(chargesSociales),
-                impots: Math.round(impot),
-                net: Math.round(revenuNet),
-                acre: (this.simulationParams.acreActif && yearNumber === 1)
-            };
-        },
+        default:
+            strategies = [
+                'Consultez un expert-comptable pour optimiser votre structure',
+                'Adaptez votre stratégie de rémunération à votre activité',
+                'Prévoyez l\'évolution de votre structure à 3-5 ans',
+                'Sécurisez votre patrimoine personnel avec les bons outils juridiques',
+                'Équilibrez optimisation fiscale et couverture sociale'
+            ];
+    }
+    
+    // Filtrer les stratégies nulles ou vides
+    strategies = strategies.filter(s => s);
+    
+    return `
+    <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-6">
+        <h4 class="font-semibold text-green-400 mb-3">Stratégies optimales pour votre ${forme.nom}</h4>
         
-        // Nouvelle méthode pour calculer les résultats d'une année pour société avec IS
-        calculateSocietyWithISYear: function(benefice, yearNumber, formeId, ratioSalaire, ratioDividendes) {
-            // Répartition du bénéfice selon les ratios choisis
-            const montantSalaire = benefice * (ratioSalaire / 100);
-            const montantDividendesBrut = benefice * (ratioDividendes / 100);
-            
-            // Prendre en compte l'ACRE si activé (seulement première année)
-            const acreReduction = (this.simulationParams.acreActif && yearNumber === 1 && 
-                                  (formeId === 'eurl' || formeId === 'sasu')) ? 0.5 : 1;
-            
-            // 1. Calcul pour la part salaire
-            // Charges patronales (environ 42% en moyenne)
-            const chargesPatronales = montantSalaire * 0.42 * acreReduction;
-            
-            // Charges salariales (environ 22% en moyenne)
-            const chargesSalariales = montantSalaire * 0.22;
-            
-            // Salaire net avant impôt
-            const salaireNetAvantImpot = montantSalaire - chargesSalariales;
-            
-            // Impôt sur le revenu sur salaire (simplifié)
-            const impotSalaire = this.calculerImpotProgressif(salaireNetAvantImpot);
-            
-            // Salaire net après impôt
-            const salaireNetApresImpot = salaireNetAvantImpot - impotSalaire;
-            
-            // 2. Calcul pour la part dividendes
-            // Impôt sur les sociétés (25% standard, 15% taux réduit jusqu'à 42.5K€)
-            const tauxIS = (benefice <= 42500) ? 0.15 : 0.25;
-            const impotSociete = montantDividendesBrut * tauxIS;
-            
-            // Dividendes nets d'IS
-            const dividendesNetsIS = montantDividendesBrut - impotSociete;
-            
-            // Prélèvements sociaux sur dividendes (17.2%)
-            const prelevementsSociauxDividendes = dividendesNetsIS * 0.172;
-            
-            // PFU ou barème progressif sur dividendes (simplifié avec PFU à 12.8%)
-            const impotDividendes = dividendesNetsIS * 0.128;
-            
-            // Dividendes nets après fiscalité
-            const dividendesNetsApresImpot = dividendesNetsIS - prelevementsSociauxDividendes - impotDividendes;
-            
-            // 3. Total des charges et impôts
-            const totalCharges = chargesPatronales + chargesSalariales + prelevementsSociauxDividendes;
-            const totalImpots = impotSalaire + impotSociete + impotDividendes;
-            
-            // 4. Revenu net total
-            const revenuNetTotal = salaireNetApresImpot + dividendesNetsApresImpot;
-            
-            return {
-                benefice: Math.round(benefice),
-                charges: Math.round(totalCharges),
-                impots: Math.round(totalImpots),
-                net: Math.round(revenuNetTotal),
-                acre: (this.simulationParams.acreActif && yearNumber === 1),
-                salaireNet: Math.round(salaireNetApresImpot),
-                dividendesNet: Math.round(dividendesNetsApresImpot)
-            };
-        },
-        
-        // Méthode auxiliaire pour obtenir l'abattement forfaitaire selon type d'activité
-        getAbattement: function(typeActivite) {
-            switch(typeActivite) {
-                case 'bic-vente':
-                    return 0.71; // 71% d'abattement pour vente de marchandises
-                case 'bic-service':
-                    return 0.50; // 50% pour prestations de services BIC
-                case 'bnc':
-                    return 0.34; // 34% pour professions libérales BNC
-                case 'artisanale':
-                    return 0.50; // 50% pour artisans
-                default:
-                    return 0.34; // Valeur par défaut
-            }
-        },
-        
-        // Méthode pour calculer l'impôt sur le revenu avec barème progressif
-        calculerImpotProgressif: function(revenuImposable) {
-            // Récupérer la TMI de l'utilisateur
-            const tmi = userResponses.tmiActuel || 30;
-            
-            // Calculer l'impôt selon la TMI (très simplifié)
-            // Dans une vraie implémentation, il faudrait appliquer les tranches complètes
-            return revenuImposable * (tmi / 100);
-        },
-        
-        // Génère des conseils stratégiques personnalisés
-        renderOptimalStrategies: function(forme, userResponses) {
-            let strategies = [];
-            
-            // Déterminer les stratégies selon la forme juridique et le profil
-            if (forme.id === 'micro-entreprise') {
-                strategies.push({
-                    titre: "Optimisation de la trésorerie",
-                    description: "Profitez de l'absence de TVA sous le seuil de franchise pour améliorer votre trésorerie.",
-                    icon: "fa-coins"
-                });
-                
-                if (userResponses.tmiActuel <= 11) {
-                    strategies.push({
-                        titre: "Option pour le versement libératoire",
-                        description: "Avec votre TMI actuelle, le versement libératoire de l'impôt (VLI) est avantageux.",
-                        icon: "fa-percent"
-                    });
-                }
-                
-                strategies.push({
-                    titre: "Surveillance du seuil",
-                    description: `Surveillez votre CA pour ne pas dépasser le seuil de ${forme.plafondCA}.`,
-                    icon: "fa-chart-line"
-                });
-            } else if (forme.id === 'ei') {
-                strategies.push({
-                    titre: "Déduction des charges réelles",
-                    description: "Optimisez votre fiscalité en déduisant toutes vos charges réelles.",
-                    icon: "fa-receipt"
-                });
-                
-                strategies.push({
-                    titre: "Protection patrimoniale",
-                    description: "Envisagez une déclaration d'insaisissabilité pour renforcer la protection de votre patrimoine personnel.",
-                    icon: "fa-home"
-                });
-            } else if (forme.id === 'eurl') {
-                if (forme.fiscaliteOption === 'Oui') {
-                    strategies.push({
-                        titre: "Optimisation fiscale",
-                        description: `Adaptez votre régime fiscal (IR/IS) selon l'évolution de votre activité et de votre TMI.`,
-                        icon: "fa-balance-scale"
-                    });
-                }
-                
-                strategies.push({
-                    titre: "Gestion de la rémunération",
-                    description: `Répartissez judicieusement entre salaire et dividendes (ratio optimal: ${this.simulationParams.ratioSalaire}/${this.simulationParams.ratioDividendes}).`,
-                    icon: "fa-percentage"
-                });
-            } else if (forme.id === 'sasu') {
-                strategies.push({
-                    titre: "Optimisation salaire/dividendes",
-                    description: `Adaptez votre rémunération entre salaire et dividendes selon votre TMI (${userResponses.tmiActuel}%).`,
-                    icon: "fa-coins"
-                });
-                
-                strategies.push({
-                    titre: "Prestations TNS",
-                    description: "Profitez des prestations du régime général (chômage, retraite, etc.) de votre statut assimilé-salarié.",
-                    icon: "fa-user-shield"
-                });
-                
-                strategies.push({
-                    titre: "Préparation levée de fonds",
-                    description: "Structure idéale pour accueillir des investisseurs, préparez une documentation adaptée.",
-                    icon: "fa-chart-line"
-                });
-            }
-            
-            if (userResponses.aides.includes('acre')) {
-                strategies.push({
-                    titre: "ACRE",
-                    description: "Profitez de l'exonération partielle de charges sociales pendant la première année.",
-                    icon: "fa-star"
-                });
-            }
-            
-            // Générer le HTML pour les stratégies
-            let html = `
-            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-6">
-                <h4 class="font-semibold text-green-400 mb-4">Stratégies optimales pour votre ${forme.nom}</h4>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            `;
-            
-            strategies.forEach(strategy => {
-                html += `
-                <div class="bg-blue-800 bg-opacity-20 p-4 rounded-lg">
-                    <div class="flex items-start">
-                        <div class="bg-green-900 bg-opacity-30 rounded-full p-3 mr-3">
-                            <i class="fas ${strategy.icon} text-green-400"></i>
-                        </div>
-                        <div>
-                            <h5 class="font-semibold mb-1">${strategy.titre}</h5>
-                            <p class="text-sm">${strategy.description}</p>
-                        </div>
+        <div class="grid grid-cols-1 gap-3">
+            ${strategies.map((strategy, index) => `
+                <div class="flex items-start bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                    <div class="strategy-number flex-shrink-0 mr-3">
+                        <span>${index + 1}</span>
+                    </div>
+                    <div>
+                        <p class="font-medium">${strategy}</p>
                     </div>
                 </div>
-                `;
-            });
-            
-            html += `
-                </div>
-            </div>
-            `;
-            
-            return html;
-        }
-    };
-
-    // Gestionnaire de stockage pour sauvegarder la progression
-    const StorageManager = {
-        // Sauvegarde la progression dans le localStorage
-        saveProgress: function() {
-            localStorage.setItem('entreprise-form-progress', JSON.stringify(userResponses));
-        },
+            `).join('')}
+        </div>
         
-        // Récupère la progression depuis le localStorage
-        loadProgress: function() {
-            const savedProgress = localStorage.getItem('entreprise-form-progress');
-            if (savedProgress) {
-                userResponses = JSON.parse(savedProgress);
-                return true;
-            }
-            return false;
-        }
-    };
-
-    // Initialisation des réponses utilisateur
-    let userResponses = {
-        // Section 1: Profil & Horizon Personnel
-        tmiActuel: 30,
-        autresRevenusSalaries: false,
-        horizonProjet: 'moyen',
-        revenuAnnee1: 30000,
-        revenuAnnee3: 50000,
-        bienImmobilier: false,
-        
-        // Section 2: Équipe & Gouvernance
-        profilEntrepreneur: null,
-        typeInvestisseurs: [],
-        
-        // Section 3: Nature de l'activité
-        typeActivite: null,
-        activiteReglementee: false,
-        ordreProessionnel: false,
-        risqueResponsabilite: false,
-        besoinAssurance: false,
-        
-        // Section 4: Volumétrie et finances
-        chiffreAffaires: null,
-        tauxMarge: 35,
-        besoinRevenusImmediats: false,
-        cautionBancaire: false,
-        montantLevee: 0,
-        preferenceRemuneration: 'mixte',
-        aides: [],
-        transmission: null,
-        regimeFiscal: null,
-        regimeSocial: null
-    };
-
-    // Tenter de restaurer la progression
-    if (StorageManager.loadProgress()) {
-        console.log('Progression restaurée depuis le localStorage');
-    }
-
-    // Initialisation de l'application
-    FormManager.init();
-    ResultsManager.init();
-    
-    // Affichage de la première section
-    FormManager.showSection(1);
-    
-    // Mise à jour de la date de dernière mise à jour
-    const lastUpdateDateElement = document.getElementById('lastUpdateDate');
-    if (lastUpdateDateElement) {
-        lastUpdateDateElement.textContent = '24/04/2025';
-    }
-    
-    // Mise à jour du temps actuel de marché
-    const marketTimeElement = document.getElementById('marketTime');
-    if (marketTimeElement) {
-        const updateMarketTime = () => {
-            const now = new Date();
-            marketTimeElement.textContent = now.toLocaleTimeString('fr-FR');
-        };
-        
-        updateMarketTime();
-        setInterval(updateMarketTime, 1000);
-    }
-    
-    // Écouteur pour le bouton "Voir les autres options"
-    const showMoreResults = document.getElementById('show-more-results');
-    const secondaryResults = document.getElementById('secondary-results');
-    
-    if (showMoreResults && secondaryResults) {
-        showMoreResults.addEventListener('click', function() {
-            if (secondaryResults.classList.contains('hidden')) {
-                secondaryResults.classList.remove('hidden');
-                this.querySelector('i').classList.remove('fa-chevron-down');
-                this.querySelector('i').classList.add('fa-chevron-up');
-                this.querySelector('span').textContent = 'Masquer les autres options';
-            } else {
-                secondaryResults.classList.add('hidden');
-                this.querySelector('i').classList.remove('fa-chevron-up');
-                this.querySelector('i').classList.add('fa-chevron-down');
-                this.querySelector('span').textContent = 'Voir les autres options compatibles';
-            }
-        });
-    }
-    
-    // Écouteur pour afficher/masquer les détails de calcul
-    document.addEventListener('toggleCalculationDetails', function(e) {
-        const calculationDetails = document.querySelectorAll('.calculation-details');
-        calculationDetails.forEach(detail => {
-            if (e.detail.visible) {
-                detail.classList.remove('hidden');
-            } else {
-                detail.classList.add('hidden');
-            }
-        });
-    });
-});
+        <div class="mt-4 text-sm">
+            <p class="flex items-center">
+                <i class="fas fa-info-circle mr-2 text-blue-400"></i>
+                <span>Ces recommandations sont adaptées à votre situation mais ne remplacent pas l'avis d'un expert-comptable.</span>
+            </p>
+        </div>
+    </div>`;
+}
