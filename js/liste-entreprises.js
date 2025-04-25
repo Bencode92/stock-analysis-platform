@@ -1006,6 +1006,9 @@ function getFormesRecommandees(profil) {
                 break;
             case 'sasu':
                 score = scoreResult.scores.sasu;
+                // Nouveaux bonus pour SASU avec les nouvelles options
+                if (profil.protectionSociale === 'retraite') score += 10;
+                if (profil.preferenceDividendes === 'pfu' && profil.tmiActuel >= 30) score += 10;
                 break;
             case 'sas':
                 score = scoreResult.scores.sas;
@@ -1065,6 +1068,204 @@ function genererGuidePDF(userResponses, formesRecommandees) {
     return "guide-personnalise.pdf";
 }
 
+/**
+ * Vérifie les incompatibilités majeures qui empêcheraient certaines formes juridiques
+ * Utilise le moteur de règles BusinessRules
+ * @param {Object} userResponses - Réponses de l'utilisateur au questionnaire
+ * @return {Array} Liste des incompatibilités détectées
+ */
+function checkHardFails(userResponses) {
+    if (typeof BusinessRules === 'undefined') {
+        console.warn('BusinessRules n\'est pas défini. Vérifiez que fiscal-simulation.js est chargé avant liste-entreprises.js');
+        return [];
+    }
+
+    // Appliquer les règles métier
+    const rulesResult = BusinessRules.applyRules(userResponses, formesJuridiques);
+    
+    // Convertir les résultats au format attendu
+    const fails = rulesResult.appliedRules.map(rule => {
+        // Essayer de trouver les formes exclues par cette règle
+        let formeIds = [];
+        
+        if (rule.exclude) {
+            formeIds = rule.exclude;
+        } else {
+            // Si pas de forme explicitement exclue, déduire selon le code de règle
+            switch(rule.id) {
+                case "ca-micro":
+                    formeIds = ['micro-entreprise'];
+                    break;
+                case "ordre-pro":
+                    formeIds = ['micro-entreprise', 'ei'];
+                    break;
+                case "investisseurs":
+                    formeIds = ['micro-entreprise', 'ei', 'eurl'];
+                    break;
+                case "protection-patrimoine":
+                    formeIds = ['micro-entreprise', 'ei'];
+                    break;
+                case "multi-associes":
+                    formeIds = ['micro-entreprise', 'ei', 'eurl', 'sasu'];
+                    break;
+                case "esus-statut":
+                    formeIds = ['micro-entreprise', 'ei', 'eurl', 'sasu'];
+                    break;
+                case "garantie-decennale":
+                    formeIds = ['micro-entreprise'];
+                    break;
+                case "structure-holding":
+                    formeIds = ['micro-entreprise', 'ei', 'eurl', 'sasu'];
+                    break;
+                case "multi-sites":
+                    formeIds = ['micro-entreprise', 'ei'];
+                    break;
+                case "rcp-forte":
+                    formeIds = ['micro-entreprise'];
+                    break;
+                case "regime-communaute":
+                    formeIds = ['micro-entreprise', 'ei'];
+                    break;
+                case "apport-pi":
+                    formeIds = ['micro-entreprise', 'ei'];
+                    break;
+            }
+        }
+        
+        // Créer un objet d'échec pour chaque forme concernée
+        return formeIds.map(formeId => ({
+            formeId: formeId,
+            code: rule.id,
+            message: rule.reason,
+            details: `Cette forme juridique n'est pas compatible avec vos besoins: ${rule.reason}`
+        }));
+    }).flat(); // Aplatir le tableau de tableaux
+    
+    return fails;
+}
+
+/**
+ * Vérifie si une forme juridique spécifique a des incompatibilités majeures
+ * @param {string} formeId - Identifiant de la forme juridique
+ * @param {Array} hardFails - Liste des incompatibilités détectées
+ * @return {boolean} - Vrai si la forme a une incompatibilité majeure
+ */
+function hasHardFail(formeId, hardFails) {
+    return hardFails.some(fail => fail.formeId === formeId);
+}
+
+/**
+ * Obtient des formes juridiques alternatives recommandées en cas d'incompatibilité
+ * @param {string} formeId - Identifiant de la forme juridique incompatible
+ * @param {string} raison - Code de la raison d'incompatibilité
+ * @return {Array} - Formes juridiques alternatives recommandées
+ */
+function getSuggestionsAlternatives(formeId, incompatibilites) {
+    if (!incompatibilites || incompatibilites.length === 0) return [];
+    
+    // Extraire les codes de raison
+    const reasons = incompatibilites.map(inc => inc.code);
+    
+    // Suggestion par raison
+    let suggestionIds = [];
+    
+    if (reasons.includes('ca-micro') || reasons.includes('CA_ELEVE')) {
+        suggestionIds.push('eurl', 'sasu', 'ei');
+    }
+    
+    if (reasons.includes('garantie-decennale') || reasons.includes('GARANTIE_DECENNALE')) {
+        suggestionIds.push('sarl', 'sasu', 'eurl');
+    }
+    
+    if (reasons.includes('structure-holding') || reasons.includes('HOLDING')) {
+        suggestionIds.push('sas', 'sa', 'sarl');
+    }
+    
+    if (reasons.includes('esus-statut') || reasons.includes('ESUS')) {
+        suggestionIds.push('scic', 'scop', 'sas');
+    }
+    
+    if (reasons.includes('multi-sites') || reasons.includes('MULTI_ETAB')) {
+        suggestionIds.push('sas', 'sarl', 'sa');
+    }
+    
+    if (reasons.includes('regime-communaute') || reasons.includes('REGIME_MATRIMONIAL')) {
+        suggestionIds.push('sasu', 'eurl', 'sarl');
+    }
+    
+    if (reasons.includes('ordre-pro') || reasons.includes('ACTIVITE_REGLEMENTEE')) {
+        suggestionIds.push('selarl', 'selas', 'sel');
+    }
+    
+    // Si pas de suggestion spécifique, proposer les formes les plus polyvalentes
+    if (suggestionIds.length === 0) {
+        suggestionIds = ['eurl', 'sasu', 'sarl', 'sas'];
+    }
+    
+    // Éliminer les doublons et convertir les IDs en objets de forme
+    return [...new Set(suggestionIds)]
+        .map(id => getFormeById(id))
+        .filter(Boolean)
+        .slice(0, 3); // Limiter à 3 suggestions
+}
+
+/**
+ * Obtient les détails complets d'une forme juridique avec simulation financière
+ * @param {string} formeId - Identifiant de la forme juridique
+ * @param {Object} userResponses - Réponses de l'utilisateur
+ * @return {Object} Détails complets avec incompatibilités et simulation
+ */
+function getFormeDetails(formeId, userResponses) {
+    const forme = getFormeById(formeId);
+    if (!forme) return null;
+    
+    // Obtenir les incompatibilités
+    const incompatibilites = checkHardFails(userResponses)
+        .filter(fail => fail.formeId === formeId);
+    
+    // Générer la simulation si compatible et si SimulationsFiscales existe
+    let simulation = null;
+    if (incompatibilites.length === 0 && typeof SimulationsFiscales !== 'undefined') {
+        try {
+            simulation = SimulationsFiscales.simulerImpactFiscal(forme, userResponses.chiffreAffaires || 50000, {
+                zoneImplantation: userResponses.zoneImplantation,
+                statutPorteur: userResponses.statutPorteur,
+                garantieDecennale: userResponses.garantieDecennale, 
+                rcpObligatoire: userResponses.rcpObligatoire,
+                regimeMatrimonial: userResponses.regimeMatrimonial,
+                preferenceDividendes: userResponses.preferenceDividendes,
+                protectionSociale: userResponses.protectionSociale,
+                acreActif: userResponses.statutPorteur === 'demandeur-emploi',
+                tmiActuel: userResponses.tmiActuel || 30
+            });
+            
+            // Générer une explication en langage naturel si la fonction existe
+            if (typeof generateNaturalExplanation !== 'undefined') {
+                simulation.explanation = generateNaturalExplanation(forme, userResponses, {
+                    simulation: simulation,
+                    scoreDetails: { pourcentage: 85 } // Score par défaut
+                });
+            }
+        } catch (e) {
+            console.error("Erreur lors de la simulation:", e);
+            simulation = { 
+                error: true, 
+                message: "Impossible de générer la simulation fiscale" 
+            };
+        }
+    }
+    
+    // Obtenir des alternatives en cas d'incompatibilité
+    const alternatives = getSuggestionsAlternatives(formeId, incompatibilites);
+    
+    return {
+        forme,
+        incompatibilites,
+        simulation,
+        alternatives
+    };
+}
+
 // Exporter les fonctions et la liste des formes juridiques
 window.formesJuridiques = formesJuridiques;
 window.getFormeById = getFormeById;
@@ -1073,3 +1274,7 @@ window.getFormesSimilaires = getFormesSimilaires;
 window.comparerFormesJuridiques = comparerFormesJuridiques;
 window.getFormesRecommandees = getFormesRecommandees;
 window.genererGuidePDF = genererGuidePDF;
+window.checkHardFails = checkHardFails;
+window.hasHardFail = hasHardFail;
+window.getSuggestionsAlternatives = getSuggestionsAlternatives;
+window.getFormeDetails = getFormeDetails;
