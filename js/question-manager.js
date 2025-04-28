@@ -1056,59 +1056,44 @@ class QuestionManager {
         const showResultsBtn = document.getElementById('show-results-btn');
         if (showResultsBtn) {
             showResultsBtn.addEventListener('click', async () => {
-                // Variable pour suivre le temps de chargement
-                let loadingTimeout;
-                let loadingInterval = null;
-                
-                // Fonction pour montrer l'indicateur si le chargement prend trop de temps
-                loadingTimeout = setTimeout(() => {
-                    if (window.showLoadingIndicator && typeof window.showLoadingIndicator === 'function') {
-                        loadingInterval = window.showLoadingIndicator();
-                    }
-                }, 500); // Afficher l'indicateur seulement si le chargement prend plus de 500ms
-                
-                // Un mini indicateur de chargement dans le conteneur de question
-                this.questionContainer.innerHTML = `
-                    <div class="bg-blue-900 bg-opacity-20 p-4 rounded-xl text-center">
-                        <div class="text-3xl text-blue-400 mb-2"><i class="fas fa-spinner fa-spin"></i></div>
-                        <p>Analyse en cours...</p>
-                    </div>
-                `;
+                // Afficher l'indicateur de chargement immédiatement
+                let loadingInterval = window.showLoadingIndicator();
                 
                 try {
-                    // Charger le moteur de recommandation de façon paresseuse
-                    if (typeof window.loadRecommendationEngine === 'function') {
-                        const engine = await window.loadRecommendationEngine();
-                        
-                        // Annuler le timer si le chargement est rapide
-                        clearTimeout(loadingTimeout);
-                        
-                        // Masquer l'indicateur si affiché
-                        if (window.hideLoadingIndicator && typeof window.hideLoadingIndicator === 'function') {
-                            window.hideLoadingIndicator(loadingInterval);
-                        }
+                    // Tentative directe de création du moteur
+                    if (!window.recommendationEngine && window.RecommendationEngine) {
+                        console.log("Création directe du moteur de recommandation");
+                        window.recommendationEngine = new window.RecommendationEngine();
+                    }
+                    
+                    // Si toujours pas disponible, essayer le chargement paresseux
+                    if (!window.recommendationEngine && window.loadRecommendationEngine) {
+                        console.log("Tentative de chargement paresseux");
+                        // Ajouter un timeout explicite
+                        const timeoutPromise = new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error("Timeout")), 5000));
+                        const enginePromise = window.loadRecommendationEngine();
+                        const engine = await Promise.race([enginePromise, timeoutPromise]);
                         
                         if (engine) {
                             engine.calculateRecommendations(this.answers);
                         } else {
-                            throw new Error("Impossible de charger le moteur de recommandation");
+                            throw new Error("Moteur non disponible");
                         }
+                    } else if (window.recommendationEngine) {
+                        // Utiliser directement le moteur si disponible
+                        window.recommendationEngine.calculateRecommendations(this.answers);
                     } else {
-                        throw new Error("Fonction de chargement non disponible");
+                        throw new Error("Moteur non disponible");
                     }
                 } catch (error) {
-                    // En cas d'erreur, s'assurer que l'indicateur est masqué
-                    clearTimeout(loadingTimeout);
-                    if (window.hideLoadingIndicator && typeof window.hideLoadingIndicator === 'function') {
-                        window.hideLoadingIndicator(loadingInterval);
-                    }
-                    
-                    console.error('Erreur lors du chargement du moteur de recommandation:', error);
+                    console.error('Erreur:', error);
+                    // Afficher un message d'erreur et offrir une solution
                     this.questionContainer.innerHTML = `
                         <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center">
                             <div class="text-6xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
                             <h2 class="text-2xl font-bold mb-4">Une erreur est survenue</h2>
-                            <p class="mb-6">Impossible de charger le moteur de recommandation. Veuillez réessayer ultérieurement.</p>
+                            <p class="mb-6">Le moteur de recommandation n'a pas pu être chargé. Essayez de recharger la page ou de vider le cache de votre navigateur.</p>
                             <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
                                 <i class="fas fa-redo mr-2"></i> Refaire le test
                             </button>
@@ -1118,6 +1103,11 @@ class QuestionManager {
                     document.getElementById('restart-btn').addEventListener('click', () => {
                         location.reload();
                     });
+                } finally {
+                    // Toujours masquer l'indicateur de chargement
+                    if (window.hideLoadingIndicator) {
+                        window.hideLoadingIndicator(loadingInterval);
+                    }
                 }
             });
         }
