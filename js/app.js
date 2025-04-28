@@ -13,32 +13,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialiser les événements de l'interface
     initUIEvents();
     
-    // Au lieu d'initialiser le moteur de recommandation directement,
-    // le charger uniquement lorsque c'est nécessaire
-    initLazyRecommendationEngine();
+    // Initialiser directement le moteur de recommandation (comme dans l'ancien système)
+    initRecommendationEngine();
 });
 
 /**
- * Initialiser le moteur de recommandation de façon paresseuse (lazy loading)
+ * Initialiser le moteur de recommandation directement (comme dans l'ancien système)
  */
-function initLazyRecommendationEngine() {
-    // Définir une fonction globale qui chargera le moteur de recommandation
-    // seulement quand on en aura besoin
-    window.loadRecommendationEngine = async function() {
-        if (!window.recommendationEngine) {
-            try {
-                // Import dynamique du module (chargement à la demande)
-                const RecommendationEngineModule = await import('./recommendation-engine.js');
-                window.recommendationEngine = new RecommendationEngineModule.default();
-                console.log("Moteur de recommandation chargé avec succès");
-                return window.recommendationEngine;
-            } catch (error) {
-                console.error("Erreur lors du chargement du moteur de recommandation:", error);
-                return null;
-            }
-        }
-        return window.recommendationEngine;
-    };
+function initRecommendationEngine() {
+    // Cette fonction sera appelée quand RecommendationEngine sera disponible globalement
+    if (window.RecommendationEngine) {
+        window.recommendationEngine = new window.RecommendationEngine();
+        console.log("Moteur de recommandation initialisé avec succès");
+    } else {
+        console.error("RecommendationEngine n'est pas disponible. Assurez-vous que recommendation-engine.js est chargé correctement.");
+    }
+    
+    // Créer des ponts de compatibilité si nécessaire pour les modules auxiliaires
+    if (!window.checkHardFails) {
+        window.checkHardFails = function(forme, userResponses) {
+            // Implémentation simplifiée qui pourrait être améliorée au besoin
+            return [];  
+        };
+    }
 }
 
 /**
