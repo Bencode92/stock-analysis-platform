@@ -1,7 +1,7 @@
 // legal-status-data.js - Données sur les statuts juridiques d'entreprise
 
 // Statuts juridiques et leurs caractéristiques
-export const legalStatuses = {
+const legalStatuses = {
     "MICRO": {
         id: 'micro-entreprise',
         name: "Micro-entreprise",
@@ -736,7 +736,7 @@ export const legalStatuses = {
 };
 
 // Barèmes 2025 pour les régimes fiscaux et sociaux
-export const scales2025 = {
+const scales2025 = {
     // Seuils micro-entreprise 2025
     micro: {
         bic_sales: 188700,
@@ -778,7 +778,7 @@ export const scales2025 = {
 };
 
 // Critères d'exclusion primaire (filtres "killer")
-export const exclusionFilters = [
+const exclusionFilters = [
     {
         id: "professional_order",
         condition: "yes",
@@ -819,7 +819,7 @@ export const exclusionFilters = [
 ];
 
 // Barème de notation des statuts (0-5) par critère
-export const ratingScales = {
+const ratingScales = {
     taxation: {
         EI: 3,
         MICRO: 4,
@@ -962,10 +962,16 @@ export const ratingScales = {
     }
 };
 
-// Export du module
-export default {
-    legalStatuses,
-    scales2025,
-    exclusionFilters,
-    ratingScales
+// Exposer globalement les variables
+window.legalStatuses = legalStatuses;
+window.scales2025 = scales2025;
+window.exclusionFilters = exclusionFilters;
+window.ratingScales = ratingScales;
+
+// Exposer via l'ancien système de compatibilité 
+window.FormeJuridiqueDB = {
+    structures: Object.values(legalStatuses),
+    getById: function(id) {
+        return legalStatuses[id];
+    }
 };
