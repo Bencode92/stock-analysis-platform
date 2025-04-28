@@ -1,6 +1,6 @@
 // question-manager.js - Gestion de l'affichage et de la navigation entre les questions
 
-import { questions, sections, quickStartQuestions } from './question-data.js';
+import { questions, sections, quickStartQuestions } from '/js/question-data.js';
 
 class QuestionManager {
     constructor() {
