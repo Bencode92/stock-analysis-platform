@@ -2,6 +2,310 @@
 
 import { legalStatuses, exclusionFilters, ratingScales } from './legal-status-data.js';
 
+// Règles de scoring configurables
+const scoringRules = [
+    // Règles pour la protection du patrimoine
+    {
+        id: 'essential_patrimony_protection',
+        description: 'Protection du patrimoine essentielle',
+        condition: answers => answers.patrimony_protection === 'essential',
+        apply: (statusId, score) => {
+            if (['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) {
+                return score + 1;
+            }
+            return score;
+        },
+        criteria: 'patrimony_protection'
+    },
+    {
+        id: 'high_risk_activity_ei_micro',
+        description: 'Activité à risque élevé pour EI/MICRO',
+        condition: answers => answers.high_professional_risk === 'yes',
+        apply: (statusId, score) => {
+            if (['EI', 'MICRO'].includes(statusId)) {
+                return score - 1;
+            } else if (statusId === 'EIRL') {
+                return score + 0.5;
+            }
+            return score;
+        },
+        criteria: 'patrimony_protection'
+    },
+    
+    // Règles pour la simplicité administrative
+    {
+        id: 'high_revenue_small_structures',
+        description: 'CA élevé pour petites structures',
+        condition: answers => parseFloat(answers.projected_revenue) > 100000,
+        apply: (statusId, score) => {
+            if (['EI', 'MICRO'].includes(statusId)) {
+                return score - 1;
+            }
+            return score;
+        },
+        criteria: 'administrative_simplicity'
+    },
+    {
+        id: 'low_revenue_complex_structures',
+        description: 'Faible CA pour structures complexes',
+        condition: answers => parseFloat(answers.projected_revenue) < 50000,
+        apply: (statusId, score) => {
+            if (['SAS', 'SA', 'SARL'].includes(statusId)) {
+                return score - 1;
+            }
+            return score;
+        },
+        criteria: 'administrative_simplicity'
+    },
+    {
+        id: 'high_revenue_complex_structures',
+        description: 'CA élevé pour structures complexes',
+        condition: answers => parseFloat(answers.projected_revenue) > 300000,
+        apply: (statusId, score) => {
+            if (['SAS', 'SA', 'SARL'].includes(statusId)) {
+                return score + 0.5;
+            }
+            return score;
+        },
+        criteria: 'administrative_simplicity'
+    },
+    {
+        id: 'accounting_complexity_simple',
+        description: 'Préférence pour comptabilité simple',
+        condition: answers => answers.accounting_complexity === 'simple',
+        apply: (statusId, score) => {
+            if (['SAS', 'SA'].includes(statusId)) {
+                return score - 1;
+            }
+            return score;
+        },
+        criteria: 'administrative_simplicity'
+    },
+    {
+        id: 'accounting_outsourced_micro',
+        description: 'Comptabilité externalisée pour micro',
+        condition: answers => answers.accounting_complexity === 'outsourced',
+        apply: (statusId, score) => {
+            if (statusId === 'MICRO') {
+                return score - 0.5;
+            }
+            return score;
+        },
+        criteria: 'administrative_simplicity'
+    },
+    
+    // Règles pour l'optimisation fiscale
+    {
+        id: 'high_tmi_ir_malus',
+        description: 'TMI élevée défavorable pour IR',
+        condition: answers => ['bracket_41', 'bracket_45'].includes(answers.tax_bracket),
+        apply: (statusId, score) => {
+            if (['EI', 'MICRO', 'SNC'].includes(statusId)) {
+                return score - 1.5;
+            }
+            return score;
+        },
+        criteria: 'taxation_optimization'
+    },
+    {
+        id: 'high_tmi_is_bonus',
+        description: 'TMI élevée favorable pour IS',
+        condition: answers => ['bracket_41', 'bracket_45'].includes(answers.tax_bracket),
+        apply: (statusId, score) => {
+            if (['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) {
+                return score + 1;
+            }
+            return score;
+        },
+        criteria: 'taxation_optimization'
+    },
+    {
+        id: 'low_tmi_micro_bonus',
+        description: 'TMI faible favorable pour micro',
+        condition: answers => ['non_taxable', 'bracket_11'].includes(answers.tax_bracket),
+        apply: (statusId, score) => {
+            if (statusId === 'MICRO') {
+                return score + 1;
+            }
+            return score;
+        },
+        criteria: 'taxation_optimization'
+    },
+    {
+        id: 'dividend_preference_is',
+        description: 'Préférence dividendes favorable pour IS',
+        condition: answers => answers.remuneration_preference === 'dividends',
+        apply: (statusId, score) => {
+            if (['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) {
+                return score + 0.5;
+            }
+            return score;
+        },
+        criteria: 'taxation_optimization'
+    },
+    {
+        id: 'salary_preference_ir',
+        description: 'Préférence salaire favorable pour IR',
+        condition: answers => answers.remuneration_preference === 'salary',
+        apply: (statusId, score) => {
+            if (['EI', 'MICRO'].includes(statusId)) {
+                return score + 0.5;
+            }
+            return score;
+        },
+        criteria: 'taxation_optimization'
+    },
+    {
+        id: 'innovation_devices_bonus',
+        description: 'Dispositifs innovation (JEI/CIR/CII)',
+        condition: answers => answers.jei_cir_cii && answers.jei_cir_cii.length > 0,
+        apply: (statusId, score) => {
+            if (['SASU', 'SAS', 'SARL', 'EURL'].includes(statusId)) {
+                return score + 0.5;
+            }
+            return score;
+        },
+        criteria: 'taxation_optimization'
+    },
+    
+    // Règles pour les charges sociales
+    {
+        id: 'tns_preference_bonus',
+        description: 'Préférence TNS favorable',
+        condition: answers => answers.social_regime === 'tns',
+        apply: (statusId, score) => {
+            if (['EI', 'EIRL', 'MICRO', 'EURL', 'SARL'].includes(statusId)) {
+                return score + 1;
+            }
+            return score;
+        },
+        criteria: 'social_charges'
+    },
+    {
+        id: 'employee_preference_bonus',
+        description: 'Préférence assimilé salarié favorable',
+        condition: answers => answers.social_regime === 'assimilated_employee',
+        apply: (statusId, score) => {
+            if (['SASU', 'SAS', 'SA'].includes(statusId)) {
+                return score + 1;
+            }
+            return score;
+        },
+        criteria: 'social_charges'
+    },
+    {
+        id: 'low_income_micro_bonus',
+        description: 'Faibles revenus favorables pour micro',
+        condition: answers => parseFloat(answers.income_objective_year1) < 1500,
+        apply: (statusId, score) => {
+            if (statusId === 'MICRO') {
+                return score + 1;
+            }
+            return score;
+        },
+        criteria: 'social_charges'
+    },
+    {
+        id: 'high_income_assimile_malus',
+        description: 'Revenus élevés défavorables pour assimilé salarié',
+        condition: answers => parseFloat(answers.income_objective_year1) > 5000,
+        apply: (statusId, score) => {
+            if (['SASU', 'SAS'].includes(statusId)) {
+                return score - 0.5;
+            }
+            return score;
+        },
+        criteria: 'social_charges'
+    },
+    {
+        id: 'acre_bonus',
+        description: 'Bonus ACRE',
+        condition: answers => answers.acre === 'yes',
+        apply: (statusId, score) => {
+            return score + 0.5;
+        },
+        criteria: 'social_charges'
+    },
+    
+    // Règles pour la capacité de financement
+    {
+        id: 'fundraising_sas_sa_bonus',
+        description: 'Levée de fonds favorable pour SAS/SASU/SA',
+        condition: answers => answers.fundraising === 'yes',
+        apply: (statusId, score) => {
+            if (['SASU', 'SAS', 'SA'].includes(statusId)) {
+                return score + 1.5;
+            } else if (['SARL', 'EURL'].includes(statusId)) {
+                return score + 0.5;
+            }
+            return score;
+        },
+        criteria: 'fundraising_capacity'
+    },
+    {
+        id: 'sharing_instruments_bonus',
+        description: 'Instruments de partage favorables pour SAS/SASU/SA',
+        condition: answers => answers.sharing_instruments && answers.sharing_instruments.length > 0,
+        apply: (statusId, score) => {
+            if (['SASU', 'SAS', 'SA'].includes(statusId)) {
+                return score + 1;
+            }
+            return score;
+        },
+        criteria: 'fundraising_capacity'
+    },
+    {
+        id: 'investors_ei_micro_malus',
+        description: 'Structure avec investisseurs défavorable pour EI/MICRO',
+        condition: answers => answers.team_structure === 'investors',
+        apply: (statusId, score) => {
+            if (['EI', 'EIRL', 'MICRO', 'SNC'].includes(statusId)) {
+                return score - 2;
+            }
+            return score;
+        },
+        criteria: 'fundraising_capacity'
+    },
+    
+    // Règles pour la transmission
+    {
+        id: 'sale_exit_bonus',
+        description: 'Sortie par vente favorable pour sociétés',
+        condition: answers => answers.exit_intention === 'sale',
+        apply: (statusId, score) => {
+            if (['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) {
+                return score + 1;
+            }
+            return score;
+        },
+        criteria: 'transmission'
+    },
+    {
+        id: 'transmission_exit_bonus',
+        description: 'Sortie par transmission favorable pour sociétés',
+        condition: answers => answers.exit_intention === 'transmission',
+        apply: (statusId, score) => {
+            if (['SAS', 'SA', 'SARL'].includes(statusId)) {
+                return score + 1;
+            }
+            return score;
+        },
+        criteria: 'transmission'
+    },
+    {
+        id: 'family_transmission_sarl_bonus',
+        description: 'Transmission familiale favorable pour SARL',
+        condition: answers => answers.family_transmission === 'yes',
+        apply: (statusId, score) => {
+            if (statusId === 'SARL') {
+                return score + 0.5;
+            }
+            return score;
+        },
+        criteria: 'transmission'
+    }
+];
+
 class RecommendationEngine {
     constructor() {
         this.answers = {};
@@ -25,6 +329,9 @@ class RecommendationEngine {
             },
             is_reduced_rate_limit: 42500
         };
+        
+        // Cache pour la mémoïsation
+        this.memoizedResults = {};
     }
 
     /**
@@ -32,18 +339,17 @@ class RecommendationEngine {
      * @param {Object} answers - Les réponses au questionnaire
      */
     calculateRecommendations(answers) {
+        // Mémoïsation - vérifier si les résultats sont déjà en cache
+        const answersKey = JSON.stringify(answers);
+        if (this.memoizedResults[answersKey]) {
+            console.log('Résultats récupérés du cache');
+            return this.memoizedResults[answersKey];
+        }
+        
         this.answers = answers;
         
         // Réinitialiser les résultats
-        this.filteredStatuses = {...legalStatuses};
-        this.scores = {};
-        this.weightedScores = {};
-        this.incompatibles = [];
-        this.auditTrail = {
-            exclusions: [],
-            weightingRules: [],
-            scores: {}
-        };
+        this.resetResults();
         
         // Appliquer les filtres d'exclusion
         this.applyExclusionFilters();
@@ -60,13 +366,79 @@ class RecommendationEngine {
         // Afficher les résultats
         this.displayResults(recommendations);
         
+        // Mémoïsation - stocker les résultats en cache
+        this.memoizedResults[answersKey] = recommendations;
+        
         return recommendations;
+    }
+    
+    /**
+     * Réinitialiser les résultats pour un nouveau calcul
+     */
+    resetResults() {
+        this.filteredStatuses = {...legalStatuses};
+        this.scores = {};
+        this.weightedScores = {};
+        this.incompatibles = [];
+        this.auditTrail = {
+            exclusions: [],
+            weightingRules: [],
+            scores: {}
+        };
     }
 
     /**
      * Appliquer les filtres d'exclusion pour éliminer certains statuts
      */
     applyExclusionFilters() {
+        // Appliquer les filtres déclaratifs
+        this.applyDeclarativeFilters();
+        
+        // Appliquer les filtres spécifiques
+        this.applySpecificFilters();
+        
+        console.log('Statuts après filtres:', Object.keys(this.filteredStatuses));
+    }
+    
+    /**
+     * Appliquer les filtres d'exclusion déclaratifs définis dans legal-status-data.js
+     */
+    applyDeclarativeFilters() {
+        exclusionFilters.forEach(filter => {
+            // Vérifier si le filtre s'applique à la réponse
+            let shouldExclude = false;
+            
+            if (typeof filter.condition === 'string') {
+                // Condition simple (valeur exacte)
+                shouldExclude = this.answers[filter.id] === filter.condition;
+            } else if (typeof filter.condition === 'function') {
+                // Condition fonction (comparaison complexe)
+                try {
+                    shouldExclude = filter.condition(this.answers[filter.id]);
+                } catch (e) {
+                    console.error(`Erreur dans le filtre ${filter.id}:`, e);
+                }
+            }
+            
+            // Vérifier si une tolérance est applicable
+            if (shouldExclude && filter.tolerance_condition && this.answers[filter.tolerance_condition]) {
+                shouldExclude = false;
+            }
+            
+            // Si la condition est remplie, exclure les statuts spécifiés
+            if (shouldExclude) {
+                this.excludeStatuses(
+                    filter.excluded_statuses,
+                    filter.tolerance_message || `Exclusion par règle: ${filter.id}`
+                );
+            }
+        });
+    }
+    
+    /**
+     * Appliquer les filtres d'exclusion spécifiques (cas particuliers)
+     */
+    applySpecificFilters() {
         // 1. Activité relevant d'un ordre → Micro-entreprise & SNC exclues
         if (this.answers.professional_order === 'yes') {
             this.excludeStatuses(['MICRO', 'SNC'], "Activité relevant d'un ordre professionnel");
@@ -81,31 +453,7 @@ class RecommendationEngine {
             });
         }
         
-        // 3. Capital < 1€ → SA exclue
-        if (parseFloat(this.answers.available_capital) < 1) {
-            this.excludeStatus('SA', "Capital insuffisant pour SA (min. 37 000€)");
-        }
-        
-        // 4. Souhait assimilé-salarié → EI/EIRL/MICRO/EURL/SNC exclues
-        if (this.answers.social_regime === 'assimilated_employee') {
-            this.excludeStatuses(['EI', 'EIRL', 'MICRO', 'SNC'], "Souhait de régime assimilé salarié uniquement");
-        }
-        
-        // 5. Âge < 18 ans → sociétés commerciales exclues (sauf si émancipé)
-        if (this.answers.age === 'minor' && !this.answers.emancipated_minor) {
-            this.excludeStatuses(['SARL', 'EURL', 'SAS', 'SASU', 'SA', 'SNC'], "Âge inférieur à 18 ans");
-        }
-        
-        // 6. Instruments d'intéressement → EI/EIRL/MICRO/SNC exclues
-        if (this.answers.sharing_instruments && 
-            this.answers.sharing_instruments.length > 0 && 
-            (this.answers.sharing_instruments.includes('bspce') || 
-             this.answers.sharing_instruments.includes('aga') ||
-             this.answers.sharing_instruments.includes('stock_options'))) {
-            this.excludeStatuses(['EI', 'EIRL', 'MICRO', 'SNC'], "Instruments d'intéressement prévus (BSPCE, AGA, stock-options)");
-        }
-        
-        // 7. CA > seuils micro → Micro exclue
+        // 3. CA > seuils micro → Micro exclue
         if (this.answers.projected_revenue) {
             const revenue = parseFloat(this.answers.projected_revenue);
             let microThreshold = this.thresholds2025.micro.bic_service; // Par défaut
@@ -122,12 +470,10 @@ class RecommendationEngine {
             }
         }
         
-        // 8. Levée de fonds → EI/MICRO/SNC exclues
+        // 4. Levée de fonds → EI/MICRO/SNC exclues
         if (this.answers.fundraising === 'yes') {
             this.excludeStatuses(['EI', 'MICRO', 'SNC'], "Besoin de lever des fonds");
         }
-        
-        console.log('Statuts après filtres:', Object.keys(this.filteredStatuses));
     }
     
     /**
@@ -242,14 +588,14 @@ class RecommendationEngine {
             
             // Critères et leurs scores
             const criteriaScores = {
-                patrimony_protection: this.calculateProtectionScore(statusId, metrics),
-                administrative_simplicity: this.calculateSimplicityScore(statusId, metrics),
-                taxation_optimization: this.calculateTaxScore(statusId, metrics),
-                social_charges: this.calculateSocialScore(statusId, metrics),
-                fundraising_capacity: this.calculateFundraisingScore(statusId, metrics),
+                patrimony_protection: this.calculateCriteriaScore('patrimony_protection', statusId, metrics),
+                administrative_simplicity: this.calculateCriteriaScore('administrative_simplicity', statusId, metrics),
+                taxation_optimization: this.calculateCriteriaScore('taxation_optimization', statusId, metrics),
+                social_charges: this.calculateCriteriaScore('social_charges', statusId, metrics),
+                fundraising_capacity: this.calculateCriteriaScore('fundraising_capacity', statusId, metrics),
                 credibility: metrics.credibility || 3,
                 governance_flexibility: metrics.governance_flexibility || 3,
-                transmission: this.calculateTransmissionScore(statusId, metrics)
+                transmission: this.calculateCriteriaScore('transmission', statusId, metrics)
             };
             
             // Calculer le score total (non pondéré)
@@ -281,220 +627,80 @@ class RecommendationEngine {
     }
     
     /**
-     * Calculer le score de protection du patrimoine
+     * Calculer le score pour un critère donné en utilisant les règles applicables
      */
-    calculateProtectionScore(statusId, metrics) {
-        let score = metrics.patrimony_protection || 1;
+    calculateCriteriaScore(criteria, statusId, metrics) {
+        // Score de base à partir des métriques du statut
+        let score = metrics[criteria] || 3;
         
-        // Bonus si importance forte de la protection du patrimoine
-        if (this.answers.patrimony_protection === 'essential' && ['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) {
-            score += 1;
-        }
+        // Appliquer toutes les règles correspondant au critère
+        const appliedRules = [];
         
-        // Bonus pour EIRL en cas de risque professionnel élevé
-        if (statusId === 'EIRL' && this.answers.high_professional_risk === 'yes') {
-            score += 0.5;
-        }
-        
-        // Malus pour l'EI et MICRO en cas de risque professionnel élevé
-        if ((statusId === 'EI' || statusId === 'MICRO') && this.answers.high_professional_risk === 'yes') {
-            score -= 1;
-        }
-        
-        return Math.max(0, Math.min(5, score));
-    }
-    
-    /**
-     * Calculer le score de simplicité administrative
-     */
-    calculateSimplicityScore(statusId, metrics) {
-        let score = metrics.administrative_simplicity || 3;
-        
-        // Ajustement pour le CA prévisionnel
-        if (this.answers.projected_revenue) {
-            const revenue = parseFloat(this.answers.projected_revenue);
-            
-            // Pour les statuts simples, la simplicité se dégrade avec le CA élevé
-            if (statusId === 'EI' || statusId === 'MICRO') {
-                if (revenue > 100000) {
-                    score -= 1;
+        scoringRules
+            .filter(rule => rule.criteria === criteria)
+            .forEach(rule => {
+                // Vérifier si la règle s'applique selon les réponses
+                if (rule.condition(this.answers)) {
+                    // Calculer le nouveau score
+                    const newScore = rule.apply(statusId, score);
+                    
+                    // Si la règle a modifié le score, l'enregistrer
+                    if (newScore !== score) {
+                        appliedRules.push({
+                            id: rule.id,
+                            description: rule.description,
+                            impact: newScore - score
+                        });
+                        
+                        // Mettre à jour le score
+                        score = newScore;
+                    }
                 }
+            });
+        
+        // Stocker les règles appliquées dans l'audit trail
+        if (appliedRules.length > 0) {
+            if (!this.auditTrail.scores[statusId]) {
+                this.auditTrail.scores[statusId] = {};
+            }
+            if (!this.auditTrail.scores[statusId][criteria]) {
+                this.auditTrail.scores[statusId][criteria] = {};
             }
             
-            // Pour les structures plus complexes, la simplicité est plus adaptée aux gros CA
-            if (['SAS', 'SA', 'SARL'].includes(statusId)) {
-                if (revenue < 50000) {
-                    score -= 1; // Surcoût administratif pour un petit CA
-                } else if (revenue > 300000) {
-                    score += 0.5; // Pertinence accrue pour gros CA
-                }
-            }
+            this.auditTrail.scores[statusId][criteria].applied_rules = appliedRules;
         }
         
-        // Ajustement en fonction de la préférence de complexité comptable
-        if (this.answers.accounting_complexity) {
-            if (this.answers.accounting_complexity === 'simple' && ['SAS', 'SA'].includes(statusId)) {
-                score -= 1;
-            } else if (this.answers.accounting_complexity === 'outsourced' && statusId === 'MICRO') {
-                score -= 0.5; // Moins d'intérêt pour la micro si on externalise de toute façon
-            }
-        }
-        
+        // Limiter le score entre 0 et 5
         return Math.max(0, Math.min(5, score));
     }
     
     /**
-     * Calculer le score fiscal
+     * Méthode pour expliquer les décisions du moteur de recommandation
      */
-    calculateTaxScore(statusId, metrics) {
-        let score = metrics.taxation_optimization || 3;
+    explainRecommendation(statusId) {
+        if (!this.auditTrail.scores[statusId]) {
+            return "Aucune explication disponible";
+        }
         
-        // Ajustement en fonction de la TMI
-        if (this.answers.tax_bracket) {
-            // Pour les statuts à l'IR (EI, MICRO), malus si TMI élevée
-            if (['EI', 'MICRO', 'SNC'].includes(statusId) && 
-                ['bracket_41', 'bracket_45'].includes(this.answers.tax_bracket)) {
-                score -= 1.5;
-            }
+        let explanation = `Explication pour ${this.filteredStatuses[statusId].name} (${statusId}):\n\n`;
+        
+        // Expliquer les scores par critère
+        for (const [criterion, data] of Object.entries(this.auditTrail.scores[statusId])) {
+            explanation += `${criterion}: ${data.raw_score}/5 (poids: ${data.weight})\n`;
             
-            // Pour les statuts à l'IS, bonus si TMI élevée
-            if (['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId) && 
-                ['bracket_41', 'bracket_45'].includes(this.answers.tax_bracket)) {
-                score += 1;
-            }
-            
-            // Avantage pour micro si TMI faible
-            if (statusId === 'MICRO' && 
-                ['non_taxable', 'bracket_11'].includes(this.answers.tax_bracket)) {
-                score += 1;
+            if (data.applied_rules && data.applied_rules.length) {
+                explanation += "  Règles appliquées:\n";
+                data.applied_rules.forEach(rule => {
+                    const impact = rule.impact > 0 ? `+${rule.impact}` : rule.impact;
+                    explanation += `  - ${rule.description} (${impact})\n`;
+                });
             }
         }
         
-        // Ajustement en fonction des préférences de rémunération
-        if (this.answers.remuneration_preference) {
-            if (this.answers.remuneration_preference === 'dividends' && 
-                ['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) {
-                score += 0.5;
-            }
-            
-            if (this.answers.remuneration_preference === 'salary' && 
-                ['EI', 'MICRO'].includes(statusId)) {
-                score += 0.5;
-            }
-        }
+        // Score final
+        explanation += `\nScore final: ${Math.round(this.weightedScores[statusId])}/100\n`;
         
-        // JEI/CIR/CII bonus pour statuts compatibles
-        if (this.answers.jei_cir_cii && this.answers.jei_cir_cii.length > 0) {
-            if (['SASU', 'SAS', 'SARL', 'EURL'].includes(statusId)) {
-                score += 0.5;
-            }
-        }
-        
-        return Math.max(0, Math.min(5, score));
-    }
-    
-    /**
-     * Calculer le score sur les charges sociales
-     */
-    calculateSocialScore(statusId, metrics) {
-        let score = metrics.social_charges || 3;
-        
-        // Ajustement en fonction du régime social souhaité
-        if (this.answers.social_regime) {
-            if (this.answers.social_regime === 'tns' && 
-                ['EI', 'EIRL', 'MICRO', 'EURL', 'SARL'].includes(statusId)) {
-                score += 1;
-            }
-            
-            if (this.answers.social_regime === 'assimilated_employee' && 
-                ['SASU', 'SAS', 'SA'].includes(statusId)) {
-                score += 1;
-            }
-        }
-        
-        // Ajustement pour les revenus faibles
-        if (this.answers.income_objective_year1) {
-            const income = parseFloat(this.answers.income_objective_year1);
-            
-            if (income < 1500 && statusId === 'MICRO') {
-                score += 1; // Le micro est avantageux pour les petits revenus
-            }
-            
-            if (income > 5000 && ['SASU', 'SAS'].includes(statusId)) {
-                score -= 0.5; // Les charges assimilé-salarié pèsent sur les gros revenus
-            }
-        }
-        
-        // ACRE bonus pour tous les statuts
-        if (this.answers.acre === 'yes') {
-            score += 0.5;
-        }
-        
-        return Math.max(0, Math.min(5, score));
-    }
-    
-    /**
-     * Calculer le score de capacité de financement
-     */
-    calculateFundraisingScore(statusId, metrics) {
-        let score = metrics.fundraising_capacity || 1;
-        
-        // Bonus si levée de fonds envisagée
-        if (this.answers.fundraising === 'yes') {
-            if (['SASU', 'SAS', 'SA'].includes(statusId)) {
-                score += 1.5;
-            } else if (['SARL', 'EURL'].includes(statusId)) {
-                score += 0.5;
-            }
-        }
-        
-        // Bonus pour les statuts compatibles avec les instruments de partage
-        if (this.answers.sharing_instruments && this.answers.sharing_instruments.length > 0) {
-            if (['SASU', 'SAS', 'SA'].includes(statusId)) {
-                score += 1;
-            }
-        }
-        
-        // Malus pour les structures non adaptées aux investisseurs
-        if (this.answers.team_structure === 'investors' && 
-            ['EI', 'EIRL', 'MICRO', 'SNC'].includes(statusId)) {
-            score -= 2;
-        }
-        
-        return Math.max(0, Math.min(5, score));
-    }
-    
-    /**
-     * Calculer le score de transmission
-     */
-    calculateTransmissionScore(statusId, metrics) {
-        let score = metrics.transmission || 1;
-        
-        // Ajustement en fonction de l'intention de sortie
-        if (this.answers.exit_intention) {
-            if (this.answers.exit_intention === 'sale' && 
-                ['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) {
-                score += 1;
-            }
-            
-            if (this.answers.exit_intention === 'transmission') {
-                if (['SAS', 'SA', 'SARL'].includes(statusId)) {
-                    score += 1;
-                }
-                
-                // Bonus spécifique pour la transmission familiale
-                if (this.answers.family_transmission === 'yes' && statusId === 'SARL') {
-                    score += 0.5;
-                }
-            }
-        }
-        
-        // Malus pour les structures difficiles à transmettre
-        if (['EI', 'MICRO'].includes(statusId)) {
-            score = Math.min(score, 2); // Plafonner le score
-        }
-        
-        return Math.max(0, Math.min(5, score));
+        return explanation;
     }
 
     /**
@@ -543,7 +749,8 @@ class RecommendationEngine {
                 scoreObjectifs: Math.round(score * 0.4), // Approximation pour compatibilité
                 scoreDetails: {
                     pourcentage: score
-                }
+                },
+                explanation: this.explainRecommendation(statusId)
             };
         });
     }
@@ -888,15 +1095,15 @@ class RecommendationEngine {
                                 <ul class="space-y-2">
                                     <li class="flex items-start">
                                         <span class="font-medium w-28">Régime:</span>
-                                        <span>${status.taxation?.system || 'Non spécifié'}</span>
+                                        <span>${status.fiscalite || 'Non spécifié'}</span>
                                     </li>
                                     <li class="flex items-start">
                                         <span class="font-medium w-28">Options:</span>
-                                        <span>${status.taxation?.options || 'Non spécifié'}</span>
+                                        <span>${status.fiscaliteOption || 'Non spécifié'}</span>
                                     </li>
                                     <li class="flex items-start">
                                         <span class="font-medium w-28">Détails:</span>
-                                        <span>${status.taxation?.details || 'Non spécifié'}</span>
+                                        <span>${status.fiscal || 'Non spécifié'}</span>
                                     </li>
                                 </ul>
                             </div>
@@ -909,11 +1116,11 @@ class RecommendationEngine {
                                 <ul class="space-y-2">
                                     <li class="flex items-start">
                                         <span class="font-medium w-28">Régime:</span>
-                                        <span>${status.social?.regime || 'Non spécifié'}</span>
+                                        <span>${status.regimeSocial || 'Non spécifié'}</span>
                                     </li>
                                     <li class="flex items-start">
                                         <span class="font-medium w-28">Taux:</span>
-                                        <span>${status.social?.rates || 'Non spécifié'}</span>
+                                        <span>${status.chargesSociales || 'Non spécifié'}</span>
                                     </li>
                                     <li class="flex items-start">
                                         <span class="font-medium w-28">Protections:</span>
@@ -990,6 +1197,14 @@ class RecommendationEngine {
                                     </li>
                                 `).join('') : '<li>Non spécifié</li>'}
                             </ul>
+                        </div>
+                        
+                        <!-- Explications du score (nouveau) -->
+                        <div class="mt-8 bg-blue-800 bg-opacity-30 p-4 rounded-lg">
+                            <h3 class="text-lg font-semibold mb-3 flex items-center text-blue-400">
+                                <i class="fas fa-chart-bar mr-2"></i> Détail du score
+                            </h3>
+                            <pre class="whitespace-pre-wrap text-sm">${recommendation.explanation || 'Aucune explication disponible'}</pre>
                         </div>
                     </div>
                 </div>
