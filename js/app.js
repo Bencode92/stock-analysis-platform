@@ -1,15 +1,11 @@
 // app.js - Fichier principal d'initialisation du simulateur de forme juridique
 
 import QuestionManager from './question-manager.js';
-import RecommendationEngine from './recommendation-engine.js';
 
 // Fonction d'initialisation de l'application
 document.addEventListener('DOMContentLoaded', () => {
     // Mettre à jour la date de dernière mise à jour
     updateLastUpdateDate();
-    
-    // Initialiser le moteur de recommandation
-    window.recommendationEngine = new RecommendationEngine();
     
     // Initialiser le gestionnaire de questions
     initQuestionManager();
