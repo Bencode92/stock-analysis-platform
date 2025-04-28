@@ -1041,7 +1041,6 @@ class QuestionManager {
      */
     showResults() {
         // Rediriger vers la page de résultats
-        // Pour cet exemple, simulons simplement un message
         this.questionContainer.innerHTML = `
             <div class="bg-green-900 bg-opacity-20 p-8 rounded-xl text-center">
                 <div class="text-6xl text-green-400 mb-4"><i class="fas fa-check-circle"></i></div>
@@ -1057,12 +1056,22 @@ class QuestionManager {
         const showResultsBtn = document.getElementById('show-results-btn');
         if (showResultsBtn) {
             showResultsBtn.addEventListener('click', async () => {
-                // Afficher un indicateur de chargement
+                // Variable pour suivre le temps de chargement
+                let loadingTimeout;
+                let loadingInterval = null;
+                
+                // Fonction pour montrer l'indicateur si le chargement prend trop de temps
+                loadingTimeout = setTimeout(() => {
+                    if (window.showLoadingIndicator && typeof window.showLoadingIndicator === 'function') {
+                        loadingInterval = window.showLoadingIndicator();
+                    }
+                }, 500); // Afficher l'indicateur seulement si le chargement prend plus de 500ms
+                
+                // Un mini indicateur de chargement dans le conteneur de question
                 this.questionContainer.innerHTML = `
-                    <div class="bg-blue-900 bg-opacity-20 p-8 rounded-xl text-center">
-                        <div class="text-6xl text-blue-400 mb-4"><i class="fas fa-spinner fa-spin"></i></div>
-                        <h2 class="text-2xl font-bold mb-4">Chargement en cours...</h2>
-                        <p class="mb-6">Veuillez patienter pendant que nous analysons vos réponses.</p>
+                    <div class="bg-blue-900 bg-opacity-20 p-4 rounded-xl text-center">
+                        <div class="text-3xl text-blue-400 mb-2"><i class="fas fa-spinner fa-spin"></i></div>
+                        <p>Analyse en cours...</p>
                     </div>
                 `;
                 
@@ -1070,6 +1079,15 @@ class QuestionManager {
                     // Charger le moteur de recommandation de façon paresseuse
                     if (typeof window.loadRecommendationEngine === 'function') {
                         const engine = await window.loadRecommendationEngine();
+                        
+                        // Annuler le timer si le chargement est rapide
+                        clearTimeout(loadingTimeout);
+                        
+                        // Masquer l'indicateur si affiché
+                        if (window.hideLoadingIndicator && typeof window.hideLoadingIndicator === 'function') {
+                            window.hideLoadingIndicator(loadingInterval);
+                        }
+                        
                         if (engine) {
                             engine.calculateRecommendations(this.answers);
                         } else {
@@ -1079,6 +1097,12 @@ class QuestionManager {
                         throw new Error("Fonction de chargement non disponible");
                     }
                 } catch (error) {
+                    // En cas d'erreur, s'assurer que l'indicateur est masqué
+                    clearTimeout(loadingTimeout);
+                    if (window.hideLoadingIndicator && typeof window.hideLoadingIndicator === 'function') {
+                        window.hideLoadingIndicator(loadingInterval);
+                    }
+                    
                     console.error('Erreur lors du chargement du moteur de recommandation:', error);
                     this.questionContainer.innerHTML = `
                         <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center">
