@@ -1202,7 +1202,7 @@ class RecommendationEngine {
      */
     generatePDF(recommendation) {
         // Cette fonction pourrait être implémentée avec une bibliothèque comme jsPDF
-        alert('Fonctionnalité d\'export PDF à implémenter');
+        alert('Fonctionnalité d\\'export PDF à implémenter');
     }
 }
 
