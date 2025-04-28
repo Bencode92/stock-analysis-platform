@@ -1056,14 +1056,44 @@ class QuestionManager {
         // Attacher l'événement au bouton
         const showResultsBtn = document.getElementById('show-results-btn');
         if (showResultsBtn) {
-            showResultsBtn.addEventListener('click', () => {
-                // Appeler le moteur de recommandation
-                const recommendationEngine = window.recommendationEngine;
-                if (recommendationEngine) {
-                    recommendationEngine.calculateRecommendations(this.answers);
-                } else {
-                    console.error('Moteur de recommandation non disponible');
-                    alert('Le moteur de recommandation n\'est pas encore disponible. Implémentation en cours...');
+            showResultsBtn.addEventListener('click', async () => {
+                // Afficher un indicateur de chargement
+                this.questionContainer.innerHTML = `
+                    <div class="bg-blue-900 bg-opacity-20 p-8 rounded-xl text-center">
+                        <div class="text-6xl text-blue-400 mb-4"><i class="fas fa-spinner fa-spin"></i></div>
+                        <h2 class="text-2xl font-bold mb-4">Chargement en cours...</h2>
+                        <p class="mb-6">Veuillez patienter pendant que nous analysons vos réponses.</p>
+                    </div>
+                `;
+                
+                try {
+                    // Charger le moteur de recommandation de façon paresseuse
+                    if (typeof window.loadRecommendationEngine === 'function') {
+                        const engine = await window.loadRecommendationEngine();
+                        if (engine) {
+                            engine.calculateRecommendations(this.answers);
+                        } else {
+                            throw new Error("Impossible de charger le moteur de recommandation");
+                        }
+                    } else {
+                        throw new Error("Fonction de chargement non disponible");
+                    }
+                } catch (error) {
+                    console.error('Erreur lors du chargement du moteur de recommandation:', error);
+                    this.questionContainer.innerHTML = `
+                        <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center">
+                            <div class="text-6xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
+                            <h2 class="text-2xl font-bold mb-4">Une erreur est survenue</h2>
+                            <p class="mb-6">Impossible de charger le moteur de recommandation. Veuillez réessayer ultérieurement.</p>
+                            <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
+                                <i class="fas fa-redo mr-2"></i> Refaire le test
+                            </button>
+                        </div>
+                    `;
+                    
+                    document.getElementById('restart-btn').addEventListener('click', () => {
+                        location.reload();
+                    });
                 }
             });
         }
@@ -1071,4 +1101,3 @@ class QuestionManager {
 }
 
 export default QuestionManager;
-            
