@@ -1038,6 +1038,7 @@ class QuestionManager {
 
     /**
      * Afficher les résultats
+     * MODIFIÉ POUR UTILISER LE PONT DE COMPATIBILITÉ AVEC L'ANCIEN SYSTÈME
      */
     showResults() {
         // Afficher un indicateur de chargement
@@ -1050,13 +1051,31 @@ class QuestionManager {
         `;
         
         try {
-            // Utiliser directement le moteur de recommandation (comme dans l'ancien système)
-            if (!window.recommendationEngine) {
-                throw new Error("Le moteur de recommandation n'est pas disponible");
-            }
+            // Stocker les réponses pour le moteur de recommandation
+            window.userResponses = this.answers;
             
-            console.log("Calcul des recommandations avec les réponses:", this.answers);
-            window.recommendationEngine.calculateRecommendations(this.answers);
+            // Mécanisme de réessai pour s'assurer que le moteur est disponible
+            const tryCalculateResults = (retries = 5) => {
+                if (window.recommendationEngine) {
+                    console.log("Calcul des recommandations avec les réponses:", this.answers);
+                    const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
+                    
+                    // Si les résultats sont disponibles, utiliser le pont de compatibilité pour l'affichage
+                    if (window.ResultsManager && typeof window.ResultsManager.displayResults === 'function') {
+                        window.ResultsManager.displayResults(recommendations);
+                    } else {
+                        console.warn("La méthode d'affichage des résultats n'est pas disponible");
+                    }
+                } else if (retries > 0) {
+                    console.log(`Moteur de recommandation non disponible, nouvel essai dans 200ms (${retries} essais restants)`);
+                    setTimeout(() => tryCalculateResults(retries - 1), 200);
+                } else {
+                    throw new Error("Le moteur de recommandation n'est pas disponible après plusieurs tentatives");
+                }
+            };
+            
+            tryCalculateResults();
+            
         } catch (error) {
             console.error('Erreur lors du calcul des recommandations:', error);
             
