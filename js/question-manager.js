@@ -1071,7 +1071,7 @@ class QuestionManager {
                         console.log("Tentative de chargement paresseux");
                         // Ajouter un timeout explicite
                         const timeoutPromise = new Promise((_, reject) => 
-                            setTimeout(() => reject(new Error("Timeout")), 5000));
+                            setTimeout(() => reject(new Error("Timeout")), 15000));
                         const enginePromise = window.loadRecommendationEngine();
                         const engine = await Promise.race([enginePromise, timeoutPromise]);
                         
