@@ -606,13 +606,18 @@ class RecommendationEngine {
      * Afficher les résultats dans l'interface
      */
     displayResults(recommendations) {
-        // Rediriger vers la page de résultats ou afficher dans un conteneur
-        const resultsContainer = document.getElementById('question-container');
+        // Récupérer les conteneurs
+        const resultsContainer = document.getElementById('results-container');
+        const questionContainer = document.getElementById('question-container');
         
         if (!resultsContainer) {
             console.error('Conteneur de résultats non trouvé');
             return;
         }
+        
+        // Masquer le conteneur de questions et afficher celui des résultats
+        if (questionContainer) questionContainer.style.display = 'none';
+        resultsContainer.style.display = 'block';
         
         if (recommendations.length === 0) {
             resultsContainer.innerHTML = `
@@ -792,7 +797,7 @@ class RecommendationEngine {
         if (!recommendation) return;
         
         const status = recommendation.status;
-        const resultsContainer = document.getElementById('question-container');
+        const resultsContainer = document.getElementById('results-container');
         
         const detailsHTML = `
             <div class="status-details">
@@ -984,7 +989,7 @@ class RecommendationEngine {
      * Afficher un tableau comparatif des statuts recommandés
      */
     showComparisonTable(recommendations) {
-        const resultsContainer = document.getElementById('question-container');
+        const resultsContainer = document.getElementById('results-container');
         
         const comparisonHTML = `
             <div class="comparison-table">
@@ -1200,5 +1205,8 @@ class RecommendationEngine {
         alert('Fonctionnalité d\'export PDF à implémenter');
     }
 }
+
+// Rendre la classe disponible globalement pour le chargement non-ES6
+window.RecommendationEngine = RecommendationEngine;
 
 export default RecommendationEngine;
