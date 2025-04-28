@@ -8,12 +8,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Mettre à jour la date de dernière mise à jour
     updateLastUpdateDate();
     
-    // IMPORTANT : Initialiser le moteur de recommandation AVANT le gestionnaire de questions
-    console.log('Initialisation du moteur de recommandation...');
+    // Initialiser le moteur de recommandation
     window.recommendationEngine = new RecommendationEngine();
-    console.log('Moteur de recommandation initialisé avec succès!');
     
-    // Ensuite initialiser le gestionnaire de questions
+    // Initialiser le gestionnaire de questions
     initQuestionManager();
     
     // Initialiser les événements de l'interface
@@ -89,20 +87,11 @@ function updateMarketStatus(now) {
  * Initialiser le gestionnaire de questions
  */
 function initQuestionManager() {
-    // Vérifier que le moteur de recommandation est bien initialisé
-    if (!window.recommendationEngine) {
-        console.error('Erreur: Le moteur de recommandation n\'est pas initialisé!');
-        // Essayer de le créer au cas où
-        window.recommendationEngine = new RecommendationEngine();
-    }
-    
-    console.log('Initialisation du gestionnaire de questions...');
     // Créer une instance du gestionnaire de questions
     window.questionManager = new QuestionManager();
     
     // Initialiser l'application
     window.questionManager.init();
-    console.log('Gestionnaire de questions initialisé avec succès!');
 }
 
 /**
