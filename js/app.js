@@ -1,7 +1,5 @@
 // app.js - Fichier principal d'initialisation du simulateur de forme juridique
 
-import QuestionManager from './question-manager.js';
-
 // Fonction d'initialisation de l'application
 document.addEventListener('DOMContentLoaded', () => {
     // Mettre à jour la date de dernière mise à jour
@@ -73,6 +71,17 @@ function initRecommendationEngine() {
 }
 
 /**
+ * Initialiser le gestionnaire de questions
+ */
+function initQuestionManager() {
+    // Créer une instance du gestionnaire de questions
+    window.questionManager = new window.QuestionManager();
+    
+    // Initialiser l'application
+    window.questionManager.init();
+}
+
+/**
  * Mettre à jour la date de dernière mise à jour
  */
 function updateLastUpdateDate() {
@@ -135,17 +144,6 @@ function updateMarketStatus(now) {
             marketStatusText.textContent = 'Marché fermé';
         }
     }
-}
-
-/**
- * Initialiser le gestionnaire de questions
- */
-function initQuestionManager() {
-    // Créer une instance du gestionnaire de questions
-    window.questionManager = new QuestionManager();
-    
-    // Initialiser l'application
-    window.questionManager.init();
 }
 
 /**
