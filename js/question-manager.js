@@ -16,7 +16,6 @@ class QuestionManager {
         this.progressPercentage = document.getElementById('progress-percentage');
         this.timeEstimate = document.getElementById('time-estimate');
         this.progressStepsContainer = document.getElementById('progress-steps-container');
-        this.resultsContainer = document.getElementById('results-container');
         
         // Initialiser les questions par section
         this.initSectionQuestions();
@@ -48,11 +47,6 @@ class QuestionManager {
                 this.renderCurrentQuestion();
             });
         }
-        
-        // Écouter l'événement recommendationEngineReady
-        document.addEventListener('recommendationEngineReady', () => {
-            console.log("👂 QuestionManager a reçu l'événement recommendationEngineReady");
-        });
     }
 
     /**
@@ -1043,110 +1037,64 @@ class QuestionManager {
     }
 
     /**
-     * Afficher les résultats - VERSION AMÉLIORÉE ET CORRIGÉE
+     * Afficher les résultats
      */
     showResults() {
-        // S'assurer que le conteneur de résultats est disponible
-        if (!this.resultsContainer) {
-            console.error("Le conteneur de résultats n'est pas disponible");
-            return;
-        }
-        
-        // Afficher l'indicateur de chargement
-        this.questionContainer.style.display = 'none';
-        this.resultsContainer.style.display = 'block';
-        this.resultsContainer.innerHTML = `
-            <div class="bg-blue-900 bg-opacity-20 p-8 rounded-xl text-center">
-                <div class="text-6xl text-blue-400 mb-4"><i class="fas fa-spinner fa-spin"></i></div>
-                <h2 class="text-2xl font-bold mb-4">Calcul des résultats...</h2>
-                <p class="mb-6">Veuillez patienter pendant que nous analysons vos réponses.</p>
+        // Rediriger vers la page de résultats
+        // Pour cet exemple, simulons simplement un message
+        this.questionContainer.innerHTML = `
+            <div class="bg-green-900 bg-opacity-20 p-8 rounded-xl text-center">
+                <div class="text-6xl text-green-400 mb-4"><i class="fas fa-check-circle"></i></div>
+                <h2 class="text-2xl font-bold mb-4">Merci d'avoir complété le questionnaire !</h2>
+                <p class="mb-6">Vos réponses ont été enregistrées. Nous allons maintenant calculer la forme juridique la plus adaptée à votre projet.</p>
+                <button id="show-results-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-3 px-6 rounded-lg transition">
+                    Voir les résultats
+                </button>
             </div>
         `;
         
-        // Stocker les réponses globalement pour le moteur de recommandation
-        window.userResponses = this.answers;
-        
-        // Vérifier si le moteur de recommandation est déjà disponible
-        if (window.recommendationEngine && typeof window.recommendationEngine.calculateRecommendations === 'function') {
-            console.log("Moteur de recommandation disponible, calcul des recommandations...");
-            
-            try {
-                // Calculer les recommandations
-                const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
-                console.log("Recommandations calculées avec succès:", recommendations);
+        // Attacher l'événement au bouton
+        const showResultsBtn = document.getElementById('show-results-btn');
+        if (showResultsBtn) {
+            showResultsBtn.addEventListener('click', async () => {
+                // Afficher un indicateur de chargement
+                this.questionContainer.innerHTML = `
+                    <div class="bg-blue-900 bg-opacity-20 p-8 rounded-xl text-center">
+                        <div class="text-6xl text-blue-400 mb-4"><i class="fas fa-spinner fa-spin"></i></div>
+                        <h2 class="text-2xl font-bold mb-4">Chargement en cours...</h2>
+                        <p class="mb-6">Veuillez patienter pendant que nous analysons vos réponses.</p>
+                    </div>
+                `;
                 
-                // Les résultats seront affichés par le moteur lui-même
-                return recommendations;
-            } catch (error) {
-                console.error("Erreur lors du calcul des recommandations:", error);
-                this.showErrorMessage(error);
-            }
-        } else {
-            console.log("Moteur de recommandation non disponible, en attente...");
-            
-            // Créer un écouteur d'événement et un délai pour empêcher les attentes infinies
-            const handleEngineReady = () => {
-                console.log("Événement de disponibilité du moteur reçu");
-                if (window.recommendationEngine && typeof window.recommendationEngine.calculateRecommendations === 'function') {
-                    try {
-                        const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
-                        console.log("Recommandations calculées avec succès (après attente):", recommendations);
-                        return recommendations;
-                    } catch (error) {
-                        console.error("Erreur lors du calcul des recommandations (après attente):", error);
-                        this.showErrorMessage(error);
+                try {
+                    // Charger le moteur de recommandation de façon paresseuse
+                    if (typeof window.loadRecommendationEngine === 'function') {
+                        const engine = await window.loadRecommendationEngine();
+                        if (engine) {
+                            engine.calculateRecommendations(this.answers);
+                        } else {
+                            throw new Error("Impossible de charger le moteur de recommandation");
+                        }
+                    } else {
+                        throw new Error("Fonction de chargement non disponible");
                     }
-                } else {
-                    console.error("Moteur toujours non disponible après l'événement");
-                    this.showErrorMessage(new Error("Le moteur de recommandation n'est pas disponible"));
+                } catch (error) {
+                    console.error('Erreur lors du chargement du moteur de recommandation:', error);
+                    this.questionContainer.innerHTML = `
+                        <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center">
+                            <div class="text-6xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
+                            <h2 class="text-2xl font-bold mb-4">Une erreur est survenue</h2>
+                            <p class="mb-6">Impossible de charger le moteur de recommandation. Veuillez réessayer ultérieurement.</p>
+                            <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
+                                <i class="fas fa-redo mr-2"></i> Refaire le test
+                            </button>
+                        </div>
+                    `;
+                    
+                    document.getElementById('restart-btn').addEventListener('click', () => {
+                        location.reload();
+                    });
                 }
-            };
-            
-            // Écouter l'événement une seule fois
-            document.addEventListener('recommendationEngineReady', handleEngineReady, { once: true });
-            
-            // Mettre en place un délai maximum d'attente
-            setTimeout(() => {
-                // Vérifier si le moteur est disponible après le délai
-                if (window.recommendationEngine && typeof window.recommendationEngine.calculateRecommendations === 'function') {
-                    document.removeEventListener('recommendationEngineReady', handleEngineReady);
-                    try {
-                        const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
-                        console.log("Recommandations calculées avec succès (après délai):", recommendations);
-                        return recommendations;
-                    } catch (error) {
-                        console.error("Erreur lors du calcul des recommandations (après délai):", error);
-                        this.showErrorMessage(error);
-                    }
-                } else {
-                    // Si toujours pas disponible, afficher un message d'erreur
-                    console.error("Délai d'attente du moteur de recommandation dépassé");
-                    document.removeEventListener('recommendationEngineReady', handleEngineReady);
-                    this.showErrorMessage(new Error("Délai d'attente du moteur de recommandation dépassé"));
-                }
-            }, 10000); // 10 secondes maximum d'attente
-        }
-    }
-    
-    /**
-     * Afficher un message d'erreur
-     */
-    showErrorMessage(error) {
-        if (this.resultsContainer) {
-            this.resultsContainer.innerHTML = `
-                <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center">
-                    <div class="text-6xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
-                    <h2 class="text-2xl font-bold mb-4">Une erreur est survenue</h2>
-                    <p class="mb-6">Détail de l'erreur: ${error.message}</p>
-                    <p class="mb-6">Impossible de calculer les recommandations. Veuillez réessayer ultérieurement.</p>
-                    <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
-                        <i class="fas fa-redo mr-2"></i> Refaire le test
-                    </button>
-                </div>
-            `;
-            
-            document.getElementById('restart-btn')?.addEventListener('click', () => {
-                location.reload();
             });
         }
     }
