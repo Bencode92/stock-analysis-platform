@@ -8,6 +8,896 @@
  */
 
 document.addEventListener('DOMContentLoaded', function() {
+    // ===== MODULE 1: BASE DE DONNÉES DES FORMES JURIDIQUES =====
+    const FormeJuridiqueDB = {
+        // Base de données des formes juridiques mise à jour avec données vérifiées 2025
+        structures: [
+            {
+                id: 'micro-entreprise',
+                nom: 'Micro-entreprise',
+                categorie: 'Commerciale/Civile',
+                associes: '1',
+                capital: 'Aucun',
+                responsabilite: 'Limitée au patrimoine professionnel (réforme 2022)',
+                fiscalite: 'IR',
+                fiscaliteOption: 'Non',
+                regimeSocial: 'TNS',
+                protectionPatrimoine: 'Oui (depuis 2022)',
+                chargesSociales: 'Simplifiées',
+                fiscal: 'Non applicable (pas de distribution, IR sur bénéfices)',
+                regimeTVA: 'Franchise en base (TVA uniquement si dépassement seuils)',
+                publicationComptes: 'Non',
+                formalites: 'Très simplifiées',
+                activite: 'Toutes sauf réglementées',
+                leveeFonds: 'Non',
+                entreeAssocies: 'Non',
+                profilOptimal: 'Entrepreneur solo',
+                avantages: 'Simplicité, coût réduit',
+                inconvenients: 'Plafond CA (188 700 € vente ou 77 700 € services), abattement forfaitaire au lieu de déduction réelle',
+                casConseille: 'Début d\'activité, test',
+                casDeconseille: 'Développement ambitieux',
+                transmission: 'Non',
+                plafondCA: '188 700 € (vente/hébergement) ou 77 700 € (services/libérales)',
+                icone: 'fa-rocket'
+            },
+            {
+                id: 'ei',
+                nom: 'Entreprise Individuelle (EI)',
+                categorie: 'Commerciale/Civile',
+                associes: '1',
+                capital: 'Aucun',
+                responsabilite: 'Limitée au patrimoine professionnel (réforme 2022)',
+                fiscalite: 'IR',
+                fiscaliteOption: 'Non',
+                regimeSocial: 'TNS',
+                protectionPatrimoine: 'Oui (depuis 2022)',
+                chargesSociales: 'Sur bénéfices',
+                fiscal: 'Non applicable (pas de distribution, IR sur bénéfices)',
+                regimeTVA: 'Oui',
+                publicationComptes: 'Non',
+                formalites: 'Très simplifiées',
+                activite: 'Toutes sauf réglementées',
+                leveeFonds: 'Non',
+                entreeAssocies: 'Non',
+                profilOptimal: 'Entrepreneur solo',
+                avantages: 'Simplicité, coût réduit',
+                inconvenients: 'Peu de protection en cas de faute de gestion',
+                casConseille: 'Artisan, commerçant',
+                casDeconseille: 'Projet à risque élevé',
+                transmission: 'Non',
+                plafondCA: 'Aucun plafond',
+                icone: 'fa-user'
+            },
+            {
+                id: 'eurl',
+                nom: 'EURL',
+                categorie: 'Commerciale',
+                associes: '1',
+                capital: '1€ minimum',
+                responsabilite: 'Limitée aux apports',
+                fiscalite: 'IR ou IS',
+                fiscaliteOption: 'Oui',
+                regimeSocial: 'TNS ou Assimilé salarié',
+                protectionPatrimoine: 'Oui',
+                chargesSociales: 'Sur rémunération',
+                fiscal: 'Dividendes possibles',
+                regimeTVA: 'Oui',
+                publicationComptes: 'Oui',
+                formalites: 'Modérées',
+                activite: 'Toutes',
+                leveeFonds: 'Limité',
+                entreeAssocies: 'Possible',
+                profilOptimal: 'Entrepreneur solo cherchant séparation patrimoine',
+                avantages: 'Protection du patrimoine personnel, flexibilité fiscale',
+                inconvenients: 'Formalisme, coûts de création',
+                casConseille: 'Activité avec risques',
+                casDeconseille: 'Petit CA sans risque',
+                transmission: 'Oui',
+                plafondCA: 'Aucun plafond',
+                icone: 'fa-shield-alt'
+            },
+            {
+                id: 'sasu',
+                nom: 'SASU',
+                categorie: 'Commerciale',
+                associes: '1',
+                capital: '1€ minimum',
+                responsabilite: 'Limitée aux apports',
+                fiscalite: 'IS',
+                fiscaliteOption: 'Non',
+                regimeSocial: 'Assimilé salarié',
+                protectionPatrimoine: 'Oui',
+                chargesSociales: 'Sur rémunération',
+                fiscal: 'Dividendes possibles',
+                regimeTVA: 'Oui',
+                publicationComptes: 'Oui',
+                formalites: 'Modérées',
+                activite: 'Toutes',
+                leveeFonds: 'Oui',
+                entreeAssocies: 'Facile',
+                profilOptimal: 'Entrepreneur solo cherchant statut salarié',
+                avantages: 'Protection sociale du régime général, flexibilité statutaire',
+                inconvenients: 'IS obligatoire, charges sociales élevées',
+                casConseille: 'Salaire élevé, levée de fonds',
+                casDeconseille: 'Petit CA',
+                transmission: 'Oui',
+                plafondCA: 'Aucun plafond',
+                icone: 'fa-chart-line'
+            },
+            {
+               id: 'sarl',
+            nom: 'SARL',
+              categorie: 'Commerciale',
+          associes: '2-100',
+  capital: '37 000 € (50% libéré à la constitution, solde dans les 5 ans)',
+  responsabilite: 'Limitée aux apports',
+  fiscalite: 'IS (IR option 5 ans)',
+  fiscaliteOption: 'Oui',
+  regimeSocial: 'TNS (gérant majoritaire), Assimilé salarié (gérant minoritaire/égalitaire)',
+  protectionPatrimoine: 'Oui',
+  chargesSociales: 'Selon statut gérant',
+  fiscal: 'Oui, selon IS/IR',
+  regimeTVA: 'Oui',
+  publicationComptes: 'Oui',
+  formalites: 'Standard',
+  activite: 'Toutes sauf réglementées',
+  leveeFonds: 'Limité',
+  entreeAssocies: 'Modéré',
+  profilOptimal: 'PME familiale',
+  avantages: 'Encadrement légal, sécurité',
+  inconvenients: 'Moins flexible que SAS',
+        casConseille: 'PME, activité familiale',
+             casDeconseille: 'Start-up, levée de fonds',
+           transmission: 'Oui',
+           plafondCA: 'Aucun plafond',
+           icone: 'fa-briefcase'
+},              
+             {
+  id: 'sas',
+  nom: 'SAS',
+  categorie: 'Commerciale',
+  associes: '2+',
+  capital: '37 000 € (50% libéré à la constitution, solde dans les 5 ans)',
+  responsabilite: 'Limitée aux apports',
+  fiscalite: 'IS (IR option 5 ans)',
+  fiscaliteOption: 'Oui',
+  regimeSocial: 'Assimilé salarié',
+  protectionPatrimoine: 'Oui',
+  chargesSociales: 'Sur rémunération',
+  fiscal: 'Oui, selon IS/IR',
+  regimeTVA: 'Oui',
+  publicationComptes: 'Oui',
+  formalites: 'Standard',
+  activite: 'Toutes sauf réglementées',
+  leveeFonds: 'Oui',
+  entreeAssocies: 'Oui',
+  profilOptimal: 'Start-up, investisseurs',
+  avantages: 'Souplesse, levée de fonds',
+  inconvenients: 'Charges sociales élevées',
+  casConseille: 'Start-up, levée de fonds',
+  casDeconseille: 'Professions réglementées',
+  transmission: 'Oui',
+  plafondCA: 'Aucun plafond',
+  icone: 'fa-lightbulb'
+},
+              {
+  id: 'sa',
+  nom: 'SA',
+  categorie: 'Commerciale',
+  associes: '2 (non cotée), 7 (cotée)',
+  capital: '37 000 € (50% libéré à la constitution, solde dans les 5 ans)',
+  responsabilite: 'Limitée aux apports',
+  fiscalite: 'IS',
+  fiscaliteOption: 'Non',
+  regimeSocial: 'Assimilé salarié',
+  protectionPatrimoine: 'Oui',
+  chargesSociales: 'Sur rémunération',
+  fiscal: 'Oui',
+  regimeTVA: 'Oui',
+  publicationComptes: 'Oui',
+  formalites: 'Complexes',
+  activite: 'Grandes entreprises',
+  leveeFonds: 'Oui',
+  entreeAssocies: 'Oui',
+  profilOptimal: 'Grands groupes, cotation',
+  avantages: 'Accès capital, crédibilité',
+  inconvenients: 'Complexité, coût',
+  casConseille: 'Grande entreprise, cotation',
+  casDeconseille: 'Petite structure',
+  transmission: 'Oui',
+  plafondCA: 'Aucun plafond',
+  icone: 'fa-building'
+},
+            {
+  id: 'sci',
+  nom: 'SCI',
+  categorie: 'Civile',
+  associes: '2+',
+  capital: 'Libre',
+  responsabilite: 'Indéfinie',
+  fiscalite: 'IR (IS option)',
+  fiscaliteOption: 'Oui',
+  regimeSocial: 'TNS ou assimilé salarié',
+  protectionPatrimoine: 'Non',
+  chargesSociales: 'Selon statut',
+  fiscal: 'Non concerné',
+  regimeTVA: 'Oui',
+  publicationComptes: 'Oui',
+  formalites: 'Standard',
+  activite: 'Gestion immobilière',
+  leveeFonds: 'Non',
+  entreeAssocies: 'Oui',
+  profilOptimal: 'Gestion patrimoine immobilier',
+  avantages: 'Transmission, souplesse',
+  inconvenients: 'Responsabilité indéfinie',
+  casConseille: 'Gestion immobilière',
+  casDeconseille: 'Activité commerciale',
+  transmission: 'Oui',
+  plafondCA: 'Aucun plafond',
+  icone: 'fa-home'
+}, 
+             {
+  id: 'scp',
+  nom: 'SCP',
+  categorie: 'Civile',
+  associes: '2+',
+  capital: 'Libre',
+  responsabilite: 'Indéfinie et solidaire',
+  fiscalite: 'IR',
+  fiscaliteOption: 'Non',
+  regimeSocial: 'TNS',
+  protectionPatrimoine: 'Non',
+  chargesSociales: 'Sur bénéfices',
+  fiscal: 'Non concerné',
+  regimeTVA: 'Oui',
+  publicationComptes: 'Oui',
+  formalites: 'Standard',
+  activite: 'Professions libérales',
+  leveeFonds: 'Non',
+  entreeAssocies: 'Modéré',
+  profilOptimal: 'Professions libérales réglementées',
+  avantages: 'Mutualisation moyens',
+  inconvenients: 'Responsabilité indéfinie',
+  casConseille: 'Professions libérales',
+  casDeconseille: 'Activité commerciale',
+  transmission: 'Non',
+  plafondCA: 'Aucun plafond',
+  icone: 'fa-briefcase-medical'
+},
+            {
+  id: 'scm',
+  nom: 'SCM',
+  categorie: 'Civile',
+  associes: '2+',
+  capital: 'Libre',
+  responsabilite: 'Indéfinie',
+  fiscalite: 'IR',
+  fiscaliteOption: 'Non',
+  regimeSocial: 'TNS',
+  protectionPatrimoine: 'Non',
+  chargesSociales: 'Sur bénéfices',
+  fiscal: 'Non concerné',
+  regimeTVA: 'Oui',
+  publicationComptes: 'Oui',
+  formalites: 'Standard',
+  activite: 'Professions libérales',
+  leveeFonds: 'Non',
+  entreeAssocies: 'Modéré',
+  profilOptimal: 'Professions libérales mutualisant moyens',
+  avantages: 'Mutualisation moyens',
+  inconvenients: 'Pas de chiffre d’affaires propre',
+  casConseille: 'Mutualisation moyens',
+  casDeconseille: 'Activité commerciale',
+  transmission: 'Non',
+  plafondCA: 'Aucun plafond',
+  icone: 'fa-tools'
+},
+             {
+  id: 'sccv',
+  nom: 'SCCV',
+  categorie: 'Civile',
+  associes: '2+',
+  capital: 'Libre',
+  responsabilite: 'Indéfinie',
+  fiscalite: 'IS',
+  fiscaliteOption: 'Non',
+  regimeSocial: 'TNS',
+  protectionPatrimoine: 'Non',
+  chargesSociales: 'Sur bénéfices',
+  fiscal: 'Non concerné',
+  regimeTVA: 'Oui',
+  publicationComptes: 'Oui',
+  formalites: 'Standard',
+  activite: 'Construction vente immobilière',
+  leveeFonds: 'Non',
+  entreeAssocies: 'Modéré',
+  profilOptimal: 'Promotion immobilière',
+  avantages: 'Fiscalité avantageuse',
+  inconvenients: 'Responsabilité indéfinie',
+  casConseille: 'Promotion immobilière',
+  casDeconseille: 'Activité commerciale',
+  transmission: 'Oui',
+  plafondCA: 'Aucun plafond',
+  icone: 'fa-hammer'
+},
+            {
+  id: 'snc',
+  nom: 'SNC',
+  categorie: 'Commerciale',
+  associes: '2+',
+  capital: 'Libre',
+  responsabilite: 'Indéfinie et solidaire',
+  fiscalite: 'IR (IS option)',
+  fiscaliteOption: 'Oui',
+  regimeSocial: 'TNS',
+  protectionPatrimoine: 'Non',
+  chargesSociales: 'Sur bénéfices',
+  fiscal: 'Oui, selon IS/IR',
+  regimeTVA: 'Oui',
+  publicationComptes: 'Oui',
+  formalites: 'Standard',
+  activite: 'Toutes sauf réglementées',
+  leveeFonds: 'Non',
+  entreeAssocies: 'Difficile',
+  profilOptimal: 'Confiance entre associés',
+  avantages: 'Simplicité, confidentialité',
+  inconvenients: 'Responsabilité lourde',
+  casConseille: 'Activité familiale, confiance',
+  casDeconseille: 'Projet risqué',
+  transmission: 'Oui',
+  plafondCA: 'Aucun plafond',
+  icone: 'fa-users'
+},
+            {
+  id: 'selarl',
+  nom: 'SELARL',
+  categorie: 'Libérale',
+  associes: '2+',
+  capital: 'Libre',
+  responsabilite: 'Limitée aux apports',
+  fiscalite: 'IS',
+  fiscaliteOption: 'Non',
+  regimeSocial: 'TNS ou assimilé salarié',
+  protectionPatrimoine: 'Oui',
+  chargesSociales: 'Selon statut',
+  fiscal: 'Oui',
+  regimeTVA: 'Oui',
+  publicationComptes: 'Oui',
+  formalites: 'Standard',
+  activite: 'Professions libérales réglementées',
+  leveeFonds: 'Oui',
+  entreeAssocies: 'Oui',
+  profilOptimal: 'Professions libérales',
+  avantages: 'Responsabilité limitée, souplesse',
+  inconvenients: 'Formalisme',
+  casConseille: 'Professions libérales',
+  casDeconseille: 'Activité commerciale',
+  transmission: 'Oui',
+  plafondCA: 'Aucun plafond',
+  icone: 'fa-user-md'
+},
+            {
+  id: 'selas',
+  nom: 'SELAS',
+  categorie: 'Libérale',
+  associes: '2+',
+  capital: 'Libre',
+  responsabilite: 'Limitée aux apports',
+  fiscalite: 'IS',
+  fiscaliteOption: 'Non',
+  regimeSocial: 'Assimilé salarié',
+  protectionPatrimoine: 'Oui',
+  chargesSociales: 'Sur rémunération',
+  fiscal: 'Oui',
+  regimeTVA: 'Oui',
+  publicationComptes: 'Oui',
+  formalites: 'Standard',
+  activite: 'Professions libérales réglementées',
+  leveeFonds: 'Oui',
+  entreeAssocies: 'Oui',
+  profilOptimal: 'Professions libérales',
+  avantages: 'Souplesse statutaire',
+  inconvenients: 'Charges sociales élevées',
+  casConseille: 'Professions libérales',
+  casDeconseille: 'Activité commerciale',
+  transmission: 'Oui',
+  plafondCA: 'Aucun plafond',
+  icone: 'fa-stethoscope'
+},
+            {
+  id: 'gaec',
+  nom: 'GAEC',
+  categorie: 'Agricole',
+  associes: '2-10',
+  capital: 'Libre',
+  responsabilite: 'Limitée aux apports',
+  fiscalite: 'IR',
+  fiscaliteOption: 'Non',
+  regimeSocial: 'TNS',
+  protectionPatrimoine: 'Oui',
+  chargesSociales: 'Sur bénéfices',
+  fiscal: 'Non concerné',
+  regimeTVA: 'Oui',
+  publicationComptes: 'Oui',
+  formalites: 'Standard',
+  activite: 'Activité agricole',
+  leveeFonds: 'Non',
+  entreeAssocies: 'Modéré',
+  profilOptimal: 'Exploitations agricoles collectives',
+  avantages: 'Mutualisation moyens',
+  inconvenients: 'Spécifique agriculture',
+  casConseille: 'Exploitation agricole',
+  casDeconseille: 'Hors agriculture',
+  transmission: 'Oui',
+  plafondCA: 'Aucun plafond',
+  icone: 'fa-tractor'
+},
+            {
+  id: 'earl',
+  nom: 'EARL',
+  categorie: 'Agricole',
+  associes: '1+',
+  capital: 'Libre',
+  responsabilite: 'Limitée aux apports',
+  fiscalite: 'IR (IS option)',
+  fiscaliteOption: 'Oui',
+  regimeSocial: 'TNS',
+  protectionPatrimoine: 'Oui',
+  chargesSociales: 'Sur bénéfices',
+  fiscal: 'Non concerné',
+  regimeTVA: 'Oui',
+  publicationComptes: 'Oui',
+  formalites: 'Standard',
+  activite: 'Activité agricole',
+  leveeFonds: 'Non',
+  entreeAssocies: 'Modéré',
+  profilOptimal: 'Exploitations agricoles',
+  avantages: 'Responsabilité limitée',
+  inconvenients: 'Spécifique agriculture',
+  casConseille: 'Exploitation agricole',
+  casDeconseille: 'Hors agriculture',
+  transmission: 'Oui',
+  plafondCA: 'Aucun plafond',
+  icone: 'fa-seedling'
+},
+            {
+  id: 'gie',
+  nom: 'GIE',
+  categorie: 'Autre',
+  associes: '2+',
+  capital: 'Libre',
+  responsabilite: 'Selon statuts',
+  fiscalite: 'IS ou IR',
+  fiscaliteOption: 'Oui',
+  regimeSocial: 'Selon statuts',
+  protectionPatrimoine: 'Selon statuts',
+  chargesSociales: 'Selon statuts',
+  fiscal: 'Selon statuts',
+  regimeTVA: 'Oui',
+  publicationComptes: 'Oui',
+  formalites: 'Standard',
+  activite: 'Mutualisation moyens',
+  leveeFonds: 'Non',
+  entreeAssocies: 'Modéré',
+  profilOptimal: 'Entreprises souhaitant mutualiser',
+  avantages: 'Mutualisation, flexibilité',
+  inconvenients: 'Responsabilité selon statuts',
+  casConseille: 'Mutualisation moyens',
+  casDeconseille: 'Activité commerciale isolée',
+  transmission: 'Oui',
+  plafondCA: 'Aucun plafond',
+  icone: 'fa-network-wired'
+},    {
+  id: 'gip',
+  nom: 'GIP',
+  categorie: 'Autre',
+  associes: '2+',
+  capital: 'Libre',
+  responsabilite: 'Selon statuts',
+  fiscalite: 'IS ou IR',
+  fiscaliteOption: 'Oui',
+  regimeSocial: 'Selon statuts',
+  protectionPatrimoine: 'Selon statuts',
+  chargesSociales: 'Selon statuts',
+  fiscal: 'Selon statuts',
+  regimeTVA: 'Oui',
+  publicationComptes: 'Oui',
+  formalites: 'Complexes',
+  activite: 'Activité d’intérêt public',
+  leveeFonds: 'Non',
+  entreeAssocies: 'Modéré',
+  profilOptimal: 'Partenariats public-privé',
+  avantages: 'Mutualisation, intérêt public',
+  inconvenients: 'Complexité',
+  casConseille: 'Partenariats public-privé',
+  casDeconseille: 'Activité commerciale isolée',
+  transmission: 'Oui',
+  plafondCA: 'Aucun plafond',
+  icone: 'fa-handshake'
+},{
+  id: 'sca',
+  nom: 'SCA',
+  categorie: 'Commerciale',
+  associes: '2+ (au moins deux associés)',
+  capital: '37 000 € (5 commanditaires minimum)',
+  responsabilite: 'Commandités (responsabilité illimitée) et commanditaires (responsabilité limitée à l’apport)',
+  fiscalite: 'IS',
+  fiscaliteOption: 'Non',
+  regimeSocial: 'Assimilé salarié (commandité)',
+  protectionPatrimoine: 'Non',
+  chargesSociales: 'Sur rémunération',
+  fiscal: 'Oui',
+  regimeTVA: 'Oui',
+  publicationComptes: 'Oui',
+  formalites: 'Complexe',
+  activite: 'Grandes entreprises uniquement',
+  leveeFonds: 'Oui, levée de fonds possible',
+  entreeAssocies: 'Oui',
+  profilOptimal: 'Petite ou grande structure nécessitant une levée de fonds',
+  avantages: 'Accès au capital, complexité, adapté aux grandes entreprises et parfois aux petites structures',
+  inconvenients: 'Complexité, grande exigence administrative',
+  casConseille: 'Petite ou grande structure nécessitant une levée de fonds',
+  casDeconseille: 'Structures recherchant la simplicité',
+  transmission: 'Oui',
+  plafondCA: 'Aucun plafond',
+  icone: 'fa-university'
+}
+            
+        ],
+        
+        // Méthodes d'accès aux données
+        getById: function(id) {
+            return this.structures.find(forme => forme.id === id);
+        },
+        
+        getCompatibleForms: function(criteres) {
+            return this.structures.filter(forme => {
+                // Filtrer les formes compatibles avec les critères
+                if (criteres.associes && criteres.associes !== forme.associes) return false;
+                // Autres critères de filtrage
+                return true;
+            });
+        }
+    };
+
+    // ===== MODULE 2: SYSTÈME DE SCORING CONTEXTUEL =====
+    const ScoringEngine = {
+        // Score maximal possible pour le calcul des pourcentages - augmenté pour plus de nuance
+        SCORE_MAX: 200,
+        
+        // Pondérations de base pour les critères d'évaluation
+        ponderation: {
+            tmiActuel: 1.5,
+            horizonProjet: 1.5,
+            profilEntrepreneur: 1.5,
+            typeActivite: 2.0,
+            chiffreAffaires: 2.0,
+            tauxMarge: 1.3,
+            besoinRevenusImmediats: 1.5,
+            cautionBancaire: 1.2,
+            montantLevee: 1.0,
+            regimeFiscal: 1.0,
+            regimeSocial: 1.0,
+            transmission: 0.8
+        },
+        
+        /**
+         * Ajuste les coefficients en fonction du contexte utilisateur
+         */
+        ajusterCoefficients: function(userResponses) {
+            let coefficients = {...this.ponderation};
+            
+            // Facteurs d'ajustement contextuel
+            // Par exemple: TMI élevé = plus d'importance à l'optimisation fiscale
+            if (userResponses.tmiActuel >= 30) {
+                coefficients.regimeFiscal = 2.5;
+            }
+            
+            // Besoins de revenus immédiats = plus d'importance au salariat
+            if (userResponses.besoinRevenusImmediats) {
+                coefficients.besoinRevenusImmediats = 2.5;
+            }
+            
+            // Bien immobilier existant = plus d'importance à la protection patrimoniale
+            if (userResponses.bienImmobilier) {
+                coefficients.cautionBancaire = 2.0;
+            }
+            
+            // Levée de fonds importante = statut juridique adapté
+            if (userResponses.montantLevee > 50000) {
+                coefficients.montantLevee = 2.5;
+            }
+            
+            // Marges faibles = plus attention aux charges sociales
+            if (userResponses.tauxMarge < 20) {
+                coefficients.tauxMarge = 2.0;
+            }
+            
+            return coefficients;
+        },
+        
+        /**
+         * Calcule le score pour une forme juridique selon un profil utilisateur
+         */
+        calculerScore: function(forme, userResponses) {
+            // Initialiser les scores par catégorie pour l'équilibre 60/40
+            let scoreCriteresStructurels = 0;
+            let scoreObjectifs = 0;
+            
+            let score = 0;
+            let details = [];
+            let scoreDetails = {}; // Pour l'affichage du détail des scores
+            let incompatibilites = [];
+            let incompatibiliteMajeure = false;
+
+            // Récupérer les coefficients ajustés au contexte
+            const coefficients = this.ajusterCoefficients(userResponses);
+
+            // Vérifier si cette forme a une incompatibilité majeure
+            if (window.hasHardFail(forme.id, window.checkHardFails(userResponses))) {
+                // Si oui, score très bas et on l'indique comme incompatible
+                incompatibiliteMajeure = true;
+                
+                // Récupérer les détails des incompatibilités
+                incompatibilites = window.checkHardFails(userResponses)
+                    .filter(fail => fail.formeId === forme.id);
+            }
+            
+            // PARTIE STRUCTURELLE (60%)
+            
+            // TMI actuelle et fiscalité
+            if (userResponses.tmiActuel <= 11 && forme.fiscalite === 'IR') {
+                scoreCriteresStructurels += 20 * coefficients.tmiActuel;
+                details.push('TMI faible: avantage fiscal avec régime IR');
+            } else if (userResponses.tmiActuel >= 30 && forme.fiscalite === 'IS') {
+                scoreCriteresStructurels += 20 * coefficients.tmiActuel;
+                details.push('TMI élevée: optimisation via IS recommandée');
+            } else if (userResponses.tmiActuel >= 30 && forme.fiscaliteOption === 'Oui') {
+                scoreCriteresStructurels += 15 * coefficients.tmiActuel;
+                details.push('TMI élevée: option fiscale avantageuse');
+            }
+            
+            // Horizon projet
+            if (userResponses.horizonProjet === 'court' && forme.id === 'micro-entreprise') {
+                scoreCriteresStructurels += 15 * coefficients.horizonProjet;
+                details.push('Structure idéale pour projet à court terme');
+            } else if (userResponses.horizonProjet === 'moyen' && 
+                      (forme.id === 'eurl' || forme.id === 'sasu')) {
+                scoreCriteresStructurels += 15 * coefficients.horizonProjet;
+                details.push('Structure adaptée à un développement sur 3-5 ans');
+            } else if (userResponses.horizonProjet === 'long' && 
+                      (forme.id === 'sas' || forme.id === 'sarl' || forme.id === 'sa')) {
+                scoreCriteresStructurels += 15 * coefficients.horizonProjet;
+                details.push('Structure pérenne pour projet à long terme');
+            }
+            
+            // Profil entrepreneur
+            if (userResponses.profilEntrepreneur === 'solo' && forme.associes === '1') {
+                scoreCriteresStructurels += 20 * coefficients.profilEntrepreneur;
+                details.push('Forme adaptée aux entrepreneurs solos');
+            } else if (userResponses.profilEntrepreneur === 'associes' && parseInt(forme.associes) > 1) {
+                scoreCriteresStructurels += 20 * coefficients.profilEntrepreneur;
+                details.push('Forme adaptée aux projets avec associés');
+            } else if (userResponses.profilEntrepreneur === 'famille' && forme.id.includes('sarl')) {
+                scoreCriteresStructurels += 20 * coefficients.profilEntrepreneur;
+                details.push('Forme particulièrement adaptée aux projets familiaux');
+            } else if (userResponses.profilEntrepreneur === 'investisseurs' && forme.leveeFonds === 'Oui') {
+                scoreCriteresStructurels += 20 * coefficients.profilEntrepreneur;
+                details.push('Structure idéale pour accueillir des investisseurs');
+            }
+            
+            // Type d'activité et réglementation
+            if (userResponses.typeActivite && forme.activite.includes(userResponses.typeActivite)) {
+                scoreCriteresStructurels += 15 * coefficients.typeActivite;
+                details.push(`Adapté aux activités ${userResponses.typeActivite}s`);
+            }
+            
+            if (userResponses.activiteReglementee && userResponses.ordreProessionnel) {
+                if (forme.id.includes('sel')) {
+                    scoreCriteresStructurels += 25;
+                    details.push('Structure spécifique pour professions réglementées avec ordre');
+                } else if (forme.id === 'micro-entreprise') {
+                    scoreCriteresStructurels -= 50; // Forte pénalité
+                    details.push('Incompatible avec ordre professionnel');
+                }
+            } else if (userResponses.activiteReglementee && forme.id !== 'micro-entreprise') {
+                scoreCriteresStructurels += 15;
+                details.push('Compatible avec activité réglementée');
+            }
+            
+            // Chiffre d'affaires et marge
+            const seuils = {
+                'bic-vente': 188700,
+                'bic-service': 77700,
+                'bnc': 77700,
+                'artisanale': 188700,
+                'agricole': 95000
+            };
+            
+            const seuil = seuils[userResponses.typeActivite] || 77700;
+            
+            if (userResponses.chiffreAffaires < seuil * 0.7 && forme.id === 'micro-entreprise') {
+                scoreCriteresStructurels += 20 * coefficients.chiffreAffaires;
+                details.push('CA compatible avec régime micro-entreprise');
+            } else if (userResponses.chiffreAffaires >= seuil && forme.id === 'micro-entreprise') {
+                scoreCriteresStructurels -= 50; // Incompatibilité forte
+                details.push('CA trop élevé pour régime micro-entreprise');
+                
+                // Ajouter une incompatibilité majeure
+                if (!incompatibiliteMajeure) {
+                    incompatibiliteMajeure = true;
+                    incompatibilites.push({
+                        code: 'ca-depasse-seuil',
+                        message: `Le CA prévu (${userResponses.chiffreAffaires.toLocaleString('fr-FR')}€) dépasse le seuil micro-entreprise (${seuil.toLocaleString('fr-FR')}€)`,
+                        details: 'Régime réel obligatoire'
+                    });
+                }
+            } else if (userResponses.chiffreAffaires >= seuil && 
+                      (forme.id === 'eurl' || forme.id === 'sasu' || forme.id === 'ei')) {
+                scoreCriteresStructurels += 15 * coefficients.chiffreAffaires;
+                details.push('Structure adaptée à ce niveau de CA');
+            } else if (userResponses.chiffreAffaires >= seuil * 2 && 
+                      (forme.id === 'sas' || forme.id === 'sarl' || forme.id === 'sa')) {
+                scoreCriteresStructurels += 20 * coefficients.chiffreAffaires;
+                details.push('Structure idéale pour les CA élevés');
+            }
+            
+            // PARTIE OBJECTIFS (40%)
+            
+            // Marge brute
+            if (userResponses.tauxMarge < 15) {
+                // Marges faibles = avantage aux formes avec charges sociales plus faibles
+                if (forme.id === 'micro-entreprise') {
+                    scoreObjectifs += 15 * coefficients.tauxMarge;
+                    details.push('Charges forfaitaires avantageuses avec marge faible');
+                } else if (forme.id === 'sasu' || forme.regimeSocial.includes('salarié')) {
+                    scoreObjectifs -= 10 * coefficients.tauxMarge;
+                    details.push('Charges sociales élevées avec marge faible');
+                }
+            } else if (userResponses.tauxMarge > 40) {
+                // Marges élevées = avantage aux formes avec fiscalité optimisée
+                if (forme.fiscalite === 'IS' || forme.fiscaliteOption === 'Oui') {
+                    scoreObjectifs += 15 * coefficients.tauxMarge;
+                    details.push('Optimisation fiscale intéressante avec marge élevée');
+                }
+            }
+            
+            // Besoin de revenus immédiats
+            if (userResponses.besoinRevenusImmediats) {
+                if (forme.regimeSocial.includes('salarié')) {
+                    scoreObjectifs += 20 * coefficients.besoinRevenusImmediats;
+                    details.push('Permet une rémunération immédiate par salaire');
+                } else if (forme.id === 'micro-entreprise') {
+                    scoreObjectifs += 15 * coefficients.besoinRevenusImmediats;
+                    details.push('Versement immédiat du CA après prélèvements forfaitaires');
+                } else if (forme.fiscalite === 'IS' && !forme.regimeSocial.includes('salarié')) {
+                    scoreObjectifs -= 10 * coefficients.besoinRevenusImmediats;
+                    details.push('Moins adapté aux besoins de rémunération immédiate');
+                }
+            }
+            
+            // Protection patrimoniale et caution bancaire
+            if (userResponses.cautionBancaire || userResponses.bienImmobilier) {
+                if (forme.protectionPatrimoine === 'Oui') {
+                    scoreObjectifs += 25 * coefficients.cautionBancaire;
+                    details.push('Protection patrimoniale complète, idéale avec caution bancaire');
+                } else if (forme.id === 'micro-entreprise' || forme.id === 'ei') {
+                    if (userResponses.bienImmobilier) {
+                        scoreObjectifs -= 20 * coefficients.cautionBancaire;
+                        details.push('Protection limitée pour votre patrimoine immobilier');
+                    } else {
+                        scoreObjectifs -= 10;
+                        details.push('Protection patrimoniale partielle depuis 2022');
+                    }
+                }
+            }
+            
+            // Montant de levée de fonds
+            if (userResponses.montantLevee > 50000) {
+                if (forme.leveeFonds === 'Oui') {
+                    scoreObjectifs += 20 * coefficients.montantLevee;
+                    details.push('Structure adaptée à la levée de fonds envisagée');
+                } else {
+                    scoreObjectifs -= 15 * coefficients.montantLevee;
+                    details.push('Structure peu adaptée à la levée de fonds');
+                }
+            }
+            
+            // Type d'investisseurs
+            if (userResponses.typeInvestisseurs.includes('vc') && forme.id === 'sas') {
+                scoreObjectifs += 15;
+                details.push('Structure privilégiée par les fonds de capital-risque');
+            } else if (userResponses.typeInvestisseurs.includes('business-angels') && 
+                      (forme.id === 'sas' || forme.id === 'sasu')) {
+                scoreObjectifs += 10;
+                details.push('Structure appréciée des business angels');
+            }
+            
+            // Aides et dispositifs spécifiques
+            if (userResponses.aides.includes('jei') && forme.fiscalite === 'IS') {
+                scoreObjectifs += 15;
+                details.push('Éligible au statut JEI');
+            }
+            
+            if (userResponses.aides.includes('cir') && 
+               (forme.id !== 'micro-entreprise' && forme.id !== 'ei')) {
+                scoreObjectifs += 10;
+                details.push('Structure compatible avec CIR/CII');
+            }
+            
+            // Transmission/sortie
+            if (userResponses.transmission === 'revente' && 
+               (forme.id === 'sas' || forme.id === 'sa')) {
+                scoreObjectifs += 15 * coefficients.transmission;
+                details.push('Structure favorable à la revente future');
+            } else if (userResponses.transmission === 'transmission' && 
+                      (forme.id === 'sarl' || forme.id.includes('ei'))) {
+                scoreObjectifs += 10 * coefficients.transmission;
+                details.push('Structure adaptée à la transmission familiale');
+            }
+            
+            // Régime fiscal préféré
+            if (userResponses.regimeFiscal === 'ir' && forme.fiscalite === 'IR') {
+                scoreObjectifs += 15 * coefficients.regimeFiscal;
+                details.push('Correspond à votre préférence pour l\'IR');
+            } else if (userResponses.regimeFiscal === 'is' && forme.fiscalite === 'IS') {
+                scoreObjectifs += 15 * coefficients.regimeFiscal;
+                details.push('Correspond à votre préférence pour l\'IS');
+            } else if (userResponses.regimeFiscal === 'flexible' && forme.fiscaliteOption === 'Oui') {
+                scoreObjectifs += 20 * coefficients.regimeFiscal;
+                details.push('Offre la flexibilité fiscale souhaitée');
+            }
+            
+            // Régime social préféré
+            if (userResponses.regimeSocial === 'tns' && forme.regimeSocial.includes('TNS')) {
+                scoreObjectifs += 15 * coefficients.regimeSocial;
+                details.push('Correspond à votre préférence pour le statut TNS');
+            } else if (userResponses.regimeSocial === 'salarie' && forme.regimeSocial.includes('salarié')) {
+                scoreObjectifs += 15 * coefficients.regimeSocial;
+                details.push('Correspond à votre préférence pour le statut assimilé-salarié');
+            }
+            
+            // Score total
+            score = scoreCriteresStructurels + scoreObjectifs;
+            
+            // Stocker les scores détaillés pour l'affichage
+            scoreDetails = {
+                criteres: scoreCriteresStructurels,
+                objectifs: scoreObjectifs,
+                total: score,
+                pourcentage: Math.round((score / this.SCORE_MAX) * 100)
+            };
+
+            // Déterminer la catégorie de compatibilité
+            let compatibilite;
+            if (incompatibiliteMajeure) {
+                compatibilite = 'INCOMPATIBLE';
+                score = -100; // Score très négatif pour les incompatibles
+            } else if (score < 0) {
+                compatibilite = 'DÉCONSEILLÉ';
+            } else if (score / this.SCORE_MAX < 0.60) {
+                compatibilite = 'PEU ADAPTÉ';
+            } else if (score / this.SCORE_MAX < 0.85) {
+                compatibilite = 'COMPATIBLE';
+            } else {
+                compatibilite = 'RECOMMANDÉ';
+            }
+            
+            return {
+                forme: forme,
+                score: score,
+                scoreOriginal: score,
+                scoreCriteresStructurels: scoreCriteresStructurels,
+                scoreObjectifs: scoreObjectifs,
+                details: details,
+                scoreDetails: scoreDetails,
+                compatibilite: compatibilite,
+                incompatibilites: incompatibilites,
+                incompatibiliteMajeure: incompatibiliteMajeure
+            };
+        }
+    };
+
     // ===== MODULE 3: GESTION DES FORMULAIRES ET INTERFACES UTILISATEUR =====
     const FormManager = {
         // Variables pour le formulaire
@@ -616,9 +1506,9 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
             
             // Calculer les scores pour chaque forme juridique
-            const results = window.FormeJuridiqueDB.structures.map(forme => {
+            const results = FormeJuridiqueDB.structures.map(forme => {
                 // Calculer le score avec le moteur de scoring amélioré
-                const scoreResult = window.ScoringEngine.calculerScore(forme, userResponses);
+                const scoreResult = ScoringEngine.calculerScore(forme, userResponses);
                 
                 // Ajouter la simulation financière
                 const simulation = window.SimulationsFiscales.simulerImpactFiscal(forme, this.simulationParams.caSimulation, {
@@ -660,7 +1550,7 @@ document.addEventListener('DOMContentLoaded', function() {
             this.displayResults(resultatsAffichage, resultatsIncompatibles);
             
             // Préparer les données du tableau comparatif complet
-            this.prepareComparatifTable(window.FormeJuridiqueDB.structures);
+            this.prepareComparatifTable(FormeJuridiqueDB.structures);
             
             // Rendre visible les boutons d'export
             const exportButtons = document.getElementById('export-buttons');
@@ -778,7 +1668,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <ul>
                                         <li>Score critères structurels: ${recommended.scoreCriteresStructurels} pts (60%)</li>
                                         <li>Score objectifs: ${recommended.scoreObjectifs} pts (40%)</li>
-                                        <li>Score total: ${recommended.score} / ${window.ScoringEngine.SCORE_MAX}</li>
+                                        <li>Score total: ${recommended.score} / ${ScoringEngine.SCORE_MAX}</li>
                                     </ul>
                                 </div>
                             </div>
@@ -923,7 +1813,7 @@ document.addEventListener('DOMContentLoaded', function() {
             // Regrouper les incompatibilités par forme juridique
             const incompatibiliteParForme = {};
             incompatibles.forEach(inc => {
-                const forme = window.FormeJuridiqueDB.getById(inc.formeId);
+                const forme = FormeJuridiqueDB.getById(inc.formeId);
                 if (forme) {
                     if (!incompatibiliteParForme[forme.id]) {
                         incompatibiliteParForme[forme.id] = {
@@ -1215,347 +2105,475 @@ document.addEventListener('DOMContentLoaded', function() {
                             <tbody>
                                 ${results.map(r => `
                                 <tr class="border-b border-gray-700 ${r.netTotal === maxNet ? 'bg-green-900 bg-opacity-20' : ''}">
-                                    <td class="p-2">${r.salaire}% salaire / ${r.dividendes}% dividendes</td>
-                                    <td class="text-right p-2">${r.charges.toLocaleString('fr-FR')} €</td>
-                                    <td class="text-right p-2">${r.impots.toLocaleString('fr-FR')} €</td>
-                                    <td class="text-right p-2 ${r.netTotal === maxNet ? 'font-semibold text-green-400' : ''}">${r.netTotal.toLocaleString('fr-FR')} €</td>
+                                    <td class="p-2">${r.salaire}% / ${r.dividendes}%</td>
+                                    <td class="p-2 text-right">${r.charges.toLocaleString('fr-FR')} €</td>
+                                    <td class="p-2 text-right">${r.impots.toLocaleString('fr-FR')} €</td>
+                                    <td class="p-2 text-right font-semibold ${r.netTotal === maxNet ? 'text-green-400' : ''}">${r.netTotal.toLocaleString('fr-FR')} €</td>
                                 </tr>
                                 `).join('')}
                             </tbody>
                         </table>
                     </div>
                     
-                    <div>
-                        <div class="bg-blue-900 bg-opacity-20 p-4 rounded-lg">
-                            <h5 class="font-medium mb-3">Scénario optimal pour votre situation</h5>
-                            <div class="text-center">
-                                <div class="font-semibold text-xl mb-1">${optimalScenario.salaire}% salaire / ${optimalScenario.dividendes}% dividendes</div>
-                                <div class="text-sm opacity-70 mb-4">Optimise votre revenu net après impôts et charges</div>
-                            </div>
-                            
-                            <div class="grid grid-cols-2 gap-2 mb-3">
-                                <div class="p-3 bg-blue-900 bg-opacity-20 rounded-lg text-center">
-                                    <div class="text-sm">Revenu net optimal</div>
-                                    <div class="font-semibold text-green-400 text-xl">${optimalScenario.netTotal.toLocaleString('fr-FR')} €</div>
-                                </div>
-                                <div class="p-3 bg-blue-900 bg-opacity-20 rounded-lg text-center">
-                                    <div class="text-sm">Taux de prélèvement</div>
-                                    <div class="font-semibold text-xl">${Math.round(100 - (optimalScenario.netTotal / benefice) * 100)}%</div>
-                                </div>
-                            </div>
-                            
-                            <p class="text-sm">
-                                <i class="fas fa-info-circle mr-1 text-green-400"></i>
-                                ${optimalScenario.dividendes > 50 ? 
-                                    'Privilégier les dividendes réduit les charges sociales mais impose le paiement préalable de l\'IS.' : 
-                                    'Un équilibre entre salaire et dividendes offre le meilleur compromis entre charges sociales et imposition globale.'}
-                            </p>
+                    <div class="bg-blue-800 bg-opacity-40 p-4 rounded-lg">
+                        <h5 class="font-medium text-green-400 mb-3">Stratégie optimale pour votre situation</h5>
+                        <div class="mb-4">
+                            <div class="text-xl font-bold">${optimalScenario.salaire}% salaire / ${optimalScenario.dividendes}% dividendes</div>
+                            <div class="text-sm text-gray-400 mt-1">Revenu net estimé: ${optimalScenario.netTotal.toLocaleString('fr-FR')} €</div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h6 class="font-medium mb-1">Pourquoi cette répartition ?</h6>
+                            <ul class="text-sm">
+                                ${optimalScenario.salaire === 100 ? 
+                                    '<li class="mb-1">• Votre TMI actuelle est faible, privilégiez le salaire</li>' : 
+                                    ''}
+                                ${optimalScenario.dividendes === 100 ? 
+                                    '<li class="mb-1">• Charges sociales très élevées sur salaire, privilégiez les dividendes</li>' : 
+                                    ''}
+                                ${optimalScenario.salaire > 0 && optimalScenario.dividendes > 0 ? 
+                                    '<li class="mb-1">• Une répartition mixte optimise votre fiscalité globale</li>' : 
+                                    ''}
+                                <li class="mb-1">• Cette répartition réduit votre pression fiscale et sociale</li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h6 class="font-medium mb-1">Considérations importantes</h6>
+                            <ul class="text-sm">
+                                <li class="mb-1">• Protection sociale plus faible avec dividendes</li>
+                                <li class="mb-1">• Besoin d'une trésorerie suffisante pour les dividendes</li>
+                                <li class="mb-1">• Impact différent sur votre crédit immobilier futur</li>
+                            </ul>
                         </div>
                     </div>
                 </div>
             </div>`;
         },
         
-        // Génère une projection pluriannuelle
+        // Génère une simulation pluriannuelle avec prise en compte de la répartition salaire/dividendes
         renderMultiYearSimulation: function(forme, caSimulation, tauxMarge) {
-            // Définir les CA pour les années successives (croissance annuelle)
-            const caAnnee1 = caSimulation;
-            const caAnnee2 = Math.round(caSimulation * 1.2); // +20%
-            const caAnnee3 = Math.round(caSimulation * 1.4); // +40%
+            // Définir progression de CA sur 3 ans
+            const caYear1 = caSimulation;
+            const caYear2 = Math.round(caSimulation * 1.2); // +20%
+            const caYear3 = Math.round(caYear2 * 1.2); // +20% supplémentaire
             
-            // Calculer les bénéfices pour chaque année
-            const beneficeAnnee1 = caAnnee1 * (tauxMarge / 100);
-            const beneficeAnnee2 = caAnnee2 * (tauxMarge / 100);
-            const beneficeAnnee3 = caAnnee3 * (tauxMarge / 100);
+            // Calculer les résultats pour chaque année
+            let resultYear1, resultYear2, resultYear3;
             
-            // Simuler les taux de prélèvement simplifiés
-            let tauxPrelevement;
-            if (forme.id === 'micro-entreprise') {
-                tauxPrelevement = 0.25; // Taux forfaitaire micro
-            } else if (forme.fiscalite === 'IR') {
-                tauxPrelevement = 0.43; // Taux IR + charges sociales
-            } else { // IS
-                tauxPrelevement = 0.38; // Taux IS + prélèvements sociaux moyens
+            // Appliquer les calculs selon le type de structure juridique
+            if (forme.id === 'micro-entreprise' || forme.id === 'ei') {
+                // Pour micro-entreprise et EI, pas de distinction salaire/dividendes
+                resultYear1 = this.calculateMicroEntrepriseYear(beneficeYear1, 1, forme.id);
+                resultYear2 = this.calculateMicroEntrepriseYear(beneficeYear2, 2, forme.id);
+                resultYear3 = this.calculateMicroEntrepriseYear(beneficeYear3, 3, forme.id);
+            } else {
+                // Pour EURL, SASU, SAS, etc. avec IS ou option IS
+                resultYear1 = this.calculateSocietyWithISYear(beneficeYear1, 1, forme.id, this.simulationParams.ratioSalaire, this.simulationParams.ratioDividendes);
+                resultYear2 = this.calculateSocietyWithISYear(beneficeYear2, 2, forme.id, this.simulationParams.ratioSalaire, this.simulationParams.ratioDividendes);
+                resultYear3 = this.calculateSocietyWithISYear(beneficeYear3, 3, forme.id, this.simulationParams.ratioSalaire, this.simulationParams.ratioDividendes);
             }
             
-            // Calculer les montants nets
-            const netAnnee1 = Math.round(beneficeAnnee1 * (1 - tauxPrelevement));
-            const netAnnee2 = Math.round(beneficeAnnee2 * (1 - tauxPrelevement));
-            const netAnnee3 = Math.round(beneficeAnnee3 * (1 - tauxPrelevement));
-            
-            // Calculer le cumul sur 3 ans
-            const cumulNet = netAnnee1 + netAnnee2 + netAnnee3;
-            const cumulCA = caAnnee1 + caAnnee2 + caAnnee3;
+            // Calcul du bénéfice pour chaque année
+            const beneficeYear1 = caYear1 * (tauxMarge / 100);
+            const beneficeYear2 = caYear2 * (tauxMarge / 100);
+            const beneficeYear3 = caYear3 * (tauxMarge / 100);
             
             return `
-            <div class="projection-container">
-                <h4 class="font-semibold text-green-400 mb-3">Projection pluriannuelle - ${forme.nom}</h4>
+            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-4">
+                <h4 class="font-semibold text-green-400 mb-3">Projection sur 3 ans</h4>
                 
-                <div class="year-tabs">
-                    <div class="year-tab active" data-year="1">Année 1</div>
-                    <div class="year-tab" data-year="2">Année 2</div>
-                    <div class="year-tab" data-year="3">Année 3</div>
-                    <div class="year-tab" data-year="cumul">Cumul 3 ans</div>
+                <div class="year-tabs flex border-b border-gray-700 mb-4">
+                    <div class="year-tab active px-4 py-2 cursor-pointer" data-year="1">Année 1</div>
+                    <div class="year-tab px-4 py-2 cursor-pointer" data-year="2">Année 2</div>
+                    <div class="year-tab px-4 py-2 cursor-pointer" data-year="3">Année 3</div>
                 </div>
                 
                 <div class="year-content active" id="year-content-1">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="p-3 bg-blue-900 bg-opacity-20 rounded-lg text-center">
-                            <div class="text-sm">Chiffre d'affaires</div>
-                            <div class="font-semibold text-xl">${caAnnee1.toLocaleString('fr-FR')} €</div>
+                    <h5 class="font-medium mb-2">Année 1 ${resultYear1.acre ? '<span class="acre-badge"><i class="fas fa-star"></i> ACRE</span>' : ''}</h5>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                            <div class="text-xs text-gray-400">Chiffre d'affaires</div>
+                            <div class="text-xl font-semibold">${caYear1.toLocaleString('fr-FR')} €</div>
                         </div>
-                        <div class="p-3 bg-blue-900 bg-opacity-20 rounded-lg text-center">
-                            <div class="text-sm">Bénéfice (${tauxMarge}%)</div>
-                            <div class="font-semibold text-xl">${Math.round(beneficeAnnee1).toLocaleString('fr-FR')} €</div>
+                        <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                            <div class="text-xs text-gray-400">Charges sociales</div>
+                            <div class="text-xl font-semibold">${resultYear1.charges.toLocaleString('fr-FR')} €</div>
+                            ${resultYear1.acre ? '<div class="text-xs text-green-400">Réduction ACRE appliquée (-50%)</div>' : ''}
                         </div>
-                        <div class="p-3 bg-blue-900 bg-opacity-20 rounded-lg text-center">
-                            <div class="text-sm">Revenu net estimé</div>
-                            <div class="font-semibold text-xl text-green-400">${netAnnee1.toLocaleString('fr-FR')} €</div>
+                        <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                            <div class="text-xs text-gray-400">Impôts</div>
+                            <div class="text-xl font-semibold">${resultYear1.impots.toLocaleString('fr-FR')} €</div>
+                        </div>
+                        <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                            <div class="text-xs text-gray-400">Revenu net</div>
+                            <div class="text-xl font-semibold text-green-400">${resultYear1.net.toLocaleString('fr-FR')} €</div>
                         </div>
                     </div>
+                    ${forme.fiscalite === 'IS' || forme.fiscaliteOption === 'Oui' ? `
+                    <div class="mt-3 bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                        <p class="text-sm mb-2">Répartition appliquée: ${this.simulationParams.ratioSalaire}% salaire / ${this.simulationParams.ratioDividendes}% dividendes</p>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                                <div class="text-xs opacity-70">Salaire net</div>
+                                <div>${Math.round(resultYear1.salaireNet || 0).toLocaleString('fr-FR')} €</div>
+                            </div>
+                            <div>
+                                <div class="text-xs opacity-70">Dividendes nets</div>
+                                <div>${Math.round(resultYear1.dividendesNet || 0).toLocaleString('fr-FR')} €</div>
+                            </div>
+                        </div>
+                    </div>` : ''}
                 </div>
                 
-                <div class="year-content" id="year-content-2">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="p-3 bg-blue-900 bg-opacity-20 rounded-lg text-center">
-                            <div class="text-sm">Chiffre d'affaires</div>
-                            <div class="font-semibold text-xl">${caAnnee2.toLocaleString('fr-FR')} €</div>
-                            <div class="text-xs text-green-400">+20% vs Année 1</div>
+                <div class="year-content hidden" id="year-content-2">
+                    <h5 class="font-medium mb-2">Année 2</h5>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                            <div class="text-xs text-gray-400">Chiffre d'affaires</div>
+                            <div class="text-xl font-semibold">${caYear2.toLocaleString('fr-FR')} €</div>
+                            <div class="text-xs text-green-400">+20% vs année 1</div>
                         </div>
-                        <div class="p-3 bg-blue-900 bg-opacity-20 rounded-lg text-center">
-                            <div class="text-sm">Bénéfice (${tauxMarge}%)</div>
-                            <div class="font-semibold text-xl">${Math.round(beneficeAnnee2).toLocaleString('fr-FR')} €</div>
+                        <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                            <div class="text-xs text-gray-400">Charges sociales</div>
+                            <div class="text-xl font-semibold">${resultYear2.charges.toLocaleString('fr-FR')} €</div>
                         </div>
-                        <div class="p-3 bg-blue-900 bg-opacity-20 rounded-lg text-center">
-                            <div class="text-sm">Revenu net estimé</div>
-                            <div class="font-semibold text-xl text-green-400">${netAnnee2.toLocaleString('fr-FR')} €</div>
+                        <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                            <div class="text-xs text-gray-400">Impôts</div>
+                            <div class="text-xl font-semibold">${resultYear2.impots.toLocaleString('fr-FR')} €</div>
+                        </div>
+                        <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                            <div class="text-xs text-gray-400">Revenu net</div>
+                            <div class="text-xl font-semibold text-green-400">${resultYear2.net.toLocaleString('fr-FR')} €</div>
                         </div>
                     </div>
+                    ${forme.fiscalite === 'IS' || forme.fiscaliteOption === 'Oui' ? `
+                    <div class="mt-3 bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                        <p class="text-sm mb-2">Répartition appliquée: ${this.simulationParams.ratioSalaire}% salaire / ${this.simulationParams.ratioDividendes}% dividendes</p>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                                <div class="text-xs opacity-70">Salaire net</div>
+                                <div>${Math.round(resultYear2.salaireNet || 0).toLocaleString('fr-FR')} €</div>
+                            </div>
+                            <div>
+                                <div class="text-xs opacity-70">Dividendes nets</div>
+                                <div>${Math.round(resultYear2.dividendesNet || 0).toLocaleString('fr-FR')} €</div>
+                            </div>
+                        </div>
+                    </div>` : ''}
                 </div>
                 
-                <div class="year-content" id="year-content-3">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="p-3 bg-blue-900 bg-opacity-20 rounded-lg text-center">
-                            <div class="text-sm">Chiffre d'affaires</div>
-                            <div class="font-semibold text-xl">${caAnnee3.toLocaleString('fr-FR')} €</div>
-                            <div class="text-xs text-green-400">+40% vs Année 1</div>
+                <div class="year-content hidden" id="year-content-3">
+                    <h5 class="font-medium mb-2">Année 3</h5>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                            <div class="text-xs text-gray-400">Chiffre d'affaires</div>
+                            <div class="text-xl font-semibold">${caYear3.toLocaleString('fr-FR')} €</div>
+                            <div class="text-xs text-green-400">+44% vs année 1</div>
                         </div>
-                        <div class="p-3 bg-blue-900 bg-opacity-20 rounded-lg text-center">
-                            <div class="text-sm">Bénéfice (${tauxMarge}%)</div>
-                            <div class="font-semibold text-xl">${Math.round(beneficeAnnee3).toLocaleString('fr-FR')} €</div>
+                        <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                            <div class="text-xs text-gray-400">Charges sociales</div>
+                            <div class="text-xl font-semibold">${resultYear3.charges.toLocaleString('fr-FR')} €</div>
                         </div>
-                        <div class="p-3 bg-blue-900 bg-opacity-20 rounded-lg text-center">
-                            <div class="text-sm">Revenu net estimé</div>
-                            <div class="font-semibold text-xl text-green-400">${netAnnee3.toLocaleString('fr-FR')} €</div>
+                        <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                            <div class="text-xs text-gray-400">Impôts</div>
+                            <div class="text-xl font-semibold">${resultYear3.impots.toLocaleString('fr-FR')} €</div>
+                        </div>
+                        <div class="bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                            <div class="text-xs text-gray-400">Revenu net</div>
+                            <div class="text-xl font-semibold text-green-400">${resultYear3.net.toLocaleString('fr-FR')} €</div>
                         </div>
                     </div>
+                    ${forme.fiscalite === 'IS' || forme.fiscaliteOption === 'Oui' ? `
+                    <div class="mt-3 bg-blue-800 bg-opacity-40 p-3 rounded-lg">
+                        <p class="text-sm mb-2">Répartition appliquée: ${this.simulationParams.ratioSalaire}% salaire / ${this.simulationParams.ratioDividendes}% dividendes</p>
+                        <div class="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                                <div class="text-xs opacity-70">Salaire net</div>
+                                <div>${Math.round(resultYear3.salaireNet || 0).toLocaleString('fr-FR')} €</div>
+                            </div>
+                            <div>
+                                <div class="text-xs opacity-70">Dividendes nets</div>
+                                <div>${Math.round(resultYear3.dividendesNet || 0).toLocaleString('fr-FR')} €</div>
+                            </div>
+                        </div>
+                    </div>` : ''}
                 </div>
                 
-                <div class="year-content" id="year-content-cumul">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="p-3 bg-blue-900 bg-opacity-20 rounded-lg text-center">
-                            <div class="text-sm">Chiffre d'affaires cumulé</div>
-                            <div class="font-semibold text-xl">${cumulCA.toLocaleString('fr-FR')} €</div>
+                <div class="mt-4 pt-4 border-t border-gray-700">
+                    <h5 class="font-medium mb-2">Résumé sur 3 ans</h5>
+                    <div class="grid grid-cols-3 gap-4 text-center">
+                        <div>
+                            <div class="text-sm text-gray-400">Année 1</div>
+                            <div class="font-semibold text-lg">${resultYear1.net.toLocaleString('fr-FR')} €</div>
                         </div>
-                        <div class="p-3 bg-blue-900 bg-opacity-20 rounded-lg text-center">
-                            <div class="text-sm">Bénéfice cumulé</div>
-                            <div class="font-semibold text-xl">${Math.round(cumulCA * (tauxMarge / 100)).toLocaleString('fr-FR')} €</div>
+                        <div>
+                            <div class="text-sm text-gray-400">Année 2</div>
+                            <div class="font-semibold text-lg">${resultYear2.net.toLocaleString('fr-FR')} €</div>
                         </div>
-                        <div class="p-3 bg-blue-900 bg-opacity-20 rounded-lg text-center">
-                            <div class="text-sm">Revenu net cumulé</div>
-                            <div class="font-semibold text-xl text-green-400">${cumulNet.toLocaleString('fr-FR')} €</div>
+                        <div>
+                            <div class="text-sm text-gray-400">Année 3</div>
+                            <div class="font-semibold text-lg">${resultYear3.net.toLocaleString('fr-FR')} €</div>
                         </div>
                     </div>
-                    
-                    <div class="mt-4 p-3 bg-green-900 bg-opacity-20 rounded-lg">
-                        <p class="flex items-center">
-                            <i class="fas fa-info-circle mr-2 text-green-400"></i>
-                            <span>
-                                <strong>Projection à 3 ans :</strong> 
-                                Avec la forme juridique ${forme.nom}, vous pouvez espérer un revenu net cumulé 
-                                d'environ ${cumulNet.toLocaleString('fr-FR')} € sur 3 ans, 
-                                soit une moyenne de ${Math.round(cumulNet / 3).toLocaleString('fr-FR')} € par an.
-                            </span>
-                        </p>
+                    <div class="mt-2 text-center">
+                        <div class="text-sm text-gray-400">Total sur 3 ans</div>
+                        <div class="font-semibold text-xl text-green-400">${(resultYear1.net + resultYear2.net + resultYear3.net).toLocaleString('fr-FR')} €</div>
                     </div>
                 </div>
             </div>`;
         },
         
-        // Ajoute les stratégies optimales pour cette forme juridique
+        // Nouvelle méthode pour calculer les résultats d'une année en Micro-entreprise
+        calculateMicroEntrepriseYear: function(benefice, yearNumber, formeId) {
+            // Abattement forfaitaire selon le type d'activité
+            const abattement = this.getAbattement(userResponses.typeActivite);
+            
+            // Prendre en compte l'ACRE si activé (seulement première année)
+            const acreReduction = (this.simulationParams.acreActif && yearNumber === 1) ? 0.5 : 1;
+            
+            // Calculer les charges sociales (22% en moyenne, -50% avec ACRE année 1)
+            const chargesSociales = benefice * 0.22 * acreReduction;
+            
+            // Calculer le revenu après charges sociales
+            const revenuApresCharges = benefice - chargesSociales;
+            
+            // Calculer le revenu fiscal (après abattement forfaitaire)
+            const revenuFiscal = revenuApresCharges * (1 - abattement);
+            
+            // Calculer l'impôt (simplifié, devrait utiliser le barème progressif)
+            const impot = this.calculerImpotProgressif(revenuFiscal);
+            
+            // Revenu net final
+            const revenuNet = revenuApresCharges - impot;
+            
+            return {
+                benefice: Math.round(benefice),
+                charges: Math.round(chargesSociales),
+                impots: Math.round(impot),
+                net: Math.round(revenuNet),
+                acre: (this.simulationParams.acreActif && yearNumber === 1)
+            };
+        },
+        
+        // Nouvelle méthode pour calculer les résultats d'une année pour société avec IS
+        calculateSocietyWithISYear: function(benefice, yearNumber, formeId, ratioSalaire, ratioDividendes) {
+            // Répartition du bénéfice selon les ratios choisis
+            const montantSalaire = benefice * (ratioSalaire / 100);
+            const montantDividendesBrut = benefice * (ratioDividendes / 100);
+            
+            // Prendre en compte l'ACRE si activé (seulement première année)
+            const acreReduction = (this.simulationParams.acreActif && yearNumber === 1 && 
+                                  (formeId === 'eurl' || formeId === 'sasu')) ? 0.5 : 1;
+            
+            // 1. Calcul pour la part salaire
+            // Charges patronales (environ 42% en moyenne)
+            const chargesPatronales = montantSalaire * 0.42 * acreReduction;
+            
+            // Charges salariales (environ 22% en moyenne)
+            const chargesSalariales = montantSalaire * 0.22;
+            
+            // Salaire net avant impôt
+            const salaireNetAvantImpot = montantSalaire - chargesSalariales;
+            
+            // Impôt sur le revenu sur salaire (simplifié)
+            const impotSalaire = this.calculerImpotProgressif(salaireNetAvantImpot);
+            
+            // Salaire net après impôt
+            const salaireNetApresImpot = salaireNetAvantImpot - impotSalaire;
+            
+            // 2. Calcul pour la part dividendes
+            // Impôt sur les sociétés (25% standard, 15% taux réduit jusqu'à 42.5K€)
+            const tauxIS = (benefice <= 42500) ? 0.15 : 0.25;
+            const impotSociete = montantDividendesBrut * tauxIS;
+            
+            // Dividendes nets d'IS
+            const dividendesNetsIS = montantDividendesBrut - impotSociete;
+            
+            // Prélèvements sociaux sur dividendes (17.2%)
+            const prelevementsSociauxDividendes = dividendesNetsIS * 0.172;
+            
+            // PFU ou barème progressif sur dividendes (simplifié avec PFU à 12.8%)
+            const impotDividendes = dividendesNetsIS * 0.128;
+            
+            // Dividendes nets après fiscalité
+            const dividendesNetsApresImpot = dividendesNetsIS - prelevementsSociauxDividendes - impotDividendes;
+            
+            // 3. Total des charges et impôts
+            const totalCharges = chargesPatronales + chargesSalariales + prelevementsSociauxDividendes;
+            const totalImpots = impotSalaire + impotSociete + impotDividendes;
+            
+            // 4. Revenu net total
+            const revenuNetTotal = salaireNetApresImpot + dividendesNetsApresImpot;
+            
+            return {
+                benefice: Math.round(benefice),
+                charges: Math.round(totalCharges),
+                impots: Math.round(totalImpots),
+                net: Math.round(revenuNetTotal),
+                acre: (this.simulationParams.acreActif && yearNumber === 1),
+                salaireNet: Math.round(salaireNetApresImpot),
+                dividendesNet: Math.round(dividendesNetsApresImpot)
+            };
+        },
+        
+        // Méthode auxiliaire pour obtenir l'abattement forfaitaire selon type d'activité
+        getAbattement: function(typeActivite) {
+            switch(typeActivite) {
+                case 'bic-vente':
+                    return 0.71; // 71% d'abattement pour vente de marchandises
+                case 'bic-service':
+                    return 0.50; // 50% pour prestations de services BIC
+                case 'bnc':
+                    return 0.34; // 34% pour professions libérales BNC
+                case 'artisanale':
+                    return 0.50; // 50% pour artisans
+                default:
+                    return 0.34; // Valeur par défaut
+            }
+        },
+        
+        // Méthode pour calculer l'impôt sur le revenu avec barème progressif
+        calculerImpotProgressif: function(revenuImposable) {
+            // Récupérer la TMI de l'utilisateur
+            const tmi = userResponses.tmiActuel || 30;
+            
+            // Calculer l'impôt selon la TMI (très simplifié)
+            // Dans une vraie implémentation, il faudrait appliquer les tranches complètes
+            return revenuImposable * (tmi / 100);
+        },
+        
+        // Génère des conseils stratégiques personnalisés
         renderOptimalStrategies: function(forme, userResponses) {
-            let strategiesHtml = `
-                <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mt-8">
-                    <h4 class="font-semibold text-green-400 mb-3">Stratégies optimales avec ${forme.nom}</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            let strategies = [];
+            
+            // Déterminer les stratégies selon la forme juridique et le profil
+            if (forme.id === 'micro-entreprise') {
+                strategies.push({
+                    titre: "Optimisation de la trésorerie",
+                    description: "Profitez de l'absence de TVA sous le seuil de franchise pour améliorer votre trésorerie.",
+                    icon: "fa-coins"
+                });
+                
+                if (userResponses.tmiActuel <= 11) {
+                    strategies.push({
+                        titre: "Option pour le versement libératoire",
+                        description: "Avec votre TMI actuelle, le versement libératoire de l'impôt (VLI) est avantageux.",
+                        icon: "fa-percent"
+                    });
+                }
+                
+                strategies.push({
+                    titre: "Surveillance du seuil",
+                    description: `Surveillez votre CA pour ne pas dépasser le seuil de ${forme.plafondCA}.`,
+                    icon: "fa-chart-line"
+                });
+            } else if (forme.id === 'ei') {
+                strategies.push({
+                    titre: "Déduction des charges réelles",
+                    description: "Optimisez votre fiscalité en déduisant toutes vos charges réelles.",
+                    icon: "fa-receipt"
+                });
+                
+                strategies.push({
+                    titre: "Protection patrimoniale",
+                    description: "Envisagez une déclaration d'insaisissabilité pour renforcer la protection de votre patrimoine personnel.",
+                    icon: "fa-home"
+                });
+            } else if (forme.id === 'eurl') {
+                if (forme.fiscaliteOption === 'Oui') {
+                    strategies.push({
+                        titre: "Optimisation fiscale",
+                        description: `Adaptez votre régime fiscal (IR/IS) selon l'évolution de votre activité et de votre TMI.`,
+                        icon: "fa-balance-scale"
+                    });
+                }
+                
+                strategies.push({
+                    titre: "Gestion de la rémunération",
+                    description: `Répartissez judicieusement entre salaire et dividendes (ratio optimal: ${this.simulationParams.ratioSalaire}/${this.simulationParams.ratioDividendes}).`,
+                    icon: "fa-percentage"
+                });
+            } else if (forme.id === 'sasu') {
+                strategies.push({
+                    titre: "Optimisation salaire/dividendes",
+                    description: `Adaptez votre rémunération entre salaire et dividendes selon votre TMI (${userResponses.tmiActuel}%).`,
+                    icon: "fa-coins"
+                });
+                
+                strategies.push({
+                    titre: "Prestations TNS",
+                    description: "Profitez des prestations du régime général (chômage, retraite, etc.) de votre statut assimilé-salarié.",
+                    icon: "fa-user-shield"
+                });
+                
+                strategies.push({
+                    titre: "Préparation levée de fonds",
+                    description: "Structure idéale pour accueillir des investisseurs, préparez une documentation adaptée.",
+                    icon: "fa-chart-line"
+                });
+            }
+            
+            if (userResponses.aides.includes('acre')) {
+                strategies.push({
+                    titre: "ACRE",
+                    description: "Profitez de l'exonération partielle de charges sociales pendant la première année.",
+                    icon: "fa-star"
+                });
+            }
+            
+            // Générer le HTML pour les stratégies
+            let html = `
+            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-6">
+                <h4 class="font-semibold text-green-400 mb-4">Stratégies optimales pour votre ${forme.nom}</h4>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             `;
             
-            // Stratégies spécifiques par forme juridique
-            const strategies = {
-                'micro-entreprise': [
-                    {
-                        title: "Optimisation fiscale",
-                        content: `${userResponses.tmiActuel <= 11 ? 
-                            "Optez pour le versement libératoire de l'impôt sur le revenu (avantage avec votre TMI actuelle)." : 
-                            "Surveillez l'évolution de votre TMI pour évaluer l'intérêt du versement libératoire de l'IR."}`,
-                        icon: "fa-percentage"
-                    },
-                    {
-                        title: "Charges déductibles",
-                        content: "Valorisez les frais que vous pouvez déduire de votre CA (frais de déplacement, repas, etc.) même en micro-entreprise.",
-                        icon: "fa-receipt"
-                    },
-                    {
-                        title: "Suivi de seuils",
-                        content: "Surveillez votre CA pour anticiper un éventuel dépassement de seuil et un changement de régime.",
-                        icon: "fa-chart-line"
-                    },
-                    {
-                        title: "ACRE",
-                        content: "Si éligible, profitez de l'ACRE pour réduire vos charges sociales de 50% la première année.",
-                        icon: "fa-piggy-bank"
-                    }
-                ],
-                'ei': [
-                    {
-                        title: "Déduction maximale",
-                        content: "Optimisez votre résultat fiscal en déduisant toutes les charges professionnelles justifiées.",
-                        icon: "fa-calculator"
-                    },
-                    {
-                        title: "Protection du patrimoine",
-                        content: "Envisagez une déclaration d'insaisissabilité pour protéger votre résidence principale.",
-                        icon: "fa-home"
-                    },
-                    {
-                        title: "Gestion de trésorerie",
-                        content: "Provisionnez vos impôts et charges pour éviter les difficultés de trésorerie.",
-                        icon: "fa-wallet"
-                    },
-                    {
-                        title: "Évolution vers une société",
-                        content: "Préparez une transformation en EURL/SASU si votre activité se développe fortement.",
-                        icon: "fa-arrow-up"
-                    }
-                ],
-                'eurl': [
-                    {
-                        title: "Option fiscale",
-                        content: `${userResponses.tmiActuel >= 30 ? 
-                            "Avec votre TMI élevée, l'option pour l'IS peut être avantageuse." : 
-                            "L'IR peut être intéressant si vos revenus personnels sont faibles."}`,
-                        icon: "fa-balance-scale"
-                    },
-                    {
-                        title: "Rémunération",
-                        content: "Si à l'IS, déterminez une rémunération optimale entre salaire et dividendes.",
-                        icon: "fa-money-bill-wave"
-                    },
-                    {
-                        title: "Amortissements",
-                        content: "Utilisez les amortissements pour étaler les investissements et réduire le résultat imposable.",
-                        icon: "fa-chart-bar"
-                    },
-                    {
-                        title: "Transformation",
-                        content: "Possibilité de transformer en SARL ou SAS sans nouvelle immatriculation si besoin d'associés.",
-                        icon: "fa-exchange-alt"
-                    }
-                ],
-                'sasu': [
-                    {
-                        title: "Arbitrage rémunération",
-                        content: "Optimisez la répartition entre salaire et dividendes selon votre TMI et vos besoins.",
-                        icon: "fa-balance-scale-left"
-                    },
-                    {
-                        title: "Cotisations retraite",
-                        content: "Bénéficiez du régime général de sécurité sociale, avantageux pour la retraite.",
-                        icon: "fa-user-clock"
-                    },
-                    {
-                        title: "Holding",
-                        content: "Envisagez une structure holding pour optimiser fiscalement une transmission ou revente future.",
-                        icon: "fa-sitemap"
-                    },
-                    {
-                        title: "Chômage",
-                        content: "Possibilité de cotiser pour l'assurance chômage via la GSC (garantie sociale des chefs d'entreprise).",
-                        icon: "fa-umbrella"
-                    }
-                ]
-            };
-            
-            // Stratégies génériques pour les formes non listées
-            const strategiesGeneriques = [
-                {
-                    title: "Choix du régime fiscal",
-                    content: `Évaluez régulièrement l'intérêt de changer de régime fiscal selon l'évolution de vos revenus.`,
-                    icon: "fa-file-invoice-dollar"
-                },
-                {
-                    title: "Optimisation des charges",
-                    content: "Structurez vos dépenses pour maximiser les charges déductibles tout en respectant la législation.",
-                    icon: "fa-receipt"
-                },
-                {
-                    title: "Protection du patrimoine",
-                    content: "Séparez clairement votre patrimoine personnel et professionnel pour une meilleure protection.",
-                    icon: "fa-shield-alt"
-                },
-                {
-                    title: "Planification fiscale",
-                    content: "Anticipez vos impôts et charges pour éviter les surprises et optimiser votre trésorerie.",
-                    icon: "fa-calendar-alt"
-                }
-            ];
-            
-            // Récupérer les stratégies spécifiques ou utiliser les génériques
-            const formeStrategies = strategies[forme.id] || strategiesGeneriques;
-            
-            // Générer le HTML pour chaque stratégie
-            formeStrategies.forEach(strategy => {
-                strategiesHtml += `
-                    <div class="p-3 bg-blue-900 bg-opacity-20 rounded-lg">
-                        <div class="flex items-start">
-                            <div class="mt-1 mr-3 rounded-full bg-green-900 bg-opacity-30 p-2 h-10 w-10 flex items-center justify-center">
-                                <i class="fas ${strategy.icon} text-green-400"></i>
-                            </div>
-                            <div>
-                                <h5 class="font-semibold mb-1">${strategy.title}</h5>
-                                <p class="text-sm">${strategy.content}</p>
-                            </div>
+            strategies.forEach(strategy => {
+                html += `
+                <div class="bg-blue-800 bg-opacity-20 p-4 rounded-lg">
+                    <div class="flex items-start">
+                        <div class="bg-green-900 bg-opacity-30 rounded-full p-3 mr-3">
+                            <i class="fas ${strategy.icon} text-green-400"></i>
+                        </div>
+                        <div>
+                            <h5 class="font-semibold mb-1">${strategy.titre}</h5>
+                            <p class="text-sm">${strategy.description}</p>
                         </div>
                     </div>
+                </div>
                 `;
             });
             
-            strategiesHtml += `
-                    </div>
+            html += `
                 </div>
+            </div>
             `;
             
-            return strategiesHtml;
+            return html;
         }
     };
 
-    // Initialisation du gestionnaire de stockage
+    // Gestionnaire de stockage pour sauvegarder la progression
     const StorageManager = {
+        // Sauvegarde la progression dans le localStorage
         saveProgress: function() {
             localStorage.setItem('entreprise-form-progress', JSON.stringify(userResponses));
         },
         
+        // Récupère la progression depuis le localStorage
         loadProgress: function() {
-            const savedData = localStorage.getItem('entreprise-form-progress');
-            if (savedData) {
-                userResponses = JSON.parse(savedData);
+            const savedProgress = localStorage.getItem('entreprise-form-progress');
+            if (savedProgress) {
+                userResponses = JSON.parse(savedProgress);
                 return true;
             }
             return false;
         }
     };
 
-    // Initialisation
+    // Initialisation des réponses utilisateur
     let userResponses = {
         // Section 1: Profil & Horizon Personnel
         tmiActuel: 30,
@@ -1588,13 +2606,66 @@ document.addEventListener('DOMContentLoaded', function() {
         regimeFiscal: null,
         regimeSocial: null
     };
-    
-    // Charger les données sauvegardées
+
+    // Tenter de restaurer la progression
     if (StorageManager.loadProgress()) {
-        console.log('Données chargées depuis localStorage');
+        console.log('Progression restaurée depuis le localStorage');
     }
-    
-    // Initialiser les gestionnaires
+
+    // Initialisation de l'application
     FormManager.init();
     ResultsManager.init();
+    
+    // Affichage de la première section
+    FormManager.showSection(1);
+    
+    // Mise à jour de la date de dernière mise à jour
+    const lastUpdateDateElement = document.getElementById('lastUpdateDate');
+    if (lastUpdateDateElement) {
+        lastUpdateDateElement.textContent = '24/04/2025';
+    }
+    
+    // Mise à jour du temps actuel de marché
+    const marketTimeElement = document.getElementById('marketTime');
+    if (marketTimeElement) {
+        const updateMarketTime = () => {
+            const now = new Date();
+            marketTimeElement.textContent = now.toLocaleTimeString('fr-FR');
+        };
+        
+        updateMarketTime();
+        setInterval(updateMarketTime, 1000);
+    }
+    
+    // Écouteur pour le bouton "Voir les autres options"
+    const showMoreResults = document.getElementById('show-more-results');
+    const secondaryResults = document.getElementById('secondary-results');
+    
+    if (showMoreResults && secondaryResults) {
+        showMoreResults.addEventListener('click', function() {
+            if (secondaryResults.classList.contains('hidden')) {
+                secondaryResults.classList.remove('hidden');
+                this.querySelector('i').classList.remove('fa-chevron-down');
+                this.querySelector('i').classList.add('fa-chevron-up');
+                this.querySelector('span').textContent = 'Masquer les autres options';
+            } else {
+                secondaryResults.classList.add('hidden');
+                this.querySelector('i').classList.remove('fa-chevron-up');
+                this.querySelector('i').classList.add('fa-chevron-down');
+                this.querySelector('span').textContent = 'Voir les autres options compatibles';
+            }
+        });
+    }
+    
+    // Écouteur pour afficher/masquer les détails de calcul
+    document.addEventListener('toggleCalculationDetails', function(e) {
+        const calculationDetails = document.querySelectorAll('.calculation-details');
+        calculationDetails.forEach(detail => {
+            if (e.detail.visible) {
+                detail.classList.remove('hidden');
+            } else {
+                detail.classList.add('hidden');
+            }
+        });
+    });
 });
