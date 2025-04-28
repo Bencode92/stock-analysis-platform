@@ -81,9 +81,8 @@
           "gpt_summary": "📰 The theme **geopolitics** was detected in **7 articles** during the period, mainly through topics like: war (4), china (1). Sentiment is mostly negative (57.1% vs 14.3% positive). Examples of articles: « U.S. could dip into recession on trade war, French central banker says », « EU hands Apple, Meta massive fines despite warnings from Trump », « IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries »."
         },
         "recession": {
-          "count": 5,
+          "count": 4,
           "articles": [
-            "Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline",
             "Americans are getting flashbacks to 2008 as tariffs stoke recession fears",
             "U.S. could dip into recession on trade war, French central banker says",
             "Lower growth expectations linked to tariffs a 'clear catalyst' for ECB decision, economist says",
@@ -104,11 +103,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 20.0,
+            "positive": 25.0,
             "neutral": 0.0,
-            "negative": 80.0
+            "negative": 75.0
           },
-          "gpt_summary": "📰 The theme **recession** was detected in **5 articles** during the period, mainly through topics like: recession (1), growth (1). Sentiment is mostly negative (80.0% vs 20.0% positive). Examples of articles: « Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline », « Americans are getting flashbacks to 2008 as tariffs stoke recession fears », « U.S. could dip into recession on trade war, French central banker says »."
+          "gpt_summary": "📰 The theme **recession** was detected in **4 articles** during the period, mainly through topics like: recession (1), growth (1). Sentiment is mostly negative (75.0% vs 25.0% positive). Examples of articles: « Americans are getting flashbacks to 2008 as tariffs stoke recession fears », « U.S. could dip into recession on trade war, French central banker says », « Lower growth expectations linked to tariffs a 'clear catalyst' for ECB decision, economist says »."
         },
         "inflation": {
           "count": 1,
@@ -167,10 +166,37 @@
           },
           "gpt_summary": "📰 The theme **technology** was detected in **9 articles** during the period, mainly through topics like: ai (6), tech (1), digital (1). Sentiment is mostly negative (44.4% vs 11.1% positive). Examples of articles: « Why dividend income may have its day in uncertain stock and bond market », « Canada February retail sales fall 0.4%; seen up 0.7% in March », « EU Fines Apple and Meta for Digital Markets Act Violations »."
         },
-        "transport": {
+        "industry": {
           "count": 3,
           "articles": [
-            "Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline",
+            "Drugmakers brace for Trump tariffs with production shifts",
+            "Street's biggest Apple bear says a production move to India is unrealistic",
+            "Even if tariffs end, the damage to the global supply chain is done, says Overhaul's David Warrick"
+          ],
+          "keywords": {
+            "manufacturing": {
+              "count": 1,
+              "examples": [
+                "Drugmakers brace for Trump tariffs with production shifts"
+              ]
+            },
+            "supply chain": {
+              "count": 1,
+              "examples": [
+                "Even if tariffs end, the damage to the global supply chain is done, says Overhaul's David Warrick"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 0.0,
+            "neutral": 66.7,
+            "negative": 33.3
+          },
+          "gpt_summary": "📰 The theme **industry** was detected in **3 articles** during the period, mainly through topics like: manufacturing (1), supply chain (1). Sentiment is mostly negative (33.3% vs 0.0% positive). Examples of articles: « Drugmakers brace for Trump tariffs with production shifts », « Street's biggest Apple bear says a production move to India is unrealistic », « Even if tariffs end, the damage to the global supply chain is done, says Overhaul's David Warrick »."
+        },
+        "transport": {
+          "count": 2,
+          "articles": [
             "EU spokesperson: Apple and Meta fines are \"proportionate\"",
             "Business already are trying to pass tariff cost onto customers, Fed report says"
           ],
@@ -184,32 +210,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 33.3,
-            "neutral": 33.3,
-            "negative": 33.3
-          },
-          "gpt_summary": "📰 The theme **transport** was detected in **3 articles** during the period, mainly through topics like: port (2). Sentiment is mixed (33.3% positive, 33.3% negative). Examples of articles: « Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline », « EU spokesperson: Apple and Meta fines are \"proportionate\" », « Business already are trying to pass tariff cost onto customers, Fed report says »."
-        },
-        "industry": {
-          "count": 2,
-          "articles": [
-            "Street's biggest Apple bear says a production move to India is unrealistic",
-            "Even if tariffs end, the damage to the global supply chain is done, says Overhaul's David Warrick"
-          ],
-          "keywords": {
-            "supply chain": {
-              "count": 1,
-              "examples": [
-                "Even if tariffs end, the damage to the global supply chain is done, says Overhaul's David Warrick"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 0.0,
+            "positive": 50.0,
             "neutral": 50.0,
-            "negative": 50.0
+            "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **industry** was detected in **2 articles** during the period, mainly through topics like: supply chain (1). Sentiment is mostly negative (50.0% vs 0.0% positive). Examples of articles: « Street's biggest Apple bear says a production move to India is unrealistic », « Even if tariffs end, the damage to the global supply chain is done, says Overhaul's David Warrick »."
+          "gpt_summary": "📰 The theme **transport** was detected in **2 articles** during the period, mainly through topics like: port (2). Sentiment is mostly positive (50.0% vs 0.0% negative). Examples of articles: « EU spokesperson: Apple and Meta fines are \"proportionate\" », « Business already are trying to pass tariff cost onto customers, Fed report says »."
         },
         "finance": {
           "count": 2,
@@ -438,6 +443,59 @@
     },
     "monthly": {
       "macroeconomics": {
+        "geopolitics": {
+          "count": 18,
+          "articles": [
+            "Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout",
+            "Taiwan's Formosa cuts refinery run rate to 68% on planned maintenance",
+            "U.S. could dip into recession on trade war, French central banker says",
+            "Countries May Have To Choose Between China And The U.S.: Implications For Markets",
+            "EU hands Apple, Meta massive fines despite warnings from Trump",
+            "IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries",
+            "How China used Vietnam to evade higher U.S. tariffs",
+            "Stocks fall, US-China trade war and the economic impact, Fed's inflation problem",
+            "Apple is left without a life raft as Trump's China trade war intensifies, analysts warn",
+            "Trump's new tariff on China is 'more of an embargo,' Jim Cramer says",
+            "Citadel's Ken Griffin warns Trump about tarnishing the 'brand' of U.S. Treasurys",
+            "Trump's trade war ripples through the business world, hits stocks again",
+            "The trade war will make the Fed hikes interest rates, says Sri-Kumar Global's Komal Sri-Kumar",
+            "Equities are going to ‘tank again in a big way', warns global strategist",
+            "Tariffs, tech, and the hidden cost of your iPhone: Leading investment bank warns of supply chain fallout",
+            "Trump trade war escalation sparks global market sell-off",
+            "Even if tariffs end, the damage to the global supply chain is done, says Overhaul's David Warrick",
+            "Top American trend forecaster warns of ‘dot-com bust 2.0'"
+          ],
+          "keywords": {
+            "war": {
+              "count": 11,
+              "examples": [
+                "Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout",
+                "U.S. could dip into recession on trade war, French central banker says",
+                "Countries May Have To Choose Between China And The U.S.: Implications For Markets"
+              ]
+            },
+            "taiwan": {
+              "count": 1,
+              "examples": [
+                "Taiwan's Formosa cuts refinery run rate to 68% on planned maintenance"
+              ]
+            },
+            "china": {
+              "count": 5,
+              "examples": [
+                "Countries May Have To Choose Between China And The U.S.: Implications For Markets",
+                "IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries",
+                "How China used Vietnam to evade higher U.S. tariffs"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 5.6,
+            "neutral": 38.9,
+            "negative": 55.6
+          },
+          "gpt_summary": "📰 The theme **geopolitics** was detected in **18 articles** during the period, mainly through topics like: war (11), china (5), taiwan (1). Sentiment is mostly negative (55.6% vs 5.6% positive). Examples of articles: « Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout », « Taiwan's Formosa cuts refinery run rate to 68% on planned maintenance », « U.S. could dip into recession on trade war, French central banker says »."
+        },
         "monetary_policy": {
           "count": 17,
           "articles": [
@@ -496,62 +554,9 @@
           },
           "gpt_summary": "📰 The theme **monetary_policy** was detected in **17 articles** during the period, mainly through topics like: fed (9), central bank (7), rate cut (1), monetary (1). Sentiment is mostly negative (52.9% vs 23.5% positive). Examples of articles: « Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator », « Traders betting Fed will cut rates at least 4 times this year to bail out economy », « US CPI eases in March, offering Fed breathing room ahead of tariff hikes »."
         },
-        "geopolitics": {
-          "count": 17,
-          "articles": [
-            "Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout",
-            "Taiwan's Formosa cuts refinery run rate to 68% on planned maintenance",
-            "U.S. could dip into recession on trade war, French central banker says",
-            "Countries May Have To Choose Between China And The U.S.: Implications For Markets",
-            "EU hands Apple, Meta massive fines despite warnings from Trump",
-            "IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries",
-            "How China used Vietnam to evade higher U.S. tariffs",
-            "Stocks fall, US-China trade war and the economic impact, Fed's inflation problem",
-            "Apple is left without a life raft as Trump's China trade war intensifies, analysts warn",
-            "Citadel's Ken Griffin warns Trump about tarnishing the 'brand' of U.S. Treasurys",
-            "Trump's trade war ripples through the business world, hits stocks again",
-            "The trade war will make the Fed hikes interest rates, says Sri-Kumar Global's Komal Sri-Kumar",
-            "Equities are going to ‘tank again in a big way', warns global strategist",
-            "Tariffs, tech, and the hidden cost of your iPhone: Leading investment bank warns of supply chain fallout",
-            "Trump trade war escalation sparks global market sell-off",
-            "Even if tariffs end, the damage to the global supply chain is done, says Overhaul's David Warrick",
-            "Top American trend forecaster warns of ‘dot-com bust 2.0'"
-          ],
-          "keywords": {
-            "war": {
-              "count": 11,
-              "examples": [
-                "Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout",
-                "U.S. could dip into recession on trade war, French central banker says",
-                "Countries May Have To Choose Between China And The U.S.: Implications For Markets"
-              ]
-            },
-            "taiwan": {
-              "count": 1,
-              "examples": [
-                "Taiwan's Formosa cuts refinery run rate to 68% on planned maintenance"
-              ]
-            },
-            "china": {
-              "count": 4,
-              "examples": [
-                "Countries May Have To Choose Between China And The U.S.: Implications For Markets",
-                "IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries",
-                "How China used Vietnam to evade higher U.S. tariffs"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 5.9,
-            "neutral": 35.3,
-            "negative": 58.8
-          },
-          "gpt_summary": "📰 The theme **geopolitics** was detected in **17 articles** during the period, mainly through topics like: war (11), china (4), taiwan (1). Sentiment is mostly negative (58.8% vs 5.9% positive). Examples of articles: « Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout », « Taiwan's Formosa cuts refinery run rate to 68% on planned maintenance », « U.S. could dip into recession on trade war, French central banker says »."
-        },
         "recession": {
-          "count": 10,
+          "count": 9,
           "articles": [
-            "Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline",
             "Americans are getting flashbacks to 2008 as tariffs stoke recession fears",
             "U.S. could dip into recession on trade war, French central banker says",
             "Lower growth expectations linked to tariffs a 'clear catalyst' for ECB decision, economist says",
@@ -580,11 +585,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 20.0,
-            "neutral": 20.0,
-            "negative": 60.0
+            "positive": 22.2,
+            "neutral": 22.2,
+            "negative": 55.6
           },
-          "gpt_summary": "📰 The theme **recession** was detected in **10 articles** during the period, mainly through topics like: recession (3), growth (2). Sentiment is mostly negative (60.0% vs 20.0% positive). Examples of articles: « Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline », « Americans are getting flashbacks to 2008 as tariffs stoke recession fears », « U.S. could dip into recession on trade war, French central banker says »."
+          "gpt_summary": "📰 The theme **recession** was detected in **9 articles** during the period, mainly through topics like: recession (3), growth (2). Sentiment is mostly negative (55.6% vs 22.2% positive). Examples of articles: « Americans are getting flashbacks to 2008 as tariffs stoke recession fears », « U.S. could dip into recession on trade war, French central banker says », « Lower growth expectations linked to tariffs a 'clear catalyst' for ECB decision, economist says »."
         },
         "inflation": {
           "count": 8,
@@ -730,9 +735,8 @@
           "gpt_summary": "📰 The theme **technology** was detected in **31 articles** during the period, mainly through topics like: ai (21), tech (7), data (3), digital (2), cloud (1). Sentiment is mixed (35.5% positive, 38.7% negative). Examples of articles: « Traders betting Fed will cut rates at least 4 times this year to bail out economy », « US bank stocks sink as Trump's tariffs cloud dealmaking, loan demand », « Mag 7 relinquishes more than $800 billion as tech drives stock market nosedive »."
         },
         "transport": {
-          "count": 8,
+          "count": 7,
           "articles": [
-            "Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline",
             "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports",
             "EU spokesperson: Apple and Meta fines are \"proportionate\"",
             "Japan's Rapidus in talks with Apple, Google to mass-produce chips, Nikkei reports",
@@ -752,11 +756,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 25.0,
-            "neutral": 62.5,
-            "negative": 12.5
+            "positive": 28.6,
+            "neutral": 71.4,
+            "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **transport** was detected in **8 articles** during the period, mainly through topics like: port (6). Sentiment is mixed (25.0% positive, 12.5% negative). Examples of articles: « Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline », « Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports », « EU spokesperson: Apple and Meta fines are \"proportionate\" »."
+          "gpt_summary": "📰 The theme **transport** was detected in **7 articles** during the period, mainly through topics like: port (6). Sentiment is mostly positive (28.6% vs 0.0% negative). Examples of articles: « Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports », « EU spokesperson: Apple and Meta fines are \"proportionate\" », « Japan's Rapidus in talks with Apple, Google to mass-produce chips, Nikkei reports »."
         },
         "consumer": {
           "count": 5,
@@ -836,13 +840,20 @@
           "gpt_summary": "📰 The theme **finance** was detected in **5 articles** during the period, mainly through topics like: treasury (2). Sentiment is mostly negative (60.0% vs 20.0% positive). Examples of articles: « Traders betting Fed will cut rates at least 4 times this year to bail out economy », « Tariffs caused US Treasury market dislocations, raising longer term concerns », « Citadel's Ken Griffin warns Trump about tarnishing the 'brand' of U.S. Treasurys »."
         },
         "industry": {
-          "count": 3,
+          "count": 4,
           "articles": [
+            "Drugmakers brace for Trump tariffs with production shifts",
             "Street's biggest Apple bear says a production move to India is unrealistic",
             "Tariffs, tech, and the hidden cost of your iPhone: Leading investment bank warns of supply chain fallout",
             "Even if tariffs end, the damage to the global supply chain is done, says Overhaul's David Warrick"
           ],
           "keywords": {
+            "manufacturing": {
+              "count": 1,
+              "examples": [
+                "Drugmakers brace for Trump tariffs with production shifts"
+              ]
+            },
             "supply chain": {
               "count": 1,
               "examples": [
@@ -852,10 +863,10 @@
           },
           "sentiment_distribution": {
             "positive": 0.0,
-            "neutral": 33.3,
-            "negative": 66.7
+            "neutral": 50.0,
+            "negative": 50.0
           },
-          "gpt_summary": "📰 The theme **industry** was detected in **3 articles** during the period, mainly through topics like: supply chain (1). Sentiment is mostly negative (66.7% vs 0.0% positive). Examples of articles: « Street's biggest Apple bear says a production move to India is unrealistic », « Tariffs, tech, and the hidden cost of your iPhone: Leading investment bank warns of supply chain fallout », « Even if tariffs end, the damage to the global supply chain is done, says Overhaul's David Warrick »."
+          "gpt_summary": "📰 The theme **industry** was detected in **4 articles** during the period, mainly through topics like: manufacturing (1), supply chain (1). Sentiment is mostly negative (50.0% vs 0.0% positive). Examples of articles: « Drugmakers brace for Trump tariffs with production shifts », « Street's biggest Apple bear says a production move to India is unrealistic », « Tariffs, tech, and the hidden cost of your iPhone: Leading investment bank warns of supply chain fallout »."
         },
         "energy": {
           "count": 3,
@@ -1056,7 +1067,7 @@
           "gpt_summary": "📰 The theme **europe** was detected in **16 articles** during the period, mainly through topics like: eu (14), europe (11), france (5), european union (5), italy (2). Sentiment is mostly negative (50.0% vs 12.5% positive). Examples of articles: « Italy agrees with US to oppose 'discriminatory' tech taxes », « France fines Apple €150 million over app tracking violations, EU probes follow », « French antitrust regulator fines Apple 150 million euros over privacy tool »."
         },
         "asia": {
-          "count": 13,
+          "count": 14,
           "articles": [
             "South Korea to seek speedy solution on auto tariffs in US trade talks",
             "Countries May Have To Choose Between China And The U.S.: Implications For Markets",
@@ -1064,6 +1075,7 @@
             "How China used Vietnam to evade higher U.S. tariffs",
             "Stocks fall, US-China trade war and the economic impact, Fed's inflation problem",
             "Apple is left without a life raft as Trump's China trade war intensifies, analysts warn",
+            "Trump's new tariff on China is 'more of an embargo,' Jim Cramer says",
             "Japan's Rapidus in talks with Apple, Google to mass-produce chips, Nikkei reports",
             "Japan's exports expand in March ahead of US tariffs",
             "Japan exports growth misses expectations, rising by a modest 3.9% in March as tariffs bite",
@@ -1080,7 +1092,7 @@
               ]
             },
             "china": {
-              "count": 4,
+              "count": 5,
               "examples": [
                 "Countries May Have To Choose Between China And The U.S.: Implications For Markets",
                 "IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries",
@@ -1105,11 +1117,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 7.7,
-            "neutral": 76.9,
-            "negative": 15.4
+            "positive": 7.1,
+            "neutral": 78.6,
+            "negative": 14.3
           },
-          "gpt_summary": "📰 The theme **asia** was detected in **13 articles** during the period, mainly through topics like: japan (5), china (4), india (4), korea (1). Sentiment is mixed (7.7% positive, 15.4% negative). Examples of articles: « South Korea to seek speedy solution on auto tariffs in US trade talks », « Countries May Have To Choose Between China And The U.S.: Implications For Markets », « IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries »."
+          "gpt_summary": "📰 The theme **asia** was detected in **14 articles** during the period, mainly through topics like: china (5), japan (5), india (4), korea (1). Sentiment is mixed (7.1% positive, 14.3% negative). Examples of articles: « South Korea to seek speedy solution on auto tariffs in US trade talks », « Countries May Have To Choose Between China And The U.S.: Implications For Markets », « IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries »."
         },
         "global": {
           "count": 13,
@@ -1221,6 +1233,59 @@
     },
     "quarterly": {
       "macroeconomics": {
+        "geopolitics": {
+          "count": 18,
+          "articles": [
+            "Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout",
+            "Taiwan's Formosa cuts refinery run rate to 68% on planned maintenance",
+            "U.S. could dip into recession on trade war, French central banker says",
+            "Countries May Have To Choose Between China And The U.S.: Implications For Markets",
+            "EU hands Apple, Meta massive fines despite warnings from Trump",
+            "IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries",
+            "How China used Vietnam to evade higher U.S. tariffs",
+            "Stocks fall, US-China trade war and the economic impact, Fed's inflation problem",
+            "Apple is left without a life raft as Trump's China trade war intensifies, analysts warn",
+            "Trump's new tariff on China is 'more of an embargo,' Jim Cramer says",
+            "Citadel's Ken Griffin warns Trump about tarnishing the 'brand' of U.S. Treasurys",
+            "Trump's trade war ripples through the business world, hits stocks again",
+            "The trade war will make the Fed hikes interest rates, says Sri-Kumar Global's Komal Sri-Kumar",
+            "Equities are going to ‘tank again in a big way', warns global strategist",
+            "Tariffs, tech, and the hidden cost of your iPhone: Leading investment bank warns of supply chain fallout",
+            "Trump trade war escalation sparks global market sell-off",
+            "Even if tariffs end, the damage to the global supply chain is done, says Overhaul's David Warrick",
+            "Top American trend forecaster warns of ‘dot-com bust 2.0'"
+          ],
+          "keywords": {
+            "war": {
+              "count": 11,
+              "examples": [
+                "Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout",
+                "U.S. could dip into recession on trade war, French central banker says",
+                "Countries May Have To Choose Between China And The U.S.: Implications For Markets"
+              ]
+            },
+            "taiwan": {
+              "count": 1,
+              "examples": [
+                "Taiwan's Formosa cuts refinery run rate to 68% on planned maintenance"
+              ]
+            },
+            "china": {
+              "count": 5,
+              "examples": [
+                "Countries May Have To Choose Between China And The U.S.: Implications For Markets",
+                "IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries",
+                "How China used Vietnam to evade higher U.S. tariffs"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 5.6,
+            "neutral": 38.9,
+            "negative": 55.6
+          },
+          "gpt_summary": "📰 The theme **geopolitics** was detected in **18 articles** during the period, mainly through topics like: war (11), china (5), taiwan (1). Sentiment is mostly negative (55.6% vs 5.6% positive). Examples of articles: « Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout », « Taiwan's Formosa cuts refinery run rate to 68% on planned maintenance », « U.S. could dip into recession on trade war, French central banker says »."
+        },
         "monetary_policy": {
           "count": 17,
           "articles": [
@@ -1279,62 +1344,9 @@
           },
           "gpt_summary": "📰 The theme **monetary_policy** was detected in **17 articles** during the period, mainly through topics like: fed (9), central bank (7), rate cut (1), monetary (1). Sentiment is mostly negative (52.9% vs 23.5% positive). Examples of articles: « Fed's Bowman vows 'pragmatic' rulemaking as top bank regulator », « Traders betting Fed will cut rates at least 4 times this year to bail out economy », « US CPI eases in March, offering Fed breathing room ahead of tariff hikes »."
         },
-        "geopolitics": {
-          "count": 17,
-          "articles": [
-            "Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout",
-            "Taiwan's Formosa cuts refinery run rate to 68% on planned maintenance",
-            "U.S. could dip into recession on trade war, French central banker says",
-            "Countries May Have To Choose Between China And The U.S.: Implications For Markets",
-            "EU hands Apple, Meta massive fines despite warnings from Trump",
-            "IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries",
-            "How China used Vietnam to evade higher U.S. tariffs",
-            "Stocks fall, US-China trade war and the economic impact, Fed's inflation problem",
-            "Apple is left without a life raft as Trump's China trade war intensifies, analysts warn",
-            "Citadel's Ken Griffin warns Trump about tarnishing the 'brand' of U.S. Treasurys",
-            "Trump's trade war ripples through the business world, hits stocks again",
-            "The trade war will make the Fed hikes interest rates, says Sri-Kumar Global's Komal Sri-Kumar",
-            "Equities are going to ‘tank again in a big way', warns global strategist",
-            "Tariffs, tech, and the hidden cost of your iPhone: Leading investment bank warns of supply chain fallout",
-            "Trump trade war escalation sparks global market sell-off",
-            "Even if tariffs end, the damage to the global supply chain is done, says Overhaul's David Warrick",
-            "Top American trend forecaster warns of ‘dot-com bust 2.0'"
-          ],
-          "keywords": {
-            "war": {
-              "count": 11,
-              "examples": [
-                "Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout",
-                "U.S. could dip into recession on trade war, French central banker says",
-                "Countries May Have To Choose Between China And The U.S.: Implications For Markets"
-              ]
-            },
-            "taiwan": {
-              "count": 1,
-              "examples": [
-                "Taiwan's Formosa cuts refinery run rate to 68% on planned maintenance"
-              ]
-            },
-            "china": {
-              "count": 4,
-              "examples": [
-                "Countries May Have To Choose Between China And The U.S.: Implications For Markets",
-                "IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries",
-                "How China used Vietnam to evade higher U.S. tariffs"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 5.9,
-            "neutral": 35.3,
-            "negative": 58.8
-          },
-          "gpt_summary": "📰 The theme **geopolitics** was detected in **17 articles** during the period, mainly through topics like: war (11), china (4), taiwan (1). Sentiment is mostly negative (58.8% vs 5.9% positive). Examples of articles: « Why Apple's stock is leading the ‘Magnificent Seven' toward a $1 trillion wipeout », « Taiwan's Formosa cuts refinery run rate to 68% on planned maintenance », « U.S. could dip into recession on trade war, French central banker says »."
-        },
         "recession": {
-          "count": 10,
+          "count": 9,
           "articles": [
-            "Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline",
             "Americans are getting flashbacks to 2008 as tariffs stoke recession fears",
             "U.S. could dip into recession on trade war, French central banker says",
             "Lower growth expectations linked to tariffs a 'clear catalyst' for ECB decision, economist says",
@@ -1363,11 +1375,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 20.0,
-            "neutral": 20.0,
-            "negative": 60.0
+            "positive": 22.2,
+            "neutral": 22.2,
+            "negative": 55.6
           },
-          "gpt_summary": "📰 The theme **recession** was detected in **10 articles** during the period, mainly through topics like: recession (3), growth (2). Sentiment is mostly negative (60.0% vs 20.0% positive). Examples of articles: « Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline », « Americans are getting flashbacks to 2008 as tariffs stoke recession fears », « U.S. could dip into recession on trade war, French central banker says »."
+          "gpt_summary": "📰 The theme **recession** was detected in **9 articles** during the period, mainly through topics like: recession (3), growth (2). Sentiment is mostly negative (55.6% vs 22.2% positive). Examples of articles: « Americans are getting flashbacks to 2008 as tariffs stoke recession fears », « U.S. could dip into recession on trade war, French central banker says », « Lower growth expectations linked to tariffs a 'clear catalyst' for ECB decision, economist says »."
         },
         "inflation": {
           "count": 8,
@@ -1513,9 +1525,8 @@
           "gpt_summary": "📰 The theme **technology** was detected in **31 articles** during the period, mainly through topics like: ai (21), tech (7), data (3), digital (2), cloud (1). Sentiment is mixed (35.5% positive, 38.7% negative). Examples of articles: « Traders betting Fed will cut rates at least 4 times this year to bail out economy », « US bank stocks sink as Trump's tariffs cloud dealmaking, loan demand », « Mag 7 relinquishes more than $800 billion as tech drives stock market nosedive »."
         },
         "transport": {
-          "count": 8,
+          "count": 7,
           "articles": [
-            "Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline",
             "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports",
             "EU spokesperson: Apple and Meta fines are \"proportionate\"",
             "Japan's Rapidus in talks with Apple, Google to mass-produce chips, Nikkei reports",
@@ -1535,11 +1546,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 25.0,
-            "neutral": 62.5,
-            "negative": 12.5
+            "positive": 28.6,
+            "neutral": 71.4,
+            "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **transport** was detected in **8 articles** during the period, mainly through topics like: port (6). Sentiment is mixed (25.0% positive, 12.5% negative). Examples of articles: « Empty shelves, trucking layoffs lead to a summer recession in Apollo's shocking trade fight timeline », « Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports », « EU spokesperson: Apple and Meta fines are \"proportionate\" »."
+          "gpt_summary": "📰 The theme **transport** was detected in **7 articles** during the period, mainly through topics like: port (6). Sentiment is mostly positive (28.6% vs 0.0% negative). Examples of articles: « Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports », « EU spokesperson: Apple and Meta fines are \"proportionate\" », « Japan's Rapidus in talks with Apple, Google to mass-produce chips, Nikkei reports »."
         },
         "consumer": {
           "count": 5,
@@ -1619,13 +1630,20 @@
           "gpt_summary": "📰 The theme **finance** was detected in **5 articles** during the period, mainly through topics like: treasury (2). Sentiment is mostly negative (60.0% vs 20.0% positive). Examples of articles: « Traders betting Fed will cut rates at least 4 times this year to bail out economy », « Tariffs caused US Treasury market dislocations, raising longer term concerns », « Citadel's Ken Griffin warns Trump about tarnishing the 'brand' of U.S. Treasurys »."
         },
         "industry": {
-          "count": 3,
+          "count": 4,
           "articles": [
+            "Drugmakers brace for Trump tariffs with production shifts",
             "Street's biggest Apple bear says a production move to India is unrealistic",
             "Tariffs, tech, and the hidden cost of your iPhone: Leading investment bank warns of supply chain fallout",
             "Even if tariffs end, the damage to the global supply chain is done, says Overhaul's David Warrick"
           ],
           "keywords": {
+            "manufacturing": {
+              "count": 1,
+              "examples": [
+                "Drugmakers brace for Trump tariffs with production shifts"
+              ]
+            },
             "supply chain": {
               "count": 1,
               "examples": [
@@ -1635,10 +1653,10 @@
           },
           "sentiment_distribution": {
             "positive": 0.0,
-            "neutral": 33.3,
-            "negative": 66.7
+            "neutral": 50.0,
+            "negative": 50.0
           },
-          "gpt_summary": "📰 The theme **industry** was detected in **3 articles** during the period, mainly through topics like: supply chain (1). Sentiment is mostly negative (66.7% vs 0.0% positive). Examples of articles: « Street's biggest Apple bear says a production move to India is unrealistic », « Tariffs, tech, and the hidden cost of your iPhone: Leading investment bank warns of supply chain fallout », « Even if tariffs end, the damage to the global supply chain is done, says Overhaul's David Warrick »."
+          "gpt_summary": "📰 The theme **industry** was detected in **4 articles** during the period, mainly through topics like: manufacturing (1), supply chain (1). Sentiment is mostly negative (50.0% vs 0.0% positive). Examples of articles: « Drugmakers brace for Trump tariffs with production shifts », « Street's biggest Apple bear says a production move to India is unrealistic », « Tariffs, tech, and the hidden cost of your iPhone: Leading investment bank warns of supply chain fallout »."
         },
         "energy": {
           "count": 3,
@@ -1839,7 +1857,7 @@
           "gpt_summary": "📰 The theme **europe** was detected in **16 articles** during the period, mainly through topics like: eu (14), europe (11), france (5), european union (5), italy (2). Sentiment is mostly negative (50.0% vs 12.5% positive). Examples of articles: « Italy agrees with US to oppose 'discriminatory' tech taxes », « France fines Apple €150 million over app tracking violations, EU probes follow », « French antitrust regulator fines Apple 150 million euros over privacy tool »."
         },
         "asia": {
-          "count": 13,
+          "count": 14,
           "articles": [
             "South Korea to seek speedy solution on auto tariffs in US trade talks",
             "Countries May Have To Choose Between China And The U.S.: Implications For Markets",
@@ -1847,6 +1865,7 @@
             "How China used Vietnam to evade higher U.S. tariffs",
             "Stocks fall, US-China trade war and the economic impact, Fed's inflation problem",
             "Apple is left without a life raft as Trump's China trade war intensifies, analysts warn",
+            "Trump's new tariff on China is 'more of an embargo,' Jim Cramer says",
             "Japan's Rapidus in talks with Apple, Google to mass-produce chips, Nikkei reports",
             "Japan's exports expand in March ahead of US tariffs",
             "Japan exports growth misses expectations, rising by a modest 3.9% in March as tariffs bite",
@@ -1863,7 +1882,7 @@
               ]
             },
             "china": {
-              "count": 4,
+              "count": 5,
               "examples": [
                 "Countries May Have To Choose Between China And The U.S.: Implications For Markets",
                 "IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries",
@@ -1888,11 +1907,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 7.7,
-            "neutral": 76.9,
-            "negative": 15.4
+            "positive": 7.1,
+            "neutral": 78.6,
+            "negative": 14.3
           },
-          "gpt_summary": "📰 The theme **asia** was detected in **13 articles** during the period, mainly through topics like: japan (5), china (4), india (4), korea (1). Sentiment is mixed (7.7% positive, 15.4% negative). Examples of articles: « South Korea to seek speedy solution on auto tariffs in US trade talks », « Countries May Have To Choose Between China And The U.S.: Implications For Markets », « IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries »."
+          "gpt_summary": "📰 The theme **asia** was detected in **14 articles** during the period, mainly through topics like: china (5), japan (5), india (4), korea (1). Sentiment is mixed (7.1% positive, 14.3% negative). Examples of articles: « South Korea to seek speedy solution on auto tariffs in US trade talks », « Countries May Have To Choose Between China And The U.S.: Implications For Markets », « IMF cuts 2025 growth forecast for major Asian economies, warns of global slowdown on trade worries »."
         },
         "global": {
           "count": 13,
@@ -2003,6 +2022,6 @@
       }
     }
   },
-  "lastUpdated": "2025-04-28T20:13:44.674557",
-  "analysisCount": 109
+  "lastUpdated": "2025-04-28T20:18:06.799846",
+  "analysisCount": 111
 }
