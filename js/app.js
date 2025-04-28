@@ -21,20 +21,36 @@ document.addEventListener('DOMContentLoaded', () => {
  * Initialiser le moteur de recommandation directement (comme dans l'ancien système)
  */
 function initRecommendationEngine() {
-    // Cette fonction sera appelée quand RecommendationEngine sera disponible globalement
-    if (window.RecommendationEngine) {
-        window.recommendationEngine = new window.RecommendationEngine();
-        console.log("Moteur de recommandation initialisé avec succès");
-    } else {
-        console.error("RecommendationEngine n'est pas disponible. Assurez-vous que recommendation-engine.js est chargé correctement.");
-    }
+    // Version améliorée avec plus de robustesse
+    console.log("Tentative d'initialisation du moteur de recommandation...");
     
-    // Créer des ponts de compatibilité si nécessaire pour les modules auxiliaires
-    if (!window.checkHardFails) {
-        window.checkHardFails = function(forme, userResponses) {
-            // Implémentation simplifiée qui pourrait être améliorée au besoin
-            return [];  
-        };
+    // Vérifier si RecommendationEngine est disponible
+    if (window.RecommendationEngine) {
+        try {
+            // Créer l'instance
+            window.recommendationEngine = new window.RecommendationEngine();
+            console.log("✅ Moteur de recommandation initialisé avec succès");
+            
+            // Créer les ponts de compatibilité
+            if (!window.checkHardFails) {
+                window.checkHardFails = function(forme, userResponses) {
+                    return [];  
+                };
+            }
+            
+            // Signaler la disponibilité du moteur
+            document.dispatchEvent(new CustomEvent('recommendationEngineReady'));
+        } catch (error) {
+            console.error("❌ Erreur lors de l'initialisation du moteur:", error);
+            
+            // Retenter après un délai
+            setTimeout(initRecommendationEngine, 1000);
+        }
+    } else {
+        console.warn("⚠️ RecommendationEngine n'est pas encore disponible");
+        
+        // Retenter après un délai plus long
+        setTimeout(initRecommendationEngine, 1000);
     }
 }
 
@@ -165,4 +181,9 @@ function initUIEvents() {
             });
         });
     }
+    
+    // Écouter l'événement de chargement du moteur
+    document.addEventListener('recommendationEngineReady', () => {
+        console.log("🎉 Événement moteur de recommandation prêt reçu!");
+    });
 }
