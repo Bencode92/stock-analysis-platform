@@ -4,7 +4,8 @@
 console.log("Chargement du recommendation-engine.js commencé");
 window.engineLoadingStarted = true;
 
-import { legalStatuses, exclusionFilters, ratingScales } from './legal-status-data.js';
+// Utilisation des variables globales au lieu des imports
+// const { legalStatuses, exclusionFilters, ratingScales } = window;
 
 // Règles de scoring configurables
 const scoringRules = [
@@ -418,7 +419,7 @@ class RecommendationEngine {
      * Réinitialiser les résultats pour un nouveau calcul
      */
     resetResults() {
-        this.filteredStatuses = {...legalStatuses};
+        this.filteredStatuses = {...window.legalStatuses};
         this.scores = {};
         this.weightedScores = {};
         this.incompatibles = [];
@@ -446,7 +447,7 @@ class RecommendationEngine {
      * Appliquer les filtres d'exclusion déclaratifs définis dans legal-status-data.js
      */
     applyDeclarativeFilters() {
-        exclusionFilters.forEach(filter => {
+        window.exclusionFilters.forEach(filter => {
             // Vérifier si le filtre s'applique à la réponse
             let shouldExclude = false;
             
@@ -1793,9 +1794,9 @@ class RecommendationEngine {
 
 // Compatibilité avec l'ancien système - Définir les objets nécessaires dans window
 window.FormeJuridiqueDB = {
-    structures: Object.values(legalStatuses),
+    structures: Object.values(window.legalStatuses),
     getById: function(id) {
-        return legalStatuses[id];
+        return window.legalStatuses[id];
     }
 };
 
@@ -1886,6 +1887,7 @@ window.ResultsManager = {
 try {
     // Rendre la classe disponible globalement
     window.RecommendationEngine = RecommendationEngine;
+    window.scoringRules = scoringRules;
     console.log("Classe RecommendationEngine exposée avec succès");
     
     // Signaler explicitement que le moteur est prêt
@@ -1896,5 +1898,3 @@ try {
 } catch (e) {
     console.error("Erreur lors de l'exposition du moteur de recommandation:", e);
 }
-
-export default RecommendationEngine;
