@@ -1,6 +1,7 @@
 // app.js - Fichier principal d'initialisation du simulateur de forme juridique
 
-import QuestionManager from './question-manager.js';
+// Modifier cette ligne pour utiliser un chemin absolu
+import QuestionManager from '/js/question-manager.js';
 
 // Fonction d'initialisation de l'application
 document.addEventListener('DOMContentLoaded', () => {
@@ -27,8 +28,8 @@ function initLazyRecommendationEngine() {
     window.loadRecommendationEngine = async function() {
         if (!window.recommendationEngine) {
             try {
-                // Import dynamique du module (chargement à la demande)
-                const RecommendationEngineModule = await import('./recommendation-engine.js');
+                // Import dynamique du module avec chemin absolu
+                const RecommendationEngineModule = await import('/js/recommendation-engine.js');
                 window.recommendationEngine = new RecommendationEngineModule.default();
                 console.log("Moteur de recommandation chargé avec succès");
                 return window.recommendationEngine;
