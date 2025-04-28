@@ -1,53 +1,42 @@
 // app.js - Fichier principal d'initialisation du simulateur de forme juridique
 
 import QuestionManager from './question-manager.js';
-import RecommendationEngine from './recommendation-engine.js';
 
 // Fonction d'initialisation de l'application
 document.addEventListener('DOMContentLoaded', () => {
     // Mettre à jour la date de dernière mise à jour
     updateLastUpdateDate();
     
-    // Initialiser DIRECTEMENT le moteur de recommandation en premier
-    try {
-        window.RecommendationEngine = RecommendationEngine;
-        window.recommendationEngine = new RecommendationEngine();
-        
-        // Créer les ponts de compatibilité nécessaires
+    // Initialiser le gestionnaire de questions
+    initQuestionManager();
+    
+    // Initialiser les événements de l'interface
+    initUIEvents();
+    
+    // Initialiser directement le moteur de recommandation (comme dans l'ancien système)
+    initRecommendationEngine();
+});
+
+/**
+ * Initialiser le moteur de recommandation directement (comme dans l'ancien système)
+ */
+function initRecommendationEngine() {
+    // Cette fonction sera appelée quand RecommendationEngine sera disponible globalement
+    if (window.RecommendationEngine) {
+        window.recommendationEngine = new window.RecommendationEngine();
+        console.log("Moteur de recommandation initialisé avec succès");
+    } else {
+        console.error("RecommendationEngine n'est pas disponible. Assurez-vous que recommendation-engine.js est chargé correctement.");
+    }
+    
+    // Créer des ponts de compatibilité si nécessaire pour les modules auxiliaires
+    if (!window.checkHardFails) {
         window.checkHardFails = function(forme, userResponses) {
+            // Implémentation simplifiée qui pourrait être améliorée au besoin
             return [];  
         };
-        
-        console.log("✅ Moteur de recommandation initialisé avec succès");
-        
-        // Signaler explicitement que le moteur est prêt
-        document.dispatchEvent(new CustomEvent('recommendationEngineReady'));
-        
-        // Ensuite initialiser le gestionnaire de questions
-        window.questionManager = new QuestionManager();
-        window.questionManager.init();
-        
-        // Initialiser les événements de l'interface
-        initUIEvents();
-    } catch (error) {
-        console.error("❌ Erreur lors de l'initialisation:", error);
-        // Afficher un message d'erreur à l'utilisateur
-        const loadingIndicator = document.getElementById('loading-indicator');
-        if (loadingIndicator) {
-            loadingIndicator.innerHTML = `
-                <div class="bg-blue-900 p-8 rounded-xl text-center max-w-md">
-                    <div class="text-6xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
-                    <h2 class="text-2xl font-bold mb-4">Erreur de chargement</h2>
-                    <p class="mb-6">Une erreur est survenue lors du chargement des modules: ${error.message}</p>
-                    <button onclick="location.reload()" class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
-                        <i class="fas fa-redo mr-2"></i> Réessayer
-                    </button>
-                </div>
-            `;
-            loadingIndicator.style.display = "flex";
-        }
     }
-});
+}
 
 /**
  * Mettre à jour la date de dernière mise à jour
@@ -115,6 +104,17 @@ function updateMarketStatus(now) {
 }
 
 /**
+ * Initialiser le gestionnaire de questions
+ */
+function initQuestionManager() {
+    // Créer une instance du gestionnaire de questions
+    window.questionManager = new QuestionManager();
+    
+    // Initialiser l'application
+    window.questionManager.init();
+}
+
+/**
  * Initialiser les événements de l'interface
  */
 function initUIEvents() {
@@ -165,7 +165,4 @@ function initUIEvents() {
             });
         });
     }
-    
-    // Afficher un message dans la console pour confirmer
-    console.log("🚀 Interface utilisateur initialisée avec succès");
 }
