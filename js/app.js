@@ -1,6 +1,7 @@
 // app.js - Fichier principal d'initialisation du simulateur de forme juridique
 
 import QuestionManager from './question-manager.js';
+import RecommendationEngine from './recommendation-engine.js';
 
 // Fonction d'initialisation de l'application
 document.addEventListener('DOMContentLoaded', () => {
@@ -9,6 +10,9 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialiser le gestionnaire de questions
     initQuestionManager();
+    
+    // Initialiser le moteur de recommandation
+    initRecommendationEngine();
     
     // Initialiser les événements de l'interface
     initUIEvents();
@@ -88,6 +92,14 @@ function initQuestionManager() {
     
     // Initialiser l'application
     window.questionManager.init();
+}
+
+/**
+ * Initialiser le moteur de recommandation
+ */
+function initRecommendationEngine() {
+    // Créer une instance du moteur de recommandation
+    window.recommendationEngine = new RecommendationEngine();
 }
 
 /**
