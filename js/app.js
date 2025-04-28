@@ -13,12 +13,46 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialiser les événements de l'interface
     initUIEvents();
     
-    // Initialiser directement le moteur de recommandation (comme dans l'ancien système)
-    initRecommendationEngine();
+    // NE PAS initialiser directement le moteur de recommandation
+    // initRecommendationEngine();  
+    
+    // À la place, créer une fonction lazy-load
+    window.loadRecommendationEngine = function() {
+        return new Promise((resolve, reject) => {
+            try {
+                // Vérifier si le moteur est déjà chargé
+                if (window.recommendationEngine) {
+                    resolve(window.recommendationEngine);
+                    return;
+                }
+                
+                // Sinon, initialiser le moteur
+                if (window.RecommendationEngine) {
+                    window.recommendationEngine = new window.RecommendationEngine();
+                    console.log("Moteur de recommandation initialisé avec succès");
+                    
+                    // Créer des ponts de compatibilité si nécessaire
+                    if (!window.checkHardFails) {
+                        window.checkHardFails = function(forme, userResponses) {
+                            return [];  
+                        };
+                    }
+                    
+                    resolve(window.recommendationEngine);
+                } else {
+                    console.error("RecommendationEngine n'est pas disponible");
+                    reject(new Error("RecommendationEngine n'est pas disponible"));
+                }
+            } catch (error) {
+                console.error("Erreur lors de l'initialisation du moteur:", error);
+                reject(error);
+            }
+        });
+    };
 });
 
 /**
- * Initialiser le moteur de recommandation directement (comme dans l'ancien système)
+ * Initialiser le moteur de recommandation directement (fonction conservée pour compatibilité)
  */
 function initRecommendationEngine() {
     // Cette fonction sera appelée quand RecommendationEngine sera disponible globalement

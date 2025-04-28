@@ -742,41 +742,59 @@
     <!-- Script pour gérer l'indicateur de chargement -->
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Afficher l'indicateur de chargement au début
+        // NE PAS afficher l'indicateur de chargement au début
         const loadingIndicator = document.getElementById('loading-indicator');
         const loadingBar = document.getElementById('loading-bar');
         const loadingStatus = document.getElementById('loading-status');
         
         if (loadingIndicator) {
-            loadingIndicator.style.display = 'flex';
+            loadingIndicator.style.display = 'none'; // Caché par défaut
         }
         
-        // Simuler la progression du chargement
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += 5;
-            if (loadingBar) {
-                loadingBar.style.width = `${Math.min(progress, 90)}%`;  // Max 90% jusqu'à ce que tout soit réellement chargé
+        // Fonction pour montrer l'indicateur de chargement lorsque nécessaire
+        window.showLoadingIndicator = function() {
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'flex';
+                
+                // Simuler la progression du chargement
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 5;
+                    if (loadingBar) {
+                        loadingBar.style.width = `${Math.min(progress, 90)}%`;
+                    }
+                    
+                    if (loadingStatus) {
+                        if (progress < 30) {
+                            loadingStatus.textContent = "Chargement des données de statuts juridiques...";
+                        } else if (progress < 60) {
+                            loadingStatus.textContent = "Initialisation du moteur de recommandation...";
+                        } else {
+                            loadingStatus.textContent = "Préparation de l'interface utilisateur...";
+                        }
+                    }
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                    }
+                }, 200);
+                
+                // En cas d'erreur ou de timeout, masquer l'indicateur après 15 secondes maximum
+                setTimeout(() => {
+                    if (loadingIndicator && loadingIndicator.style.display !== 'none') {
+                        loadingIndicator.style.display = 'none';
+                        console.warn("L'indicateur de chargement a été fermé après le délai maximum");
+                        clearInterval(interval);
+                    }
+                }, 15000);
+                
+                return interval;
             }
-            
-            if (loadingStatus) {
-                if (progress < 30) {
-                    loadingStatus.textContent = "Chargement des données de statuts juridiques...";
-                } else if (progress < 60) {
-                    loadingStatus.textContent = "Initialisation du moteur de recommandation...";
-                } else {
-                    loadingStatus.textContent = "Préparation de l'interface utilisateur...";
-                }
-            }
-            
-            if (progress >= 100) {
-                clearInterval(interval);
-            }
-        }, 200);
+            return null;
+        };
         
-        // Écouteur d'événement pour détecter quand le moteur est prêt
-        document.addEventListener('recommendationEngineReady', function() {
-            // Compléter la barre de chargement
+        // Fonction pour masquer l'indicateur de chargement
+        window.hideLoadingIndicator = function(interval) {
             if (loadingBar) {
                 loadingBar.style.width = "100%";
             }
@@ -784,23 +802,21 @@
                 loadingStatus.textContent = "Chargement terminé !";
             }
             
-            // Masquer l'indicateur après un court délai
             setTimeout(() => {
                 if (loadingIndicator) {
                     loadingIndicator.style.display = 'none';
                 }
             }, 500);
             
-            clearInterval(interval);
-        });
-        
-        // En cas d'erreur ou de timeout, masquer l'indicateur après 15 secondes maximum
-        setTimeout(() => {
-            if (loadingIndicator && loadingIndicator.style.display !== 'none') {
-                loadingIndicator.style.display = 'none';
-                console.warn("L'indicateur de chargement a été fermé après le délai maximum");
+            if (interval) {
+                clearInterval(interval);
             }
-        }, 15000);
+        };
+        
+        // Écouteur d'événement pour détecter quand le moteur est prêt
+        document.addEventListener('recommendationEngineReady', function() {
+            window.recommendationEngineLoaded = true;
+        });
     });
     </script>
 </body>
