@@ -1,13 +1,19 @@
 // app.js - Fichier principal d'initialisation du simulateur de forme juridique
 
 import QuestionManager from './question-manager.js';
+import RecommendationEngine from './recommendation-engine.js';
 
 // Fonction d'initialisation de l'application
 document.addEventListener('DOMContentLoaded', () => {
     // Mettre à jour la date de dernière mise à jour
     updateLastUpdateDate();
     
-    // Initialiser le gestionnaire de questions
+    // IMPORTANT : Initialiser le moteur de recommandation AVANT le gestionnaire de questions
+    console.log('Initialisation du moteur de recommandation...');
+    window.recommendationEngine = new RecommendationEngine();
+    console.log('Moteur de recommandation initialisé avec succès!');
+    
+    // Ensuite initialiser le gestionnaire de questions
     initQuestionManager();
     
     // Initialiser les événements de l'interface
@@ -83,11 +89,20 @@ function updateMarketStatus(now) {
  * Initialiser le gestionnaire de questions
  */
 function initQuestionManager() {
+    // Vérifier que le moteur de recommandation est bien initialisé
+    if (!window.recommendationEngine) {
+        console.error('Erreur: Le moteur de recommandation n\'est pas initialisé!');
+        // Essayer de le créer au cas où
+        window.recommendationEngine = new RecommendationEngine();
+    }
+    
+    console.log('Initialisation du gestionnaire de questions...');
     // Créer une instance du gestionnaire de questions
     window.questionManager = new QuestionManager();
     
     // Initialiser l'application
     window.questionManager.init();
+    console.log('Gestionnaire de questions initialisé avec succès!');
 }
 
 /**
