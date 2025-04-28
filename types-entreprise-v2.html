@@ -491,53 +491,9 @@
                 background-position: 0% 50%;
             }
         }
-        
-        /* Style pour l'indicateur de chargement */
-        #loading-indicator {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(1, 22, 39, 0.9);
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .loading-content {
-            background-color: rgba(1, 42, 74, 0.8);
-            border-radius: 12px;
-            padding: 2rem;
-            max-width: 500px;
-            text-align: center;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
-        }
-        
-        #loading-bar {
-            height: 8px;
-            background: linear-gradient(90deg, var(--primary-color), #00bfa5);
-            border-radius: 4px;
-            transition: width 0.3s ease;
-            box-shadow: 0 0 10px rgba(0, 255, 135, 0.4);
-        }
     </style>
 </head>
 <body class="dark">
-    <!-- Indicateur de chargement -->
-    <div id="loading-indicator" class="fixed inset-0 bg-blue-900 bg-opacity-80 z-50 flex items-center justify-center" style="display: none;">
-        <div class="bg-blue-900 p-8 rounded-xl text-center max-w-md">
-            <div class="text-6xl text-blue-400 mb-4"><i class="fas fa-spinner fa-spin"></i></div>
-            <h2 class="text-2xl font-bold mb-4">Initialisation du moteur de recommandation</h2>
-            <p class="mb-6">Veuillez patienter pendant le chargement des modules...</p>
-            <div id="loading-progress" class="w-full h-2 bg-blue-800 rounded-full">
-                <div id="loading-bar" class="h-2 bg-green-400 rounded-full" style="width: 0%"></div>
-            </div>
-            <p id="loading-status" class="mt-4 text-sm"></p>
-        </div>
-    </div>
-
     <!-- Sidebar de navigation verticale -->
     <aside class="sidebar">
         <div class="sidebar-logo">TP</div>
@@ -701,6 +657,16 @@
             
             <!-- Résultats du simulateur -->
             <div id="results-container" class="max-w-4xl mx-auto mb-12" style="display: none;">
+                <!-- Indicateur de chargement amélioré -->
+                <div id="loading-indicator" class="bg-blue-900 bg-opacity-20 p-8 rounded-xl text-center">
+                    <div class="text-6xl text-blue-400 mb-4"><i class="fas fa-spinner fa-spin"></i></div>
+                    <h2 class="text-2xl font-bold mb-4">Calcul des résultats en cours</h2>
+                    <p class="mb-6">Veuillez patienter pendant que nous analysons vos réponses...</p>
+                    <div class="w-full h-2 bg-blue-800 rounded-full">
+                        <div id="loading-bar" class="h-2 bg-green-400 rounded-full" style="width: 10%"></div>
+                    </div>
+                    <p id="loading-status" class="mt-4 text-sm">Initialisation du moteur de recommandation</p>
+                </div>
                 <!-- Les résultats seront injectés ici -->
             </div>
         </div>
@@ -732,76 +698,11 @@
         </button>
     </div>
     
-    <!-- Scripts avec ordre optimisé -->
+    <!-- Scripts -->
     <script type="module" src="js/legal-status-data.js"></script>
-    <script type="module" src="js/recommendation-engine.js"></script>
     <script type="module" src="js/question-data.js"></script>
+    <script type="module" src="js/recommendation-engine.js"></script>
     <script type="module" src="js/question-manager.js"></script>
     <script type="module" src="js/app.js"></script>
-    
-    <!-- Script pour gérer l'indicateur de chargement -->
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Afficher l'indicateur de chargement au début
-        const loadingIndicator = document.getElementById('loading-indicator');
-        const loadingBar = document.getElementById('loading-bar');
-        const loadingStatus = document.getElementById('loading-status');
-        
-        if (loadingIndicator) {
-            loadingIndicator.style.display = 'flex';
-        }
-        
-        // Simuler la progression du chargement
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += 5;
-            if (loadingBar) {
-                loadingBar.style.width = `${Math.min(progress, 90)}%`;  // Max 90% jusqu'à ce que tout soit réellement chargé
-            }
-            
-            if (loadingStatus) {
-                if (progress < 30) {
-                    loadingStatus.textContent = "Chargement des données de statuts juridiques...";
-                } else if (progress < 60) {
-                    loadingStatus.textContent = "Initialisation du moteur de recommandation...";
-                } else {
-                    loadingStatus.textContent = "Préparation de l'interface utilisateur...";
-                }
-            }
-            
-            if (progress >= 100) {
-                clearInterval(interval);
-            }
-        }, 200);
-        
-        // Écouteur d'événement pour détecter quand le moteur est prêt
-        document.addEventListener('recommendationEngineReady', function() {
-            // Compléter la barre de chargement
-            if (loadingBar) {
-                loadingBar.style.width = "100%";
-            }
-            if (loadingStatus) {
-                loadingStatus.textContent = "Chargement terminé !";
-            }
-            
-            // Masquer l'indicateur après un court délai
-            setTimeout(() => {
-                if (loadingIndicator) {
-                    loadingIndicator.style.display = 'none';
-                }
-            }, 500);
-            
-            clearInterval(interval);
-        });
-        
-        // En cas d'erreur ou de timeout, masquer l'indicateur après 15 secondes maximum
-        setTimeout(() => {
-            if (loadingIndicator && loadingIndicator.style.display !== 'none') {
-                loadingIndicator.style.display = 'none';
-                console.warn("L'indicateur de chargement a été fermé après le délai maximum");
-            }
-        }, 15000);
-    });
-    </script>
 </body>
 </html>
