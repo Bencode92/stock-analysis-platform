@@ -1,7 +1,6 @@
 // app.js - Fichier principal d'initialisation du simulateur de forme juridique
 
 import QuestionManager from './question-manager.js';
-import RecommendationEngine from './recommendation-engine.js';
 
 // Fonction d'initialisation de l'application
 document.addEventListener('DOMContentLoaded', () => {
@@ -15,21 +14,22 @@ document.addEventListener('DOMContentLoaded', () => {
     initUIEvents();
     
     // Au lieu d'initialiser le moteur de recommandation directement,
-    // le charger uniquement lorsque c'est nécessaire mais de façon statique
-    initRecommendationEngine();
+    // le charger uniquement lorsque c'est nécessaire
+    initLazyRecommendationEngine();
 });
 
 /**
- * Initialiser le moteur de recommandation
+ * Initialiser le moteur de recommandation de façon paresseuse (lazy loading)
  */
-function initRecommendationEngine() {
+function initLazyRecommendationEngine() {
     // Définir une fonction globale qui chargera le moteur de recommandation
-    // seulement quand on en aura besoin mais sans import dynamique
+    // seulement quand on en aura besoin
     window.loadRecommendationEngine = async function() {
         if (!window.recommendationEngine) {
             try {
-                // Créer une instance du moteur de recommandation
-                window.recommendationEngine = new RecommendationEngine();
+                // Import dynamique du module (chargement à la demande)
+                const RecommendationEngineModule = await import('./recommendation-engine.js');
+                window.recommendationEngine = new RecommendationEngineModule.default();
                 console.log("Moteur de recommandation chargé avec succès");
                 return window.recommendationEngine;
             } catch (error) {
