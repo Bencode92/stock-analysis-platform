@@ -1,9 +1,13 @@
 // app.js - Fichier principal d'initialisation du simulateur de forme juridique
 
 import QuestionManager from './question-manager.js';
+import RecommendationEngine from './recommendation-engine.js'; // Ajout de l'import direct
 
 // Fonction d'initialisation de l'application
 document.addEventListener('DOMContentLoaded', () => {
+    // Initialiser directement le moteur de recommandation
+    window.recommendationEngine = new RecommendationEngine();
+    
     // Mettre à jour la date de dernière mise à jour
     updateLastUpdateDate();
     
@@ -13,33 +17,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialiser les événements de l'interface
     initUIEvents();
     
-    // Au lieu d'initialiser le moteur de recommandation directement,
-    // le charger uniquement lorsque c'est nécessaire
-    initLazyRecommendationEngine();
-});
-
-/**
- * Initialiser le moteur de recommandation de façon paresseuse (lazy loading)
- */
-function initLazyRecommendationEngine() {
-    // Définir une fonction globale qui chargera le moteur de recommandation
-    // seulement quand on en aura besoin
+    // Définir la fonction loadRecommendationEngine pour la compatibilité
     window.loadRecommendationEngine = async function() {
-        if (!window.recommendationEngine) {
-            try {
-                // Import dynamique du module (chargement à la demande)
-                const RecommendationEngineModule = await import('./recommendation-engine.js');
-                window.recommendationEngine = new RecommendationEngineModule.default();
-                console.log("Moteur de recommandation chargé avec succès");
-                return window.recommendationEngine;
-            } catch (error) {
-                console.error("Erreur lors du chargement du moteur de recommandation:", error);
-                return null;
-            }
-        }
         return window.recommendationEngine;
     };
-}
+});
 
 /**
  * Mettre à jour la date de dernière mise à jour
