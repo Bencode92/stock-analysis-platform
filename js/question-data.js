@@ -126,7 +126,10 @@ export const questions = [
         options: [
             { id: "yes", label: "Oui", icon: "fa-check-circle" },
             { id: "no", label: "Non", icon: "fa-times-circle" }
-        ]
+        ],
+        showIf: {
+            "marital_status": ["married"]
+        }
     },
     {
         id: "other_income",
@@ -135,6 +138,18 @@ export const questions = [
         description: "Avez-vous d'autres revenus salariés par ailleurs ?",
         type: "radio",
         required: true,
+        options: [
+            { id: "yes", label: "Oui", icon: "fa-check-circle" },
+            { id: "no", label: "Non", icon: "fa-times-circle" }
+        ]
+    },
+    {
+        id: "unemployment_benefits",
+        sectionId: "profile",
+        title: "Allocation chômage (ARE)",
+        description: "Percevez-vous des allocations chômage actuellement ?",
+        type: "radio",
+        required: false,
         options: [
             { id: "yes", label: "Oui", icon: "fa-check-circle" },
             { id: "no", label: "Non", icon: "fa-times-circle" }
@@ -254,6 +269,21 @@ export const questions = [
         ]
     },
     {
+        id: "associates_number",
+        sectionId: "team",
+        title: "Nombre d'associés",
+        description: "Combien d'associés prévoyez-vous dans votre structure ?",
+        type: "number",
+        min: 2,
+        max: 50,
+        step: 1,
+        default: 2,
+        showIf: {
+            "team_structure": ["family", "associates", "investors"]
+        },
+        required: false
+    },
+    {
         id: "capital_percentage",
         sectionId: "team",
         title: "Pourcentage du capital",
@@ -329,6 +359,22 @@ export const questions = [
         showIf: {
             "team_structure": ["associates", "investors"]
         },
+        required: false
+    },
+    {
+        id: "governance_complexity",
+        sectionId: "team",
+        title: "Complexité de gouvernance",
+        description: "Quel niveau de complexité de gouvernance souhaitez-vous ?",
+        type: "radio",
+        showIf: {
+            "team_structure": ["associates", "investors"]
+        },
+        options: [
+            { id: "simple", label: "Simple (statuts types)", icon: "fa-file-alt" },
+            { id: "moderate", label: "Modérée (pacte d'associés)", icon: "fa-file-contract" },
+            { id: "complex", label: "Complexe (structure sur-mesure)", icon: "fa-sitemap" }
+        ],
         required: false
     },
 
@@ -446,6 +492,20 @@ export const questions = [
             { id: "no", label: "Non", icon: "fa-times-circle" }
         ]
     },
+    {
+        id: "intellectual_property",
+        sectionId: "activity",
+        title: "Propriété intellectuelle",
+        description: "Votre activité implique-t-elle des enjeux de propriété intellectuelle ?",
+        type: "checkbox",
+        required: false,
+        options: [
+            { id: "patents", label: "Brevets", icon: "fa-certificate" },
+            { id: "trademarks", label: "Marques", icon: "fa-trademark" },
+            { id: "copyright", label: "Droits d'auteur", icon: "fa-copyright" },
+            { id: "software", label: "Logiciels", icon: "fa-laptop-code" }
+        ]
+    },
 
     // Section 4: Volumétrie & finances
     {
@@ -556,6 +616,21 @@ export const questions = [
             { id: "flexible", label: "Flexible", icon: "fa-sliders-h" }
         ]
     },
+    {
+        id: "expense_structure",
+        sectionId: "finances",
+        title: "Structure des dépenses",
+        description: "Comment se répartissent vos principales dépenses ?",
+        type: "checkbox",
+        required: false,
+        options: [
+            { id: "equipment", label: "Équipement important", icon: "fa-tools" },
+            { id: "premises", label: "Locaux", icon: "fa-building" },
+            { id: "salaries", label: "Salaires", icon: "fa-users" },
+            { id: "stock", label: "Stock", icon: "fa-boxes" },
+            { id: "marketing", label: "Marketing", icon: "fa-ad" }
+        ]
+    },
 
     // Section 5: Capital & apports
     {
@@ -636,6 +711,23 @@ export const questions = [
         options: [
             { id: "yes", label: "Oui", icon: "fa-check-circle" },
             { id: "no", label: "Non", icon: "fa-times-circle" }
+        ]
+    },
+    {
+        id: "capital_structure",
+        sectionId: "capital",
+        title: "Structure du capital",
+        description: "Comment souhaitez-vous structurer votre capital ?",
+        type: "radio",
+        required: false,
+        showIf: {
+            "team_structure": ["associates", "investors"]
+        },
+        options: [
+            { id: "equal_shares", label: "Parts égales", icon: "fa-equals" },
+            { id: "majority", label: "Majoritaire", icon: "fa-greater-than" },
+            { id: "control", label: "Contrôle (>66%)", icon: "fa-crown" },
+            { id: "minority", label: "Minoritaire", icon: "fa-less-than" }
         ]
     },
 
@@ -719,6 +811,18 @@ export const questions = [
             { id: "other", label: "Autres combinaisons", icon: "fa-plus" }
         ]
     },
+    {
+        id: "startup_incentives",
+        sectionId: "aids",
+        title: "Incitations pour startups",
+        description: "Êtes-vous intéressé(e) par les incitations spécifiques aux startups ?",
+        type: "radio",
+        required: false,
+        options: [
+            { id: "yes", label: "Oui", icon: "fa-check-circle" },
+            { id: "no", label: "Non", icon: "fa-times-circle" }
+        ]
+    },
 
     // Section 7: Sortie & transmission
     {
@@ -790,6 +894,37 @@ export const questions = [
             { id: "no", label: "Non", icon: "fa-times-circle" }
         ]
     },
+    {
+        id: "family_transmission",
+        sectionId: "exit",
+        title: "Transmission familiale",
+        description: "Envisagez-vous une transmission familiale de l'entreprise ?",
+        type: "radio",
+        required: false,
+        showIf: {
+            "exit_intention": ["transmission"]
+        },
+        options: [
+            { id: "yes", label: "Oui", icon: "fa-check-circle" },
+            { id: "no", label: "Non", icon: "fa-times-circle" }
+        ]
+    },
+    {
+        id: "pacte_dutreil",
+        sectionId: "exit",
+        title: "Pacte Dutreil",
+        description: "Êtes-vous intéressé(e) par le Pacte Dutreil pour la transmission ?",
+        type: "radio",
+        required: false,
+        showIf: {
+            "family_transmission": ["yes"]
+        },
+        options: [
+            { id: "yes", label: "Oui", icon: "fa-check-circle" },
+            { id: "no", label: "Non", icon: "fa-times-circle" },
+            { id: "need_info", label: "J'ai besoin d'informations", icon: "fa-info-circle" }
+        ]
+    },
 
     // Section 8: Options avancées
     {
@@ -851,6 +986,34 @@ export const questions = [
         options: [
             { id: "yes", label: "Oui", icon: "fa-check-circle" },
             { id: "no", label: "Non", icon: "fa-times-circle" }
+        ]
+    },
+    {
+        id: "tax_optimization",
+        sectionId: "advanced",
+        title: "Optimisation fiscale",
+        description: "Quelles stratégies d'optimisation fiscale vous intéressent ?",
+        type: "checkbox",
+        required: false,
+        options: [
+            { id: "holding", label: "Structure de holding", icon: "fa-building" },
+            { id: "ip_box", label: "IP Box / Patent Box", icon: "fa-file-contract" },
+            { id: "international", label: "Structure internationale", icon: "fa-globe" },
+            { id: "r_and_d", label: "Optimisation R&D", icon: "fa-flask" }
+        ]
+    },
+    {
+        id: "accounting_complexity",
+        sectionId: "advanced",
+        title: "Complexité comptable",
+        description: "Quel niveau de complexité comptable pouvez-vous gérer ?",
+        type: "radio",
+        required: false,
+        options: [
+            { id: "simple", label: "Simple (comptabilité de trésorerie)", icon: "fa-calculator" },
+            { id: "moderate", label: "Modérée (comptabilité sans TVA)", icon: "fa-calculator" },
+            { id: "complete", label: "Complète (comptabilité d'engagement)", icon: "fa-calculator" },
+            { id: "outsourced", label: "Externalisée (expert-comptable)", icon: "fa-user-tie" }
         ]
     },
 
