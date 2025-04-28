@@ -1,6 +1,6 @@
 // recommendation-engine.js - Analyse des réponses et génération de recommandations
 
-import { legalStatuses } from './legal-status-data.js';
+import { legalStatuses, exclusionFilters, ratingScales } from './legal-status-data.js';
 
 class RecommendationEngine {
     constructor() {
@@ -9,6 +9,7 @@ class RecommendationEngine {
         this.scores = {};
         this.weightedScores = {};
         this.priorityWeights = {};
+        this.incompatibles = [];
         this.auditTrail = {
             exclusions: [],
             weightingRules: [],
@@ -37,6 +38,7 @@ class RecommendationEngine {
         this.filteredStatuses = {...legalStatuses};
         this.scores = {};
         this.weightedScores = {};
+        this.incompatibles = [];
         this.auditTrail = {
             exclusions: [],
             weightingRules: [],
@@ -120,6 +122,11 @@ class RecommendationEngine {
             }
         }
         
+        // 8. Levée de fonds → EI/MICRO/SNC exclues
+        if (this.answers.fundraising === 'yes') {
+            this.excludeStatuses(['EI', 'MICRO', 'SNC'], "Besoin de lever des fonds");
+        }
+        
         console.log('Statuts après filtres:', Object.keys(this.filteredStatuses));
     }
     
@@ -128,6 +135,18 @@ class RecommendationEngine {
      */
     excludeStatus(statusId, reason) {
         if (this.filteredStatuses[statusId]) {
+            const status = this.filteredStatuses[statusId];
+            
+            // Stocker dans les incompatibilités
+            this.incompatibles.push({
+                id: statusId,
+                name: status.name,
+                shortName: status.shortName,
+                status: status,
+                reason: reason,
+                compatibilite: 'INCOMPATIBLE'
+            });
+            
             delete this.filteredStatuses[statusId];
             
             // Journaliser l'exclusion
@@ -496,17 +515,35 @@ class RecommendationEngine {
         const topN = Math.min(count, sortedStatuses.length);
         const topStatuses = sortedStatuses.slice(0, topN);
         
-        // Construire les objets de recommandation
+        // Construire les objets de recommandation avec catégorisation
         return topStatuses.map((statusId, index) => {
+            const score = Math.round(this.weightedScores[statusId]);
+            
+            // Catégoriser selon le score
+            let compatibilite = 'PEU ADAPTÉ';
+            if (score >= 80) {
+                compatibilite = 'RECOMMANDÉ';
+            } else if (score >= 65) {
+                compatibilite = 'COMPATIBLE';
+            } else if (score < 45) {
+                compatibilite = 'DÉCONSEILLÉ';
+            }
+            
             return {
                 rank: index + 1,
                 id: statusId,
                 name: this.filteredStatuses[statusId].name,
                 shortName: this.filteredStatuses[statusId].shortName,
-                score: Math.round(this.weightedScores[statusId]),
+                score: score,
                 status: this.filteredStatuses[statusId],
                 strengths: this.getStrengths(statusId),
-                weaknesses: this.getWeaknesses(statusId)
+                weaknesses: this.getWeaknesses(statusId),
+                compatibilite: compatibilite,
+                scoreCriteresStructurels: Math.round(score * 0.6), // Approximation pour compatibilité
+                scoreObjectifs: Math.round(score * 0.4), // Approximation pour compatibilité
+                scoreDetails: {
+                    pourcentage: score
+                }
             };
         });
     }
@@ -1029,7 +1066,7 @@ class RecommendationEngine {
                                 <td class="py-3 px-4 border-b border-gray-700 font-medium">Régime fiscal</td>
                                 ${recommendations.map(r => `
                                     <td class="py-3 px-4 border-b border-gray-700">
-                                        ${r.status.taxation?.system || '-'}
+                                        ${r.status.fiscalite || '-'}
                                     </td>
                                 `).join('')}
                             </tr>
@@ -1039,7 +1076,7 @@ class RecommendationEngine {
                                 <td class="py-3 px-4 border-b border-gray-700 font-medium">Régime social</td>
                                 ${recommendations.map(r => `
                                     <td class="py-3 px-4 border-b border-gray-700">
-                                        ${r.status.social?.regime || '-'}
+                                        ${r.status.regimeSocial || '-'}
                                     </td>
                                 `).join('')}
                             </tr>
@@ -1202,7 +1239,7 @@ class RecommendationEngine {
      */
     generatePDF(recommendation) {
         // Cette fonction pourrait être implémentée avec une bibliothèque comme jsPDF
-        alert('Fonctionnalité d\\'export PDF à implémenter');
+        alert('Fonctionnalité d\'export PDF à implémenter');
     }
 }
 
@@ -1218,6 +1255,37 @@ window.ScoringEngine = {
     SCORE_MAX: 100,
     calculerScore: function(forme, userResponses) {
         // Logique simplifiée qui sera remplacée par le vrai calcul dans RecommendationEngine
+        // Pont de compatibilité vers le nouveau système
+        if (window.recommendationEngine) {
+            const engine = window.recommendationEngine;
+            
+            // Trouver la forme correspondante dans les statuts filtrés
+            const statusId = Object.keys(engine.filteredStatuses).find(id => 
+                engine.filteredStatuses[id].id === forme.id
+            );
+            
+            if (statusId) {
+                const score = Math.round(engine.weightedScores[statusId]);
+                
+                // Déterminer la compatibilité
+                let compatibilite = 'PEU ADAPTÉ';
+                if (score >= 80) compatibilite = 'RECOMMANDÉ';
+                else if (score >= 65) compatibilite = 'COMPATIBLE';
+                else if (score <= 25) compatibilite = 'DÉCONSEILLÉ';
+                
+                return {
+                    formeId: forme.id,
+                    forme: forme,
+                    score: score,
+                    scoreCriteresStructurels: Math.round(score * 0.6), // Approximation
+                    scoreObjectifs: Math.round(score * 0.4), // Approximation
+                    compatibilite: compatibilite,
+                    details: engine.getStrengths(statusId),
+                    scoreDetails: { pourcentage: score }
+                };
+            }
+        }
+        
         return {
             formeId: forme.id,
             forme: forme,
@@ -1268,5 +1336,8 @@ window.ResultsManager = {
 
 // Rendre la classe disponible globalement pour le chargement non-ES6
 window.RecommendationEngine = RecommendationEngine;
+
+// Signaler explicitement que le moteur est prêt
+document.dispatchEvent(new CustomEvent('recommendationEngineReady'));
 
 export default RecommendationEngine;
