@@ -202,7 +202,7 @@ class QuestionManager {
      */
     createQuestionElement(question) {
         const card = document.createElement('div');
-        card.className = 'question-card p-6 mb-8';
+        card.className = 'question-card p-6';
         card.dataset.questionId = question.id;
         
         // En-tête de la question
@@ -1040,80 +1040,106 @@ class QuestionManager {
      * Afficher les résultats - VERSION AMÉLIORÉE
      */
     showResults() {
-        // Afficher un indicateur de chargement
-        this.questionContainer.innerHTML = `
-            <div class="bg-blue-900 bg-opacity-20 p-8 rounded-xl text-center">
-                <div class="text-6xl text-blue-400 mb-4"><i class="fas fa-spinner fa-spin"></i></div>
-                <h2 class="text-2xl font-bold mb-4">Calcul des résultats...</h2>
-                <p class="mb-6">Veuillez patienter pendant que nous analysons vos réponses.</p>
-            </div>
-        `;
+        // Cacher le formulaire et afficher le conteneur de résultats
+        this.questionContainer.style.display = 'none';
         
-        try {
-            // Stocker les réponses pour le moteur de recommandation
-            window.userResponses = this.answers;
+        const resultsContainer = document.getElementById('results-container');
+        const loadingIndicator = document.getElementById('loading-indicator');
+        
+        if (!resultsContainer) return;
+        
+        // Afficher le conteneur de résultats
+        resultsContainer.style.display = 'block';
+        
+        // Stocker les réponses pour le moteur de recommandation
+        window.userResponses = this.answers;
+        
+        // Initialiser le compteur de tentatives
+        let attempts = 0;
+        const maxAttempts = 20;
+        const checkInterval = 1000; // 1 seconde entre chaque vérification
+        
+        const loadingBar = document.getElementById('loading-bar');
+        const loadingStatus = document.getElementById('loading-status');
+        
+        const checkEngineAvailability = () => {
+            attempts++;
             
-            // Attendre que le moteur soit prêt
-            const processResults = () => {
-                console.log("Calcul des recommandations avec les réponses:", this.answers);
-                
-                if (!window.recommendationEngine) {
-                    console.error("Le moteur de recommandation n'est toujours pas disponible");
-                    return;
-                }
-                
-                const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
-                
-                if (window.ResultsManager && typeof window.ResultsManager.displayResults === 'function') {
-                    window.ResultsManager.displayResults(recommendations);
-                } else {
-                    console.warn("La méthode d'affichage des résultats n'est pas disponible");
-                }
-            };
-            
-            // Vérifier si le moteur est déjà disponible
-            if (window.recommendationEngine) {
-                console.log("Moteur de recommandation déjà disponible, calcul immédiat");
-                processResults();
-            } else {
-                console.log("En attente de l'initialisation du moteur de recommandation");
-                
-                // Écouter l'événement de disponibilité du moteur
-                document.addEventListener('recommendationEngineReady', processResults, { once: true });
-                
-                // Ajouter un délai de secours plus long (20 secondes)
-                setTimeout(() => {
-                    // Tenter une dernière fois au cas où l'événement n'a pas été déclenché
-                    if (!window.recommendationEngine) {
-                        console.warn("Tentative finale d'initialisation du moteur après attente");
-                        if (window.RecommendationEngine) {
-                            window.recommendationEngine = new window.RecommendationEngine();
-                            processResults();
-                        } else {
-                            throw new Error("Le moteur de recommandation n'a pas pu être initialisé après 20 secondes");
-                        }
-                    }
-                }, 20000);
+            // Mettre à jour la barre de progression
+            if (loadingBar) {
+                loadingBar.style.width = `${(attempts/maxAttempts)*100}%`;
             }
-        } catch (error) {
-            console.error('Erreur lors du calcul des recommandations:', error);
             
-            this.questionContainer.innerHTML = `
-                <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center">
+            // Mettre à jour le statut
+            if (loadingStatus) {
+                loadingStatus.textContent = `Tentative ${attempts}/${maxAttempts} - Chargement du moteur de recommandation...`;
+            }
+            
+            // Vérifier si le moteur est disponible
+            if (window.recommendationEngine) {
+                // Le moteur est prêt, calculer les résultats
+                try {
+                    console.log("Moteur de recommandation disponible, calcul immédiat");
+                    const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
+                    
+                    // Masquer l'indicateur de chargement et afficher les résultats
+                    if (window.ResultsManager && typeof window.ResultsManager.displayResults === 'function') {
+                        window.ResultsManager.displayResults(recommendations);
+                    } else {
+                        console.error("La méthode displayResults n'est pas disponible");
+                        loadingStatus.textContent = "Erreur: La méthode d'affichage des résultats n'est pas disponible";
+                    }
+                } catch (error) {
+                    console.error("Erreur lors du calcul des recommandations:", error);
+                    loadingIndicator.innerHTML = `
+                        <div class="text-6xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
+                        <h2 class="text-2xl font-bold mb-4">Erreur lors du calcul</h2>
+                        <p class="mb-6">Une erreur est survenue lors du calcul des recommandations: ${error.message}</p>
+                        <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
+                            <i class="fas fa-redo mr-2"></i> Recommencer
+                        </button>
+                    `;
+                    
+                    // Ajouter un écouteur d'événement au bouton de redémarrage
+                    const restartBtn = document.getElementById('restart-btn');
+                    if (restartBtn) {
+                        restartBtn.addEventListener('click', () => {
+                            location.reload();
+                        });
+                    }
+                }
+            } else if (attempts < maxAttempts) {
+                // Réessayer après un délai
+                setTimeout(checkEngineAvailability, checkInterval);
+            } else {
+                // Après plusieurs tentatives infructueuses, afficher une erreur
+                loadingIndicator.innerHTML = `
                     <div class="text-6xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
-                    <h2 class="text-2xl font-bold mb-4">Une erreur est survenue</h2>
-                    <p class="mb-6">Détail de l'erreur: ${error.message}</p>
-                    <p class="mb-6">Impossible de calculer les recommandations. Veuillez réessayer ultérieurement.</p>
+                    <h2 class="text-2xl font-bold mb-4">Problème de chargement</h2>
+                    <p class="mb-6">Le moteur de recommandation n'a pas pu être chargé après ${maxAttempts} tentatives.</p>
+                    <p class="mb-4">Causes possibles:</p>
+                    <ul class="list-disc pl-5 mb-6 text-left">
+                        <li>Connexion internet instable</li>
+                        <li>Navigateur obsolète ou incompatible</li>
+                        <li>Erreur de chargement du module</li>
+                    </ul>
                     <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
-                        <i class="fas fa-redo mr-2"></i> Refaire le test
+                        <i class="fas fa-redo mr-2"></i> Essayer à nouveau
                     </button>
-                </div>
-            `;
-            
-            document.getElementById('restart-btn').addEventListener('click', () => {
-                location.reload();
-            });
-        }
+                `;
+                
+                // Ajouter un écouteur d'événement au bouton de redémarrage
+                const restartBtn = document.getElementById('restart-btn');
+                if (restartBtn) {
+                    restartBtn.addEventListener('click', () => {
+                        location.reload();
+                    });
+                }
+            }
+        };
+        
+        // Démarrer les vérifications
+        checkEngineAvailability();
     }
 }
 
