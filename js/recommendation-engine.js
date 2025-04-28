@@ -1,5 +1,9 @@
 // recommendation-engine.js - Analyse des réponses et génération de recommandations
 
+// Logs de débogage pour traquer le chargement
+console.log("Chargement du recommendation-engine.js commencé");
+window.engineLoadingStarted = true;
+
 import { legalStatuses, exclusionFilters, ratingScales } from './legal-status-data.js';
 
 // Règles de scoring configurables
@@ -308,6 +312,7 @@ const scoringRules = [
 
 class RecommendationEngine {
     constructor() {
+        console.log("Initialisation du RecommendationEngine");
         this.answers = {};
         this.filteredStatuses = {};
         this.scores = {};
@@ -366,6 +371,7 @@ class RecommendationEngine {
                 }
             }
         };
+        console.log("RecommendationEngine initialisé avec succès");
     }
 
     /**
@@ -373,6 +379,7 @@ class RecommendationEngine {
      * @param {Object} answers - Les réponses au questionnaire
      */
     calculateRecommendations(answers) {
+        console.log("Début du calcul des recommandations", answers);
         // Mémoïsation - vérifier si les résultats sont déjà en cache
         const answersKey = JSON.stringify(answers);
         if (this.memoizedResults[answersKey]) {
@@ -403,6 +410,7 @@ class RecommendationEngine {
         // Mémoïsation - stocker les résultats en cache
         this.memoizedResults[answersKey] = recommendations;
         
+        console.log("Fin du calcul des recommandations", recommendations);
         return recommendations;
     }
     
@@ -1094,6 +1102,7 @@ class RecommendationEngine {
      * Afficher les résultats dans l'interface
      */
     displayResults(recommendations) {
+        console.log("Affichage des résultats:", recommendations);
         // Récupérer les conteneurs
         const resultsContainer = document.getElementById('results-container');
         const questionContainer = document.getElementById('question-container');
@@ -1878,5 +1887,7 @@ window.RecommendationEngine = RecommendationEngine;
 
 // Signaler explicitement que le moteur est prêt
 document.dispatchEvent(new CustomEvent('recommendationEngineReady'));
+console.log("Chargement du recommendation-engine.js terminé");
+window.engineLoadingCompleted = true;
 
 export default RecommendationEngine;
