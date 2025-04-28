@@ -670,40 +670,11 @@
         </button>
     </div>
     
-    <!-- Scripts - Modules de base (données) -->
+    <!-- Scripts -->
     <script type="module" src="js/legal-status-data.js"></script>
     <script type="module" src="js/question-data.js"></script>
-    
-    <!-- Scripts - Moteur de recommandation -->
     <script type="module" src="js/recommendation-engine.js"></script>
-    
-    <!-- Scripts - Gestionnaire d'interface -->
     <script type="module" src="js/question-manager.js"></script>
-    
-    <!-- Script principal d'initialisation -->
     <script type="module" src="js/app.js"></script>
-    
-    <!-- Script pour détecter et réparer les problèmes d'initialisation -->
-    <script>
-        // Vérifier si les composants sont correctement initialisés après le chargement de la page
-        window.addEventListener('DOMContentLoaded', function() {
-            // Laisser le temps aux modules de se charger
-            setTimeout(function() {
-                // Vérifier si le moteur de recommandation est initialisé
-                if (!window.recommendationEngine) {
-                    console.warn("Moteur de recommandation non initialisé, tentative de réparation...");
-                    
-                    // Tenter d'initialiser manuellement le moteur de recommandation
-                    import('./js/recommendation-engine.js').then(module => {
-                        const RecommendationEngine = module.default;
-                        window.recommendationEngine = new RecommendationEngine();
-                        console.log("Moteur de recommandation initialisé avec succès via le script de récupération");
-                    }).catch(error => {
-                        console.error("Échec de l'initialisation du moteur de recommandation:", error);
-                    });
-                }
-            }, 1000); // Attendre 1 seconde après le chargement de la page
-        });
-    </script>
 </body>
 </html>
