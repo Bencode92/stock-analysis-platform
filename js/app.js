@@ -1,7 +1,6 @@
 // app.js - Fichier principal d'initialisation du simulateur de forme juridique
 
 import QuestionManager from './question-manager.js';
-// On retire l'import direct pour éviter les problèmes de chargement
 
 // Fonction d'initialisation de l'application
 document.addEventListener('DOMContentLoaded', () => {
@@ -14,19 +13,33 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialiser les événements de l'interface
     initUIEvents();
     
-    // Ajout d'une méthode globale pour initialiser le moteur de recommandation quand nécessaire
-    window.initRecommendationEngine = async function() {
-        try {
-            // Import dynamique pour charger le module uniquement quand nécessaire
-            const RecommendationModule = await import('./recommendation-engine.js');
-            window.recommendationEngine = new RecommendationModule.default();
-            return true;
-        } catch (error) {
-            console.error("Erreur lors de l'initialisation du moteur de recommandation:", error);
-            return false;
-        }
-    };
+    // Au lieu d'initialiser le moteur de recommandation directement,
+    // le charger uniquement lorsque c'est nécessaire
+    initLazyRecommendationEngine();
 });
+
+/**
+ * Initialiser le moteur de recommandation de façon paresseuse (lazy loading)
+ */
+function initLazyRecommendationEngine() {
+    // Définir une fonction globale qui chargera le moteur de recommandation
+    // seulement quand on en aura besoin
+    window.loadRecommendationEngine = async function() {
+        if (!window.recommendationEngine) {
+            try {
+                // Import dynamique du module (chargement à la demande)
+                const RecommendationEngineModule = await import('./recommendation-engine.js');
+                window.recommendationEngine = new RecommendationEngineModule.default();
+                console.log("Moteur de recommandation chargé avec succès");
+                return window.recommendationEngine;
+            } catch (error) {
+                console.error("Erreur lors du chargement du moteur de recommandation:", error);
+                return null;
+            }
+        }
+        return window.recommendationEngine;
+    };
+}
 
 /**
  * Mettre à jour la date de dernière mise à jour
