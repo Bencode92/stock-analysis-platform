@@ -1882,12 +1882,19 @@ window.ResultsManager = {
     }
 };
 
-// Rendre la classe disponible globalement pour le chargement non-ES6
-window.RecommendationEngine = RecommendationEngine;
-
-// Signaler explicitement que le moteur est prêt
-document.dispatchEvent(new CustomEvent('recommendationEngineReady'));
-console.log("Chargement du recommendation-engine.js terminé");
-window.engineLoadingCompleted = true;
+// Exposer la classe et une instance de manière synchrone
+try {
+    // Rendre la classe disponible globalement
+    window.RecommendationEngine = RecommendationEngine;
+    console.log("Classe RecommendationEngine exposée avec succès");
+    
+    // Signaler explicitement que le moteur est prêt
+    document.dispatchEvent(new CustomEvent('recommendationEngineReady'));
+    console.log("Événement 'recommendationEngineReady' déclenché");
+    
+    window.engineLoadingCompleted = true;
+} catch (e) {
+    console.error("Erreur lors de l'exposition du moteur de recommandation:", e);
+}
 
 export default RecommendationEngine;
