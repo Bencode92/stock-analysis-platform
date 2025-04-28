@@ -332,6 +332,40 @@ class RecommendationEngine {
         
         // Cache pour la mémoïsation
         this.memoizedResults = {};
+        
+        // Dictionnaire des alternatives pour chaque cas d'incompatibilité
+        this.alternativeSuggestions = {
+            'MICRO': {
+                'ca-depasse-seuil': {
+                    alternatives: ['EURL', 'SASU'], 
+                    explanation: "Optez pour une EURL ou SASU permettant des volumes d'activité plus importants"
+                },
+                'ordre-professionnel': {
+                    alternatives: ['SELARL', 'SELAS'],
+                    explanation: "Choisissez une structure adaptée aux professions réglementées comme une SELARL ou SELAS"
+                },
+                'fundraising': {
+                    alternatives: ['SAS', 'SASU'],
+                    explanation: "Pour lever des fonds, privilégiez une SAS ou SASU qui facilitent l'entrée d'investisseurs"
+                }
+            },
+            'EI': {
+                'protection-patrimoine': {
+                    alternatives: ['EURL', 'SASU'],
+                    explanation: "Privilégiez une EURL ou SASU qui offrent une meilleure protection patrimoniale"
+                },
+                'levee-fonds': {
+                    alternatives: ['SASU', 'SAS'],
+                    explanation: "Pour lever des fonds, une SASU ou SAS est beaucoup plus adaptée"
+                }
+            },
+            'SNC': {
+                'risque-eleve': {
+                    alternatives: ['SARL', 'SAS'],
+                    explanation: "Pour limiter les risques personnels, préférez une SARL ou SAS avec responsabilité limitée"
+                }
+            }
+        };
     }
 
     /**
@@ -477,11 +511,78 @@ class RecommendationEngine {
     }
     
     /**
+     * Trouve des alternatives pour un statut exclu et une raison donnée
+     * @param {string} statusId - Identifiant du statut exclu
+     * @param {string} reason - Raison de l'exclusion
+     * @returns {Object|null} - Suggestion d'alternative ou null
+     */
+    findAlternativeSuggestion(statusId, reason) {
+        // Convertir la raison en code pour correspondance
+        const reasonCode = this.getReasonCode(reason);
+        
+        if (this.alternativeSuggestions[statusId] && 
+            this.alternativeSuggestions[statusId][reasonCode]) {
+            return this.alternativeSuggestions[statusId][reasonCode];
+        }
+        
+        // Alternative générique si pas de correspondance spécifique
+        return {
+            alternatives: this.getGenericAlternatives(statusId),
+            explanation: "Consultez les autres formes juridiques recommandées qui évitent cette contrainte"
+        };
+    }
+
+    /**
+     * Convertit une raison textuelle en code pour correspondance
+     * @param {string} reason - Raison d'exclusion en texte
+     * @returns {string} - Code de raison standardisé
+     */
+    getReasonCode(reason) {
+        // Extraire un code à partir de la description
+        if (reason.includes("CA") && reason.includes("seuil")) return "ca-depasse-seuil";
+        if (reason.includes("ordre professionnel")) return "ordre-professionnel";
+        if (reason.includes("fonds")) return "fundraising";
+        if (reason.includes("patrimoine")) return "protection-patrimoine";
+        if (reason.includes("risque")) return "risque-eleve";
+        
+        // Créer un slug à partir du texte
+        return reason.toLowerCase()
+            .replace(/[^a-z0-9]/g, '-')
+            .replace(/-+/g, '-')
+            .substring(0, 30);
+    }
+
+    /**
+     * Retourne des alternatives génériques selon le type de statut
+     * @param {string} statusId - Identifiant du statut
+     * @returns {Array} - Liste d'alternatives possibles
+     */
+    getGenericAlternatives(statusId) {
+        const alternatives = {
+            'MICRO': ['EI', 'EURL'],
+            'EI': ['MICRO', 'EURL'],
+            'EURL': ['SASU', 'SARL'],
+            'SASU': ['EURL', 'SAS'],
+            'SARL': ['EURL', 'SAS'],
+            'SAS': ['SASU', 'SARL'],
+            'SNC': ['SARL', 'SAS'],
+            'SCI': ['SARL', 'SAS'],
+            'SELARL': ['SELAS'],
+            'SELAS': ['SELARL']
+        };
+        
+        return alternatives[statusId] || ['EURL', 'SASU'];
+    }
+    
+    /**
      * Exclure un statut juridique
      */
     excludeStatus(statusId, reason) {
         if (this.filteredStatuses[statusId]) {
             const status = this.filteredStatuses[statusId];
+            
+            // Trouver une suggestion d'alternative
+            const suggestion = this.findAlternativeSuggestion(statusId, reason);
             
             // Stocker dans les incompatibilités
             this.incompatibles.push({
@@ -490,15 +591,17 @@ class RecommendationEngine {
                 shortName: status.shortName,
                 status: status,
                 reason: reason,
+                suggestion: suggestion,
                 compatibilite: 'INCOMPATIBLE'
             });
             
             delete this.filteredStatuses[statusId];
             
-            // Journaliser l'exclusion
+            // Journaliser l'exclusion avec l'alternative
             this.auditTrail.exclusions.push({
                 status_id: statusId,
-                reason: reason
+                reason: reason,
+                alternative: suggestion ? suggestion.explanation : null
             });
         }
     }
@@ -701,6 +804,147 @@ class RecommendationEngine {
         explanation += `\nScore final: ${Math.round(this.weightedScores[statusId])}/100\n`;
         
         return explanation;
+    }
+
+    /**
+     * Génère des stratégies personnalisées pour un statut juridique selon le profil
+     * @param {string} statusId - Identifiant du statut juridique
+     * @returns {Array} - Liste des stratégies personnalisées
+     */
+    generateContextualStrategies(statusId) {
+        const status = this.filteredStatuses[statusId];
+        if (!status) return [];
+        
+        const strategies = [];
+        
+        // Stratégies spécifiques par forme juridique
+        if (statusId === 'MICRO') {
+            strategies.push({
+                title: "Optimisation de la trésorerie",
+                description: "Profitez de l'absence de TVA sous le seuil de franchise pour améliorer votre trésorerie.",
+                icon: "fa-coins"
+            });
+            
+            if (this.answers.tax_bracket === 'non_taxable' || this.answers.tax_bracket === 'bracket_11') {
+                strategies.push({
+                    title: "Option versement libératoire",
+                    description: "Avec votre TMI faible, le versement libératoire de l'impôt est très avantageux.",
+                    icon: "fa-percent"
+                });
+            }
+            
+            strategies.push({
+                title: "Surveillance des seuils",
+                description: `Suivez votre CA pour ne pas dépasser les seuils (${this.thresholds2025.micro.bic_sales}€/vente, ${this.thresholds2025.micro.bic_service}€/services).`,
+                icon: "fa-chart-line"
+            });
+        } 
+        else if (statusId === 'EURL') {
+            if (this.answers.tax_bracket === 'bracket_41' || this.answers.tax_bracket === 'bracket_45') {
+                strategies.push({
+                    title: "Option IS recommandée",
+                    description: "Avec votre TMI élevée, l'IS avec taux réduit à 15% est fiscal-optimisant.",
+                    icon: "fa-balance-scale"
+                });
+            }
+            
+            strategies.push({
+                title: "Charges déductibles",
+                description: "Optimisez vos charges réelles déductibles, contrairement au forfait micro-entreprise.",
+                icon: "fa-receipt"
+            });
+        }
+        else if (statusId === 'SASU' || statusId === 'SAS') {
+            strategies.push({
+                title: "Optimisation salaire/dividendes",
+                description: "Répartissez judicieusement entre salaire et dividendes selon votre TMI et vos besoins de trésorerie.",
+                icon: "fa-percentage"
+            });
+            
+            if (this.answers.fundraising === 'yes') {
+                strategies.push({
+                    title: "Préparation à la levée de fonds",
+                    description: "Préparez une documentation adaptée et des statuts optimisés pour les investisseurs.",
+                    icon: "fa-hand-holding-usd"
+                });
+            }
+        }
+        
+        // Stratégies basées sur les priorités utilisateur
+        const priorities = this.answers.priorities || [];
+        if (priorities.includes('patrimony_protection')) {
+            if (['SASU', 'SAS', 'SARL', 'EURL'].includes(statusId)) {
+                strategies.push({
+                    title: "Renforcement de la protection patrimoniale",
+                    description: "Envisagez une assurance RC Pro complémentaire pour une protection maximale.",
+                    icon: "fa-shield-alt"
+                });
+            }
+        }
+        
+        // Stratégies liées aux aides et dispositifs
+        if (this.answers.acre === 'yes') {
+            strategies.push({
+                title: "Exonérations ACRE",
+                description: "Profitez de l'exonération partielle de charges sociales pendant la première année.",
+                icon: "fa-star"
+            });
+        }
+        
+        if (priorities.includes('taxation_optimization') && ['SASU', 'SAS'].includes(statusId)) {
+            strategies.push({
+                title: "Taux réduit IS",
+                description: "Optimisez votre rémunération pour bénéficier du taux IS réduit à 15% jusqu'à 42 500€.",
+                icon: "fa-piggy-bank"
+            });
+        }
+        
+        return strategies;
+    }
+
+    /**
+     * Génère le HTML pour afficher les stratégies contextuelles
+     * @param {string} statusId - Identifiant du statut
+     * @returns {string} - HTML pour les stratégies
+     */
+    renderContextualStrategies(statusId) {
+        const strategies = this.generateContextualStrategies(statusId);
+        if (strategies.length === 0) return '';
+        
+        const status = this.filteredStatuses[statusId];
+        
+        let html = `
+        <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-6">
+            <h4 class="font-semibold text-green-400 mb-4">
+                <i class="fas fa-lightbulb mr-2"></i>
+                Stratégies optimales pour votre ${status.name}
+            </h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        `;
+        
+        strategies.forEach(strategy => {
+            html += `
+            <div class="bg-blue-800 bg-opacity-20 p-4 rounded-lg hover:bg-opacity-30 transition">
+                <div class="flex items-start">
+                    <div class="bg-green-900 bg-opacity-30 rounded-full p-3 mr-3">
+                        <i class="fas ${strategy.icon} text-green-400"></i>
+                    </div>
+                    <div>
+                        <h5 class="font-semibold mb-1">${strategy.title}</h5>
+                        <p class="text-sm text-gray-300">${strategy.description}</p>
+                    </div>
+                </div>
+            </div>
+            `;
+        });
+        
+        html += `
+            </div>
+        </div>
+        `;
+        
+        return html;
     }
 
     /**
@@ -970,24 +1214,13 @@ class RecommendationEngine {
             `;
         });
         
-        // Résumé des exclusions
-        if (this.auditTrail.exclusions.length > 0) {
-            resultsHTML += `
-                <div class="bg-blue-900 bg-opacity-40 p-6 rounded-xl mb-8">
-                    <h3 class="text-xl font-semibold mb-3 flex items-center">
-                        <i class="fas fa-filter text-yellow-400 mr-2"></i> Statuts exclus de l'analyse
-                    </h3>
-                    <ul class="space-y-2">
-                        ${this.auditTrail.exclusions.map(exclusion => `
-                            <li class="flex items-start">
-                                <i class="fas fa-times-circle text-red-400 mt-1 mr-2"></i>
-                                <span>${exclusion.status_id || ''} - ${exclusion.reason}</span>
-                            </li>
-                        `).join('')}
-                    </ul>
-                </div>
-            `;
+        // Ajouter les stratégies contextuelles pour la recommandation principale
+        if (recommendations.length > 0) {
+            resultsHTML += this.renderContextualStrategies(recommendations[0].id);
         }
+        
+        // Afficher les incompatibilités
+        resultsHTML += this.displayIncompatibilities(this.incompatibles);
         
         // Fermer les conteneurs
         resultsHTML += `
@@ -1032,6 +1265,94 @@ class RecommendationEngine {
                 // this.generatePDF(recommendations[0]);
             });
         }
+    }
+
+    /**
+     * Affiche les statuts juridiques incompatibles avec suggestions alternatives
+     * @param {Array} incompatibles - Liste des statuts incompatibles
+     * @returns {string} - HTML pour l'affichage des incompatibilités
+     */
+    displayIncompatibilities(incompatibles) {
+        if (!incompatibles || incompatibles.length === 0) return '';
+        
+        let html = `
+            <div class="mt-8 mb-6">
+                <h3 class="text-xl font-bold text-red-400 mb-4 flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-2"></i> 
+                    Formes juridiques incompatibles avec votre profil
+                </h3>
+                <div class="bg-blue-900 bg-opacity-20 p-4 rounded-xl">
+                    <p class="mb-4">Les structures suivantes présentent des incompatibilités avec vos critères :</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        `;
+        
+        // Regrouper les incompatibilités par forme juridique
+        const incompatibilitiesByForm = {};
+        
+        incompatibles.forEach(inc => {
+            if (!incompatibilitiesByForm[inc.id]) {
+                incompatibilitiesByForm[inc.id] = {
+                    form: inc.status,
+                    reasons: [],
+                    suggestions: []
+                };
+            }
+            
+            // Ajouter la raison si nouvelle
+            if (!incompatibilitiesByForm[inc.id].reasons.some(r => r === inc.reason)) {
+                incompatibilitiesByForm[inc.id].reasons.push(inc.reason);
+            }
+            
+            // Ajouter la suggestion si nouvelle et non déjà présente
+            if (inc.suggestion && !incompatibilitiesByForm[inc.id].suggestions.some(
+                s => s.explanation === inc.suggestion.explanation
+            )) {
+                incompatibilitiesByForm[inc.id].suggestions.push(inc.suggestion);
+            }
+        });
+        
+        // Générer le HTML pour chaque forme incompatible
+        Object.values(incompatibilitiesByForm).forEach(item => {
+            html += `
+                <div class="bg-red-900 bg-opacity-20 p-4 rounded-lg border border-red-800">
+                    <h4 class="font-semibold text-red-400 mb-2">${item.form.name}</h4>
+                    <ul class="text-sm">
+            `;
+            
+            item.reasons.forEach(reason => {
+                html += `<li class="mb-1 flex items-start">
+                    <i class="fas fa-times text-red-400 mr-2 mt-1"></i>
+                    <span>${reason}</span>
+                </li>`;
+            });
+            
+            // Ajouter les suggestions alternatives
+            if (item.suggestions.length > 0) {
+                html += `<li class="mt-3 pt-2 border-t border-red-800"></li>`;
+                
+                item.suggestions.forEach(suggestion => {
+                    html += `
+                        <li class="mt-2 flex items-start">
+                            <i class="fas fa-lightbulb text-yellow-400 mr-2 mt-1"></i>
+                            <span><strong>Alternative :</strong> ${suggestion.explanation}</span>
+                        </li>
+                    `;
+                });
+            }
+            
+            html += `
+                    </ul>
+                </div>
+            `;
+        });
+        
+        html += `
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        return html;
     }
 
     /**
@@ -1208,6 +1529,9 @@ class RecommendationEngine {
                         </div>
                     </div>
                 </div>
+                
+                <!-- Stratégies optimales -->
+                ${this.renderContextualStrategies(recommendation.id)}
                 
                 <!-- Bouton d'action -->
                 <div class="text-center mt-8">
