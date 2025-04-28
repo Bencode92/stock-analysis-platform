@@ -1060,43 +1060,58 @@ class QuestionManager {
                 // Afficher l'indicateur de chargement immédiatement
                 let loadingInterval = window.showLoadingIndicator();
                 
+                // Méthode robuste de gestion du moteur
                 try {
-                    // Initialisation directe et forcée
-                    console.log("Tentative d'initialisation directe");
-                    window.recommendationEngine = new window.RecommendationEngine();
+                    console.log("Vérification de la disponibilité du moteur de recommandation");
                     
-                    // Utiliser directement l'objet
-                    const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
-                    
-                    // Afficher les résultats
-                    window.recommendationEngine.displayResults(recommendations);
-                    
+                    // S'assurer que la classe est disponible
+                    if (typeof window.RecommendationEngine === 'function') {
+                        // Création explicite d'une nouvelle instance
+                        console.log("Création d'une nouvelle instance du moteur");
+                        if (!window.recommendationEngine) {
+                            window.recommendationEngine = new window.RecommendationEngine();
+                        }
+                        
+                        // Utiliser l'instance pour calculer les recommandations
+                        const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
+                        console.log("Recommandations calculées:", recommendations);
+                        
+                        // Afficher les résultats
+                        window.recommendationEngine.displayResults(recommendations);
+                    } else {
+                        // Afficher une erreur
+                        console.error("La classe RecommendationEngine n'est pas disponible");
+                        this.showError("Le moteur de recommandation n'est pas disponible. Veuillez vérifier que le script est correctement chargé.");
+                    }
                 } catch (error) {
-                    console.error("Erreur d'initialisation forcée:", error);
-                    
-                    // Afficher un message d'erreur avec plus de détails
-                    this.questionContainer.innerHTML = `
-                        <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center">
-                            <div class="text-6xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
-                            <h2 class="text-2xl font-bold mb-4">Erreur détectée</h2>
-                            <p class="mb-6">Détails de l'erreur: ${error.message}</p>
-                            <p class="text-xs bg-blue-900 bg-opacity-30 p-2 mb-4 overflow-auto text-left">
-                                ${error.stack || "Pas de stack trace disponible"}
-                            </p>
-                            <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
-                                <i class="fas fa-redo mr-2"></i> Refaire le test
-                            </button>
-                        </div>
-                    `;
-                    
-                    document.getElementById('restart-btn').addEventListener('click', () => {
-                        location.reload();
-                    });
+                    console.error("Erreur lors du calcul des recommandations:", error);
+                    this.showError(`Une erreur s'est produite lors du calcul: ${error.message}`);
                 } finally {
+                    // Masquer l'indicateur de chargement
                     window.hideLoadingIndicator(loadingInterval);
                 }
             });
         }
+    }
+
+    /**
+     * Affiche un message d'erreur
+     */
+    showError(message) {
+        this.questionContainer.innerHTML = `
+            <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center">
+                <div class="text-6xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
+                <h2 class="text-2xl font-bold mb-4">Erreur détectée</h2>
+                <p class="mb-6">${message}</p>
+                <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
+                    <i class="fas fa-redo mr-2"></i> Refaire le test
+                </button>
+            </div>
+        `;
+        
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            location.reload();
+        });
     }
 }
 
