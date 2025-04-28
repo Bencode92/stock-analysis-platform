@@ -1202,39 +1202,8 @@ class RecommendationEngine {
      */
     generatePDF(recommendation) {
         // Cette fonction pourrait être implémentée avec une bibliothèque comme jsPDF
-        alert('Fonctionnalité d\'export PDF à implémenter');
+        alert('Fonctionnalité d\\'export PDF à implémenter');
     }
-}
-
-// Fonctions de compatibilité avec l'ancien système
-function convertRecommendationFormat(newRecommendation) {
-    return {
-        forme: {
-            id: newRecommendation.id,
-            nom: newRecommendation.name,
-            shortName: newRecommendation.shortName,
-            // Autres propriétés nécessaires
-        },
-        score: newRecommendation.score,
-        compatibilite: 'RECOMMANDÉ',
-        details: newRecommendation.strengths,
-        scoreDetails: { 
-            pourcentage: newRecommendation.score 
-        }
-    };
-}
-
-function convertLegacyFormat(oldResult) {
-    return {
-        rank: oldResult.rank || 1,
-        id: oldResult.formeId,
-        name: oldResult.forme.nom,
-        shortName: oldResult.forme.shortName,
-        score: oldResult.scoreDetails.pourcentage,
-        status: oldResult.forme,
-        strengths: oldResult.details || [],
-        weaknesses: oldResult.forme.inconvenients?.split(',') || []
-    };
 }
 
 // Compatibilité avec l'ancien système - Définir les objets nécessaires dans window
@@ -1273,7 +1242,7 @@ window.SimulationsFiscales = {
     }
 };
 
-// Ajouter le pont de compatibilité pour l'ancien système de résultats
+// NOUVEAU: Ajouter le pont de compatibilité pour l'ancien système
 window.ResultsManager = {
     // Pont vers la nouvelle méthode d'affichage
     generateResults: function(customParams) {
@@ -1287,17 +1256,12 @@ window.ResultsManager = {
         }
     },
     
-    // Importer la méthode d'affichage HTML de l'ancienne version
+    // Réutiliser la méthode d'affichage de la nouvelle version
     displayResults: function(results, incompatibles) {
-        if (!results || results.length === 0) {
-            console.error("Pas de résultats à afficher");
-            return;
-        }
-        
         if (window.recommendationEngine) {
             window.recommendationEngine.displayResults(results);
         } else {
-            console.error("Le moteur de recommandation n'est pas disponible pour afficher les résultats");
+            console.error("La méthode d'affichage n'est pas disponible");
         }
     }
 };
