@@ -1206,6 +1206,42 @@ class RecommendationEngine {
     }
 }
 
+// Compatibilité avec l'ancien système - Définir les objets nécessaires dans window
+window.FormeJuridiqueDB = {
+    structures: Object.values(legalStatuses),
+    getById: function(id) {
+        return legalStatuses[id];
+    }
+};
+
+window.ScoringEngine = {
+    SCORE_MAX: 100,
+    calculerScore: function(forme, userResponses) {
+        // Logique simplifiée qui sera remplacée par le vrai calcul dans RecommendationEngine
+        return {
+            formeId: forme.id,
+            forme: forme,
+            score: 85,
+            scoreCriteresStructurels: 55,
+            scoreObjectifs: 30,
+            compatibilite: 'RECOMMANDÉ',
+            details: ['Adapté à votre profil', 'Avantage fiscal', 'Protection du patrimoine'],
+            scoreDetails: { pourcentage: 85 }
+        };
+    }
+};
+
+window.SimulationsFiscales = {
+    simulerImpactFiscal: function(forme, caSimulation, params) {
+        // Logique simplifiée qui sera remplacée par le vrai calcul
+        return {
+            chargesSociales: caSimulation * 0.25,
+            impot: caSimulation * 0.15,
+            revenueNet: caSimulation * 0.6
+        };
+    }
+};
+
 // Rendre la classe disponible globalement pour le chargement non-ES6
 window.RecommendationEngine = RecommendationEngine;
 
