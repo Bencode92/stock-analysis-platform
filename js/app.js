@@ -1,30 +1,32 @@
 // app.js - Fichier principal d'initialisation du simulateur de forme juridique
 
 import QuestionManager from './question-manager.js';
-import RecommendationEngine from './recommendation-engine.js'; // Ajouté
+// On retire l'import direct pour éviter les problèmes de chargement
 
 // Fonction d'initialisation de l'application
 document.addEventListener('DOMContentLoaded', () => {
     // Mettre à jour la date de dernière mise à jour
     updateLastUpdateDate();
     
-    // Initialiser le moteur de recommandation
-    initRecommendationEngine(); // Ajouté
-    
     // Initialiser le gestionnaire de questions
     initQuestionManager();
     
     // Initialiser les événements de l'interface
     initUIEvents();
+    
+    // Ajout d'une méthode globale pour initialiser le moteur de recommandation quand nécessaire
+    window.initRecommendationEngine = async function() {
+        try {
+            // Import dynamique pour charger le module uniquement quand nécessaire
+            const RecommendationModule = await import('./recommendation-engine.js');
+            window.recommendationEngine = new RecommendationModule.default();
+            return true;
+        } catch (error) {
+            console.error("Erreur lors de l'initialisation du moteur de recommandation:", error);
+            return false;
+        }
+    };
 });
-
-/**
- * Initialiser le moteur de recommandation
- */
-function initRecommendationEngine() { // Ajouté
-    // Créer une instance du moteur de recommandation
-    window.recommendationEngine = new RecommendationEngine();
-}
 
 /**
  * Mettre à jour la date de dernière mise à jour
