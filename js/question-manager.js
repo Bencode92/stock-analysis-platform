@@ -22,9 +22,6 @@ class QuestionManager {
         
         // Initialiser les événements
         this.initEvents();
-        
-        // Vérifier que le moteur de recommandation est disponible
-        console.log('QuestionManager: Vérification du moteur de recommandation:', window.recommendationEngine ? 'Disponible' : 'Non disponible');
     }
 
     /**
@@ -941,7 +938,7 @@ class QuestionManager {
                 break;
             
             case 'slider':
-                const slider = document.querySelector(`input[type=\"range\"][min=\"${currentQuestion.min}\"]`);
+                const slider = document.querySelector(`input[type="range"][min="${currentQuestion.min}"]`);
                 this.answers[currentQuestion.id] = parseFloat(slider.value);
                 break;
             
@@ -1060,13 +1057,10 @@ class QuestionManager {
         const showResultsBtn = document.getElementById('show-results-btn');
         if (showResultsBtn) {
             showResultsBtn.addEventListener('click', () => {
-                // Vérifier si le moteur de recommandation est disponible
-                console.log('Vérification du moteur de recommandation:', window.recommendationEngine ? 'Disponible' : 'Non disponible');
-                
                 // Appeler le moteur de recommandation
-                if (window.recommendationEngine) {
-                    console.log('Appel du moteur de recommandation avec les réponses:', this.answers);
-                    window.recommendationEngine.calculateRecommendations(this.answers);
+                const recommendationEngine = window.recommendationEngine;
+                if (recommendationEngine) {
+                    recommendationEngine.calculateRecommendations(this.answers);
                 } else {
                     console.error('Moteur de recommandation non disponible');
                     alert('Le moteur de recommandation n\'est pas encore disponible. Implémentation en cours...');
