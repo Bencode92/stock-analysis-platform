@@ -16,6 +16,7 @@ class QuestionManager {
         this.progressPercentage = document.getElementById('progress-percentage');
         this.timeEstimate = document.getElementById('time-estimate');
         this.progressStepsContainer = document.getElementById('progress-steps-container');
+        this.resultsContainer = document.getElementById('results-container');
         
         // Initialiser les questions par section
         this.initSectionQuestions();
@@ -47,6 +48,11 @@ class QuestionManager {
                 this.renderCurrentQuestion();
             });
         }
+        
+        // Écouter l'événement recommendationEngineReady
+        document.addEventListener('recommendationEngineReady', () => {
+            console.log("👂 QuestionManager a reçu l'événement recommendationEngineReady");
+        });
     }
 
     /**
@@ -1037,11 +1043,19 @@ class QuestionManager {
     }
 
     /**
-     * Afficher les résultats - VERSION AMÉLIORÉE
+     * Afficher les résultats - VERSION AMÉLIORÉE ET CORRIGÉE
      */
     showResults() {
-        // Afficher un indicateur de chargement
-        this.questionContainer.innerHTML = `
+        // S'assurer que le conteneur de résultats est disponible
+        if (!this.resultsContainer) {
+            console.error("Le conteneur de résultats n'est pas disponible");
+            return;
+        }
+        
+        // Afficher l'indicateur de chargement
+        this.questionContainer.style.display = 'none';
+        this.resultsContainer.style.display = 'block';
+        this.resultsContainer.innerHTML = `
             <div class="bg-blue-900 bg-opacity-20 p-8 rounded-xl text-center">
                 <div class="text-6xl text-blue-400 mb-4"><i class="fas fa-spinner fa-spin"></i></div>
                 <h2 class="text-2xl font-bold mb-4">Calcul des résultats...</h2>
@@ -1049,56 +1063,77 @@ class QuestionManager {
             </div>
         `;
         
-        try {
-            // Stocker les réponses pour le moteur de recommandation
-            window.userResponses = this.answers;
+        // Stocker les réponses globalement pour le moteur de recommandation
+        window.userResponses = this.answers;
+        
+        // Vérifier si le moteur de recommandation est déjà disponible
+        if (window.recommendationEngine && typeof window.recommendationEngine.calculateRecommendations === 'function') {
+            console.log("Moteur de recommandation disponible, calcul des recommandations...");
             
-            // Attendre que le moteur soit prêt
-            const processResults = () => {
-                console.log("Calcul des recommandations avec les réponses:", this.answers);
-                
-                if (!window.recommendationEngine) {
-                    console.error("Le moteur de recommandation n'est toujours pas disponible");
-                    return;
-                }
-                
+            try {
+                // Calculer les recommandations
                 const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
+                console.log("Recommandations calculées avec succès:", recommendations);
                 
-                if (window.ResultsManager && typeof window.ResultsManager.displayResults === 'function') {
-                    window.ResultsManager.displayResults(recommendations);
+                // Les résultats seront affichés par le moteur lui-même
+                return recommendations;
+            } catch (error) {
+                console.error("Erreur lors du calcul des recommandations:", error);
+                this.showErrorMessage(error);
+            }
+        } else {
+            console.log("Moteur de recommandation non disponible, en attente...");
+            
+            // Créer un écouteur d'événement et un délai pour empêcher les attentes infinies
+            const handleEngineReady = () => {
+                console.log("Événement de disponibilité du moteur reçu");
+                if (window.recommendationEngine && typeof window.recommendationEngine.calculateRecommendations === 'function') {
+                    try {
+                        const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
+                        console.log("Recommandations calculées avec succès (après attente):", recommendations);
+                        return recommendations;
+                    } catch (error) {
+                        console.error("Erreur lors du calcul des recommandations (après attente):", error);
+                        this.showErrorMessage(error);
+                    }
                 } else {
-                    console.warn("La méthode d'affichage des résultats n'est pas disponible");
+                    console.error("Moteur toujours non disponible après l'événement");
+                    this.showErrorMessage(new Error("Le moteur de recommandation n'est pas disponible"));
                 }
             };
             
-            // Vérifier si le moteur est déjà disponible
-            if (window.recommendationEngine) {
-                console.log("Moteur de recommandation déjà disponible, calcul immédiat");
-                processResults();
-            } else {
-                console.log("En attente de l'initialisation du moteur de recommandation");
-                
-                // Écouter l'événement de disponibilité du moteur
-                document.addEventListener('recommendationEngineReady', processResults, { once: true });
-                
-                // Ajouter un délai de secours plus long (20 secondes)
-                setTimeout(() => {
-                    // Tenter une dernière fois au cas où l'événement n'a pas été déclenché
-                    if (!window.recommendationEngine) {
-                        console.warn("Tentative finale d'initialisation du moteur après attente");
-                        if (window.RecommendationEngine) {
-                            window.recommendationEngine = new window.RecommendationEngine();
-                            processResults();
-                        } else {
-                            throw new Error("Le moteur de recommandation n'a pas pu être initialisé après 20 secondes");
-                        }
-                    }
-                }, 20000);
-            }
-        } catch (error) {
-            console.error('Erreur lors du calcul des recommandations:', error);
+            // Écouter l'événement une seule fois
+            document.addEventListener('recommendationEngineReady', handleEngineReady, { once: true });
             
-            this.questionContainer.innerHTML = `
+            // Mettre en place un délai maximum d'attente
+            setTimeout(() => {
+                // Vérifier si le moteur est disponible après le délai
+                if (window.recommendationEngine && typeof window.recommendationEngine.calculateRecommendations === 'function') {
+                    document.removeEventListener('recommendationEngineReady', handleEngineReady);
+                    try {
+                        const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
+                        console.log("Recommandations calculées avec succès (après délai):", recommendations);
+                        return recommendations;
+                    } catch (error) {
+                        console.error("Erreur lors du calcul des recommandations (après délai):", error);
+                        this.showErrorMessage(error);
+                    }
+                } else {
+                    // Si toujours pas disponible, afficher un message d'erreur
+                    console.error("Délai d'attente du moteur de recommandation dépassé");
+                    document.removeEventListener('recommendationEngineReady', handleEngineReady);
+                    this.showErrorMessage(new Error("Délai d'attente du moteur de recommandation dépassé"));
+                }
+            }, 10000); // 10 secondes maximum d'attente
+        }
+    }
+    
+    /**
+     * Afficher un message d'erreur
+     */
+    showErrorMessage(error) {
+        if (this.resultsContainer) {
+            this.resultsContainer.innerHTML = `
                 <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center">
                     <div class="text-6xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
                     <h2 class="text-2xl font-bold mb-4">Une erreur est survenue</h2>
@@ -1110,7 +1145,7 @@ class QuestionManager {
                 </div>
             `;
             
-            document.getElementById('restart-btn').addEventListener('click', () => {
+            document.getElementById('restart-btn')?.addEventListener('click', () => {
                 location.reload();
             });
         }
