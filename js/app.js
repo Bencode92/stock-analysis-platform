@@ -11,23 +11,28 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialiser les événements de l'interface
     initUIEvents();
     
-    // NE PAS initialiser directement le moteur de recommandation
-    // initRecommendationEngine();  
+    // Initialiser le moteur de recommandation directement (si possible)
+    try {
+        initRecommendationEngine();
+    } catch (error) {
+        console.warn("Initialisation directe du moteur impossible, sera faite plus tard:", error);
+    }
     
-    // À la place, créer une fonction lazy-load
+    // Crée une fonction lazy-load de secours
     window.loadRecommendationEngine = function() {
         return new Promise((resolve, reject) => {
             try {
                 // Vérifier si le moteur est déjà chargé
                 if (window.recommendationEngine) {
+                    console.log("Moteur déjà initialisé, réutilisation de l'instance existante");
                     resolve(window.recommendationEngine);
                     return;
                 }
                 
-                // Sinon, initialiser le moteur
-                if (window.RecommendationEngine) {
+                // Sinon, initialiser le moteur si la classe est disponible
+                if (typeof window.RecommendationEngine === 'function') {
+                    console.log("Classe RecommendationEngine disponible, création d'une instance");
                     window.recommendationEngine = new window.RecommendationEngine();
-                    console.log("Moteur de recommandation initialisé avec succès");
                     
                     // Créer des ponts de compatibilité si nécessaire
                     if (!window.checkHardFails) {
@@ -50,15 +55,33 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /**
- * Initialiser le moteur de recommandation directement (fonction conservée pour compatibilité)
+ * Initialiser le moteur de recommandation directement
  */
 function initRecommendationEngine() {
-    // Cette fonction sera appelée quand RecommendationEngine sera disponible globalement
-    if (window.RecommendationEngine) {
+    console.log("Tentative d'initialisation directe du moteur de recommandation");
+    
+    // Vérifier explicitement si la classe est disponible
+    if (typeof window.RecommendationEngine === 'function') {
         window.recommendationEngine = new window.RecommendationEngine();
         console.log("Moteur de recommandation initialisé avec succès");
+        
+        // Dispatcher un événement pour signaler que le moteur est prêt
+        window.recommendationEngineLoaded = true;
+        document.dispatchEvent(new CustomEvent('recommendationEngineReady'));
     } else {
-        console.error("RecommendationEngine n'est pas disponible. Assurez-vous que recommendation-engine.js est chargé correctement.");
+        console.warn("RecommendationEngine n'est pas encore disponible pour l'initialisation directe");
+        
+        // Écouter l'événement qui indique que le script est chargé
+        document.addEventListener('recommendationEngineReady', function() {
+            try {
+                console.log("Événement 'recommendationEngineReady' reçu, initialisation du moteur");
+                window.recommendationEngine = new window.RecommendationEngine();
+                window.recommendationEngineLoaded = true;
+                console.log("Moteur de recommandation initialisé avec succès après l'événement");
+            } catch (error) {
+                console.error("Erreur lors de l'initialisation du moteur après l'événement:", error);
+            }
+        });
     }
     
     // Créer des ponts de compatibilité si nécessaire pour les modules auxiliaires
