@@ -688,7 +688,7 @@ const legalStatuses = {
         categorie: 'Commerciale',
         associes: '2+ (au moins deux associés)',
         capital: '37 000 € (5 commanditaires minimum)',
-        responsabilite: 'Commandités (responsabilité illimitée) et commanditaires (responsabilité limitée à l'apport)',
+        responsabilite: 'Commandités (responsabilité illimitée) et commanditaires (responsabilité limitée apport)',
         fiscalite: 'IS',
         fiscaliteOption: 'Non',
         regimeSocial: 'Assimilé salarié (commandité)',
