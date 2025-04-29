@@ -1,5 +1,4 @@
 // recommendation-engine.js - Analyse des réponses et génération de recommandations
-import { legalStatuses, exclusionFilters, ratingScales } from './legal-status-data.js';
 
 // Gestionnaire d'erreurs spécifique pour ce fichier
 window.addEventListener('error', (e) => {
@@ -12,8 +11,11 @@ window.addEventListener('error', (e) => {
 console.log("Chargement du recommendation-engine.js commencé");
 window.engineLoadingStarted = true;
 
+// Utilisation des variables globales au lieu des imports
+// const { legalStatuses, exclusionFilters, ratingScales } = window;
+
 // Règles de scoring configurables
-export const scoringRules = [
+const scoringRules = [
     // Règles pour la protection du patrimoine
     {
         id: 'essential_patrimony_protection',
@@ -316,17 +318,17 @@ export const scoringRules = [
     }
 ];
 
-export class RecommendationEngine {
+class RecommendationEngine {
     constructor() {
         console.log("Initialisation du RecommendationEngine");
         // Blindage du constructeur - vérification que legalStatuses est disponible
-        if (!legalStatuses) {
+        if (!window.legalStatuses) {
             throw new Error(
-                "`legalStatuses` est introuvable – vérifie le chargement de legal-status-data.js"
+                "`window.legalStatuses` est introuvable – vérifie le chargement de legal-status-data.js"
             );
         }
         this.answers = {};
-        this.filteredStatuses = {...legalStatuses};
+        this.filteredStatuses = {...window.legalStatuses};
         this.scores = {};
         this.weightedScores = {};
         this.priorityWeights = {};
@@ -384,6 +386,8 @@ export class RecommendationEngine {
             }
         };
         console.log("RecommendationEngine initialisé avec succès");
+        
+        // Ne plus émettre l'événement ici, il sera émis à la fin du fichier
     }
 
     /**
@@ -430,7 +434,7 @@ export class RecommendationEngine {
      * Réinitialiser les résultats pour un nouveau calcul
      */
     resetResults() {
-        this.filteredStatuses = {...legalStatuses};
+        this.filteredStatuses = {...window.legalStatuses};
         this.scores = {};
         this.weightedScores = {};
         this.incompatibles = [];
@@ -458,7 +462,7 @@ export class RecommendationEngine {
      * Appliquer les filtres d'exclusion déclaratifs définis dans legal-status-data.js
      */
     applyDeclarativeFilters() {
-        exclusionFilters.forEach(filter => {
+        window.exclusionFilters.forEach(filter => {
             // Vérifier si le filtre s'applique à la réponse
             let shouldExclude = false;
             
@@ -805,23 +809,23 @@ export class RecommendationEngine {
             return "Aucune explication disponible";
         }
         
-        let explanation = `Explication pour ${this.filteredStatuses[statusId].name} (${statusId}):\\n\\n`;
+        let explanation = `Explication pour ${this.filteredStatuses[statusId].name} (${statusId}):\n\n`;
         
         // Expliquer les scores par critère
         for (const [criterion, data] of Object.entries(this.auditTrail.scores[statusId])) {
-            explanation += `${criterion}: ${data.raw_score}/5 (poids: ${data.weight})\\n`;
+            explanation += `${criterion}: ${data.raw_score}/5 (poids: ${data.weight})\n`;
             
             if (data.applied_rules && data.applied_rules.length) {
-                explanation += "  Règles appliquées:\\n";
+                explanation += "  Règles appliquées:\n";
                 data.applied_rules.forEach(rule => {
                     const impact = rule.impact > 0 ? `+${rule.impact}` : rule.impact;
-                    explanation += `  - ${rule.description} (${impact})\\n`;
+                    explanation += `  - ${rule.description} (${impact})\n`;
                 });
             }
         }
         
         // Score final
-        explanation += `\\nScore final: ${Math.round(this.weightedScores[statusId])}/100\\n`;
+        explanation += `\nScore final: ${Math.round(this.weightedScores[statusId])}/100\n`;
         
         return explanation;
     }
@@ -1803,19 +1807,11 @@ export class RecommendationEngine {
     }
 }
 
-/**
- * Notifier que le moteur de recommandation est prêt
- */
-export function notifyEngineReady() {
-    console.log("Émission de l'événement recommendationEngineReady");
-    document.dispatchEvent(new CustomEvent('recommendationEngineReady'));
-}
-
 // Compatibilité avec l'ancien système - Définir les objets nécessaires dans window
 window.FormeJuridiqueDB = {
-    structures: Object.values(legalStatuses),
+    structures: Object.values(window.legalStatuses),
     getById: function(id) {
-        return legalStatuses[id];
+        return window.legalStatuses[id];
     }
 };
 
@@ -1902,16 +1898,20 @@ window.ResultsManager = {
     }
 };
 
-// Exposer la classe et les règles pour compatibilité 
-window.RecommendationEngine = RecommendationEngine;
-window.scoringRules = scoringRules;
-console.log("Classe RecommendationEngine exposée avec succès");
-window.engineLoadingCompleted = true;
-
-// Attendre que le DOM soit chargé pour émettre l'événement
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', notifyEngineReady);
-} else {
-    // DOM déjà chargé, émettre l'événement directement
-    setTimeout(notifyEngineReady, 100); // Petit délai pour s'assurer que tout est bien chargé
+// Exposer la classe et une instance de manière synchrone
+try {
+    // Rendre la classe disponible globalement
+    window.RecommendationEngine = RecommendationEngine;
+    window.scoringRules = scoringRules;
+    console.log("Classe RecommendationEngine exposée avec succès");
+    
+    // Ne pas déclencher l'événement ici mais à la fin du fichier
+    window.engineLoadingCompleted = true;
+} catch (e) {
+    console.error("Erreur lors de l'exposition du moteur de recommandation:", e);
 }
+
+// Déclencher l'événement une seule fois, à la fin du fichier
+// après que tout soit chargé et disponible
+console.log("Déclenchement de l'événement recommendationEngineReady depuis la fin du fichier");
+document.dispatchEvent(new CustomEvent('recommendationEngineReady'));
