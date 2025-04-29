@@ -387,8 +387,7 @@ class RecommendationEngine {
         };
         console.log("RecommendationEngine initialisé avec succès");
         
-        // Déclencher l'événement ici, quand tout est réellement prêt
-        document.dispatchEvent(new CustomEvent('recommendationEngineReady'));
+        // Ne plus émettre l'événement ici, il sera émis à la fin du fichier
     }
 
     /**
@@ -1906,8 +1905,13 @@ try {
     window.scoringRules = scoringRules;
     console.log("Classe RecommendationEngine exposée avec succès");
     
-    // Ne pas déclencher l'événement ici mais dans le constructeur
+    // Ne pas déclencher l'événement ici mais à la fin du fichier
     window.engineLoadingCompleted = true;
 } catch (e) {
     console.error("Erreur lors de l'exposition du moteur de recommandation:", e);
 }
+
+// Déclencher l'événement une seule fois, à la fin du fichier
+// après que tout soit chargé et disponible
+console.log("Déclenchement de l'événement recommendationEngineReady depuis la fin du fichier");
+document.dispatchEvent(new CustomEvent('recommendationEngineReady'));
