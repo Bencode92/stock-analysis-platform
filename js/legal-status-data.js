@@ -47,7 +47,7 @@ const legalStatuses = {
             "Test d'un concept avant structure plus formelle",
             "Activités secondaires ou complémentaires"
         ],
-        casConseille: 'Début d\'activité, test',
+        casConseille: 'Début d\\'activité, test',
         casDeconseille: 'Développement ambitieux',
         transmission: 'Non',
         plafondCA: '188 700 € (vente/hébergement) ou 77 700 € (services/libérales)',
@@ -962,7 +962,10 @@ const ratingScales = {
     }
 };
 
-// Exposer globalement les variables
+// Exporter les constantes (module ES6)
+export { legalStatuses, scales2025, exclusionFilters, ratingScales };
+
+// Pour la compatibilité avec l'ancien code (sera supprimé à terme)
 window.legalStatuses = legalStatuses;
 window.scales2025 = scales2025;
 window.exclusionFilters = exclusionFilters;
