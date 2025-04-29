@@ -1,9 +1,6 @@
 // question-manager.js - Gestion de l'affichage et de la navigation entre les questions
 
-import { sections, questions, quickStartQuestions } from './question-data.js';
-import { RecommendationEngine } from './recommendation-engine.js';
-
-export class QuestionManager {
+class QuestionManager {
     constructor() {
         this.currentSectionIndex = 0;
         this.currentQuestionIndex = 0;
@@ -11,7 +8,7 @@ export class QuestionManager {
         this.currentSectionQuestionIndex = 0; // Index de la question dans la section courante
         this.answers = {};
         this.isQuickStart = false;
-        this.maxProgress = questions.length;
+        this.maxProgress = window.questions.length;
         this.questionContainer = document.getElementById('question-container');
         this.progressBar = document.getElementById('progress-bar');
         this.progressPercentage = document.getElementById('progress-percentage');
@@ -30,8 +27,8 @@ export class QuestionManager {
      */
     initSectionQuestions() {
         // Regrouper les questions par section
-        sections.forEach(section => {
-            this.sectionQuestions[section.id] = questions.filter(q => q.sectionId === section.id);
+        window.sections.forEach(section => {
+            this.sectionQuestions[section.id] = window.questions.filter(q => q.sectionId === section.id);
         });
     }
 
@@ -55,7 +52,7 @@ export class QuestionManager {
      */
     initQuickStart() {
         // Filtrer les questions pour garder uniquement celles du quick start
-        this.filteredQuestions = questions.filter(q => quickStartQuestions.includes(q.id));
+        this.filteredQuestions = window.questions.filter(q => window.quickStartQuestions.includes(q.id));
         this.maxProgress = this.filteredQuestions.length;
         this.currentQuestionIndex = 0;
         
@@ -85,7 +82,7 @@ export class QuestionManager {
         this.progressStepsContainer.innerHTML = '';
         
         // Déterminer les questions à utiliser
-        const questionsToUse = this.isQuickStart ? this.filteredQuestions : questions;
+        const questionsToUse = this.isQuickStart ? this.filteredQuestions : window.questions;
         
         // Créer une étape par section (regrouper les questions par section)
         const uniqueSections = [];
@@ -97,7 +94,7 @@ export class QuestionManager {
         
         // Rendre chaque étape
         uniqueSections.forEach((sectionId, index) => {
-            const section = sections.find(s => s.id === sectionId);
+            const section = window.sections.find(s => s.id === sectionId);
             const isActive = index === this.currentSectionIndex;
             const isCompleted = index < this.currentSectionIndex;
             
@@ -125,7 +122,7 @@ export class QuestionManager {
      * Calculer le pourcentage de progression
      */
     calculateProgress() {
-        const questionsToUse = this.isQuickStart ? this.filteredQuestions : questions;
+        const questionsToUse = this.isQuickStart ? this.filteredQuestions : window.questions;
         return (this.currentQuestionIndex / questionsToUse.length) * 100;
     }
 
@@ -141,7 +138,7 @@ export class QuestionManager {
             questionToRender = this.filteredQuestions[this.currentQuestionIndex];
         } else {
             // Mode normal : naviguer par section
-            const currentSectionId = sections[this.currentSectionIndex].id;
+            const currentSectionId = window.sections[this.currentSectionIndex].id;
             const sectionQuestions = this.sectionQuestions[currentSectionId] || [];
             
             // S'assurer que nous avons un index valide
@@ -211,7 +208,7 @@ export class QuestionManager {
         header.className = 'mb-6';
         
         // Trouver la section correspondante
-        const section = sections.find(s => s.id === question.sectionId);
+        const section = window.sections.find(s => s.id === question.sectionId);
         
         header.innerHTML = `
             <div class="flex items-center mb-3">
@@ -871,7 +868,7 @@ export class QuestionManager {
         if (this.isQuickStart) {
             currentQuestion = this.filteredQuestions[this.currentQuestionIndex];
         } else {
-            const currentSectionId = sections[this.currentSectionIndex].id;
+            const currentSectionId = window.sections[this.currentSectionIndex].id;
             const sectionQuestions = this.sectionQuestions[currentSectionId] || [];
             currentQuestion = sectionQuestions[this.currentSectionQuestionIndex];
         }
@@ -915,7 +912,7 @@ export class QuestionManager {
         if (this.isQuickStart) {
             currentQuestion = this.filteredQuestions[this.currentQuestionIndex];
         } else {
-            const currentSectionId = sections[this.currentSectionIndex].id;
+            const currentSectionId = window.sections[this.currentSectionIndex].id;
             const sectionQuestions = this.sectionQuestions[currentSectionId] || [];
             currentQuestion = sectionQuestions[this.currentSectionQuestionIndex];
         }
@@ -984,7 +981,7 @@ export class QuestionManager {
             }
         } else {
             // Mode navigation par section
-            const currentSectionId = sections[this.currentSectionIndex].id;
+            const currentSectionId = window.sections[this.currentSectionIndex].id;
             const sectionQuestions = this.sectionQuestions[currentSectionId] || [];
             
             if (this.currentSectionQuestionIndex > 0) {
@@ -994,7 +991,7 @@ export class QuestionManager {
             } else if (this.currentSectionIndex > 0) {
                 // Revenir à la dernière question de la section précédente
                 this.currentSectionIndex--;
-                const prevSectionId = sections[this.currentSectionIndex].id;
+                const prevSectionId = window.sections[this.currentSectionIndex].id;
                 const prevSectionQuestions = this.sectionQuestions[prevSectionId] || [];
                 this.currentSectionQuestionIndex = prevSectionQuestions.length - 1;
                 this.renderCurrentQuestion();
@@ -1015,14 +1012,14 @@ export class QuestionManager {
             }
         } else {
             // Mode navigation par section
-            const currentSectionId = sections[this.currentSectionIndex].id;
+            const currentSectionId = window.sections[this.currentSectionIndex].id;
             const sectionQuestions = this.sectionQuestions[currentSectionId] || [];
             
             if (this.currentSectionQuestionIndex < sectionQuestions.length - 1) {
                 // Passer à la question suivante dans la même section
                 this.currentSectionQuestionIndex++;
                 this.renderCurrentQuestion();
-            } else if (this.currentSectionIndex < sections.length - 1) {
+            } else if (this.currentSectionIndex < window.sections.length - 1) {
                 // Passer à la première question de la section suivante
                 this.currentSectionIndex++;
                 this.currentSectionQuestionIndex = 0;
@@ -1064,15 +1061,60 @@ export class QuestionManager {
                 let loadingInterval = window.showLoadingIndicator();
                 
                 try {
-                    // Créer une instance du moteur de recommandation
-                    const engine = new RecommendationEngine();
-                    window.recommendationEngine = engine;
+                    // Si loadRecommendationEngine est disponible (approche Promise)
+                    if (typeof window.loadRecommendationEngine === 'function') {
+                        console.log("Utilisation de loadRecommendationEngine Promise");
+                        const engine = await window.loadRecommendationEngine();
+                        const recommendations = engine.calculateRecommendations(this.answers);
+                        engine.displayResults(recommendations);
+                        return;
+                    }
                     
-                    // Calculer les recommandations avec nos réponses
-                    const recommendations = engine.calculateRecommendations(this.answers);
+                    // Si le moteur est directement accessible
+                    if (typeof window.RecommendationEngine === 'function') {
+                        console.log("Création directe d'une instance RecommendationEngine");
+                        window.recommendationEngine = new window.RecommendationEngine();
+                        const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
+                        window.recommendationEngine.displayResults(recommendations);
+                        return;
+                    }
                     
-                    // Afficher les résultats
-                    engine.displayResults(recommendations);
+                    // Si déjà instancié, utiliser l'instance existante
+                    if (window.recommendationEngine) {
+                        console.log("Utilisation de l'instance existante");
+                        const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
+                        window.recommendationEngine.displayResults(recommendations);
+                        return;
+                    }
+                    
+                    // Fallback: Attendre l'événement
+                    console.log("Fallback: utilisation de l'approche par événement");
+                    const answersData = this.answers;
+                    
+                    const engineReadyHandler = function() {
+                        try {
+                            console.log("Événement reçu, initialisation du moteur");
+                            window.recommendationEngine = new window.RecommendationEngine();
+                            const recommendations = window.recommendationEngine.calculateRecommendations(answersData);
+                            window.recommendationEngine.displayResults(recommendations);
+                        } catch (error) {
+                            console.error("Erreur lors de l'utilisation du moteur:", error);
+                            this.showEngineErrorMessage(error);
+                        } finally {
+                            document.removeEventListener('recommendationEngineReady', engineReadyHandler);
+                        }
+                    }.bind(this);
+                    
+                    document.addEventListener('recommendationEngineReady', engineReadyHandler);
+                    
+                    // Timeout plus long (60 secondes au lieu de 30)
+                    setTimeout(() => {
+                        if (document.querySelector('#loading-indicator').style.display !== 'none') {
+                            console.error("Timeout lors du chargement du moteur de recommandation");
+                            document.removeEventListener('recommendationEngineReady', engineReadyHandler);
+                            this.showEngineErrorMessage(new Error("Le moteur de recommandation n'a pas pu être chargé dans le délai imparti."));
+                        }
+                    }, 60000); // 60 secondes de timeout
                 } catch (error) {
                     console.error("Erreur lors de l'affichage des résultats:", error);
                     this.showEngineErrorMessage(error);
@@ -1107,5 +1149,5 @@ export class QuestionManager {
     }
 }
 
-// Exposer la classe au niveau global - pour la rétrocompatibilité
+// Exposer la classe au niveau global
 window.QuestionManager = QuestionManager;
