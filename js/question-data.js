@@ -1048,10 +1048,7 @@ const quickStartQuestions = [
     "priorities"
 ];
 
-// Exporter les constantes (module ES6)
-export { sections, questions, quickStartQuestions };
-
-// Pour la compatibilité avec l'ancien code (sera supprimé à terme)
+// Pour la compatibilité avec l'ancien code
 window.sections = sections;
 window.questions = questions;
 window.quickStartQuestions = quickStartQuestions;
