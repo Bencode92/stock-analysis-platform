@@ -1060,13 +1060,30 @@ class QuestionManager {
                 // Afficher l'indicateur de chargement immédiatement
                 let loadingInterval = window.showLoadingIndicator();
                 
-                // Utiliser l'événement recommendationEngineReady pour initialiser et utiliser le moteur
-                const answersData = this.answers; // Sauvegarde des réponses pour utilisation dans l'écouteur d'événement
+                // Vérifier si le moteur est déjà disponible dans window
+                if (typeof window.RecommendationEngine === 'function') {
+                    console.log("RecommendationEngine est disponible comme constructeur");
+                    try {
+                        // Initialiser directement
+                        window.recommendationEngine = new window.RecommendationEngine();
+                        const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
+                        window.recommendationEngine.displayResults(recommendations);
+                        window.hideLoadingIndicator(loadingInterval);
+                        return;
+                    } catch (error) {
+                        console.error("Erreur lors de l'initialisation directe:", error);
+                        // Continue avec la méthode par événement ci-dessous
+                    }
+                }
                 
-                // Vérifier si le moteur est déjà disponible
+                // Utiliser l'événement recommendationEngineReady
+                console.log("Utilisation de l'approche par événement");
+                const answersData = this.answers; // Sauvegarde pour l'écouteur d'événement
+                
+                // Vérifier si le moteur est déjà marqué comme chargé
                 if (window.recommendationEngineLoaded) {
                     try {
-                        // Le moteur est déjà chargé, on peut l'instancier directement
+                        console.log("Le moteur est déjà chargé, initialisation directe");
                         window.recommendationEngine = new window.RecommendationEngine();
                         const recommendations = window.recommendationEngine.calculateRecommendations(answersData);
                         window.recommendationEngine.displayResults(recommendations);
@@ -1077,9 +1094,11 @@ class QuestionManager {
                         window.hideLoadingIndicator(loadingInterval);
                     }
                 } else {
+                    console.log("Mise en place de l'écouteur d'événement pour recommendationEngineReady");
                     // Écouter l'événement de disponibilité du moteur
                     const engineReadyHandler = function() {
                         try {
+                            console.log("Événement reçu, initialisation du moteur");
                             // Créer l'instance du moteur
                             window.recommendationEngine = new window.RecommendationEngine();
                             const recommendations = window.recommendationEngine.calculateRecommendations(answersData);
@@ -1088,6 +1107,7 @@ class QuestionManager {
                             console.error("Erreur lors de l'utilisation du moteur de recommandation:", error);
                             this.showEngineErrorMessage(error);
                         } finally {
+                            console.log("Nettoyage de l'écouteur et de l'indicateur");
                             window.hideLoadingIndicator(loadingInterval);
                             // Nettoyage de l'écouteur
                             document.removeEventListener('recommendationEngineReady', engineReadyHandler);
@@ -1097,7 +1117,7 @@ class QuestionManager {
                     // Ajouter l'écouteur d'événement
                     document.addEventListener('recommendationEngineReady', engineReadyHandler);
                     
-                    // Timeout de sécurité pour éviter que l'indicateur de chargement reste bloqué
+                    // Timeout de sécurité augmenté à 30 secondes
                     setTimeout(() => {
                         if (document.querySelector('#loading-indicator').style.display !== 'none') {
                             console.error("Timeout lors du chargement du moteur de recommandation");
@@ -1105,7 +1125,7 @@ class QuestionManager {
                             document.removeEventListener('recommendationEngineReady', engineReadyHandler);
                             this.showEngineErrorMessage(new Error("Le moteur de recommandation n'a pas pu être chargé dans le délai imparti."));
                         }
-                    }, 10000); // 10 secondes de timeout
+                    }, 30000); // 30 secondes de timeout
                 }
             });
         }
