@@ -1081,7 +1081,7 @@ class QuestionManager {
                 const answersData = this.answers; // Sauvegarde pour l'écouteur d'événement
                 
                 // Vérifier si le moteur est déjà marqué comme chargé
-                if (window.recommendationEngineLoaded) {
+                if (window.recommendationEngineLoaded || typeof window.RecommendationEngine === 'function') {
                     try {
                         console.log("Le moteur est déjà chargé, initialisation directe");
                         window.recommendationEngine = new window.RecommendationEngine();
