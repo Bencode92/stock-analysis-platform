@@ -22,40 +22,55 @@ function initRecommendationEngine() {
     // Afficher l'indicateur de chargement
     const loadingInterval = window.showLoadingIndicator ? window.showLoadingIndicator() : null;
     
-    // Utiliser la méthode statique create pour initialiser le moteur
-    RecommendationEngine.create()
-        .then(engine => {
-            window.recommendationEngine = engine;
-            console.log("Moteur de recommandation initialisé avec succès");
-            // Masquer l'indicateur de chargement
-            if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
-        })
-        .catch(error => {
-            console.error("Erreur lors de l'initialisation du moteur:", error);
-            // Masquer l'indicateur de chargement même en cas d'erreur
-            if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
-            
-            // Afficher un message d'erreur convivial à l'utilisateur
-            const errorMessage = `Une erreur est survenue lors de l'initialisation du simulateur: ${error.message}. Essayez de rafraîchir la page.`;
-            
-            // Afficher l'erreur dans l'interface (si l'élément question-container existe)
-            const questionContainer = document.getElementById('question-container');
-            if (questionContainer) {
-                questionContainer.innerHTML = `
-                    <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center">
-                        <div class="text-4xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
-                        <h2 class="text-xl font-bold mb-4">Problème de chargement</h2>
-                        <p class="mb-6">${errorMessage}</p>
-                        <button onclick="location.reload()" class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
-                            <i class="fas fa-redo mr-2"></i> Rafraîchir la page
-                        </button>
-                    </div>
-                `;
-            } else {
-                // Si questionContainer n'existe pas, utiliser une alerte
-                alert(errorMessage);
-            }
-        });
+    // Vérifier si legalStatuses est disponible
+    if (!window.legalStatuses) {
+        console.log("window.legalStatuses n'est pas disponible, attente de l'événement legalStatusesLoaded");
+        
+        document.addEventListener('legalStatusesLoaded', () => {
+            console.log("Événement legalStatusesLoaded reçu, initialisation du moteur");
+            startEngine();
+        }, { once: true });
+    } else {
+        console.log("window.legalStatuses est déjà disponible, initialisation directe du moteur");
+        startEngine();
+    }
+    
+    function startEngine() {
+        // Utiliser la méthode statique create pour initialiser le moteur
+        RecommendationEngine.create()
+            .then(engine => {
+                window.recommendationEngine = engine;
+                console.log("Moteur de recommandation initialisé avec succès");
+                // Masquer l'indicateur de chargement
+                if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
+            })
+            .catch(error => {
+                console.error("Erreur lors de l'initialisation du moteur:", error);
+                // Masquer l'indicateur de chargement même en cas d'erreur
+                if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
+                
+                // Afficher un message d'erreur convivial à l'utilisateur
+                const errorMessage = `Une erreur est survenue lors de l'initialisation du simulateur: ${error.message}. Essayez de rafraîchir la page.`;
+                
+                // Afficher l'erreur dans l'interface (si l'élément question-container existe)
+                const questionContainer = document.getElementById('question-container');
+                if (questionContainer) {
+                    questionContainer.innerHTML = `
+                        <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center">
+                            <div class="text-4xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
+                            <h2 class="text-xl font-bold mb-4">Problème de chargement</h2>
+                            <p class="mb-6">${errorMessage}</p>
+                            <button onclick="location.reload()" class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+                                <i class="fas fa-redo mr-2"></i> Rafraîchir la page
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    // Si questionContainer n'existe pas, utiliser une alerte
+                    alert(errorMessage);
+                }
+            });
+    }
     
     // Créer des ponts de compatibilité si nécessaire pour les modules auxiliaires
     if (!window.checkHardFails) {
