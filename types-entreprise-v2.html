@@ -736,9 +736,9 @@
     </div>
     
     <!-- Scripts avec ordre de chargement modifié et timestamps pour éviter les problèmes de cache -->
-    <script src="js/legal-status-data.js?v=20250429_1"></script>
+    <script src="js/combined-recommendation.js?v=20250429_2"></script>
     <script>
-    // Vérification que legal-status-data.js est bien chargé
+    // Vérification que combined-recommendation.js est bien chargé
     document.addEventListener('DOMContentLoaded', function() {
         console.log("DOM chargé, vérification de legalStatuses");
         if (!window.legalStatuses) {
@@ -749,7 +749,6 @@
     });
     </script>
     <script src="js/question-data.js?v=20250429_1" defer></script>
-    <script src="js/recommendation-engine.js?v=20250429_1" defer></script>
     <script src="js/question-manager.js?v=20250429_1" defer></script>
     <script src="js/app.js?v=20250429_1" defer></script>
     
