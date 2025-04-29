@@ -148,11 +148,105 @@ class RecommendationEngine {
         // Calculer les scores pour chaque statut juridique
         this.calculateScores();
         
+        // CORRECTIF: Après le calcul des scores, s'assurer que tous les statuts ont un score minimum
+        // pour éviter les tableaux vides en résultat
+        if (Object.keys(this.weightedScores).length === 0) {
+            console.warn('Aucun statut avec score > 0, attribution d\'un score neutre');
+            Object.keys(this.filteredStatuses).forEach(id => {
+                this.weightedScores[id] = 50; // Score neutre par défaut
+                this.scores[id] = 50;
+            });
+        }
+        
+        // Vérifier s'il reste encore des statuts après le filtrage
+        if (Object.keys(this.filteredStatuses).length === 0) {
+            console.warn("Tous les statuts ont été filtrés! Restauration des statuts par défaut");
+            // Restaurer au moins quelques statuts de base
+            if (window.legalStatuses) {
+                if (window.legalStatuses.SARL) {
+                    this.filteredStatuses.SARL = window.legalStatuses.SARL;
+                    this.weightedScores.SARL = 65;
+                }
+                if (window.legalStatuses.EURL) {
+                    this.filteredStatuses.EURL = window.legalStatuses.EURL;
+                    this.weightedScores.EURL = 60;
+                }
+                if (window.legalStatuses.SASU) {
+                    this.filteredStatuses.SASU = window.legalStatuses.SASU;
+                    this.weightedScores.SASU = 55;
+                }
+            }
+        }
+        
         // Obtenir les recommandations finales (top 3)
         const recommendations = this.getTopRecommendations(3);
         
-        // Afficher les résultats
-        this.displayResults(recommendations);
+        // CORRECTIF: Si aucune recommandation n'est retournée, créer des recommandations par défaut
+        if (recommendations.length === 0) {
+            console.warn('Aucune recommandation trouvée, création de recommandations par défaut');
+            
+            // Créer des recommandations par défaut avec les statuts les plus courants
+            const defaultRecommendations = [];
+            
+            if (window.legalStatuses) {
+                // Ajouter SARL comme recommandation par défaut
+                if (window.legalStatuses.SARL) {
+                    defaultRecommendations.push({
+                        status: window.legalStatuses.SARL,
+                        score: 65,
+                        strengths: [
+                            "Structure bien connue et reconnue",
+                            "Responsabilité limitée aux apports",
+                            "Adapté aux projets avec plusieurs associés"
+                        ],
+                        weaknesses: [
+                            "Formalisme juridique important",
+                            "Coûts de gestion administrative",
+                            "Moins flexible que la SAS"
+                        ]
+                    });
+                }
+                
+                // Ajouter EURL comme recommandation par défaut
+                if (window.legalStatuses.EURL) {
+                    defaultRecommendations.push({
+                        status: window.legalStatuses.EURL,
+                        score: 60,
+                        strengths: [
+                            "Responsabilité limitée aux apports",
+                            "Adapté pour un entrepreneur solo",
+                            "Protection du patrimoine personnel"
+                        ],
+                        weaknesses: [
+                            "Formalisme administratif",
+                            "Coûts de gestion plus élevés qu'en microentreprise",
+                            "Moins adapté à la croissance rapide"
+                        ]
+                    });
+                }
+                
+                // Ajouter SASU comme recommandation par défaut
+                if (window.legalStatuses.SASU) {
+                    defaultRecommendations.push({
+                        status: window.legalStatuses.SASU,
+                        score: 55,
+                        strengths: [
+                            "Grande souplesse statutaire",
+                            "Idéal pour les levées de fonds",
+                            "Statut social avantageux (assimilé salarié)"
+                        ],
+                        weaknesses: [
+                            "Charges sociales élevées",
+                            "Coûts de gestion importants",
+                            "Complexité administrative"
+                        ]
+                    });
+                }
+            }
+            
+            // Utiliser ces recommandations par défaut
+            return defaultRecommendations;
+        }
         
         // Mémoïsation - stocker les résultats en cache
         this.memoizedResults[answersKey] = recommendations;
@@ -177,7 +271,235 @@ class RecommendationEngine {
         };
     }
 
-    // ... Reste des méthodes de la classe (non modifiées) ...
+    /**
+     * Appliquer les filtres d'exclusion
+     */
+    applyExclusionFilters() {
+        console.log("Statuts avant filtrage:", Object.keys(this.filteredStatuses));
+        
+        // Pour chaque filtre d'exclusion
+        if (window.exclusionFilters) {
+            window.exclusionFilters.forEach(filter => {
+                // Vérifier si la condition du filtre est remplie
+                const answerValue = this.answers[filter.id];
+                let isConditionMet = false;
+                
+                if (typeof filter.condition === 'function') {
+                    isConditionMet = filter.condition(answerValue);
+                } else {
+                    isConditionMet = answerValue === filter.condition;
+                }
+                
+                if (isConditionMet) {
+                    console.log(`Filtre ${filter.id} activé, valeur: ${answerValue}`);
+                    console.log(`Statuts exclus par ce filtre: ${filter.excluded_statuses}`);
+                    
+                    // Exclure les statuts
+                    filter.excluded_statuses.forEach(statusId => {
+                        if (this.filteredStatuses[statusId]) {
+                            console.log(`Exclusion de ${statusId}`);
+                            delete this.filteredStatuses[statusId];
+                            this.incompatibles.push(statusId);
+                        }
+                    });
+                }
+            });
+        } else {
+            console.warn("window.exclusionFilters n'est pas défini, aucun filtre appliqué");
+        }
+        
+        console.log("Statuts après filtrage:", Object.keys(this.filteredStatuses));
+    }
+
+    /**
+     * Calculer les poids des priorités
+     */
+    calculatePriorityWeights() {
+        // Si priorités définies, les utiliser pour pondérer les critères
+        const priorities = this.answers.priorities || [];
+        
+        // Poids par défaut si aucune priorité définie
+        const defaultWeights = {
+            taxation: 3,
+            social_cost: 3,
+            patrimony_protection: 3,
+            governance_flexibility: 3,
+            fundraising: 3,
+            transmission: 3,
+            administrative_simplicity: 3,
+            accounting_cost: 3,
+            retirement_insurance: 3
+        };
+        
+        // Copier les poids par défaut
+        this.priorityWeights = {...defaultWeights};
+        
+        // Appliquer les priorités de l'utilisateur
+        if (priorities.length > 0) {
+            // Poids selon la position
+            const weights = [5, 4, 3]; // Position 1, 2, 3
+            
+            // Pour chaque priorité, augmenter le poids
+            priorities.forEach((priority, index) => {
+                if (index < weights.length && this.priorityWeights[priority]) {
+                    this.priorityWeights[priority] = weights[index];
+                }
+            });
+        }
+        
+        console.log("Poids des priorités calculés:", this.priorityWeights);
+    }
+
+    /**
+     * Calculer les scores pour chaque statut juridique
+     */
+    calculateScores() {
+        // Pour chaque statut juridique restant après filtrage
+        Object.keys(this.filteredStatuses).forEach(statusId => {
+            // Initialiser le score
+            this.scores[statusId] = 0;
+            
+            // Appliquer les règles de scoring
+            window.scoringRules.forEach(rule => {
+                // Vérifier si la condition est remplie
+                let isConditionMet = false;
+                if (typeof rule.condition === 'function') {
+                    isConditionMet = rule.condition(this.answers);
+                }
+                
+                if (isConditionMet) {
+                    // Appliquer la règle
+                    const newScore = rule.apply(statusId, this.scores[statusId]);
+                    
+                    // Mettre à jour le score et l'audit trail
+                    this.scores[statusId] = newScore;
+                    this.auditTrail.scores[statusId] = this.auditTrail.scores[statusId] || [];
+                    this.auditTrail.scores[statusId].push({
+                        rule: rule.id,
+                        points: newScore - this.scores[statusId]
+                    });
+                }
+            });
+            
+            // Appliquer les scores intrinsèques de chaque statut juridique (si disponibles)
+            const status = this.filteredStatuses[statusId];
+            if (status && status.key_metrics) {
+                const metrics = status.key_metrics;
+                
+                // Calculer une moyenne pondérée des métriques
+                let totalWeight = 0;
+                let weightedSum = 0;
+                
+                for (const [key, weight] of Object.entries(this.priorityWeights)) {
+                    if (metrics[key]) {
+                        weightedSum += metrics[key] * weight;
+                        totalWeight += weight;
+                    }
+                }
+                
+                // Calculer le score final (pondéré)
+                this.weightedScores[statusId] = totalWeight > 0 ? 
+                    (weightedSum / totalWeight) * 20 : // Échelle 0-100
+                    50; // Score neutre par défaut
+            } else {
+                // Si pas de métriques disponibles, score neutre
+                this.weightedScores[statusId] = 50;
+            }
+        });
+        
+        console.log("Scores calculés:", this.weightedScores);
+    }
+
+    /**
+     * Obtenir les meilleures recommandations
+     * @param {number} count - Nombre de recommandations à retourner
+     * @returns {Array} Les meilleures recommandations
+     */
+    getTopRecommendations(count) {
+        // Trier les statuts par score (décroissant)
+        const sortedStatuses = Object.keys(this.weightedScores)
+            .sort((a, b) => this.weightedScores[b] - this.weightedScores[a]);
+        
+        // CORRECTIF: Log pour debug
+        console.log("Statuts triés par score:", sortedStatuses.map(id => 
+            `${id}: ${this.weightedScores[id]}`
+        ));
+        
+        // Créer les recommandations
+        const recommendations = [];
+        
+        // Limiter au nombre demandé ou au nombre disponible
+        const limit = Math.min(count, sortedStatuses.length);
+        
+        // CORRECTIF: Si aucun statut n'a de score > 0, retourner un tableau vide
+        if (limit === 0) {
+            console.warn("Aucun statut avec score positif trouvé");
+            return [];
+        }
+        
+        // Construire les recommandations
+        for (let i = 0; i < limit; i++) {
+            const statusId = sortedStatuses[i];
+            const status = this.filteredStatuses[statusId];
+            
+            // CORRECTIF: Seulement inclure les statuts avec un score >= 50
+            if (this.weightedScores[statusId] >= 50) {
+                recommendations.push({
+                    status: status,
+                    score: Math.round(this.weightedScores[statusId]),
+                    strengths: this.getStrengths(statusId),
+                    weaknesses: this.getWeaknesses(statusId)
+                });
+            } else {
+                console.log(`Statut ${statusId} exclu car score trop bas: ${this.weightedScores[statusId]}`);
+            }
+        }
+        
+        return recommendations;
+    }
+
+    /**
+     * Obtenir les forces d'un statut juridique
+     * @param {string} statusId - Identifiant du statut
+     * @returns {Array} Les forces du statut
+     */
+    getStrengths(statusId) {
+        // À implémenter: extraire les forces basées sur le profil
+        const status = this.filteredStatuses[statusId];
+        if (status && status.advantages) {
+            // Prendre les 3 premiers avantages
+            return status.advantages.slice(0, 3);
+        }
+        return ["Données non disponibles"];
+    }
+
+    /**
+     * Obtenir les faiblesses d'un statut juridique
+     * @param {string} statusId - Identifiant du statut
+     * @returns {Array} Les faiblesses du statut
+     */
+    getWeaknesses(statusId) {
+        // À implémenter: extraire les faiblesses basées sur le profil
+        const status = this.filteredStatuses[statusId];
+        if (status && status.disadvantages) {
+            // Prendre les 3 premières faiblesses
+            return status.disadvantages.slice(0, 3);
+        }
+        return ["Données non disponibles"];
+    }
+
+    /**
+     * Afficher les résultats dans la console
+     * @param {Array} recommendations - Les recommandations à afficher
+     */
+    displayResults(recommendations) {
+        console.log("Recommandations générées:");
+        recommendations.forEach((rec, index) => {
+            console.log(`${index + 1}. ${rec.status.name} (score: ${rec.score})`);
+            console.log("   Forces:", rec.strengths);
+            console.log("   Faiblesses:", rec.weaknesses);
+        });
+    }
 }
 window.RecommendationEngine = RecommendationEngine;
 
