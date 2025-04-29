@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test du Moteur de Recommandation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary-color: #00FF87;
+            --primary-dark: #00CC6A;
+            --background-dark: #011627;
+            --card-background: rgba(1, 42, 74, 0.8);
+            --header-background: rgba(1, 22, 39, 0.8);
+        }
+        
+        body.dark {
+            background-color: var(--background-dark);
+            color: #E6E6E6;
+        }
+        
+        .card {
+            background-color: var(--card-background);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 20px;
+            padding: 20px;
+        }
+        
+        .rule-card {
+            border-left: 3px solid var(--primary-color);
+            margin-bottom: 8px;
+            padding: 8px 12px;
+            background-color: rgba(1, 42, 74, 0.4);
+            border-radius: 6px;
+        }
+        
+        .rule-card:hover {
+            background-color: rgba(0, 255, 135, 0.1);
+        }
+        
+        .result-card {
+            background-color: rgba(1, 62, 94, 0.6);
+            border-radius: 12px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .audit-entry {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .audit-entry .positive {
+            color: var(--primary-color);
+        }
+        
+        .audit-entry .negative {
+            color: #ff4d4d;
+        }
+        
+        .tab-button {
+            padding: 8px 16px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+        
+        .tab-button.active {
+            border-bottom-color: var(--primary-color);
+            color: var(--primary-color);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body class="dark">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl font-bold text-green-400 mb-2">Test du Moteur de Recommandation</h1>
+            <p class="text-xl opacity-80">Analyse et évaluation du nouveau système de scoring</p>
+        </header>
+        
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <!-- Panneau de gauche - Configuration -->
+            <div class="lg:col-span-5">
+                <div class="card">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-cog text-green-400 mr-2"></i>
+                        Configuration
+                    </h2>
+                    
+                    <div class="mb-6">
+                        <label class="block mb-2 font-medium">Profil de test</label>
+                        <select id="test-profile" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 text-white rounded-lg py-2 px-4">
+                            <option value="solo_small_ca">Entrepreneur solo, petit CA</option>
+                            <option value="solo_growing">Entrepreneur solo en croissance</option>
+                            <option value="startup_fundraising">Startup avec levée de fonds</option>
+                            <option value="family_business">Entreprise familiale</option>
+                            <option value="regulated_profession">Profession réglementée</option>
+                            <option value="custom">Personnalisé</option>
+                        </select>
+                    </div>
+                    
+                    <div id="custom-profile-form" class="hidden">
+                        <h3 class="text-lg font-medium mb-3">Profil personnalisé</h3>
+                        
+                        <div class="space-y-4">
+                            <!-- Quelques paramètres clés pour le profil personnalisé -->
+                            <div>
+                                <label class="block mb-1">Statut fiscal préféré</label>
+                                <select id="tax_regime" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 text-white rounded-lg py-2 px-4">
+                                    <option value="ir">IR (Impôt sur le Revenu)</option>
+                                    <option value="is">IS (Impôt sur les Sociétés)</option>
+                                    <option value="flexible">Flexible</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block mb-1">Protection du patrimoine</label>
+                                <select id="patrimony_protection" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 text-white rounded-lg py-2 px-4">
+                                    <option value="essential">Essentiel</option>
+                                    <option value="important">Important</option>
+                                    <option value="secondary">Secondaire</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block mb-1">Levée de fonds</label>
+                                <select id="fundraising" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 text-white rounded-lg py-2 px-4">
+                                    <option value="yes">Oui</option>
+                                    <option value="no">Non</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block mb-1">Montant de la levée (€)</label>
+                                <input type="number" id="fundraising_amount" value="0" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 text-white rounded-lg py-2 px-4">
+                            </div>
+                            
+                            <div>
+                                <label class="block mb-1">Chiffre d'affaires prévu (€)</label>
+                                <input type="number" id="projected_revenue" value="50000" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 text-white rounded-lg py-2 px-4">
+                            </div>
+                            
+                            <div>
+                                <label class="block mb-1">Tranche marginale d'imposition</label>
+                                <select id="tax_bracket" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 text-white rounded-lg py-2 px-4">
+                                    <option value="non_taxable">Non imposable</option>
+                                    <option value="bracket_11">11%</option>
+                                    <option value="bracket_30">30%</option>
+                                    <option value="bracket_41">41%</option>
+                                    <option value="bracket_45">45%</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block mb-1">Ordre professionnel</label>
+                                <select id="professional_order" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 text-white rounded-lg py-2 px-4">
+                                    <option value="no">Non</option>
+                                    <option value="yes">Oui</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="block mb-1">Secteur d'activité</label>
+                                <select id="sector" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 text-white rounded-lg py-2 px-4">
+                                    <option value="">Non spécifié</option>
+                                    <option value="tech">Tech / Numérique</option>
+                                    <option value="commerce">Commerce</option>
+                                    <option value="prof_lib">Professions libérales</option>
+                                    <option value="artisanat">Artisanat</option>
+                                    <option value="immobilier">Immobilier</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6">
+                        <button id="calculate-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-semibold py-2 px-6 rounded-lg transition w-full">
+                            <i class="fas fa-calculator mr-2"></i> Calculer les recommandations
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="card">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-scroll text-green-400 mr-2"></i>
+                        Documentation des règles
+                    </h2>
+                    
+                    <div class="tab-navigation flex mb-4 border-b border-gray-700">
+                        <div class="tab-button active" data-tab="rules-by-category">Par catégorie</div>
+                        <div class="tab-button" data-tab="rules-by-criteria">Par critère</div>
+                    </div>
+                    
+                    <div id="rules-by-category" class="tab-content active">
+                        <div class="rules-container overflow-y-auto max-h-96 space-y-4" id="rules-category-container">
+                            <!-- Les règles seront ajoutées ici par catégorie -->
+                        </div>
+                    </div>
+                    
+                    <div id="rules-by-criteria" class="tab-content">
+                        <div class="rules-container overflow-y-auto max-h-96 space-y-4" id="rules-criteria-container">
+                            <!-- Les règles seront ajoutées ici par critère -->
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <button id="export-rules-md" class="text-green-400 hover:text-green-300 text-sm flex items-center">
+                            <i class="fas fa-file-export mr-1"></i> Exporter en Markdown
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Panneau de droite - Résultats -->
+            <div class="lg:col-span-7">
+                <div class="card">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-chart-bar text-green-400 mr-2"></i>
+                        Résultats
+                    </h2>
+                    
+                    <div id="results-container" class="space-y-6 min-h-96">
+                        <div class="text-center py-10 text-gray-400">
+                            <i class="fas fa-arrow-left text-xl mb-2"></i>
+                            <p>Choisissez un profil et cliquez sur "Calculer les recommandations"</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card" id="audit-card" style="display: none;">
+                    <h2 class="text-2xl font-bold mb-4 flex items-center">
+                        <i class="fas fa-list-check text-green-400 mr-2"></i>
+                        Audit trail détaillé
+                    </h2>
+                    
+                    <div id="audit-header" class="mb-3">
+                        <!-- Nom du statut sélectionné -->
+                    </div>
+                    
+                    <div id="audit-container" class="space-y-1 overflow-y-auto max-h-96">
+                        <!-- L'audit trail sera ajouté ici -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Chargement des scripts nécessaires -->
+    <script src="js/legal-status-data.js"></script>
+    <script src="js/recommendation-engine.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Sélection des éléments DOM
+            const testProfileSelect = document.getElementById('test-profile');
+            const customProfileForm = document.getElementById('custom-profile-form');
+            const calculateBtn = document.getElementById('calculate-btn');
+            const resultsContainer = document.getElementById('results-container');
+            const auditCard = document.getElementById('audit-card');
+            const auditHeader = document.getElementById('audit-header');
+            const auditContainer = document.getElementById('audit-container');
+            const exportRulesMdBtn = document.getElementById('export-rules-md');
+            
+            // Gestion des onglets
+            const tabButtons = document.querySelectorAll('.tab-button');
+            const tabContents = document.querySelectorAll('.tab-content');
+            
+            tabButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    // Désactiver tous les onglets
+                    tabButtons.forEach(btn => btn.classList.remove('active'));
+                    tabContents.forEach(content => content.classList.remove('active'));
+                    
+                    // Activer l'onglet cliqué
+                    this.classList.add('active');
+                    const tabId = this.getAttribute('data-tab');
+                    document.getElementById(tabId).classList.add('active');
+                });
+            });
+            
+            // Afficher/Masquer le formulaire personnalisé
+            testProfileSelect.addEventListener('change', function() {
+                customProfileForm.style.display = this.value === 'custom' ? 'block' : 'none';
+            });
+            
+            // Fonction pour initialiser l'affichage des règles
+            function initRuleDocumentation() {
+                // S'assurer que window.ruleDocs existe
+                if (!window.ruleDocs) {
+                    console.error("Documentation des règles non disponible");
+                    return;
+                }
+                
+                const rulesByCategoryContainer = document.getElementById('rules-category-container');
+                const rulesByCriteriaContainer = document.getElementById('rules-criteria-container');
+                
+                // Grouper les règles par catégorie
+                const rulesByCategory = {};
+                window.ruleDocs.forEach(rule => {
+                    if (!rulesByCategory[rule.category]) {
+                        rulesByCategory[rule.category] = [];
+                    }
+                    rulesByCategory[rule.category].push(rule);
+                });
+                
+                // Afficher les règles par catégorie
+                for (const [category, rules] of Object.entries(rulesByCategory)) {
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.innerHTML = `
+                        <h3 class="font-semibold text-green-400 mb-2">${category}</h3>
+                        <div class="space-y-2">
+                            ${rules.map(rule => `
+                                <div class="rule-card">
+                                    <div class="font-medium">${rule.id}</div>
+                                    <div class="text-sm text-gray-300">${rule.description}</div>
+                                    <div class="flex justify-between mt-1 text-xs text-gray-400">
+                                        <span>Critère: ${rule.criteria}</span>
+                                        <span>Impact: ${rule.impact}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    rulesByCategoryContainer.appendChild(categoryDiv);
+                }
+                
+                // Grouper les règles par critère
+                const rulesByCriteria = {};
+                window.ruleDocs.forEach(rule => {
+                    if (!rulesByCriteria[rule.criteria]) {
+                        rulesByCriteria[rule.criteria] = [];
+                    }
+                    rulesByCriteria[rule.criteria].push(rule);
+                });
+                
+                // Afficher les règles par critère
+                for (const [criteria, rules] of Object.entries(rulesByCriteria)) {
+                    const criteriaDiv = document.createElement('div');
+                    criteriaDiv.innerHTML = `
+                        <h3 class="font-semibold text-green-400 mb-2">${criteria}</h3>
+                        <div class="space-y-2">
+                            ${rules.map(rule => `
+                                <div class="rule-card">
+                                    <div class="font-medium">${rule.id}</div>
+                                    <div class="text-sm text-gray-300">${rule.description}</div>
+                                    <div class="flex justify-between mt-1 text-xs text-gray-400">
+                                        <span>Catégorie: ${rule.category}</span>
+                                        <span>Impact: ${rule.impact}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                    rulesByCriteriaContainer.appendChild(criteriaDiv);
+                }
+            }
+            
+            // Fonction pour exporter les règles en Markdown
+            exportRulesMdBtn.addEventListener('click', function() {
+                if (window.recommendationEngine) {
+                    const markdown = window.recommendationEngine.exportRuleDocumentationAsMarkdown();
+                    
+                    // Créer un lien de téléchargement
+                    const blob = new Blob([markdown], { type: 'text/markdown' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'rules-documentation.md';
+                    a.click();
+                    URL.revokeObjectURL(url);
+                } else {
+                    alert("Le moteur de recommandation n'est pas encore initialisé");
+                }
+            });
+            
+            // Fonction pour créer les profils prédéfinis
+            function getProfileData(profileType) {
+                const profiles = {
+                    solo_small_ca: {
+                        tax_regime: 'ir',
+                        patrimony_protection: 'secondary',
+                        fundraising: 'no',
+                        fundraising_amount: 0,
+                        projected_revenue: 30000,
+                        tax_bracket: 'bracket_11',
+                        professional_order: 'no',
+                        sector: 'commerce'
+                    },
+                    solo_growing: {
+                        tax_regime: 'flexible',
+                        patrimony_protection: 'important',
+                        fundraising: 'no',
+                        fundraising_amount: 0,
+                        projected_revenue: 90000,
+                        tax_bracket: 'bracket_30',
+                        professional_order: 'no',
+                        sector: 'tech'
+                    },
+                    startup_fundraising: {
+                        tax_regime: 'is',
+                        patrimony_protection: 'essential',
+                        fundraising: 'yes',
+                        fundraising_amount: 250000,
+                        projected_revenue: 120000,
+                        tax_bracket: 'bracket_30',
+                        professional_order: 'no',
+                        sector: 'tech'
+                    },
+                    family_business: {
+                        tax_regime: 'ir',
+                        patrimony_protection: 'important',
+                        fundraising: 'no',
+                        fundraising_amount: 0,
+                        projected_revenue: 200000,
+                        tax_bracket: 'bracket_30',
+                        professional_order: 'no',
+                        sector: 'commerce'
+                    },
+                    regulated_profession: {
+                        tax_regime: 'is',
+                        patrimony_protection: 'essential',
+                        fundraising: 'no',
+                        fundraising_amount: 0,
+                        projected_revenue: 150000,
+                        tax_bracket: 'bracket_41',
+                        professional_order: 'yes',
+                        sector: 'prof_lib'
+                    },
+                    custom: {
+                        tax_regime: document.getElementById('tax_regime').value,
+                        patrimony_protection: document.getElementById('patrimony_protection').value,
+                        fundraising: document.getElementById('fundraising').value,
+                        fundraising_amount: parseInt(document.getElementById('fundraising_amount').value),
+                        projected_revenue: parseInt(document.getElementById('projected_revenue').value),
+                        tax_bracket: document.getElementById('tax_bracket').value,
+                        professional_order: document.getElementById('professional_order').value,
+                        sector: document.getElementById('sector').value
+                    }
+                };
+                
+                const profile = profiles[profileType];
+                
+                // Ajouter les priorités par défaut pour tous les profils
+                profile.priorities = ['patrimony_protection', 'taxation', 'administrative_simplicity'];
+                
+                return profile;
+            }
+            
+            // Fonction pour afficher l'audit trail d'un statut
+            function displayAuditTrail(statusId, statusName, auditEntries) {
+                auditCard.style.display = 'block';
+                auditHeader.innerHTML = `<h3 class="text-xl font-semibold">Audit de ${statusName} (${statusId})</h3>`;
+                auditContainer.innerHTML = '';
+                
+                // Trier les entrées par impact (delta) décroissant
+                auditEntries.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+                
+                // Créer les entrées d'audit
+                auditEntries.forEach(entry => {
+                    const auditEntry = document.createElement('div');
+                    auditEntry.className = 'audit-entry';
+                    
+                    auditEntry.innerHTML = `
+                        <div class="flex-grow">
+                            <div class="font-medium">${entry.rule}</div>
+                            <div class="text-sm text-gray-300">${entry.explanation || ''}</div>
+                        </div>
+                        <div class="font-bold whitespace-nowrap ${entry.delta > 0 ? 'positive' : entry.delta < 0 ? 'negative' : ''}">
+                            ${entry.delta > 0 ? '+' : ''}${entry.delta}
+                        </div>
+                    `;
+                    
+                    auditContainer.appendChild(auditEntry);
+                });
+            }
+            
+            // Fonction pour calculer et afficher les recommandations
+            calculateBtn.addEventListener('click', async function() {
+                // Afficher un indicateur de chargement
+                resultsContainer.innerHTML = `
+                    <div class="text-center py-10">
+                        <div class="inline-block animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-green-400 mb-4"></div>
+                        <p>Calcul des recommandations en cours...</p>
+                    </div>
+                `;
+                
+                // Masquer l'audit trail
+                auditCard.style.display = 'none';
+                
+                try {
+                    // Récupérer les réponses selon le profil sélectionné
+                    const profileType = testProfileSelect.value;
+                    const answers = getProfileData(profileType);
+                    
+                    // Initialiser le moteur de recommandation si nécessaire
+                    if (!window.recommendationEngine) {
+                        await RecommendationEngine.create();
+                    }
+                    
+                    // Calculer les recommandations
+                    const recommendations = window.recommendationEngine.calculateRecommendations(answers);
+                    
+                    // Afficher les résultats
+                    resultsContainer.innerHTML = '';
+                    
+                    if (recommendations.length === 0) {
+                        resultsContainer.innerHTML = `
+                            <div class="text-center py-10 text-red-400">
+                                <i class="fas fa-exclamation-circle text-3xl mb-2"></i>
+                                <p>Aucune recommandation trouvée pour ce profil</p>
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    // Afficher chaque recommandation
+                    recommendations.forEach((rec, index) => {
+                        const resultCard = document.createElement('div');
+                        resultCard.className = 'result-card';
+                        
+                        // Badge pour la première recommandation
+                        const badge = index === 0 ? 
+                            `<span class="bg-green-500 text-xs text-gray-900 font-bold px-2 py-1 rounded-full absolute -top-3 -right-3">
+                                Recommandé
+                            </span>` : '';
+                        
+                        resultCard.innerHTML = `
+                            <div class="relative">
+                                ${badge}
+                                <div class="flex justify-between items-start">
+                                    <h3 class="text-xl font-bold text-green-400">${rec.status.name}</h3>
+                                    <div class="bg-green-900 bg-opacity-40 text-green-400 px-3 py-1 rounded-lg font-bold">
+                                        Score: ${rec.score}/100
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <h4 class="font-medium mb-1">Points forts</h4>
+                                        <ul class="text-sm space-y-1">
+                                            ${rec.strengths.map(s => `<li><i class="fas fa-check text-green-400 mr-1"></i> ${s}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <h4 class="font-medium mb-1">Points d'attention</h4>
+                                        <ul class="text-sm space-y-1">
+                                            ${rec.weaknesses.map(w => `<li><i class="fas fa-exclamation text-yellow-400 mr-1"></i> ${w}</li>`).join('')}
+                                        </ul>
+                                    </div>
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <button class="view-audit-btn text-green-400 hover:text-green-300 text-sm flex items-center" 
+                                            data-status-id="${rec.status.shortName || rec.status.id}"
+                                            data-status-name="${rec.status.name}">
+                                        <i class="fas fa-magnifying-glass-chart mr-1"></i> Voir le détail du score
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Ajouter la carte au conteneur de résultats
+                        resultsContainer.appendChild(resultCard);
+                        
+                        // Ajouter l'événement pour afficher l'audit trail
+                        const auditBtn = resultCard.querySelector('.view-audit-btn');
+                        auditBtn.addEventListener('click', function() {
+                            const statusId = this.getAttribute('data-status-id');
+                            const statusName = this.getAttribute('data-status-name');
+                            
+                            // Récupérer l'audit trail pour ce statut
+                            if (rec.auditTrail) {
+                                displayAuditTrail(statusId, statusName, rec.auditTrail);
+                            } else {
+                                alert(`Audit trail non disponible pour ${statusName}`);
+                            }
+                        });
+                    });
+                    
+                } catch (error) {
+                    console.error("Erreur lors du calcul des recommandations:", error);
+                    resultsContainer.innerHTML = `
+                        <div class="text-center py-10 text-red-400">
+                            <i class="fas fa-exclamation-triangle text-3xl mb-2"></i>
+                            <p>Erreur lors du calcul: ${error.message}</p>
+                        </div>
+                    `;
+                }
+            });
+            
+            // Attendre le chargement complet du moteur
+            document.addEventListener('recommendationEngineReady', function() {
+                console.log("Moteur de recommandation prêt");
+                initRuleDocumentation();
+            });
+            
+            // Si le moteur est déjà chargé
+            if (window.engineLoadingCompleted) {
+                console.log("Moteur déjà chargé, initialisation de la documentation");
+                initRuleDocumentation();
+            }
+        });
+    </script>
+</body>
+</html>
