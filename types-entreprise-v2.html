@@ -735,12 +735,42 @@
         </button>
     </div>
     
-    <!-- Scripts (sans type="module") -->
-    <script src="js/legal-status-data.js"></script>
-    <script src="js/question-data.js"></script>
-    <script src="js/recommendation-engine.js"></script>
-    <script src="js/question-manager.js"></script>
-    <script src="js/app.js"></script>
+    <!-- Scripts avec chargement séquentiel -->
+    <script>
+    // Fonction pour charger les scripts séquentiellement
+    function loadScriptsSequentially(scripts, callback) {
+        if (scripts.length === 0) {
+            if (callback) callback();
+            return;
+        }
+        
+        var script = document.createElement('script');
+        script.src = scripts[0];
+        script.onload = function() {
+            console.log('Script chargé:', scripts[0]);
+            loadScriptsSequentially(scripts.slice(1), callback);
+        };
+        script.onerror = function() {
+            console.error('Erreur de chargement du script:', scripts[0]);
+            loadScriptsSequentially(scripts.slice(1), callback);
+        };
+        document.body.appendChild(script);
+    }
+    
+    // Liste des scripts à charger dans l'ordre
+    var scripts = [
+        'js/legal-status-data.js',
+        'js/question-data.js',
+        'js/recommendation-engine.js',
+        'js/question-manager.js',
+        'js/app.js'
+    ];
+    
+    // Charger les scripts dans l'ordre
+    loadScriptsSequentially(scripts, function() {
+        console.log('Tous les scripts sont chargés');
+    });
+    </script>
     
     <!-- Script pour gérer l'indicateur de chargement -->
     <script>
