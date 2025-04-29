@@ -1,6 +1,6 @@
 // app.js - Fichier principal d'initialisation du simulateur de forme juridique
 import { QuestionManager } from './question-manager.js';
-import { RecommendationEngine } from './recommendation-engine.js';
+import { RecommendationEngine, notifyEngineReady } from './recommendation-engine.js';
 
 // Fonction d'initialisation de l'application
 document.addEventListener('DOMContentLoaded', () => {
@@ -13,13 +13,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialiser les événements de l'interface
     initUIEvents();
     
-    // Initialisation directe du moteur - simplifiée avec les modules ES6
+    // Initialisation directe du moteur avec les modules ES6
     try {
         const engine = new RecommendationEngine();
         console.log("Moteur de recommandation initialisé avec succès via module ES6");
+        
         // Conserver pour la compatibilité avec l'ancien code
         window.recommendationEngine = engine;
         window.recommendationEngineLoaded = true;
+        
+        // Notifier que le moteur est prêt
+        notifyEngineReady();
     } catch (error) {
         console.error("Erreur lors de l'initialisation du moteur:", error);
     }
@@ -283,8 +287,10 @@ function initUIEvents() {
     }
 }
 
-// Fonctions utilitaires pour maintenir la compatibilité avec l'ancien code
-// Cette fonction est simplifiée puisque le moteur est maintenant chargé directement
+/**
+ * Charger le moteur de recommandation
+ * Fonction utilitaire pour maintenir la compatibilité avec l'ancien code
+ */
 export function loadRecommendationEngine() {
     console.log("loadRecommendationEngine appelée via module ES6");
     return new Promise((resolve, reject) => {
