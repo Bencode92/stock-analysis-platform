@@ -1,15 +1,7 @@
 // app.js - Fichier principal d'initialisation du simulateur de forme juridique
-import { QuestionManager } from './question-manager.js';
-import { RecommendationEngine, notifyEngineReady } from './recommendation-engine.js';
-// Importation directe de legal-status-data.js pour s'assurer qu'il est chargé
-import { legalStatuses, exclusionFilters, ratingScales } from './legal-status-data.js';
-// Importation directe de question-data.js pour s'assurer qu'il est chargé
-import { sections, questions, quickStartQuestions } from './question-data.js';
 
 // Fonction d'initialisation de l'application
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOM entièrement chargé et analysé");
-    
     // Mettre à jour la date de dernière mise à jour
     updateLastUpdateDate();
     
@@ -19,51 +11,74 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialiser les événements de l'interface
     initUIEvents();
     
-    // Initialisation directe du moteur avec les modules ES6
-    try {
-        const engine = new RecommendationEngine();
-        console.log("Moteur de recommandation initialisé avec succès via module ES6");
-        
-        // Conserver pour la compatibilité avec l'ancien code
-        window.recommendationEngine = engine;
-        window.recommendationEngineLoaded = true;
-        
-        // Notifier que le moteur est prêt
-        notifyEngineReady();
-    } catch (error) {
-        console.error("Erreur lors de l'initialisation du moteur:", error);
-    }
+    // NE PAS initialiser directement le moteur de recommandation
+    // initRecommendationEngine();  
+    
+    // À la place, créer une fonction lazy-load
+    window.loadRecommendationEngine = function() {
+        return new Promise((resolve, reject) => {
+            try {
+                // Vérifier si le moteur est déjà chargé
+                if (window.recommendationEngine) {
+                    resolve(window.recommendationEngine);
+                    return;
+                }
+                
+                // Sinon, initialiser le moteur
+                if (window.RecommendationEngine) {
+                    window.recommendationEngine = new window.RecommendationEngine();
+                    console.log("Moteur de recommandation initialisé avec succès");
+                    
+                    // Créer des ponts de compatibilité si nécessaire
+                    if (!window.checkHardFails) {
+                        window.checkHardFails = function(forme, userResponses) {
+                            return [];  
+                        };
+                    }
+                    
+                    resolve(window.recommendationEngine);
+                } else {
+                    console.error("RecommendationEngine n'est pas disponible");
+                    reject(new Error("RecommendationEngine n'est pas disponible"));
+                }
+            } catch (error) {
+                console.error("Erreur lors de l'initialisation du moteur:", error);
+                reject(error);
+            }
+        });
+    };
 });
+
+/**
+ * Initialiser le moteur de recommandation directement (fonction conservée pour compatibilité)
+ */
+function initRecommendationEngine() {
+    // Cette fonction sera appelée quand RecommendationEngine sera disponible globalement
+    if (window.RecommendationEngine) {
+        window.recommendationEngine = new window.RecommendationEngine();
+        console.log("Moteur de recommandation initialisé avec succès");
+    } else {
+        console.error("RecommendationEngine n'est pas disponible. Assurez-vous que recommendation-engine.js est chargé correctement.");
+    }
+    
+    // Créer des ponts de compatibilité si nécessaire pour les modules auxiliaires
+    if (!window.checkHardFails) {
+        window.checkHardFails = function(forme, userResponses) {
+            // Implémentation simplifiée qui pourrait être améliorée au besoin
+            return [];  
+        };
+    }
+}
 
 /**
  * Initialiser le gestionnaire de questions
  */
 function initQuestionManager() {
-    try {
-        console.log("Démarrage de l'initialisation du QuestionManager");
-        
-        // Vérifier que les données sont disponibles
-        console.log("Données disponibles:", {
-            sections: sections.length, 
-            questions: questions.length, 
-            quickStartQuestions: quickStartQuestions.length
-        });
-        
-        // Créer une instance du gestionnaire de questions
-        const questionManager = new QuestionManager();
-        
-        // Pour la compatibilité avec l'ancien code
-        window.questionManager = questionManager;
-        
-        // Initialiser l'application
-        console.log("QuestionManager créé, appel de init()");
-        questionManager.init();
-        
-        console.log("QuestionManager initialisé avec succès");
-    } catch (error) {
-        console.error("Erreur lors de l'initialisation du QuestionManager:", error);
-        console.error("Détails de l'erreur:", error.stack);
-    }
+    // Créer une instance du gestionnaire de questions
+    window.questionManager = new window.QuestionManager();
+    
+    // Initialiser l'application
+    window.questionManager.init();
 }
 
 /**
@@ -309,34 +324,3 @@ function initUIEvents() {
         changeTab(0);
     }
 }
-
-/**
- * Charger le moteur de recommandation
- * Fonction utilitaire pour maintenir la compatibilité avec l'ancien code
- */
-export function loadRecommendationEngine() {
-    console.log("loadRecommendationEngine appelée via module ES6");
-    return new Promise((resolve, reject) => {
-        try {
-            // Vérifier si le moteur est déjà chargé
-            if (window.recommendationEngine) {
-                console.log("Moteur déjà initialisé, réutilisation");
-                resolve(window.recommendationEngine);
-                return;
-            }
-            
-            // Sinon, initialiser une nouvelle instance
-            const engine = new RecommendationEngine();
-            window.recommendationEngine = engine;
-            window.recommendationEngineLoaded = true;
-            
-            resolve(engine);
-        } catch (error) {
-            console.error("Erreur lors de l'initialisation du moteur:", error);
-            reject(error);
-        }
-    });
-}
-
-// Exposer la fonction pour compatibilité
-window.loadRecommendationEngine = loadRecommendationEngine;
