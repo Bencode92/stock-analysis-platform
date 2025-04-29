@@ -735,8 +735,12 @@
         </button>
     </div>
     
-    <!-- Seule balise nécessaire - le système d'importation s'occupe du reste -->
-    <script type="module" src="js/app.js"></script>
+    <!-- Scripts (sans type="module") -->
+    <script src="js/legal-status-data.js"></script>
+    <script src="js/question-data.js"></script>
+    <script src="js/recommendation-engine.js"></script>
+    <script src="js/question-manager.js"></script>
+    <script src="js/app.js"></script>
     
     <!-- Script pour gérer l'indicateur de chargement -->
     <script>
@@ -815,7 +819,6 @@
         // Écouteur d'événement pour détecter quand le moteur est prêt
         document.addEventListener('recommendationEngineReady', function() {
             window.recommendationEngineLoaded = true;
-            console.log("Moteur de recommandation prêt à être utilisé");
         });
     });
     </script>
