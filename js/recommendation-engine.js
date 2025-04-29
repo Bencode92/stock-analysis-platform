@@ -321,8 +321,14 @@ const scoringRules = [
 class RecommendationEngine {
     constructor() {
         console.log("Initialisation du RecommendationEngine");
+        // Blindage du constructeur - vérification que legalStatuses est disponible
+        if (!window.legalStatuses) {
+            throw new Error(
+                "`window.legalStatuses` est introuvable – vérifie le chargement de legal-status-data.js"
+            );
+        }
         this.answers = {};
-        this.filteredStatuses = {};
+        this.filteredStatuses = {...window.legalStatuses};
         this.scores = {};
         this.weightedScores = {};
         this.priorityWeights = {};
@@ -380,6 +386,9 @@ class RecommendationEngine {
             }
         };
         console.log("RecommendationEngine initialisé avec succès");
+        
+        // Déclencher l'événement ici, quand tout est réellement prêt
+        document.dispatchEvent(new CustomEvent('recommendationEngineReady'));
     }
 
     /**
@@ -1897,10 +1906,7 @@ try {
     window.scoringRules = scoringRules;
     console.log("Classe RecommendationEngine exposée avec succès");
     
-    // Signaler explicitement que le moteur est prêt
-    document.dispatchEvent(new CustomEvent('recommendationEngineReady'));
-    console.log("Événement 'recommendationEngineReady' déclenché");
-    
+    // Ne pas déclencher l'événement ici mais dans le constructeur
     window.engineLoadingCompleted = true;
 } catch (e) {
     console.error("Erreur lors de l'exposition du moteur de recommandation:", e);
