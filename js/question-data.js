@@ -1048,7 +1048,7 @@ export const quickStartQuestions = [
     "priorities"
 ];
 
-// Pour la compatibilité avec l'ancien code (sera supprimé à terme)
+// Pour la compatibilité temporaire - à supprimer progressivement
 window.sections = sections;
 window.questions = questions;
 window.quickStartQuestions = quickStartQuestions;
