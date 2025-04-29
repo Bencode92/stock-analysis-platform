@@ -1,5 +1,12 @@
 // recommendation-engine.js - Analyse des réponses et génération de recommandations
 
+// Gestionnaire d'erreurs spécifique pour ce fichier
+window.addEventListener('error', (e) => {
+    if (e.filename.includes('recommendation-engine.js')) {
+        console.error('Erreur bloquante dans recommendation-engine.js', e);
+    }
+}, true);
+
 // Logs de débogage pour traquer le chargement
 console.log("Chargement du recommendation-engine.js commencé");
 window.engineLoadingStarted = true;
