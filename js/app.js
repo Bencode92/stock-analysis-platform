@@ -184,133 +184,143 @@ function initUIEvents() {
     const tabItems = document.querySelectorAll('.tab-item');
     
     if (tabItems.length > 0) {
-        // Créer dynamiquement les conteneurs pour chaque onglet s'ils n'existent pas encore
-        const contentWrapper = document.querySelector('.content-wrapper');
-        const existingContainers = {};
-        
-        // Fonction pour créer ou récupérer un conteneur d'onglet
-        function getOrCreateTabContainer(tabName, index) {
-            const tabId = `tab-content-${index}`;
-            let container = document.getElementById(tabId);
-            
-            if (!container) {
-                container = document.createElement('div');
-                container.id = tabId;
-                container.className = 'tab-content';
-                container.dataset.tabName = tabName;
-                container.style.display = index === 0 ? 'block' : 'none';
-                
-                // Si c'est le premier onglet (Simulateur), déplacer les éléments existants dans ce conteneur
-                if (index === 0) {
-                    // Éléments à déplacer dans le premier onglet
-                    const elementsToMove = [
-                        document.querySelector('.progress-info'),
-                        document.querySelector('.progress-bar-container'),
-                        document.getElementById('progress-steps-container'),
-                        document.getElementById('question-container'),
-                        document.getElementById('results-container')
-                    ];
+        // Définir le contenu des onglets
+        const tabContents = {
+            'Simulateur': {
+                content: () => {
+                    // Activer le conteneur des questions et de résultats pour l'onglet Simulateur
+                    const progressInfo = document.querySelector('.progress-info');
+                    const progressBarContainer = document.querySelector('.progress-bar-container');
+                    const progressStepsContainer = document.getElementById('progress-steps-container');
+                    const questionContainer = document.getElementById('question-container');
+                    const resultsContainer = document.getElementById('results-container');
                     
-                    elementsToMove.forEach(element => {
-                        if (element) {
-                            const clone = element.cloneNode(true);
-                            container.appendChild(clone);
-                            element.style.display = 'none'; // Cacher l'original
-                        }
-                    });
-                } else {
-                    // Pour les autres onglets, ajouter un contenu par défaut
-                    switch(tabName) {
-                        case 'Comparatif des statuts':
-                            container.innerHTML = `
-                                <div class="max-w-4xl mx-auto mb-12">
-                                    <h2 class="text-2xl font-bold mb-4">Comparatif des formes juridiques</h2>
-                                    <p class="mb-4">Le tableau comparatif ci-dessous présente les principales caractéristiques des différentes formes juridiques d'entreprise en France.</p>
-                                    <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
-                                        <p class="text-center">Contenu en cours de chargement...</p>
-                                    </div>
-                                </div>
-                            `;
-                            break;
-                        case 'Guide fiscal':
-                            container.innerHTML = `
-                                <div class="max-w-4xl mx-auto mb-12">
-                                    <h2 class="text-2xl font-bold mb-4">Guide fiscal pour entrepreneurs</h2>
-                                    <p class="mb-4">Ce guide présente les principales informations fiscales à connaître pour chaque forme juridique.</p>
-                                    <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
-                                        <p class="text-center">Contenu en cours de chargement...</p>
-                                    </div>
-                                </div>
-                            `;
-                            break;
-                        case 'Barèmes 2025':
-                            container.innerHTML = `
-                                <div class="max-w-4xl mx-auto mb-12">
-                                    <h2 class="text-2xl font-bold mb-4">Barèmes fiscaux et sociaux 2025</h2>
-                                    <p class="mb-4">Retrouvez les barèmes à jour pour l'année 2025.</p>
-                                    <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
-                                        <p class="text-center">Contenu en cours de chargement...</p>
-                                    </div>
-                                </div>
-                            `;
-                            break;
-                        case 'Historique':
-                            container.innerHTML = `
-                                <div class="max-w-4xl mx-auto mb-12">
-                                    <h2 class="text-2xl font-bold mb-4">Historique de vos simulations</h2>
-                                    <p class="mb-4">Retrouvez ici l'historique de vos précédentes simulations.</p>
-                                    <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
-                                        <p class="text-center">Aucune simulation enregistrée pour le moment.</p>
-                                    </div>
-                                </div>
-                            `;
-                            break;
-                        default:
-                            container.innerHTML = `<div class="max-w-4xl mx-auto"><p>Contenu de l'onglet "${tabName}" en cours de chargement...</p></div>`;
-                    }
+                    if (progressInfo) progressInfo.style.display = 'flex';
+                    if (progressBarContainer) progressBarContainer.style.display = 'block';
+                    if (progressStepsContainer) progressStepsContainer.style.display = 'flex';
+                    if (questionContainer) questionContainer.style.display = 'block';
+                    if (resultsContainer) resultsContainer.style.display = 'none';
+                    
+                    return '';
                 }
-                
-                // Insérer le conteneur après les onglets
-                const tabNavigation = document.querySelector('.tab-navigation');
-                if (tabNavigation && tabNavigation.nextSibling) {
-                    contentWrapper.insertBefore(container, tabNavigation.nextSibling);
-                } else {
-                    contentWrapper.appendChild(container);
+            },
+            'Comparatif des statuts': {
+                content: () => {
+                    return `
+                        <div class="max-w-4xl mx-auto mb-12">
+                            <h2 class="text-2xl font-bold mb-4">Comparatif des formes juridiques</h2>
+                            <p class="mb-4">Le tableau comparatif ci-dessous présente les principales caractéristiques des différentes formes juridiques d'entreprise en France.</p>
+                            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
+                                <p class="text-center">Contenu du comparatif des statuts en cours de chargement...</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            },
+            'Guide fiscal': {
+                content: () => {
+                    return `
+                        <div class="max-w-4xl mx-auto mb-12">
+                            <h2 class="text-2xl font-bold mb-4">Guide fiscal pour entrepreneurs</h2>
+                            <p class="mb-4">Ce guide présente les principales informations fiscales à connaître pour chaque forme juridique.</p>
+                            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
+                                <p class="text-center">Contenu du guide fiscal en cours de chargement...</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            },
+            'Barèmes 2025': {
+                content: () => {
+                    return `
+                        <div class="max-w-4xl mx-auto mb-12">
+                            <h2 class="text-2xl font-bold mb-4">Barèmes fiscaux et sociaux 2025</h2>
+                            <p class="mb-4">Retrouvez les barèmes à jour pour l'année 2025.</p>
+                            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
+                                <p class="text-center">Contenu des barèmes 2025 en cours de chargement...</p>
+                            </div>
+                        </div>
+                    `;
+                }
+            },
+            'Historique': {
+                content: () => {
+                    return `
+                        <div class="max-w-4xl mx-auto mb-12">
+                            <h2 class="text-2xl font-bold mb-4">Historique de vos simulations</h2>
+                            <p class="mb-4">Retrouvez ici l'historique de vos précédentes simulations.</p>
+                            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
+                                <p class="text-center">Aucune simulation enregistrée pour le moment.</p>
+                            </div>
+                        </div>
+                    `;
                 }
             }
+        };
+        
+        // Créer un conteneur pour le contenu des onglets s'il n'existe pas déjà
+        let tabContentContainer = document.getElementById('tab-content-container');
+        if (!tabContentContainer) {
+            tabContentContainer = document.createElement('div');
+            tabContentContainer.id = 'tab-content-container';
+            const contentWrapper = document.querySelector('.content-wrapper');
             
-            existingContainers[tabName] = container;
-            return container;
+            // Insérer le conteneur après la navigation des onglets
+            const tabNavigation = document.querySelector('.tab-navigation');
+            if (contentWrapper && tabNavigation) {
+                contentWrapper.insertBefore(tabContentContainer, tabNavigation.nextSibling);
+            }
         }
         
-        // Initialiser les conteneurs pour chaque onglet
+        // Fonction pour changer d'onglet
+        const changeTab = (index) => {
+            // Désactiver tous les onglets
+            tabItems.forEach(item => item.classList.remove('active'));
+            
+            // Activer l'onglet sélectionné
+            tabItems[index].classList.add('active');
+            
+            // Obtenir le nom de l'onglet
+            const tabName = tabItems[index].textContent.trim();
+            
+            // Masquer les éléments du simulateur si ce n'est pas l'onglet Simulateur
+            const progressInfo = document.querySelector('.progress-info');
+            const progressBarContainer = document.querySelector('.progress-bar-container');
+            const progressStepsContainer = document.getElementById('progress-steps-container');
+            const questionContainer = document.getElementById('question-container');
+            const resultsContainer = document.getElementById('results-container');
+            
+            if (tabName !== 'Simulateur') {
+                if (progressInfo) progressInfo.style.display = 'none';
+                if (progressBarContainer) progressBarContainer.style.display = 'none';
+                if (progressStepsContainer) progressStepsContainer.style.display = 'none';
+                if (questionContainer) questionContainer.style.display = 'none';
+                if (resultsContainer) resultsContainer.style.display = 'none';
+                
+                // Afficher le contenu de l'onglet
+                tabContentContainer.innerHTML = tabContents[tabName].content();
+                tabContentContainer.style.display = 'block';
+            } else {
+                // Afficher les éléments du simulateur
+                tabContentContainer.style.display = 'none';
+                
+                if (progressInfo) progressInfo.style.display = 'flex';
+                if (progressBarContainer) progressBarContainer.style.display = 'block';
+                if (progressStepsContainer) progressStepsContainer.style.display = 'flex';
+                if (questionContainer) questionContainer.style.display = 'block';
+                // Ne pas afficher les résultats automatiquement, ils seront affichés quand nécessaire
+            }
+            
+            // Faire défiler la page vers le haut
+            window.scrollTo(0, 0);
+        };
+        
+        // Attacher l'événement de clic à chaque onglet
         tabItems.forEach((tab, index) => {
-            const tabName = tab.textContent.trim();
-            getOrCreateTabContainer(tabName, index);
+            tab.addEventListener('click', () => changeTab(index));
         });
         
-        // Ajouter les événements de clic sur les onglets
-        tabItems.forEach((tab, index) => {
-            tab.addEventListener('click', () => {
-                // Désactiver tous les onglets
-                tabItems.forEach(t => t.classList.remove('active'));
-                
-                // Activer l'onglet cliqué
-                tab.classList.add('active');
-                
-                // Masquer tous les conteneurs
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.style.display = 'none';
-                });
-                
-                // Afficher le conteneur correspondant à l'onglet sélectionné
-                const tabName = tab.textContent.trim();
-                const tabContainer = getOrCreateTabContainer(tabName, index);
-                tabContainer.style.display = 'block';
-                
-                // Faire défiler la page vers le haut
-                window.scrollTo(0, 0);
-            });
-        });
+        // Activer l'onglet Simulateur par défaut
+        changeTab(0);
     }
 }
