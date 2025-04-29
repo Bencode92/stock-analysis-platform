@@ -1056,76 +1056,70 @@ class QuestionManager {
         // Attacher l'événement au bouton
         const showResultsBtn = document.getElementById('show-results-btn');
         if (showResultsBtn) {
-            showResultsBtn.addEventListener('click', () => {
+            showResultsBtn.addEventListener('click', async () => {
                 // Afficher l'indicateur de chargement immédiatement
                 let loadingInterval = window.showLoadingIndicator();
                 
-                // Vérifier si le moteur est déjà disponible dans window
-                if (typeof window.RecommendationEngine === 'function') {
-                    console.log("RecommendationEngine est disponible comme constructeur");
-                    try {
-                        // Initialiser directement
+                try {
+                    // Si loadRecommendationEngine est disponible (approche Promise)
+                    if (typeof window.loadRecommendationEngine === 'function') {
+                        console.log("Utilisation de loadRecommendationEngine Promise");
+                        const engine = await window.loadRecommendationEngine();
+                        const recommendations = engine.calculateRecommendations(this.answers);
+                        engine.displayResults(recommendations);
+                        return;
+                    }
+                    
+                    // Si le moteur est directement accessible
+                    if (typeof window.RecommendationEngine === 'function') {
+                        console.log("Création directe d'une instance RecommendationEngine");
                         window.recommendationEngine = new window.RecommendationEngine();
                         const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
                         window.recommendationEngine.displayResults(recommendations);
-                        window.hideLoadingIndicator(loadingInterval);
                         return;
-                    } catch (error) {
-                        console.error("Erreur lors de l'initialisation directe:", error);
-                        // Continue avec la méthode par événement ci-dessous
                     }
-                }
-                
-                // Utiliser l'événement recommendationEngineReady
-                console.log("Utilisation de l'approche par événement");
-                const answersData = this.answers; // Sauvegarde pour l'écouteur d'événement
-                
-                // Vérifier si le moteur est déjà marqué comme chargé
-                if (window.recommendationEngineLoaded || typeof window.RecommendationEngine === 'function') {
-                    try {
-                        console.log("Le moteur est déjà chargé, initialisation directe");
-                        window.recommendationEngine = new window.RecommendationEngine();
-                        const recommendations = window.recommendationEngine.calculateRecommendations(answersData);
+                    
+                    // Si déjà instancié, utiliser l'instance existante
+                    if (window.recommendationEngine) {
+                        console.log("Utilisation de l'instance existante");
+                        const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
                         window.recommendationEngine.displayResults(recommendations);
-                    } catch (error) {
-                        console.error("Erreur lors de l'utilisation du moteur de recommandation:", error);
-                        this.showEngineErrorMessage(error);
-                    } finally {
-                        window.hideLoadingIndicator(loadingInterval);
+                        return;
                     }
-                } else {
-                    console.log("Mise en place de l'écouteur d'événement pour recommendationEngineReady");
-                    // Écouter l'événement de disponibilité du moteur
+                    
+                    // Fallback: Attendre l'événement
+                    console.log("Fallback: utilisation de l'approche par événement");
+                    const answersData = this.answers;
+                    
                     const engineReadyHandler = function() {
                         try {
                             console.log("Événement reçu, initialisation du moteur");
-                            // Créer l'instance du moteur
                             window.recommendationEngine = new window.RecommendationEngine();
                             const recommendations = window.recommendationEngine.calculateRecommendations(answersData);
                             window.recommendationEngine.displayResults(recommendations);
                         } catch (error) {
-                            console.error("Erreur lors de l'utilisation du moteur de recommandation:", error);
+                            console.error("Erreur lors de l'utilisation du moteur:", error);
                             this.showEngineErrorMessage(error);
                         } finally {
-                            console.log("Nettoyage de l'écouteur et de l'indicateur");
-                            window.hideLoadingIndicator(loadingInterval);
-                            // Nettoyage de l'écouteur
                             document.removeEventListener('recommendationEngineReady', engineReadyHandler);
                         }
                     }.bind(this);
                     
-                    // Ajouter l'écouteur d'événement
                     document.addEventListener('recommendationEngineReady', engineReadyHandler);
                     
-                    // Timeout de sécurité augmenté à 30 secondes
+                    // Timeout plus long (60 secondes au lieu de 30)
                     setTimeout(() => {
                         if (document.querySelector('#loading-indicator').style.display !== 'none') {
                             console.error("Timeout lors du chargement du moteur de recommandation");
-                            window.hideLoadingIndicator(loadingInterval);
                             document.removeEventListener('recommendationEngineReady', engineReadyHandler);
                             this.showEngineErrorMessage(new Error("Le moteur de recommandation n'a pas pu être chargé dans le délai imparti."));
                         }
-                    }, 30000); // 30 secondes de timeout
+                    }, 60000); // 60 secondes de timeout
+                } catch (error) {
+                    console.error("Erreur lors de l'affichage des résultats:", error);
+                    this.showEngineErrorMessage(error);
+                } finally {
+                    window.hideLoadingIndicator(loadingInterval);
                 }
             });
         }
