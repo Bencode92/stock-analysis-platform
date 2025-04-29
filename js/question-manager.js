@@ -123,7 +123,9 @@ class QuestionManager {
      */
     calculateProgress() {
         const questionsToUse = this.isQuickStart ? this.filteredQuestions : window.questions;
-        return (this.currentQuestionIndex / questionsToUse.length) * 100;
+        // Amélioration: Éviter NaN en vérifiant si questionsToUse.length est valide
+        const totalQuestions = questionsToUse ? questionsToUse.length : 1;
+        return (this.currentQuestionIndex / totalQuestions) * 100;
     }
 
     /**
@@ -475,6 +477,7 @@ class QuestionManager {
         
         const slider = document.createElement('input');
         slider.type = 'range';
+        slider.id = `${question.id}-slider`; // Amélioration: ID unique pour le slider
         slider.min = question.min;
         slider.max = question.max;
         slider.step = question.step;
@@ -936,7 +939,8 @@ class QuestionManager {
                 break;
             
             case 'slider':
-                const slider = document.querySelector(`input[type="range"][min="${currentQuestion.min}"]`);
+                // Amélioration: Utilisation de l'ID spécifique du slider
+                const slider = document.getElementById(`${currentQuestion.id}-slider`);
                 this.answers[currentQuestion.id] = parseFloat(slider.value);
                 break;
             
@@ -1065,14 +1069,14 @@ class QuestionManager {
                     if (typeof window.loadRecommendationEngine === 'function') {
                         console.log("Utilisation de loadRecommendationEngine Promise");
                         const engine = await window.loadRecommendationEngine();
+                        // IMPORTANT: Assurer que l'instance a la méthode displayResults
+                        engine.displayResults = displayResults;
                         const recommendations = engine.calculateRecommendations(this.answers);
                         
-                        // MODIFICATION: Utiliser ResultsManager.displayResults au lieu de engine.displayResults
                         if (window.ResultsManager && typeof window.ResultsManager.displayResults === 'function') {
                             window.ResultsManager.displayResults(recommendations);
                         } else {
-                            // Afficher un message d'erreur si ResultsManager n'est pas disponible
-                            throw new Error("Méthode d'affichage des résultats non disponible");
+                            displayResults(recommendations);
                         }
                         return;
                     }
@@ -1081,13 +1085,14 @@ class QuestionManager {
                     if (typeof window.RecommendationEngine === 'function') {
                         console.log("Création directe d'une instance RecommendationEngine");
                         window.recommendationEngine = new window.RecommendationEngine();
+                        // IMPORTANT: Assurer que l'instance a la méthode displayResults
+                        window.recommendationEngine.displayResults = displayResults;
                         const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
                         
-                        // MODIFICATION: Utiliser ResultsManager.displayResults au lieu de window.recommendationEngine.displayResults
                         if (window.ResultsManager && typeof window.ResultsManager.displayResults === 'function') {
                             window.ResultsManager.displayResults(recommendations);
                         } else {
-                            throw new Error("Méthode d'affichage des résultats non disponible");
+                            displayResults(recommendations);
                         }
                         return;
                     }
@@ -1095,13 +1100,14 @@ class QuestionManager {
                     // Si déjà instancié, utiliser l'instance existante
                     if (window.recommendationEngine) {
                         console.log("Utilisation de l'instance existante");
+                        // IMPORTANT: Assurer que l'instance a la méthode displayResults
+                        window.recommendationEngine.displayResults = displayResults;
                         const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
                         
-                        // MODIFICATION: Utiliser ResultsManager.displayResults au lieu de window.recommendationEngine.displayResults
                         if (window.ResultsManager && typeof window.ResultsManager.displayResults === 'function') {
                             window.ResultsManager.displayResults(recommendations);
                         } else {
-                            throw new Error("Méthode d'affichage des résultats non disponible");
+                            displayResults(recommendations);
                         }
                         return;
                     }
@@ -1114,13 +1120,14 @@ class QuestionManager {
                         try {
                             console.log("Événement reçu, initialisation du moteur");
                             window.recommendationEngine = new window.RecommendationEngine();
+                            // IMPORTANT: Assurer que l'instance a la méthode displayResults
+                            window.recommendationEngine.displayResults = displayResults;
                             const recommendations = window.recommendationEngine.calculateRecommendations(answersData);
                             
-                            // MODIFICATION: Utiliser ResultsManager.displayResults au lieu de window.recommendationEngine.displayResults
                             if (window.ResultsManager && typeof window.ResultsManager.displayResults === 'function') {
                                 window.ResultsManager.displayResults(recommendations);
                             } else {
-                                throw new Error("Méthode d'affichage des résultats non disponible");
+                                displayResults(recommendations);
                             }
                         } catch (error) {
                             console.error("Erreur lors de l'utilisation du moteur:", error);
@@ -1341,6 +1348,10 @@ function displayResults(recommendations) {
         alert('Fonctionnalité de comparaison à implémenter');
     });
 }
+
+// IMPORTANT: Exposer l'affichage des résultats de façon cohérente
+window.ResultsManager = window.ResultsManager || {};
+window.ResultsManager.displayResults = displayResults;
 
 // Solution de l'expert : exporter la fonction displayResults vers window.recommendationEngine
 if (window.recommendationEngine) {
