@@ -184,7 +184,113 @@ function initUIEvents() {
     const tabItems = document.querySelectorAll('.tab-item');
     
     if (tabItems.length > 0) {
-        tabItems.forEach(tab => {
+        // Créer dynamiquement les conteneurs pour chaque onglet s'ils n'existent pas encore
+        const contentWrapper = document.querySelector('.content-wrapper');
+        const existingContainers = {};
+        
+        // Fonction pour créer ou récupérer un conteneur d'onglet
+        function getOrCreateTabContainer(tabName, index) {
+            const tabId = `tab-content-${index}`;
+            let container = document.getElementById(tabId);
+            
+            if (!container) {
+                container = document.createElement('div');
+                container.id = tabId;
+                container.className = 'tab-content';
+                container.dataset.tabName = tabName;
+                container.style.display = index === 0 ? 'block' : 'none';
+                
+                // Si c'est le premier onglet (Simulateur), déplacer les éléments existants dans ce conteneur
+                if (index === 0) {
+                    // Éléments à déplacer dans le premier onglet
+                    const elementsToMove = [
+                        document.querySelector('.progress-info'),
+                        document.querySelector('.progress-bar-container'),
+                        document.getElementById('progress-steps-container'),
+                        document.getElementById('question-container'),
+                        document.getElementById('results-container')
+                    ];
+                    
+                    elementsToMove.forEach(element => {
+                        if (element) {
+                            const clone = element.cloneNode(true);
+                            container.appendChild(clone);
+                            element.style.display = 'none'; // Cacher l'original
+                        }
+                    });
+                } else {
+                    // Pour les autres onglets, ajouter un contenu par défaut
+                    switch(tabName) {
+                        case 'Comparatif des statuts':
+                            container.innerHTML = `
+                                <div class="max-w-4xl mx-auto mb-12">
+                                    <h2 class="text-2xl font-bold mb-4">Comparatif des formes juridiques</h2>
+                                    <p class="mb-4">Le tableau comparatif ci-dessous présente les principales caractéristiques des différentes formes juridiques d'entreprise en France.</p>
+                                    <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
+                                        <p class="text-center">Contenu en cours de chargement...</p>
+                                    </div>
+                                </div>
+                            `;
+                            break;
+                        case 'Guide fiscal':
+                            container.innerHTML = `
+                                <div class="max-w-4xl mx-auto mb-12">
+                                    <h2 class="text-2xl font-bold mb-4">Guide fiscal pour entrepreneurs</h2>
+                                    <p class="mb-4">Ce guide présente les principales informations fiscales à connaître pour chaque forme juridique.</p>
+                                    <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
+                                        <p class="text-center">Contenu en cours de chargement...</p>
+                                    </div>
+                                </div>
+                            `;
+                            break;
+                        case 'Barèmes 2025':
+                            container.innerHTML = `
+                                <div class="max-w-4xl mx-auto mb-12">
+                                    <h2 class="text-2xl font-bold mb-4">Barèmes fiscaux et sociaux 2025</h2>
+                                    <p class="mb-4">Retrouvez les barèmes à jour pour l'année 2025.</p>
+                                    <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
+                                        <p class="text-center">Contenu en cours de chargement...</p>
+                                    </div>
+                                </div>
+                            `;
+                            break;
+                        case 'Historique':
+                            container.innerHTML = `
+                                <div class="max-w-4xl mx-auto mb-12">
+                                    <h2 class="text-2xl font-bold mb-4">Historique de vos simulations</h2>
+                                    <p class="mb-4">Retrouvez ici l'historique de vos précédentes simulations.</p>
+                                    <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
+                                        <p class="text-center">Aucune simulation enregistrée pour le moment.</p>
+                                    </div>
+                                </div>
+                            `;
+                            break;
+                        default:
+                            container.innerHTML = `<div class="max-w-4xl mx-auto"><p>Contenu de l'onglet "${tabName}" en cours de chargement...</p></div>`;
+                    }
+                }
+                
+                // Insérer le conteneur après les onglets
+                const tabNavigation = document.querySelector('.tab-navigation');
+                if (tabNavigation && tabNavigation.nextSibling) {
+                    contentWrapper.insertBefore(container, tabNavigation.nextSibling);
+                } else {
+                    contentWrapper.appendChild(container);
+                }
+            }
+            
+            existingContainers[tabName] = container;
+            return container;
+        }
+        
+        // Initialiser les conteneurs pour chaque onglet
+        tabItems.forEach((tab, index) => {
+            const tabName = tab.textContent.trim();
+            getOrCreateTabContainer(tabName, index);
+        });
+        
+        // Ajouter les événements de clic sur les onglets
+        tabItems.forEach((tab, index) => {
             tab.addEventListener('click', () => {
                 // Désactiver tous les onglets
                 tabItems.forEach(t => t.classList.remove('active'));
@@ -192,8 +298,18 @@ function initUIEvents() {
                 // Activer l'onglet cliqué
                 tab.classList.add('active');
                 
-                // Ici, vous pourriez ajouter la logique pour changer le contenu affiché
-                // en fonction de l'onglet sélectionné
+                // Masquer tous les conteneurs
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.style.display = 'none';
+                });
+                
+                // Afficher le conteneur correspondant à l'onglet sélectionné
+                const tabName = tab.textContent.trim();
+                const tabContainer = getOrCreateTabContainer(tabName, index);
+                tabContainer.style.display = 'block';
+                
+                // Faire défiler la page vers le haut
+                window.scrollTo(0, 0);
             });
         });
     }
