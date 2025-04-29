@@ -1,9 +1,15 @@
 // app.js - Fichier principal d'initialisation du simulateur de forme juridique
 import { QuestionManager } from './question-manager.js';
 import { RecommendationEngine, notifyEngineReady } from './recommendation-engine.js';
+// Importation directe de legal-status-data.js pour s'assurer qu'il est chargé
+import { legalStatuses, exclusionFilters, ratingScales } from './legal-status-data.js';
+// Importation directe de question-data.js pour s'assurer qu'il est chargé
+import { sections, questions, quickStartQuestions } from './question-data.js';
 
 // Fonction d'initialisation de l'application
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM entièrement chargé et analysé");
+    
     // Mettre à jour la date de dernière mise à jour
     updateLastUpdateDate();
     
@@ -33,14 +39,31 @@ document.addEventListener('DOMContentLoaded', () => {
  * Initialiser le gestionnaire de questions
  */
 function initQuestionManager() {
-    // Créer une instance du gestionnaire de questions avec importation ES6
-    const questionManager = new QuestionManager();
-    
-    // Pour la compatibilité avec l'ancien code
-    window.questionManager = questionManager;
-    
-    // Initialiser l'application
-    questionManager.init();
+    try {
+        console.log("Démarrage de l'initialisation du QuestionManager");
+        
+        // Vérifier que les données sont disponibles
+        console.log("Données disponibles:", {
+            sections: sections.length, 
+            questions: questions.length, 
+            quickStartQuestions: quickStartQuestions.length
+        });
+        
+        // Créer une instance du gestionnaire de questions
+        const questionManager = new QuestionManager();
+        
+        // Pour la compatibilité avec l'ancien code
+        window.questionManager = questionManager;
+        
+        // Initialiser l'application
+        console.log("QuestionManager créé, appel de init()");
+        questionManager.init();
+        
+        console.log("QuestionManager initialisé avec succès");
+    } catch (error) {
+        console.error("Erreur lors de l'initialisation du QuestionManager:", error);
+        console.error("Détails de l'erreur:", error.stack);
+    }
 }
 
 /**
