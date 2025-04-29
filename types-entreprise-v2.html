@@ -735,12 +735,12 @@
         </button>
     </div>
     
-    <!-- Scripts (sans type="module") -->
-    <script src="js/legal-status-data.js"></script>
-    <script src="js/question-data.js"></script>
-    <script src="js/recommendation-engine.js"></script>
-    <script src="js/question-manager.js"></script>
-    <script src="js/app.js"></script>
+    <!-- Scripts avec defer pour garantir l'ordre de chargement et éviter les problèmes -->
+    <script src="js/legal-status-data.js?v=20250429" defer></script>
+    <script src="js/question-data.js?v=20250429" defer></script>
+    <script src="js/recommendation-engine.js?v=20250429" defer></script>
+    <script src="js/question-manager.js?v=20250429" defer></script>
+    <script src="js/app.js?v=20250429" defer></script>
     
     <!-- Script pour gérer l'indicateur de chargement -->
     <script>
