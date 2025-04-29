@@ -1,5 +1,8 @@
 // legal-status-data.js - Données sur les statuts juridiques d'entreprise
 
+// Ajouter une vérification de chargement du script
+console.log("Chargement de legal-status-data.js...");
+
 // Statuts juridiques et leurs caractéristiques
 const legalStatuses = {
     "MICRO": {
@@ -47,7 +50,7 @@ const legalStatuses = {
             "Test d'un concept avant structure plus formelle",
             "Activités secondaires ou complémentaires"
         ],
-        casConseille: 'Début d\\\'activité, test',
+        casConseille: 'Début d\\\\\\'activité, test',
         casDeconseille: 'Développement ambitieux',
         transmission: 'Non',
         plafondCA: '188 700 € (vente/hébergement) ou 77 700 € (services/libérales)',
@@ -734,7 +737,10 @@ const legalStatuses = {
         }
     }
 };
+
+// S'assurer que window.legalStatuses est défini avant la fin du chargement
 window.legalStatuses = legalStatuses;
+console.log("window.legalStatuses a été défini avec succès");
 
 // Barèmes 2025 pour les régimes fiscaux et sociaux
 const scales2025 = {
@@ -976,3 +982,18 @@ window.FormeJuridiqueDB = {
     structures: Object.values(legalStatuses),
     getById: getById
 };
+
+// Vérification supplémentaire pour s'assurer que tout est bien défini
+document.addEventListener('DOMContentLoaded', function() {
+    if (!window.legalStatuses) {
+        console.error("window.legalStatuses n'est pas défini après le chargement du document");
+        // Réassigner si nécessaire
+        window.legalStatuses = legalStatuses;
+    } else {
+        console.log("window.legalStatuses est bien défini après le chargement du document");
+    }
+});
+
+// Déclencher un événement pour signaler que le fichier est chargé
+document.dispatchEvent(new CustomEvent('legalStatusesLoaded'));
+console.log("Fin du chargement de legal-status-data.js");
