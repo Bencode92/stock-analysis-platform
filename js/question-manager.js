@@ -1174,5 +1174,189 @@ class QuestionManager {
     }
 }
 
+// Fonction pour afficher les résultats (déplacée depuis recommendation-engine.js)
+function displayResults(recommendations) {
+    console.log("Affichage des résultats dans displayResults:", recommendations);
+    // Récupérer les conteneurs
+    const resultsContainer = document.getElementById('results-container');
+    const questionContainer = document.getElementById('question-container');
+    
+    if (!resultsContainer) {
+        console.error('Conteneur de résultats non trouvé');
+        return;
+    }
+    
+    // Masquer le conteneur de questions et afficher celui des résultats
+    if (questionContainer) questionContainer.style.display = 'none';
+    resultsContainer.style.display = 'block';
+    
+    if (recommendations.length === 0) {
+        resultsContainer.innerHTML = `
+            <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center mb-8">
+                <div class="text-6xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
+                <h2 class="text-2xl font-bold mb-4">Aucun statut juridique correspondant</h2>
+                <p class="mb-6">Vos critères semblent incompatibles. Essayez d'assouplir certaines exigences et refaites le test.</p>
+                <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
+                    <i class="fas fa-redo mr-2"></i> Refaire le test
+                </button>
+            </div>
+        `;
+        
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            location.reload();
+        });
+        
+        return;
+    }
+    
+    // Créer le contenu des résultats
+    let resultsHTML = `
+        <div class="results-container">
+            <div class="text-center mb-10">
+                <h2 class="text-3xl font-bold mb-3">Votre statut juridique recommandé</h2>
+                <p class="text-lg text-gray-300">Basé sur vos réponses, voici les formes juridiques les plus adaptées à votre projet</p>
+            </div>
+            
+            <div class="recommendation-cards">
+    `;
+    
+    // Carte pour chaque recommandation
+    recommendations.forEach((recommendation, index) => {
+        const status = recommendation.status;
+        const isMainRecommendation = index === 0;
+        
+        resultsHTML += `
+            <div class="recommendation-card ${isMainRecommendation ? 'main-recommendation' : ''} bg-opacity-60 bg-blue-900 rounded-xl overflow-hidden mb-8 border ${isMainRecommendation ? 'border-green-400' : 'border-gray-700'}">
+                <!-- En-tête -->
+                <div class="p-6 flex items-center border-b border-gray-700 ${isMainRecommendation ? 'bg-green-900 bg-opacity-30' : ''}">
+                    <div class="h-16 w-16 rounded-full bg-opacity-30 ${isMainRecommendation ? 'bg-green-800' : 'bg-blue-800'} flex items-center justify-center text-3xl mr-5">
+                        <i class="fas ${status.logo || 'fa-building'} ${isMainRecommendation ? 'text-green-400' : 'text-gray-300'}"></i>
+                    </div>
+                    <div class="flex-grow">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-2xl font-bold">${status.name}</h3>
+                            <div class="score-badge ${isMainRecommendation ? 'bg-green-500 text-gray-900' : 'bg-blue-700'} px-3 py-1 rounded-full text-sm font-medium">
+                                Score: ${recommendation.score}/100
+                            </div>
+                        </div>
+                        <p class="text-gray-400 mt-1">
+                            ${isMainRecommendation ? 'Recommandation principale' : `Alternative ${index}`}
+                        </p>
+                    </div>
+                </div>
+                
+                <!-- Contenu -->
+                <div class="p-6">
+                    <p class="mb-5">${status.description}</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Forces -->
+                        <div>
+                            <h4 class="font-semibold mb-2 flex items-center text-green-400">
+                                <i class="fas fa-check-circle mr-2"></i> Points forts
+                            </h4>
+                            <ul class="space-y-2">
+                                ${recommendation.strengths.map(strength => `
+                                    <li class="flex items-start">
+                                        <i class="fas fa-plus-circle text-green-400 mt-1 mr-2"></i>
+                                        <span>${strength}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                        
+                        <!-- Faiblesses -->
+                        <div>
+                            <h4 class="font-semibold mb-2 flex items-center text-red-400">
+                                <i class="fas fa-exclamation-circle mr-2"></i> Points d'attention
+                            </h4>
+                            <ul class="space-y-2">
+                                ${recommendation.weaknesses.map(weakness => `
+                                    <li class="flex items-start">
+                                        <i class="fas fa-minus-circle text-red-400 mt-1 mr-2"></i>
+                                        <span>${weakness}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <!-- Boutons d'action -->
+                    <div class="mt-6 flex justify-end">
+                        <button class="details-btn bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg mr-3" data-status-id="${status.shortName}">
+                            <i class="fas fa-info-circle mr-2"></i> Plus de détails
+                        </button>
+                        ${isMainRecommendation ? `
+                            <button class="download-btn bg-green-500 hover:bg-green-400 text-gray-900 font-medium px-4 py-2 rounded-lg">
+                                <i class="fas fa-file-download mr-2"></i> Télécharger le PDF
+                            </button>
+                        ` : ''}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    // Fermer les conteneurs
+    resultsHTML += `
+            </div>
+            
+            <div class="text-center mt-10">
+                <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
+                    <i class="fas fa-redo mr-2"></i> Refaire le test
+                </button>
+                <button id="compare-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-medium px-6 py-3 rounded-lg ml-4">
+                    <i class="fas fa-balance-scale mr-2"></i> Comparer les statuts
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Injecter le HTML dans le conteneur
+    resultsContainer.innerHTML = resultsHTML;
+    
+    // Attacher les événements
+    document.getElementById('restart-btn').addEventListener('click', () => {
+        location.reload();
+    });
+    
+    // Événements pour les boutons de détails
+    document.querySelectorAll('.details-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const statusId = btn.dataset.statusId;
+            alert(`Affichage des détails pour ${statusId} - Fonctionnalité en développement`);
+        });
+    });
+    
+    // Événement pour le bouton de téléchargement PDF
+    const downloadBtn = document.querySelector('.download-btn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', () => {
+            alert('Fonctionnalité de téléchargement PDF à implémenter');
+        });
+    }
+    
+    // Événement pour le bouton de comparaison
+    document.getElementById('compare-btn').addEventListener('click', () => {
+        alert('Fonctionnalité de comparaison à implémenter');
+    });
+}
+
+// Solution de l'expert : exporter la fonction displayResults vers window.recommendationEngine
+if (window.recommendationEngine) {
+    window.recommendationEngine.displayResults = displayResults;
+}
+
 // Exposer la classe au niveau global
 window.QuestionManager = QuestionManager;
+
+// Vérifier si window.recommendationEngine existe périodiquement et exporter displayResults quand il est disponible
+(function checkAndExportDisplayResults() {
+    if (window.recommendationEngine) {
+        window.recommendationEngine.displayResults = displayResults;
+        console.log("Function displayResults successfully exported to window.recommendationEngine");
+    } else {
+        console.log("window.recommendationEngine not available yet, will check again in 1 second");
+        setTimeout(checkAndExportDisplayResults, 1000); // Vérifier à nouveau dans 1 seconde
+    }
+})();
