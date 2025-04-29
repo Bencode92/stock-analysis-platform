@@ -1,7 +1,7 @@
 // legal-status-data.js - Données sur les statuts juridiques d'entreprise
 
 // Statuts juridiques et leurs caractéristiques
-export const legalStatuses = {
+const legalStatuses = {
     "MICRO": {
         id: 'micro-entreprise',
         name: "Micro-entreprise",
@@ -47,7 +47,7 @@ export const legalStatuses = {
             "Test d'un concept avant structure plus formelle",
             "Activités secondaires ou complémentaires"
         ],
-        casConseille: 'Début d\\\'activité, test',
+        casConseille: 'Début d\\'activité, test',
         casDeconseille: 'Développement ambitieux',
         transmission: 'Non',
         plafondCA: '188 700 € (vente/hébergement) ou 77 700 € (services/libérales)',
@@ -736,7 +736,7 @@ export const legalStatuses = {
 };
 
 // Barèmes 2025 pour les régimes fiscaux et sociaux
-export const scales2025 = {
+const scales2025 = {
     // Seuils micro-entreprise 2025
     micro: {
         bic_sales: 188700,
@@ -778,7 +778,7 @@ export const scales2025 = {
 };
 
 // Critères d'exclusion primaire (filtres "killer")
-export const exclusionFilters = [
+const exclusionFilters = [
     {
         id: "professional_order",
         condition: "yes",
@@ -819,7 +819,7 @@ export const exclusionFilters = [
 ];
 
 // Barème de notation des statuts (0-5) par critère
-export const ratingScales = {
+const ratingScales = {
     taxation: {
         EI: 3,
         MICRO: 4,
@@ -962,10 +962,8 @@ export const ratingScales = {
     }
 };
 
-// Fonction utilitaire pour récupérer un statut par ID
-export function getStatusById(id) {
-    return legalStatuses[id];
-}
+// Exporter les constantes (module ES6)
+export { legalStatuses, scales2025, exclusionFilters, ratingScales };
 
 // Pour la compatibilité avec l'ancien code (sera supprimé à terme)
 window.legalStatuses = legalStatuses;
@@ -973,7 +971,7 @@ window.scales2025 = scales2025;
 window.exclusionFilters = exclusionFilters;
 window.ratingScales = ratingScales;
 
-// Exposer via l'ancien système de compatibilité
+// Exposer via l'ancien système de compatibilité 
 window.FormeJuridiqueDB = {
     structures: Object.values(legalStatuses),
     getById: function(id) {
