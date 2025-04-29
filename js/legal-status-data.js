@@ -1,7 +1,33 @@
 // legal-status-data.js - Données sur les statuts juridiques d'entreprise
 
-// Ajouter une vérification de chargement du script
-console.log("Chargement de legal-status-data.js...");
+// Logging amélioré pour le diagnostic de chargement
+console.log("Début du chargement de legal-status-data.js...");
+
+// Fonction pour s'assurer que l'événement est bien déclenché
+function ensureLegalStatusesAvailable() {
+    // Définir l'événement à déclencher quand tout est chargé
+    const event = new CustomEvent('legalStatusesLoaded');
+    
+    // Vérifier si window.legalStatuses existe déjà
+    if (window.legalStatuses) {
+        console.log("window.legalStatuses est disponible - envoi de l'événement legalStatusesLoaded");
+        document.dispatchEvent(event);
+    } else {
+        console.warn("window.legalStatuses n'est pas encore disponible - attendre DOMContentLoaded");
+        
+        // Si le DOM est déjà chargé, déclencher l'événement directement
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            console.log("DOM déjà chargé, déclenchement immédiat");
+            document.dispatchEvent(event);
+        } else {
+            // Sinon attendre DOMContentLoaded
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log("DOM chargé, déclenchement de legalStatusesLoaded");
+                document.dispatchEvent(event);
+            });
+        }
+    }
+}
 
 // Statuts juridiques et leurs caractéristiques
 const legalStatuses = {
@@ -50,7 +76,7 @@ const legalStatuses = {
             "Test d'un concept avant structure plus formelle",
             "Activités secondaires ou complémentaires"
         ],
-        casConseille: 'Début d\\\\\\'activité, test',
+        casConseille: 'Début d\\\'activité, test',
         casDeconseille: 'Développement ambitieux',
         transmission: 'Non',
         plafondCA: '188 700 € (vente/hébergement) ou 77 700 € (services/libérales)',
@@ -738,9 +764,9 @@ const legalStatuses = {
     }
 };
 
-// S'assurer que window.legalStatuses est défini avant la fin du chargement
+// S'assurer que window.legalStatuses est défini immédiatement
 window.legalStatuses = legalStatuses;
-console.log("window.legalStatuses a été défini avec succès");
+console.log("window.legalStatuses a été défini avec succès, contient", Object.keys(legalStatuses).length, "statuts juridiques");
 
 // Barèmes 2025 pour les régimes fiscaux et sociaux
 const scales2025 = {
@@ -992,8 +1018,14 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.log("window.legalStatuses est bien défini après le chargement du document");
     }
+    
+    // Vérifier que l'événement a été déclenché
+    ensureLegalStatusesAvailable();
 });
 
 // Déclencher un événement pour signaler que le fichier est chargé
 document.dispatchEvent(new CustomEvent('legalStatusesLoaded'));
-console.log("Fin du chargement de legal-status-data.js");
+console.log("Fin du chargement de legal-status-data.js - Événement legalStatusesLoaded déclenché");
+
+// Appeler la fonction immédiatement pour garantir que l'événement est déclenché
+ensureLegalStatusesAvailable();
