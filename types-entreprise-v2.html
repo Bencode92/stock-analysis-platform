@@ -735,12 +735,23 @@
         </button>
     </div>
     
-    <!-- Scripts avec ordre de chargement modifié pour résoudre les problèmes de dépendance -->
-    <script src="js/legal-status-data.js?v=20250429"></script>
-    <script src="js/question-data.js?v=20250429" defer></script>
-    <script src="js/recommendation-engine.js?v=20250429" defer></script>
-    <script src="js/question-manager.js?v=20250429" defer></script>
-    <script src="js/app.js?v=20250429" defer></script>
+    <!-- Scripts avec ordre de chargement modifié et timestamps pour éviter les problèmes de cache -->
+    <script src="js/legal-status-data.js?v=20250429_1"></script>
+    <script>
+    // Vérification que legal-status-data.js est bien chargé
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("DOM chargé, vérification de legalStatuses");
+        if (!window.legalStatuses) {
+            console.warn("window.legalStatuses n'est pas disponible au chargement du DOM - attendons l'événement legalStatusesLoaded");
+        } else {
+            console.log("window.legalStatuses est disponible au chargement du DOM", Object.keys(window.legalStatuses).length);
+        }
+    });
+    </script>
+    <script src="js/question-data.js?v=20250429_1" defer></script>
+    <script src="js/recommendation-engine.js?v=20250429_1" defer></script>
+    <script src="js/question-manager.js?v=20250429_1" defer></script>
+    <script src="js/app.js?v=20250429_1" defer></script>
     
     <!-- Script pour gérer l'indicateur de chargement -->
     <script>
@@ -819,6 +830,13 @@
         // Écouteur d'événement pour détecter quand le moteur est prêt
         document.addEventListener('recommendationEngineReady', function() {
             window.recommendationEngineLoaded = true;
+            console.log("Événement recommendationEngineReady reçu - le moteur est prêt!");
+        });
+
+        // Écouteur pour les statuts juridiques
+        document.addEventListener('legalStatusesLoaded', function() {
+            console.log("Événement legalStatusesLoaded reçu - les données de statuts sont disponibles!");
+            console.log("Vérification de legalStatuses après l'événement:", window.legalStatuses ? Object.keys(window.legalStatuses).length : "non disponible");
         });
     });
     </script>
