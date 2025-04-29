@@ -11,600 +11,323 @@ window.addEventListener('error', (e) => {
 console.log("Chargement du recommendation-engine.js commencé");
 window.engineLoadingStarted = true;
 
-/**
- * Documentation automatique des règles
- * Cette structure stocke les métadonnées de chaque règle pour l'affichage
- * ou l'exportation ultérieure (interface d'admin, documentation)
- */
-window.ruleDocs = [];
+// Utilisation des variables globales au lieu des imports
+// const { legalStatuses, exclusionFilters, ratingScales } = window;
 
-/**
- * Factory pour créer une règle et documenter ses métadonnées
- * @param {Object} options - Options de la règle
- * @returns {Object} - La règle créée
- */
-function makeRule({ id, description, criteria, condition, apply, impact = "medium", category = "standard" }) {
-    // Ajouter à la documentation
-    window.ruleDocs.push({ 
-        id, 
-        description, 
-        criteria,
-        impact, 
-        category,
-        createdAt: new Date().toISOString()
-    });
-    
-    // Retourner la règle
-    return { id, description, criteria, condition, apply };
-}
-
-// Liste des critères pour les règles génériques
-const criteriaList = [
-    'taxation', 'social_cost', 'patrimony_protection', 'governance_flexibility',
-    'fundraising', 'flexibility', 'administrative_simplicity', 'accounting_cost',
-    'retirement_insurance', 'transmission'
-];
-
-// Générer les règles génériques (une par critère)
-const scoringRules = criteriaList.map(crit => 
-    makeRule({
-        id: `intrinsic_${crit}`,
-        description: `Note intrinsèque pour le critère ${crit}`,
-        criteria: crit,
-        category: "intrinsic",
-        // Toujours vraie : on applique la note intrinsèque à chaque statut
-        condition: () => true,
-        /**
-         * @param {string} statusId - ex. 'SAS'
-         * @param {number} score - score courant
-         * @param {Object} answers - réponses utilisateur
-         * @param {Object} weights - priorityWeights calculés avant
-         * @param {Array} audit - tableau pour stocker l'audit
-         */
-        apply: (statusId, score, answers, weights, audit) => {
-            // Récupérer la note de base du barème (0-5)
-            const base = window.ratingScales[crit]?.[statusId] ?? 0;
-            
-            // Récupérer le poids attribué par l'utilisateur (1-5)
-            const weight = weights?.[crit] ?? 3;
-            
-            // Calculer l'incrément
-            const delta = base * weight;
-            
-            // Enregistrer l'audit
-            if (audit) {
-                audit.push({
-                    rule: `intrinsic_${crit}`,
-                    delta,
-                    explanation: `Base ${base}/5 × Poids ${weight} = +${delta}`,
-                    timestamp: performance.now()
-                });
-            }
-            
-            // Retourner le nouveau score
-            return score + delta;
-        }
-    })
-);
-
-// Ajouter les règles spécifiques (bonus/malus) pour des cas particuliers
-scoringRules.push(
-    // Protection du patrimoine « essentielle »
-    makeRule({
+// Règles de scoring configurables
+const scoringRules = [
+    // Règles pour la protection du patrimoine
+    {
         id: 'essential_patrimony_protection',
-        description: 'Protection du patrimoine essentielle pour l\'utilisateur',
-        criteria: 'patrimony_protection',
-        category: 'contextual',
-        impact: 'high',
+        description: 'Protection du patrimoine essentielle',
         condition: answers => answers.patrimony_protection === 'essential',
-        apply: (statusId, score, answers, weights, audit) => {
-            let delta = 0;
-            
-            // Formes avec bonne protection patrimoniale
+        apply: (statusId, score) => {
             if (['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) {
-                delta = 10;
-            } 
-            // Formes avec protection limitée
-            else if (['MICRO', 'EI', 'SNC'].includes(statusId)) {
-                delta = -10;
+                return score + 1;
             }
-            
-            // Enregistrer l'audit
-            if (audit) {
-                audit.push({
-                    rule: 'essential_patrimony_protection',
-                    delta,
-                    explanation: `${delta > 0 
-                        ? 'Bonus pour protection patrimoniale forte' 
-                        : 'Malus pour protection patrimoniale limitée'}`,
-                    timestamp: performance.now()
-                });
-            }
-            
-            return score + delta;
-        }
-    }),
-    
-    // Important patrimony protection
-    makeRule({
-        id: 'important_patrimony_protection',
-        description: 'Protection du patrimoine importante pour l\'utilisateur',
-        criteria: 'patrimony_protection',
-        category: 'contextual',
-        condition: answers => answers.patrimony_protection === 'important',
-        apply: (statusId, score, answers, weights, audit) => {
-            let delta = 0;
-            
-            // Formes avec bonne protection patrimoniale
-            if (['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) {
-                delta = 5;
-            } 
-            // Formes avec protection limitée
-            else if (['MICRO', 'EI', 'SNC'].includes(statusId)) {
-                delta = -5;
-            }
-            
-            if (audit) {
-                audit.push({
-                    rule: 'important_patrimony_protection',
-                    delta,
-                    explanation: delta > 0 
-                        ? 'Bonus modéré pour protection patrimoniale'
-                        : 'Malus modéré pour protection patrimoniale limitée',
-                    timestamp: performance.now()
-                });
-            }
-            
-            return score + delta;
-        }
-    }),
-    
-    // Levée de fonds nécessaire
-    makeRule({
-        id: 'need_fundraising',
-        description: 'Besoin de lever des fonds',
-        criteria: 'fundraising',
-        category: 'contextual',
-        impact: 'high',
-        condition: answers => answers.fundraising === 'yes',
-        apply: (statusId, score, answers, weights, audit) => {
-            let delta = 0;
-            
-            // Formes adaptées à la levée de fonds
-            if (['SAS', 'SASU', 'SA', 'SCA'].includes(statusId)) {
-                delta = 8;
-            } 
-            // Formes peu adaptées
-            else if (['MICRO', 'EI', 'EURL', 'SNC', 'SCI'].includes(statusId)) {
-                delta = -5;
-            }
-            
-            if (audit) {
-                audit.push({
-                    rule: 'need_fundraising',
-                    delta,
-                    explanation: delta > 0 
-                        ? 'Forme bien adaptée à la levée de fonds'
-                        : 'Forme peu adaptée à la levée de fonds',
-                    timestamp: performance.now()
-                });
-            }
-            
-            return score + delta;
-        }
-    }),
-    
-    // Montant de levée important
-    makeRule({
-        id: 'high_fundraising_amount',
-        description: 'Montant important de levée de fonds',
-        criteria: 'fundraising',
-        category: 'contextual',
-        impact: 'high',
-        condition: answers => answers.fundraising_amount > 200000,
-        apply: (statusId, score, answers, weights, audit) => {
-            let delta = 0;
-            
-            // Formes idéales pour des levées importantes
-            if (['SAS', 'SA'].includes(statusId)) {
-                delta = 12;
-            } 
-            // Formes possibles mais moins idéales
-            else if (['SASU'].includes(statusId)) {
-                delta = 6;
-            }
-            // Formes inadaptées
-            else if (['MICRO', 'EI', 'EURL', 'SNC', 'SCI', 'SELARL'].includes(statusId)) {
-                delta = -8;
-            }
-            
-            if (audit) {
-                audit.push({
-                    rule: 'high_fundraising_amount',
-                    delta,
-                    explanation: `Adaptation à une levée de fonds importante (${answers.fundraising_amount.toLocaleString('fr-FR')} €)`,
-                    timestamp: performance.now()
-                });
-            }
-            
-            return score + delta;
-        }
-    }),
-    
-    // Prévision de CA > seuil micro-entreprise
-    makeRule({
-        id: 'ca_above_micro',
-        description: 'CA prévisionnel supérieur aux plafonds micro-entreprise',
-        criteria: 'administrative_simplicity',
-        category: 'contextual',
-        impact: 'high',
-        condition: answers => {
-            // Vérifier selon le type d'activité
-            if (!answers.projected_revenue) return false;
-            
-            const typeActivity = answers.activity_type || 'bic_service';
-            let threshold;
-            
-            switch (typeActivity) {
-                case 'bic_sales':
-                    threshold = window.scales2025?.micro?.bic_sales || 188700;
-                    break;
-                case 'bnc':
-                    threshold = window.scales2025?.micro?.bnc || 77700;
-                    break;
-                case 'bic_service':
-                default:
-                    threshold = window.scales2025?.micro?.bic_service || 77700;
-                    break;
-            }
-            
-            return answers.projected_revenue > threshold;
+            return score;
         },
-        apply: (statusId, score, answers, weights, audit) => {
-            let delta = 0;
-            
-            if (statusId === 'MICRO') {
-                delta = -15;
-                
-                if (audit) {
-                    audit.push({
-                        rule: 'ca_above_micro',
-                        delta,
-                        explanation: 'Le CA prévisionnel dépasse les seuils micro-entreprise',
-                        timestamp: performance.now()
-                    });
-                }
+        criteria: 'patrimony_protection'
+    },
+    {
+        id: 'high_risk_activity_ei_micro',
+        description: 'Activité à risque élevé pour EI/MICRO',
+        condition: answers => answers.high_professional_risk === 'yes',
+        apply: (statusId, score) => {
+            if (['EI', 'MICRO'].includes(statusId)) {
+                return score - 1;
+            } else if (statusId === 'EIRL') {
+                return score + 0.5;
             }
-            
-            return score + delta;
-        }
-    }),
+            return score;
+        },
+        criteria: 'patrimony_protection'
+    },
     
-    // Pas de capital disponible
-    makeRule({
-        id: 'no_capital',
-        description: 'Capital initial très limité (< 1€)',
-        criteria: 'administrative_simplicity',
-        category: 'contextual',
-        condition: answers => answers.available_capital < 1,
-        apply: (statusId, score, answers, weights, audit) => {
-            let delta = 0;
-            
-            // SA nécessite un capital minimum
-            if (statusId === 'SA') {
-                delta = -20;
+    // Règles pour la simplicité administrative
+    {
+        id: 'high_revenue_small_structures',
+        description: 'CA élevé pour petites structures',
+        condition: answers => parseFloat(answers.projected_revenue) > 100000,
+        apply: (statusId, score) => {
+            if (['EI', 'MICRO'].includes(statusId)) {
+                return score - 1;
             }
-            // Formes sans besoin de capital
-            else if (['MICRO', 'EI'].includes(statusId)) {
-                delta = 5;
-            }
-            
-            if (audit && delta !== 0) {
-                audit.push({
-                    rule: 'no_capital',
-                    delta,
-                    explanation: delta > 0 
-                        ? 'Avantage pour forme sans capital minimum'
-                        : 'Incompatible avec l\'absence de capital',
-                    timestamp: performance.now()
-                });
-            }
-            
-            return score + delta;
-        }
-    }),
-    
-    // TMI élevée - optimisation fiscale IS
-    makeRule({
-        id: 'high_income_tax_bracket',
-        description: 'Tranche marginale d\'imposition élevée (≥ 30%)',
-        criteria: 'taxation',
-        category: 'contextual',
-        condition: answers => answers.tax_bracket && 
-            (answers.tax_bracket === 'bracket_30' || 
-             answers.tax_bracket === 'bracket_41' || 
-             answers.tax_bracket === 'bracket_45'),
-        apply: (statusId, score, answers, weights, audit) => {
-            let delta = 0;
-            
-            // Formes à l'IS par défaut ou optionnelles
-            if (['SASU', 'SAS', 'SA'].includes(statusId)) {
-                delta = 8;
-            } 
-            else if (['EURL', 'SARL'].includes(statusId)) {
-                delta = 5; // Option IS possible
-            }
-            // Formes à l'IR sans option IS
-            else if (['MICRO'].includes(statusId)) {
-                delta = -5;
-            }
-            
-            if (audit && delta !== 0) {
-                audit.push({
-                    rule: 'high_income_tax_bracket',
-                    delta,
-                    explanation: delta > 0 
-                        ? 'Optimisation fiscale via IS avantageuse avec TMI élevée'
-                        : 'Pas d\'optimisation fiscale possible (IR obligatoire)',
-                    timestamp: performance.now()
-                });
-            }
-            
-            return score + delta;
-        }
-    }),
-    
-    // TMI faible - avantage IR
-    makeRule({
-        id: 'low_income_tax_bracket',
-        description: 'Tranche marginale d\'imposition faible (≤ 11%)',
-        criteria: 'taxation',
-        category: 'contextual',
-        condition: answers => answers.tax_bracket && 
-            (answers.tax_bracket === 'non_taxable' || 
-             answers.tax_bracket === 'bracket_11'),
-        apply: (statusId, score, answers, weights, audit) => {
-            let delta = 0;
-            
-            // Formes à l'IR par défaut
-            if (['MICRO', 'EI'].includes(statusId)) {
-                delta = 8;
-            } 
-            else if (['EURL', 'SNC'].includes(statusId)) {
-                delta = 5; // IR par défaut avec option IS
-            }
-            
-            if (audit && delta !== 0) {
-                audit.push({
-                    rule: 'low_income_tax_bracket',
-                    delta,
-                    explanation: 'IR avantageux avec TMI faible',
-                    timestamp: performance.now()
-                });
-            }
-            
-            return score + delta;
-        }
-    }),
-    
-    // Ordre professionnel
-    makeRule({
-        id: 'professional_order',
-        description: 'Inscription à un ordre professionnel requise',
-        criteria: 'administrative_simplicity',
-        category: 'contextual',
-        impact: 'high',
-        condition: answers => answers.professional_order === 'yes',
-        apply: (statusId, score, answers, weights, audit) => {
-            let delta = 0;
-            
-            // Formes adaptées aux professions libérales réglementées
-            if (['SELARL', 'SELAS'].includes(statusId)) {
-                delta = 15;
-            } 
-            // Formes incompatibles
-            else if (['MICRO'].includes(statusId)) {
-                delta = -20;
-            }
-            // Formes possibles mais non optimales
-            else if (['EI', 'EURL'].includes(statusId)) {
-                delta = -5;
-            }
-            
-            if (audit && delta !== 0) {
-                audit.push({
-                    rule: 'professional_order',
-                    delta,
-                    explanation: delta > 0 
-                        ? 'Structure adaptée aux professions réglementées avec ordre'
-                        : 'Structure peu ou pas adaptée aux professions réglementées',
-                    timestamp: performance.now()
-                });
-            }
-            
-            return score + delta;
-        }
-    }),
-    
-    // Transmission/sortie envisagée
-    makeRule({
-        id: 'exit_strategy',
-        description: 'Transmission ou sortie envisagée',
-        criteria: 'transmission',
-        category: 'contextual',
-        condition: answers => answers.exit_intention && 
-            (answers.exit_intention === 'sale' || 
-             answers.exit_intention === 'transmission'),
-        apply: (statusId, score, answers, weights, audit) => {
-            let delta = 0;
-            
-            // Formes adaptées à la transmission
+            return score;
+        },
+        criteria: 'administrative_simplicity'
+    },
+    {
+        id: 'low_revenue_complex_structures',
+        description: 'Faible CA pour structures complexes',
+        condition: answers => parseFloat(answers.projected_revenue) < 50000,
+        apply: (statusId, score) => {
             if (['SAS', 'SA', 'SARL'].includes(statusId)) {
-                delta = 8;
-            } 
-            else if (['EURL', 'SASU'].includes(statusId)) {
-                delta = 5;
+                return score - 1;
             }
-            // Formes difficiles à transmettre
-            else if (['MICRO', 'EI'].includes(statusId)) {
-                delta = -10;
+            return score;
+        },
+        criteria: 'administrative_simplicity'
+    },
+    {
+        id: 'high_revenue_complex_structures',
+        description: 'CA élevé pour structures complexes',
+        condition: answers => parseFloat(answers.projected_revenue) > 300000,
+        apply: (statusId, score) => {
+            if (['SAS', 'SA', 'SARL'].includes(statusId)) {
+                return score + 0.5;
             }
-            
-            if (audit && delta !== 0) {
-                audit.push({
-                    rule: 'exit_strategy',
-                    delta,
-                    explanation: delta > 0 
-                        ? 'Structure favorable à la revente ou transmission'
-                        : 'Structure difficile à transmettre',
-                    timestamp: performance.now()
-                });
+            return score;
+        },
+        criteria: 'administrative_simplicity'
+    },
+    {
+        id: 'accounting_complexity_simple',
+        description: 'Préférence pour comptabilité simple',
+        condition: answers => answers.accounting_complexity === 'simple',
+        apply: (statusId, score) => {
+            if (['SAS', 'SA'].includes(statusId)) {
+                return score - 1;
             }
-            
-            return score + delta;
-        }
-    }),
+            return score;
+        },
+        criteria: 'administrative_simplicity'
+    },
+    {
+        id: 'accounting_outsourced_micro',
+        description: 'Comptabilité externalisée pour micro',
+        condition: answers => answers.accounting_complexity === 'outsourced',
+        apply: (statusId, score) => {
+            if (statusId === 'MICRO') {
+                return score - 0.5;
+            }
+            return score;
+        },
+        criteria: 'administrative_simplicity'
+    },
     
-    // Besoin de revenus immédiats
-    makeRule({
-        id: 'immediate_income_need',
-        description: 'Besoin de revenus immédiats',
-        criteria: 'social_cost',
-        category: 'contextual',
-        condition: answers => answers.immediate_income === 'yes',
-        apply: (statusId, score, answers, weights, audit) => {
-            let delta = 0;
-            
-            // Formes avec rémunération immédiate
-            if (['MICRO', 'EI'].includes(statusId)) {
-                delta = 8;
-            } 
-            else if (['SASU', 'SAS'].includes(statusId)) {
-                delta = 5; // Possibilité de salaire immédiat
+    // Règles pour l'optimisation fiscale
+    {
+        id: 'high_tmi_ir_malus',
+        description: 'TMI élevée défavorable pour IR',
+        condition: answers => ['bracket_41', 'bracket_45'].includes(answers.tax_bracket),
+        apply: (statusId, score) => {
+            if (['EI', 'MICRO', 'SNC'].includes(statusId)) {
+                return score - 1.5;
             }
-            
-            if (audit && delta !== 0) {
-                audit.push({
-                    rule: 'immediate_income_need',
-                    delta,
-                    explanation: 'Structure permettant une rémunération immédiate',
-                    timestamp: performance.now()
-                });
+            return score;
+        },
+        criteria: 'taxation_optimization'
+    },
+    {
+        id: 'high_tmi_is_bonus',
+        description: 'TMI élevée favorable pour IS',
+        condition: answers => ['bracket_41', 'bracket_45'].includes(answers.tax_bracket),
+        apply: (statusId, score) => {
+            if (['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) {
+                return score + 1;
             }
-            
-            return score + delta;
-        }
-    }),
+            return score;
+        },
+        criteria: 'taxation_optimization'
+    },
+    {
+        id: 'low_tmi_micro_bonus',
+        description: 'TMI faible favorable pour micro',
+        condition: answers => ['non_taxable', 'bracket_11'].includes(answers.tax_bracket),
+        apply: (statusId, score) => {
+            if (statusId === 'MICRO') {
+                return score + 1;
+            }
+            return score;
+        },
+        criteria: 'taxation_optimization'
+    },
+    {
+        id: 'dividend_preference_is',
+        description: 'Préférence dividendes favorable pour IS',
+        condition: answers => answers.remuneration_preference === 'dividends',
+        apply: (statusId, score) => {
+            if (['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) {
+                return score + 0.5;
+            }
+            return score;
+        },
+        criteria: 'taxation_optimization'
+    },
+    {
+        id: 'salary_preference_ir',
+        description: 'Préférence salaire favorable pour IR',
+        condition: answers => answers.remuneration_preference === 'salary',
+        apply: (statusId, score) => {
+            if (['EI', 'MICRO'].includes(statusId)) {
+                return score + 0.5;
+            }
+            return score;
+        },
+        criteria: 'taxation_optimization'
+    },
+    {
+        id: 'innovation_devices_bonus',
+        description: 'Dispositifs innovation (JEI/CIR/CII)',
+        condition: answers => answers.jei_cir_cii && answers.jei_cir_cii.length > 0,
+        apply: (statusId, score) => {
+            if (['SASU', 'SAS', 'SARL', 'EURL'].includes(statusId)) {
+                return score + 0.5;
+            }
+            return score;
+        },
+        criteria: 'taxation_optimization'
+    },
     
-    // Préférence pour statut TNS
-    makeRule({
-        id: 'tns_preference',
-        description: 'Préférence pour le statut de travailleur non salarié',
-        criteria: 'social_cost',
-        category: 'contextual',
+    // Règles pour les charges sociales
+    {
+        id: 'tns_preference_bonus',
+        description: 'Préférence TNS favorable',
         condition: answers => answers.social_regime === 'tns',
-        apply: (statusId, score, answers, weights, audit) => {
-            let delta = 0;
-            
-            // Formes avec statut TNS
-            if (['MICRO', 'EI', 'EURL'].includes(statusId)) {
-                delta = 8;
-            } 
-            // Formes uniquement assimilé salarié
-            else if (['SASU', 'SAS', 'SA'].includes(statusId)) {
-                delta = -5;
+        apply: (statusId, score) => {
+            if (['EI', 'EIRL', 'MICRO', 'EURL', 'SARL'].includes(statusId)) {
+                return score + 1;
             }
-            
-            if (audit && delta !== 0) {
-                audit.push({
-                    rule: 'tns_preference',
-                    delta,
-                    explanation: delta > 0 
-                        ? 'Structure avec statut TNS correspondant à votre préférence'
-                        : 'Structure incompatible avec statut TNS',
-                    timestamp: performance.now()
-                });
+            return score;
+        },
+        criteria: 'social_charges'
+    },
+    {
+        id: 'employee_preference_bonus',
+        description: 'Préférence assimilé salarié favorable',
+        condition: answers => answers.social_regime === 'assimilated_employee',
+        apply: (statusId, score) => {
+            if (['SASU', 'SAS', 'SA'].includes(statusId)) {
+                return score + 1;
             }
-            
-            return score + delta;
-        }
-    }),
+            return score;
+        },
+        criteria: 'social_charges'
+    },
+    {
+        id: 'low_income_micro_bonus',
+        description: 'Faibles revenus favorables pour micro',
+        condition: answers => parseFloat(answers.income_objective_year1) < 1500,
+        apply: (statusId, score) => {
+            if (statusId === 'MICRO') {
+                return score + 1;
+            }
+            return score;
+        },
+        criteria: 'social_charges'
+    },
+    {
+        id: 'high_income_assimile_malus',
+        description: 'Revenus élevés défavorables pour assimilé salarié',
+        condition: answers => parseFloat(answers.income_objective_year1) > 5000,
+        apply: (statusId, score) => {
+            if (['SASU', 'SAS'].includes(statusId)) {
+                return score - 0.5;
+            }
+            return score;
+        },
+        criteria: 'social_charges'
+    },
+    {
+        id: 'acre_bonus',
+        description: 'Bonus ACRE',
+        condition: answers => answers.acre === 'yes',
+        apply: (statusId, score) => {
+            return score + 0.5;
+        },
+        criteria: 'social_charges'
+    },
     
-    // Secteur spécifique - si disponible dans les réponses
-    makeRule({
-        id: 'sector_specific',
-        description: 'Adaptation au secteur d\'activité',
-        criteria: 'sector_fit',
-        category: 'sectorial',
-        condition: answers => !!answers.sector,
-        apply: (statusId, score, answers, weights, audit) => {
-            // Mapping des secteurs vers les formes recommandées et déconseillées
-            const sectorMap = {
-                tech: { 
-                    plus: ['SAS', 'SASU'], 
-                    minus: ['MICRO', 'SCI'] 
-                },
-                commerce: { 
-                    plus: ['SARL', 'EURL'], 
-                    minus: ['SCI', 'SELARL'] 
-                },
-                prof_lib: { 
-                    plus: ['SELARL', 'SELAS'], 
-                    minus: ['SAS', 'MICRO'] 
-                },
-                artisanat: {
-                    plus: ['EURL', 'SARL'],
-                    minus: ['SA']
-                },
-                immobilier: {
-                    plus: ['SCI', 'SARL'],
-                    minus: ['MICRO']
-                }
-            };
-            
-            const config = sectorMap[answers.sector] || { plus: [], minus: [] };
-            let delta = 0;
-            
-            if (config.plus.includes(statusId)) {
-                delta = 6;
-            } else if (config.minus.includes(statusId)) {
-                delta = -6;
+    // Règles pour la capacité de financement
+    {
+        id: 'fundraising_sas_sa_bonus',
+        description: 'Levée de fonds favorable pour SAS/SASU/SA',
+        condition: answers => answers.fundraising === 'yes',
+        apply: (statusId, score) => {
+            if (['SASU', 'SAS', 'SA'].includes(statusId)) {
+                return score + 1.5;
+            } else if (['SARL', 'EURL'].includes(statusId)) {
+                return score + 0.5;
             }
-            
-            if (audit && delta !== 0) {
-                audit.push({
-                    rule: 'sector_specific',
-                    delta,
-                    explanation: `${delta > 0 ? 'Bonus' : 'Malus'} sectoriel pour ${answers.sector}`,
-                    timestamp: performance.now()
-                });
+            return score;
+        },
+        criteria: 'fundraising_capacity'
+    },
+    {
+        id: 'sharing_instruments_bonus',
+        description: 'Instruments de partage favorables pour SAS/SASU/SA',
+        condition: answers => answers.sharing_instruments && answers.sharing_instruments.length > 0,
+        apply: (statusId, score) => {
+            if (['SASU', 'SAS', 'SA'].includes(statusId)) {
+                return score + 1;
             }
-            
-            return score + delta;
-        }
-    })
-);
-
-// Rendre les règles disponibles globalement
+            return score;
+        },
+        criteria: 'fundraising_capacity'
+    },
+    {
+        id: 'investors_ei_micro_malus',
+        description: 'Structure avec investisseurs défavorable pour EI/MICRO',
+        condition: answers => answers.team_structure === 'investors',
+        apply: (statusId, score) => {
+            if (['EI', 'EIRL', 'MICRO', 'SNC'].includes(statusId)) {
+                return score - 2;
+            }
+            return score;
+        },
+        criteria: 'fundraising_capacity'
+    },
+    
+    // Règles pour la transmission
+    {
+        id: 'sale_exit_bonus',
+        description: 'Sortie par vente favorable pour sociétés',
+        condition: answers => answers.exit_intention === 'sale',
+        apply: (statusId, score) => {
+            if (['SASU', 'SAS', 'SA', 'SARL', 'EURL'].includes(statusId)) {
+                return score + 1;
+            }
+            return score;
+        },
+        criteria: 'transmission'
+    },
+    {
+        id: 'transmission_exit_bonus',
+        description: 'Sortie par transmission favorable pour sociétés',
+        condition: answers => answers.exit_intention === 'transmission',
+        apply: (statusId, score) => {
+            if (['SAS', 'SA', 'SARL'].includes(statusId)) {
+                return score + 1;
+            }
+            return score;
+        },
+        criteria: 'transmission'
+    },
+    {
+        id: 'family_transmission_sarl_bonus',
+        description: 'Transmission familiale favorable pour SARL',
+        condition: answers => answers.family_transmission === 'yes',
+        apply: (statusId, score) => {
+            if (statusId === 'SARL') {
+                return score + 0.5;
+            }
+            return score;
+        },
+        criteria: 'transmission'
+    }
+];
 window.scoringRules = scoringRules;
 
 class RecommendationEngine {
     constructor() {
         console.log("Initialisation du RecommendationEngine");
-        
-        // Version améliorée du constructeur - ne plante plus immédiatement
+        // Blindage du constructeur - vérification que legalStatuses est disponible
         if (!window.legalStatuses) {
-            console.warn("`window.legalStatuses` n'est pas encore disponible - le moteur sera initialisé plus tard");
-            // Ne pas lever d'erreur ici, juste signaler
-            return;
+            throw new Error(
+                "`window.legalStatuses` est introuvable – vérifie le chargement de legal-status-data.js"
+            );
         }
-        
-        // Si legalStatuses est disponible, initialiser le moteur
-        this.initializeEngine();
-    }
-    
-    // Nouvelle méthode pour initialiser une fois que les données sont disponibles
-    initializeEngine() {
         this.answers = {};
         this.filteredStatuses = {...window.legalStatuses};
         this.scores = {};
@@ -664,6 +387,8 @@ class RecommendationEngine {
             }
         };
         console.log("RecommendationEngine initialisé avec succès");
+        
+        // Ne plus émettre l'événement ici, il sera émis à la fin du fichier
     }
 
     /**
@@ -672,19 +397,6 @@ class RecommendationEngine {
      */
     calculateRecommendations(answers) {
         console.log("Début du calcul des recommandations", answers);
-        
-        // Vérifier que le moteur est correctement initialisé
-        if (!this.filteredStatuses && window.legalStatuses) {
-            console.log("Initialisation tardive du moteur de recommandation");
-            this.initializeEngine();
-        }
-        
-        // Si toujours pas initialisé, impossible de calculer
-        if (!this.filteredStatuses) {
-            console.error("Impossible de calculer les recommandations: moteur non initialisé");
-            return [];
-        }
-        
         // Mémoïsation - vérifier si les résultats sont déjà en cache
         const answersKey = JSON.stringify(answers);
         if (this.memoizedResults[answersKey]) {
@@ -706,95 +418,11 @@ class RecommendationEngine {
         // Calculer les scores pour chaque statut juridique
         this.calculateScores();
         
-        // Vérifier s'il reste encore des statuts après le filtrage
-        if (Object.keys(this.filteredStatuses).length === 0) {
-            console.warn("Tous les statuts ont été filtrés! Restauration des statuts par défaut");
-            // Restaurer au moins quelques statuts de base
-            if (window.legalStatuses) {
-                if (window.legalStatuses.SARL) {
-                    this.filteredStatuses.SARL = window.legalStatuses.SARL;
-                    this.weightedScores.SARL = 65;
-                }
-                if (window.legalStatuses.EURL) {
-                    this.filteredStatuses.EURL = window.legalStatuses.EURL;
-                    this.weightedScores.EURL = 60;
-                }
-                if (window.legalStatuses.SASU) {
-                    this.filteredStatuses.SASU = window.legalStatuses.SASU;
-                    this.weightedScores.SASU = 55;
-                }
-            }
-        }
-        
         // Obtenir les recommandations finales (top 3)
         const recommendations = this.getTopRecommendations(3);
         
-        // CORRECTIF: Si aucune recommandation n'est retournée, créer des recommandations par défaut
-        if (recommendations.length === 0) {
-            console.warn('Aucune recommandation trouvée, création de recommandations par défaut');
-            
-            // Créer des recommandations par défaut avec les statuts les plus courants
-            const defaultRecommendations = [];
-            
-            if (window.legalStatuses) {
-                // Ajouter SARL comme recommandation par défaut
-                if (window.legalStatuses.SARL) {
-                    defaultRecommendations.push({
-                        status: window.legalStatuses.SARL,
-                        score: 65,
-                        strengths: [
-                            "Structure bien connue et reconnue",
-                            "Responsabilité limitée aux apports",
-                            "Adapté aux projets avec plusieurs associés"
-                        ],
-                        weaknesses: [
-                            "Formalisme juridique important",
-                            "Coûts de gestion administrative",
-                            "Moins flexible que la SAS"
-                        ]
-                    });
-                }
-                
-                // Ajouter EURL comme recommandation par défaut
-                if (window.legalStatuses.EURL) {
-                    defaultRecommendations.push({
-                        status: window.legalStatuses.EURL,
-                        score: 60,
-                        strengths: [
-                            "Responsabilité limitée aux apports",
-                            "Adapté pour un entrepreneur solo",
-                            "Protection du patrimoine personnel"
-                        ],
-                        weaknesses: [
-                            "Formalisme administratif",
-                            "Coûts de gestion plus élevés qu'en microentreprise",
-                            "Moins adapté à la croissance rapide"
-                        ]
-                    });
-                }
-                
-                // Ajouter SASU comme recommandation par défaut
-                if (window.legalStatuses.SASU) {
-                    defaultRecommendations.push({
-                        status: window.legalStatuses.SASU,
-                        score: 55,
-                        strengths: [
-                            "Grande souplesse statutaire",
-                            "Idéal pour les levées de fonds",
-                            "Statut social avantageux (assimilé salarié)"
-                        ],
-                        weaknesses: [
-                            "Charges sociales élevées",
-                            "Coûts de gestion importants",
-                            "Complexité administrative"
-                        ]
-                    });
-                }
-            }
-            
-            // Utiliser ces recommandations par défaut
-            return defaultRecommendations;
-        }
+        // Afficher les résultats
+        this.displayResults(recommendations);
         
         // Mémoïsation - stocker les résultats en cache
         this.memoizedResults[answersKey] = recommendations;
@@ -807,8 +435,7 @@ class RecommendationEngine {
      * Réinitialiser les résultats pour un nouveau calcul
      */
     resetResults() {
-        // S'assurer que filteredStatuses est disponible
-        this.filteredStatuses = window.legalStatuses ? {...window.legalStatuses} : {};
+        this.filteredStatuses = {...window.legalStatuses};
         this.scores = {};
         this.weightedScores = {};
         this.incompatibles = [];
@@ -820,374 +447,1373 @@ class RecommendationEngine {
     }
 
     /**
-     * Appliquer les filtres d'exclusion
+     * Appliquer les filtres d'exclusion pour éliminer certains statuts
      */
     applyExclusionFilters() {
-        console.log("Statuts avant filtrage:", Object.keys(this.filteredStatuses));
+        // Appliquer les filtres déclaratifs
+        this.applyDeclarativeFilters();
         
-        // Pour chaque filtre d'exclusion
-        if (window.exclusionFilters) {
-            window.exclusionFilters.forEach(filter => {
-                // Vérifier si la condition du filtre est remplie
-                const answerValue = this.answers[filter.id];
-                let isConditionMet = false;
-                
-                if (typeof filter.condition === 'function') {
-                    isConditionMet = filter.condition(answerValue);
-                } else {
-                    isConditionMet = answerValue === filter.condition;
+        // Appliquer les filtres spécifiques
+        this.applySpecificFilters();
+        
+        console.log('Statuts après filtres:', Object.keys(this.filteredStatuses));
+    }
+    
+    /**
+     * Appliquer les filtres d'exclusion déclaratifs définis dans legal-status-data.js
+     */
+    applyDeclarativeFilters() {
+        window.exclusionFilters.forEach(filter => {
+            // Vérifier si le filtre s'applique à la réponse
+            let shouldExclude = false;
+            
+            if (typeof filter.condition === 'string') {
+                // Condition simple (valeur exacte)
+                shouldExclude = this.answers[filter.id] === filter.condition;
+            } else if (typeof filter.condition === 'function') {
+                // Condition fonction (comparaison complexe)
+                try {
+                    shouldExclude = filter.condition(this.answers[filter.id]);
+                } catch (e) {
+                    console.error(`Erreur dans le filtre ${filter.id}:`, e);
                 }
-                
-                if (isConditionMet) {
-                    console.log(`Filtre ${filter.id} activé, valeur: ${answerValue}`);
-                    console.log(`Statuts exclus par ce filtre: ${filter.excluded_statuses}`);
-                    
-                    // Enregistrer dans l'audit trail
-                    this.auditTrail.exclusions.push({
-                        filter: filter.id,
-                        value: answerValue,
-                        excluded: filter.excluded_statuses,
-                        timestamp: performance.now()
-                    });
-                    
-                    // Exclure les statuts
-                    filter.excluded_statuses.forEach(statusId => {
-                        if (this.filteredStatuses[statusId]) {
-                            console.log(`Exclusion de ${statusId}`);
-                            delete this.filteredStatuses[statusId];
-                            this.incompatibles.push(statusId);
-                        }
-                    });
-                }
-            });
-        } else {
-            console.warn("window.exclusionFilters n'est pas défini, aucun filtre appliqué");
+            }
+            
+            // Vérifier si une tolérance est applicable
+            if (shouldExclude && filter.tolerance_condition && this.answers[filter.tolerance_condition]) {
+                shouldExclude = false;
+            }
+            
+            // Si la condition est remplie, exclure les statuts spécifiés
+            if (shouldExclude) {
+                this.excludeStatuses(
+                    filter.excluded_statuses,
+                    filter.tolerance_message || `Exclusion par règle: ${filter.id}`
+                );
+            }
+        });
+    }
+    
+    /**
+     * Appliquer les filtres d'exclusion spécifiques (cas particuliers)
+     */
+    applySpecificFilters() {
+        // 1. Activité relevant d'un ordre → Micro-entreprise & SNC exclues
+        if (this.answers.professional_order === 'yes') {
+            this.excludeStatuses(['MICRO', 'SNC'], "Activité relevant d'un ordre professionnel");
         }
         
-        console.log("Statuts après filtrage:", Object.keys(this.filteredStatuses));
+        // 2. Structure solo → EI & EURL/MICRO conservées, autres exclues
+        if (this.answers.team_structure === 'solo') {
+            Object.keys(this.filteredStatuses).forEach(statusId => {
+                if (!['EI', 'EIRL', 'MICRO', 'EURL', 'SASU'].includes(statusId)) {
+                    this.excludeStatus(statusId, "Structure solo - un seul associé");
+                }
+            });
+        }
+        
+        // 3. CA > seuils micro → Micro exclue
+        if (this.answers.projected_revenue) {
+            const revenue = parseFloat(this.answers.projected_revenue);
+            let microThreshold = this.thresholds2025.micro.bic_service; // Par défaut
+            
+            // Déterminer le seuil applicable selon l'activité
+            if (this.answers.activity_type === 'bic_sales') {
+                microThreshold = this.thresholds2025.micro.bic_sales;
+            } else if (this.answers.activity_type === 'bnc') {
+                microThreshold = this.thresholds2025.micro.bnc;
+            }
+            
+            if (revenue > microThreshold) {
+                this.excludeStatus('MICRO', `CA prévisionnel (${revenue}€) supérieur au seuil micro (${microThreshold}€)`);
+            }
+        }
+        
+        // 4. Levée de fonds → EI/MICRO/SNC exclues
+        if (this.answers.fundraising === 'yes') {
+            this.excludeStatuses(['EI', 'MICRO', 'SNC'], "Besoin de lever des fonds");
+        }
+    }
+    
+    /**
+     * Trouve des alternatives pour un statut exclu et une raison donnée
+     * @param {string} statusId - Identifiant du statut exclu
+     * @param {string} reason - Raison de l'exclusion
+     * @returns {Object|null} - Suggestion d'alternative ou null
+     */
+    findAlternativeSuggestion(statusId, reason) {
+        // Convertir la raison en code pour correspondance
+        const reasonCode = this.getReasonCode(reason);
+        
+        if (this.alternativeSuggestions[statusId] && 
+            this.alternativeSuggestions[statusId][reasonCode]) {
+            return this.alternativeSuggestions[statusId][reasonCode];
+        }
+        
+        // Alternative générique si pas de correspondance spécifique
+        return {
+            alternatives: this.getGenericAlternatives(statusId),
+            explanation: "Consultez les autres formes juridiques recommandées qui évitent cette contrainte"
+        };
     }
 
     /**
-     * Calculer les poids des priorités
+     * Convertit une raison textuelle en code pour correspondance
+     * @param {string} reason - Raison d'exclusion en texte
+     * @returns {string} - Code de raison standardisé
      */
-    calculatePriorityWeights() {
-        // Si priorités définies, les utiliser pour pondérer les critères
-        const priorities = this.answers.priorities || [];
+    getReasonCode(reason) {
+        // Extraire un code à partir de la description
+        if (reason.includes("CA") && reason.includes("seuil")) return "ca-depasse-seuil";
+        if (reason.includes("ordre professionnel")) return "ordre-professionnel";
+        if (reason.includes("fonds")) return "fundraising";
+        if (reason.includes("patrimoine")) return "protection-patrimoine";
+        if (reason.includes("risque")) return "risque-eleve";
         
-        // Poids par défaut si aucune priorité définie
-        const defaultWeights = {
-            taxation: 3,
-            social_cost: 3,
-            patrimony_protection: 3,
-            governance_flexibility: 3,
-            fundraising: 3,
-            transmission: 3,
-            administrative_simplicity: 3,
-            accounting_cost: 3,
-            retirement_insurance: 3,
-            flexibility: 3
+        // Créer un slug à partir du texte
+        return reason.toLowerCase()
+            .replace(/[^a-z0-9]/g, '-')
+            .replace(/-+/g, '-')
+            .substring(0, 30);
+    }
+
+    /**
+     * Retourne des alternatives génériques selon le type de statut
+     * @param {string} statusId - Identifiant du statut
+     * @returns {Array} - Liste d'alternatives possibles
+     */
+    getGenericAlternatives(statusId) {
+        const alternatives = {
+            'MICRO': ['EI', 'EURL'],
+            'EI': ['MICRO', 'EURL'],
+            'EURL': ['SASU', 'SARL'],
+            'SASU': ['EURL', 'SAS'],
+            'SARL': ['EURL', 'SAS'],
+            'SAS': ['SASU', 'SARL'],
+            'SNC': ['SARL', 'SAS'],
+            'SCI': ['SARL', 'SAS'],
+            'SELARL': ['SELAS'],
+            'SELAS': ['SELARL']
         };
         
-        // Copier les poids par défaut
+        return alternatives[statusId] || ['EURL', 'SASU'];
+    }
+    
+    /**
+     * Exclure un statut juridique
+     */
+    excludeStatus(statusId, reason) {
+        if (this.filteredStatuses[statusId]) {
+            const status = this.filteredStatuses[statusId];
+            
+            // Trouver une suggestion d'alternative
+            const suggestion = this.findAlternativeSuggestion(statusId, reason);
+            
+            // Stocker dans les incompatibilités
+            this.incompatibles.push({
+                id: statusId,
+                name: status.name,
+                shortName: status.shortName,
+                status: status,
+                reason: reason,
+                suggestion: suggestion,
+                compatibilite: 'INCOMPATIBLE'
+            });
+            
+            delete this.filteredStatuses[statusId];
+            
+            // Journaliser l'exclusion avec l'alternative
+            this.auditTrail.exclusions.push({
+                status_id: statusId,
+                reason: reason,
+                alternative: suggestion ? suggestion.explanation : null
+            });
+        }
+    }
+    
+    /**
+     * Exclure plusieurs statuts juridiques
+     */
+    excludeStatuses(statusIds, reason) {
+        statusIds.forEach(statusId => {
+            this.excludeStatus(statusId, reason);
+        });
+    }
+
+    /**
+     * Calculer les poids à appliquer pour chaque critère basé sur les priorités
+     */
+    calculatePriorityWeights() {
+        // Par défaut, tous les critères ont un poids de 1
+        const defaultWeights = {
+            patrimony_protection: 1,
+            administrative_simplicity: 1,
+            taxation_optimization: 1,
+            social_charges: 1,
+            fundraising_capacity: 1,
+            credibility: 1,
+            governance_flexibility: 1,
+            transmission: 1
+        };
+        
         this.priorityWeights = {...defaultWeights};
         
-        // Appliquer les priorités de l'utilisateur
-        if (priorities.length > 0) {
-            // Poids selon la position
-            const weights = [5, 4, 3]; // Position 1, 2, 3
+        // Si les priorités ont été définies
+        if (this.answers.priorities && this.answers.priorities.length > 0) {
+            // Mapping des IDs de priorité vers les critères
+            const priorityMapping = {
+                taxation: 'taxation_optimization',
+                social_cost: 'social_charges',
+                patrimony_protection: 'patrimony_protection',
+                governance_flexibility: 'governance_flexibility',
+                fundraising: 'fundraising_capacity',
+                transmission: 'transmission',
+                admin_simplicity: 'administrative_simplicity',
+                accounting_cost: 'administrative_simplicity',
+                retirement_insurance: 'social_charges'
+            };
             
-            // Pour chaque priorité, augmenter le poids
-            priorities.forEach((priority, index) => {
-                if (index < weights.length && this.priorityWeights[priority]) {
-                    this.priorityWeights[priority] = weights[index];
-                    
-                    // Enregistrer dans l'audit trail
-                    this.auditTrail.weightingRules.push({
-                        criteria: priority,
-                        weight: weights[index],
-                        priority: index + 1
-                    });
+            // Poids selon le rang (1er = 5, 2e = 4, 3e = 3)
+            const rankWeights = [5, 4, 3];
+            
+            // Appliquer les poids selon les priorités
+            this.answers.priorities.forEach((priorityId, index) => {
+                if (index < 3) { // Limiter à 3 priorités
+                    const criteriaKey = priorityMapping[priorityId];
+                    if (criteriaKey) {
+                        this.priorityWeights[criteriaKey] = rankWeights[index];
+                        
+                        // Journaliser la règle de pondération
+                        this.auditTrail.weightingRules.push({
+                            priority: priorityId,
+                            rank: index + 1,
+                            criteria: criteriaKey,
+                            weight: rankWeights[index]
+                        });
+                    }
                 }
             });
         }
         
-        console.log("Poids des priorités calculés:", this.priorityWeights);
+        console.log('Poids des priorités:', this.priorityWeights);
     }
 
     /**
      * Calculer les scores pour chaque statut juridique
      */
     calculateScores() {
-        // Pour chaque statut juridique restant après filtrage
-        Object.keys(this.filteredStatuses).forEach(statusId => {
+        const statuses = Object.keys(this.filteredStatuses);
+        
+        // Pour chaque statut
+        statuses.forEach(statusId => {
             // Initialiser le score
             this.scores[statusId] = 0;
+            this.weightedScores[statusId] = 0;
+            this.auditTrail.scores[statusId] = {};
             
-            // Créer un tableau d'audit pour ce statut
-            const auditLog = [];
-            this.auditTrail.scores[statusId] = auditLog;
+            const status = this.filteredStatuses[statusId];
+            const metrics = status.key_metrics;
             
-            // Appliquer les règles de scoring
-            window.scoringRules.forEach(rule => {
-                // Vérifier si la condition est remplie
-                let isConditionMet = false;
-                if (typeof rule.condition === 'function') {
-                    isConditionMet = rule.condition(this.answers);
-                }
+            // Critères et leurs scores
+            const criteriaScores = {
+                patrimony_protection: this.calculateCriteriaScore('patrimony_protection', statusId, metrics),
+                administrative_simplicity: this.calculateCriteriaScore('administrative_simplicity', statusId, metrics),
+                taxation_optimization: this.calculateCriteriaScore('taxation_optimization', statusId, metrics),
+                social_charges: this.calculateCriteriaScore('social_charges', statusId, metrics),
+                fundraising_capacity: this.calculateCriteriaScore('fundraising_capacity', statusId, metrics),
+                credibility: metrics.credibility || 3,
+                governance_flexibility: metrics.governance_flexibility || 3,
+                transmission: this.calculateCriteriaScore('transmission', statusId, metrics)
+            };
+            
+            // Calculer le score total (non pondéré)
+            let totalScore = 0;
+            let totalWeightedScore = 0;
+            let totalWeight = 0;
+            
+            for (const [criterion, score] of Object.entries(criteriaScores)) {
+                const weight = this.priorityWeights[criterion] || 1;
+                totalScore += score;
+                totalWeightedScore += score * weight;
+                totalWeight += weight;
                 
-                if (isConditionMet) {
-                    // Appliquer la règle avec les poids et l'audit
-                    const newScore = rule.apply(
-                        statusId, 
-                        this.scores[statusId], 
-                        this.answers, 
-                        this.priorityWeights,
-                        auditLog
-                    );
-                    
-                    // Mettre à jour le score
-                    this.scores[statusId] = newScore;
-                }
-            });
+                // Journaliser les scores
+                this.auditTrail.scores[statusId][criterion] = {
+                    raw_score: score,
+                    weight: weight,
+                    weighted_score: score * weight
+                };
+            }
             
-            // Normaliser le score sur une échelle 0-100
-            const criteriaCount = Object.keys(this.priorityWeights).length;
-            const maxPossible = 5 /* note max */ * 5 /* poids max */ * criteriaCount + 20 /* bonus */;
+            this.scores[statusId] = totalScore;
             
-            this.weightedScores[statusId] = Math.round((this.scores[statusId] / maxPossible) * 100);
-            
-            // S'assurer que le score reste dans les limites 0-100
-            this.weightedScores[statusId] = Math.max(0, Math.min(100, this.weightedScores[statusId]));
+            // Normaliser le score pondéré (sur 100)
+            this.weightedScores[statusId] = totalWeightedScore / totalWeight * 20;
         });
         
-        console.log("Scores calculés:", this.weightedScores);
+        console.log('Scores pondérés:', this.weightedScores);
+    }
+    
+    /**
+     * Calculer le score pour un critère donné en utilisant les règles applicables
+     */
+    calculateCriteriaScore(criteria, statusId, metrics) {
+        // Score de base à partir des métriques du statut
+        let score = metrics[criteria] || 3;
+        
+        // Appliquer toutes les règles correspondant au critère
+        const appliedRules = [];
+        
+        scoringRules
+            .filter(rule => rule.criteria === criteria)
+            .forEach(rule => {
+                // Vérifier si la règle s'applique selon les réponses
+                if (rule.condition(this.answers)) {
+                    // Calculer le nouveau score
+                    const newScore = rule.apply(statusId, score);
+                    
+                    // Si la règle a modifié le score, l'enregistrer
+                    if (newScore !== score) {
+                        appliedRules.push({
+                            id: rule.id,
+                            description: rule.description,
+                            impact: newScore - score
+                        });
+                        
+                        // Mettre à jour le score
+                        score = newScore;
+                    }
+                }
+            });
+        
+        // Stocker les règles appliquées dans l'audit trail
+        if (appliedRules.length > 0) {
+            if (!this.auditTrail.scores[statusId]) {
+                this.auditTrail.scores[statusId] = {};
+            }
+            if (!this.auditTrail.scores[statusId][criteria]) {
+                this.auditTrail.scores[statusId][criteria] = {};
+            }
+            
+            this.auditTrail.scores[statusId][criteria].applied_rules = appliedRules;
+        }
+        
+        // Limiter le score entre 0 et 5
+        return Math.max(0, Math.min(5, score));
+    }
+    
+    /**
+     * Méthode pour expliquer les décisions du moteur de recommandation
+     */
+    explainRecommendation(statusId) {
+        if (!this.auditTrail.scores[statusId]) {
+            return "Aucune explication disponible";
+        }
+        
+        let explanation = `Explication pour ${this.filteredStatuses[statusId].name} (${statusId}):\n\n`;
+        
+        // Expliquer les scores par critère
+        for (const [criterion, data] of Object.entries(this.auditTrail.scores[statusId])) {
+            explanation += `${criterion}: ${data.raw_score}/5 (poids: ${data.weight})\n`;
+            
+            if (data.applied_rules && data.applied_rules.length) {
+                explanation += "  Règles appliquées:\n";
+                data.applied_rules.forEach(rule => {
+                    const impact = rule.impact > 0 ? `+${rule.impact}` : rule.impact;
+                    explanation += `  - ${rule.description} (${impact})\n`;
+                });
+            }
+        }
+        
+        // Score final
+        explanation += `\nScore final: ${Math.round(this.weightedScores[statusId])}/100\n`;
+        
+        return explanation;
     }
 
     /**
-     * Obtenir les meilleures recommandations
-     * @param {number} count - Nombre de recommandations à retourner
-     * @returns {Array} Les meilleures recommandations
+     * Génère des stratégies personnalisées pour un statut juridique selon le profil
+     * @param {string} statusId - Identifiant du statut juridique
+     * @returns {Array} - Liste des stratégies personnalisées
      */
-    getTopRecommendations(count) {
-        // Trier les statuts par score (décroissant)
-        const sortedStatuses = Object.keys(this.weightedScores)
-            .sort((a, b) => this.weightedScores[b] - this.weightedScores[a]);
+    generateContextualStrategies(statusId) {
+        const status = this.filteredStatuses[statusId];
+        if (!status) return [];
         
-        // Log pour debug
-        console.log("Statuts triés par score:", sortedStatuses.map(id => 
-            `${id}: ${this.weightedScores[id]}`
-        ));
+        const strategies = [];
         
-        // Créer les recommandations
-        const recommendations = [];
+        // Stratégies spécifiques par forme juridique
+        if (statusId === 'MICRO') {
+            strategies.push({
+                title: "Optimisation de la trésorerie",
+                description: "Profitez de l'absence de TVA sous le seuil de franchise pour améliorer votre trésorerie.",
+                icon: "fa-coins"
+            });
+            
+            if (this.answers.tax_bracket === 'non_taxable' || this.answers.tax_bracket === 'bracket_11') {
+                strategies.push({
+                    title: "Option versement libératoire",
+                    description: "Avec votre TMI faible, le versement libératoire de l'impôt est très avantageux.",
+                    icon: "fa-percent"
+                });
+            }
+            
+            strategies.push({
+                title: "Surveillance des seuils",
+                description: `Suivez votre CA pour ne pas dépasser les seuils (${this.thresholds2025.micro.bic_sales}€/vente, ${this.thresholds2025.micro.bic_service}€/services).`,
+                icon: "fa-chart-line"
+            });
+        } 
+        else if (statusId === 'EURL') {
+            if (this.answers.tax_bracket === 'bracket_41' || this.answers.tax_bracket === 'bracket_45') {
+                strategies.push({
+                    title: "Option IS recommandée",
+                    description: "Avec votre TMI élevée, l'IS avec taux réduit à 15% est fiscal-optimisant.",
+                    icon: "fa-balance-scale"
+                });
+            }
+            
+            strategies.push({
+                title: "Charges déductibles",
+                description: "Optimisez vos charges réelles déductibles, contrairement au forfait micro-entreprise.",
+                icon: "fa-receipt"
+            });
+        }
+        else if (statusId === 'SASU' || statusId === 'SAS') {
+            strategies.push({
+                title: "Optimisation salaire/dividendes",
+                description: "Répartissez judicieusement entre salaire et dividendes selon votre TMI et vos besoins de trésorerie.",
+                icon: "fa-percentage"
+            });
+            
+            if (this.answers.fundraising === 'yes') {
+                strategies.push({
+                    title: "Préparation à la levée de fonds",
+                    description: "Préparez une documentation adaptée et des statuts optimisés pour les investisseurs.",
+                    icon: "fa-hand-holding-usd"
+                });
+            }
+        }
         
-        // Limiter au nombre demandé ou au nombre disponible
-        const limit = Math.min(count, sortedStatuses.length);
+        // Stratégies basées sur les priorités utilisateur
+        const priorities = this.answers.priorities || [];
+        if (priorities.includes('patrimony_protection')) {
+            if (['SASU', 'SAS', 'SARL', 'EURL'].includes(statusId)) {
+                strategies.push({
+                    title: "Renforcement de la protection patrimoniale",
+                    description: "Envisagez une assurance RC Pro complémentaire pour une protection maximale.",
+                    icon: "fa-shield-alt"
+                });
+            }
+        }
         
-        // Si aucun statut n'a de score, retourner un tableau vide
-        if (limit === 0) {
-            console.warn("Aucun statut avec score positif trouvé");
+        // Stratégies liées aux aides et dispositifs
+        if (this.answers.acre === 'yes') {
+            strategies.push({
+                title: "Exonérations ACRE",
+                description: "Profitez de l'exonération partielle de charges sociales pendant la première année.",
+                icon: "fa-star"
+            });
+        }
+        
+        if (priorities.includes('taxation_optimization') && ['SASU', 'SAS'].includes(statusId)) {
+            strategies.push({
+                title: "Taux réduit IS",
+                description: "Optimisez votre rémunération pour bénéficier du taux IS réduit à 15% jusqu'à 42 500€.",
+                icon: "fa-piggy-bank"
+            });
+        }
+        
+        return strategies;
+    }
+
+    /**
+     * Génère le HTML pour afficher les stratégies contextuelles
+     * @param {string} statusId - Identifiant du statut
+     * @returns {string} - HTML pour les stratégies
+     */
+    renderContextualStrategies(statusId) {
+        const strategies = this.generateContextualStrategies(statusId);
+        if (strategies.length === 0) return '';
+        
+        const status = this.filteredStatuses[statusId];
+        
+        let html = `
+        <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-6">
+            <h4 class="font-semibold text-green-400 mb-4">
+                <i class="fas fa-lightbulb mr-2"></i>
+                Stratégies optimales pour votre ${status.name}
+            </h4>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        `;
+        
+        strategies.forEach(strategy => {
+            html += `
+            <div class="bg-blue-800 bg-opacity-20 p-4 rounded-lg hover:bg-opacity-30 transition">
+                <div class="flex items-start">
+                    <div class="bg-green-900 bg-opacity-30 rounded-full p-3 mr-3">
+                        <i class="fas ${strategy.icon} text-green-400"></i>
+                    </div>
+                    <div>
+                        <h5 class="font-semibold mb-1">${strategy.title}</h5>
+                        <p class="text-sm text-gray-300">${strategy.description}</p>
+                    </div>
+                </div>
+            </div>
+            `;
+        });
+        
+        html += `
+            </div>
+        </div>
+        `;
+        
+        return html;
+    }
+
+    /**
+     * Obtenir les meilleures recommandations (top N)
+     */
+    getTopRecommendations(count = 3) {
+        // Vérifier qu'il y a au moins un statut disponible
+        if (Object.keys(this.filteredStatuses).length === 0) {
+            console.error("Aucun statut disponible après application des filtres");
             return [];
         }
         
-        // Construire les recommandations
-        for (let i = 0; i < limit; i++) {
-            const statusId = sortedStatuses[i];
-            const status = this.filteredStatuses[statusId];
+        // Trier les statuts par score pondéré décroissant
+        const sortedStatuses = Object.keys(this.weightedScores)
+            .sort((a, b) => this.weightedScores[b] - this.weightedScores[a]);
+        
+        // Prendre les N premiers
+        const topN = Math.min(count, sortedStatuses.length);
+        const topStatuses = sortedStatuses.slice(0, topN);
+        
+        // Construire les objets de recommandation avec catégorisation
+        return topStatuses.map((statusId, index) => {
+            const score = Math.round(this.weightedScores[statusId]);
             
-            // Seulement inclure les statuts avec un score >= 40
-            if (this.weightedScores[statusId] >= 40) {
-                recommendations.push({
-                    status: status,
-                    score: Math.round(this.weightedScores[statusId]),
-                    strengths: this.getStrengths(statusId),
-                    weaknesses: this.getWeaknesses(statusId),
-                    auditTrail: this.auditTrail.scores[statusId] || []
-                });
-            } else {
-                console.log(`Statut ${statusId} exclu car score trop bas: ${this.weightedScores[statusId]}`);
+            // Catégoriser selon le score
+            let compatibilite = 'PEU ADAPTÉ';
+            if (score >= 80) {
+                compatibilite = 'RECOMMANDÉ';
+            } else if (score >= 65) {
+                compatibilite = 'COMPATIBLE';
+            } else if (score < 45) {
+                compatibilite = 'DÉCONSEILLÉ';
             }
-        }
-        
-        return recommendations;
+            
+            return {
+                rank: index + 1,
+                id: statusId,
+                name: this.filteredStatuses[statusId].name,
+                shortName: this.filteredStatuses[statusId].shortName,
+                score: score,
+                status: this.filteredStatuses[statusId],
+                strengths: this.getStrengths(statusId),
+                weaknesses: this.getWeaknesses(statusId),
+                compatibilite: compatibilite,
+                scoreCriteresStructurels: Math.round(score * 0.6), // Approximation pour compatibilité
+                scoreObjectifs: Math.round(score * 0.4), // Approximation pour compatibilité
+                scoreDetails: {
+                    pourcentage: score
+                },
+                explanation: this.explainRecommendation(statusId)
+            };
+        });
     }
 
     /**
-     * Affiche l'audit détaillé d'un statut spécifique
-     * @param {string} statusId - Identifiant du statut
-     */
-    showAudit(statusId) {
-        console.group(`Audit détaillé pour ${statusId}`);
-        
-        if (this.auditTrail.scores[statusId]) {
-            this.auditTrail.scores[statusId].forEach(entry => {
-                console.log(`${entry.rule}: ${entry.delta > 0 ? '+' : ''}${entry.delta} - ${entry.explanation || ''}`);
-            });
-        } else {
-            console.log("Aucun détail d'audit disponible pour ce statut");
-        }
-        
-        console.groupEnd();
-    }
-
-    /**
-     * Obtenir les forces d'un statut juridique
-     * @param {string} statusId - Identifiant du statut
-     * @returns {Array} Les forces du statut
+     * Obtenir les forces d'un statut juridique pour le profil
      */
     getStrengths(statusId) {
-        // À implémenter: extraire les forces basées sur le profil
+        const strengths = [];
         const status = this.filteredStatuses[statusId];
-        if (status && status.advantages) {
-            // Prendre les 3 premiers avantages
-            return status.advantages.slice(0, 3);
+        
+        // Ajouter les forces spécifiques au profil
+        if (statusId === 'MICRO' && this.answers.administrative_simplicity) {
+            strengths.push("Simplicité administrative maximale (pas de comptabilité complexe)");
         }
-        return ["Données non disponibles"];
+        
+        if (['SASU', 'SAS'].includes(statusId) && this.answers.governance_flexibility) {
+            strengths.push("Grande liberté statutaire et souplesse de gouvernance");
+        }
+        
+        if (['SASU', 'SAS', 'SARL', 'EURL'].includes(statusId) && this.answers.patrimony_protection === 'essential') {
+            strengths.push("Protection complète du patrimoine personnel");
+        }
+        
+        if (['SASU', 'SAS'].includes(statusId) && this.answers.social_regime === 'assimilated_employee') {
+            strengths.push("Statut d'assimilé salarié avec protection sociale complète");
+        }
+        
+        // Avantages fiscaux spécifiques
+        if ((['SASU', 'SAS', 'SARL', 'EURL'].includes(statusId)) && 
+            ['bracket_41', 'bracket_45'].includes(this.answers.tax_bracket)) {
+            strengths.push("Optimisation fiscale avec l'IS à 15% jusqu'à 42 500€ de bénéfices");
+        }
+        
+        if (statusId === 'MICRO' && this.answers.projected_revenue < 50000) {
+            strengths.push("Régime fiscal avantageux avec abattement forfaitaire sur le chiffre d'affaires");
+        }
+        
+        // Si pas assez de forces spécifiques, compléter avec des forces génériques
+        if (strengths.length < 3 && status.advantages) {
+            for (const advantage of status.advantages) {
+                if (strengths.length < 3 && !strengths.some(s => s.toLowerCase().includes(advantage.toLowerCase()))) {
+                    strengths.push(advantage);
+                }
+            }
+        }
+        
+        return strengths.slice(0, 3); // Limiter à 3 forces
     }
 
     /**
-     * Obtenir les faiblesses d'un statut juridique
-     * @param {string} statusId - Identifiant du statut
-     * @returns {Array} Les faiblesses du statut
+     * Obtenir les faiblesses d'un statut juridique pour le profil
      */
     getWeaknesses(statusId) {
-        // À implémenter: extraire les faiblesses basées sur le profil
+        const weaknesses = [];
         const status = this.filteredStatuses[statusId];
-        if (status && status.disadvantages) {
-            // Prendre les 3 premières faiblesses
-            return status.disadvantages.slice(0, 3);
+        
+        // Ajouter les faiblesses spécifiques au profil
+        if (['EI', 'MICRO'].includes(statusId) && this.answers.high_professional_risk === 'yes') {
+            weaknesses.push("Responsabilité illimitée risquée pour votre activité à risque élevé");
         }
-        return ["Données non disponibles"];
+        
+        if (['EI', 'MICRO', 'EIRL'].includes(statusId) && this.answers.fundraising === 'yes') {
+            weaknesses.push("Difficultés pour lever des fonds ou attirer des investisseurs");
+        }
+        
+        if (['SAS', 'SASU', 'SA'].includes(statusId) && this.answers.projected_revenue < 30000) {
+            weaknesses.push("Coûts de gestion potentiellement élevés par rapport au chiffre d'affaires");
+        }
+        
+        if (statusId === 'MICRO' && this.answers.projected_revenue > 0.7 * this.thresholds2025.micro.bic_service) {
+            weaknesses.push("Risque de dépassement des seuils du régime micro-entrepreneur");
+        }
+        
+        // Faiblesses fiscales spécifiques
+        if (['EI', 'MICRO'].includes(statusId) && ['bracket_41', 'bracket_45'].includes(this.answers.tax_bracket)) {
+            weaknesses.push("Imposition à l'IR potentiellement défavorable avec votre TMI élevée");
+        }
+        
+        if ((['SASU', 'SAS'].includes(statusId)) && this.answers.social_regime === 'tns') {
+            weaknesses.push("Ne correspond pas à votre préférence pour le régime TNS");
+        }
+        
+        // Si pas assez de faiblesses spécifiques, compléter avec des faiblesses génériques
+        if (weaknesses.length < 3 && status.disadvantages) {
+            for (const disadvantage of status.disadvantages) {
+                if (weaknesses.length < 3 && !weaknesses.some(w => w.toLowerCase().includes(disadvantage.toLowerCase()))) {
+                    weaknesses.push(disadvantage);
+                }
+            }
+        }
+        
+        return weaknesses.slice(0, 3); // Limiter à 3 faiblesses
     }
 
     /**
-     * Afficher les résultats dans la console
-     * @param {Array} recommendations - Les recommandations à afficher
+     * Afficher les résultats dans l'interface
      */
     displayResults(recommendations) {
-        console.log("Recommandations générées:");
-        recommendations.forEach((rec, index) => {
-            console.log(`${index + 1}. ${rec.status.name} (score: ${rec.score})`);
-            console.log("   Forces:", rec.strengths);
-            console.log("   Faiblesses:", rec.weaknesses);
-            
-            // Afficher l'audit si disponible
-            if (rec.auditTrail && rec.auditTrail.length > 0) {
-                console.group("   Détails du score:");
-                rec.auditTrail.forEach(entry => {
-                    console.log(`     - ${entry.rule}: ${entry.delta > 0 ? '+' : ''}${entry.delta}`);
-                });
-                console.groupEnd();
-            }
-        });
-    }
-    
-    /**
-     * Exporter les règles documentées au format JSON
-     */
-    exportRuleDocumentation() {
-        return JSON.stringify(window.ruleDocs, null, 2);
-    }
-    
-    /**
-     * Exporter les règles documentées au format Markdown
-     */
-    exportRuleDocumentationAsMarkdown() {
-        const rules = window.ruleDocs;
-        let md = "# Documentation des règles du moteur de recommandation\n\n";
+        console.log("Affichage des résultats:", recommendations);
+        // Récupérer les conteneurs
+        const resultsContainer = document.getElementById('results-container');
+        const questionContainer = document.getElementById('question-container');
         
-        // Grouper les règles par catégorie
-        const categories = {};
-        rules.forEach(rule => {
-            if (!categories[rule.category]) {
-                categories[rule.category] = [];
-            }
-            categories[rule.category].push(rule);
-        });
-        
-        // Générer le markdown pour chaque catégorie
-        for (const [category, categoryRules] of Object.entries(categories)) {
-            md += `## Catégorie: ${category}\n\n`;
-            
-            categoryRules.forEach(rule => {
-                md += `### ${rule.id}\n\n`;
-                md += `- **Description**: ${rule.description}\n`;
-                md += `- **Critère**: ${rule.criteria}\n`;
-                md += `- **Impact**: ${rule.impact}\n`;
-                md += `- **Date de création**: ${rule.createdAt}\n\n`;
-            });
+        if (!resultsContainer) {
+            console.error('Conteneur de résultats non trouvé');
+            return;
         }
         
-        return md;
+        // Masquer le conteneur de questions et afficher celui des résultats
+        if (questionContainer) questionContainer.style.display = 'none';
+        resultsContainer.style.display = 'block';
+        
+        if (recommendations.length === 0) {
+            resultsContainer.innerHTML = `
+                <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center mb-8">
+                    <div class="text-6xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
+                    <h2 class="text-2xl font-bold mb-4">Aucun statut juridique correspondant</h2>
+                    <p class="mb-6">Vos critères semblent incompatibles. Essayez d'assouplir certaines exigences et refaites le test.</p>
+                    <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
+                        <i class="fas fa-redo mr-2"></i> Refaire le test
+                    </button>
+                </div>
+            `;
+            
+            document.getElementById('restart-btn').addEventListener('click', () => {
+                location.reload();
+            });
+            
+            return;
+        }
+        
+        // Créer le contenu des résultats
+        let resultsHTML = `
+            <div class="results-container">
+                <div class="text-center mb-10">
+                    <h2 class="text-3xl font-bold mb-3">Votre statut juridique recommandé</h2>
+                    <p class="text-lg text-gray-300">Basé sur vos réponses, voici les formes juridiques les plus adaptées à votre projet</p>
+                </div>
+                
+                <div class="recommendation-cards">
+        `;
+        
+        // Carte pour chaque recommandation
+        recommendations.forEach((recommendation, index) => {
+            const status = recommendation.status;
+            const isMainRecommendation = index === 0;
+            
+            resultsHTML += `
+                <div class="recommendation-card ${isMainRecommendation ? 'main-recommendation' : ''} bg-opacity-60 bg-blue-900 rounded-xl overflow-hidden mb-8 border ${isMainRecommendation ? 'border-green-400' : 'border-gray-700'}">
+                    <!-- En-tête -->
+                    <div class="p-6 flex items-center border-b border-gray-700 ${isMainRecommendation ? 'bg-green-900 bg-opacity-30' : ''}">
+                        <div class="h-16 w-16 rounded-full bg-opacity-30 ${isMainRecommendation ? 'bg-green-800' : 'bg-blue-800'} flex items-center justify-center text-3xl mr-5">
+                            <i class="fas ${status.logo || 'fa-building'} ${isMainRecommendation ? 'text-green-400' : 'text-gray-300'}"></i>
+                        </div>
+                        <div class="flex-grow">
+                            <div class="flex justify-between items-center">
+                                <h3 class="text-2xl font-bold">${status.name}</h3>
+                                <div class="score-badge ${isMainRecommendation ? 'bg-green-500 text-gray-900' : 'bg-blue-700'} px-3 py-1 rounded-full text-sm font-medium">
+                                    Score: ${recommendation.score}/100
+                                </div>
+                            </div>
+                            <p class="text-gray-400 mt-1">
+                                ${isMainRecommendation ? 'Recommandation principale' : `Alternative ${index}`}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <!-- Contenu -->
+                    <div class="p-6">
+                        <p class="mb-5">${status.description}</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Forces -->
+                            <div>
+                                <h4 class="font-semibold mb-2 flex items-center text-green-400">
+                                    <i class="fas fa-check-circle mr-2"></i> Points forts
+                                </h4>
+                                <ul class="space-y-2">
+                                    ${recommendation.strengths.map(strength => `
+                                        <li class="flex items-start">
+                                            <i class="fas fa-plus-circle text-green-400 mt-1 mr-2"></i>
+                                            <span>${strength}</span>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                            
+                            <!-- Faiblesses -->
+                            <div>
+                                <h4 class="font-semibold mb-2 flex items-center text-red-400">
+                                    <i class="fas fa-exclamation-circle mr-2"></i> Points d'attention
+                                </h4>
+                                <ul class="space-y-2">
+                                    ${recommendation.weaknesses.map(weakness => `
+                                        <li class="flex items-start">
+                                            <i class="fas fa-minus-circle text-red-400 mt-1 mr-2"></i>
+                                            <span>${weakness}</span>
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <!-- Boutons d'action -->
+                        <div class="mt-6 flex justify-end">
+                            <button class="details-btn bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg mr-3" data-status-id="${status.shortName}">
+                                <i class="fas fa-info-circle mr-2"></i> Plus de détails
+                            </button>
+                            ${isMainRecommendation ? `
+                                <button class="download-btn bg-green-500 hover:bg-green-400 text-gray-900 font-medium px-4 py-2 rounded-lg">
+                                    <i class="fas fa-file-download mr-2"></i> Télécharger le PDF
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        // Ajouter les stratégies contextuelles pour la recommandation principale
+        if (recommendations.length > 0) {
+            resultsHTML += this.renderContextualStrategies(recommendations[0].id);
+        }
+        
+        // Afficher les incompatibilités
+        resultsHTML += this.displayIncompatibilities(this.incompatibles);
+        
+        // Fermer les conteneurs
+        resultsHTML += `
+                </div>
+                
+                <div class="text-center mt-10">
+                    <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
+                        <i class="fas fa-redo mr-2"></i> Refaire le test
+                    </button>
+                    <button id="compare-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-medium px-6 py-3 rounded-lg ml-4">
+                        <i class="fas fa-balance-scale mr-2"></i> Comparer les statuts
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Injecter le HTML dans le conteneur
+        resultsContainer.innerHTML = resultsHTML;
+        
+        // Attacher les événements
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            location.reload();
+        });
+        
+        document.getElementById('compare-btn').addEventListener('click', () => {
+            this.showComparisonTable(recommendations);
+        });
+        
+        // Événements pour les boutons de détails
+        document.querySelectorAll('.details-btn').forEach((btn, index) => {
+            btn.addEventListener('click', () => {
+                const statusId = btn.dataset.statusId;
+                this.showStatusDetails(recommendations.find(r => r.status.shortName === statusId));
+            });
+        });
+        
+        // Événement pour le bouton de téléchargement PDF
+        const downloadBtn = document.querySelector('.download-btn');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', () => {
+                alert('Fonctionnalité de téléchargement PDF à implémenter');
+                // this.generatePDF(recommendations[0]);
+            });
+        }
+    }
+
+    /**
+     * Affiche les statuts juridiques incompatibles avec suggestions alternatives
+     * @param {Array} incompatibles - Liste des statuts incompatibles
+     * @returns {string} - HTML pour l'affichage des incompatibilités
+     */
+    displayIncompatibilities(incompatibles) {
+        if (!incompatibles || incompatibles.length === 0) return '';
+        
+        let html = `
+            <div class="mt-8 mb-6">
+                <h3 class="text-xl font-bold text-red-400 mb-4 flex items-center">
+                    <i class="fas fa-exclamation-triangle mr-2"></i> 
+                    Formes juridiques incompatibles avec votre profil
+                </h3>
+                <div class="bg-blue-900 bg-opacity-20 p-4 rounded-xl">
+                    <p class="mb-4">Les structures suivantes présentent des incompatibilités avec vos critères :</p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        `;
+        
+        // Regrouper les incompatibilités par forme juridique
+        const incompatibilitiesByForm = {};
+        
+        incompatibles.forEach(inc => {
+            if (!incompatibilitiesByForm[inc.id]) {
+                incompatibilitiesByForm[inc.id] = {
+                    form: inc.status,
+                    reasons: [],
+                    suggestions: []
+                };
+            }
+            
+            // Ajouter la raison si nouvelle
+            if (!incompatibilitiesByForm[inc.id].reasons.some(r => r === inc.reason)) {
+                incompatibilitiesByForm[inc.id].reasons.push(inc.reason);
+            }
+            
+            // Ajouter la suggestion si nouvelle et non déjà présente
+            if (inc.suggestion && !incompatibilitiesByForm[inc.id].suggestions.some(
+                s => s.explanation === inc.suggestion.explanation
+            )) {
+                incompatibilitiesByForm[inc.id].suggestions.push(inc.suggestion);
+            }
+        });
+        
+        // Générer le HTML pour chaque forme incompatible
+        Object.values(incompatibilitiesByForm).forEach(item => {
+            html += `
+                <div class="bg-red-900 bg-opacity-20 p-4 rounded-lg border border-red-800">
+                    <h4 class="font-semibold text-red-400 mb-2">${item.form.name}</h4>
+                    <ul class="text-sm">
+            `;
+            
+            item.reasons.forEach(reason => {
+                html += `<li class="mb-1 flex items-start">
+                    <i class="fas fa-times text-red-400 mr-2 mt-1"></i>
+                    <span>${reason}</span>
+                </li>`;
+            });
+            
+            // Ajouter les suggestions alternatives
+            if (item.suggestions.length > 0) {
+                html += `<li class="mt-3 pt-2 border-t border-red-800"></li>`;
+                
+                item.suggestions.forEach(suggestion => {
+                    html += `
+                        <li class="mt-2 flex items-start">
+                            <i class="fas fa-lightbulb text-yellow-400 mr-2 mt-1"></i>
+                            <span><strong>Alternative :</strong> ${suggestion.explanation}</span>
+                        </li>
+                    `;
+                });
+            }
+            
+            html += `
+                    </ul>
+                </div>
+            `;
+        });
+        
+        html += `
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        return html;
+    }
+
+    /**
+     * Afficher les détails d'un statut juridique
+     */
+    showStatusDetails(recommendation) {
+        if (!recommendation) return;
+        
+        const status = recommendation.status;
+        const resultsContainer = document.getElementById('results-container');
+        
+        const detailsHTML = `
+            <div class="status-details">
+                <div class="mb-4">
+                    <button id="back-to-results" class="text-blue-400 hover:text-blue-300 flex items-center">
+                        <i class="fas fa-arrow-left mr-2"></i> Retour aux résultats
+                    </button>
+                </div>
+                
+                <div class="bg-blue-900 bg-opacity-60 rounded-xl overflow-hidden border border-gray-700 mb-8">
+                    <!-- En-tête -->
+                    <div class="p-6 border-b border-gray-700 flex items-center">
+                        <div class="h-16 w-16 rounded-full bg-blue-800 bg-opacity-50 flex items-center justify-center text-3xl mr-5">
+                            <i class="fas ${status.logo || 'fa-building'} text-green-400"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-bold">${status.name} (${status.shortName})</h2>
+                            <p class="text-gray-400">${status.description}</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Contenu détaillé -->
+                    <div class="p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <!-- Création -->
+                            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold mb-3 flex items-center text-green-400">
+                                    <i class="fas fa-file-signature mr-2"></i> Création
+                                </h3>
+                                <ul class="space-y-2">
+                                    <li class="flex items-start">
+                                        <span class="font-medium w-28">Processus:</span>
+                                        <span>${status.creation?.process || 'Non spécifié'}</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="font-medium w-28">Coût:</span>
+                                        <span>${status.creation?.cost || 'Non spécifié'}</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="font-medium w-28">Délai:</span>
+                                        <span>${status.creation?.time || 'Non spécifié'}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Fiscalité -->
+                            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold mb-3 flex items-center text-green-400">
+                                    <i class="fas fa-file-invoice-dollar mr-2"></i> Fiscalité
+                                </h3>
+                                <ul class="space-y-2">
+                                    <li class="flex items-start">
+                                        <span class="font-medium w-28">Régime:</span>
+                                        <span>${status.fiscalite || 'Non spécifié'}</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="font-medium w-28">Options:</span>
+                                        <span>${status.fiscaliteOption || 'Non spécifié'}</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="font-medium w-28">Détails:</span>
+                                        <span>${status.fiscal || 'Non spécifié'}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Social -->
+                            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold mb-3 flex items-center text-green-400">
+                                    <i class="fas fa-user-shield mr-2"></i> Régime social
+                                </h3>
+                                <ul class="space-y-2">
+                                    <li class="flex items-start">
+                                        <span class="font-medium w-28">Régime:</span>
+                                        <span>${status.regimeSocial || 'Non spécifié'}</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="font-medium w-28">Taux:</span>
+                                        <span>${status.chargesSociales || 'Non spécifié'}</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="font-medium w-28">Protections:</span>
+                                        <span>${status.social?.protections || 'Non spécifié'}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Comptabilité -->
+                            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
+                                <h3 class="text-lg font-semibold mb-3 flex items-center text-green-400">
+                                    <i class="fas fa-calculator mr-2"></i> Comptabilité
+                                </h3>
+                                <ul class="space-y-2">
+                                    <li class="flex items-start">
+                                        <span class="font-medium w-28">Complexité:</span>
+                                        <span>${status.accounting?.complexity || 'Non spécifié'}</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="font-medium w-28">Exigences:</span>
+                                        <span>${status.accounting?.requirements || 'Non spécifié'}</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <span class="font-medium w-28">Coûts:</span>
+                                        <span>${status.accounting?.costs || 'Non spécifié'}</span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <!-- Avantages et inconvénients -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+                            <!-- Avantages -->
+                            <div>
+                                <h3 class="text-lg font-semibold mb-3 flex items-center text-green-400">
+                                    <i class="fas fa-plus-circle mr-2"></i> Avantages
+                                </h3>
+                                <ul class="space-y-2">
+                                    ${status.advantages ? status.advantages.map(advantage => `
+                                        <li class="flex items-start">
+                                            <i class="fas fa-check text-green-400 mt-1 mr-2"></i>
+                                            <span>${advantage}</span>
+                                        </li>
+                                    `).join('') : '<li>Non spécifié</li>'}
+                                </ul>
+                            </div>
+                            
+                            <!-- Inconvénients -->
+                            <div>
+                                <h3 class="text-lg font-semibold mb-3 flex items-center text-red-400">
+                                    <i class="fas fa-minus-circle mr-2"></i> Inconvénients
+                                </h3>
+                                <ul class="space-y-2">
+                                    ${status.disadvantages ? status.disadvantages.map(disadvantage => `
+                                        <li class="flex items-start">
+                                            <i class="fas fa-times text-red-400 mt-1 mr-2"></i>
+                                            <span>${disadvantage}</span>
+                                        </li>
+                                    `).join('') : '<li>Non spécifié</li>'}
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <!-- Pour qui -->
+                        <div class="mt-8">
+                            <h3 class="text-lg font-semibold mb-3 flex items-center text-blue-400">
+                                <i class="fas fa-user-check mr-2"></i> Adapté pour
+                            </h3>
+                            <ul class="space-y-2">
+                                ${status.suitable_for ? status.suitable_for.map(profile => `
+                                    <li class="flex items-start">
+                                        <i class="fas fa-angle-right text-blue-400 mt-1 mr-2"></i>
+                                        <span>${profile}</span>
+                                    </li>
+                                `).join('') : '<li>Non spécifié</li>'}
+                            </ul>
+                        </div>
+                        
+                        <!-- Explications du score (nouveau) -->
+                        <div class="mt-8 bg-blue-800 bg-opacity-30 p-4 rounded-lg">
+                            <h3 class="text-lg font-semibold mb-3 flex items-center text-blue-400">
+                                <i class="fas fa-chart-bar mr-2"></i> Détail du score
+                            </h3>
+                            <pre class="whitespace-pre-wrap text-sm">${recommendation.explanation || 'Aucune explication disponible'}</pre>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Stratégies optimales -->
+                ${this.renderContextualStrategies(recommendation.id)}
+                
+                <!-- Bouton d'action -->
+                <div class="text-center mt-8">
+                    <button id="back-to-results-bottom" class="bg-blue-700 hover:bg-blue-600 text-white px-5 py-2 rounded-lg">
+                        <i class="fas fa-arrow-left mr-2"></i> Retour aux résultats
+                    </button>
+                    <button id="download-details" class="bg-green-500 hover:bg-green-400 text-gray-900 font-medium px-5 py-2 rounded-lg ml-4">
+                        <i class="fas fa-file-download mr-2"></i> Télécharger cette fiche
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        resultsContainer.innerHTML = detailsHTML;
+        
+        // Attacher les événements de retour
+        document.getElementById('back-to-results').addEventListener('click', () => {
+            this.displayResults(this.getTopRecommendations(3));
+        });
+        
+        document.getElementById('back-to-results-bottom').addEventListener('click', () => {
+            this.displayResults(this.getTopRecommendations(3));
+        });
+        
+        document.getElementById('download-details').addEventListener('click', () => {
+            alert('Fonctionnalité de téléchargement de fiche à implémenter');
+        });
+    }
+
+    /**
+     * Afficher un tableau comparatif des statuts recommandés
+     */
+    showComparisonTable(recommendations) {
+        const resultsContainer = document.getElementById('results-container');
+        
+        const comparisonHTML = `
+            <div class="comparison-table">
+                <div class="mb-4">
+                    <button id="back-to-results" class="text-blue-400 hover:text-blue-300 flex items-center">
+                        <i class="fas fa-arrow-left mr-2"></i> Retour aux résultats
+                    </button>
+                </div>
+                
+                <h2 class="text-2xl font-bold mb-6 text-center">Tableau comparatif des statuts recommandés</h2>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full bg-blue-900 bg-opacity-50 rounded-lg border border-gray-700">
+                        <thead>
+                            <tr class="bg-blue-800 bg-opacity-70 text-left">
+                                <th class="py-3 px-4 border-b border-gray-700">Critère</th>
+                                ${recommendations.map(r => `
+                                    <th class="py-3 px-4 border-b border-gray-700">
+                                        ${r.status.name} (${r.status.shortName})
+                                    </th>
+                                `).join('')}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Protection du patrimoine -->
+                            <tr>
+                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Protection du patrimoine</td>
+                                ${recommendations.map(r => `
+                                    <td class="py-3 px-4 border-b border-gray-700">
+                                        ${this.getStarRating(r.status.key_metrics.patrimony_protection)}
+                                    </td>
+                                `).join('')}
+                            </tr>
+                            
+                            <!-- Régime fiscal -->
+                            <tr>
+                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Régime fiscal</td>
+                                ${recommendations.map(r => `
+                                    <td class="py-3 px-4 border-b border-gray-700">
+                                        ${r.status.fiscalite || '-'}
+                                    </td>
+                                `).join('')}
+                            </tr>
+                            
+                            <!-- Régime social -->
+                            <tr>
+                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Régime social</td>
+                                ${recommendations.map(r => `
+                                    <td class="py-3 px-4 border-b border-gray-700">
+                                        ${r.status.regimeSocial || '-'}
+                                    </td>
+                                `).join('')}
+                            </tr>
+                            
+                            <!-- Coût des charges sociales -->
+                            <tr>
+                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Charges sociales</td>
+                                ${recommendations.map(r => `
+                                    <td class="py-3 px-4 border-b border-gray-700">
+                                        ${this.getInverseStarRating(5 - r.status.key_metrics.social_charges)}
+                                    </td>
+                                `).join('')}
+                            </tr>
+                            
+                            <!-- Complexité administrative -->
+                            <tr>
+                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Simplicité administrative</td>
+                                ${recommendations.map(r => `
+                                    <td class="py-3 px-4 border-b border-gray-700">
+                                        ${this.getStarRating(r.status.key_metrics.administrative_simplicity)}
+                                    </td>
+                                `).join('')}
+                            </tr>
+                            
+                            <!-- Crédibilité -->
+                            <tr>
+                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Crédibilité</td>
+                                ${recommendations.map(r => `
+                                    <td class="py-3 px-4 border-b border-gray-700">
+                                        ${this.getStarRating(r.status.key_metrics.credibility)}
+                                    </td>
+                                `).join('')}
+                            </tr>
+                            
+                            <!-- Capacité à lever des fonds -->
+                            <tr>
+                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Capacité à lever des fonds</td>
+                                ${recommendations.map(r => `
+                                    <td class="py-3 px-4 border-b border-gray-700">
+                                        ${this.getStarRating(r.status.key_metrics.fundraising_capacity)}
+                                    </td>
+                                `).join('')}
+                            </tr>
+                            
+                            <!-- Transmission -->
+                            <tr>
+                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Facilité de transmission</td>
+                                ${recommendations.map(r => `
+                                    <td class="py-3 px-4 border-b border-gray-700">
+                                        ${this.getStarRating(r.status.key_metrics.transmission)}
+                                    </td>
+                                `).join('')}
+                            </tr>
+                            
+                            <!-- Coût comptable -->
+                            <tr>
+                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Coût comptable annuel</td>
+                                ${recommendations.map(r => `
+                                    <td class="py-3 px-4 border-b border-gray-700">
+                                        ${r.status.accounting?.costs || '-'}
+                                    </td>
+                                `).join('')}
+                            </tr>
+                            
+                            <!-- Capital minimum -->
+                            <tr>
+                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Capital minimum</td>
+                                ${recommendations.map(r => {
+                                    let capital = '-';
+                                    if (r.status.shortName === 'SA') {
+                                        capital = '37 000€';
+                                    } else if (['SAS', 'SASU', 'SARL', 'EURL'].includes(r.status.shortName)) {
+                                        capital = '1€';
+                                    } else {
+                                        capital = 'Aucun';
+                                    }
+                                    return `<td class="py-3 px-4 border-b border-gray-700">${capital}</td>`;
+                                }).join('')}
+                            </tr>
+                            
+                            <!-- Score global -->
+                            <tr class="bg-blue-800 bg-opacity-30">
+                                <td class="py-3 px-4 border-b border-gray-700 font-bold">Score global</td>
+                                ${recommendations.map(r => `
+                                    <td class="py-3 px-4 border-b border-gray-700 font-bold text-green-400">
+                                        ${r.score}/100
+                                    </td>
+                                `).join('')}
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Légende -->
+                <div class="mt-4 text-sm text-gray-400">
+                    <p class="flex items-center">
+                        <span class="mr-2">Évaluation :</span>
+                        <span class="text-green-400 mr-1">★★★★★</span> Excellent
+                        <span class="mx-2">|</span>
+                        <span class="text-green-400 mr-1">★★★★☆</span> Très bien
+                        <span class="mx-2">|</span>
+                        <span class="text-green-400 mr-1">★★★☆☆</span> Bien
+                        <span class="mx-2">|</span>
+                        <span class="text-green-400 mr-1">★★☆☆☆</span> Moyen
+                        <span class="mx-2">|</span>
+                        <span class="text-green-400 mr-1">★☆☆☆☆</span> Faible
+                    </p>
+                </div>
+                
+                <!-- Bouton d'action -->
+                <div class="text-center mt-8">
+                    <button id="back-to-results-bottom" class="bg-blue-700 hover:bg-blue-600 text-white px-5 py-2 rounded-lg">
+                        <i class="fas fa-arrow-left mr-2"></i> Retour aux résultats
+                    </button>
+                    <button id="download-comparison" class="bg-green-500 hover:bg-green-400 text-gray-900 font-medium px-5 py-2 rounded-lg ml-4">
+                        <i class="fas fa-file-download mr-2"></i> Télécharger ce comparatif
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        resultsContainer.innerHTML = comparisonHTML;
+        
+        // Attacher les événements de retour
+        document.getElementById('back-to-results').addEventListener('click', () => {
+            this.displayResults(recommendations);
+        });
+        
+        document.getElementById('back-to-results-bottom').addEventListener('click', () => {
+            this.displayResults(recommendations);
+        });
+        
+        document.getElementById('download-comparison').addEventListener('click', () => {
+            alert('Fonctionnalité de téléchargement du comparatif à implémenter');
+        });
+    }
+    
+    /**
+     * Obtenir la notation en étoiles pour un score
+     */
+    getStarRating(score) {
+        const fullStars = Math.floor(score);
+        const emptyStars = 5 - fullStars;
+        
+        return `${'<i class="fas fa-star text-green-400"></i>'.repeat(fullStars)}${'<i class="far fa-star text-gray-500"></i>'.repeat(emptyStars)}`;
+    }
+    
+    /**
+     * Obtenir la notation en étoiles inversée pour un score
+     */
+    getInverseStarRating(score) {
+        const fullStars = Math.floor(score);
+        const emptyStars = 5 - fullStars;
+        
+        return `${'<i class="fas fa-star text-red-400"></i>'.repeat(fullStars)}${'<i class="far fa-star text-gray-500"></i>'.repeat(emptyStars)}`;
+    }
+
+    /**
+     * Générer un PDF avec le résultat de la simulation
+     */
+    generatePDF(recommendation) {
+        // Cette fonction pourrait être implémentée avec une bibliothèque comme jsPDF
+        alert('Fonctionnalité d\'export PDF à implémenter');
     }
 }
-
 window.RecommendationEngine = RecommendationEngine;
-
-// Méthode statique create pour initialiser le moteur de manière asynchrone
-RecommendationEngine.create = function() {
-    return new Promise((resolve, reject) => {
-        const waitForLegalStatuses = () => {
-            if (window.legalStatuses) {
-                try {
-                    const engine = new RecommendationEngine();
-                    
-                    // Si le moteur n'a pas pu être initialisé, attendre l'événement
-                    if (!engine.filteredStatuses) {
-                        console.log("RecommendationEngine créé mais pas encore initialisé, attente de l'événement legalStatusesLoaded");
-                        document.addEventListener('legalStatusesLoaded', () => {
-                            engine.initializeEngine();
-                            window.recommendationEngine = engine;
-                            resolve(engine);
-                        }, { once: true });
-                    } else {
-                        window.recommendationEngine = engine;
-                        resolve(engine);
-                    }
-                } catch (error) {
-                    reject(error);
-                }
-            } else {
-                console.log("Attente du chargement de legal-status-data.js...");
-                
-                // Écouter l'événement de chargement
-                document.addEventListener('legalStatusesLoaded', () => {
-                    try {
-                        console.log("Événement legalStatusesLoaded détecté, création du moteur");
-                        const engine = new RecommendationEngine();
-                        engine.initializeEngine();
-                        window.recommendationEngine = engine;
-                        resolve(engine);
-                    } catch (error) {
-                        reject(error);
-                    }
-                }, { once: true });
-                
-                // Mettre un timeout au cas où l'événement ne serait jamais déclenché
-                setTimeout(() => {
-                    if (!window.legalStatuses) {
-                        reject(new Error("Timeout: window.legalStatuses n'a pas été chargé dans le délai imparti"));
-                    } else {
-                        waitForLegalStatuses();
-                    }
-                }, 5000);
-            }
-        };
-        
-        waitForLegalStatuses();
-    });
-};
-
-// Fonction de création d'instance compatible avec l'ancien code
-window.createRecommendationEngine = function() {
-    return RecommendationEngine.create();
-};
 
 // Compatibilité avec l'ancien système - Définir les objets nécessaires dans window
 window.FormeJuridiqueDB = {
-    structures: window.legalStatuses ? Object.values(window.legalStatuses) : [],
+    structures: Object.values(window.legalStatuses),
     getById: function(id) {
-        return window.legalStatuses ? window.legalStatuses[id] : null;
+        return window.legalStatuses[id];
     }
 };
 
@@ -1281,7 +1907,9 @@ try {
     window.scoringRules = scoringRules;
     console.log("Classe RecommendationEngine exposée avec succès");
     
-    // NE PAS créer d'instance immédiatement - ce sera fait de manière asynchrone
+    // Créer une instance globale
+    window.recommendationEngine = new RecommendationEngine();
+    
     window.engineLoadingCompleted = true;
 } catch (e) {
     console.error("Erreur lors de l'exposition du moteur de recommandation:", e);
