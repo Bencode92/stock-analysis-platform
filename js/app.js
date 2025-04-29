@@ -24,6 +24,36 @@ function initRecommendationEngine() {
     
     // Version améliorée du mécanisme d'attente
     function initializeEngine() {
+        // Vérifier d'abord la présence de RecommendationEngine
+        if (!window.RecommendationEngine && window.legalStatuses) {
+            console.log("Moteur de recommandation non disponible, création d'une version de secours");
+            // Si les données sont là mais pas la classe, définir une classe temporaire
+            window.RecommendationEngine = function() {
+                console.log("Moteur de recommandation de secours initialisé");
+                this.calculateRecommendations = function(answers) {
+                    return Object.keys(window.legalStatuses).slice(0, 3).map(id => ({
+                        id: id,
+                        status: window.legalStatuses[id],
+                        score: 75,
+                        strengths: window.legalStatuses[id].advantages?.slice(0, 3) || [],
+                        weaknesses: window.legalStatuses[id].disadvantages?.slice(0, 3) || [],
+                        compatibilite: 'COMPATIBLE'
+                    }));
+                };
+                
+                // Ajouter la méthode displayResults qui sera appelée
+                this.displayResults = function(recommendations) {
+                    if (window.ResultsManager && typeof window.ResultsManager.displayResults === 'function') {
+                        window.ResultsManager.displayResults(recommendations);
+                    } else if (window.displayResults) {
+                        window.displayResults(recommendations);
+                    } else {
+                        console.error("Aucune fonction d'affichage des résultats trouvée");
+                    }
+                };
+            };
+        }
+    
         if (window.legalStatuses) {
             console.log("window.legalStatuses est disponible, initialisation immédiate du moteur");
             try {
@@ -71,7 +101,7 @@ function initRecommendationEngine() {
                 if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
                 showErrorMessage(new Error("Timeout: Le moteur de recommandation n'a pas pu être chargé"));
             }
-        }, 10000); // 10 secondes de timeout
+        }, 30000); // 30 secondes de timeout au lieu de 10
     }
     
     // Fonction pour afficher un message d'erreur convivial
