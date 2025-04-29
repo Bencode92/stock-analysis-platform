@@ -47,7 +47,7 @@ const legalStatuses = {
             "Test d'un concept avant structure plus formelle",
             "Activités secondaires ou complémentaires"
         ],
-        casConseille: 'Début d\\'activité, test',
+        casConseille: 'Début d\\\'activité, test',
         casDeconseille: 'Développement ambitieux',
         transmission: 'Non',
         plafondCA: '188 700 € (vente/hébergement) ou 77 700 € (services/libérales)',
@@ -734,6 +734,7 @@ const legalStatuses = {
         }
     }
 };
+window.legalStatuses = legalStatuses;
 
 // Barèmes 2025 pour les régimes fiscaux et sociaux
 const scales2025 = {
@@ -776,6 +777,7 @@ const scales2025 = {
         standard_rate: 25
     }
 };
+window.scales2025 = scales2025;
 
 // Critères d'exclusion primaire (filtres "killer")
 const exclusionFilters = [
@@ -817,6 +819,7 @@ const exclusionFilters = [
         tolerance_message: null
     }
 ];
+window.exclusionFilters = exclusionFilters;
 
 // Barème de notation des statuts (0-5) par critère
 const ratingScales = {
@@ -961,20 +964,15 @@ const ratingScales = {
         SCA: 4
     }
 };
-
-// Exporter les constantes (module ES6)
-export { legalStatuses, scales2025, exclusionFilters, ratingScales };
-
-// Pour la compatibilité avec l'ancien code (sera supprimé à terme)
-window.legalStatuses = legalStatuses;
-window.scales2025 = scales2025;
-window.exclusionFilters = exclusionFilters;
 window.ratingScales = ratingScales;
+
+// Fonction utilitaire pour récupérer un statut par ID
+function getById(id) {
+    return legalStatuses[id];
+}
 
 // Exposer via l'ancien système de compatibilité 
 window.FormeJuridiqueDB = {
     structures: Object.values(legalStatuses),
-    getById: function(id) {
-        return legalStatuses[id];
-    }
+    getById: getById
 };
