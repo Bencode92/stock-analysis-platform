@@ -1,7 +1,7 @@
 // question-data.js - Données pour le simulateur de forme juridique 2025
 
 // Sections du questionnaire
-window.sections = [
+const sections = [
     {
         id: "profile",
         title: "Profil & horizon personnel",
@@ -60,7 +60,7 @@ window.sections = [
 ];
 
 // Questions du questionnaire
-window.questions = [
+const questions = [
     // Section 1: Profil & horizon personnel
     {
         id: "age",
@@ -1040,10 +1040,18 @@ window.questions = [
 ];
 
 // Questions pour la version "Quick Start" (5 questions seulement)
-window.quickStartQuestions = [
+const quickStartQuestions = [
     "age",
     "tax_bracket",
     "projected_revenue",
     "income_objective_year1",
     "priorities"
 ];
+
+// Exporter les constantes (module ES6)
+export { sections, questions, quickStartQuestions };
+
+// Pour la compatibilité avec l'ancien code (sera supprimé à terme)
+window.sections = sections;
+window.questions = questions;
+window.quickStartQuestions = quickStartQuestions;
