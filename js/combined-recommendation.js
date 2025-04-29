@@ -744,7 +744,6 @@ const legalStatuses = {
 window.legalStatuses = legalStatuses;
 
 // Barèmes et filtres (PLACEHOLDERS, À REMPLACER)
-const exclusionFilters = [
    const exclusionFilters = [
     {
         id: "professional_order",
@@ -785,8 +784,6 @@ const exclusionFilters = [
     }
 ];
 window.exclusionFilters = exclusionFilters;
-
-const ratingScales = {
  const ratingScales = {
     taxation: {
         EI: 3,
