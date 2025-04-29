@@ -1060,43 +1060,78 @@ class QuestionManager {
                 // Afficher l'indicateur de chargement immédiatement
                 let loadingInterval = window.showLoadingIndicator();
                 
-                try {
-                    // Initialisation directe et forcée
-                    console.log("Tentative d'initialisation directe");
-                    window.recommendationEngine = new window.RecommendationEngine();
+                // Utiliser l'événement recommendationEngineReady pour initialiser et utiliser le moteur
+                const answersData = this.answers; // Sauvegarde des réponses pour utilisation dans l'écouteur d'événement
+                
+                // Vérifier si le moteur est déjà disponible
+                if (window.recommendationEngineLoaded) {
+                    try {
+                        // Le moteur est déjà chargé, on peut l'instancier directement
+                        window.recommendationEngine = new window.RecommendationEngine();
+                        const recommendations = window.recommendationEngine.calculateRecommendations(answersData);
+                        window.recommendationEngine.displayResults(recommendations);
+                    } catch (error) {
+                        console.error("Erreur lors de l'utilisation du moteur de recommandation:", error);
+                        this.showEngineErrorMessage(error);
+                    } finally {
+                        window.hideLoadingIndicator(loadingInterval);
+                    }
+                } else {
+                    // Écouter l'événement de disponibilité du moteur
+                    const engineReadyHandler = function() {
+                        try {
+                            // Créer l'instance du moteur
+                            window.recommendationEngine = new window.RecommendationEngine();
+                            const recommendations = window.recommendationEngine.calculateRecommendations(answersData);
+                            window.recommendationEngine.displayResults(recommendations);
+                        } catch (error) {
+                            console.error("Erreur lors de l'utilisation du moteur de recommandation:", error);
+                            this.showEngineErrorMessage(error);
+                        } finally {
+                            window.hideLoadingIndicator(loadingInterval);
+                            // Nettoyage de l'écouteur
+                            document.removeEventListener('recommendationEngineReady', engineReadyHandler);
+                        }
+                    }.bind(this);
                     
-                    // Utiliser directement l'objet
-                    const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
+                    // Ajouter l'écouteur d'événement
+                    document.addEventListener('recommendationEngineReady', engineReadyHandler);
                     
-                    // Afficher les résultats
-                    window.recommendationEngine.displayResults(recommendations);
-                    
-                } catch (error) {
-                    console.error("Erreur d'initialisation forcée:", error);
-                    
-                    // Afficher un message d'erreur avec plus de détails
-                    this.questionContainer.innerHTML = `
-                        <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center">
-                            <div class="text-6xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
-                            <h2 class="text-2xl font-bold mb-4">Erreur détectée</h2>
-                            <p class="mb-6">Détails de l'erreur: ${error.message}</p>
-                            <p class="text-xs bg-blue-900 bg-opacity-30 p-2 mb-4 overflow-auto text-left">
-                                ${error.stack || "Pas de stack trace disponible"}
-                            </p>
-                            <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
-                                <i class="fas fa-redo mr-2"></i> Refaire le test
-                            </button>
-                        </div>
-                    `;
-                    
-                    document.getElementById('restart-btn').addEventListener('click', () => {
-                        location.reload();
-                    });
-                } finally {
-                    window.hideLoadingIndicator(loadingInterval);
+                    // Timeout de sécurité pour éviter que l'indicateur de chargement reste bloqué
+                    setTimeout(() => {
+                        if (document.querySelector('#loading-indicator').style.display !== 'none') {
+                            console.error("Timeout lors du chargement du moteur de recommandation");
+                            window.hideLoadingIndicator(loadingInterval);
+                            document.removeEventListener('recommendationEngineReady', engineReadyHandler);
+                            this.showEngineErrorMessage(new Error("Le moteur de recommandation n'a pas pu être chargé dans le délai imparti."));
+                        }
+                    }, 10000); // 10 secondes de timeout
                 }
             });
         }
+    }
+    
+    /**
+     * Afficher un message d'erreur lié au moteur de recommandation
+     */
+    showEngineErrorMessage(error) {
+        this.questionContainer.innerHTML = `
+            <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center">
+                <div class="text-6xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
+                <h2 class="text-2xl font-bold mb-4">Erreur détectée</h2>
+                <p class="mb-6">Détails de l'erreur: ${error.message}</p>
+                <p class="text-xs bg-blue-900 bg-opacity-30 p-2 mb-4 overflow-auto text-left">
+                    ${error.stack || "Pas de stack trace disponible"}
+                </p>
+                <button id="restart-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-6 py-3 rounded-lg">
+                    <i class="fas fa-redo mr-2"></i> Refaire le test
+                </button>
+            </div>
+        `;
+        
+        document.getElementById('restart-btn').addEventListener('click', () => {
+            location.reload();
+        });
     }
 }
 
