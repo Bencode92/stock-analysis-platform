@@ -2842,6 +2842,8 @@ window.ResultsManager = {
 };
 
 // Déclencher l'événement une seule fois, à la fin du fichier
+console.log("Déclenchement de l'événement legalStatusesLoaded depuis la fin du fichier");
+document.dispatchEvent(new CustomEvent('legalStatusesLoaded'));
 // après que tout soit chargé et disponible
 console.log("Déclenchement de l'événement recommendationEngineReady depuis la fin du fichier");
 document.dispatchEvent(new CustomEvent('recommendationEngineReady'));
