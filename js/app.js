@@ -14,35 +14,66 @@ document.addEventListener('DOMContentLoaded', () => {
     // NE PAS initialiser directement le moteur de recommandation
     // initRecommendationEngine();  
     
-    // À la place, créer une fonction lazy-load
+    // À la place, créer une fonction lazy-load qui utilise notre fonction createRecommendationEngine
     window.loadRecommendationEngine = function() {
         return new Promise((resolve, reject) => {
             try {
+                // Afficher l'indicateur de chargement
+                const loadingInterval = window.showLoadingIndicator ? window.showLoadingIndicator() : null;
+                
                 // Vérifier si le moteur est déjà chargé
                 if (window.recommendationEngine) {
+                    if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
                     resolve(window.recommendationEngine);
                     return;
                 }
                 
-                // Sinon, initialiser le moteur
-                if (window.RecommendationEngine) {
-                    window.recommendationEngine = new window.RecommendationEngine();
-                    console.log("Moteur de recommandation initialisé avec succès");
+                // Sinon, utiliser la fonction createRecommendationEngine
+                if (window.createRecommendationEngine) {
+                    window.createRecommendationEngine()
+                        .then(engine => {
+                            console.log("Moteur de recommandation créé avec succès via createRecommendationEngine");
+                            if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
+                            resolve(engine);
+                        })
+                        .catch(error => {
+                            console.error("Erreur lors de la création du moteur:", error);
+                            if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
+                            reject(error);
+                        });
+                } else if (window.RecommendationEngine) {
+                    // Fallback à l'ancienne méthode si createRecommendationEngine n'est pas disponible
+                    console.log("Utilisation de la construction directe du moteur");
+                    const engineOrPromise = new window.RecommendationEngine();
                     
-                    // Créer des ponts de compatibilité si nécessaire
-                    if (!window.checkHardFails) {
-                        window.checkHardFails = function(forme, userResponses) {
-                            return [];  
-                        };
+                    // Vérifier si le constructeur a retourné une promesse
+                    if (engineOrPromise instanceof Promise) {
+                        engineOrPromise
+                            .then(engine => {
+                                window.recommendationEngine = engine;
+                                if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
+                                resolve(engine);
+                            })
+                            .catch(error => {
+                                console.error("Erreur lors de la création du moteur:", error);
+                                if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
+                                reject(error);
+                            });
+                    } else {
+                        // Si c'est une instance directe
+                        window.recommendationEngine = engineOrPromise;
+                        if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
+                        resolve(engineOrPromise);
                     }
-                    
-                    resolve(window.recommendationEngine);
                 } else {
-                    console.error("RecommendationEngine n'est pas disponible");
-                    reject(new Error("RecommendationEngine n'est pas disponible"));
+                    console.error("Ni RecommendationEngine ni createRecommendationEngine ne sont disponibles");
+                    if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
+                    reject(new Error("Moteur de recommandation non disponible"));
                 }
             } catch (error) {
-                console.error("Erreur lors de l'initialisation du moteur:", error);
+                console.error("Erreur dans loadRecommendationEngine:", error);
+                const loadingInterval = window.showLoadingIndicator ? window.showLoadingIndicator() : null;
+                if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
                 reject(error);
             }
         });
@@ -54,9 +85,34 @@ document.addEventListener('DOMContentLoaded', () => {
  */
 function initRecommendationEngine() {
     // Cette fonction sera appelée quand RecommendationEngine sera disponible globalement
-    if (window.RecommendationEngine) {
-        window.recommendationEngine = new window.RecommendationEngine();
-        console.log("Moteur de recommandation initialisé avec succès");
+    if (window.createRecommendationEngine) {
+        window.createRecommendationEngine()
+            .then(engine => {
+                console.log("Moteur de recommandation initialisé avec succès");
+            })
+            .catch(error => {
+                console.error("Erreur lors de l'initialisation du moteur:", error);
+            });
+    } else if (window.RecommendationEngine) {
+        try {
+            const engineOrPromise = new window.RecommendationEngine();
+            
+            if (engineOrPromise instanceof Promise) {
+                engineOrPromise
+                    .then(engine => {
+                        window.recommendationEngine = engine;
+                        console.log("Moteur de recommandation initialisé avec succès (asynchrone)");
+                    })
+                    .catch(error => {
+                        console.error("Erreur lors de l'initialisation du moteur:", error);
+                    });
+            } else {
+                window.recommendationEngine = engineOrPromise;
+                console.log("Moteur de recommandation initialisé avec succès (synchrone)");
+            }
+        } catch (error) {
+            console.error("RecommendationEngine n'a pas pu être initialisé correctement:", error);
+        }
     } else {
         console.error("RecommendationEngine n'est pas disponible. Assurez-vous que recommendation-engine.js est chargé correctement.");
     }
