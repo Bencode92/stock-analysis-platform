@@ -1066,7 +1066,14 @@ class QuestionManager {
                         console.log("Utilisation de loadRecommendationEngine Promise");
                         const engine = await window.loadRecommendationEngine();
                         const recommendations = engine.calculateRecommendations(this.answers);
-                        engine.displayResults(recommendations);
+                        
+                        // MODIFICATION: Utiliser ResultsManager.displayResults au lieu de engine.displayResults
+                        if (window.ResultsManager && typeof window.ResultsManager.displayResults === 'function') {
+                            window.ResultsManager.displayResults(recommendations);
+                        } else {
+                            // Afficher un message d'erreur si ResultsManager n'est pas disponible
+                            throw new Error("Méthode d'affichage des résultats non disponible");
+                        }
                         return;
                     }
                     
@@ -1075,7 +1082,13 @@ class QuestionManager {
                         console.log("Création directe d'une instance RecommendationEngine");
                         window.recommendationEngine = new window.RecommendationEngine();
                         const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
-                        window.recommendationEngine.displayResults(recommendations);
+                        
+                        // MODIFICATION: Utiliser ResultsManager.displayResults au lieu de window.recommendationEngine.displayResults
+                        if (window.ResultsManager && typeof window.ResultsManager.displayResults === 'function') {
+                            window.ResultsManager.displayResults(recommendations);
+                        } else {
+                            throw new Error("Méthode d'affichage des résultats non disponible");
+                        }
                         return;
                     }
                     
@@ -1083,7 +1096,13 @@ class QuestionManager {
                     if (window.recommendationEngine) {
                         console.log("Utilisation de l'instance existante");
                         const recommendations = window.recommendationEngine.calculateRecommendations(this.answers);
-                        window.recommendationEngine.displayResults(recommendations);
+                        
+                        // MODIFICATION: Utiliser ResultsManager.displayResults au lieu de window.recommendationEngine.displayResults
+                        if (window.ResultsManager && typeof window.ResultsManager.displayResults === 'function') {
+                            window.ResultsManager.displayResults(recommendations);
+                        } else {
+                            throw new Error("Méthode d'affichage des résultats non disponible");
+                        }
                         return;
                     }
                     
@@ -1096,7 +1115,13 @@ class QuestionManager {
                             console.log("Événement reçu, initialisation du moteur");
                             window.recommendationEngine = new window.RecommendationEngine();
                             const recommendations = window.recommendationEngine.calculateRecommendations(answersData);
-                            window.recommendationEngine.displayResults(recommendations);
+                            
+                            // MODIFICATION: Utiliser ResultsManager.displayResults au lieu de window.recommendationEngine.displayResults
+                            if (window.ResultsManager && typeof window.ResultsManager.displayResults === 'function') {
+                                window.ResultsManager.displayResults(recommendations);
+                            } else {
+                                throw new Error("Méthode d'affichage des résultats non disponible");
+                            }
                         } catch (error) {
                             console.error("Erreur lors de l'utilisation du moteur:", error);
                             this.showEngineErrorMessage(error);
