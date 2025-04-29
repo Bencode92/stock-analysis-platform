@@ -317,6 +317,7 @@ const scoringRules = [
         criteria: 'transmission'
     }
 ];
+window.scoringRules = scoringRules;
 
 class RecommendationEngine {
     constructor() {
@@ -1806,6 +1807,7 @@ class RecommendationEngine {
         alert('Fonctionnalité d\'export PDF à implémenter');
     }
 }
+window.RecommendationEngine = RecommendationEngine;
 
 // Compatibilité avec l'ancien système - Définir les objets nécessaires dans window
 window.FormeJuridiqueDB = {
@@ -1900,12 +1902,14 @@ window.ResultsManager = {
 
 // Exposer la classe et une instance de manière synchrone
 try {
-    // Rendre la classe disponible globalement
+    // Rendre la classe disponible globalement (déjà fait plus haut)
     window.RecommendationEngine = RecommendationEngine;
     window.scoringRules = scoringRules;
     console.log("Classe RecommendationEngine exposée avec succès");
     
-    // Ne pas déclencher l'événement ici mais à la fin du fichier
+    // Créer une instance globale
+    window.recommendationEngine = new RecommendationEngine();
+    
     window.engineLoadingCompleted = true;
 } catch (e) {
     console.error("Erreur lors de l'exposition du moteur de recommandation:", e);
