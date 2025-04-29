@@ -22,54 +22,82 @@ function initRecommendationEngine() {
     // Afficher l'indicateur de chargement
     const loadingInterval = window.showLoadingIndicator ? window.showLoadingIndicator() : null;
     
-    // Vérifier si legalStatuses est disponible
-    if (!window.legalStatuses) {
-        console.log("window.legalStatuses n'est pas disponible, attente de l'événement legalStatusesLoaded");
-        
-        document.addEventListener('legalStatusesLoaded', () => {
-            console.log("Événement legalStatusesLoaded reçu, initialisation du moteur");
-            startEngine();
-        }, { once: true });
-    } else {
-        console.log("window.legalStatuses est déjà disponible, initialisation directe du moteur");
-        startEngine();
+    // Version améliorée du mécanisme d'attente
+    function initializeEngine() {
+        if (window.legalStatuses) {
+            console.log("window.legalStatuses est disponible, initialisation immédiate du moteur");
+            try {
+                window.recommendationEngine = new window.RecommendationEngine();
+                console.log("Moteur de recommandation initialisé avec succès");
+                if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
+                // Déclencher un événement pour indiquer que le moteur est prêt
+                document.dispatchEvent(new CustomEvent('engineReady'));
+            } catch (error) {
+                console.error("Erreur lors de l'initialisation du moteur:", error);
+                if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
+                showErrorMessage(error);
+            }
+        } else {
+            console.log("window.legalStatuses n'est pas disponible, attente de l'événement legalStatusesLoaded");
+            document.addEventListener('legalStatusesLoaded', () => {
+                console.log("Événement legalStatusesLoaded reçu, initialisation du moteur");
+                try {
+                    window.recommendationEngine = new window.RecommendationEngine();
+                    console.log("Moteur de recommandation initialisé avec succès (après événement)");
+                    if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
+                    // Déclencher un événement pour indiquer que le moteur est prêt
+                    document.dispatchEvent(new CustomEvent('engineReady'));
+                } catch (error) {
+                    console.error("Erreur lors de l'initialisation du moteur (après événement):", error);
+                    if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
+                    showErrorMessage(error);
+                }
+            }, { once: true });
+        }
     }
     
-    function startEngine() {
-        // Utiliser la méthode statique create pour initialiser le moteur
-        RecommendationEngine.create()
-            .then(engine => {
-                window.recommendationEngine = engine;
-                console.log("Moteur de recommandation initialisé avec succès");
-                // Masquer l'indicateur de chargement
+    // Vérifier si RecommendationEngine est disponible
+    if (window.RecommendationEngine) {
+        initializeEngine();
+    } else {
+        console.log("window.RecommendationEngine n'est pas disponible, attente...");
+        // Attendre que le script recommendation-engine.js soit chargé
+        document.addEventListener('recommendationEngineReady', initializeEngine, { once: true });
+        
+        // Sécurité supplémentaire : timeout si le script ne charge pas
+        setTimeout(() => {
+            if (!window.recommendationEngine) {
+                console.error("Timeout: Le moteur de recommandation n'a pas pu être initialisé dans le délai imparti");
                 if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
-            })
-            .catch(error => {
-                console.error("Erreur lors de l'initialisation du moteur:", error);
-                // Masquer l'indicateur de chargement même en cas d'erreur
-                if (loadingInterval) window.hideLoadingIndicator(loadingInterval);
-                
-                // Afficher un message d'erreur convivial à l'utilisateur
-                const errorMessage = `Une erreur est survenue lors de l'initialisation du simulateur: ${error.message}. Essayez de rafraîchir la page.`;
-                
-                // Afficher l'erreur dans l'interface (si l'élément question-container existe)
-                const questionContainer = document.getElementById('question-container');
-                if (questionContainer) {
-                    questionContainer.innerHTML = `
-                        <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center">
-                            <div class="text-4xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
-                            <h2 class="text-xl font-bold mb-4">Problème de chargement</h2>
-                            <p class="mb-6">${errorMessage}</p>
-                            <button onclick="location.reload()" class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
-                                <i class="fas fa-redo mr-2"></i> Rafraîchir la page
-                            </button>
-                        </div>
-                    `;
-                } else {
-                    // Si questionContainer n'existe pas, utiliser une alerte
-                    alert(errorMessage);
-                }
-            });
+                showErrorMessage(new Error("Timeout: Le moteur de recommandation n'a pas pu être chargé"));
+            }
+        }, 10000); // 10 secondes de timeout
+    }
+    
+    // Fonction pour afficher un message d'erreur convivial
+    function showErrorMessage(error) {
+        const errorMessage = `Une erreur est survenue: ${error.message}. Rechargez la page ou videz le cache du navigateur.`;
+        
+        // Afficher l'erreur dans l'interface (si l'élément question-container existe)
+        const questionContainer = document.getElementById('question-container');
+        if (questionContainer) {
+            questionContainer.innerHTML = `
+                <div class="bg-red-900 bg-opacity-20 p-8 rounded-xl text-center">
+                    <div class="text-4xl text-red-400 mb-4"><i class="fas fa-exclamation-circle"></i></div>
+                    <h2 class="text-xl font-bold mb-4">Problème de chargement</h2>
+                    <p class="mb-6">${errorMessage}</p>
+                    <div class="text-xs bg-blue-900 bg-opacity-30 p-2 mb-4 overflow-auto text-left">
+                        ${error.stack || "Erreur détaillée: " + error.message}
+                    </div>
+                    <button onclick="location.reload()" class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+                        <i class="fas fa-redo mr-2"></i> Rafraîchir la page
+                    </button>
+                </div>
+            `;
+        } else {
+            // Si questionContainer n'existe pas, utiliser une alerte
+            alert(errorMessage);
+        }
     }
     
     // Créer des ponts de compatibilité si nécessaire pour les modules auxiliaires
