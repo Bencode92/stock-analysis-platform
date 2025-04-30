@@ -1331,7 +1331,20 @@ function displayResults(recommendations) {
     document.querySelectorAll('.details-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
             const statusId = btn.dataset.statusId;
-            alert(`Affichage des détails pour ${statusId} - Fonctionnalité en développement`);
+            const recommendationEngine = window.recommendationEngine;
+            if (recommendationEngine) {
+                // Trouver la recommandation correspondante
+                const recommendation = recommendations.find(r => r.status.shortName === statusId);
+                if (recommendation) {
+                    recommendationEngine.showStatusDetails(recommendation);
+                } else {
+                    console.error(`Recommandation non trouvée pour ${statusId}`);
+                    alert(`Détails non disponibles pour ${statusId}`);
+                }
+            } else {
+                console.error("Moteur de recommandation non disponible");
+                alert(`Le moteur de recommandation n'est pas disponible.`);
+            }
         });
     });
     
