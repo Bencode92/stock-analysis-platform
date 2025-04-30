@@ -751,6 +751,8 @@
     <script src="js/question-data.js?v=20250429_1" defer></script>
     <script src="js/question-manager.js?v=20250429_1" defer></script>
     <script src="js/app.js?v=20250429_1" defer></script>
+    <!-- Script du glossaire juridique interactif -->
+    <script src="js/glossary.js?v=20250430_1" defer></script>
     
     <!-- Script pour gérer l'indicateur de chargement -->
     <script>
@@ -836,6 +838,15 @@
         document.addEventListener('legalStatusesLoaded', function() {
             console.log("Événement legalStatusesLoaded reçu - les données de statuts sont disponibles!");
             console.log("Vérification de legalStatuses après l'événement:", window.legalStatuses ? Object.keys(window.legalStatuses).length : "non disponible");
+        });
+        
+        // Écouteur pour le glossaire juridique
+        document.addEventListener('glossaryLoaded', function() {
+            console.log("Glossaire juridique chargé et actif!");
+            // Mettre à jour le contenu après chargement des résultats
+            document.addEventListener('contentUpdated', function() {
+                refreshGlossary();
+            });
         });
     });
     </script>
