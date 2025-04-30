@@ -1,430 +1,649 @@
 {
-  "micro-entreprise": {
-    "definition": "Régime simplifié d'entreprise individuelle, adapté aux petites activités, avec un système fiscal et social forfaitaire et allégé.",
-    "example": "Un freelance développeur web avec un CA annuel de 40 000€ peut opter pour le statut micro-entrepreneur et bénéficier d'une déclaration simplifiée.",
-    "related_terms": ["auto-entrepreneur", "ACRE", "versement libératoire"]
-  },
-  "eirl": {
-    "definition": "L'Entreprise Individuelle à Responsabilité Limitée permet à un entrepreneur individuel de protéger son patrimoine personnel en affectant un patrimoine professionnel distinct à son activité.",
-    "example": "Un artisan peut créer une EIRL en listant précisément les biens affectés à son activité, séparant ainsi son patrimoine professionnel de ses biens personnels.",
-    "related_terms": ["patrimoine d'affectation", "entrepreneur individuel", "responsabilité limitée"]
-  },
-  "ei": {
-    "definition": "L'Entreprise Individuelle est une forme juridique où l'entrepreneur et l'entreprise constituent une seule entité juridique, avec des démarches de création simplifiées.",
-    "example": "Un consultant indépendant en EI déclare ses revenus professionnels dans sa déclaration d'impôts personnelle sous le régime des BNC.",
-    "related_terms": ["TNS", "BIC", "BNC", "affaire personnelle"]
-  },
-  "eurl": {
-    "definition": "L'Entreprise Unipersonnelle à Responsabilité Limitée est une société à responsabilité limitée avec un associé unique, permettant de limiter la responsabilité au montant des apports.",
-    "example": "Une personne souhaitant créer une agence web peut opter pour l'EURL avec un capital de 1000€, protégeant ainsi son patrimoine personnel.",
-    "related_terms": ["gérant", "associé unique", "SARL", "option IR/IS"]
-  },
-  "sasu": {
-    "definition": "La Société par Actions Simplifiée Unipersonnelle est une SAS avec un seul associé, offrant une grande flexibilité statutaire et le statut d'assimilé-salarié.",
-    "example": "Un consultant IT se constitue en SASU pour bénéficier de la protection sociale du régime général tout en conservant la flexibilité de définir librement les règles de gouvernance.",
-    "related_terms": ["assimilé-salarié", "président", "SAS", "dividendes"]
-  },
-  "sarl": {
-    "definition": "La Société à Responsabilité Limitée est une forme de société commerciale où la responsabilité des associés est limitée à leurs apports, avec un formalisme moins contraignant que la SA.",
-    "example": "Deux associés créent une SARL pour ouvrir un restaurant avec un capital de 5000€ réparti à parts égales.",
-    "related_terms": ["gérant majoritaire", "gérant minoritaire", "parts sociales", "IS", "co-gérance"]
-  },
-  "sas": {
-    "definition": "La Société par Actions Simplifiée est une forme de société commerciale offrant une grande liberté statutaire et organisationnelle, adaptée aux projets avec investisseurs.",
-    "example": "Une startup tech adopte le statut SAS pour faciliter l'entrée d'investisseurs et mettre en place un pacte d'actionnaires et des actions de préférence.",
-    "related_terms": ["président", "actions", "pacte d'actionnaires", "liberté statutaire"]
-  },
-  "selafa": {
-    "definition": "La Société d'Exercice Libéral à Forme Anonyme est une structure dédiée aux professions libérales réglementées, fonctionnant comme une SA.",
-    "example": "Un groupe de médecins spécialistes créent une SELAFA pour exercer ensemble, avec un capital minimum de 37 000€ et un conseil d'administration.",
-    "related_terms": ["SEL", "SA", "profession libérale", "ordre professionnel"]
-  },
-  "selarl": {
-    "definition": "La Société d'Exercice Libéral à Responsabilité Limitée est une structure dédiée aux professions libérales réglementées, fonctionnant comme une SARL.",
-    "example": "Deux avocats s'associent en SELARL pour mutualiser leurs moyens tout en exerçant une profession réglementée par un ordre professionnel.",
-    "related_terms": ["SEL", "SARL", "profession libérale", "ordre professionnel"]
-  },
-  "selas": {
-    "definition": "La Société d'Exercice Libéral par Actions Simplifiée permet aux professionnels libéraux réglementés d'exercer en structure sociétaire avec la flexibilité d'une SAS.",
-    "example": "Un groupe d'experts-comptables crée une SELAS pour bénéficier de la souplesse statutaire tout en respectant les règles de l'ordre professionnel.",
-    "related_terms": ["SEL", "SAS", "profession libérale", "président"]
-  },
-  "scop": {
-    "definition": "La Société Coopérative et Participative est une entreprise dont les salariés sont associés majoritaires et participent aux décisions stratégiques selon le principe \"une personne = une voix\".",
-    "example": "Une équipe de développeurs crée une SCOP où chaque membre détient une part égale du capital et participe aux décisions, avec une répartition équitable des bénéfices.",
-    "related_terms": ["coopérative", "ESS", "participation", "réserves impartageables"]
-  },
-  "scic": {
-    "definition": "La Société Coopérative d'Intérêt Collectif permet d'associer autour d'un projet économique commun des acteurs multiples: salariés, bénéficiaires, collectivités publiques, entreprises, associations, particuliers...",
-    "example": "Un projet d'agriculture locale durable se structure en SCIC pour associer producteurs, consommateurs, collectivités locales et salariés dans la gouvernance.",
-    "related_terms": ["ESS", "multi-sociétariat", "utilité sociale", "lucrativité limitée"]
-  },
-  "is": {
-    "definition": "L'Impôt sur les Sociétés est un impôt direct qui frappe les bénéfices réalisés par les sociétés et certaines autres personnes morales.",
-    "example": "Une SARL réalisant 100 000€ de bénéfices paiera 25 000€ d'IS au taux normal (ou 15% sur les premiers 42 500€ de bénéfices pour les PME).",
-    "related_terms": ["résultat fiscal", "bénéfice imposable", "taux réduit", "acomptes d'IS"]
-  },
-  "ir": {
-    "definition": "L'Impôt sur le Revenu est un impôt direct progressif par tranches qui porte sur le revenu des personnes physiques et de certaines entreprises individuelles.",
-    "example": "Un entrepreneur individuel qui génère 60 000€ de bénéfices verra cette somme ajoutée à ses autres revenus et imposée selon le barème progressif de l'IR.",
-    "related_terms": ["tranches d'imposition", "quotient familial", "BIC", "BNC", "foyer fiscal"]
-  },
+"tmi": {
+  "definition": "Le Taux Marginal d’Imposition (TMI) est le taux d’impôt appliqué à la dernière tranche de vos revenus imposables selon le barème progressif de l’impôt sur le revenu.",
+  "example": "Un célibataire avec un revenu net imposable de 32 000 € a un TMI de 30 %, car la tranche 29 316 € – 83 823 € est imposée à ce taux. Un euro supplémentaire sera donc taxé à 30 %.",
+  "related_terms": ["barème progressif", "tranches d'imposition", "taux moyen d’imposition", "revenu imposable", "IR"]
+},
+  "appetencerisque": {
+  "definition": "L’appétence au risque désigne la capacité d’un entrepreneur à accepter l’incertitude financière, stratégique ou personnelle pour créer et développer son entreprise.",
+  "example": "Un entrepreneur avec une forte appétence au risque contracte un prêt de 200 000 € pour lancer une startup tech innovante sans garantie de rentabilité à court terme.",
+  "related_terms": ["prise de risque", "création d’entreprise", "plan de financement", "structure juridique", "levée de fonds", "caution personnelle"]
+},
+"autresrevenussalaries_entrepreneur": {
+  "definition": "Dans le cadre de la création d’entreprise, les 'autres revenus salariés' désignent les revenus d’une activité salariée exercée en parallèle d’une activité entrepreneuriale, permettant de sécuriser le lancement du projet.",
+  "example": "Un graphiste salarié lance son activité en freelance en auto-entrepreneur tout en conservant un emploi à mi-temps pour assurer un revenu stable.",
+  "related_terms": ["auto-entrepreneur", "activité mixte", "sécurité sociale", "prélèvement libératoire", "cumul d’activités", "clause d’exclusivité"]
+},
   "tns": {
-    "definition": "Le Travailleur Non Salarié est un statut social concernant les indépendants non-salariés qui ne cotisent pas au régime général de la sécurité sociale mais à un régime spécifique.",
-    "example": "Un artisan en EI ou un gérant majoritaire de SARL sont des TNS qui cotisent à la SSI (ex-RSI) pour leur protection sociale.",
-    "related_terms": ["SSI", "indépendant", "cotisations sociales", "gérant majoritaire"]
-  },
-  "assimile-salarie": {
-    "definition": "Statut social accordé à certains dirigeants de sociétés qui bénéficient du régime général de la sécurité sociale, similaire aux salariés, bien que n'étant pas juridiquement subordonnés.",
-    "example": "Le président d'une SAS ou SASU est assimilé-salarié et cotise au régime général pour sa retraite, sa santé et le chômage.",
-    "related_terms": ["régime général", "sécurité sociale", "president SAS", "gérant minoritaire"]
-  },
-  "acre": {
-    "definition": "L'Aide à la Création ou à la Reprise d'Entreprise offre une exonération partielle de charges sociales pendant la première année d'activité pour les créateurs d'entreprise.",
-    "example": "Un demandeur d'emploi créant son entreprise peut bénéficier de l'ACRE, réduisant ses cotisations sociales de 50% la première année.",
-    "related_terms": ["exonération", "cotisations sociales", "création d'entreprise", "demandeur d'emploi"]
-  },
-  "bspce": {
-    "definition": "Les Bons de Souscription de Parts de Créateur d'Entreprise permettent aux startups de moins de 15 ans d'attribuer à leurs salariés et dirigeants des bons leur donnant droit d'acquérir des actions à un prix déterminé à l'avance.",
-    "example": "Une startup tech attribue des BSPCE à ses premiers employés, leur permettant d'acheter des actions à 10€ alors qu'elles valent 50€ après la levée de fonds.",
-    "related_terms": ["startup", "stock-options", "plus-value d'acquisition", "actions"]
-  },
-  "pfu": {
-    "definition": "Le Prélèvement Forfaitaire Unique, aussi appelé \"flat tax\", est un taux d'imposition fixe de 30% (12,8% d'impôt sur le revenu + 17,2% de prélèvements sociaux) sur les revenus du capital.",
-    "example": "Un actionnaire reçoit 10 000€ de dividendes et opte pour le PFU: il paiera 3 000€ d'impôt au total (flat tax), au lieu d'utiliser le barème progressif de l'IR.",
-    "related_terms": ["dividendes", "plus-values mobilières", "fiscalité du capital", "abattement 40%"]
-  },
-  "zfu": {
-    "definition": "Les Zones Franches Urbaines sont des quartiers prioritaires où les entreprises bénéficient d'exonérations fiscales et sociales pour favoriser le développement économique et l'emploi.",
-    "example": "Une agence de communication s'installe en ZFU et bénéficie d'une exonération d'IS pendant 5 ans, puis dégressive pendant 3 ans.",
-    "related_terms": ["QPV", "exonération fiscale", "implantation territoriale", "politique de la ville"]
-  },
-  "jei": {
-    "definition": "Le statut Jeune Entreprise Innovante offre des avantages fiscaux et sociaux aux PME réalisant des projets de R&D, notamment une réduction des charges sociales et une exonération d'IS.",
-    "example": "Une startup développant une technologie de blockchain obtient le statut JEI, lui permettant d'économiser significativement sur ses charges patronales pour ses ingénieurs R&D.",
-    "related_terms": ["R&D", "innovation", "exonérations sociales", "CIR"]
-  },
-  "cir": {
-    "definition": "Le Crédit d'Impôt Recherche est un dispositif fiscal qui permet aux entreprises de déduire une partie de leurs dépenses de recherche et développement de leur impôt.",
-    "example": "Une entreprise qui dépense 100 000€ en R&D peut obtenir un CIR de 30 000€, réduisant d'autant son IS ou obtenir un remboursement direct si elle est déficitaire.",
-    "related_terms": ["recherche", "innovation", "JEI", "crédit d'impôt"]
-  },
-  "esus": {
-    "definition": "L'agrément Entreprise Solidaire d'Utilité Sociale reconnaît les entreprises de l'ESS poursuivant un objectif d'utilité sociale, leur permettant d'accéder à des financements spécifiques.",
-    "example": "Une entreprise d'insertion professionnelle pour personnes handicapées obtient l'agrément ESUS pour lever des fonds auprès d'investisseurs solidaires bénéficiant d'avantages fiscaux.",
-    "related_terms": ["ESS", "impact social", "utilité sociale", "finance solidaire", "SCIC"]
-  },
-  "pacte-d-associes": {
-    "definition": "Accord confidentiel entre associés d'une société qui complète les statuts en définissant des règles spécifiques: cession de parts, gouvernance, sortie, etc.",
-    "example": "Dans une SAS avec plusieurs associés, un pacte prévoit un droit de préemption, une clause de sortie conjointe et des règles de valorisation en cas de cession.",
-    "related_terms": ["gouvernance", "cession de titres", "préemption", "clause de sortie", "valorisation"]
-  },
-  "ca-previsionnel": {
-    "definition": "Projection du chiffre d'affaires qu'une entreprise prévoit de réaliser sur une période future, généralement sur un an ou plus.",
-    "example": "Une entreprise en création établit un CA prévisionnel de 70 000€ pour sa première année, 120 000€ pour la deuxième année, et 200 000€ pour la troisième année.",
-    "related_terms": ["business plan", "prévisionnel financier", "seuil de rentabilité", "budget"]
-  },
-  "versement-liberatoire": {
-    "definition": "Option fiscale proposée aux micro-entrepreneurs dont le revenu fiscal de référence ne dépasse pas un certain seuil, permettant de payer l'impôt sur le revenu en même temps que les cotisations sociales.",
-    "example": "Un micro-entrepreneur avec un RFR faible opte pour le versement libératoire à 1% sur son CA commercial, simplifiant ses démarches et optimisant sa fiscalité.",
-    "related_terms": ["micro-entreprise", "impôt sur le revenu", "prélèvement forfaitaire", "abattement forfaitaire"]
-  },
-  "tmi": {
-    "definition": "Le Taux Marginal d'Imposition est le taux d'imposition applicable à la dernière tranche de revenus d'un contribuable dans le cadre de l'impôt progressif.",
-    "example": "Un contribuable dont le revenu net imposable est de 100 000€ se trouve dans la tranche à 41% - son TMI est donc de 41%, mais son taux moyen d'imposition sera inférieur.",
-    "related_terms": ["tranches d'imposition", "IR", "imposition progressive", "taux moyen"]
-  },
+  "definition": "Statut des entrepreneurs individuels, micro-entrepreneurs ou gérants majoritaires, affiliés à la SSI avec moins de charges sociales mais une protection limitée.",
+  "example": "Julie lance sa micro-entreprise de bijoux : elle paie 12,8 % de cotisations sur ses ventes et ne paie rien si elle ne vend pas.",
+  "related_terms": ["indépendant", "micro-entreprise", "gérant majoritaire", "SSI", "cotisations sociales"]
+},
+
+"assimilésalarié": {
+  "definition": "Statut du dirigeant de SAS/SASU ou gérant minoritaire de SARL, affilié au régime général avec une bonne protection sociale mais un coût plus élevé.",
+  "example": "Marc crée une SASU pour son activité de conseil : il se verse 2 000 € nets par mois, ce qui coûte 3 300 € à la société.",
+  "related_terms": ["président", "mandat social", "SAS", "URSSAF", "protection sociale"]
+},
+
+"mixte": {
+  "definition": "Statut hybride combinant un mandat social et un contrat de travail, rarement avantageux sauf cas très précis, avec deux régimes sociaux distincts à gérer.",
+  "example": "Sophie est présidente de sa SAS et développeuse salariée : elle paie des charges des deux côtés, sans économies.",
+  "related_terms": ["cumul de fonctions", "mandat social", "contrat de travail", "régime mixte"]
+},
+  "bic_vente": {
+  "definition": "Activité d’achat-revente de biens ou marchandises, imposée dans la catégorie des BIC (Bénéfices Industriels et Commerciaux).",
+  "example": "Un entrepreneur ouvre une boutique de vêtements ou vend des produits sur un site e-commerce.",
+  "related_terms": ["commerce", "achat-revente", "boutique", "e-commerce", "BIC", "RCS"]
+},
+
+"bic_service": {
+  "definition": "Activité de prestation de services à caractère commercial ou artisanal, imposée comme BIC.",
+  "example": "Un coiffeur, un chauffeur VTC ou une entreprise de ménage relève du BIC service.",
+  "related_terms": ["service", "artisan", "BIC", "nettoyage", "plombier", "coiffeur"]
+},
+
+"bnc": {
+  "definition": "Activité libérale ou intellectuelle imposée dans la catégorie des BNC (Bénéfices Non Commerciaux).",
+  "example": "Un consultant, un formateur ou un avocat exerçant en indépendant relève du régime BNC.",
+  "related_terms": ["profession libérale", "consultant", "expert", "honoraires", "déontologie"]
+},
+
+"artisanat": {
+  "definition": "Activité manuelle de fabrication, transformation ou réparation exercée seul ou en petite structure, imposée en BIC.",
+  "example": "Un boulanger ou un couturier immatriculé au registre national des entreprises avec un CAP.",
+  "related_terms": ["artisan", "qualification", "BIC", "registre RNE", "activité manuelle"]
+},
+
+"agricole": {
+  "definition": "Activité d’exploitation d’un cycle biologique (animal ou végétal), avec production, transformation ou vente de produits agricoles.",
+  "example": "Un viticulteur ou éleveur vendant ses produits en circuit court relève des bénéfices agricoles (BA).",
+  "related_terms": ["agriculture", "BA", "PAC", "élevage", "viticulture", "exploitation"]
+},
+  "activite_reglementee": {
+  "definition": "Une activité réglementée est soumise à des conditions légales strictes (diplômes, autorisations, agréments) pour pouvoir être exercée légalement.",
+  "example": "Un coiffeur doit justifier d’un CAP coiffure pour pouvoir ouvrir son salon ; un agent immobilier doit obtenir une carte professionnelle.",
+  "related_terms": ["diplôme", "carte professionnelle", "autorisation", "agrément", "conditions d'accès", "registre"]
+},
+  "ordre_professionnel": {
+  "definition": "Un ordre professionnel est un organisme obligatoire qui encadre certaines professions réglementées, contrôle l’accès à la profession et veille au respect de la déontologie.",
+  "example": "Un avocat doit être inscrit à l’Ordre des avocats pour pouvoir exercer ; l’ordre vérifie ses diplômes, encadre sa pratique et peut le sanctionner en cas de faute.",
+  "related_terms": ["profession libérale", "déontologie", "inscription obligatoire", "sanction disciplinaire", "réglementation"]
+},
+  "amf": {
+  "definition": "L’agrément AMF est obligatoire pour les sociétés qui exercent dans la gestion de fonds ou le conseil en investissement, afin de garantir leur compétence et solidité.",
+  "example": "Une société de gestion doit obtenir l’agrément AMF avant de proposer ses produits financiers aux clients.",
+  "related_terms": ["finance", "investissement", "fonds", "conformité", "régulation"]
+},
+  "arcep": {
+  "definition": "L’agrément ARCEP est requis pour les opérateurs télécoms ou ceux exploitant un réseau de communication, garantissant le respect des normes techniques.",
+  "example": "Un nouvel opérateur téléphonique doit obtenir l’autorisation de l’ARCEP avant de proposer ses offres sur le marché.",
+  "related_terms": ["télécom", "réseau", "normes", "autorisation", "régulation"]
+},
+  "iobsp": {
+  "definition": "L’agrément IOBSP est nécessaire pour exercer une activité d’intermédiaire bancaire, comme le courtage en crédit ou en services de paiement.",
+  "example": "Un courtier en crédit immobilier doit obtenir l’agrément IOBSP pour pouvoir présenter des offres de prêt à ses clients.",
+  "related_terms": ["crédit", "banque", "intermédiaire", "assurance", "IOB"]
+},
+  "kyc": {
+  "definition": "Le KYC est une procédure de vérification de l’identité du client imposée aux établissements financiers pour lutter contre le blanchiment d’argent.",
+  "example": "Une fintech doit collecter une pièce d’identité et un justificatif de domicile avant d’ouvrir un compte client.",
+  "related_terms": ["compliance", "lutte anti-blanchiment", "AML", "client", "identité"]
+},
+  "risques_professionnels": {
+  "definition": "Les risques professionnels élevés désignent les dommages (physiques, matériels, financiers) que l’entreprise peut causer à des tiers et qui engagent sa responsabilité civile.",
+  "example": "Un client se blesse en chutant dans une boutique : l’entreprise peut être tenue de l’indemniser. Une RC Pro permet de couvrir ce type de situation.",
+  "related_terms": ["responsabilité civile", "RC Pro", "dommage", "tiers", "assurance", "patrimoine personnel"]
+},
+  "franchise_tva": {
+  "definition": "Régime de TVA qui permet aux petites entreprises de ne pas facturer ni déclarer la TVA, sous certaines limites de chiffre d’affaires.",
+  "example": "Julie débute son activité de graphiste freelance. En franchise en base, elle ne facture pas la TVA à ses clients et n’a pas à la reverser à l’État.",
+  "related_terms": ["TVA non applicable", "article 293 B", "petite entreprise", "seuil TVA", "simplification"]
+},
+  "exoneration_tva": {
+  "definition": "Certaines activités comme la santé ou l’enseignement sont exonérées de TVA par la loi, quels que soient les revenus.",
+  "example": "Un médecin libéral ne facture pas de TVA à ses patients et ne peut pas la récupérer sur ses achats professionnels.",
+  "related_terms": ["TVA exonérée", "activité réglementée", "enseignement", "médical", "non assujetti"]
+},
+  "tva_reel_simplifie": {
+  "definition": "Régime qui permet de déclarer la TVA une ou deux fois par an avec des acomptes trimestriels, adapté aux entreprises avec un chiffre d'affaires modéré.",
+  "example": "Une TPE de vente de produits réalise 300 000 € de chiffre d’affaires par an : elle choisit le régime réel simplifié pour alléger ses déclarations.",
+  "related_terms": ["TVA", "acompte", "déclaration annuelle", "simplifié", "comptabilité"]
+},
+  "tva_reel_normal": {
+  "definition": "Régime où l’entreprise déclare et paie la TVA chaque mois (ou chaque trimestre si TVA < 4 000 €/an), obligatoire au-delà de certains seuils de chiffre d’affaires.",
+  "example": "Une société de services dépassant 250 000 € de chiffre d’affaires déclare sa TVA tous les mois via le régime réel normal.",
+  "related_terms": ["TVA mensuelle", "déclaration", "seuils", "entreprise", "régime fiscal"]
+},
+  "cnil": {
+  "definition": "Autorité française chargée de veiller à la protection des données personnelles et au respect du RGPD dans les entreprises.",
+  "example": "Une entreprise qui collecte des données clients doit s’assurer qu’elle respecte les règles fixées par la CNIL, sous peine de sanction.",
+  "related_terms": ["données personnelles", "vie privée", "autorité administrative", "contrôle", "sanction"]
+},
+  "rgpd": {
+  "definition": "Règlement européen qui encadre la collecte, l’utilisation et la protection des données personnelles dans toutes les entreprises.",
+  "example": "Une boutique en ligne doit informer ses clients de l’usage de leurs données et leur permettre d’en demander la suppression, conformément au RGPD.",
+  "related_terms": ["données personnelles", "consentement", "dpo", "registre de traitement", "obligations légales"]
+},
+  "taux_marge_brute": {
+  "definition": "Indicateur de rentabilité qui mesure la différence entre le prix de vente HT et le coût d’achat ou de production d’un bien ou service, exprimée en pourcentage.",
+  "example": "Si un produit est vendu 120 € HT et coûte 80 € à produire, la marge brute est de 40 €, soit un taux de marge brute de 33,33 %. Cela signifie que l’entreprise garde 33 % de marge avant frais fixes.",
+  "related_terms": ["rentabilité", "coût de revient", "prix de vente", "business plan", "marge commerciale"]
+},
+  "salaire": {
+  "definition": "Rémunération versée régulièrement à un dirigeant en échange de son travail, ouvrant droit à la protection sociale (maladie, retraite, prévoyance).",
+  "example": "Sophie, dirigeante de SAS, se verse un salaire mensuel de 2 000 € pour bénéficier de la sécurité sociale et constituer des droits à la retraite.",
+  "related_terms": ["protection sociale", "fiche de paie", "cotisations", "sécurité sociale", "retraite"]
+},
+  "dividende": {
+  "definition": "Somme versée à un associé à partir des bénéfices réalisés par l’entreprise, sans ouvrir de droits à la protection sociale.",
+  "example": "Marc, associé unique d’une SASU, touche un dividende en fin d’année après approbation des comptes, soumis à 30 % de prélèvements fiscaux.",
+  "related_terms": ["bénéfices", "assemblée générale", "flat tax", "prélèvements sociaux", "capital"]
+},
+  "capital_social": {
+  "definition": "Le capital social est la somme des apports effectués par les associés ou actionnaires lors de la création d'une société. Il constitue une base financière pour l'entreprise et figure dans les statuts. Il ne concerne que les sociétés (SARL, SAS, SA, etc.) et non les entreprises individuelles.",
+  "example": "Une SARL est créée avec un capital de 10 000 €, composé d’un apport en numéraire de 8 000 € et d’un ordinateur évalué à 2 000 € en nature. Les deux associés détiennent des parts sociales en proportion de leur apport.",
+  "related_terms": ["apport en numéraire", "apport en nature", "apport en industrie", "statuts", "Kbis", "créanciers", "parts sociales"],
+  "details": "Il existe trois types d’apports : en numéraire (argent versé sur un compte bloqué), en nature (matériel, brevets, etc.) et en industrie (savoir-faire, qui ne compose pas le capital). Le capital social sert à financer les débuts de l’entreprise, répartir les droits de vote, rassurer les partenaires et crédibiliser le projet. Le montant est libre pour les SARL et SAS (dès 1 €), mais doit atteindre au moins 37 000 € pour une SA. Une partie peut être versée à la création (ex. : 20 %), le reste dans les 5 ans. Une fois la société immatriculée, le capital est débloqué et utilisable pour les besoins professionnels. Il ne peut pas être transféré vers un compte personnel. Enfin, un capital trop faible peut limiter l'accès au crédit ou réduire la confiance des tiers."
+},
+  "liberation_capital_social": {
+  "definition": "La libération du capital social correspond au versement effectif des sommes promises par les associés ou actionnaires lors de la constitution d’une société. Elle peut être partielle à la création, avec un complément versé dans un délai légal.",
+  "example": "Un associé crée une SAS avec un capital social de 10 000 €. Il verse 5 000 € à la création (50 %), et s’engage à verser les 5 000 € restants dans un délai de 5 ans.",
+  "related_terms": ["capital souscrit", "capital libéré", "apport en numéraire", "apport en nature", "SARL", "SAS", "EURL", "dépôt de capital"],
+  "details": "Le pourcentage à libérer dépend de la forme juridique : 20 % minimum pour une SARL ou EURL, 50 % pour une SAS, SASU ou SA. Le reste des apports en numéraire doit être libéré dans un délai de 5 ans maximum. En revanche, les apports en nature doivent être libérés en totalité dès la création. La libération partielle permet de soulager la trésorerie des associés au démarrage, mais retarde la mise à disposition complète des fonds pour la société. Un capital totalement libéré peut offrir des avantages fiscaux (IS à taux réduit), rassurer les partenaires et renforcer la crédibilité de l’entreprise. Il est essentiel de distinguer capital souscrit (promesse) et capital libéré (effectivement versé), notamment lors de la rédaction des statuts et du dépôt de capital auprès de la banque."
+},
+  "apport_en_nature": {
+  "definition": "Un apport en nature correspond à la mise à disposition par un associé d’un bien autre que de l’argent lors de la création ou de l’augmentation de capital d’une société. Il peut s’agir d’un bien matériel, immobilier ou immatériel. En contrepartie, l’associé reçoit des parts sociales ou actions proportionnelles à la valeur de son apport.",
+  "example": "Paul apporte un local commercial qu’il possède à une SAS en échange de 40 % des actions, selon une évaluation faite par un commissaire aux apports.",
+  "related_terms": ["apport en numéraire", "apport en industrie", "capital social", "commissaire aux apports", "statuts"],
+  "details": "Les apports en nature peuvent inclure des ordinateurs, véhicules, immeubles, logiciels, marques, brevets ou encore fonds de commerce. Ces biens doivent être précisément identifiés et évalués. Lorsque la valeur dépasse certains seuils ou en présence de plusieurs apports, un commissaire aux apports peut être obligatoire pour en garantir la valeur. Contrairement aux apports en numéraire, les apports en nature doivent être totalement libérés dès la signature des statuts. La société peut recevoir selon les cas la pleine propriété, la jouissance ou l’usufruit du bien. Tous les détails (valeur, nature, contrepartie en parts) doivent figurer dans les statuts. L’apport en nature permet aux associés de contribuer à la société sans mobiliser de trésorerie, tout en mettant à disposition des ressources stratégiques dès le lancement."
+},
+  "apport_en_compte_courant": {
+  "definition": "L’apport en compte courant d’associé est une avance de fonds, comparable à un prêt, qu’un associé ou un dirigeant fait à sa société pour lui permettre de disposer de trésorerie supplémentaire sans modifier son capital social.",
+  "example": "Julie, associée dans une SARL, verse 20 000 € à l’entreprise via un apport en compte courant pour couvrir un besoin de trésorerie urgent. Cette somme ne modifie pas son pourcentage de capital et lui sera remboursée dès que possible.",
+  "related_terms": ["capital social", "apport en numéraire", "apport en nature", "prêt d’associé", "convention de compte courant"],
+  "details": "Contrairement à un apport au capital, l’apport en compte courant n’ouvre aucun droit supplémentaire (ni actions, ni parts sociales) et ne modifie pas la répartition du capital. Il est enregistré au passif du bilan comptable sous forme de dette de la société envers l’associé. Ce type d’apport est souvent utilisé pour financer un besoin ponctuel (investissement, démarrage, imprévu) sans passer par une augmentation de capital, ce qui en fait un outil souple et rapide. Il peut être rémunéré par des intérêts si une convention le prévoit, ou laissé gratuitement à disposition. L’associé peut demander son remboursement à tout moment, sauf si une clause ou une convention de blocage temporaire a été signée. C’est une solution temporaire pour renforcer la trésorerie d’une société, souvent utilisée dans les jeunes entreprises ou en cas de besoin de financement immédiat."
+},
+  "apport_progressif": {
+  "definition": "Un apport progressif désigne un apport réalisé en plusieurs fois, sur une période donnée. Il concerne principalement la libération échelonnée du capital social pour les apports en numéraire, ou les apports en industrie (compétences, savoir-faire) qui se concrétisent dans le temps.",
+  "example": "Lors de la création d'une SARL avec un capital de 10 000 €, les associés ne versent que 2 000 € à la création. Le solde de 8 000 € est apporté progressivement dans les années suivantes. Un autre associé apporte son expertise en informatique de manière continue : c’est un apport en industrie, donc progressif par nature.",
+  "related_terms": ["capital social", "apport en numéraire", "apport en industrie", "libération de capital", "transmission d'entreprise"],
+  "details": "Dans les sociétés comme les SARL ou SAS, la loi autorise à ne libérer qu’une partie du capital à la création (20 % pour les SARL, 50 % pour les SAS), le reste pouvant être apporté dans un délai maximal de 5 ans. Cela permet aux associés de ne pas mobiliser toute la trésorerie immédiatement. L’apport en industrie est un autre cas typique d’apport progressif : il correspond à la mise à disposition d’un savoir-faire ou d’un travail dans la durée. Ce type d’apport ne figure pas dans le capital social mais donne lieu à l’attribution de parts sociales spécifiques. Il existe aussi des cas plus rares d’apports progressifs dans le cadre de transmissions d’entreprises, notamment lors d’un apport partiel d’actif ou d’un pacte Dutreil aménagé. Dans tous les cas, l’aspect progressif repose sur un engagement contractuel précis et documenté entre l’associé et la société."
+},
+  
+  "cession_partielle": {
+  "definition": "La cession partielle dans le cadre d’un LBO (Leverage Buy-Out) consiste à vendre une partie du capital d’une entreprise à un investisseur, via une holding qui s’endette pour financer l’acquisition. Le dirigeant reste souvent actionnaire et opérationnel.",
+  "example": "Un dirigeant cède 60 % de ses parts à une holding de LBO et conserve 40 %, participant ainsi à la croissance future de l’entreprise tout en sécurisant une partie de son patrimoine.",
+  "related_terms": ["LBO", "cession", "holding", "effet de levier", "investisseur financier", "sortie en deux temps"]
+},
+    "acre": {
+        "titre": "ACRE : Aide à la Création ou à la Reprise d’Entreprise",
+        "definition": "L’ACRE est une exonération partielle ou totale de certaines cotisations sociales pendant la première année d’activité, visant à faciliter la création ou la reprise d’entreprise en France.",
+        "objectif": [
+            "Réduire les charges sociales au démarrage",
+            "Améliorer la trésorerie du créateur ou repreneur",
+            "Favoriser l'installation durable de nouvelles entreprises"
+        ],
+        "nature_de_l_aide": [
+            "Exonération partielle de cotisations sociales : maladie, maternité, invalidité, décès, allocations familiales, retraite de base",
+            "Exclusion de certaines cotisations : CSG-CRDS, retraite complémentaire, formation professionnelle"
+        ],
+        "modalites": [
+            "Pour les sociétés classiques : attribution automatique si les conditions sont remplies",
+            "Pour les micro-entrepreneurs : demande obligatoire à la création, via l’Urssaf"
+        ],
+        "eligibilite_generale": [
+            "Créer ou reprendre une entreprise en France",
+            "Exercer le contrôle effectif de l’entreprise",
+            "Ne pas avoir bénéficié de l’ACRE au cours des 3 dernières années"
+        ],
+        "controle_effectif_société": [
+            "Détenir plus de 50 % du capital seul ou avec proches (dont 35 % à titre personnel)",
+            "Ou être dirigeant avec plus de 33 % du capital (dont 25 % personnel), aucun autre associé ne doit détenir plus de 50 %"
+        ],
+        "plafond_de_revenus": [
+            "Exonération totale si revenu < 75 % du PASS",
+            "Exonération dégressive entre 75 % et 100 % du PASS",
+            "Pas d’exonération si revenu > 100 % du PASS"
+        ],
+        "cas_micro_entrepreneurs": [
+            "Demandeur d’emploi indemnisé ou non (6 mois sur 18)",
+            "Âgé de 18 à 26 ans (ou jusqu’à 30 ans avec handicap)",
+            "Bénéficiaire du RSA, ASS ou PreParE",
+            "Résident en QPV",
+            "Signataire d’un CAPE",
+            "Ne pas avoir eu l’ACRE dans les 3 dernières années"
+        ],
+        "utilite": [
+            "Réduction significative des charges sociales au démarrage",
+            "Souplesse pour les micro-entrepreneurs en situation précaire",
+            "Facilite l’investissement des premiers mois d’activité"
+        ],
+        "points_cles": [
+            "L’exonération est temporaire (1 an en général)",
+            "Certaines cotisations restent dues (retraite complémentaire, CSG-CRDS)",
+            "Le dispositif ne peut être accordé qu’une fois tous les trois ans",
+            "Le non-respect du contrôle effectif entraîne la perte du bénéfice"
+        ],
+        "resume": "L’ACRE permet au créateur ou repreneur d’entreprise de réduire ses charges sociales durant la première année, sous conditions de contrôle effectif et de plafond de revenus. Pour les micro-entrepreneurs, la demande est à effectuer à la création, avec des critères sociaux spécifiques.",
+        "source": "https://www.service-public.fr/particuliers/vosdroits/F11677"
+    },
+  "jeune_entreprise_innovante": [
   {
-  "moteur-de-decision": {
-    "definition": "Système d'analyse qui traite les réponses d'un questionnaire pour suggérer automatiquement les meilleurs choix ou statuts juridiques adaptés.",
-    "example": "Le moteur de décision du questionnaire 2025 propose une SASU à un entrepreneur souhaitant protection sociale maximale et souplesse de gouvernance.",
-    "related_terms": ["filtre-d-exclusion", "scoring-pondere", "audit-trail"]
-  },
-  "filtre-d-exclusion": {
-    "definition": "Mécanisme qui élimine automatiquement certaines options ou statuts qui ne correspondent pas aux critères de base définis par l'utilisateur.",
-    "example": "Un candidat de moins de 18 ans est exclu de toutes formes de sociétés commerciales grâce au filtre d'exclusion.",
-    "related_terms": ["moteur-de-decision", "scoring-pondere"]
-  },
-  "scoring-pondere": {
-    "definition": "Méthode de notation qui évalue plusieurs critères avec des poids différents pour hiérarchiser les options proposées.",
-    "example": "Le scoring pondéré favorise un statut offrant une meilleure protection du patrimoine si cette priorité est mise en premier par l'utilisateur.",
-    "related_terms": ["moteur-de-decision", "priorisation-des-objectifs"]
-  },
-  "audit-trail": {
-    "definition": "Système d'enregistrement qui conserve la trace de toutes les décisions automatiques prises par l'outil pour garantir la transparence.",
-    "example": "Chaque exclusion de statut est enregistrée dans un audit trail pour pouvoir justifier les propositions faites à l'utilisateur.",
-    "related_terms": ["moteur-de-decision", "traçabilité", "filtre-d-exclusion"]
-  },
-  "instruments-d-interessement": {
-    "definition": "Dispositifs permettant d'associer les salariés ou dirigeants aux résultats de l'entreprise via des actions ou bons.",
-    "example": "Une startup distribue des BSPCE à ses employés comme instrument d'intéressement pour les fidéliser.",
-    "related_terms": ["bspce", "aga", "stock-options", "partage de valeur"]
-  },
-  "age-moins-18-ans": {
-    "definition": "Situation juridique où une personne n'ayant pas atteint 18 ans ne peut pas librement créer ou diriger une société commerciale.",
-    "example": "Un jeune de 17 ans souhaitant créer une entreprise devra attendre sa majorité ou passer par une tutelle.",
-    "related_terms": ["majorité légale", "capacite-juridique"]
-  },
-  "horizon-projet": {
-    "definition": "Durée prévue pour le développement ou la réalisation du projet entrepreneurial, souvent court, moyen ou long terme.",
-    "example": "Un entrepreneur visant une revente rapide en 2 ans indique un horizon projet court terme.",
-    "related_terms": ["business plan", "strategie de sortie"]
-  },
-  "appetence-au-risque": {
-    "definition": "Disposition personnelle d'un entrepreneur à accepter des risques financiers et juridiques dans son projet.",
-    "example": "Un porteur de projet avec une faible appétence au risque privilégiera une SASU pour limiter sa responsabilité.",
-    "related_terms": ["responsabilite-limitee", "statut-juridique"]
-  },
-  "clause-d-agrement": {
-    "definition": "Clause des statuts d'une société qui impose l'accord des associés avant qu'un actionnaire puisse céder ses titres à un tiers.",
-    "example": "Dans une SARL, une clause d'agrément empêche un associé de vendre ses parts sans l'accord des autres.",
-    "related_terms": ["cession-de-parts", "statuts-sociaux", "pacte-d-associes"]
-  },
-  "clause-de-preemption": {
-    "definition": "Clause permettant aux associés d'acheter en priorité les parts d'un associé souhaitant les céder.",
-    "example": "En SAS, la clause de préemption permet aux associés existants de racheter des actions avant leur vente à des tiers.",
-    "related_terms": ["clause-d-agrement", "pacte-d-associes", "cession-de-parts"]
-  },
-  "business-angels": {
-    "definition": "Investisseurs individuels qui financent des startups en échange de parts de capital, tout en apportant leur expérience.",
-    "example": "Une startup lève 200 000€ auprès de trois business angels pour accélérer son développement commercial.",
-    "related_terms": ["levee-de-fonds", "capital-risque", "crowdfunding"]
-  },
-  "venture-capital": {
-    "definition": "Investissement en capital par des fonds spécialisés dans des entreprises innovantes à fort potentiel de croissance.",
-    "example": "Une biotech obtient 3 millions d'euros auprès d'un fonds de venture capital pour financer ses recherches.",
-    "related_terms": ["levee-de-fonds", "business-angels", "startup"]
-  },
-  "crowdfunding": {
-    "definition": "Mode de financement participatif permettant à un grand nombre de personnes d'investir de petites sommes dans un projet.",
-    "example": "Une marque de vêtements écoresponsables finance sa première collection grâce à une campagne de crowdfunding.",
-    "related_terms": ["levee-de-fonds", "financement-participatif", "plateformes-crowdfunding"]
-  },
-  "bic": {
-    "definition": "Bénéfices Industriels et Commerciaux : revenus générés par les activités commerciales, industrielles ou artisanales.",
-    "example": "Un boulanger déclare ses revenus professionnels en BIC dans sa déclaration de revenus.",
-    "related_terms": ["bénéfices", "activités commerciales", "impot-sur-le-revenu"]
-  },
-  "bnc": {
-    "definition": "Bénéfices Non Commerciaux : revenus issus d'activités libérales ou intellectuelles non commerciales.",
-    "example": "Un avocat exerçant en indépendant déclare ses revenus sous la catégorie BNC.",
-    "related_terms": ["professions-liberales", "impot-sur-le-revenu", "bic"]
-  },
-  "activite-reglementee": {
-    "definition": "Activité encadrée par des règles spécifiques nécessitant parfois des diplômes, des agréments ou des autorisations particulières.",
-    "example": "L'activité de notaire est une activité réglementée nécessitant un diplôme d'État et une nomination officielle.",
-    "related_terms": ["inscription-a-un-ordre", "agrement-specifique", "professions-reglementees"]
-  },
-  "inscription-a-un-ordre": {
-    "definition": "Obligation pour certains professionnels (médecins, avocats, experts-comptables...) de s'inscrire auprès de leur ordre professionnel.",
-    "example": "Un expert-comptable doit être inscrit à l'Ordre des Experts-Comptables pour exercer légalement.",
-    "related_terms": ["activite-reglementee", "ordre-professionnel", "reglementation"]
-  },
-  "agrement-specifique": {
-    "definition": "Autorisation administrative obligatoire pour exercer certaines activités sensibles ou réglementées (ex : finance, santé).",
-    "example": "Une entreprise d'investissement doit obtenir l'agrément AMF avant de proposer des services financiers.",
-    "related_terms": ["activite-reglementee", "inscription-a-un-ordre", "regulation-sectorielle"]
-  },
-  "caution-bancaire": {
-    "definition": "Garantie financière fournie par une banque pour sécuriser un prêt ou une obligation contractuelle.",
-    "example": "Un entrepreneur obtient une caution bancaire de 50 000€ pour garantir un prêt professionnel.",
-    "related_terms": ["garantie", "pret-professionnel", "financement"]
-  },
-  {
-  "levee-de-fonds": {
-    "definition": "Processus par lequel une entreprise obtient des financements externes, généralement en échange de parts de capital.",
-    "example": "La startup lève 1 million d’euros auprès de business angels pour financer sa R&D.",
-    "related_terms": ["capital-investissement", "business-angels", "venture-capital", "crowdfunding"]
-  },
-  "capital-social": {
-    "definition": "Montant total des apports effectués par les associés ou actionnaires lors de la création de la société.",
-    "example": "Les fondateurs apportent 10 000€ chacun pour constituer le capital social de leur SARL.",
-    "related_terms": ["apport-en-nature", "parts-sociales", "liberation-de-capital"]
-  },
-  "apport-en-nature": {
-    "definition": "Apport d’un bien autre que de l’argent à une société (ex. : matériel, brevet, véhicule), évalué et intégré au capital.",
-    "example": "Un associé apporte une voiture professionnelle d’une valeur de 8 000€ à une SAS.",
-    "related_terms": ["capital-social", "commissaire-aux-apports", "valorisation"]
-  },
-  "apport-en-compte-courant": {
-    "definition": "Somme d’argent prêtée à la société par un associé, remboursable selon la trésorerie de l’entreprise.",
-    "example": "Un associé prête 15 000€ à la société en compte courant pour couvrir un besoin temporaire.",
-    "related_terms": ["financement-interne", "associé", "remboursement"]
-  },
-  "apport-progressif": {
-    "definition": "Possibilité d’apporter le capital social en plusieurs fois, selon les modalités prévues par les statuts.",
-    "example": "Les associés d’une SAS versent 50% du capital à la création, puis le reste sur deux ans.",
-    "related_terms": ["liberation-de-capital", "capital-social", "statuts"]
-  },
-  "holding": {
-    "definition": "Société qui détient des participations dans d'autres sociétés afin de les contrôler ou d’optimiser leur gestion.",
-    "example": "Un entrepreneur crée une holding pour regrouper ses deux entreprises sous une même structure juridique et financière.",
-    "related_terms": ["filiale", "groupe", "integrations-fiscale", "optimisation"]
-  },
-  "integration-fiscale": {
-    "definition": "Régime permettant à une société mère (holding) de consolider fiscalement les résultats de ses filiales.",
-    "example": "La holding Caméléons opte pour l’intégration fiscale afin de compenser les pertes d’une filiale par les bénéfices d’une autre.",
-    "related_terms": ["is", "groupe", "optimisation-fiscale"]
-  },
-  "option-is-pour-eurl-ei": {
-    "definition": "Possibilité pour une entreprise individuelle ou une EURL d’opter pour l’Impôt sur les Sociétés (IS) au lieu de l’IR.",
-    "example": "Un consultant en EURL opte pour l’IS afin de mieux contrôler sa fiscalité et se verser des dividendes.",
-    "related_terms": ["ir", "is", "eurl", "optimisation-fiscale"]
-  },
-  "projection-pluriannuelle": {
-    "definition": "Prévision financière sur plusieurs années, souvent utilisée dans les business plans pour anticiper la rentabilité.",
-    "example": "L’entrepreneur prévoit un chiffre d’affaires de 100k€ en année 1, 150k€ en année 2, 200k€ en année 3.",
-    "related_terms": ["business-plan", "previsionnel", "ca-previsionnel"]
-  },
-  "prevoyance-retraite": {
-    "definition": "Dispositif de protection sociale qui couvre l’invalidité, le décès et la retraite du dirigeant ou de l’indépendant.",
-    "example": "Le gérant d’EURL souscrit une prévoyance pour garantir un revenu en cas d’arrêt de travail.",
-    "related_terms": ["tns", "assureur", "retraite-complementaire"]
-  },
-  "transmission": {
-    "definition": "Processus par lequel une entreprise ou des parts sociales sont transmises à un repreneur ou à des héritiers.",
-    "example": "Un dirigeant prépare la transmission de sa société à ses enfants via un pacte Dutreil.",
-    "related_terms": ["cession", "donation", "succession", "reprise"]
-  },
-  "donation-succession": {
-    "definition": "Transfert de propriété à titre gratuit d’une entreprise ou de parts sociales, soit du vivant (donation), soit après décès (succession).",
-    "example": "Un père transmet à son fils ses parts dans une SCI via une donation avec réserve d’usufruit.",
-    "related_terms": ["transmission", "pacte-dutreil", "droits-de-succession"]
-  },
-  "lbo": {
-    "definition": "Technique de rachat d'entreprise financée en grande partie par de la dette, souvent utilisée lors de transmissions ou de cessions.",
-    "example": "Le repreneur rachète l’entreprise via un LBO financé par une banque et adosse la dette à la société cible.",
-    "related_terms": ["rachat", "cession", "earn-out", "private-equity"]
-  },
-  "earn-out": {
-    "definition": "Mécanisme de complément de prix dans une cession d’entreprise, basé sur les résultats futurs de la société.",
-    "example": "Le cédant reçoit 200k€ à la signature, plus 100k€ si le CA dépasse 500k€ dans 2 ans.",
-    "related_terms": ["cession", "lbo", "valorisation", "accord-de-sortie"]
-  },
-  "projection-micro-vs-reel": {
-    "definition": "Comparaison financière entre le régime micro-entreprise (forfaitaire) et le régime réel (frais réels déductibles).",
-    "example": "Le simulateur montre qu’à partir de 80 000€ de CA, le régime réel devient plus avantageux que le micro.",
-    "related_terms": ["micro-entreprise", "ca-previsionnel", "fiscalite"]
-  },
-  "regime-tva": {
-    "definition": "Régime d’imposition qui détermine comment la TVA est collectée, déclarée et payée selon le chiffre d’affaires.",
-    "example": "Une TPE choisit le régime réel simplifié pour bénéficier d’un rythme de déclaration semestriel.",
-    "related_terms": ["franchise-en-base", "tva", "regime-reel"]
-  },
-  "zone-zrr": {
-    "definition": "Zone de Revitalisation Rurale offrant des avantages fiscaux aux entreprises qui s’y implantent.",
-    "example": "Une micro-crèche s’implante en ZRR pour bénéficier d’exonérations d’impôt sur les bénéfices pendant 5 ans.",
-    "related_terms": ["zfu", "aides-publiques", "implantation"]
-  },
-  "zone-qpv": {
-    "definition": "Quartier Prioritaire de la Politique de la Ville, où les entreprises peuvent bénéficier d’aides ou exonérations sociales.",
-    "example": "Une auto-école s’installe en QPV pour bénéficier d’exonérations de cotisations sociales durant 5 ans.",
-    "related_terms": ["zfu", "aides-publiques", "politique-de-la-ville"]
-  },
-  "projection-bonus-micro-neutralise": {
-    "definition": "Correction automatique qui supprime l’avantage du statut micro si la fiscalité est défavorable ou si le chiffre d’affaires dépasse les seuils.",
-    "example": "Un utilisateur avec 90k€ de CA et une fiscalité élevée se voit proposer un régime réel malgré un profil micro.",
-    "related_terms": ["ca-previsionnel", "filtre-d-exclusion", "scoring-pondere"]
-  },{
-  "priorisation-des-objectifs": {
-    "definition": "Étape consistant à classer les objectifs du porteur de projet (fiscalité, protection, simplicité…) pour orienter le choix du statut.",
-    "example": "L'utilisateur glisse en priorité 'Protection du patrimoine' et 'Prévoyance', influençant le moteur de décision vers des statuts sécurisants.",
-    "related_terms": ["scoring-pondere", "moteur-de-decision", "objectifs"]
-  },
-  "simplicite-administrative": {
-    "definition": "Critère mesurant la facilité de gestion d’un statut : déclarations, charges, tenue comptable, etc.",
-    "example": "Une micro-entreprise est choisie pour sa simplicité administrative par un freelance débutant.",
-    "related_terms": ["statut-juridique", "micro-entreprise", "cout-comptable"]
-  },
-  "cout-comptable": {
-    "definition": "Montant des frais liés à la tenue de la comptabilité et à l'accompagnement administratif de l'entreprise.",
-    "example": "Un auto-entrepreneur n’a pas besoin d’expert-comptable, contrairement à une SAS.",
-    "related_terms": ["comptabilite", "statut-juridique", "simplification"]
-  },
-  "souplesse-de-gouvernance": {
-    "definition": "Degré de liberté dont disposent les dirigeants pour organiser le fonctionnement de la société (statuts, pouvoirs, décisions).",
-    "example": "La SAS est réputée pour sa grande souplesse de gouvernance, permettant une organisation sur-mesure.",
-    "related_terms": ["gouvernance", "statuts", "sas"]
-  },
-  "gouvernance": {
-    "definition": "Ensemble des règles et pratiques encadrant la gestion, les décisions et la répartition des pouvoirs dans une société.",
-    "example": "Dans une SARL, la gouvernance est encadrée par la loi, contrairement à la SAS plus libre.",
-    "related_terms": ["souplesse-de-gouvernance", "dirigeant", "statuts"]
-  },
-  "previsionnel-financier": {
-    "definition": "Document chiffré prévoyant les recettes, dépenses, investissements et besoins de financement d’un projet sur plusieurs années.",
-    "example": "Le prévisionnel financier permet d’anticiper la rentabilité du projet et d’ajuster le choix du statut fiscal.",
-    "related_terms": ["business-plan", "projection-pluriannuelle", "ca-previsionnel"]
-  },
-  "assureur-prevoyance": {
-    "definition": "Organisme auprès duquel un dirigeant peut souscrire une protection complémentaire (invalidité, décès, retraite).",
-    "example": "Un TNS choisit un assureur pour couvrir sa perte de revenus en cas d’arrêt de travail prolongé.",
-    "related_terms": ["prevoyance-retraite", "tns", "mutuelle"]
-  },
-  "associe-unique": {
-    "definition": "Personne seule fondatrice et détentrice de 100 % du capital dans certaines formes juridiques (EURL, SASU).",
-    "example": "Le fondateur de la SASU est l’associé unique et cumule les pouvoirs de décision.",
-    "related_terms": ["eurl", "sasu", "entrepreneur-individuel"]
-  },
-  "president": {
-    "definition": "Dirigeant légal d'une SAS ou SASU, représentant la société auprès des tiers et en interne.",
-    "example": "Le président d'une SAS signe les contrats, représente la société et peut déléguer certains pouvoirs.",
-    "related_terms": ["sas", "assimilé-salarié", "gouvernance"]
-  },
-  "gérant": {
-    "definition": "Dirigeant légal d'une SARL ou EURL, pouvant être majoritaire, égalitaire ou minoritaire selon sa part dans le capital.",
-    "example": "Le gérant majoritaire d’une SARL est affilié au régime TNS.",
-    "related_terms": ["sarl", "tns", "gerant-majoritaire", "gerant-minoritaire"]
-  },
-  {
-  "regime-reel": {
-    "definition": "Régime fiscal dans lequel l'entreprise déduit ses charges réelles de son chiffre d'affaires et paie l'impôt sur le bénéfice réel, avec une comptabilité complète obligatoire.",
-    "example": "Un consultant en SAS opte pour le régime réel et déduit ses loyers, frais de déplacement et achats de matériel de ses recettes.",
-    "related_terms": ["tva", "comptabilite", "deductions-fiscales", "regime-fiscal"]
-  },
-  "franchise-en-base-de-tva": {
-    "definition": "Régime exonérant les petites entreprises de la collecte et du paiement de la TVA tant que leur chiffre d'affaires reste sous certains seuils.",
-    "example": "Un micro-entrepreneur prestataire de services bénéficie de la franchise en base et ne facture pas de TVA à ses clients.",
-    "related_terms": ["tva", "regime-reel", "seuils-tva", "facturation"]
-  },
-  "regime-reel-simplifie": {
-    "definition": "Régime intermédiaire où l'entreprise est au régime réel pour la TVA et l'impôt, mais avec des obligations comptables allégées (déclarations semestrielles).",
-    "example": "Un commerçant au régime réel simplifié déclare sa TVA tous les six mois au lieu de chaque mois.",
-    "related_terms": ["tva", "regime-reel", "obligations-comptables"]
-  },
-  "cotisations-sociales": {
-    "definition": "Contributions obligatoires versées par les travailleurs pour financer la protection sociale (retraite, santé, chômage, etc.).",
-    "example": "Un gérant de SARL verse chaque trimestre ses cotisations sociales à l'URSSAF pour sa protection santé et retraite.",
-    "related_terms": ["tns", "assimilé-salarié", "urssaf", "charges-sociales"]
-  },
-  "are": {
-    "definition": "L'Allocation de Retour à l'Emploi (ARE) est une aide financière versée par Pôle Emploi aux demandeurs d'emploi, parfois maintenue partiellement en cas de création d'entreprise.",
-    "example": "Un demandeur d’emploi créant son entreprise peut cumuler l’ARE avec ses premiers revenus d’activité.",
-    "related_terms": ["pole-emploi", "arce", "acre", "aide-entrepreneur"]
-  },
-  "dividendes": {
-    "definition": "Revenus distribués aux associés ou actionnaires d'une société, issus des bénéfices réalisés après impôt.",
-    "example": "Après avoir clôturé l’exercice avec un bénéfice net, la SAS verse des dividendes à son associé unique.",
-    "related_terms": ["distribution-de-benefices", "is", "pfu", "revenus-du-capital"]
-  },
-  "commissaire-aux-apports": {
-    "definition": "Professionnel indépendant chargé d’évaluer la valeur des apports en nature faits à une société lors de sa création ou d’une augmentation de capital.",
-    "example": "Une startup faisant un apport en brevet d'une valeur estimée à 50 000€ doit faire intervenir un commissaire aux apports.",
-    "related_terms": ["apport-en-nature", "capital-social", "creation-d-entreprise", "evaluation"]
-  },
-  "protection-du-patrimoine": {
-    "definition": "Mécanismes permettant de séparer les biens personnels de ceux de l’entreprise afin de limiter les risques en cas de difficultés financières.",
-    "example": "En créant une SAS, l’entrepreneur limite sa responsabilité aux apports en capital, protégeant ainsi son patrimoine personnel.",
-    "related_terms": ["responsabilite-limitee", "eirl", "ei", "societe"]
-  },
-  "apport-en-compte-courant-d-associe": {
-    "definition": "Prêt consenti par un associé à la société pour financer temporairement son activité, pouvant être remboursé sous conditions.",
-    "example": "Un associé avance 20 000€ en compte courant pour financer une embauche urgente avant une levée de fonds.",
-    "related_terms": ["financement-interne", "tresorerie", "remboursement", "capital-social"]
-  },
-  "prevoyance": {
-    "definition": "Contrats complémentaires permettant de couvrir les aléas de la vie professionnelle : arrêt de travail, invalidité, décès.",
-    "example": "Un gérant TNS souscrit une prévoyance pour recevoir une indemnité journalière en cas d'arrêt maladie.",
-    "related_terms": ["prevoyance-retraite", "assurance", "protection-sociale", "tns"]
+    "definition": "Statut fiscal et social pour les entreprises de moins de 8 ans investissant au moins 20% de leurs charges en R&D.",
+    "conditions": {
+      "age_max": "8 ans",
+      "taille": "Moins de 250 salariés, CA < 50 M€, bilan < 43 M€",
+      "capital": "Détenu à 50 % par personnes physiques ou structures qualifiées",
+      "r_d": "Au moins 20 % des charges déductibles",
+      "autres": "Être indépendante, non cotée, soumise à l'IS, basée dans l'EEE"
+    },
+    "avantages": {
+      "urssaf": "Réduction de 50 % des charges patronales sur salaires R&D",
+      "is": "Exonération totale (1er exercice), 50 % (2e) - supprimée après 01/01/2024",
+      "fonciere": "Exonération de CFE et de taxe foncière",
+      "cir": "Facilite l'accès au Crédit d'Impôt Recherche"
+    },
+    "source": "https://entreprendre.service-public.fr/vosdroits/F31188"
   }
+],
+"credit_impot_recherche": [
+  {
+    "definition": "Dispositif fiscal permettant aux entreprises de bénéficier d’un crédit d’impôt proportionnel à leurs dépenses de R&D.",
+    "conditions": {
+      "entreprise": "Industrielle, commerciale ou agricole, régime réel IS ou IR",
+      "taille": "Moins de 250 salariés, CA < 50 M€, bilan < 43 M€",
+      "r_d": "Projet visant à lever une incertitude technique, technicité supérieure au savoir-faire commun"
+    },
+    "depenses_eligibles": [
+      "Salaires du personnel de R&D",
+      "Amortissements",
+      "Frais de brevets",
+      "Sous-traitance R&D"
+    ],
+    "source": "https://entreprendre.service-public.fr/vosdroits/F23533"
+  }
+],
+
+  "credit_impot_innovation": [
+  {
+    "definition": "Crédit d’impôt complémentaire au CIR pour les PME innovantes développant ou améliorant des produits.",
+    "conditions": {
+      "entreprise": "PME, régime réel",
+      "taille": "Moins de 250 salariés, CA < 50 M€, bilan < 43 M€",
+      "projet": "Développement ou amélioration significative de produits originaux ou inventifs"
+    },
+    "depenses_eligibles": [
+      "Salaires liés à l'innovation",
+      "Sous-traitance",
+      "Propriété industrielle"
+    ],
+    "taux": "30 % des dépenses éligibles engagées à partir de 2023",
+    "source": "https://entreprendre.service-public.fr/vosdroits/F35494"
+  }
+],
+  "revente_entreprise_holding": {
+  "definition": "La revente d'une entreprise détenue à 100 % par une holding correspond à une opération dans laquelle la société holding cède les titres de sa filiale. Les fonds issus de cette vente remontent dans la holding, sans passage direct par la personne physique associée.",
+  "example": "Vous êtes associé unique d'une holding qui détient une société opérationnelle. La holding revend cette société à un tiers pour 5 millions d'euros. Ces 5 millions sont perçus directement par la holding, sans fiscalité immédiate pour vous.",
+  "etapes": [
+    "La holding vend les titres de la société qu’elle détient",
+    "La plus-value est calculée et bénéficie d’un régime fiscal réduit si les titres sont détenus depuis plus de deux ans",
+    "Les fonds sont conservés dans la holding",
+    "Possibilité de réinvestir pour bénéficier du régime de report d’imposition (apport-cession)",
+    "Utilisation possible pour investir, rembourser des dettes, ou verser des dividendes"
+  ],
+  "avantages": [
+    "Fiscalité optimisée : seulement 12 % de la plus-value soumise à l'impôt sur les sociétés",
+    "Capacité de réinvestissement importante dans d’autres projets",
+    "Souplesse dans la gestion du patrimoine professionnel",
+    "Possibilité de différer la fiscalité personnelle via le mécanisme d’apport-cession",
+    "Protection du patrimoine personnel grâce à la structure juridique de la holding"
+  ],
+  "conditions_fiscales": {
+    "duree_detention": "Titres détenus depuis plus de deux ans pour bénéficier de la quote-part de 12 %",
+    "report_imposition": "Réinvestissement d’au moins 60 % du produit de la cession dans les deux ans dans des actifs éligibles",
+    "dividendes": "Distribution possible mais fiscalisée au niveau personnel"
+  },
+  "utilisation_fonds": [
+    "Investissement dans d’autres sociétés ou projets",
+    "Développement d’activités connexes ou immobilières",
+    "Remboursement des dettes éventuelles de la holding",
+    "Versement de dividendes (soumis à fiscalité pour les associés)"
+  ],
+  "impact": "La revente via la holding permet de maîtriser le calendrier fiscal, de sécuriser les gains, et de structurer un patrimoine professionnel de manière flexible. Elle offre également des perspectives de développement pour d’autres activités sans imposition immédiate au niveau personnel."
+};
+  "integration_fiscale_groupe": {
+  "definition": "L’intégration fiscale est un dispositif permettant à un groupe de sociétés, constitué d’une société mère (souvent une holding) et de ses filiales, de consolider leurs résultats fiscaux pour ne payer qu’un seul impôt sur les sociétés sur le résultat global du groupe.",
+  "example": "Une holding détient à 100 % deux sociétés : l’une est déficitaire, l’autre bénéficiaire. Grâce à l’intégration fiscale, le déficit de l’une compense le bénéfice de l’autre, réduisant ainsi l’impôt global du groupe.",
+  "fonctionnement": [
+    "Chaque société du groupe calcule son résultat fiscal séparément",
+    "La société mère centralise les résultats (bénéfices et pertes)",
+    "Un résultat fiscal unique est établi pour le groupe",
+    "Un seul paiement d’impôt sur les sociétés est effectué par la société mère"
+  ],
+  "avantages": [
+    "Compensation immédiate des bénéfices et pertes entre filiales",
+    "Réduction globale de l’impôt à payer",
+    "Neutralisation fiscale des dividendes intragroupe (hors quote-part de frais et charges)",
+    "Simplification : une seule déclaration fiscale pour tout le groupe"
+  ],
+  "conditions": [
+    "La société mère doit détenir au moins 95 % du capital de chaque filiale intégrée",
+    "Option pour l’intégration fiscale valable pour 5 ans, renouvelable",
+    "Accord écrit de toutes les sociétés intégrées",
+    "Résidence fiscale en France des sociétés intégrées (sauf cas particuliers)"
+  ],
+  "inconvenients": [
+    "Procédures administratives plus lourdes",
+    "Obligations de reporting fiscal plus complexes",
+    "Suivi rigoureux exigé chaque année"
+  ],
+  "mise_en_place": [
+    "Analyse préalable de la structure de détention",
+    "Signature d'une convention d'intégration entre la mère et les filiales",
+    "Dépôt de l’option auprès de l’administration fiscale avec pièces justificatives",
+    "Déclaration consolidée de l’impôt sur les sociétés par la holding"
+  ],
+  "impact": "L’intégration fiscale permet une optimisation fiscale immédiate et stratégique, en centralisant l’imposition au niveau du groupe, tout en sécurisant la trésorerie et facilitant la croissance des filiales sous le pilotage d’une société mère."
+},
+  import json
+
+# JSON structuration without separate "comparatif" section
+niveaux_comptabilite = {
+  "niveaux_comptabilite": {
+    "comptabilite_simple": {
+      "nom": "Comptabilité de trésorerie",
+      "pour_qui": "Micro-entreprises, BNC, petites structures sous certains régimes fiscaux",
+      "principe": "Enregistrement uniquement des flux d'encaissement et de décaissement, les dettes et créances ne sont pas suivies en temps réel.",
+      "avantages": [
+        "Simplicité",
+        "Gain de temps",
+        "Moins de formalités administratives"
+      ],
+      "obligations": [
+        "Tenue d’un livre des recettes",
+        "Registre des achats (parfois)"
+      ],
+      "exemple": "Une vente est comptabilisée uniquement au moment de l’encaissement, et non à la facturation.",
+      "inconvenients": [
+        "Vision moins précise",
+        "Pas adaptée à une croissance rapide"
+      ]
+    },
+    "comptabilite_moderee": {
+      "nom": "Comptabilité sans TVA (franchise en base)",
+      "pour_qui": "Entreprises sous le seuil de TVA (micro-entreprises, petites sociétés)",
+      "principe": "Pas de TVA collectée ni déduite. Les factures portent la mention : 'TVA non applicable, art. 293 B du CGI'.",
+      "avantages": [
+        "Pas de déclaration ou paiement de TVA",
+        "Moins de charge administrative"
+      ],
+      "limites": [
+        "Impossible de récupérer la TVA sur les achats professionnels"
+      ],
+      "exemple": "Une facture de 1000 € est encaissée intégralement sans TVA, aucun reversement à l'État.",
+      "inconvenients": [
+        "TVA non récupérable",
+        "Peut limiter la crédibilité auprès de partenaires B2B"
+      ]
+    },
+    "comptabilite_complete": {
+      "nom": "Comptabilité d’engagement",
+      "pour_qui": "PME, sociétés soumises au régime réel ou réel simplifié",
+      "principe": "Enregistrement des dettes et créances dès la facturation, qu’elles soient payées ou non.",
+      "avantages": [
+        "Vision financière précise",
+        "Obligatoire pour la majorité des sociétés",
+        "Anticipation des flux de trésorerie"
+      ],
+      "obligations": [
+        "Tenue d’un livre-journal et d’un grand livre",
+        "Établissement du bilan, du compte de résultat, et des annexes"
+      ],
+      "exemple": "Une facture fournisseur reçue en décembre est comptabilisée immédiatement, même si elle est payée en janvier.",
+      "inconvenients": [
+        "Plus complexe",
+        "Chronophage",
+        "Nécessite des compétences comptables ou un accompagnement"
+      ]
+    },
+    "externalite_expert_comptable": {
+      "nom": "Recours à un expert-comptable",
+      "pour_qui": "Toutes les entreprises, en particulier celles avec des obligations complexes ou un besoin de sécurisation",
+      "principe": "Délégation de la comptabilité (partielle ou totale) à un professionnel externe agréé.",
+      "avantages": [
+        "Sécurité et conformité légale",
+        "Conseils personnalisés",
+        "Gain de temps",
+        "Optimisation fiscale"
+      ],
+      "exemple": "L’expert-comptable gère la comptabilité, établit les comptes annuels, fait les déclarations fiscales, accompagne le dirigeant.",
+      "inconvenients": [
+        "Coût d’honoraires",
+        "Dépendance à un tiers pour les mises à jour comptables"
+      ]
+    },
+    "impots_is_ir": [
+  {
+    "definition": "L’impôt sur les sociétés (IS) et l’impôt sur le revenu (IR) sont deux régimes fiscaux distincts selon la forme juridique de l’entreprise. L’IS est payé par la société sur ses bénéfices, tandis que l’IR est payé directement par les associés ou l’entrepreneur sur leur part de bénéfice intégrée à leur revenu global.",
+    "example": "Une SAS réalisant 100 000 € de bénéfices paiera 15 % sur les premiers 42 500 €, puis 25 % sur le reste. Un entrepreneur individuel intégrera 40 000 € de bénéfice à son revenu personnel pour l’IR.",
+    "is": {
+      "description": "Impôt payé par les sociétés de capitaux sur les bénéfices réalisés.",
+      "taux": {
+        "reduit": "15 % jusqu’à 42 500 € de bénéfices si CA < 10 M€",
+        "normal": "25 % depuis 2022"
+      },
+      "fonctionnement": [
+        "La société calcule son bénéfice imposable",
+        "Elle paie l’impôt sur les sociétés (IS)",
+        "Le bénéfice net peut être conservé ou distribué sous forme de dividendes",
+        "Les dividendes sont ensuite imposés au niveau des associés"
+      ],
+      "statuts_concernes": ["SA", "SAS", "SARL", "SASU", "EURL à l’IS"],
+      "avantages": [
+        "Rémunération du dirigeant déductible du résultat fiscal",
+        "Taux d’imposition fixe",
+        "Permet de conserver les bénéfices en entreprise pour réinvestissement"
+      ]
+    },
+    "ir": {
+      "description": "Impôt payé par les personnes physiques sur les bénéfices réalisés par une entreprise individuelle ou une société de personnes.",
+      "fonctionnement": [
+        "Le bénéfice est ajouté aux autres revenus du foyer fiscal",
+        "Le total est soumis au barème progressif de l’impôt sur le revenu",
+        "L’entreprise ne paie pas directement d’impôt"
+      ],
+      "statuts_concernes": ["Entreprise individuelle", "Micro-entreprise", "Société civile", "SNC", "EURL à l’IR"],
+      "avantages": [
+        "Pas d’imposition au niveau de la société",
+        "Simplicité administrative",
+        "Intéressant pour les faibles revenus"
+      ]
+    },
+    "comparatif": [
+      {
+        "critere": "Qui paie l’impôt ?",
+        "is": "La société elle-même",
+        "ir": "L’entrepreneur ou les associés"
+      },
+      {
+        "critere": "Méthode d’imposition",
+        "is": "Taux fixe : 15 % (jusqu’à 42 500 €), puis 25 %",
+        "ir": "Barème progressif selon tranches"
+      },
+      {
+        "critere": "Distribution des bénéfices",
+        "is": "Dividendes imposés à l’IR",
+        "ir": "Bénéfices déjà imposés chez l’associé"
+      },
+      {
+        "critere": "Rémunération du dirigeant",
+        "is": "Déductible",
+        "ir": "Non déductible"
+      },
+      {
+        "critere": "Statuts concernés",
+        "is": "SA, SAS, SARL, SASU, EURL à l’IS",
+        "ir": "Entreprise individuelle, micro-entreprise, société de personnes"
+      }
+    ],
+    "points_cles": [
+      "Le choix entre IS et IR dépend du statut juridique et des objectifs de l’entrepreneur",
+      "L’IS est souvent privilégié pour les entreprises souhaitant réinvestir",
+      "L’IR peut être pénalisant si le foyer fiscal est déjà fortement imposé",
+      "Certains statuts permettent d’opter temporairement pour l’un ou l’autre"
+    ],
+    "impact": "Le régime choisi influence la fiscalité globale du dirigeant, la répartition du revenu imposé et les stratégies de rémunération ou de distribution. Il a aussi un effet sur la capacité à réinvestir ou à distribuer les bénéfices.",
+  }
+],
+    import json
+
+# Dictionnaires JSON individuels pour chaque concept
+
+cout_social = {
+    "cout_social": [
+        {
+            "definition": "Le coût social correspond aux charges sociales versées aux organismes sociaux pour couvrir la protection sociale des dirigeants et salariés.",
+            "application": {
+                "entrepreneur_individuel": "Cotisations sociales calculées sur le revenu professionnel.",
+                "societe": "Charges patronales sur les salaires + charges salariales déduites du brut."
+            },
+            "elements_couverts": [
+                "Sécurité sociale",
+                "Retraite",
+                "Assurance chômage",
+                "Prévoyance"
+            ],
+            "variabilité": "Selon statut (salarié, TNS, etc.) et rémunération",
+            "importance": "Doit être intégré dans le prévisionnel financier"
+        }
+    ]
+}
+
+fiscalite = {
+    "fiscalite": [
+        {
+            "definition": "La fiscalité désigne l'ensemble des impôts et taxes supportés par l'entreprise selon sa forme juridique et son régime fiscal.",
+            "types_d_impots": {
+                "IS": "Impôt sur les sociétés à 25%, avec taux réduit à 15% jusqu'à 42 500 € pour certaines PME",
+                "IR": "Impôt sur le revenu payé directement par l'entrepreneur ou les associés",
+                "TVA": "Collecte et reversement de la TVA, possibilité de déduction",
+                "CFE": "Taxe locale basée sur la valeur locative des locaux professionnels",
+                "autres": "Taxe sur les véhicules de société, droits d’enregistrement, etc."
+            },
+            "choix_regime": "Fixé lors de la création, modifiable selon l’évolution de l’activité"
+        }
+    ]
+}
+
+cout_comptable = {
+    "cout_comptable": [
+        {
+            "definition": "Le coût comptable regroupe toutes les dépenses liées à la gestion administrative et comptable de l’entreprise.",
+            "composants": {
+                "expert_comptable": "Honoraires variables selon la complexité, entre 150€ et 500€ pour la création",
+                "formalites": "Frais d’immatriculation, annonces légales, rédaction des statuts (24–226 €)",
+                "logiciels": "Coût d’un logiciel de comptabilité si gestion interne",
+                "annexes": "Dépôt de nom de domaine, domiciliation, dépôt de marque, etc."
+            },
+            "importance": "À anticiper pour garantir la conformité légale dès la création"
+        }
+    ]
+},
+"micro_vs_reel": {
+  "definition": "Le régime micro (micro-BIC ou micro-BNC) et le régime réel sont deux modes d’imposition distincts pour les entrepreneurs individuels et micro-entreprises. Le choix de l’un ou l’autre a un impact direct sur la manière de déclarer les revenus et de calculer les charges fiscales.",
+  "regime_micro": {
+    "description": "Régime simplifié d’imposition destiné aux petites entreprises avec un chiffre d’affaires limité.",
+    "seuils_CA_2024": {
+      "micro_BIC_vente": "188 700 €",
+      "micro_BIC_services": "77 700 €",
+      "micro_BNC": "77 700 €"
+    },
+    "fonctionnement": [
+      "Pas de déduction des charges réelles",
+      "Application d’un abattement forfaitaire pour frais",
+      "Calcul automatique de l’impôt sur le revenu",
+      "Pas de TVA à facturer (sauf option ou dépassement)"
+    ],
+    "abattement_forfaitaire": {
+      "vente": "71 %",
+      "services_BIC": "50 %",
+      "BNC": "34 %",
+      "minimum": "305 € d’abattement minimal dans tous les cas"
+    },
+    "avantages": [
+      "Simplicité administrative (pas de bilan, pas de comptabilité complète)",
+      "Calcul fiscal automatique",
+      "Idéal pour les faibles charges"
+    ],
+    "inconvenients": [
+      "Impossible de déduire les frais réels",
+      "Peu avantageux si les charges sont élevées",
+      "Pas de récupération de la TVA (sauf option)"
+    ]
+  },
+  "regime_reel": {
+    "description": "Régime d’imposition où l’entrepreneur déclare ses revenus réels et peut déduire l’ensemble des charges professionnelles réellement supportées.",
+    "types": ["Réel simplifié", "Réel normal"],
+    "fonctionnement": [
+      "Déclaration complète des recettes et dépenses",
+      "Déduction des charges réelles engagées (loyer, matériel, véhicule, etc.)",
+      "Comptabilité complète (livre journal, grand livre, bilan, compte de résultat)",
+      "Récupération possible de la TVA"
+    ],
+    "avantages": [
+      "Déduction précise des frais réels",
+      "Plus avantageux si les charges sont élevées",
+      "Récupération de la TVA"
+    ],
+    "inconvenients": [
+      "Obligations comptables lourdes",
+      "Coût éventuel d’un expert-comptable",
+      "Risque de contrôle fiscal plus élevé"
+    ]
+  },
+  "frais_reels": {
+    "definition": "Les frais réels sont les dépenses professionnelles réellement engagées et justifiées, déductibles uniquement dans le cadre du régime réel.",
+    "exemples": [
+      "Frais de déplacement (carburant, entretien)",
+      "Frais de repas",
+      "Location de bureau ou local",
+      "Fournitures, logiciels, assurances professionnelles"
+    ],
+    "condition": "Nécessitent une comptabilité rigoureuse et des justificatifs"
+  },
+  "abattement_forfaitaire": {
+    "definition": "Réduction automatique appliquée sur le chiffre d’affaires en régime micro, représentant les charges professionnelles moyennes.",
+    "non_personnalise": true,
+    "application": "Appliqué directement par l’administration fiscale sur la base du CA déclaré, sans déduction de frais réels."
+  },
+  "comparatif": [
+    {
+      "critere": "Calcul des charges",
+      "micro": "Abattement forfaitaire",
+      "reel": "Frais réels déductibles"
+    },
+    {
+      "critere": "Comptabilité",
+      "micro": "Allégée",
+      "reel": "Comptabilité complète"
+    },
+    {
+      "critere": "TVA",
+      "micro": "Non applicable (franchise de base)",
+      "reel": "Applicable, possibilité de récupération"
+    },
+    {
+      "critere": "Idéal pour",
+      "micro": "Petite activité avec peu de charges",
+      "reel": "Activité avec charges élevées"
+    }
+  ],
+  "points_cles": [
+    "Le régime micro est simple et rapide, mais peu avantageux si vous avez beaucoup de charges.",
+    "Le régime réel demande plus de gestion, mais permet une fiscalité plus juste si vos dépenses professionnelles sont importantes.",
+    "Il est possible d’opter volontairement pour le régime réel même si vous êtes en dessous des seuils.",
+    "L’option pour le régime réel est valable pour 2 ans et renouvelable tacitement."
+  ],
+},
 }
