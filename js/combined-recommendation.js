@@ -2043,7 +2043,355 @@ class RecommendationEngine {
     }
 
     /**
-     * Afficher les résultats dans l'interface
+     * Affiche les détails d'un statut juridique
+     * @param {Object} recommendation - L'objet de recommandation
+     */
+    showStatusDetails(recommendation) {
+        if (!recommendation) return;
+        
+        const status = recommendation.status;
+        
+        // Extraire les raisons personnalisées de la recommandation
+        const explanations = this.getStatusExplanations(recommendation.id, this.answers);
+        
+        // Créer l'élément de la modale
+        const modalOverlay = document.createElement('div');
+        modalOverlay.className = 'fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50';
+        
+        // Contenu de la modale
+        modalOverlay.innerHTML = `
+            <div class="bg-blue-900 bg-opacity-70 rounded-xl p-6 max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                <!-- En-tête -->
+                <div class="flex items-center mb-6 pb-4 border-b border-gray-700">
+                    <div class="h-16 w-16 rounded-full bg-blue-800 bg-opacity-50 flex items-center justify-center text-3xl mr-5">
+                        <i class="fas ${status.logo || 'fa-building'} text-green-400"></i>
+                    </div>
+                    <div class="flex-grow">
+                        <h2 class="text-2xl font-bold">${status.name} (${status.shortName})</h2>
+                        <p class="text-gray-300">${status.description}</p>
+                    </div>
+                    <div>
+                        <span class="px-3 py-1 bg-green-500 text-gray-900 rounded-full font-medium">
+                            Score: ${recommendation.score}/100
+                        </span>
+                    </div>
+                </div>
+                
+                <!-- SECTION PERSONNALISÉE: Pourquoi ce statut est adapté à votre projet -->
+                <div class="bg-green-900 bg-opacity-20 p-5 rounded-xl border border-green-800 mb-6">
+                    <h3 class="text-xl font-bold mb-3 text-green-400">
+                        <i class="fas fa-chart-line mr-2"></i> Pourquoi la ${status.name} est adaptée à votre projet
+                    </h3>
+                    
+                    <div class="mb-4">
+                        <p class="text-lg mb-3">Basé sur vos réponses, ce statut est particulièrement recommandé car:</p>
+                        <ul class="space-y-3">
+                            ${explanations.map(item => `
+                                <li class="flex items-start">
+                                    <i class="fas fa-check-circle text-green-400 mt-1 mr-2"></i>
+                                    <div>
+                                        <p class="font-medium">${item.title}</p>
+                                        <p class="text-gray-300 text-sm">${item.explanation}</p>
+                                    </div>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Caractéristiques principales -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2 flex items-center">
+                            <i class="fas fa-users mr-2 text-green-400"></i> Structure
+                        </h3>
+                        <ul class="space-y-2 text-sm">
+                            <li class="flex justify-between">
+                                <span class="text-gray-400">Associés:</span>
+                                <span>${status.associes || 'Non spécifié'}</span>
+                            </li>
+                            <li class="flex justify-between">
+                                <span class="text-gray-400">Capital:</span>
+                                <span>${status.capital || 'Non spécifié'}</span>
+                            </li>
+                            <li class="flex justify-between">
+                                <span class="text-gray-400">Responsabilité:</span>
+                                <span>${status.responsabilite || 'Non spécifié'}</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2 flex items-center">
+                            <i class="fas fa-file-invoice-dollar mr-2 text-green-400"></i> Fiscalité
+                        </h3>
+                        <ul class="space-y-2 text-sm">
+                            <li class="flex justify-between">
+                                <span class="text-gray-400">Régime:</span>
+                                <span>${status.fiscalite || 'Non spécifié'}</span>
+                            </li>
+                            <li class="flex justify-between">
+                                <span class="text-gray-400">Option:</span>
+                                <span>${status.fiscaliteOption || 'Non spécifié'}</span>
+                            </li>
+                            <li class="flex justify-between">
+                                <span class="text-gray-400">TVA:</span>
+                                <span>${status.regimeTVA || 'Non spécifié'}</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
+                        <h3 class="font-semibold mb-2 flex items-center">
+                            <i class="fas fa-user-shield mr-2 text-green-400"></i> Social
+                        </h3>
+                        <ul class="space-y-2 text-sm">
+                            <li class="flex justify-between">
+                                <span class="text-gray-400">Régime:</span>
+                                <span>${status.regimeSocial || 'Non spécifié'}</span>
+                            </li>
+                            <li class="flex justify-between">
+                                <span class="text-gray-400">Charges:</span>
+                                <span>${status.chargesSociales || 'Non spécifié'}</span>
+                            </li>
+                            <li class="flex justify-between">
+                                <span class="text-gray-400">Protection:</span>
+                                <span>${status.protectionPatrimoine || 'Non spécifié'}</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Forces et faiblesses -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <!-- Forces -->
+                    <div class="bg-green-900 bg-opacity-20 p-4 rounded-lg border border-green-800">
+                        <h3 class="font-semibold mb-3 flex items-center text-green-400">
+                            <i class="fas fa-plus-circle mr-2"></i> Points forts
+                        </h3>
+                        <ul class="space-y-2">
+                            ${recommendation.strengths.map(strength => `
+                                <li class="flex items-start">
+                                    <i class="fas fa-check text-green-400 mt-1 mr-2"></i>
+                                    <span>${strength}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                    
+                    <!-- Faiblesses -->
+                    <div class="bg-red-900 bg-opacity-20 p-4 rounded-lg border border-red-800">
+                        <h3 class="font-semibold mb-3 flex items-center text-red-400">
+                            <i class="fas fa-exclamation-circle mr-2"></i> Points d'attention
+                        </h3>
+                        <ul class="space-y-2">
+                            ${recommendation.weaknesses.map(weakness => `
+                                <li class="flex items-start">
+                                    <i class="fas fa-times text-red-400 mt-1 mr-2"></i>
+                                    <span>${weakness}</span>
+                                </li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- Profils adaptés -->
+                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg mb-6">
+                    <h3 class="font-semibold mb-2 flex items-center text-green-400">
+                        <i class="fas fa-thumbs-up mr-2"></i> Profils adaptés
+                    </h3>
+                    <ul class="space-y-2">
+                        ${(status.suitable_for || []).map(item => `
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-green-400 mt-1 mr-2"></i>
+                                <span>${item}</span>
+                            </li>
+                        `).join('')}
+                    </ul>
+                </div>
+                
+                <!-- Boutons d'action -->
+                <div class="flex justify-end mt-6">
+                    <button id="close-details-modal" class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+                        <i class="fas fa-times mr-2"></i> Fermer
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Ajouter la modale au DOM
+        document.body.appendChild(modalOverlay);
+        
+        // Gérer la fermeture
+        document.getElementById('close-details-modal').addEventListener('click', () => {
+            modalOverlay.remove();
+        });
+        
+        // Fermer en cliquant en dehors du contenu
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                modalOverlay.remove();
+            }
+        });
+    }
+
+    /**
+     * Génère des explications personnalisées sur pourquoi un statut est recommandé
+     * @param {string} statusId - Identifiant du statut juridique
+     * @param {Object} answers - Réponses de l'utilisateur
+     * @returns {Array} - Liste d'explications
+     */
+    getStatusExplanations(statusId, answers) {
+        const explanations = [];
+        
+        // Mapping TMI pour affichage
+        const tmiMap = {
+            'non_taxable': 'non imposable',
+            'bracket_11': '11%',
+            'bracket_30': '30%',
+            'bracket_41': '41%',
+            'bracket_45': '45%'
+        };
+        
+        // 1. FISCALITÉ (TMI)
+        if (answers.tax_bracket) {
+            const tmiValue = tmiMap[answers.tax_bracket] || '';
+            
+            if ((statusId === 'SASU' || statusId === 'SAS') && 
+                (answers.tax_bracket === 'bracket_41' || answers.tax_bracket === 'bracket_45')) {
+                explanations.push({
+                    title: "Optimisation fiscale avec votre TMI élevée",
+                    explanation: `Avec votre tranche marginale d'imposition à ${tmiValue}, ce statut vous permet de bénéficier de l'IS au taux réduit de 15% jusqu'à 42 500€ de bénéfices au lieu d'une imposition directe à l'IR.`
+                });
+            } else if ((statusId === 'MICRO') && 
+                    (answers.tax_bracket === 'non_taxable' || answers.tax_bracket === 'bracket_11')) {
+                explanations.push({
+                    title: "Régime fiscal simplifié adapté à votre TMI",
+                    explanation: `Avec votre tranche marginale d'imposition ${tmiValue}, la micro-entreprise vous permet de bénéficier d'un abattement forfaitaire avantageux.`
+                });
+            } else if (statusId === 'EURL') {
+                explanations.push({
+                    title: "Flexibilité fiscale adaptée à votre situation",
+                    explanation: `L'EURL vous permet de choisir entre l'IR et l'IS selon ce qui est le plus avantageux pour votre TMI de ${tmiValue}.`
+                });
+            }
+        }
+        
+        // 2. PROTECTION DU PATRIMOINE
+        if (answers.patrimony_protection === 'essential' && 
+            (statusId === 'SASU' || statusId === 'SAS' || statusId === 'SARL' || statusId === 'EURL')) {
+            explanations.push({
+                title: "Protection optimale de votre patrimoine personnel",
+                explanation: "Ce statut répond parfaitement à votre besoin essentiel de protéger votre patrimoine personnel, avec une responsabilité strictement limitée à vos apports."
+            });
+        }
+        
+        // 3. RÉGIME SOCIAL
+        if (answers.social_regime === 'assimilated_employee' && 
+            (statusId === 'SASU' || statusId === 'SAS')) {
+            explanations.push({
+                title: "Régime social d'assimilé salarié correspondant à vos préférences",
+                explanation: "Ce statut vous permet de bénéficier du régime général de la sécurité sociale (assimilé salarié), avec une meilleure protection sociale, comme vous l'avez souhaité."
+            });
+        } else if (answers.social_regime === 'tns' && 
+                (statusId === 'MICRO' || statusId === 'EI' || statusId === 'EURL')) {
+            explanations.push({
+                title: "Régime TNS correspondant à vos préférences",
+                explanation: "Ce statut vous permet de bénéficier du régime social des indépendants que vous avez indiqué préférer, avec généralement des cotisations sociales plus avantageuses."
+            });
+        }
+        
+        // 4. VOLUME D'ACTIVITÉ
+        if (answers.projected_revenue) {
+            const revenue = parseFloat(answers.projected_revenue);
+            if (statusId === 'MICRO' && revenue < 77000) {
+                explanations.push({
+                    title: "Compatible avec votre volume d'activité prévisionnel",
+                    explanation: `Avec un CA prévisionnel de ${revenue}€, vous restez sous les seuils de la micro-entreprise tout en bénéficiant de sa simplicité administrative.`
+                });
+            } else if ((statusId === 'SASU' || statusId === 'SAS') && revenue > 80000) {
+                explanations.push({
+                    title: "Structure adaptée à votre volume d'activité",
+                    explanation: `Avec un CA prévisionnel de ${revenue}€, cette forme juridique offre le cadre adapté pour gérer et développer votre activité sur le long terme.`
+                });
+            }
+        }
+        
+        // 5. LEVÉE DE FONDS
+        if (answers.fundraising === 'yes' && (statusId === 'SASU' || statusId === 'SAS')) {
+            explanations.push({
+                title: "Structure optimale pour vos besoins de financement",
+                explanation: "Ce statut facilite les levées de fonds futures grâce à ses actions et sa structure flexible, parfaitement adapté à votre besoin de financement externe."
+            });
+        }
+        
+        // 6. GOUVERNANCE
+        if (answers.team_structure === 'investors' && (statusId === 'SAS' || statusId === 'SASU')) {
+            explanations.push({
+                title: "Gouvernance adaptée à votre structure avec investisseurs",
+                explanation: "Cette forme juridique offre la flexibilité nécessaire pour accueillir des investisseurs et structurer la gouvernance selon vos besoins spécifiques."
+            });
+        }
+        
+        // Ajouter des explications génériques si nécessaire
+        if (explanations.length < 3) {
+            // Explications génériques basées sur les points forts du statut
+            const genericExplanations = {
+                'SASU': [
+                    {
+                        title: "Structure flexible et évolutive",
+                        explanation: "La SASU offre une grande liberté statutaire et peut évoluer facilement vers une SAS multi-actionnaires si votre projet se développe."
+                    },
+                    {
+                        title: "Image professionnelle renforcée",
+                        explanation: "Ce statut confère une image professionnelle et crédible auprès de vos partenaires et clients potentiels."
+                    }
+                ],
+                'MICRO': [
+                    {
+                        title: "Simplicité administrative maximale",
+                        explanation: "La micro-entreprise vous permet de démarrer rapidement avec un minimum de formalités et une comptabilité ultra-simplifiée."
+                    },
+                    {
+                        title: "Charges calculées uniquement sur le CA réalisé",
+                        explanation: "Vous ne payez des cotisations que sur les revenus effectivement encaissés, idéal pour une activité en démarrage ou à temps partiel."
+                    }
+                ],
+                'EURL': [
+                    {
+                        title: "Équilibre entre simplicité et protection",
+                        explanation: "L'EURL offre un bon compromis entre simplicité administrative et protection du patrimoine personnel."
+                    },
+                    {
+                        title: "Crédibilité commerciale",
+                        explanation: "Ce statut est bien connu et reconnu, ce qui renforce votre crédibilité auprès des partenaires commerciaux et financiers."
+                    }
+                ]
+            };
+            
+            // Ajouter les explications génériques pour ce statut
+            if (genericExplanations[statusId]) {
+                genericExplanations[statusId].forEach(exp => {
+                    if (explanations.length < 3) {
+                        explanations.push(exp);
+                    }
+                });
+            }
+        }
+        
+        // Si toujours pas assez d'explications, ajouter une générique basée sur le score
+        if (explanations.length < 3) {
+            explanations.push({
+                title: "Structure globalement adaptée à votre profil",
+                explanation: "Après analyse complète de vos réponses, notre algorithme a déterminé que ce statut présente le meilleur équilibre entre tous les critères importants pour votre situation."
+            });
+        }
+        
+        return explanations;
+    }
+    
+    /**
+     * Afficher les détails d'un statut juridique avec analyse personnalisée
      */
     displayResults(recommendations) {
         console.log("Affichage des résultats:", recommendations);
@@ -2199,14 +2547,17 @@ class RecommendationEngine {
         });
         
         document.getElementById('compare-btn').addEventListener('click', () => {
-            this.showComparisonTable(recommendations);
+            alert('Fonctionnalité de comparaison à implémenter');
         });
         
         // Événements pour les boutons de détails
-        document.querySelectorAll('.details-btn').forEach((btn, index) => {
+        document.querySelectorAll('.details-btn').forEach((btn) => {
             btn.addEventListener('click', () => {
                 const statusId = btn.dataset.statusId;
-                this.showStatusDetails(recommendations.find(r => r.status.shortName === statusId));
+                const recommendationObject = recommendations.find(r => r.status.shortName === statusId);
+                if (recommendationObject) {
+                    this.showStatusDetails(recommendationObject);
+                }
             });
         });
         
@@ -2215,11 +2566,10 @@ class RecommendationEngine {
         if (downloadBtn) {
             downloadBtn.addEventListener('click', () => {
                 alert('Fonctionnalité de téléchargement PDF à implémenter');
-                // this.generatePDF(recommendations[0]);
             });
         }
     }
-
+    
     /**
      * Affiche les statuts juridiques incompatibles avec suggestions alternatives
      * @param {Array} incompatibles - Liste des statuts incompatibles
@@ -2307,543 +2657,59 @@ class RecommendationEngine {
         
         return html;
     }
-
-    /**
-     * Afficher les détails d'un statut juridique
-     */
-    showStatusDetails(recommendation) {
-        if (!recommendation) return;
-        
-        const status = recommendation.status;
-        const resultsContainer = document.getElementById('results-container');
-        
-        const detailsHTML = `
-            <div class="status-details">
-                <div class="mb-4">
-                    <button id="back-to-results" class="text-blue-400 hover:text-blue-300 flex items-center">
-                        <i class="fas fa-arrow-left mr-2"></i> Retour aux résultats
-                    </button>
-                </div>
-                
-                <div class="bg-blue-900 bg-opacity-60 rounded-xl overflow-hidden border border-gray-700 mb-8">
-                    <!-- En-tête -->
-                    <div class="p-6 border-b border-gray-700 flex items-center">
-                        <div class="h-16 w-16 rounded-full bg-blue-800 bg-opacity-50 flex items-center justify-center text-3xl mr-5">
-                            <i class="fas ${status.logo || 'fa-building'} text-green-400"></i>
-                        </div>
-                        <div>
-                            <h2 class="text-2xl font-bold">${status.name} (${status.shortName})</h2>
-                            <p class="text-gray-400">${status.description}</p>
-                        </div>
-                    </div>
-                    
-                    <!-- Contenu détaillé -->
-                    <div class="p-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <!-- Création -->
-                            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
-                                <h3 class="text-lg font-semibold mb-3 flex items-center text-green-400">
-                                    <i class="fas fa-file-signature mr-2"></i> Création
-                                </h3>
-                                <ul class="space-y-2">
-                                    <li class="flex items-start">
-                                        <span class="font-medium w-28">Processus:</span>
-                                        <span>${status.creation?.process || 'Non spécifié'}</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <span class="font-medium w-28">Coût:</span>
-                                        <span>${status.creation?.cost || 'Non spécifié'}</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <span class="font-medium w-28">Délai:</span>
-                                        <span>${status.creation?.time || 'Non spécifié'}</span>
-                                    </li>
-                                </ul>
-                            </div>
-                            
-                            <!-- Fiscalité -->
-                            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
-                                <h3 class="text-lg font-semibold mb-3 flex items-center text-green-400">
-                                    <i class="fas fa-file-invoice-dollar mr-2"></i> Fiscalité
-                                </h3>
-                                <ul class="space-y-2">
-                                    <li class="flex items-start">
-                                        <span class="font-medium w-28">Régime:</span>
-                                        <span>${status.fiscalite || 'Non spécifié'}</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <span class="font-medium w-28">Options:</span>
-                                        <span>${status.fiscaliteOption || 'Non spécifié'}</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <span class="font-medium w-28">Détails:</span>
-                                        <span>${status.fiscal || 'Non spécifié'}</span>
-                                    </li>
-                                </ul>
-                            </div>
-                            
-                            <!-- Social -->
-                            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
-                                <h3 class="text-lg font-semibold mb-3 flex items-center text-green-400">
-                                    <i class="fas fa-user-shield mr-2"></i> Régime social
-                                </h3>
-                                <ul class="space-y-2">
-                                    <li class="flex items-start">
-                                        <span class="font-medium w-28">Régime:</span>
-                                        <span>${status.regimeSocial || 'Non spécifié'}</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <span class="font-medium w-28">Taux:</span>
-                                        <span>${status.chargesSociales || 'Non spécifié'}</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <span class="font-medium w-28">Protections:</span>
-                                        <span>${status.social?.protections || 'Non spécifié'}</span>
-                                    </li>
-                                </ul>
-                            </div>
-                            
-                            <!-- Comptabilité -->
-                            <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg">
-                                <h3 class="text-lg font-semibold mb-3 flex items-center text-green-400">
-                                    <i class="fas fa-calculator mr-2"></i> Comptabilité
-                                </h3>
-                                <ul class="space-y-2">
-                                    <li class="flex items-start">
-                                        <span class="font-medium w-28">Complexité:</span>
-                                        <span>${status.accounting?.complexity || 'Non spécifié'}</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <span class="font-medium w-28">Exigences:</span>
-                                        <span>${status.accounting?.requirements || 'Non spécifié'}</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <span class="font-medium w-28">Coûts:</span>
-                                        <span>${status.accounting?.costs || 'Non spécifié'}</span>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                        
-                        <!-- Avantages et inconvénients -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
-                            <!-- Avantages -->
-                            <div>
-                                <h3 class="text-lg font-semibold mb-3 flex items-center text-green-400">
-                                    <i class="fas fa-plus-circle mr-2"></i> Avantages
-                                </h3>
-                                <ul class="space-y-2">
-                                    ${status.advantages ? status.advantages.map(advantage => `
-                                        <li class="flex items-start">
-                                            <i class="fas fa-check text-green-400 mt-1 mr-2"></i>
-                                            <span>${advantage}</span>
-                                        </li>
-                                    `).join('') : '<li>Non spécifié</li>'}
-                                </ul>
-                            </div>
-                            
-                            <!-- Inconvénients -->
-                            <div>
-                                <h3 class="text-lg font-semibold mb-3 flex items-center text-red-400">
-                                    <i class="fas fa-minus-circle mr-2"></i> Inconvénients
-                                </h3>
-                                <ul class="space-y-2">
-                                    ${status.disadvantages ? status.disadvantages.map(disadvantage => `
-                                        <li class="flex items-start">
-                                            <i class="fas fa-times text-red-400 mt-1 mr-2"></i>
-                                            <span>${disadvantage}</span>
-                                        </li>
-                                    `).join('') : '<li>Non spécifié</li>'}
-                                </ul>
-                            </div>
-                        </div>
-                        
-                        <!-- Pour qui -->
-                        <div class="mt-8">
-                            <h3 class="text-lg font-semibold mb-3 flex items-center text-blue-400">
-                                <i class="fas fa-user-check mr-2"></i> Adapté pour
-                            </h3>
-                            <ul class="space-y-2">
-                                ${status.suitable_for ? status.suitable_for.map(profile => `
-                                    <li class="flex items-start">
-                                        <i class="fas fa-angle-right text-blue-400 mt-1 mr-2"></i>
-                                        <span>${profile}</span>
-                                    </li>
-                                `).join('') : '<li>Non spécifié</li>'}
-                            </ul>
-                        </div>
-                        
-                        <!-- Explications du score (nouveau) -->
-                        <div class="mt-8 bg-blue-800 bg-opacity-30 p-4 rounded-lg">
-                            <h3 class="text-lg font-semibold mb-3 flex items-center text-blue-400">
-                                <i class="fas fa-chart-bar mr-2"></i> Détail du score
-                            </h3>
-                            <pre class="whitespace-pre-wrap text-sm">${recommendation.explanation || 'Aucune explication disponible'}</pre>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Stratégies optimales -->
-                ${this.renderContextualStrategies(recommendation.id)}
-                
-                <!-- Bouton d'action -->
-                <div class="text-center mt-8">
-                    <button id="back-to-results-bottom" class="bg-blue-700 hover:bg-blue-600 text-white px-5 py-2 rounded-lg">
-                        <i class="fas fa-arrow-left mr-2"></i> Retour aux résultats
-                    </button>
-                    <button id="download-details" class="bg-green-500 hover:bg-green-400 text-gray-900 font-medium px-5 py-2 rounded-lg ml-4">
-                        <i class="fas fa-file-download mr-2"></i> Télécharger cette fiche
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        resultsContainer.innerHTML = detailsHTML;
-        
-        // Attacher les événements de retour
-        document.getElementById('back-to-results').addEventListener('click', () => {
-            this.displayResults(this.getTopRecommendations(3));
-        });
-        
-        document.getElementById('back-to-results-bottom').addEventListener('click', () => {
-            this.displayResults(this.getTopRecommendations(3));
-        });
-        
-        document.getElementById('download-details').addEventListener('click', () => {
-            alert('Fonctionnalité de téléchargement de fiche à implémenter');
-        });
-    }
-
-    /**
-     * Afficher un tableau comparatif des statuts recommandés
-     */
-    showComparisonTable(recommendations) {
-        const resultsContainer = document.getElementById('results-container');
-        
-        const comparisonHTML = `
-            <div class="comparison-table">
-                <div class="mb-4">
-                    <button id="back-to-results" class="text-blue-400 hover:text-blue-300 flex items-center">
-                        <i class="fas fa-arrow-left mr-2"></i> Retour aux résultats
-                    </button>
-                </div>
-                
-                <h2 class="text-2xl font-bold mb-6 text-center">Tableau comparatif des statuts recommandés</h2>
-                
-                <div class="overflow-x-auto">
-                    <table class="w-full bg-blue-900 bg-opacity-50 rounded-lg border border-gray-700">
-                        <thead>
-                            <tr class="bg-blue-800 bg-opacity-70 text-left">
-                                <th class="py-3 px-4 border-b border-gray-700">Critère</th>
-                                ${recommendations.map(r => `
-                                    <th class="py-3 px-4 border-b border-gray-700">
-                                        ${r.status.name} (${r.status.shortName})
-                                    </th>
-                                `).join('')}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <!-- Protection du patrimoine -->
-                            <tr>
-                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Protection du patrimoine</td>
-                                ${recommendations.map(r => `
-                                    <td class="py-3 px-4 border-b border-gray-700">
-                                        ${this.getStarRating(r.status.key_metrics.patrimony_protection)}
-                                    </td>
-                                `).join('')}
-                            </tr>
-                            
-                            <!-- Régime fiscal -->
-                            <tr>
-                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Régime fiscal</td>
-                                ${recommendations.map(r => `
-                                    <td class="py-3 px-4 border-b border-gray-700">
-                                        ${r.status.fiscalite || '-'}
-                                    </td>
-                                `).join('')}
-                            </tr>
-                            
-                            <!-- Régime social -->
-                            <tr>
-                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Régime social</td>
-                                ${recommendations.map(r => `
-                                    <td class="py-3 px-4 border-b border-gray-700">
-                                        ${r.status.regimeSocial || '-'}
-                                    </td>
-                                `).join('')}
-                            </tr>
-                            
-                            <!-- Coût des charges sociales -->
-                            <tr>
-                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Charges sociales</td>
-                                ${recommendations.map(r => `
-                                    <td class="py-3 px-4 border-b border-gray-700">
-                                        ${this.getInverseStarRating(5 - r.status.key_metrics.social_charges)}
-                                    </td>
-                                `).join('')}
-                            </tr>
-                            
-                            <!-- Complexité administrative -->
-                            <tr>
-                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Simplicité administrative</td>
-                                ${recommendations.map(r => `
-                                    <td class="py-3 px-4 border-b border-gray-700">
-                                        ${this.getStarRating(r.status.key_metrics.administrative_simplicity)}
-                                    </td>
-                                `).join('')}
-                            </tr>
-                            
-                            <!-- Crédibilité -->
-                            <tr>
-                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Crédibilité</td>
-                                ${recommendations.map(r => `
-                                    <td class="py-3 px-4 border-b border-gray-700">
-                                        ${this.getStarRating(r.status.key_metrics.credibility)}
-                                    </td>
-                                `).join('')}
-                            </tr>
-                            
-                            <!-- Capacité à lever des fonds -->
-                            <tr>
-                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Capacité à lever des fonds</td>
-                                ${recommendations.map(r => `
-                                    <td class="py-3 px-4 border-b border-gray-700">
-                                        ${this.getStarRating(r.status.key_metrics.fundraising_capacity)}
-                                    </td>
-                                `).join('')}
-                            </tr>
-                            
-                            <!-- Transmission -->
-                            <tr>
-                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Facilité de transmission</td>
-                                ${recommendations.map(r => `
-                                    <td class="py-3 px-4 border-b border-gray-700">
-                                        ${this.getStarRating(r.status.key_metrics.transmission)}
-                                    </td>
-                                `).join('')}
-                            </tr>
-                            
-                            <!-- Coût comptable -->
-                            <tr>
-                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Coût comptable annuel</td>
-                                ${recommendations.map(r => `
-                                    <td class="py-3 px-4 border-b border-gray-700">
-                                        ${r.status.accounting?.costs || '-'}
-                                    </td>
-                                `).join('')}
-                            </tr>
-                            
-                            <!-- Capital minimum -->
-                            <tr>
-                                <td class="py-3 px-4 border-b border-gray-700 font-medium">Capital minimum</td>
-                                ${recommendations.map(r => {
-                                    let capital = '-';
-                                    if (r.status.shortName === 'SA') {
-                                        capital = '37 000€';
-                                    } else if (['SAS', 'SASU', 'SARL', 'EURL'].includes(r.status.shortName)) {
-                                        capital = '1€';
-                                    } else {
-                                        capital = 'Aucun';
-                                    }
-                                    return `<td class="py-3 px-4 border-b border-gray-700">${capital}</td>`;
-                                }).join('')}
-                            </tr>
-                            
-                            <!-- Score global -->
-                            <tr class="bg-blue-800 bg-opacity-30">
-                                <td class="py-3 px-4 border-b border-gray-700 font-bold">Score global</td>
-                                ${recommendations.map(r => `
-                                    <td class="py-3 px-4 border-b border-gray-700 font-bold text-green-400">
-                                        ${r.score}/100
-                                    </td>
-                                `).join('')}
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- Légende -->
-                <div class="mt-4 text-sm text-gray-400">
-                    <p class="flex items-center">
-                        <span class="mr-2">Évaluation :</span>
-                        <span class="text-green-400 mr-1">★★★★★</span> Excellent
-                        <span class="mx-2">|</span>
-                        <span class="text-green-400 mr-1">★★★★☆</span> Très bien
-                        <span class="mx-2">|</span>
-                        <span class="text-green-400 mr-1">★★★☆☆</span> Bien
-                        <span class="mx-2">|</span>
-                        <span class="text-green-400 mr-1">★★☆☆☆</span> Moyen
-                        <span class="mx-2">|</span>
-                        <span class="text-green-400 mr-1">★☆☆☆☆</span> Faible
-                    </p>
-                </div>
-                
-                <!-- Bouton d'action -->
-                <div class="text-center mt-8">
-                    <button id="back-to-results-bottom" class="bg-blue-700 hover:bg-blue-600 text-white px-5 py-2 rounded-lg">
-                        <i class="fas fa-arrow-left mr-2"></i> Retour aux résultats
-                    </button>
-                    <button id="download-comparison" class="bg-green-500 hover:bg-green-400 text-gray-900 font-medium px-5 py-2 rounded-lg ml-4">
-                        <i class="fas fa-file-download mr-2"></i> Télécharger ce comparatif
-                    </button>
-                </div>
-            </div>
-        `;
-        
-        resultsContainer.innerHTML = comparisonHTML;
-        
-        // Attacher les événements de retour
-        document.getElementById('back-to-results').addEventListener('click', () => {
-            this.displayResults(recommendations);
-        });
-        
-        document.getElementById('back-to-results-bottom').addEventListener('click', () => {
-            this.displayResults(recommendations);
-        });
-        
-        document.getElementById('download-comparison').addEventListener('click', () => {
-            alert('Fonctionnalité de téléchargement du comparatif à implémenter');
-        });
-    }
-    
-    /**
-     * Obtenir la notation en étoiles pour un score
-     */
-    getStarRating(score) {
-        const fullStars = Math.floor(score);
-        const emptyStars = 5 - fullStars;
-        
-        return `${'<i class="fas fa-star text-green-400"></i>'.repeat(fullStars)}${'<i class="far fa-star text-gray-500"></i>'.repeat(emptyStars)}`;
-    }
-    
-    /**
-     * Obtenir la notation en étoiles inversée pour un score
-     */
-    getInverseStarRating(score) {
-        const fullStars = Math.floor(score);
-        const emptyStars = 5 - fullStars;
-        
-        return `${'<i class="fas fa-star text-red-400"></i>'.repeat(fullStars)}${'<i class="far fa-star text-gray-500"></i>'.repeat(emptyStars)}`;
-    }
-
-    /**
-     * Générer un PDF avec le résultat de la simulation
-     */
-    generatePDF(recommendation) {
-        // Cette fonction pourrait être implémentée avec une bibliothèque comme jsPDF
-        alert('Fonctionnalité d\'export PDF à implémenter');
-    }
 }
 
-// Exposer la classe et une instance de manière synchrone
+/**
+ * Crée et retourne un moteur de recommandation à la demande (lazy loading)
+ * @returns {Promise<RecommendationEngine>} - Une promesse résolvant vers un instance du moteur
+ */
+window.loadRecommendationEngine = async function() {
+    return new Promise((resolve, reject) => {
+        try {
+            // Attendre que les statuts juridiques soient chargés si nécessaire
+            if (window.legalStatuses) {
+                const engine = new RecommendationEngine();
+                resolve(engine);
+            } else {
+                // Attendre l'événement de chargement
+                const handler = () => {
+                    try {
+                        const engine = new RecommendationEngine();
+                        resolve(engine);
+                    } catch (e) {
+                        reject(e);
+                    } finally {
+                        document.removeEventListener('legalStatusesLoaded', handler);
+                    }
+                };
+                
+                document.addEventListener('legalStatusesLoaded', handler);
+                
+                // Timeout de sécurité
+                setTimeout(() => {
+                    if (!window.legalStatuses) {
+                        document.removeEventListener('legalStatusesLoaded', handler);
+                        reject(new Error("Timeout: Les données juridiques n'ont pas pu être chargées dans le délai imparti"));
+                    }
+                }, 10000);
+            }
+        } catch (e) {
+            reject(e);
+        }
+    });
+};
+
+// Définir l'instance directement disponible
 try {
-    // Rendre la classe disponible globalement
-    window.RecommendationEngine = RecommendationEngine;
-    window.scoringRules = scoringRules;
-    console.log("Classe RecommendationEngine exposée avec succès");
-    
-    // Créer une instance globale
     window.recommendationEngine = new RecommendationEngine();
     
-    window.engineLoadingCompleted = true;
+    // Notifier que l'engin est prêt
+    document.dispatchEvent(new CustomEvent('recommendationEngineReady'));
+    console.log("Objet recommendationEngine créé et disponible globalement");
 } catch (e) {
-    console.error("Erreur lors de l'exposition du moteur de recommandation:", e);
+    console.error("Impossible de créer recommendationEngine directement:", e);
+    console.log("Vous pouvez utiliser window.loadRecommendationEngine() à la place");
 }
 
-// Compatibilité avec l'ancien système - Définir les objets nécessaires dans window
-window.FormeJuridiqueDB = {
-    structures: Object.values(window.legalStatuses),
-    getById: function(id) {
-        return window.legalStatuses[id];
-    }
-};
-
-window.ScoringEngine = {
-    SCORE_MAX: 100,
-    calculerScore: function(forme, userResponses) {
-        // Logique simplifiée qui sera remplacée par le vrai calcul dans RecommendationEngine
-        // Pont de compatibilité vers le nouveau système
-        if (window.recommendationEngine) {
-            const engine = window.recommendationEngine;
-            
-            // Trouver la forme correspondante dans les statuts filtrés
-            const statusId = Object.keys(engine.filteredStatuses).find(id => 
-                engine.filteredStatuses[id].id === forme.id
-            );
-            
-            if (statusId) {
-                const score = Math.round(engine.weightedScores[statusId]);
-                
-                // Déterminer la compatibilité
-                let compatibilite = 'PEU ADAPTÉ';
-                if (score >= 80) compatibilite = 'RECOMMANDÉ';
-                else if (score >= 65) compatibilite = 'COMPATIBLE';
-                else if (score <= 25) compatibilite = 'DÉCONSEILLÉ';
-                
-                return {
-                    formeId: forme.id,
-                    forme: forme,
-                    score: score,
-                    scoreCriteresStructurels: Math.round(score * 0.6), // Approximation
-                    scoreObjectifs: Math.round(score * 0.4), // Approximation
-                    compatibilite: compatibilite,
-                    details: engine.getStrengths(statusId),
-                    scoreDetails: { pourcentage: score }
-                };
-            }
-        }
-        
-        return {
-            formeId: forme.id,
-            forme: forme,
-            score: 85,
-            scoreCriteresStructurels: 55,
-            scoreObjectifs: 30,
-            compatibilite: 'RECOMMANDÉ',
-            details: ['Adapté à votre profil', 'Avantage fiscal', 'Protection du patrimoine'],
-            scoreDetails: { pourcentage: 85 }
-        };
-    }
-};
-
-window.SimulationsFiscales = {
-    simulerImpactFiscal: function(forme, caSimulation, params) {
-        // Logique simplifiée qui sera remplacée par le vrai calcul
-        return {
-            chargesSociales: caSimulation * 0.25,
-            impot: caSimulation * 0.15,
-            revenueNet: caSimulation * 0.6
-        };
-    }
-};
-
-// NOUVEAU: Ajouter le pont de compatibilité pour l'ancien système
-window.ResultsManager = {
-    // Pont vers la nouvelle méthode d'affichage
-    generateResults: function(customParams) {
-        if (window.recommendationEngine) {
-            // Convertir les paramètres de l'ancien format vers le nouveau format si nécessaire
-            const recommendations = window.recommendationEngine.calculateRecommendations(window.userResponses || {});
-            return recommendations;
-        } else {
-            console.error("Le moteur de recommandation n'est pas disponible");
-            return [];
-        }
-    },
-    
-    // Réutiliser la méthode d'affichage de la nouvelle version
-    displayResults: function(results, incompatibles) {
-        if (window.recommendationEngine) {
-            window.recommendationEngine.displayResults(results);
-        } else {
-            console.error("La méthode d'affichage n'est pas disponible");
-        }
-    }
-};
-
-// Déclencher l'événement une seule fois, à la fin du fichier
-console.log("Déclenchement de l'événement legalStatusesLoaded depuis la fin du fichier");
-document.dispatchEvent(new CustomEvent('legalStatusesLoaded'));
-// après que tout soit chargé et disponible
-console.log("Déclenchement de l'événement recommendationEngineReady depuis la fin du fichier");
-document.dispatchEvent(new CustomEvent('recommendationEngineReady'));
+// Notification de fin de chargement du script
+console.log("Chargement du recommendation-engine.js terminé");
