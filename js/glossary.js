@@ -199,7 +199,39 @@ class LegalGlossary {
         return textNodes;
     }
 
-    // Met en évidence les termes dans un nœud de texte
+    // Construit une RegExp unique pour tous les termes
+    buildGlossaryRegex() {
+        const alternates = Object.keys(this.terms)
+            .sort((a, b) => b.length - a.length)   // long -> court pour prioritiser les expressions longues
+            .map(id => this.getTermPattern(id));
+        return new RegExp(`\\b(?:${alternates.join('|')})\\b`, 'giu');
+    }
+
+    // Convertit l'ID d'un terme en modèle de recherche
+    getTermPattern(termId) {
+        // 1) snake_case -> texte + espaces souples
+        let txt = termId.replace(/_/g, ' ');
+
+        // 2) supprime les accents pour la recherche
+        txt = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '');  // enlève les diacritiques
+        txt = txt.replace(/\s+/g, '\\s+');                           // espace(s) variable(s)
+        
+        // 3) échappe tout caractère spécial RegExp
+        txt = txt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+        return txt;
+    }
+
+    // Normaliser le texte trouvé en ID
+    normalizeToId(str) {
+        return str
+            .toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // enlève les accents
+            .trim()
+            .replace(/\s+/g, '_');                            // espaces -> underscore
+    }
+
+    // Met en évidence les termes dans un nœud de texte (nouvelle implémentation)
     highlightTermsInNode(textNode) {
         const text = textNode.nodeValue;
         const parent = textNode.parentNode;
@@ -212,64 +244,51 @@ class LegalGlossary {
         // Créer un fragment de document pour stocker le contenu modifié
         const fragment = document.createDocumentFragment();
         
-        // Position de départ dans le texte
-        let currentPosition = 0;
+        const regex = this.buildGlossaryRegex();
+        let match, lastIndex = 0;
         
-        // Rechercher tous les termes du glossaire dans le texte
-        for (const [termId, termData] of Object.entries(this.terms)) {
-            // Convertir l'ID du terme en texte lisible (suppression des underscores, etc.)
-            const termPattern = this.getTermPattern(termId);
-            
-            // Rechercher le terme dans le texte restant
-            const regex = new RegExp(`\\b(${termPattern})\\b`, 'gi');
-            let match;
-            
-            while ((match = regex.exec(text)) !== null) {
-                // Ajouter le texte avant le terme
-                if (match.index > currentPosition) {
-                    fragment.appendChild(document.createTextNode(
-                        text.substring(currentPosition, match.index)
-                    ));
-                }
-                
-                // Créer un élément pour le terme surligné
-                const termElement = document.createElement('span');
-                termElement.className = 'glossary-term';
-                termElement.textContent = match[0];
-                termElement.dataset.termId = termId;
-                
-                // Ajouter un gestionnaire de clic pour afficher la définition
-                termElement.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.showDefinition(termId, termElement);
-                });
-                
-                fragment.appendChild(termElement);
-                
-                // Mettre à jour la position courante
-                currentPosition = match.index + match[0].length;
+        // Rechercher tous les termes dans une seule passe
+        while ((match = regex.exec(text)) !== null) {
+            // Ajouter le texte avant le terme
+            if (match.index > lastIndex) {
+                fragment.appendChild(document.createTextNode(
+                    text.substring(lastIndex, match.index)
+                ));
             }
+            
+            // Obtenir l'ID du terme à partir du texte trouvé
+            const termId = this.normalizeToId(match[0]);
+            
+            // Créer un élément pour le terme trouvé
+            const termElement = document.createElement('span');
+            termElement.className = 'glossary-term';
+            termElement.textContent = match[0];
+            termElement.dataset.termId = termId;
+            
+            // Ajouter un gestionnaire de clic pour afficher la définition
+            termElement.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.showDefinition(termId, termElement);
+            });
+            
+            fragment.appendChild(termElement);
+            
+            // Mettre à jour la position courante
+            lastIndex = regex.lastIndex;
         }
         
-        // Ajouter le reste du texte
-        if (currentPosition < text.length) {
+        // Ajouter le reste du texte après le dernier terme
+        if (lastIndex < text.length) {
             fragment.appendChild(document.createTextNode(
-                text.substring(currentPosition)
+                text.substring(lastIndex)
             ));
         }
         
         // Remplacer le nœud de texte par le fragment uniquement si des modifications ont été apportées
-        if (currentPosition > 0) {
+        if (lastIndex > 0) {
             parent.replaceChild(fragment, textNode);
         }
-    }
-
-    // Convertit l'ID du terme en motif de recherche
-    getTermPattern(termId) {
-        return termId
-            .replace(/_/g, '\\s+') // Remplacer les underscores par des espaces
-            .replace(/([a-z])([A-Z])/g, '$1\\s*$2'); // Insérer des espaces facultatifs entre camelCase
     }
 
     // Affiche la définition d'un terme
@@ -277,7 +296,20 @@ class LegalGlossary {
         // Fermer la bulle active si elle existe
         this.closeActiveTooltip();
         
-        const termData = this.terms[termId];
+        // Chercher le terme dans le dictionnaire des termes
+        // On vérifie d'abord si le termId existe directement, sinon on cherche un terme qui pourrait correspondre
+        let termData = this.terms[termId];
+        if (!termData) {
+            // Recherche alternative si l'ID exact n'est pas trouvé
+            const possibleTermId = Object.keys(this.terms).find(id => 
+                this.normalizeToId(id) === termId || id === termId
+            );
+            if (possibleTermId) {
+                termData = this.terms[possibleTermId];
+                termId = possibleTermId; // Mise à jour de l'ID utilisé pour la suite
+            }
+        }
+        
         if (!termData) return;
         
         // Créer la bulle d'information
