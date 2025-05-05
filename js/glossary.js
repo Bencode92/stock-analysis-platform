@@ -9,7 +9,7 @@ const GLOSSARY_CONFIG = {
     highlightColor: '#00FF87', // Couleur verte LED
     targetSelectors: ['.question-card', '.recommendation-card', '.results-container', '.main-content p'], // Conteneurs où rechercher les termes
     excludeSelectors: ['button', 'input', 'select', 'a', 'h1', 'h2', 'h3', '.glossary-tooltip'], // Éléments à ignorer
-    jsonPath: 'data/legal-terms.json', // Chemin vers le fichier JSON
+    jsonPath: 'js/legal-terms.json', // Chemin modifié - maintenant dans le dossier js/
     maxTooltipWidth: '350px', // Largeur maximale de l'info-bulle
     animationDuration: 300 // Durée de l'animation en ms
 };
@@ -107,6 +107,34 @@ class LegalGlossary {
         } catch (error) {
             this.isLoading = false;
             console.error('Impossible de charger le glossaire juridique:', error);
+            
+            // Initialiser un glossaire de secours en cas d'erreur
+            this.terms = {
+                "impot_societes": {
+                    "definition": "Impôt payé par les sociétés sur leurs bénéfices. Le taux standard en 2025 est de 25%.",
+                    "example": "Une SAS avec 100 000€ de bénéfices paie 25 000€ d'IS."
+                },
+                "micro_entreprise": {
+                    "definition": "Régime simplifié pour entrepreneurs individuels avec des plafonds de chiffre d'affaires (188 700€ pour les ventes et 77 700€ pour les services en 2025).",
+                    "example": "Un consultant en micro-entreprise bénéficie d'un abattement forfaitaire de 34% sur son CA."
+                },
+                "tva": {
+                    "definition": "Taxe sur la Valeur Ajoutée, impôt indirect sur la consommation.",
+                    "example": "Une entreprise facture la TVA à ses clients et la reverse à l'État."
+                },
+                "sasu": {
+                    "definition": "Société par Actions Simplifiée Unipersonnelle, forme juridique avec un actionnaire unique et grande flexibilité.",
+                    "example": "Un entrepreneur a créé une SASU pour son activité de conseil avec 1€ de capital social."
+                },
+                "eurl": {
+                    "definition": "Entreprise Unipersonnelle à Responsabilité Limitée, SARL à associé unique.",
+                    "example": "L'EURL lui permet de choisir entre l'IR et l'IS tout en protégeant son patrimoine personnel."
+                }
+            };
+            this.isLoaded = true;
+            console.log("Utilisation d'un glossaire de secours minimal");
+            this.highlightTermsInContent();
+            document.dispatchEvent(new Event('glossaryLoaded'));
         }
     }
 
@@ -221,7 +249,7 @@ class LegalGlossary {
             const termPattern = this.getTermPattern(termId);
             
             // Rechercher le terme dans le texte restant
-            const regex = new RegExp(`\\b(${termPattern})\\b`, 'gi');
+            const regex = new RegExp(`\\\\b(${termPattern})\\\\b`, 'gi');
             let match;
             
             while ((match = regex.exec(text)) !== null) {
@@ -268,8 +296,8 @@ class LegalGlossary {
     // Convertit l'ID du terme en motif de recherche
     getTermPattern(termId) {
         return termId
-            .replace(/_/g, '\\s+') // Remplacer les underscores par des espaces
-            .replace(/([a-z])([A-Z])/g, '$1\\s*$2'); // Insérer des espaces facultatifs entre camelCase
+            .replace(/_/g, '\\\\s+') // Remplacer les underscores par des espaces
+            .replace(/([a-z])([A-Z])/g, '$1\\\\s*$2'); // Insérer des espaces facultatifs entre camelCase
     }
 
     // Affiche la définition d'un terme
@@ -346,7 +374,7 @@ class LegalGlossary {
             .replace(/_/g, ' ')
             .replace(/([A-Z])/g, ' $1')
             .trim()
-            .replace(/\b\w/g, l => l.toUpperCase());
+            .replace(/\\b\\w/g, l => l.toUpperCase());
         
         let content = `
             <div style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 8px;">
@@ -371,7 +399,7 @@ class LegalGlossary {
         if (termData.application) {
             content += `<div style="margin-top: 8px;"><strong style="color: #00FF87;">Application:</strong>`;
             for (const [key, value] of Object.entries(termData.application)) {
-                const readableKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                const readableKey = key.replace(/_/g, ' ').replace(/\\b\\w/g, l => l.toUpperCase());
                 content += `<div style="margin: 4px 0 4px 12px;"><strong>${readableKey}:</strong> ${value}</div>`;
             }
             content += `</div>`;
