@@ -24,6 +24,146 @@ function toId(s) {
     .replace(/[^\w_]/g, '');         // garde uniquement les caractères alphanumériques
 }
 
+// Fonction pour extraire spécifiquement les termes manquants
+function extractSpecificMissingTerms() {
+  const missingTerms = [
+    // 1. Termes spécifiques liés au capital social
+    'capital_social',
+    'liberation_du_capital_social',
+    'capital',
+    'liberation',
+    
+    // 2. Termes liés à la comptabilité
+    'comptabilite_simple',
+    'comptabilite_moderee',
+    'comptabilite_complete',
+    'simple',
+    'moderate',
+    'complete',
+    'outsourced',
+    
+    // 3. Termes d'expertise comptable
+    'externalite_expert_comptable',
+    'expert_comptable',
+    
+    // 4. Termes fiscaux
+    'abattement_forfaitaire'
+  ];
+  
+  // Versions avec espaces (sans underscores) pour certains termes complexes
+  const termVariants = [
+    'capital social',
+    'libération du capital social',
+    'comptabilité simple',
+    'comptabilité modérée',
+    'comptabilité complète',
+    'comptabilité d\'engagement',
+    'expertise comptable',
+    'abattement forfaitaire'
+  ];
+  
+  // Convertir en IDs
+  const variantIds = termVariants.map(term => toId(term));
+  
+  // Combiner les deux listes, éliminer les doublons
+  return [...new Set([...missingTerms, ...variantIds])];
+}
+
+// Fonction pour extraire des termes de la question "accounting_complexity"
+function extractAccountingComplexityTerms(content) {
+  const terms = [];
+  
+  // Trouver la question accounting_complexity
+  const accountingComplexityRegex = /id:\s*["']accounting_complexity["'][\s\S]*?options:\s*\[([\s\S]*?)\]/;
+  const match = content.match(accountingComplexityRegex);
+  
+  if (match && match[1]) {
+    const optionsContent = match[1];
+    
+    // Extraire les IDs des options
+    const optionIdMatches = optionsContent.match(/id:\s*["']([^"']+)["']/g) || [];
+    optionIdMatches.forEach(match => {
+      const id = match.replace(/id:\s*["']|["']/g, '');
+      terms.push(id);
+    });
+    
+    // Extraire les labels des options
+    const labelMatches = optionsContent.match(/label:\s*["']([^"']+)["']/g) || [];
+    labelMatches.forEach(match => {
+      const label = match.replace(/label:\s*["']|["']/g, '');
+      
+      // Ajouter le label entier
+      terms.push(toId(label));
+      
+      // Extraire les mots individuels significatifs
+      const words = label.split(/\s+\(/)[0].split(/\s+/);
+      words.forEach(word => {
+        if (word.length > 3) {
+          terms.push(toId(word));
+        }
+      });
+    });
+  }
+  
+  return terms;
+}
+
+// Fonction pour extraire des termes liés au capital
+function extractCapitalTerms(content) {
+  const terms = [];
+  
+  // Chercher les questions liées au capital
+  const capitalQuestions = [
+    'available_capital',
+    'capital_percentage',
+    'associate_current_account',
+    'capital_structure',
+    'progressive_contribution'
+  ];
+  
+  // Créer une regex pour trouver ces questions et leurs descriptions
+  const capitalRegexPattern = capitalQuestions
+    .map(id => `id:\\s*["']${id}["'][\\s\\S]*?description:\\s*["']([^"']+)["']`)
+    .join('|');
+  
+  const capitalRegex = new RegExp(capitalRegexPattern, 'g');
+  let match;
+  
+  while ((match = capitalRegex.exec(content)) !== null) {
+    // Extraire la description trouvée (elle sera dans l'un des groupes de capture)
+    const description = match.find((group, index) => index > 0 && group);
+    
+    if (description) {
+      // Ajouter des mots-clés spécifiques au capital
+      const keywords = ['capital', 'apport', 'libéré', 'libération', 'social', 'progressif'];
+      
+      // Traiter la description
+      const words = description.split(/\s+/);
+      
+      // Rechercher les mots-clés
+      words.forEach((word, i) => {
+        const processedWord = word.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        
+        if (keywords.some(keyword => processedWord.includes(keyword))) {
+          // Ajouter le mot individuel
+          terms.push(toId(word));
+          
+          // Ajouter des expressions de 2-3 mots autour du mot-clé
+          if (i > 0) {
+            terms.push(toId(`${words[i-1]} ${words[i]}`));
+          }
+          
+          if (i < words.length - 1) {
+            terms.push(toId(`${words[i]} ${words[i+1]}`));
+          }
+        }
+      });
+    }
+  }
+  
+  return terms;
+}
+
 // Chemins des fichiers
 const questionDataPath = path.resolve(__dirname, '../js/question-data.js');
 const outputPath = path.resolve(__dirname, '../data/glossary-index.json');
@@ -97,7 +237,22 @@ try {
     }
   });
   
-  console.log(`✓ ${candidateSet.size} termes candidats extraits`);
+  // AMÉLIORATION: Ajouter les termes spécifiques manquants
+  const specificTerms = extractSpecificMissingTerms();
+  specificTerms.forEach(term => candidateSet.add(term));
+  console.log(`✓ ${specificTerms.length} termes spécifiques manuels ajoutés`);
+  
+  // AMÉLIORATION: Extraire les termes liés à la comptabilité
+  const accountingTerms = extractAccountingComplexityTerms(questionDataContent);
+  accountingTerms.forEach(term => candidateSet.add(term));
+  console.log(`✓ ${accountingTerms.length} termes liés à la comptabilité extraits`);
+  
+  // AMÉLIORATION: Extraire les termes liés au capital
+  const capitalTerms = extractCapitalTerms(questionDataContent);
+  capitalTerms.forEach(term => candidateSet.add(term));
+  console.log(`✓ ${capitalTerms.length} termes liés au capital extraits`);
+  
+  console.log(`✓ ${candidateSet.size} termes candidats extraits au total`);
   
   // 6) Créer l'index du glossaire (sans vérification dans legal-terms.json)
   const glossaryIndex = [...candidateSet].filter(term => term.length > 2).sort();
