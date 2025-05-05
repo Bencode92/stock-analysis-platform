@@ -19,7 +19,7 @@ const GLOSSARY_CONFIG = {
         '.question-card .mb-2'          // Autres textes dans les questions
     ],
     excludeSelectors: ['button', 'input', 'select', 'a', 'h1', 'h2', 'h3.font-semibold', '.glossary-tooltip'], // Éléments à ignorer
-    jsonPath: 'js/legal-terms.json', // Chemin vers le fichier JSON
+    jsonPath: 'data/legal-terms.json', // Chemin vers le fichier JSON
     maxTooltipWidth: '350px', // Largeur maximale de l'info-bulle
     animationDuration: 300 // Durée de l'animation en ms
 };
