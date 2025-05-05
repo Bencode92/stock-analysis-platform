@@ -107,7 +107,42 @@ class LegalGlossary {
         } catch (error) {
             this.isLoading = false;
             console.error('Impossible de charger le glossaire juridique:', error);
+            console.error(`Détails de l'erreur: ${error.message}`);
+            console.log(`Tentative de chargement depuis: ${this.config.jsonPath}`);
+            
+            // Essayer de charger depuis un chemin alternatif si le premier échoue
+            this.tryAlternativePaths();
         }
+    }
+    
+    // Tente de charger le fichier JSON depuis des chemins alternatifs
+    async tryAlternativePaths() {
+        const alternativePaths = [
+            'legal-terms.json',
+            '../data/legal-terms.json',
+            '/data/legal-terms.json',
+            '/legal-terms.json'
+        ];
+        
+        for (const path of alternativePaths) {
+            try {
+                console.log(`Tentative avec le chemin alternatif: ${path}`);
+                const response = await fetch(path);
+                
+                if (response.ok) {
+                    this.terms = await response.json();
+                    this.isLoaded = true;
+                    console.log(`Glossaire chargé avec succès depuis ${path}`);
+                    this.highlightTermsInContent();
+                    document.dispatchEvent(new Event('glossaryLoaded'));
+                    return;
+                }
+            } catch (e) {
+                console.warn(`Échec du chargement depuis ${path}: ${e.message}`);
+            }
+        }
+        
+        console.error("Tous les chemins alternatifs ont échoué");
     }
 
     // Trouve et met en évidence les termes du glossaire dans le contenu
@@ -268,8 +303,10 @@ class LegalGlossary {
     // Convertit l'ID du terme en motif de recherche
     getTermPattern(termId) {
         return termId
-            .replace(/_/g, '\\s+') // Remplacer les underscores par des espaces
-            .replace(/([a-z])([A-Z])/g, '$1\\s*$2'); // Insérer des espaces facultatifs entre camelCase
+            // Remplacer les underscores et tirets par un motif acceptant espaces ou tirets
+            .replace(/[_-]/g, '[\\s\\-_]+')
+            // Insérer des espaces facultatifs entre camelCase
+            .replace(/([a-z])([A-Z])/g, '$1\\s*$2');
     }
 
     // Affiche la définition d'un terme
@@ -343,7 +380,7 @@ class LegalGlossary {
     generateTooltipContent(termId, termData) {
         // Titre du terme (transforme termId en texte lisible)
         const termTitle = termId
-            .replace(/_/g, ' ')
+            .replace(/[_-]/g, ' ')
             .replace(/([A-Z])/g, ' $1')
             .trim()
             .replace(/\b\w/g, l => l.toUpperCase());
