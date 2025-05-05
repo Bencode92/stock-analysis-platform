@@ -256,11 +256,11 @@
   "definition": "Dispositif fiscal permettant aux entreprises de bénéficier d'un crédit d'impôt proportionnel à leurs dépenses de R&D.",
   "example": "Une entreprise dépense 100 000€ en R&D et obtient un crédit d'impôt de 30 000€ qu'elle déduit de ses impôts.",
   "related_terms": ["recherche et développement", "innovation", "fiscalité", "impôt sur les sociétés"],
-  "conditions": [
+  "conditions": {
     "entreprise": "Industrielle, commerciale ou agricole, régime réel IS ou IR",
     "taille": "Moins de 250 salariés, CA < 50 M€, bilan < 43 M€",
     "r_d": "Projet visant à lever une incertitude technique, technicité supérieure au savoir-faire commun"
-  ],
+  },
   "depenses_eligibles": [
     "Salaires du personnel de R&D",
     "Amortissements",
@@ -269,20 +269,22 @@
   ],
   "source": "https://entreprendre.service-public.fr/vosdroits/F23533"
 },
+
 "cir": {
   "definition": "Le Crédit d'Impôt Recherche (CIR) est un dispositif fiscal permettant aux entreprises de bénéficier d'un crédit d'impôt proportionnel à leurs dépenses de R&D.",
   "example": "Une entreprise dépense 100 000€ en R&D et obtient un crédit d'impôt de 30 000€ qu'elle déduit de ses impôts.",
   "related_terms": ["recherche et développement", "innovation", "fiscalité", "impôt sur les sociétés", "credit_impot_recherche"]
 },
+
 "credit_impot_innovation": {
   "definition": "Crédit d'impôt complémentaire au CIR pour les PME innovantes développant ou améliorant des produits.",
   "example": "Une PME qui améliore significativement l'un de ses produits peut bénéficier d'un crédit d'impôt de 30% sur ses dépenses d'innovation.",
   "related_terms": ["CIR", "PME", "innovation produit", "crédit d'impôt"],
-  "conditions": [
+  "conditions": {
     "entreprise": "PME, régime réel",
     "taille": "Moins de 250 salariés, CA < 50 M€, bilan < 43 M€",
     "projet": "Développement ou amélioration significative de produits originaux ou inventifs"
-  ],
+  },
   "depenses_eligibles": [
     "Salaires liés à l'innovation",
     "Sous-traitance",
@@ -291,11 +293,13 @@
   "taux": "30 % des dépenses éligibles engagées à partir de 2023",
   "source": "https://entreprendre.service-public.fr/vosdroits/F35494"
 },
+
 "cii": {
   "definition": "Le Crédit d'Impôt Innovation (CII) est un dispositif fiscal complémentaire au CIR pour les PME innovantes développant ou améliorant des produits.",
   "example": "Une PME qui améliore significativement l'un de ses produits peut bénéficier d'un crédit d'impôt de 30% sur ses dépenses d'innovation.",
   "related_terms": ["CIR", "PME", "innovation produit", "crédit d'impôt", "credit_impot_innovation"]
 },
+
 "revente_entreprise_holding": {
   "definition": "La revente d'une entreprise détenue à 100 % par une holding correspond à une opération dans laquelle la société holding cède les titres de sa filiale. Les fonds issus de cette vente remontent dans la holding, sans passage direct par la personne physique associée.",
   "example": "Vous êtes associé unique d'une holding qui détient une société opérationnelle. La holding revend cette société à un tiers pour 5 millions d'euros. Ces 5 millions sont perçus directement par la holding, sans fiscalité immédiate pour vous.",
@@ -314,11 +318,11 @@
     "Possibilité de différer la fiscalité personnelle via le mécanisme d'apport-cession",
     "Protection du patrimoine personnel grâce à la structure juridique de la holding"
   ],
-  "conditions_fiscales": [
+  "conditions_fiscales": {
     "duree_detention": "Titres détenus depuis plus de deux ans pour bénéficier de la quote-part de 12 %",
     "report_imposition": "Réinvestissement d'au moins 60 % du produit de la cession dans les deux ans dans des actifs éligibles",
     "dividendes": "Distribution possible mais fiscalisée au niveau personnel"
-   ],
+  },
   "utilisation_fonds": [
     "Investissement dans d'autres sociétés ou projets",
     "Développement d'activités connexes ou immobilières",
@@ -327,164 +331,46 @@
   ],
   "impact": "La revente via la holding permet de maîtriser le calendrier fiscal, de sécuriser les gains, et de structurer un patrimoine professionnel de manière flexible. Elle offre également des perspectives de développement pour d'autres activités sans imposition immédiate au niveau personnel."
 },
-"integration_fiscale_groupe": {
-  "definition": "L'intégration fiscale est un dispositif permettant à un groupe de sociétés, constitué d'une société mère (souvent une holding) et de ses filiales, de consolider leurs résultats fiscaux pour ne payer qu'un seul impôt sur les sociétés sur le résultat global du groupe.",
-  "example": "Une holding détient à 100 % deux sociétés : l'une est déficitaire, l'autre bénéficiaire. Grâce à l'intégration fiscale, le déficit de l'une compense le bénéfice de l'autre, réduisant ainsi l'impôt global du groupe.",
-  "related_terms": ["groupe de sociétés", "holding", "impôt sur les sociétés", "optimisation fiscale"],
-  "fonctionnement": [
-    "Chaque société du groupe calcule son résultat fiscal séparément",
-    "La société mère centralise les résultats (bénéfices et pertes)",
-    "Un résultat fiscal unique est établi pour le groupe",
-    "Un seul paiement d'impôt sur les sociétés est effectué par la société mère"
-  ],
-  "avantages": [
-    "Compensation immédiate des bénéfices et pertes entre filiales",
-    "Réduction globale de l'impôt à payer",
-    "Neutralisation fiscale des dividendes intragroupe (hors quote-part de frais et charges)",
-    "Simplification : une seule déclaration fiscale pour tout le groupe"
-  ],
-  "conditions": [
-    "La société mère doit détenir au moins 95 % du capital de chaque filiale intégrée",
-    "Option pour l'intégration fiscale valable pour 5 ans, renouvelable",
-    "Accord écrit de toutes les sociétés intégrées",
-    "Résidence fiscale en France des sociétés intégrées (sauf cas particuliers)"
-  ],
-  "inconvenients": [
-    "Procédures administratives plus lourdes",
-    "Obligations de reporting fiscal plus complexes",
-    "Suivi rigoureux exigé chaque année"
-  ],
-  "mise_en_place": [
-    "Analyse préalable de la structure de détention",
-    "Signature d'une convention d'intégration entre la mère et les filiales",
-    "Dépôt de l'option auprès de l'administration fiscale avec pièces justificatives",
-    "Déclaration consolidée de l'impôt sur les sociétés par la holding"
-  ],
-  "impact": "L'intégration fiscale permet une optimisation fiscale immédiate et stratégique, en centralisant l'imposition au niveau du groupe, tout en sécurisant la trésorerie et facilitant la croissance des filiales sous le pilotage d'une société mère."
-},
-"comptabilite_simple": {
-  "definition": "Mode de tenue des comptes simplifié basé uniquement sur les encaissements et décaissements réels, sans suivi des dettes et créances.",
-  "example": "Un freelance enregistre ses ventes uniquement lorsqu'il reçoit le paiement sur son compte bancaire.",
-  "related_terms": ["comptabilité de trésorerie", "micro-entreprise", "encaissement", "livre des recettes"],
-  "nom": "Comptabilité de trésorerie",
-  "pour_qui": "Micro-entreprises, BNC, petites structures sous certains régimes fiscaux",
-  "principe": "Enregistrement uniquement des flux d'encaissement et de décaissement, les dettes et créances ne sont pas suivies en temps réel.",
-  "avantages": [
-    "Simplicité",
-    "Gain de temps",
-    "Moins de formalités administratives"
-  ],
-  "obligations": [
-    "Tenue d'un livre des recettes",
-    "Registre des achats (parfois)"
-  ],
-  "inconvenients": [
-    "Vision moins précise",
-    "Pas adaptée à une croissance rapide"
-  ]
-},
-"comptabilite_moderee": {
-  "definition": "Mode de comptabilité sans gestion de la TVA, utilisé par les entreprises en franchise de base de TVA.",
-  "example": "Un graphiste freelance facture ses clients sans TVA et mentionne sur ses factures 'TVA non applicable, art. 293 B du CGI'.",
-  "related_terms": ["franchise en base", "TVA non applicable", "article 293 B", "seuil de TVA"],
-  "nom": "Comptabilité sans TVA (franchise en base)",
-  "pour_qui": "Entreprises sous le seuil de TVA (micro-entreprises, petites sociétés)",
-  "principe": "Pas de TVA collectée ni déduite. Les factures portent la mention : 'TVA non applicable, art. 293 B du CGI'.",
-  "avantages": [
-    "Pas de déclaration ou paiement de TVA",
-    "Moins de charge administrative"
-  ],
-  "limites": [
-    "Impossible de récupérer la TVA sur les achats professionnels"
-  ],
-  "inconvenients": [
-    "TVA non récupérable",
-    "Peut limiter la crédibilité auprès de partenaires B2B"
-  ]
-},
-"comptabilite_complete": {
-  "definition": "Mode de comptabilité qui enregistre toutes les opérations dès leur engagement, indépendamment des flux de trésorerie.",
-  "example": "Une entreprise enregistre une facture client dès son émission, même si le paiement n'interviendra que 30 jours plus tard.",
-  "related_terms": ["comptabilité d'engagement", "bilan", "compte de résultat", "plan comptable", "régime réel"],
-  "nom": "Comptabilité d'engagement",
-  "pour_qui": "PME, sociétés soumises au régime réel ou réel simplifié",
-  "principe": "Enregistrement des dettes et créances dès la facturation, qu'elles soient payées ou non.",
-  "avantages": [
-    "Vision financière précise",
-    "Obligatoire pour la majorité des sociétés",
-    "Anticipation des flux de trésorerie"
-  ],
-  "obligations": [
-    "Tenue d'un livre-journal et d'un grand livre",
-    "Établissement du bilan, du compte de résultat, et des annexes"
-  ],
-  "inconvenients": [
-    "Plus complexe",
-    "Chronophage",
-    "Nécessite des compétences comptables ou un accompagnement"
-  ]
-},
-"externalite_expert_comptable": {
-  "definition": "Recours à un professionnel de la comptabilité pour gérer tout ou partie de la comptabilité de l'entreprise.",
-  "example": "Une PME confie la production de ses comptes annuels et déclarations fiscales à un cabinet d'expertise comptable.",
-  "related_terms": ["expert-comptable", "commissaire aux comptes", "externalisation", "tenue comptable"],
-  "nom": "Recours à un expert-comptable",
-  "pour_qui": "Toutes les entreprises, en particulier celles avec des obligations complexes ou un besoin de sécurisation",
-  "principe": "Délégation de la comptabilité (partielle ou totale) à un professionnel externe agréé.",
-  "avantages": [
-    "Sécurité et conformité légale",
-    "Conseils personnalisés",
-    "Gain de temps",
-    "Optimisation fiscale"
-  ],
-  "inconvenients": [
-    "Coût d'honoraires",
-    "Dépendance à un tiers pour les mises à jour comptables"
-  ]
-},
-"impots_is_ir": {
-  "definition": "L'impôt sur les sociétés (IS) et l'impôt sur le revenu (IR) sont deux régimes fiscaux distincts selon la forme juridique de l'entreprise. L'IS est payé par la société sur ses bénéfices, tandis que l'IR est payé directement par les associés ou l'entrepreneur sur leur part de bénéfice intégrée à leur revenu global.",
-  "example": "Une SAS réalisant 100 000 € de bénéfices paiera 15 % sur les premiers 42 500 €, puis 25 % sur le reste. Un entrepreneur individuel intégrera 40 000 € de bénéfice à son revenu personnel pour l'IR.",
-  "related_terms": ["impôt", "fiscalité", "bénéfices", "dividendes", "taux d'imposition", "barème fiscal"]
-},
+
 "cout_social": {
   "definition": "Le coût social correspond aux charges sociales versées aux organismes sociaux pour couvrir la protection sociale des dirigeants et salariés.",
   "example": "Un dirigeant de SASU verse 45 % de charges sociales sur son salaire pour bénéficier de la couverture maladie, retraite et prévoyance.",
   "related_terms": ["charges sociales", "URSSAF", "cotisations", "protection sociale", "paie"],
-  "application": [
+  "application": {
     "entrepreneur_individuel": "Cotisations sociales calculées sur le revenu professionnel.",
     "societe": "Charges patronales sur les salaires + charges salariales déduites du brut."
-  ]
+  }
 },
 
 "fiscalite": {
   "definition": "La fiscalité désigne l'ensemble des impôts et taxes supportés par l'entreprise selon sa forme juridique et son régime fiscal.",
   "example": "Une SARL paie l'impôt sur les sociétés sur ses bénéfices, collecte et reverse la TVA, et s'acquitte de la taxe sur les véhicules de société.",
   "related_terms": ["impôt", "taxe", "IS", "IR", "TVA", "CFE", "droits d'enregistrement"],
-  "types_d_impots": [
-      "IS": "Impôt sur les sociétés à 25%, avec taux réduit à 15% jusqu'à 42 500 € pour certaines PME",
-      "IR": "Impôt sur le revenu payé directement par l'entrepreneur ou les associés",
-      "TVA": "Collecte et reversement de la TVA, possibilité de déduction",
-      "CFE": "Taxe locale basée sur la valeur locative des locaux professionnels",
-      "autres": "Taxe sur les véhicules de société, droits d'enregistrement, etc."
-  ]
+  "types_d_impots": {
+    "IS": "Impôt sur les sociétés à 25 %, avec taux réduit à 15 % jusqu'à 42 500 € pour certaines PME",
+    "IR": "Impôt sur le revenu payé directement par l'entrepreneur ou les associés",
+    "TVA": "Collecte et reversement de la TVA, possibilité de déduction",
+    "CFE": "Taxe locale basée sur la valeur locative des locaux professionnels",
+    "autres": "Taxe sur les véhicules de société, droits d'enregistrement, etc."
+  }
 },
+
 "cout_comptable": {
   "definition": "Le coût comptable regroupe toutes les dépenses liées à la gestion administrative et comptable de l'entreprise.",
   "example": "Une SARL paie 200€ par mois à son expert-comptable pour la tenue de sa comptabilité et ses déclarations fiscales.",
   "related_terms": ["expert-comptable", "frais de constitution", "annonces légales", "logiciel comptable", "tenue comptable"],
-  "composants": [
-      "expert_comptable": "Honoraires variables selon la complexité, entre 150€ et 500€ pour la création",
-      "formalites": "Frais d'immatriculation, annonces légales, rédaction des statuts (24–226 €)",
-      "logiciels": "Coût d'un logiciel de comptabilité si gestion interne",
-      "annexes": "Dépôt de nom de domaine, domiciliation, dépôt de marque, etc."
-  ]
+  "composants": {
+    "expert_comptable": "Honoraires variables selon la complexité, entre 150€ et 500€ pour la création",
+    "formalites": "Frais d'immatriculation, annonces légales, rédaction des statuts (24–226 €)",
+    "logiciels": "Coût d'un logiciel de comptabilité si gestion interne",
+    "annexes": "Dépôt de nom de domaine, domiciliation, dépôt de marque, etc."
+  }
 },
+
 "micro_vs_reel": {
-  "definition": "Le régime micro (micro-BIC ou micro-BNC) et le régime réel sont deux modes d'imposition distincts pour les entrepreneurs individuels et micro-entreprises. Le choix de l'un ou l'autre a un impact direct sur la manière de déclarer les revenus et de calculer les charges fiscales.",
-  "example": "Un consultant indépendant au régime micro-BNC déduit automatiquement 34% de son chiffre d'affaires comme charges, alors qu'au réel il déduirait ses frais réels qui peuvent représenter 45% de son CA.",
+  "definition": "Le régime micro (micro‑BIC ou micro‑BNC) et le régime réel sont deux modes d'imposition distincts pour les entrepreneurs individuels. Le choix de l'un ou l'autre a un impact direct sur la manière de déclarer les revenus et de calculer les charges fiscales.",
+  "example": "Un consultant au régime micro‑BNC déduit automatiquement 34 % de son chiffre d'affaires comme charges, alors qu'au réel il déduirait ses frais réels qui peuvent représenter 45 % de son CA.",
   "related_terms": ["micro-entreprise", "régime réel", "abattement forfaitaire", "frais réels", "comptabilité"],
-  },
   "regime_micro": {
     "description": "Régime simplifié d'imposition destiné aux petites entreprises avec un chiffre d'affaires limité.",
     "seuils_CA_2024": {
@@ -496,33 +382,33 @@
       "vente": "71 %",
       "services_BIC": "50 %",
       "BNC": "34 %",
-      "minimum": "305 € d'abattement minimal dans tous les cas"
+      "minimum": "305 € d'abattement minimal"
+    }
   },
   "regime_reel": {
-    "description": "Régime d'imposition où l'entrepreneur déclare ses revenus réels et peut déduire l'ensemble des charges professionnelles réellement supportées.",
+    "description": "Régime d'imposition où l'entrepreneur déclare ses revenus réels et peut déduire toutes les charges professionnelles effectivement supportées.",
     "types": ["Réel simplifié", "Réel normal"],
     "fonctionnement": [
       "Déclaration complète des recettes et dépenses",
-      "Déduction des charges réelles engagées (loyer, matériel, véhicule, etc.)",
-      "Comptabilité complète (livre journal, grand livre, bilan, compte de résultat)",
+      "Déduction des charges réelles engagées",
+      "Comptabilité d'engagement (bilan, compte de résultat, annexes)",
       "Récupération possible de la TVA"
     ]
   },
   "frais_reels": {
-    "definition": "Les frais réels sont les dépenses professionnelles réellement engagées et justifiées, déductibles uniquement dans le cadre du régime réel.",
+    "definition": "Dépenses professionnelles réellement engagées et justifiées, déductibles uniquement dans le cadre du régime réel.",
     "exemples": [
-      "Frais de déplacement (carburant, entretien)",
+      "Frais de déplacement",
       "Frais de repas",
-      "Location de bureau ou local",
-      "Fournitures, logiciels, assurances professionnelles"
-    ],
-    "condition": "Nécessitent une comptabilité rigoureuse et des justificatifs"
+      "Location de bureau",
+      "Logiciels et assurances pro"
+    ]
   },
   "abattement_forfaitaire": {
     "definition": "Réduction automatique appliquée sur le chiffre d'affaires en régime micro, représentant les charges professionnelles moyennes.",
     "non_personnalise": true,
-    "application": "Appliqué directement par l'administration fiscale sur la base du CA déclaré, sans déduction de frais réels."
-},
+    "application": "Appliqué directement par l'administration fiscale sans justificatifs."
+  },
 "high_professional_risk": {
   "definition": "Les risques professionnels élevés désignent les dommages potentiels (physiques, matériels, financiers) que l'entreprise peut causer à des tiers dans l'exercice de son activité et qui engagent sa responsabilité civile professionnelle.",
   "example": "Un ingénieur consultant dont les conseils techniques erronés entraînent des défauts de construction majeurs, ou un restaurateur dont la négligence provoque une intoxication alimentaire collective.",
