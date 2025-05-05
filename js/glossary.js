@@ -22,8 +22,6 @@ class LegalGlossary {
         this.activeTooltip = null;
         this.isLoading = false;
         this.isLoaded = false;
-        this.regex = null; // 🔹 Cache pour la RegExp
-        this.observer = null; // 🔹 Référence au MutationObserver
         this.injectStyles();
         this.loadTerms();
     }
@@ -101,9 +99,6 @@ class LegalGlossary {
             this.isLoading = false;
             console.log(`Glossaire juridique chargé avec ${Object.keys(this.terms).length} termes`);
             
-            // Réinitialiser le cache de regex après chargement des termes
-            this.regex = null;
-            
             // Lancer le processus de mise en évidence après le chargement
             this.highlightTermsInContent();
             
@@ -132,10 +127,7 @@ class LegalGlossary {
 
     // Observer les changements dans le DOM pour traiter le contenu dynamique
     observeDynamicContent() {
-        // Éviter les observateurs multiples
-        if (this.observer) return;
-        
-        this.observer = new MutationObserver(mutations => {
+        const observer = new MutationObserver(mutations => {
             mutations.forEach(mutation => {
                 if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
                     mutation.addedNodes.forEach(node => {
@@ -152,18 +144,10 @@ class LegalGlossary {
             });
         });
         
-        this.observer.observe(document.body, {
+        observer.observe(document.body, {
             childList: true,
             subtree: true
         });
-    }
-    
-    // Arrêter l'observation des mutations du DOM
-    disconnect() {
-        if (this.observer) {
-            this.observer.disconnect();
-            this.observer = null;
-        }
     }
 
     // Traite un nœud DOM pour mettre en évidence les termes
@@ -215,46 +199,9 @@ class LegalGlossary {
         return textNodes;
     }
 
-    // Construit une RegExp unique pour tous les termes
-    buildGlossaryRegex() {
-        // Utiliser la RegExp en cache si disponible
-        if (this.regex) return this.regex;
-        
-        const alternates = Object.keys(this.terms)
-            .sort((a, b) => b.length - a.length)   // long -> court pour prioritiser les expressions longues
-            .map(id => this.getTermPattern(id));
-            
-        this.regex = new RegExp(`\\b(?:${alternates.join('|')})\\b`, 'giu');
-        return this.regex;
-    }
-
-    // Convertit l'ID d'un terme en modèle de recherche
-    getTermPattern(termId) {
-        // 1) snake_case -> texte + espaces souples
-        let txt = termId.replace(/_/g, ' ');
-
-        // 2) supprime les accents pour la recherche
-        txt = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '');  // enlève les diacritiques
-        txt = txt.replace(/\s+/g, '\\s+');                           // espace(s) variable(s)
-        
-        // 3) échappe tout caractère spécial RegExp
-        txt = txt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-        return txt;
-    }
-
-    // Normaliser le texte trouvé en ID
-    normalizeToId(str) {
-        return str
-            .toLowerCase()
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // enlève les accents
-            .trim()
-            .replace(/\s+/g, '_');                            // espaces -> underscore
-    }
-
-    // Met en évidence les termes dans un nœud de texte (nouvelle implémentation)
+    // Met en évidence les termes dans un nœud de texte
     highlightTermsInNode(textNode) {
-        const raw = textNode.nodeValue;
+        const text = textNode.nodeValue;
         const parent = textNode.parentNode;
         
         // Si le parent est déjà un terme de glossaire, ne pas le traiter à nouveau
@@ -265,59 +212,64 @@ class LegalGlossary {
         // Créer un fragment de document pour stocker le contenu modifié
         const fragment = document.createDocumentFragment();
         
-        // Pré-normaliser le texte pour la recherche (sans accents)
-        const norm = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        // Position de départ dans le texte
+        let currentPosition = 0;
         
-        const regex = this.buildGlossaryRegex();
-        regex.lastIndex = 0; // Réinitialiser le lastIndex
-        
-        let match, lastIndex = 0;
-        
-        // Rechercher tous les termes dans une seule passe
-        while ((match = regex.exec(norm)) !== null) {
-            // Ajouter le texte avant le terme
-            if (match.index > lastIndex) {
-                fragment.appendChild(document.createTextNode(
-                    raw.substring(lastIndex, match.index)
-                ));
+        // Rechercher tous les termes du glossaire dans le texte
+        for (const [termId, termData] of Object.entries(this.terms)) {
+            // Convertir l'ID du terme en texte lisible (suppression des underscores, etc.)
+            const termPattern = this.getTermPattern(termId);
+            
+            // Rechercher le terme dans le texte restant
+            const regex = new RegExp(`\\b(${termPattern})\\b`, 'gi');
+            let match;
+            
+            while ((match = regex.exec(text)) !== null) {
+                // Ajouter le texte avant le terme
+                if (match.index > currentPosition) {
+                    fragment.appendChild(document.createTextNode(
+                        text.substring(currentPosition, match.index)
+                    ));
+                }
+                
+                // Créer un élément pour le terme surligné
+                const termElement = document.createElement('span');
+                termElement.className = 'glossary-term';
+                termElement.textContent = match[0];
+                termElement.dataset.termId = termId;
+                
+                // Ajouter un gestionnaire de clic pour afficher la définition
+                termElement.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.showDefinition(termId, termElement);
+                });
+                
+                fragment.appendChild(termElement);
+                
+                // Mettre à jour la position courante
+                currentPosition = match.index + match[0].length;
             }
-            
-            // Récupérer le texte original avec accents
-            const origSlice = raw.slice(match.index, regex.lastIndex);
-            
-            // Obtenir l'ID du terme à partir du texte trouvé
-            const termId = this.normalizeToId(match[0]);
-            
-            // Créer un élément pour le terme trouvé
-            const termElement = document.createElement('span');
-            termElement.className = 'glossary-term';
-            termElement.textContent = origSlice; // Utiliser le texte original avec accents
-            termElement.dataset.termId = termId;
-            
-            // Ajouter un gestionnaire de clic pour afficher la définition
-            termElement.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                this.showDefinition(termId, termElement);
-            });
-            
-            fragment.appendChild(termElement);
-            
-            // Mettre à jour la position courante
-            lastIndex = regex.lastIndex;
         }
         
-        // Ajouter le reste du texte après le dernier terme
-        if (lastIndex < raw.length) {
+        // Ajouter le reste du texte
+        if (currentPosition < text.length) {
             fragment.appendChild(document.createTextNode(
-                raw.substring(lastIndex)
+                text.substring(currentPosition)
             ));
         }
         
         // Remplacer le nœud de texte par le fragment uniquement si des modifications ont été apportées
-        if (lastIndex > 0) {
+        if (currentPosition > 0) {
             parent.replaceChild(fragment, textNode);
         }
+    }
+
+    // Convertit l'ID du terme en motif de recherche
+    getTermPattern(termId) {
+        return termId
+            .replace(/_/g, '\\s+') // Remplacer les underscores par des espaces
+            .replace(/([a-z])([A-Z])/g, '$1\\s*$2'); // Insérer des espaces facultatifs entre camelCase
     }
 
     // Affiche la définition d'un terme
@@ -325,20 +277,7 @@ class LegalGlossary {
         // Fermer la bulle active si elle existe
         this.closeActiveTooltip();
         
-        // Chercher le terme dans le dictionnaire des termes
-        // On vérifie d'abord si le termId existe directement, sinon on cherche un terme qui pourrait correspondre
-        let termData = this.terms[termId];
-        if (!termData) {
-            // Recherche alternative si l'ID exact n'est pas trouvé
-            const possibleTermId = Object.keys(this.terms).find(id => 
-                this.normalizeToId(id) === termId || id === termId
-            );
-            if (possibleTermId) {
-                termData = this.terms[possibleTermId];
-                termId = possibleTermId; // Mise à jour de l'ID utilisé pour la suite
-            }
-        }
-        
+        const termData = this.terms[termId];
         if (!termData) return;
         
         // Créer la bulle d'information
@@ -482,14 +421,14 @@ class LegalGlossary {
         setTimeout(() => {
             const tooltipRect = tooltip.getBoundingClientRect();
             
-            // Ajuster horizontalement avec une marge minimale de 20px
+            // Ajuster horizontalement
             if (tooltipRect.right > window.innerWidth) {
-                tooltip.style.left = `${Math.max(20, window.innerWidth - tooltipRect.width - 20) + scrollLeft}px`;
+                tooltip.style.left = `${window.innerWidth - tooltipRect.width - 20 + scrollLeft}px`;
             }
             
-            // Ajuster verticalement avec une marge minimale de 20px
+            // Ajuster verticalement
             if (tooltipRect.bottom > window.innerHeight) {
-                tooltip.style.top = `${Math.max(20, rect.top + scrollTop - tooltipRect.height - 10)}px`;
+                tooltip.style.top = `${rect.top + scrollTop - tooltipRect.height - 10}px`;
             }
         }, 0);
     }
@@ -516,19 +455,6 @@ class LegalGlossary {
             }
         }
     }
-    
-    // Méthode pour tester le bon fonctionnement de la détection des termes
-    runTests() {
-        const testTerms = ['Autres revenus salariés', 'revenus', 'TMI', 'ARE', 'salariés'];
-        console.group('Tests de détection des termes');
-        testTerms.forEach(txt => {
-            const normalized = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-            const regex = this.buildGlossaryRegex();
-            const matches = regex.test(normalized);
-            console.log(`Terme "${txt}" (norm: "${normalized}"): ${matches ? '✅' : '❌'}`);
-        });
-        console.groupEnd();
-    }
 }
 
 // Initialiser le glossaire après le chargement de la page
@@ -540,13 +466,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('contentUpdated', () => {
         if (window.legalGlossary && window.legalGlossary.isLoaded) {
             window.legalGlossary.highlightTermsInContent();
-        }
-    });
-    
-    // Ajouter une fonction pour déconnecter l'observer lors du changement de page
-    window.addEventListener('beforeunload', () => {
-        if (window.legalGlossary) {
-            window.legalGlossary.disconnect();
         }
     });
 });
