@@ -9,7 +9,7 @@ const GLOSSARY_CONFIG = {
     highlightColor: '#00FF87', // Couleur verte LED
     targetSelectors: ['.question-card', '.recommendation-card', '.results-container', '.main-content p'], // Conteneurs où rechercher les termes
     excludeSelectors: ['button', 'input', 'select', 'a', 'h1', 'h2', 'h3', '.glossary-tooltip'], // Éléments à ignorer
-    jsonPath: 'data/legal-terms.json', // Chemin modifié - maintenant dans le dossier js/
+    jsonPath: 'data/legal-terms.json', // Chemin modifié - maintenant dans le dossier data/
     maxTooltipWidth: '350px', // Largeur maximale de l'info-bulle
     animationDuration: 300 // Durée de l'animation en ms
 };
