@@ -21,7 +21,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          # Suppression de l'option de cache qui nécessite package-lock.json
+          # Pas de cache pour éviter l'erreur de fichier de verrou manquant
       
       - name: Install dependencies
         run: npm install
@@ -32,17 +32,30 @@ jobs:
       - name: Generate glossary index
         run: node scripts/buildGlossaryIndex.js
       
-      - name: Check for changes
-        id: check_changes
+      - name: Check if glossary index exists
+        id: check_file
         run: |
-          git diff --exit-code data/glossary-index.json || echo "has_changes=true" >> $GITHUB_OUTPUT
+          if [ -f "data/glossary-index.json" ]; then
+            echo "file_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "file_exists=false" >> $GITHUB_OUTPUT
+          fi
       
-      - name: Commit and push if there are changes
-        if: steps.check_changes.outputs.has_changes == 'true'
+      - name: Commit and push changes
+        if: steps.check_file.outputs.file_exists == 'true'
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add data/glossary-index.json
-          git add report-missing-terms.txt || true
-          git commit -m "${{ github.event.inputs.commit_message }}"
-          git push
+          
+          if [ -f "report-missing-terms.txt" ]; then
+            git add report-missing-terms.txt
+          fi
+          
+          # Vérifier s'il y a des changements à commiter
+          if git diff --staged --quiet; then
+            echo "Aucun changement détecté, rien à commiter"
+          else
+            git commit -m "${{ github.event.inputs.commit_message }}"
+            git push
+          fi
