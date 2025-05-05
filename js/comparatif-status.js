@@ -3,6 +3,11 @@
  * À inclure dans la page "Comparatif des statuts"
  */
 
+// Fonction d'initialisation disponible globalement pour être appelée depuis app.js
+window.initComparatifStatuts = function() {
+    createComparatifTable('comparatif-container');
+};
+
 (function() {
     // Injecter le CSS nécessaire pour le tableau
     function injectCSS() {
@@ -569,9 +574,9 @@
     // Démarrer lorsque le DOM est chargé
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', () => {
-            createComparatifTable('comparatif-container');
+            // On n'initialise plus automatiquement ici, l'initialisation est faite via window.initComparatifStatuts
         });
     } else {
-        createComparatifTable('comparatif-container');
+        // On n'initialise plus automatiquement ici non plus
     }
 })();
