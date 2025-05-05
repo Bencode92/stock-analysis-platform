@@ -1,7 +1,7 @@
 /**
  * Script de génération de l'index du glossaire
  * 
- * Version modifiée qui n'utilise PAS legal-terms.json
+ * Version simplifiée qui n'utilise PAS legal-terms.json
  * Ce script extrait uniquement les termes de question-data.js
  * pour créer un index du glossaire indépendant.
  * 
@@ -41,51 +41,40 @@ try {
   // Lire le contenu de question-data.js comme une chaîne
   const questionDataContent = fs.readFileSync(questionDataPath, 'utf8');
   
-  // Extraire les questions avec une regex
-  const questionObjects = questionDataContent.match(/{\\s*id:\\s*[\"']([^\"']+)[\"'],[\\s\\S]*?}/g) || [];
+  // Approche simplifiée : extraire tous les textes pertinents directement
   
   // 1) Extraire tous les identifiants (IDs)
   const idMatches = questionDataContent.match(/id:\s*["']([^"']+)["']/g) || [];
   const ids = idMatches.map(match => match.replace(/id:\s*["']|["']/g, ''));
   
-  // 2) Ratisse toutes les chaînes potentielles
-  const titles = [];
+  // 2) Extraire les titres
+  const titleMatches = questionDataContent.match(/title:\s*["']([^"']+)["']/g) || [];
+  const titles = titleMatches.map(match => match.replace(/title:\s*["']|["']/g, ''));
   
-  for (const questionStr of questionObjects) {
-    // Extraire le titre
-    const titleMatch = questionStr.match(/title:\\s*[\"']([^\"']+)[\"']/);
-    if (titleMatch && titleMatch[1]) titles.push(titleMatch[1]);
-    
-    // Extraire la description
-    const descMatch = questionStr.match(/description:\\s*[\"']([^\"']+)[\"']/);
-    if (descMatch && descMatch[1]) titles.push(descMatch[1]);
-    
-    // Extraire les options (plus complexe)
-    const optionsMatch = questionStr.match(/options:\\s*\\[([\\s\\S]*?)\\]/);
-    if (optionsMatch && optionsMatch[1]) {
-      const optionsStr = optionsMatch[1];
-      const optionLabelMatches = optionsStr.match(/label:\\s*[\"']([^\"']+)[\"']/g) || [];
-      
-      for (const labelMatch of optionLabelMatches) {
-        const label = labelMatch.match(/label:\\s*[\"']([^\"']+)[\"']/);
-        if (label && label[1]) titles.push(label[1]);
-      }
-    }
-  }
+  // 3) Extraire les descriptions
+  const descMatches = questionDataContent.match(/description:\s*["']([^"']+)["']/g) || [];
+  const descriptions = descMatches.map(match => match.replace(/description:\s*["']|["']/g, ''));
   
-  console.log(`✓ ${titles.length} textes extraits des questions`);
+  // 4) Extraire les labels d'options
+  const labelMatches = questionDataContent.match(/label:\s*["']([^"']+)["']/g) || [];
+  const labels = labelMatches.map(match => match.replace(/label:\s*["']|["']/g, ''));
   
-  // 3) Les transforme en tokens « mots » (split sur espace & ponctuation)
+  // Fusionner tous les textes extraits
+  const allTexts = [...ids, ...titles, ...descriptions, ...labels];
+  
+  console.log(`✓ ${allTexts.length} textes extraits des questions`);
+  
+  // 5) Les transforme en tokens « mots » (split sur espace & ponctuation)
   const candidateSet = new Set();
   
-  // Ajouter les IDs directement
+  // Ajouter les IDs directement (ils sont probablement déjà au bon format)
   ids.forEach(id => {
     const processedId = toId(id);
     if (processedId.length > 2) candidateSet.add(processedId);
   });
   
-  // Traiter les titres et autres textes
-  titles.forEach(txt => {
+  // Traiter tous les textes
+  allTexts.forEach(txt => {
     if (!txt) return;
     
     // Extraire des segments de mots (potentiellement multi-mots)
@@ -110,17 +99,17 @@ try {
   
   console.log(`✓ ${candidateSet.size} termes candidats extraits`);
   
-  // 4) Créer l'index du glossaire (sans vérification dans legal-terms.json)
+  // 6) Créer l'index du glossaire (sans vérification dans legal-terms.json)
   const glossaryIndex = [...candidateSet].filter(term => term.length > 2).sort();
   
-  // 5) Créer le dossier data s'il n'existe pas
+  // 7) Créer le dossier data s'il n'existe pas
   const dataDir = path.dirname(outputPath);
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
     console.log(`✓ Dossier créé: ${dataDir}`);
   }
   
-  // 6) Écrit le fichier d'index
+  // 8) Écrit le fichier d'index
   fs.writeFileSync(
     outputPath,
     JSON.stringify(glossaryIndex, null, 2),
