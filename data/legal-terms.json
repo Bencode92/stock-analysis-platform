@@ -232,19 +232,19 @@
   "definition": "Statut fiscal et social pour les entreprises de moins de 8 ans investissant au moins 20% de leurs charges en R&D.",
   "example": "Une startup technologique bénéficie du statut JEI et obtient une réduction de 50% des charges patronales sur ses ingénieurs R&D.",
   "related_terms": ["innovation", "recherche et développement", "exonération fiscale", "startup"],
-  "conditions": {
+  "conditions": [
     "age_max": "8 ans",
     "taille": "Moins de 250 salariés, CA < 50 M€, bilan < 43 M€",
     "capital": "Détenu à 50 % par personnes physiques ou structures qualifiées",
     "r_d": "Au moins 20 % des charges déductibles",
     "autres": "Être indépendante, non cotée, soumise à l'IS, basée dans l'EEE"
-  },
-  "avantages": {
+  ],
+  "avantages": [
     "urssaf": "Réduction de 50 % des charges patronales sur salaires R&D",
     "is": "Exonération totale (1er exercice), 50 % (2e) - supprimée après 01/01/2024",
     "fonciere": "Exonération de CFE et de taxe foncière",
     "cir": "Facilite l'accès au Crédit d'Impôt Recherche"
-  },
+  ],
   "source": "https://entreprendre.service-public.fr/vosdroits/F31188"
 },
 "jei": {
@@ -256,11 +256,11 @@
   "definition": "Dispositif fiscal permettant aux entreprises de bénéficier d'un crédit d'impôt proportionnel à leurs dépenses de R&D.",
   "example": "Une entreprise dépense 100 000€ en R&D et obtient un crédit d'impôt de 30 000€ qu'elle déduit de ses impôts.",
   "related_terms": ["recherche et développement", "innovation", "fiscalité", "impôt sur les sociétés"],
-  "conditions": {
+  "conditions": [
     "entreprise": "Industrielle, commerciale ou agricole, régime réel IS ou IR",
     "taille": "Moins de 250 salariés, CA < 50 M€, bilan < 43 M€",
     "r_d": "Projet visant à lever une incertitude technique, technicité supérieure au savoir-faire commun"
-  },
+  ],
   "depenses_eligibles": [
     "Salaires du personnel de R&D",
     "Amortissements",
@@ -278,11 +278,11 @@
   "definition": "Crédit d'impôt complémentaire au CIR pour les PME innovantes développant ou améliorant des produits.",
   "example": "Une PME qui améliore significativement l'un de ses produits peut bénéficier d'un crédit d'impôt de 30% sur ses dépenses d'innovation.",
   "related_terms": ["CIR", "PME", "innovation produit", "crédit d'impôt"],
-  "conditions": {
+  "conditions": [
     "entreprise": "PME, régime réel",
     "taille": "Moins de 250 salariés, CA < 50 M€, bilan < 43 M€",
     "projet": "Développement ou amélioration significative de produits originaux ou inventifs"
-  },
+  ],
   "depenses_eligibles": [
     "Salaires liés à l'innovation",
     "Sous-traitance",
@@ -314,11 +314,11 @@
     "Possibilité de différer la fiscalité personnelle via le mécanisme d'apport-cession",
     "Protection du patrimoine personnel grâce à la structure juridique de la holding"
   ],
-  "conditions_fiscales": {
+  "conditions_fiscales": [
     "duree_detention": "Titres détenus depuis plus de deux ans pour bénéficier de la quote-part de 12 %",
     "report_imposition": "Réinvestissement d'au moins 60 % du produit de la cession dans les deux ans dans des actifs éligibles",
     "dividendes": "Distribution possible mais fiscalisée au niveau personnel"
-  },
+   ],
   "utilisation_fonds": [
     "Investissement dans d'autres sociétés ou projets",
     "Développement d'activités connexes ou immobilières",
@@ -451,39 +451,40 @@
   "definition": "Le coût social correspond aux charges sociales versées aux organismes sociaux pour couvrir la protection sociale des dirigeants et salariés.",
   "example": "Un dirigeant de SASU verse 45 % de charges sociales sur son salaire pour bénéficier de la couverture maladie, retraite et prévoyance.",
   "related_terms": ["charges sociales", "URSSAF", "cotisations", "protection sociale", "paie"],
-  "application": {
+  "application": [
     "entrepreneur_individuel": "Cotisations sociales calculées sur le revenu professionnel.",
     "societe": "Charges patronales sur les salaires + charges salariales déduites du brut."
-  }
+  ]
 },
 
 "fiscalite": {
   "definition": "La fiscalité désigne l'ensemble des impôts et taxes supportés par l'entreprise selon sa forme juridique et son régime fiscal.",
   "example": "Une SARL paie l'impôt sur les sociétés sur ses bénéfices, collecte et reverse la TVA, et s'acquitte de la taxe sur les véhicules de société.",
   "related_terms": ["impôt", "taxe", "IS", "IR", "TVA", "CFE", "droits d'enregistrement"],
-  "types_d_impots": {
+  "types_d_impots": [
       "IS": "Impôt sur les sociétés à 25%, avec taux réduit à 15% jusqu'à 42 500 € pour certaines PME",
       "IR": "Impôt sur le revenu payé directement par l'entrepreneur ou les associés",
       "TVA": "Collecte et reversement de la TVA, possibilité de déduction",
       "CFE": "Taxe locale basée sur la valeur locative des locaux professionnels",
       "autres": "Taxe sur les véhicules de société, droits d'enregistrement, etc."
-  }
+  ]
 },
 "cout_comptable": {
   "definition": "Le coût comptable regroupe toutes les dépenses liées à la gestion administrative et comptable de l'entreprise.",
   "example": "Une SARL paie 200€ par mois à son expert-comptable pour la tenue de sa comptabilité et ses déclarations fiscales.",
   "related_terms": ["expert-comptable", "frais de constitution", "annonces légales", "logiciel comptable", "tenue comptable"],
-  "composants": {
+  "composants": [
       "expert_comptable": "Honoraires variables selon la complexité, entre 150€ et 500€ pour la création",
       "formalites": "Frais d'immatriculation, annonces légales, rédaction des statuts (24–226 €)",
       "logiciels": "Coût d'un logiciel de comptabilité si gestion interne",
       "annexes": "Dépôt de nom de domaine, domiciliation, dépôt de marque, etc."
-  }
+  ]
 },
 "micro_vs_reel": {
   "definition": "Le régime micro (micro-BIC ou micro-BNC) et le régime réel sont deux modes d'imposition distincts pour les entrepreneurs individuels et micro-entreprises. Le choix de l'un ou l'autre a un impact direct sur la manière de déclarer les revenus et de calculer les charges fiscales.",
   "example": "Un consultant indépendant au régime micro-BNC déduit automatiquement 34% de son chiffre d'affaires comme charges, alors qu'au réel il déduirait ses frais réels qui peuvent représenter 45% de son CA.",
   "related_terms": ["micro-entreprise", "régime réel", "abattement forfaitaire", "frais réels", "comptabilité"],
+  },
   "regime_micro": {
     "description": "Régime simplifié d'imposition destiné aux petites entreprises avec un chiffre d'affaires limité.",
     "seuils_CA_2024": {
@@ -496,7 +497,6 @@
       "services_BIC": "50 %",
       "BNC": "34 %",
       "minimum": "305 € d'abattement minimal dans tous les cas"
-    }
   },
   "regime_reel": {
     "description": "Régime d'imposition où l'entrepreneur déclare ses revenus réels et peut déduire l'ensemble des charges professionnelles réellement supportées.",
@@ -522,7 +522,6 @@
     "definition": "Réduction automatique appliquée sur le chiffre d'affaires en régime micro, représentant les charges professionnelles moyennes.",
     "non_personnalise": true,
     "application": "Appliqué directement par l'administration fiscale sur la base du CA déclaré, sans déduction de frais réels."
-  }
 },
 "high_professional_risk": {
   "definition": "Les risques professionnels élevés désignent les dommages potentiels (physiques, matériels, financiers) que l'entreprise peut causer à des tiers dans l'exercice de son activité et qui engagent sa responsabilité civile professionnelle.",
