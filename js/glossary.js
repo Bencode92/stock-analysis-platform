@@ -98,7 +98,7 @@ class LegalGlossary {
 
     // Supprime tous les diacritiques (accents) via Unicode NFD
     stripDiacritics(str) {
-        return str.normalize('NFD').replace(/\p{Diacritic}/gu, '');
+        return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     }
 
     // Charge les termes depuis le fichier JSON
@@ -346,7 +346,7 @@ class LegalGlossary {
         return pattern;
     }
 
-    // Met en évidence les termes dans un nœud de texte avec gestion des accents
+    // MODIFIÉE : Met en évidence les termes dans un nœud de texte avec amélioration pour les accents
     highlightTermsInNode(textNode) {
         const text = textNode.nodeValue;
         const parent = textNode.parentNode;
@@ -362,8 +362,8 @@ class LegalGlossary {
         // Position de départ dans le texte
         let currentPosition = 0;
         
-        // Normaliser le texte une seule fois pour toutes les recherches
-        const normalizedText = this.stripDiacritics(text.toLowerCase());
+        // Créer une version normalisée du texte (sans accents) pour la recherche
+        const normalizedText = this.removeAccents(text.toLowerCase());
         
         // Rechercher tous les termes du glossaire dans le texte
         for (const [termId, termData] of Object.entries(this.terms)) {
@@ -371,10 +371,9 @@ class LegalGlossary {
             const termPattern = this.getTermPattern(termId);
             
             // Rechercher le terme dans le texte normalisé
-            const regex = new RegExp(`\\b(${termPattern})\\b`, 'g');
-            regex.lastIndex = 0; // Réinitialiser pour une nouvelle recherche
-            
+            const regex = new RegExp(`\\b(${termPattern})\\b`, 'gi');
             let match;
+            
             while ((match = regex.exec(normalizedText)) !== null) {
                 // Ajouter le texte avant le terme
                 if (match.index > currentPosition) {
@@ -383,7 +382,7 @@ class LegalGlossary {
                     ));
                 }
                 
-                // Extraire le texte original correspondant au match (avec accents)
+                // Récupérer le texte original (avec les accents) du match
                 const originalMatch = text.substring(match.index, match.index + match[0].length);
                 
                 // Créer un élément pour le terme surligné
@@ -417,6 +416,11 @@ class LegalGlossary {
         if (currentPosition > 0) {
             parent.replaceChild(fragment, textNode);
         }
+    }
+    
+    // Fonction utilitaire pour enlever les accents (utilisée par highlightTermsInNode)
+    removeAccents(str) {
+        return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     }
 
     // Affiche la définition d'un terme
