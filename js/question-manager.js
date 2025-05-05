@@ -176,6 +176,12 @@ class QuestionManager {
         
         // Mettre à jour la barre de progression
         this.updateProgressBar();
+        
+        // Informer le glossaire qu'une nouvelle question a été ajoutée
+        setTimeout(() => {
+            console.log("Question injectée, notification du glossaire");
+            document.dispatchEvent(new Event('contentUpdated'));
+        }, 10);
     }
 
     /**
@@ -1057,6 +1063,12 @@ class QuestionManager {
             </div>
         `;
         
+        // Informer le glossaire de l'ajout de contenu
+        setTimeout(() => {
+            console.log("Écran de confirmation injecté, notification du glossaire");
+            document.dispatchEvent(new Event('contentUpdated'));
+        }, 10);
+        
         // Attacher l'événement au bouton
         const showResultsBtn = document.getElementById('show-results-btn');
         if (showResultsBtn) {
@@ -1175,6 +1187,12 @@ class QuestionManager {
             </div>
         `;
         
+        // Informer le glossaire de l'ajout de contenu d'erreur
+        setTimeout(() => {
+            console.log("Message d'erreur injecté, notification du glossaire");
+            document.dispatchEvent(new Event('contentUpdated'));
+        }, 10);
+        
         document.getElementById('restart-btn').addEventListener('click', () => {
             location.reload();
         });
@@ -1212,6 +1230,12 @@ function displayResults(recommendations) {
         document.getElementById('restart-btn').addEventListener('click', () => {
             location.reload();
         });
+        
+        // Informer le glossaire pour le cas d'erreur
+        setTimeout(() => {
+            console.log("Message d'erreur 'Aucun statut' injecté, notification du glossaire");
+            document.dispatchEvent(new Event('contentUpdated'));
+        }, 10);
         
         return;
     }
@@ -1321,6 +1345,12 @@ function displayResults(recommendations) {
     
     // Injecter le HTML dans le conteneur
     resultsContainer.innerHTML = resultsHTML;
+    
+    // Informer le glossaire de l'ajout des résultats détaillés
+    setTimeout(() => {
+        console.log("Résultats détaillés injectés, notification du glossaire");
+        document.dispatchEvent(new Event('contentUpdated'));
+    }, 100);
     
     // Attacher les événements
     document.getElementById('restart-btn').addEventListener('click', () => {
