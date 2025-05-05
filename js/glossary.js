@@ -19,10 +19,13 @@ const GLOSSARY_CONFIG = {
         '.question-card .mb-2'          // Autres textes dans les questions
     ],
     excludeSelectors: ['button', 'input', 'select', 'a', 'h1', 'h2', 'h3.font-semibold', '.glossary-tooltip'], // Éléments à ignorer
-    jsonPath: 'data/legal-terms.json', // Chemin vers le fichier JSON
+    jsonPath: 'js/legal-terms.json', // Chemin vers le fichier JSON
     maxTooltipWidth: '350px', // Largeur maximale de l'info-bulle
     animationDuration: 300 // Durée de l'animation en ms
 };
+
+// Cache pour les regex compilées
+const regexCache = new Map();
 
 // Classe principale du glossaire
 class LegalGlossary {
@@ -93,14 +96,26 @@ class LegalGlossary {
         document.head.appendChild(style);
     }
 
+    // Supprime tous les diacritiques (accents) via Unicode NFD
+    stripDiacritics(str) {
+        return str.normalize('NFD').replace(/\p{Diacritic}/gu, '');
+    }
+
     // Charge les termes depuis le fichier JSON
     async loadTerms() {
+        // D'abord essayer d'utiliser les données prédéfinies si disponibles
+        if (this.initWithPredefinedData()) {
+            return;
+        }
+        
         try {
             this.isLoading = true;
             console.log('Chargement du glossaire juridique...');
+            console.log(`Tentative de chargement depuis: ${this.config.jsonPath}`);
             
             const response = await fetch(this.config.jsonPath);
             if (!response.ok) {
+                console.warn(`Erreur HTTP: ${response.status} lors du chargement de ${this.config.jsonPath}`);
                 throw new Error(`Erreur HTTP: ${response.status}`);
             }
             
@@ -118,23 +133,58 @@ class LegalGlossary {
             this.isLoading = false;
             console.error('Impossible de charger le glossaire juridique:', error);
             console.error(`Détails de l'erreur: ${error.message}`);
-            console.log(`Tentative de chargement depuis: ${this.config.jsonPath}`);
             
             // Essayer de charger depuis un chemin alternatif si le premier échoue
             this.tryAlternativePaths();
         }
     }
     
+    // Utiliser des données prédéfinies si disponibles
+    initWithPredefinedData() {
+        console.log("Vérification pour des données prédéfinies");
+        
+        // Vérifier si des données sont définies dans window.legalTermsData
+        if (window.legalTermsData) {
+            console.log("Données prédéfinies trouvées dans window.legalTermsData");
+            this.terms = window.legalTermsData;
+            this.isLoaded = true;
+            this.highlightTermsInContent();
+            document.dispatchEvent(new Event('glossaryLoaded'));
+            return true;
+        }
+        
+        // Chercher si le contenu JSON est intégré dans la page
+        const jsonScriptTag = document.querySelector('script[id="legal-terms-data"]');
+        if (jsonScriptTag) {
+            try {
+                console.log("Données prédéfinies trouvées dans une balise script");
+                this.terms = JSON.parse(jsonScriptTag.textContent);
+                this.isLoaded = true;
+                this.highlightTermsInContent();
+                document.dispatchEvent(new Event('glossaryLoaded'));
+                return true;
+            } catch (e) {
+                console.error("Erreur lors du parsing des données prédéfinies:", e);
+            }
+        }
+        
+        return false;
+    }
+    
     // Tente de charger le fichier JSON depuis des chemins alternatifs
     async tryAlternativePaths() {
         const alternativePaths = [
+            'js/legal-terms.json',
+            '/js/legal-terms.json',
             'legal-terms.json',
-            '../data/legal-terms.json',
-            '/data/legal-terms.json',
             '/legal-terms.json',
-            'js/legal-terms.json',            // Chemin supplémentaire à essayer
-            '/js/legal-terms.json'            // Chemin supplémentaire à essayer
+            '../legal-terms.json',
+            'data/legal-terms.json',
+            '/data/legal-terms.json',
+            '../data/legal-terms.json'
         ];
+        
+        console.log("Tentative de chargement avec des chemins alternatifs...");
         
         for (const path of alternativePaths) {
             try {
@@ -142,19 +192,49 @@ class LegalGlossary {
                 const response = await fetch(path);
                 
                 if (response.ok) {
-                    this.terms = await response.json();
-                    this.isLoaded = true;
-                    console.log(`Glossaire chargé avec succès depuis ${path}`);
-                    this.highlightTermsInContent();
-                    document.dispatchEvent(new Event('glossaryLoaded'));
-                    return;
+                    console.log(`Réponse OK pour ${path}, tentative de parse JSON...`);
+                    const data = await response.json();
+                    
+                    if (data && Object.keys(data).length > 0) {
+                        this.terms = data;
+                        this.isLoaded = true;
+                        console.log(`Glossaire chargé avec succès depuis ${path} avec ${Object.keys(data).length} termes`);
+                        this.highlightTermsInContent();
+                        document.dispatchEvent(new Event('glossaryLoaded'));
+                        return;
+                    } else {
+                        console.warn(`Le fichier ${path} a été chargé mais ne contient pas de données valides`);
+                    }
+                } else {
+                    console.warn(`Échec du chargement depuis ${path}: statut ${response.status}`);
                 }
             } catch (e) {
-                console.warn(`Échec du chargement depuis ${path}: ${e.message}`);
+                console.warn(`Erreur lors du chargement depuis ${path}: ${e.message}`);
             }
         }
         
         console.error("Tous les chemins alternatifs ont échoué");
+        
+        // Fallback ultime: essayer de charger directement depuis le repo GitHub
+        try {
+            const githubPath = "https://raw.githubusercontent.com/Bencode92/stock-analysis-platform/main/js/legal-terms.json";
+            console.log(`Tentative avec URL GitHub: ${githubPath}`);
+            const response = await fetch(githubPath);
+            
+            if (response.ok) {
+                const data = await response.json();
+                if (data && Object.keys(data).length > 0) {
+                    this.terms = data;
+                    this.isLoaded = true;
+                    console.log(`Glossaire chargé avec succès depuis GitHub`);
+                    this.highlightTermsInContent();
+                    document.dispatchEvent(new Event('glossaryLoaded'));
+                    return;
+                }
+            }
+        } catch (e) {
+            console.error(`Même la tentative GitHub a échoué: ${e.message}`);
+        }
     }
 
     // Trouve et met en évidence les termes du glossaire dans le contenu
@@ -246,7 +326,27 @@ class LegalGlossary {
         return textNodes;
     }
 
-    // Met en évidence les termes dans un nœud de texte
+    // Convertit l'ID du terme en motif de recherche avec normalisation Unicode
+    getTermPattern(termId) {
+        // Vérifier si le pattern est déjà dans le cache
+        if (regexCache.has(termId)) {
+            return regexCache.get(termId);
+        }
+        
+        // Traitement des espaces, tirets et camelCase
+        let pattern = termId
+            .replace(/[_-]/g, '[\\s\\-_]+')
+            .replace(/([a-z])([A-Z])/g, '$1\\s*$2');
+        
+        // Normaliser et supprimer les accents
+        pattern = this.stripDiacritics(pattern.toLowerCase());
+        
+        // Mettre en cache pour les prochaines utilisations
+        regexCache.set(termId, pattern);
+        return pattern;
+    }
+
+    // Met en évidence les termes dans un nœud de texte avec gestion des accents
     highlightTermsInNode(textNode) {
         const text = textNode.nodeValue;
         const parent = textNode.parentNode;
@@ -262,16 +362,20 @@ class LegalGlossary {
         // Position de départ dans le texte
         let currentPosition = 0;
         
+        // Normaliser le texte une seule fois pour toutes les recherches
+        const normalizedText = this.stripDiacritics(text.toLowerCase());
+        
         // Rechercher tous les termes du glossaire dans le texte
         for (const [termId, termData] of Object.entries(this.terms)) {
-            // Convertir l'ID du terme en texte lisible (suppression des underscores, etc.)
+            // Convertir l'ID du terme en motif de recherche
             const termPattern = this.getTermPattern(termId);
             
-            // Rechercher le terme dans le texte restant
-            const regex = new RegExp(`\\b(${termPattern})\\b`, 'gi');
-            let match;
+            // Rechercher le terme dans le texte normalisé
+            const regex = new RegExp(`\\b(${termPattern})\\b`, 'g');
+            regex.lastIndex = 0; // Réinitialiser pour une nouvelle recherche
             
-            while ((match = regex.exec(text)) !== null) {
+            let match;
+            while ((match = regex.exec(normalizedText)) !== null) {
                 // Ajouter le texte avant le terme
                 if (match.index > currentPosition) {
                     fragment.appendChild(document.createTextNode(
@@ -279,10 +383,13 @@ class LegalGlossary {
                     ));
                 }
                 
+                // Extraire le texte original correspondant au match (avec accents)
+                const originalMatch = text.substring(match.index, match.index + match[0].length);
+                
                 // Créer un élément pour le terme surligné
                 const termElement = document.createElement('span');
                 termElement.className = 'glossary-term';
-                termElement.textContent = match[0];
+                termElement.textContent = originalMatch;
                 termElement.dataset.termId = termId;
                 
                 // Ajouter un gestionnaire de clic pour afficher la définition
@@ -310,24 +417,6 @@ class LegalGlossary {
         if (currentPosition > 0) {
             parent.replaceChild(fragment, textNode);
         }
-    }
-
-    // Convertit l'ID du terme en motif de recherche (avec gestion des accents)
-    getTermPattern(termId) {
-        // Fonction pour supprimer les accents
-        const removeAccents = (str) => {
-            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-        };
-        
-        // Pattern de base
-        const basePattern = termId
-            // Remplacer les underscores et tirets par un motif acceptant espaces ou tirets
-            .replace(/[_-]/g, '[\\s\\-_]+')
-            // Insérer des espaces facultatifs entre camelCase
-            .replace(/([a-z])([A-Z])/g, '$1\\s*$2');
-        
-        // Version sans accent du pattern pour être insensible aux accents
-        return removeAccents(basePattern);
     }
 
     // Affiche la définition d'un terme
@@ -399,8 +488,8 @@ class LegalGlossary {
 
     // Génère le contenu HTML de la bulle d'information
     generateTooltipContent(termId, termData) {
-        // Titre du terme (transforme termId en texte lisible)
-        const termTitle = termId
+        // Utiliser displayTerm s'il existe, sinon formater l'ID du terme
+        const termTitle = termData.displayTerm || termId
             .replace(/[_-]/g, ' ')
             .replace(/([A-Z])/g, ' $1')
             .trim()
@@ -423,16 +512,6 @@ class LegalGlossary {
                     <strong style="color: #00FF87;">Exemple:</strong> ${termData.example}
                 </div>
             `;
-        }
-        
-        // Pour les objets imbriqués
-        if (termData.application) {
-            content += `<div style="margin-top: 8px;"><strong style="color: #00FF87;">Application:</strong>`;
-            for (const [key, value] of Object.entries(termData.application)) {
-                const readableKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                content += `<div style="margin: 4px 0 4px 12px;"><strong>${readableKey}:</strong> ${value}</div>`;
-            }
-            content += `</div>`;
         }
         
         // Pour les tableaux
