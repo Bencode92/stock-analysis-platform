@@ -1,9 +1,12 @@
 /**
  * Script de génération de l'index du glossaire
  * 
- * Version simplifiée qui n'utilise PAS legal-terms.json
- * Ce script extrait uniquement les termes de question-data.js
- * pour créer un index du glossaire indépendant.
+ * Version améliorée qui combine:
+ * 1. Les termes extraits de question-data.js
+ * 2. Les termes définis dans legal-terms.json
+ * 
+ * L'objectif est de créer un glossaire complet avec les termes 
+ * de l'interface utilisateur et les définitions juridiques.
  * 
  * Usage: node scripts/buildGlossaryIndex.js
  */
@@ -166,14 +169,19 @@ function extractCapitalTerms(content) {
 
 // Chemins des fichiers
 const questionDataPath = path.resolve(__dirname, '../js/question-data.js');
+const legalTermsPath = path.resolve(__dirname, '../data/legal-terms.json');
 const outputPath = path.resolve(__dirname, '../data/glossary-index.json');
 
-console.log('🔍 Analyse des termes potentiels dans question-data.js...');
+console.log('🔍 Analyse des termes pour le glossaire...');
 
 try {
-  // Vérifier si le fichier question-data.js existe
+  // Vérifier si les fichiers source existent
   if (!fs.existsSync(questionDataPath)) {
     throw new Error(`Fichier question-data.js non trouvé: ${questionDataPath}`);
+  }
+  
+  if (!fs.existsSync(legalTermsPath)) {
+    console.warn(`⚠️ Fichier legal-terms.json non trouvé: ${legalTermsPath}. Certains termes pourraient manquer.`);
   }
   
   console.log(`✓ Fichier question-data.js trouvé: ${questionDataPath}`);
@@ -252,9 +260,43 @@ try {
   capitalTerms.forEach(term => candidateSet.add(term));
   console.log(`✓ ${capitalTerms.length} termes liés au capital extraits`);
   
+  // NOUVELLE AMÉLIORATION: Incorporer les termes de legal-terms.json
+  let legalTermsCount = 0;
+  
+  if (fs.existsSync(legalTermsPath)) {
+    try {
+      // Lire les termes juridiques
+      const legalTermsContent = fs.readFileSync(legalTermsPath, 'utf8');
+      const legalTerms = JSON.parse(legalTermsContent);
+      
+      // Ajouter les clés des termes juridiques
+      Object.keys(legalTerms).forEach(key => {
+        candidateSet.add(key);
+        legalTermsCount++;
+      });
+      
+      // BONUS: Extraire des termes associés (related_terms) pour enrichissement
+      Object.values(legalTerms).forEach(termData => {
+        if (termData.related_terms && Array.isArray(termData.related_terms)) {
+          termData.related_terms.forEach(relatedTerm => {
+            const relatedTermId = toId(relatedTerm);
+            if (relatedTermId.length > 2) {
+              candidateSet.add(relatedTermId);
+              legalTermsCount++;
+            }
+          });
+        }
+      });
+      
+      console.log(`✓ ${legalTermsCount} termes juridiques ajoutés depuis legal-terms.json`);
+    } catch (error) {
+      console.warn(`⚠️ Erreur lors de la lecture des termes juridiques: ${error.message}`);
+    }
+  }
+  
   console.log(`✓ ${candidateSet.size} termes candidats extraits au total`);
   
-  // 6) Créer l'index du glossaire (sans vérification dans legal-terms.json)
+  // 6) Créer l'index du glossaire
   const glossaryIndex = [...candidateSet].filter(term => term.length > 2).sort();
   
   // 7) Créer le dossier data s'il n'existe pas
