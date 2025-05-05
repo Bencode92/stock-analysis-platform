@@ -1,9 +1,9 @@
 /**
  * Script de génération de l'index du glossaire
  * 
- * Ce script analyse le contenu de question-data.js pour extraire tous les termes potentiels,
- * et vérifie lesquels ont une définition dans legal-terms.json.
- * Il génère ensuite un petit fichier d'index contenant uniquement les IDs des termes valides.
+ * Version modifiée qui n'utilise PAS legal-terms.json
+ * Ce script extrait uniquement les termes de question-data.js
+ * pour créer un index du glossaire indépendant.
  * 
  * Usage: node scripts/buildGlossaryIndex.js
  */
@@ -26,38 +26,48 @@ function toId(s) {
 
 // Chemins des fichiers
 const questionDataPath = path.resolve(__dirname, '../js/question-data.js');
-const legalTermsPath = path.resolve(__dirname, '../data/legal-terms.json');
 const outputPath = path.resolve(__dirname, '../data/glossary-index.json');
 
 console.log('🔍 Analyse des termes potentiels dans question-data.js...');
 
 try {
+  // Vérifier si le fichier question-data.js existe
+  if (!fs.existsSync(questionDataPath)) {
+    throw new Error(`Fichier question-data.js non trouvé: ${questionDataPath}`);
+  }
+  
+  console.log(`✓ Fichier question-data.js trouvé: ${questionDataPath}`);
+  
   // Lire le contenu de question-data.js comme une chaîne
   const questionDataContent = fs.readFileSync(questionDataPath, 'utf8');
   
   // Extraire les questions avec une regex
-  const questionObjects = questionDataContent.match(/{\s*id:\s*["']([^"']+)["'],[\s\S]*?}/g) || [];
+  const questionObjects = questionDataContent.match(/{\\s*id:\\s*[\"']([^\"']+)[\"'],[\\s\\S]*?}/g) || [];
   
-  // 1) Ratisse toutes les chaînes potentielles
+  // 1) Extraire tous les identifiants (IDs)
+  const idMatches = questionDataContent.match(/id:\s*["']([^"']+)["']/g) || [];
+  const ids = idMatches.map(match => match.replace(/id:\s*["']|["']/g, ''));
+  
+  // 2) Ratisse toutes les chaînes potentielles
   const titles = [];
   
   for (const questionStr of questionObjects) {
     // Extraire le titre
-    const titleMatch = questionStr.match(/title:\s*["']([^"']+)["']/);
+    const titleMatch = questionStr.match(/title:\\s*[\"']([^\"']+)[\"']/);
     if (titleMatch && titleMatch[1]) titles.push(titleMatch[1]);
     
     // Extraire la description
-    const descMatch = questionStr.match(/description:\s*["']([^"']+)["']/);
+    const descMatch = questionStr.match(/description:\\s*[\"']([^\"']+)[\"']/);
     if (descMatch && descMatch[1]) titles.push(descMatch[1]);
     
     // Extraire les options (plus complexe)
-    const optionsMatch = questionStr.match(/options:\s*\[([\s\S]*?)\]/);
+    const optionsMatch = questionStr.match(/options:\\s*\\[([\\s\\S]*?)\\]/);
     if (optionsMatch && optionsMatch[1]) {
       const optionsStr = optionsMatch[1];
-      const optionLabelMatches = optionsStr.match(/label:\s*["']([^"']+)["']/g) || [];
+      const optionLabelMatches = optionsStr.match(/label:\\s*[\"']([^\"']+)[\"']/g) || [];
       
       for (const labelMatch of optionLabelMatches) {
-        const label = labelMatch.match(/label:\s*["']([^"']+)["']/);
+        const label = labelMatch.match(/label:\\s*[\"']([^\"']+)[\"']/);
         if (label && label[1]) titles.push(label[1]);
       }
     }
@@ -65,8 +75,16 @@ try {
   
   console.log(`✓ ${titles.length} textes extraits des questions`);
   
-  // 2) Les transforme en tokens « mots » (split sur espace & ponctuation)
+  // 3) Les transforme en tokens « mots » (split sur espace & ponctuation)
   const candidateSet = new Set();
+  
+  // Ajouter les IDs directement
+  ids.forEach(id => {
+    const processedId = toId(id);
+    if (processedId.length > 2) candidateSet.add(processedId);
+  });
+  
+  // Traiter les titres et autres textes
   titles.forEach(txt => {
     if (!txt) return;
     
@@ -92,28 +110,20 @@ try {
   
   console.log(`✓ ${candidateSet.size} termes candidats extraits`);
   
-  // 3) Garde ceux qui existent dans le JSON
-  const legalTerms = JSON.parse(fs.readFileSync(legalTermsPath, 'utf8'));
-  const glossaryIndex = [...candidateSet].filter(id => legalTerms[id]);
+  // 4) Créer l'index du glossaire (sans vérification dans legal-terms.json)
+  const glossaryIndex = [...candidateSet].filter(term => term.length > 2).sort();
   
-  console.log(`✓ ${glossaryIndex.length} termes ont une définition dans legal-terms.json`);
-  
-  // 4) Liste des termes manquants (optionnel)
-  const missing = [...candidateSet].filter(id => !legalTerms[id]);
-  if (missing.length) {
-    console.warn('⚠️ Définitions manquantes :', missing.join(', '));
-    fs.writeFileSync(
-      path.resolve(__dirname, '../report-missing-terms.txt'), 
-      missing.join('\n'),
-      'utf8'
-    );
-    console.log('✓ Liste des termes manquants écrite dans report-missing-terms.txt');
+  // 5) Créer le dossier data s'il n'existe pas
+  const dataDir = path.dirname(outputPath);
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+    console.log(`✓ Dossier créé: ${dataDir}`);
   }
   
-  // 5) Écrit le fichier d'index
+  // 6) Écrit le fichier d'index
   fs.writeFileSync(
     outputPath,
-    JSON.stringify(glossaryIndex),
+    JSON.stringify(glossaryIndex, null, 2),
     'utf8'
   );
   
@@ -121,6 +131,7 @@ try {
   console.log(`   Fichier créé : ${outputPath}`);
   
 } catch (error) {
-  console.error('❌ Erreur lors de la génération de l\'index du glossaire:', error);
+  console.error(`❌ Erreur lors de la génération de l'index du glossaire: ${error.message}`);
+  console.error(error);
   process.exit(1);
 }
