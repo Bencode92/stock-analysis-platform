@@ -7,8 +7,18 @@
 // Configuration globale
 const GLOSSARY_CONFIG = {
     highlightColor: '#00FF87', // Couleur verte LED
-    targetSelectors: ['.question-card', '.recommendation-card', '.results-container', '.main-content p'], // Conteneurs où rechercher les termes
-    excludeSelectors: ['button', 'input', 'select', 'a', 'h1', 'h2', 'h3', '.glossary-tooltip'], // Éléments à ignorer
+    targetSelectors: [
+        '.question-card', 
+        '.recommendation-card', 
+        '.results-container', 
+        '.main-content p',
+        '.question-card h3',            // Titres des questions
+        '.question-card p',             // Descriptions des questions
+        '.option-btn label',            // Texte des options
+        '.option-btn span',             // Texte des options (variante)
+        '.question-card .mb-2'          // Autres textes dans les questions
+    ],
+    excludeSelectors: ['button', 'input', 'select', 'a', 'h1', 'h2', 'h3.font-semibold', '.glossary-tooltip'], // Éléments à ignorer
     jsonPath: 'data/legal-terms.json', // Chemin vers le fichier JSON
     maxTooltipWidth: '350px', // Largeur maximale de l'info-bulle
     animationDuration: 300 // Durée de l'animation en ms
@@ -121,7 +131,9 @@ class LegalGlossary {
             'legal-terms.json',
             '../data/legal-terms.json',
             '/data/legal-terms.json',
-            '/legal-terms.json'
+            '/legal-terms.json',
+            'js/legal-terms.json',            // Chemin supplémentaire à essayer
+            '/js/legal-terms.json'            // Chemin supplémentaire à essayer
         ];
         
         for (const path of alternativePaths) {
@@ -300,13 +312,22 @@ class LegalGlossary {
         }
     }
 
-    // Convertit l'ID du terme en motif de recherche
+    // Convertit l'ID du terme en motif de recherche (avec gestion des accents)
     getTermPattern(termId) {
-        return termId
+        // Fonction pour supprimer les accents
+        const removeAccents = (str) => {
+            return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        };
+        
+        // Pattern de base
+        const basePattern = termId
             // Remplacer les underscores et tirets par un motif acceptant espaces ou tirets
             .replace(/[_-]/g, '[\\s\\-_]+')
             // Insérer des espaces facultatifs entre camelCase
             .replace(/([a-z])([A-Z])/g, '$1\\s*$2');
+        
+        // Version sans accent du pattern pour être insensible aux accents
+        return removeAccents(basePattern);
     }
 
     // Affiche la définition d'un terme
