@@ -1,5 +1,5 @@
 /**
- * TradePulse - Glossaire juridique interactif
+ * TradePulse - Glossaire juridique interactif (Version améliorée)
  * Ce script charge les termes juridiques depuis le JSON et les met en évidence
  * dans le contenu de la page, affichant leur définition en cliquant.
  */
@@ -7,11 +7,12 @@
 // Configuration globale
 const GLOSSARY_CONFIG = {
     highlightColor: '#00FF87', // Couleur verte LED
-    targetSelectors: ['.question-card', '.recommendation-card', '.results-container', '.main-content p'], // Conteneurs où rechercher les termes
-    excludeSelectors: ['button', 'input', 'select', 'a', 'h1', 'h2', 'h3', '.glossary-tooltip'], // Éléments à ignorer
-    jsonPath: 'data/legal-terms.json', // Chemin modifié - maintenant dans le dossier data/
-    maxTooltipWidth: '350px', // Largeur maximale de l'info-bulle
-    animationDuration: 300 // Durée de l'animation en ms
+    targetSelectors: ['.question-card', '.recommendation-card', '.results-container', '.main-content p', '.score-explanation'], // Ajout de .score-explanation
+    excludeSelectors: ['button', 'input', 'select', 'a', 'h1', 'h2', 'h3', '.glossary-tooltip', '.glossary-term'], // Ajout de .glossary-term pour éviter les boucles
+    jsonPath: 'data/legal-terms.json', 
+    maxTooltipWidth: '350px',
+    animationDuration: 300,
+    debugMode: window.GLOSSARY_DEBUG || false // Support pour le mode debug
 };
 
 // Classe principale du glossaire
@@ -22,8 +23,12 @@ class LegalGlossary {
         this.activeTooltip = null;
         this.isLoading = false;
         this.isLoaded = false;
+        this.processedElements = new WeakSet(); // Pour éviter de traiter plusieurs fois les mêmes éléments
         this.injectStyles();
         this.loadTerms();
+
+        // Référence explicite à la méthode de traitement pour l'événement contentUpdated
+        this.handleContentUpdated = this.handleContentUpdated.bind(this);
     }
 
     // Injecter les styles CSS directement dans la page
@@ -81,13 +86,14 @@ class LegalGlossary {
             }
         `;
         document.head.appendChild(style);
+        if (this.config.debugMode) console.log('[Glossary]', 'Styles injectés');
     }
 
     // Charge les termes depuis le fichier JSON
     async loadTerms() {
         try {
             this.isLoading = true;
-            console.log('Chargement du glossaire juridique...');
+            if (this.config.debugMode) console.log('[Glossary]', 'Chargement du glossaire juridique...');
             
             const response = await fetch(this.config.jsonPath);
             if (!response.ok) {
@@ -97,10 +103,13 @@ class LegalGlossary {
             this.terms = await response.json();
             this.isLoaded = true;
             this.isLoading = false;
-            console.log(`Glossaire juridique chargé avec ${Object.keys(this.terms).length} termes`);
+            if (this.config.debugMode) console.log('[Glossary]', `Glossaire juridique chargé avec ${Object.keys(this.terms).length} termes`);
             
             // Lancer le processus de mise en évidence après le chargement
             this.highlightTermsInContent();
+            
+            // Ajouter un écouteur pour les mises à jour de contenu
+            document.addEventListener('contentUpdated', this.handleContentUpdated);
             
             // Émettre un événement pour informer que le glossaire est prêt
             document.dispatchEvent(new Event('glossaryLoaded'));
@@ -132,67 +141,119 @@ class LegalGlossary {
                 }
             };
             this.isLoaded = true;
-            console.log("Utilisation d'un glossaire de secours minimal");
+            if (this.config.debugMode) console.log('[Glossary]', "Utilisation d'un glossaire de secours minimal");
             this.highlightTermsInContent();
+            document.addEventListener('contentUpdated', this.handleContentUpdated);
             document.dispatchEvent(new Event('glossaryLoaded'));
         }
     }
 
+    // Gestionnaire pour l'événement contentUpdated
+    handleContentUpdated(event) {
+        if (this.config.debugMode) console.log('[Glossary]', 'Événement contentUpdated reçu', event.detail);
+        
+        // Attendre un peu que le DOM soit stabilisé
+        setTimeout(() => {
+            this.highlightTermsInContent();
+        }, 50);
+    }
+
     // Trouve et met en évidence les termes du glossaire dans le contenu
     highlightTermsInContent() {
-        if (!this.isLoaded) return;
+        if (!this.isLoaded) {
+            if (this.config.debugMode) console.log('[Glossary]', 'Glossaire non chargé, analyse reportée');
+            return;
+        }
 
         // Sélectionner tous les conteneurs cibles
         const containers = document.querySelectorAll(this.config.targetSelectors.join(', '));
         
+        if (this.config.debugMode) console.log('[Glossary]', `${containers.length} conteneurs cibles trouvés`);
+        
         containers.forEach(container => {
-            this.processNode(container);
+            // Vérifier si l'élément a déjà été traité
+            if (!this.processedElements.has(container)) {
+                this.processNode(container);
+                this.processedElements.add(container);
+            }
         });
         
-        // Ajouter un écouteur pour les nouvelles sections chargées dynamiquement
+        // Ajouter un écouteur pour les nouvelles sections chargées dynamiquement si pas déjà fait
         this.observeDynamicContent();
     }
 
     // Observer les changements dans le DOM pour traiter le contenu dynamique
     observeDynamicContent() {
-        const observer = new MutationObserver(mutations => {
+        // Ne créer l'observateur qu'une seule fois
+        if (this.mutationObserver) return;
+        
+        this.mutationObserver = new MutationObserver(mutations => {
+            let shouldProcess = false;
+            
             mutations.forEach(mutation => {
                 if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
                     mutation.addedNodes.forEach(node => {
                         if (node.nodeType === Node.ELEMENT_NODE) {
                             // Vérifier si le nœud correspond à l'un des sélecteurs cibles
-                            if (this.config.targetSelectors.some(selector => 
+                            const matches = this.config.targetSelectors.some(selector => 
                                 node.matches && node.matches(selector) || 
-                                node.querySelector && node.querySelector(selector))) {
-                                this.processNode(node);
+                                node.querySelector && node.querySelector(selector));
+                            
+                            if (matches) {
+                                shouldProcess = true;
+                                if (this.config.debugMode) console.log('[Glossary]', 'Nouvel élément détecté:', node);
+                                
+                                // Vérifier si l'élément a déjà été traité
+                                if (!this.processedElements.has(node)) {
+                                    this.processNode(node);
+                                    this.processedElements.add(node);
+                                }
                             }
                         }
                     });
                 }
             });
+            
+            // Si des conteneurs ont été modifiés mais pas traités directement, déclencher une analyse générale
+            if (shouldProcess) {
+                if (this.config.debugMode) console.log('[Glossary]', 'Déclenchement analyse complète après mutations');
+                this.highlightTermsInContent();
+            }
         });
         
-        observer.observe(document.body, {
+        this.mutationObserver.observe(document.body, {
             childList: true,
             subtree: true
         });
+        
+        if (this.config.debugMode) console.log('[Glossary]', 'Observateur de mutations configuré');
     }
 
     // Traite un nœud DOM pour mettre en évidence les termes
     processNode(node) {
         // S'assurer de ne pas traiter les nœuds exclus
-        if (this.shouldExcludeNode(node)) return;
+        if (this.shouldExcludeNode(node)) {
+            if (this.config.debugMode) console.log('[Glossary]', 'Nœud exclu:', node);
+            return;
+        }
 
         const textNodes = this.getTextNodes(node);
         
+        if (this.config.debugMode && textNodes.length > 0) {
+            console.log('[Glossary]', `${textNodes.length} nœuds texte trouvés dans:`, node);
+        }
+        
         textNodes.forEach(textNode => {
-            this.highlightTermsInNode(textNode);
+            // Vérifier que le textNode a bien une valeur et un parent
+            if (textNode && textNode.nodeValue && textNode.parentNode) {
+                this.highlightTermsInNode(textNode);
+            }
         });
     }
 
     // Vérifie si un nœud doit être exclu du traitement
     shouldExcludeNode(node) {
-        if (node.nodeType !== Node.ELEMENT_NODE) return false;
+        if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
         
         // Vérifier si le nœud ou l'un de ses parents correspond à un sélecteur d'exclusion
         return this.config.excludeSelectors.some(selector => {
@@ -204,24 +265,32 @@ class LegalGlossary {
     // Récupère tous les nœuds de texte dans un élément
     getTextNodes(element) {
         const textNodes = [];
-        const walker = document.createTreeWalker(
-            element,
-            NodeFilter.SHOW_TEXT,
-            {
-                acceptNode: function(node) {
-                    // Ignorer les nœuds vides ou dans des éléments exclus
-                    if (node.nodeValue.trim() === '' || 
-                        node.parentElement && this.shouldExcludeNode(node.parentElement)) {
-                        return NodeFilter.FILTER_REJECT;
-                    }
-                    return NodeFilter.FILTER_ACCEPT;
-                }.bind(this)
-            }
-        );
+        
+        // Vérifier si l'élément existe
+        if (!element) return textNodes;
+        
+        try {
+            const walker = document.createTreeWalker(
+                element,
+                NodeFilter.SHOW_TEXT,
+                {
+                    acceptNode: function(node) {
+                        // Ignorer les nœuds vides ou dans des éléments exclus
+                        if (!node || !node.nodeValue || node.nodeValue.trim() === '' || 
+                            node.parentElement && this.shouldExcludeNode(node.parentElement)) {
+                            return NodeFilter.FILTER_REJECT;
+                        }
+                        return NodeFilter.FILTER_ACCEPT;
+                    }.bind(this)
+                }
+            );
 
-        let node;
-        while (node = walker.nextNode()) {
-            textNodes.push(node);
+            let node;
+            while (node = walker.nextNode()) {
+                textNodes.push(node);
+            }
+        } catch (error) {
+            console.error('Erreur lors de la récupération des nœuds de texte:', error);
         }
 
         return textNodes;
@@ -229,6 +298,8 @@ class LegalGlossary {
 
     // Met en évidence les termes dans un nœud de texte
     highlightTermsInNode(textNode) {
+        if (!textNode || !textNode.nodeValue) return;
+        
         const text = textNode.nodeValue;
         const parent = textNode.parentNode;
         
@@ -242,6 +313,7 @@ class LegalGlossary {
         
         // Position de départ dans le texte
         let currentPosition = 0;
+        let termsFound = false;
         
         // Rechercher tous les termes du glossaire dans le texte
         for (const [termId, termData] of Object.entries(this.terms)) {
@@ -249,10 +321,12 @@ class LegalGlossary {
             const termPattern = this.getTermPattern(termId);
             
             // Rechercher le terme dans le texte restant
-            const regex = new RegExp(`\\\\b(${termPattern})\\\\b`, 'gi');
+            const regex = new RegExp(`\\b(${termPattern})\\b`, 'gi');
             let match;
             
             while ((match = regex.exec(text)) !== null) {
+                termsFound = true;
+                
                 // Ajouter le texte avant le terme
                 if (match.index > currentPosition) {
                     fragment.appendChild(document.createTextNode(
@@ -288,16 +362,31 @@ class LegalGlossary {
         }
         
         // Remplacer le nœud de texte par le fragment uniquement si des modifications ont été apportées
-        if (currentPosition > 0) {
-            parent.replaceChild(fragment, textNode);
+        if (termsFound && currentPosition > 0 && parent) {
+            try {
+                parent.replaceChild(fragment, textNode);
+                if (this.config.debugMode) console.log('[Glossary]', `Termes mis en évidence dans: "${text.substring(0, 50)}..."`);
+            } catch (error) {
+                console.error('Erreur lors du remplacement du nœud de texte:', error, {
+                    nodeValue: textNode?.nodeValue,
+                    parentExists: !!parent
+                });
+            }
         }
     }
 
     // Convertit l'ID du terme en motif de recherche
     getTermPattern(termId) {
-        return termId
-            .replace(/_/g, '\\\\s+') // Remplacer les underscores par des espaces
-            .replace(/([a-z])([A-Z])/g, '$1\\\\s*$2'); // Insérer des espaces facultatifs entre camelCase
+        let pattern = termId
+            .replace(/_/g, '\\s+') // Remplacer les underscores par des espaces
+            .replace(/([a-z])([A-Z])/g, '$1\\s*$2'); // Insérer des espaces facultatifs entre camelCase
+        
+        // Éviter les expressions régulières trop permissives
+        if (pattern.length < 3) {
+            pattern = `\\b${pattern}\\b`;
+        }
+        
+        return pattern;
     }
 
     // Affiche la définition d'un terme
@@ -311,19 +400,23 @@ class LegalGlossary {
         // Créer la bulle d'information
         const tooltip = document.createElement('div');
         tooltip.className = 'glossary-tooltip';
-        tooltip.style.position = 'absolute';
-        tooltip.style.zIndex = '1000';
-        tooltip.style.maxWidth = this.config.maxTooltipWidth;
-        tooltip.style.backgroundColor = 'rgba(1, 42, 74, 0.95)';
-        tooltip.style.color = '#fff';
-        tooltip.style.padding = '12px 16px';
-        tooltip.style.borderRadius = '8px';
-        tooltip.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.2)';
-        tooltip.style.border = '1px solid rgba(0, 255, 135, 0.3)';
-        tooltip.style.backdropFilter = 'blur(5px)';
-        tooltip.style.opacity = '0';
-        tooltip.style.transform = 'translateY(10px)';
-        tooltip.style.transition = `all ${this.config.animationDuration}ms ease`;
+        
+        // Définir les styles pour l'animation
+        Object.assign(tooltip.style, {
+            position: 'absolute',
+            zIndex: '1000',
+            maxWidth: this.config.maxTooltipWidth,
+            backgroundColor: 'rgba(1, 42, 74, 0.95)',
+            color: '#fff',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.2)',
+            border: '1px solid rgba(0, 255, 135, 0.3)',
+            backdropFilter: 'blur(5px)',
+            opacity: '0',
+            transform: 'translateY(10px)',
+            transition: `all ${this.config.animationDuration}ms ease`
+        });
         
         // Contenu HTML de la bulle
         tooltip.innerHTML = this.generateTooltipContent(termId, termData);
@@ -331,15 +424,17 @@ class LegalGlossary {
         // Ajouter un bouton de fermeture
         const closeButton = document.createElement('button');
         closeButton.innerHTML = '&times;';
-        closeButton.style.position = 'absolute';
-        closeButton.style.top = '8px';
-        closeButton.style.right = '8px';
-        closeButton.style.background = 'none';
-        closeButton.style.border = 'none';
-        closeButton.style.color = '#00FF87';
-        closeButton.style.fontSize = '20px';
-        closeButton.style.cursor = 'pointer';
-        closeButton.style.padding = '0 5px';
+        Object.assign(closeButton.style, {
+            position: 'absolute',
+            top: '8px',
+            right: '8px',
+            background: 'none',
+            border: 'none',
+            color: '#00FF87',
+            fontSize: '20px',
+            cursor: 'pointer',
+            padding: '0 5px'
+        });
         closeButton.onclick = () => this.closeActiveTooltip();
         
         tooltip.appendChild(closeButton);
@@ -365,6 +460,8 @@ class LegalGlossary {
                 this.closeActiveTooltip();
             }
         });
+        
+        if (this.config.debugMode) console.log('[Glossary]', `Définition affichée pour: ${termId}`);
     }
 
     // Génère le contenu HTML de la bulle d'information
@@ -374,7 +471,7 @@ class LegalGlossary {
             .replace(/_/g, ' ')
             .replace(/([A-Z])/g, ' $1')
             .trim()
-            .replace(/\\b\\w/g, l => l.toUpperCase());
+            .replace(/\b\w/g, l => l.toUpperCase());
         
         let content = `
             <div style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 8px;">
@@ -399,7 +496,7 @@ class LegalGlossary {
         if (termData.application) {
             content += `<div style="margin-top: 8px;"><strong style="color: #00FF87;">Application:</strong>`;
             for (const [key, value] of Object.entries(termData.application)) {
-                const readableKey = key.replace(/_/g, ' ').replace(/\\b\\w/g, l => l.toUpperCase());
+                const readableKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                 content += `<div style="margin: 4px 0 4px 12px;"><strong>${readableKey}:</strong> ${value}</div>`;
             }
             content += `</div>`;
@@ -437,6 +534,8 @@ class LegalGlossary {
 
     // Positionne la bulle d'information près de l'élément
     positionTooltip(tooltip, element) {
+        if (!element || !tooltip) return;
+        
         const rect = element.getBoundingClientRect();
         const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
         const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
@@ -483,6 +582,27 @@ class LegalGlossary {
             }
         }
     }
+    
+    // Méthode de nettoyage pour éviter les fuites de mémoire
+    destroy() {
+        if (this.config.debugMode) console.log('[Glossary]', 'Destruction du glossaire');
+        
+        // Supprimer l'écouteur contentUpdated
+        document.removeEventListener('contentUpdated', this.handleContentUpdated);
+        
+        // Déconnecter l'observateur de mutations
+        if (this.mutationObserver) {
+            this.mutationObserver.disconnect();
+            this.mutationObserver = null;
+        }
+        
+        // Fermer toute bulle active
+        this.closeActiveTooltip();
+        
+        // Nettoyer les références
+        this.terms = null;
+        this.processedElements = null;
+    }
 }
 
 // Initialiser le glossaire après le chargement de la page
@@ -493,6 +613,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Ajouter un écouteur pour les contenus chargés dynamiquement
     document.addEventListener('contentUpdated', () => {
         if (window.legalGlossary && window.legalGlossary.isLoaded) {
+            if (GLOSSARY_CONFIG.debugMode) console.log('[Glossary]', 'Rafraîchissement du glossaire via l\'écouteur global contentUpdated');
             window.legalGlossary.highlightTermsInContent();
         }
     });
@@ -501,6 +622,34 @@ document.addEventListener('DOMContentLoaded', () => {
 // Fonction utilitaire pour déclencher l'analyse après un chargement de contenu dynamique
 function refreshGlossary() {
     if (window.legalGlossary && window.legalGlossary.isLoaded) {
-        window.legalGlossary.highlightTermsInContent();
+        if (GLOSSARY_CONFIG.debugMode) console.log('[Glossary]', 'Rafraîchissement manuel du glossaire');
+        
+        // Déclencher un événement contentUpdated pour informer le glossaire
+        const event = new CustomEvent('contentUpdated', {
+            detail: { source: 'manual', timestamp: new Date().getTime() }
+        });
+        document.dispatchEvent(event);
     }
+}
+
+// Exposer des fonctions utilitaires pour le débogage
+if (GLOSSARY_CONFIG.debugMode) {
+    window.glossaryDebug = {
+        inspect: () => {
+            console.log({
+                isLoaded: window.legalGlossary.isLoaded,
+                termsCount: Object.keys(window.legalGlossary.terms).length,
+                processedElementsCount: window.legalGlossary.processedElements ? 'WeakSet (count unavailable)' : 'Not initialized',
+                activeTooltip: window.legalGlossary.activeTooltip ? 'Present' : 'None'
+            });
+        },
+        forceRefresh: () => {
+            window.legalGlossary.processedElements = new WeakSet();
+            window.legalGlossary.highlightTermsInContent();
+            console.log('[Glossary Debug]', 'Forced complete refresh');
+        },
+        listTerms: () => {
+            return Object.keys(window.legalGlossary.terms);
+        }
+    };
 }
