@@ -1,0 +1,48 @@
+name: Generate Glossary Index
+
+on:
+  # Permet de déclencher manuellement le workflow depuis l'interface GitHub
+  workflow_dispatch:
+    inputs:
+      commit_message:
+        description: 'Message de commit pour la mise à jour'
+        default: 'Mise à jour automatique de l''index du glossaire'
+        required: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm install
+      
+      - name: Create data directory if it doesn't exist
+        run: mkdir -p data
+      
+      - name: Generate glossary index
+        run: node scripts/buildGlossaryIndex.js
+      
+      - name: Check for changes
+        id: check_changes
+        run: |
+          git diff --exit-code data/glossary-index.json || echo "::set-output name=has_changes::true"
+      
+      - name: Commit and push if there are changes
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/glossary-index.json
+          git add report-missing-terms.txt || true
+          git commit -m "${{ github.event.inputs.commit_message }}"
+          git push
