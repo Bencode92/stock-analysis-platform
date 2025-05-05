@@ -1,26 +1,19 @@
 /**
- * TradePulse - Glossaire juridique interactif (optimisé)
+ * TradePulse - Glossaire juridique interactif
  * Ce script charge les termes juridiques depuis le JSON et les met en évidence
  * dans le contenu de la page, affichant leur définition en cliquant.
  * 
- * Version optimisée: meilleure correspondance avec vos termes extraits manuellement
+ * Version optimisée : architecture en deux temps (scan au build, highlight au runtime)
  */
 
 // Configuration globale
 const GLOSSARY_CONFIG = {
     highlightColor: '#00FF87', // Couleur verte LED
-    targetSelectors: [
-        '.question-card', 
-        '.recommendation-card', 
-        '.results-container', 
-        '.main-content p', 
-        '.option-btn', 
-        '.question-description'
-    ], // Sélecteurs enrichis pour couvrir tous les éléments pertinents
+    targetSelectors: ['.question-card', '.recommendation-card', '.results-container', '.main-content p'], // Conteneurs où rechercher les termes
     excludeSelectors: ['button', 'input', 'select', 'a', 'h1', 'h2', 'h3', '.glossary-tooltip'], // Éléments à ignorer
     jsonPath: 'data/legal-terms.json', // Chemin vers le fichier JSON complet des définitions
-    indexPath: 'data/glossary-index.json', // Chemin vers le fichier d'index des termes
-    maxTooltipWidth: '380px', // Largeur maximale de l'info-bulle
+    indexPath: 'data/glossary-index.json', // Chemin vers le fichier d'index des termes (généré au build)
+    maxTooltipWidth: '350px', // Largeur maximale de l'info-bulle
     animationDuration: 300 // Durée de l'animation en ms
 };
 
@@ -87,34 +80,6 @@ class LegalGlossary {
                 animation: glossary-pulse 2s infinite;
             }
             
-            .glossary-tooltip h3 {
-                color: #00FF87;
-                font-size: 16px;
-                font-weight: bold;
-                margin-top: 0;
-                margin-bottom: 10px;
-                border-bottom: 1px solid rgba(0, 255, 135, 0.3);
-                padding-bottom: 6px;
-            }
-            
-            .glossary-tooltip p {
-                margin-bottom: 8px;
-            }
-            
-            .glossary-tooltip .example {
-                background: rgba(0, 255, 135, 0.1);
-                padding: 10px;
-                border-radius: 6px;
-                margin: 10px 0;
-                font-style: italic;
-            }
-            
-            .glossary-tooltip .related-terms {
-                margin-top: 12px;
-                font-size: 0.9em;
-                color: #ccc;
-            }
-            
             @keyframes glossary-pulse {
                 0% { box-shadow: 0 0 0 0 rgba(0, 255, 135, 0.4); }
                 70% { box-shadow: 0 0 0 6px rgba(0, 255, 135, 0); }
@@ -130,31 +95,26 @@ class LegalGlossary {
             this.isLoading = true;
             console.log('Chargement du glossaire juridique optimisé...');
             
-            // 1. D'abord, tenter de charger le fichier d'index (rapide)
-            try {
-                const indexResponse = await fetch(this.config.indexPath);
-                
-                if (indexResponse.ok) {
-                    // Récupère la liste des IDs validés
-                    this.allowedIds = await indexResponse.json();
-                    console.log(`Index du glossaire chargé avec ${this.allowedIds.length} termes validés`);
-                    
-                    // Compile immédiatement la RegExp avec la liste des termes validés
-                    this.regex = this.buildGlossaryRegex();
-                    this.isLoaded = true;
-                    
-                    // Lancer immédiatement la mise en évidence avec la liste réduite
-                    this.highlightTermsInContent();
-                } else {
-                    console.warn('Fichier d\'index non trouvé, chargement en mode complet.');
-                    await this.loadFullTerms();
-                    return;
-                }
-            } catch (error) {
-                console.warn('Erreur de chargement de l\'index, chargement en mode complet.', error);
+            // 1. D'abord, charge le petit fichier d'index (rapide)
+            const indexResponse = await fetch(this.config.indexPath);
+            if (!indexResponse.ok) {
+                // Si le fichier d'index n'existe pas, on passe à l'ancien système
+                console.warn('Fichier d\'index non trouvé, chargement en mode complet.');
                 await this.loadFullTerms();
                 return;
             }
+            
+            // Récupère la liste des IDs validés
+            this.allowedIds = await indexResponse.json();
+            console.log(`Index du glossaire chargé avec ${this.allowedIds.length} termes validés`);
+            
+            // Compile immédiatement la RegExp avec la liste des termes validés
+            this.regex = this.buildGlossaryRegex();
+            this.isLoaded = true;
+            this.isLoading = false;
+            
+            // Lancer immédiatement la mise en évidence avec la liste réduite
+            this.highlightTermsInContent();
             
             // 2. Ensuite, charge le fichier complet des définitions en arrière-plan
             fetch(this.config.jsonPath)
@@ -168,20 +128,11 @@ class LegalGlossary {
                     this.terms = data;
                     console.log(`Définitions complètes chargées (${Object.keys(this.terms).length} termes)`);
                     
-                    // Vérifier si des termes indexés mais non définis
-                    const missingTerms = this.allowedIds.filter(id => !this.terms[id]);
-                    if (missingTerms.length > 0) {
-                        console.warn(`${missingTerms.length} termes dans l'index mais absents des définitions:`, missingTerms);
-                    }
-                    
                     // Émettre un événement pour informer que le glossaire est totalement prêt
                     document.dispatchEvent(new Event('glossaryFullyLoaded'));
                 })
                 .catch(error => {
                     console.error('Impossible de charger les définitions complètes:', error);
-                })
-                .finally(() => {
-                    this.isLoading = false;
                 });
             
         } catch (error) {
@@ -192,10 +143,9 @@ class LegalGlossary {
         }
     }
 
-    // Méthode de secours : charge tous les termes en mode complet
+    // Méthode de secours : charge tous les termes en mode complet (ancien système)
     async loadFullTerms() {
         try {
-            console.log('Chargement du glossaire en mode complet...');
             const response = await fetch(this.config.jsonPath);
             if (!response.ok) {
                 throw new Error(`Erreur HTTP: ${response.status}`);
@@ -207,7 +157,7 @@ class LegalGlossary {
             this.isLoading = false;
             
             // Réinitialiser le cache de regex après chargement des termes
-            this.regex = this.buildGlossaryRegex();
+            this.regex = null;
             
             // Lancer le processus de mise en évidence
             this.highlightTermsInContent();
@@ -229,15 +179,12 @@ class LegalGlossary {
         // Sélectionner tous les conteneurs cibles
         const containers = document.querySelectorAll(this.config.targetSelectors.join(', '));
         
-        // Parcourir les conteneurs et traiter chacun
         containers.forEach(container => {
             this.processNode(container);
         });
         
         // Ajouter un écouteur pour les nouvelles sections chargées dynamiquement
         this.observeDynamicContent();
-        
-        console.log('Termes du glossaire mis en évidence dans le contenu');
     }
 
     // Observer les changements dans le DOM pour traiter le contenu dynamique
@@ -327,80 +274,45 @@ class LegalGlossary {
 
     // Construit une RegExp unique pour tous les termes
     buildGlossaryRegex() {
-        // Sécurité: vérifier si les IDs sont disponibles
-        if (!this.allowedIds || this.allowedIds.length === 0) {
-            console.warn("Aucun terme disponible pour construire l'expression régulière");
-            return new RegExp("xxxnomatchxxx", "g"); // RegExp qui ne matchera rien
-        }
-        
-        // Trier par longueur décroissante pour prioritiser les expressions longues
-        const alternates = this.allowedIds
-            .sort((a, b) => b.length - a.length)
+        // Utiliser uniquement les IDs autorisés (termes qui ont une définition)
+        const alternates = (this.allowedIds || [])
+            .sort((a, b) => b.length - a.length)   // long -> court pour prioritiser les expressions longues
             .map(id => this.getTermPattern(id));
             
-        // Créer la RegExp en utilisant des limites de mots (\b) et en étant insensible à la casse (i)
-        try {
-            return new RegExp(`\\b(?:${alternates.join('|')})\\b`, 'giu');
-        } catch (e) {
-            console.error("Erreur lors de la construction de la RegExp:", e);
-            return new RegExp("xxxnomatchxxx", "g");
-        }
+        return new RegExp(`\\b(?:${alternates.join('|')})\\b`, 'giu');
     }
 
     // Convertit l'ID d'un terme en modèle de recherche
     getTermPattern(termId) {
-        try {
-            // 1) snake_case -> texte + espaces souples
-            let txt = termId.replace(/_/g, ' ');
+        // 1) snake_case -> texte + espaces souples
+        let txt = termId.replace(/_/g, ' ');
 
-            // 2) supprime les accents pour la recherche
-            txt = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '');  // enlève les diacritiques
-            txt = txt.replace(/\s+/g, '\\s+');                           // espace(s) variable(s)
-            
-            // 3) échappe tout caractère spécial RegExp
-            txt = txt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // 2) supprime les accents pour la recherche
+        txt = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '');  // enlève les diacritiques
+        txt = txt.replace(/\s+/g, '\\s+');                           // espace(s) variable(s)
+        
+        // 3) échappe tout caractère spécial RegExp
+        txt = txt.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-            return txt;
-        } catch (e) {
-            console.error(`Erreur dans getTermPattern pour ${termId}:`, e);
-            return termId; // En cas d'erreur, retourner le terme tel quel
-        }
+        return txt;
     }
 
     // Normaliser le texte trouvé en ID
     normalizeToId(str) {
-        try {
-            return str
-                .toLowerCase()
-                .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // enlève les accents
-                .trim()
-                .replace(/\s+/g, '_');                            // espaces -> underscore
-        } catch (e) {
-            console.error(`Erreur dans normalizeToId pour "${str}":`, e);
-            return str.toLowerCase().trim().replace(/\s+/g, '_');
-        }
+        return str
+            .toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // enlève les accents
+            .trim()
+            .replace(/\s+/g, '_');                            // espaces -> underscore
     }
 
-    // Met en évidence les termes dans un nœud de texte
+    // Met en évidence les termes dans un nœud de texte (nouvelle implémentation)
     highlightTermsInNode(textNode) {
-        // Vérifications de sécurité
-        if (!textNode || !textNode.nodeValue) return;
-        
         const raw = textNode.nodeValue;
         const parent = textNode.parentNode;
         
         // Si le parent est déjà un terme de glossaire, ne pas le traiter à nouveau
         if (parent.classList && parent.classList.contains('glossary-term')) {
-            return;
-        }
-        
-        // Vérifier si nous avons une regex
-        if (!this.regex) {
-            this.regex = this.buildGlossaryRegex();
-        }
-        
-        // Vérifier si le texte contient des correspondances potentielles (rapide)
-        if (!this.containsPotentialTerm(raw)) {
             return;
         }
         
@@ -410,15 +322,17 @@ class LegalGlossary {
         // Pré-normaliser le texte pour la recherche (sans accents)
         const norm = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         
+        // Vérifier si nous avons des termes à chercher
+        if (!this.regex) {
+            this.regex = this.buildGlossaryRegex();
+        }
+        
         this.regex.lastIndex = 0; // Réinitialiser le lastIndex
         
         let match, lastIndex = 0;
-        let matchFound = false;
         
         // Rechercher tous les termes dans une seule passe
         while ((match = this.regex.exec(norm)) !== null) {
-            matchFound = true;
-            
             // Ajouter le texte avant le terme
             if (match.index > lastIndex) {
                 fragment.appendChild(document.createTextNode(
@@ -427,7 +341,7 @@ class LegalGlossary {
             }
             
             // Récupérer le texte original avec accents
-            const origSlice = raw.slice(match.index, this.regex.lastIndex);
+            const origSlice = raw.slice(match.index, regex.lastIndex);
             
             // Obtenir l'ID du terme à partir du texte trouvé
             const termId = this.normalizeToId(match[0]);
@@ -448,11 +362,8 @@ class LegalGlossary {
             fragment.appendChild(termElement);
             
             // Mettre à jour la position courante
-            lastIndex = this.regex.lastIndex;
+            lastIndex = regex.lastIndex;
         }
-        
-        // Si aucune correspondance n'a été trouvée, sortir sans modifications
-        if (!matchFound) return;
         
         // Ajouter le reste du texte après le dernier terme
         if (lastIndex < raw.length) {
@@ -461,20 +372,10 @@ class LegalGlossary {
             ));
         }
         
-        // Remplacer le nœud de texte par le fragment
-        parent.replaceChild(fragment, textNode);
-    }
-    
-    // Vérifie rapidement si un texte pourrait contenir des termes (optimisation)
-    containsPotentialTerm(text) {
-        // Liste de mots-clés courants dans les termes juridiques et fiscaux
-        const commonKeywords = ['impôt', 'taxe', 'social', 'capital', 'société', 'entreprise', 
-            'micro', 'sas', 'sarl', 'eurl', 'tva', 'acre', 'bic', 'bnc'];
-            
-        const lowercaseText = text.toLowerCase();
-        
-        // Vérifier si au moins un mot-clé est présent
-        return commonKeywords.some(keyword => lowercaseText.includes(keyword));
+        // Remplacer le nœud de texte par le fragment uniquement si des modifications ont été apportées
+        if (lastIndex > 0) {
+            parent.replaceChild(fragment, textNode);
+        }
     }
 
     // Affiche la définition d'un terme
@@ -511,14 +412,21 @@ class LegalGlossary {
             }
         }
         
-        if (!termData) {
-            console.warn(`Aucune définition trouvée pour le terme "${termId}"`);
-            return;
-        }
+        if (!termData) return;
         
         // Créer la bulle d'information
         const tooltip = document.createElement('div');
         tooltip.className = 'glossary-tooltip';
+        tooltip.style.position = 'absolute';
+        tooltip.style.zIndex = '1000';
+        tooltip.style.maxWidth = this.config.maxTooltipWidth;
+        tooltip.style.backgroundColor = 'rgba(1, 42, 74, 0.95)';
+        tooltip.style.color = '#fff';
+        tooltip.style.padding = '12px 16px';
+        tooltip.style.borderRadius = '8px';
+        tooltip.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.2)';
+        tooltip.style.border = '1px solid rgba(0, 255, 135, 0.3)';
+        tooltip.style.backdropFilter = 'blur(5px)';
         tooltip.style.opacity = '0';
         tooltip.style.transform = 'translateY(10px)';
         tooltip.style.transition = `all ${this.config.animationDuration}ms ease`;
@@ -567,32 +475,35 @@ class LegalGlossary {
 
     // Génère le contenu HTML de la bulle d'information
     generateTooltipContent(termId, termData) {
-        // Titre du terme (transforme snake_case en texte lisible)
+        // Titre du terme (transforme termId en texte lisible)
         const termTitle = termId
             .replace(/_/g, ' ')
             .replace(/([A-Z])/g, ' $1')
             .trim()
             .replace(/\b\w/g, l => l.toUpperCase());
         
-        let content = `<h3>${termTitle}</h3>`;
+        let content = `
+            <div style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 8px; margin-bottom: 8px;">
+                <h3 style="margin: 0 0 5px; font-size: 16px; color: #00FF87;">${termTitle}</h3>
+            </div>
+        `;
         
-        // Définition principale
+        // Traiter différents formats de données
         if (termData.definition) {
-            content += `<p>${termData.definition}</p>`;
+            content += `<p style="margin: 0 0 8px; line-height: 1.4;">${termData.definition}</p>`;
         }
         
-        // Exemple (stylisé différemment)
         if (termData.example) {
             content += `
-                <div class="example">
-                    <strong>Exemple:</strong> ${termData.example}
+                <div style="background: rgba(0, 255, 135, 0.1); border-radius: 4px; padding: 8px; margin: 8px 0; font-size: 14px;">
+                    <strong style="color: #00FF87;">Exemple:</strong> ${termData.example}
                 </div>
             `;
         }
         
-        // Pour les objets imbriqués (application, etc.)
+        // Pour les objets imbriqués
         if (termData.application) {
-            content += `<div class="section"><strong style="color: #00FF87;">Application:</strong>`;
+            content += `<div style="margin-top: 8px;"><strong style="color: #00FF87;">Application:</strong>`;
             for (const [key, value] of Object.entries(termData.application)) {
                 const readableKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                 content += `<div style="margin: 4px 0 4px 12px;"><strong>${readableKey}:</strong> ${value}</div>`;
@@ -600,19 +511,18 @@ class LegalGlossary {
             content += `</div>`;
         }
         
-        // Pour les tableaux (listes)
+        // Pour les tableaux
         if (Array.isArray(termData.related_terms) && termData.related_terms.length > 0) {
             content += `
-                <div class="related-terms">
+                <div style="margin-top: 8px;">
                     <strong style="color: #00FF87;">Termes liés:</strong> 
-                    <span>${termData.related_terms.join(', ')}</span>
+                    <span style="font-style: italic; color: #ccc;">${termData.related_terms.join(', ')}</span>
                 </div>
             `;
         }
         
-        // Liste d'éléments
         if (Array.isArray(termData.elements_couverts) && termData.elements_couverts.length > 0) {
-            content += `<div><strong style="color: #00FF87;">Éléments couverts:</strong><ul style="margin: 4px 0; padding-left: 20px;">`;
+            content += `<div style="margin-top: 8px;"><strong style="color: #00FF87;">Éléments couverts:</strong><ul style="margin: 4px 0; padding-left: 20px;">`;
             termData.elements_couverts.forEach(item => {
                 content += `<li>${item}</li>`;
             });
@@ -679,6 +589,19 @@ class LegalGlossary {
             }
         }
     }
+    
+    // Méthode pour tester le bon fonctionnement de la détection des termes
+    runTests() {
+        const testTerms = ['Autres revenus salariés', 'revenus', 'TMI', 'ARE', 'salariés'];
+        console.group('Tests de détection des termes');
+        testTerms.forEach(txt => {
+            const normalized = txt.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            const regex = this.buildGlossaryRegex();
+            const matches = regex.test(normalized);
+            console.log(`Terme "${txt}" (norm: "${normalized}"): ${matches ? '✅' : '❌'}`);
+        });
+        console.groupEnd();
+    }
 }
 
 // Initialiser le glossaire après le chargement de la page
@@ -699,15 +622,6 @@ document.addEventListener('DOMContentLoaded', () => {
             window.legalGlossary.disconnect();
         }
     });
-    
-    // Traiter explicitement les éléments une fois les questions chargées
-    document.addEventListener('recommendationEngineReady', () => {
-        setTimeout(() => {
-            if (window.legalGlossary && window.legalGlossary.isLoaded) {
-                window.legalGlossary.highlightTermsInContent();
-            }
-        }, 500);
-    });
 });
 
 // Fonction utilitaire pour déclencher l'analyse après un chargement de contenu dynamique
@@ -716,3 +630,4 @@ function refreshGlossary() {
         window.legalGlossary.highlightTermsInContent();
     }
 }
+            
