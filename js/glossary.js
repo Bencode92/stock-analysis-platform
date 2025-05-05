@@ -2,6 +2,8 @@
  * TradePulse - Glossaire juridique interactif
  * Ce script charge les termes juridiques depuis le JSON et les met en évidence
  * dans le contenu de la page, affichant leur définition en cliquant.
+ * 
+ * Version optimisée : architecture en deux temps (scan au build, highlight au runtime)
  */
 
 // Configuration globale
@@ -9,7 +11,8 @@ const GLOSSARY_CONFIG = {
     highlightColor: '#00FF87', // Couleur verte LED
     targetSelectors: ['.question-card', '.recommendation-card', '.results-container', '.main-content p'], // Conteneurs où rechercher les termes
     excludeSelectors: ['button', 'input', 'select', 'a', 'h1', 'h2', 'h3', '.glossary-tooltip'], // Éléments à ignorer
-    jsonPath: 'data/legal-terms.json', // Chemin vers le fichier JSON
+    jsonPath: 'data/legal-terms.json', // Chemin vers le fichier JSON complet des définitions
+    indexPath: 'data/glossary-index.json', // Chemin vers le fichier d'index des termes (généré au build)
     maxTooltipWidth: '350px', // Largeur maximale de l'info-bulle
     animationDuration: 300 // Durée de l'animation en ms
 };
@@ -18,7 +21,8 @@ const GLOSSARY_CONFIG = {
 class LegalGlossary {
     constructor(config) {
         this.config = config;
-        this.terms = {};
+        this.terms = {}; // Stockera les définitions complètes
+        this.allowedIds = []; // Stockera la liste des IDs validés (termes qui ont une définition)
         this.activeTooltip = null;
         this.isLoading = false;
         this.isLoaded = false;
@@ -89,23 +93,76 @@ class LegalGlossary {
     async loadTerms() {
         try {
             this.isLoading = true;
-            console.log('Chargement du glossaire juridique...');
+            console.log('Chargement du glossaire juridique optimisé...');
             
+            // 1. D'abord, charge le petit fichier d'index (rapide)
+            const indexResponse = await fetch(this.config.indexPath);
+            if (!indexResponse.ok) {
+                // Si le fichier d'index n'existe pas, on passe à l'ancien système
+                console.warn('Fichier d\'index non trouvé, chargement en mode complet.');
+                await this.loadFullTerms();
+                return;
+            }
+            
+            // Récupère la liste des IDs validés
+            this.allowedIds = await indexResponse.json();
+            console.log(`Index du glossaire chargé avec ${this.allowedIds.length} termes validés`);
+            
+            // Compile immédiatement la RegExp avec la liste des termes validés
+            this.regex = this.buildGlossaryRegex();
+            this.isLoaded = true;
+            this.isLoading = false;
+            
+            // Lancer immédiatement la mise en évidence avec la liste réduite
+            this.highlightTermsInContent();
+            
+            // 2. Ensuite, charge le fichier complet des définitions en arrière-plan
+            fetch(this.config.jsonPath)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`Erreur HTTP: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    this.terms = data;
+                    console.log(`Définitions complètes chargées (${Object.keys(this.terms).length} termes)`);
+                    
+                    // Émettre un événement pour informer que le glossaire est totalement prêt
+                    document.dispatchEvent(new Event('glossaryFullyLoaded'));
+                })
+                .catch(error => {
+                    console.error('Impossible de charger les définitions complètes:', error);
+                });
+            
+        } catch (error) {
+            this.isLoading = false;
+            console.error('Erreur lors du chargement du glossaire:', error);
+            // Tenter de charger en mode complet en cas d'erreur
+            await this.loadFullTerms();
+        }
+    }
+
+    // Méthode de secours : charge tous les termes en mode complet (ancien système)
+    async loadFullTerms() {
+        try {
             const response = await fetch(this.config.jsonPath);
             if (!response.ok) {
                 throw new Error(`Erreur HTTP: ${response.status}`);
             }
             
             this.terms = await response.json();
+            this.allowedIds = Object.keys(this.terms);
             this.isLoaded = true;
             this.isLoading = false;
-            console.log(`Glossaire juridique chargé avec ${Object.keys(this.terms).length} termes`);
             
             // Réinitialiser le cache de regex après chargement des termes
             this.regex = null;
             
-            // Lancer le processus de mise en évidence après le chargement
+            // Lancer le processus de mise en évidence
             this.highlightTermsInContent();
+            
+            console.log(`Glossaire juridique chargé en mode complet avec ${this.allowedIds.length} termes`);
             
             // Émettre un événement pour informer que le glossaire est prêt
             document.dispatchEvent(new Event('glossaryLoaded'));
@@ -217,15 +274,12 @@ class LegalGlossary {
 
     // Construit une RegExp unique pour tous les termes
     buildGlossaryRegex() {
-        // Utiliser la RegExp en cache si disponible
-        if (this.regex) return this.regex;
-        
-        const alternates = Object.keys(this.terms)
+        // Utiliser uniquement les IDs autorisés (termes qui ont une définition)
+        const alternates = (this.allowedIds || [])
             .sort((a, b) => b.length - a.length)   // long -> court pour prioritiser les expressions longues
             .map(id => this.getTermPattern(id));
             
-        this.regex = new RegExp(`\\b(?:${alternates.join('|')})\\b`, 'giu');
-        return this.regex;
+        return new RegExp(`\\b(?:${alternates.join('|')})\\b`, 'giu');
     }
 
     // Convertit l'ID d'un terme en modèle de recherche
@@ -268,13 +322,17 @@ class LegalGlossary {
         // Pré-normaliser le texte pour la recherche (sans accents)
         const norm = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         
-        const regex = this.buildGlossaryRegex();
-        regex.lastIndex = 0; // Réinitialiser le lastIndex
+        // Vérifier si nous avons des termes à chercher
+        if (!this.regex) {
+            this.regex = this.buildGlossaryRegex();
+        }
+        
+        this.regex.lastIndex = 0; // Réinitialiser le lastIndex
         
         let match, lastIndex = 0;
         
         // Rechercher tous les termes dans une seule passe
-        while ((match = regex.exec(norm)) !== null) {
+        while ((match = this.regex.exec(norm)) !== null) {
             // Ajouter le texte avant le terme
             if (match.index > lastIndex) {
                 fragment.appendChild(document.createTextNode(
@@ -324,6 +382,21 @@ class LegalGlossary {
     showDefinition(termId, element) {
         // Fermer la bulle active si elle existe
         this.closeActiveTooltip();
+        
+        // Si les définitions complètes ne sont pas encore chargées, attendre un peu
+        if (!this.terms || !this.terms[termId]) {
+            // Montrer un indicateur de chargement sur l'élément
+            element.style.opacity = '0.7';
+            element.style.textDecoration = 'underline dashed';
+            
+            // Réessayer dans un court instant
+            setTimeout(() => {
+                element.style.opacity = '';
+                element.style.textDecoration = '';
+                this.showDefinition(termId, element);
+            }, 100);
+            return;
+        }
         
         // Chercher le terme dans le dictionnaire des termes
         // On vérifie d'abord si le termId existe directement, sinon on cherche un terme qui pourrait correspondre
