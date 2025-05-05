@@ -21,7 +21,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: '18'
-          cache: 'npm'
+          # Suppression de l'option de cache qui nécessite package-lock.json
       
       - name: Install dependencies
         run: npm install
@@ -35,7 +35,7 @@ jobs:
       - name: Check for changes
         id: check_changes
         run: |
-          git diff --exit-code data/glossary-index.json || echo "::set-output name=has_changes::true"
+          git diff --exit-code data/glossary-index.json || echo "has_changes=true" >> $GITHUB_OUTPUT
       
       - name: Commit and push if there are changes
         if: steps.check_changes.outputs.has_changes == 'true'
