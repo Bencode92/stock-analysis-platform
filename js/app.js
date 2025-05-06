@@ -279,29 +279,7 @@ function initUIEvents() {
                         <div class="max-w-5xl mx-auto mb-12">
                             <h2 class="text-2xl font-bold mb-4">Comparatif des formes juridiques</h2>
                             <p class="mb-4">Le tableau comparatif ci-dessous présente les principales caractéristiques des différentes formes juridiques d'entreprise en France en 2025.</p>
-                            <div id="comparatif-filters" class="flex flex-wrap gap-3 mb-4 bg-blue-900 bg-opacity-30 p-4 rounded-lg">
-                                <div class="form-group">
-                                    <label class="block text-sm font-medium mb-1">Filtrer par critère:</label>
-                                    <select id="filter-criteria" class="bg-blue-800 bg-opacity-50 border border-gray-700 text-white rounded-lg py-2 px-3 w-full">
-                                        <option value="all">Tous les critères</option>
-                                        <option value="structure">Structure</option>
-                                        <option value="fiscal">Fiscal</option>
-                                        <option value="social">Social</option>
-                                        <option value="creation">Création</option>
-                                        <option value="gestion">Gestion</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label class="block text-sm font-medium mb-1">Comparer uniquement:</label>
-                                    <select id="compare-specific" class="bg-blue-800 bg-opacity-50 border border-gray-700 text-white rounded-lg py-2 px-3 w-full">
-                                        <option value="all">Toutes les formes</option>
-                                        <option value="MICRO,EI,EURL">Entrepreneur solo</option>
-                                        <option value="EURL,SASU">EURL vs SASU</option>
-                                        <option value="SASU,SAS,SARL">Structures sociétaires</option>
-                                        <option value="SELARL,SELAS">Professions libérales</option>
-                                    </select>
-                                </div>
-                            </div>
+                            <!-- Suppression des filtres en double -->
                             <div id="comparatif-container" class="overflow-x-auto">
                                 <!-- Le tableau comparatif sera inséré ici par le JavaScript -->
                                 <div class="text-center p-4">
