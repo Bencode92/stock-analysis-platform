@@ -1,5 +1,5 @@
 // fiscal-guide.js - Simulateur fiscal simplifié pour l'onglet Guide fiscal
-// Version 2.0 - Mai 2025 - Mise à jour pour inclure tous les statuts juridiques
+// Version 2.1 - Mai 2025 - Mise à jour avec méthodologie et options avancées
 
 document.addEventListener('DOMContentLoaded', function() {
     // S'assurer que l'onglet Guide fiscal initialise correctement ce code
@@ -87,6 +87,29 @@ function updateSimulatorInterface() {
                             </label>
                         </div>
                     </div>
+                    
+                    <!-- Nouvelles options -->
+                    <div>
+                        <label class="block text-gray-300 mb-2">Mode de calcul IR</label>
+                        <div>
+                            <label class="inline-flex items-center mr-4">
+                                <input type="radio" name="ir-mode" value="simple" class="form-radio h-4 w-4 text-green-400" checked>
+                                <span class="ml-2">Simplifié (TMI)</span>
+                            </label>
+                            <label class="inline-flex items-center">
+                                <input type="radio" name="ir-mode" value="real" class="form-radio h-4 w-4 text-green-400">
+                                <span class="ml-2">Tranches réelles</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-gray-300 mb-2">Stratégie de rémunération</label>
+                        <select id="sim-remu-strategy" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
+                            <option value="standard">Standard (70% rémunération)</option>
+                            <option value="balanced">Équilibrée (50/50)</option>
+                            <option value="optimized">Optimisée fiscalement</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <div id="custom-status-options" class="hidden mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-sm">
@@ -159,6 +182,13 @@ function updateSimulatorInterface() {
             showDetails.addEventListener('change', runComparison);
         }
         
+        // Événements pour les nouvelles options
+        document.querySelectorAll('input[name="ir-mode"]').forEach(radio => {
+            radio.addEventListener('change', runComparison);
+        });
+        
+        document.getElementById('sim-remu-strategy').addEventListener('change', runComparison);
+        
         // Sélectionner par défaut les statuts courants
         statusFilter.dispatchEvent(new Event('change'));
     }
@@ -190,6 +220,20 @@ function runComparison() {
     const ratioSalaire = parseFloat(document.getElementById('sim-salaire').value) / 100 || 0.7;
     const tmi = parseFloat(document.getElementById('sim-tmi').value) || 30;
     
+    // Récupérer les nouvelles options
+    const calculReelIR = document.querySelector('input[name="ir-mode"]:checked').value === 'real';
+    const strategyRemu = document.getElementById('sim-remu-strategy').value;
+    
+    let tauxRemuEffectif = ratioSalaire;
+    let optimiserRemu = false;
+    
+    // Déterminer la stratégie de rémunération
+    if (strategyRemu === 'balanced') {
+        tauxRemuEffectif = 0.5;
+    } else if (strategyRemu === 'optimized') {
+        optimiserRemu = true;
+    }
+    
     const resultsBody = document.getElementById('sim-results-body');
     if (!resultsBody) return;
     
@@ -197,8 +241,11 @@ function runComparison() {
     const params = {
         ca: ca,
         tauxMarge: marge,
-        tauxRemuneration: ratioSalaire,
-        tmiActuel: tmi
+        tauxRemuneration: tauxRemuEffectif,
+        tmiActuel: tmi,
+        calculReelIR: calculReelIR,
+        optimiserRemu: optimiserRemu,
+        quotientFamilial: 1 // Par défaut, 1 part
     };
     
     // Vider les résultats précédents
@@ -222,7 +269,8 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerMicroEntreprise({
                 ca: ca,
                 typeMicro: 'BIC',
-                tmiActuel: tmi
+                tmiActuel: tmi,
+                calculReelIR: calculReelIR
             })
         },
         'ei': { 
@@ -230,7 +278,8 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerEI({
                 ca: ca,
                 tauxMarge: marge,
-                tmiActuel: tmi
+                tmiActuel: tmi,
+                calculReelIR: calculReelIR
             })
         },
         'eurl': { 
@@ -238,9 +287,11 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerEURL({
                 ca: ca,
                 tauxMarge: marge,
-                tauxRemuneration: ratioSalaire,
+                tauxRemuneration: tauxRemuEffectif,
                 optionIS: false,
-                tmiActuel: tmi
+                tmiActuel: tmi,
+                calculReelIR: calculReelIR,
+                optimiserRemu: optimiserRemu
             })
         },
         'eurlIS': { 
@@ -248,9 +299,11 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerEURL({
                 ca: ca,
                 tauxMarge: marge,
-                tauxRemuneration: ratioSalaire,
+                tauxRemuneration: tauxRemuEffectif,
                 optionIS: true,
-                tmiActuel: tmi
+                tmiActuel: tmi,
+                calculReelIR: calculReelIR,
+                optimiserRemu: optimiserRemu
             })
         },
         'sasu': { 
@@ -258,8 +311,10 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerSASU({
                 ca: ca,
                 tauxMarge: marge,
-                tauxRemuneration: ratioSalaire,
-                tmiActuel: tmi
+                tauxRemuneration: tauxRemuEffectif,
+                tmiActuel: tmi,
+                calculReelIR: calculReelIR,
+                optimiserRemu: optimiserRemu
             })
         },
         'sarl': { 
@@ -267,8 +322,10 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerSARL({
                 ca: ca,
                 tauxMarge: marge,
-                tauxRemuneration: ratioSalaire,
+                tauxRemuneration: tauxRemuEffectif,
                 tmiActuel: tmi,
+                calculReelIR: calculReelIR,
+                optimiserRemu: optimiserRemu,
                 gerantMajoritaire: true
             })
         },
@@ -277,8 +334,10 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerSAS({
                 ca: ca,
                 tauxMarge: marge,
-                tauxRemuneration: ratioSalaire,
-                tmiActuel: tmi
+                tauxRemuneration: tauxRemuEffectif,
+                tmiActuel: tmi,
+                calculReelIR: calculReelIR,
+                optimiserRemu: optimiserRemu
             })
         },
         'sa': { 
@@ -286,8 +345,10 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerSA({
                 ca: ca,
                 tauxMarge: marge,
-                tauxRemuneration: ratioSalaire,
-                tmiActuel: tmi
+                tauxRemuneration: tauxRemuEffectif,
+                tmiActuel: tmi,
+                calculReelIR: calculReelIR,
+                optimiserRemu: optimiserRemu
             })
         },
         'snc': { 
@@ -295,7 +356,8 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerSNC({
                 ca: ca,
                 tauxMarge: marge,
-                tmiActuel: tmi
+                tmiActuel: tmi,
+                calculReelIR: calculReelIR
             })
         },
         'sci': { 
@@ -303,7 +365,8 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerSCI({
                 revenuLocatif: ca,
                 chargesDeductibles: ca * (1 - marge),
-                tmiActuel: tmi
+                tmiActuel: tmi,
+                calculReelIR: calculReelIR
             })
         },
         'selarl': { 
@@ -311,8 +374,10 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerSELARL({
                 ca: ca,
                 tauxMarge: marge,
-                tauxRemuneration: ratioSalaire,
-                tmiActuel: tmi
+                tauxRemuneration: tauxRemuEffectif,
+                tmiActuel: tmi,
+                calculReelIR: calculReelIR,
+                optimiserRemu: optimiserRemu
             })
         },
         'selas': { 
@@ -320,8 +385,10 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerSELAS({
                 ca: ca,
                 tauxMarge: marge,
-                tauxRemuneration: ratioSalaire,
-                tmiActuel: tmi
+                tauxRemuneration: tauxRemuEffectif,
+                tmiActuel: tmi,
+                calculReelIR: calculReelIR,
+                optimiserRemu: optimiserRemu
             })
         },
         'sca': { 
@@ -329,8 +396,10 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerSCA({
                 ca: ca,
                 tauxMarge: marge,
-                tauxRemuneration: ratioSalaire,
-                tmiActuel: tmi
+                tauxRemuneration: tauxRemuEffectif,
+                tmiActuel: tmi,
+                calculReelIR: calculReelIR,
+                optimiserRemu: optimiserRemu
             })
         }
     };
@@ -388,7 +457,7 @@ function runComparison() {
                     net = sim.revenuNetApresImpot;
                 } else {
                     // Cas général pour les statuts à l'IS (SASU, EURL-IS, SAS, SARL, etc.)
-                    brut = sim.remuneration || sim.resultatEntreprise * ratioSalaire;
+                    brut = sim.remuneration || sim.resultatEntreprise * (params.tauxRemuneration || 0.7);
                     charges = sim.cotisationsSociales || (sim.chargesPatronales + sim.chargesSalariales);
                     impots = (sim.impotRevenu || 0) + (sim.is || 0) + (sim.prelevementForfaitaire || 0);
                     net = sim.revenuNetTotal || sim.revenuNetApresImpot;
@@ -485,7 +554,9 @@ function runComparison() {
                 <td class="px-4 py-3">${res.charges === '-' ? '-' : formatter.format(res.charges)}</td>
                 <td class="px-4 py-3">${res.impots === '-' ? '-' : formatter.format(res.impots)}</td>
                 <td class="px-4 py-3">${dividendesNets ? formatter.format(dividendesNets) : '-'}</td>
-                <td class="px-4 py-3 font-medium ${isTopResult ? 'text-green-400' : (isGoodResult ? 'text-green-300' : '')}">${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}</td>
+                <td class="px-4 py-3 font-medium ${isTopResult ? 'text-green-400' : (isGoodResult ? 'text-green-300' : '')}">
+                    ${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}
+                </td>
             `;
         } else {
             // Affichage standard
@@ -497,7 +568,9 @@ function runComparison() {
                 <td class="px-4 py-3">${res.brut === '-' ? '-' : formatter.format(res.brut)}</td>
                 <td class="px-4 py-3">${res.charges === '-' ? '-' : formatter.format(res.charges)}</td>
                 <td class="px-4 py-3">${res.impots === '-' ? '-' : formatter.format(res.impots)}</td>
-                <td class="px-4 py-3 font-medium ${isTopResult ? 'text-green-400' : (isGoodResult ? 'text-green-300' : '')}">${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}</td>
+                <td class="px-4 py-3 font-medium ${isTopResult ? 'text-green-400' : (isGoodResult ? 'text-green-300' : '')}">
+                    ${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}
+                </td>
             `;
         }
         
@@ -703,5 +776,115 @@ function getStatutFiscalInfo(statutId) {
     return infosFiscales[statutId] || `<p class="mb-2">Informations fiscales non disponibles pour ce statut.</p>`;
 }
 
+// Fonction pour générer le contenu de la méthodologie pour l'onglet correspondant
+function generateMethodologyContent() {
+    const methodologyAccordion = document.getElementById('methodology-accordion');
+    if (!methodologyAccordion) return;
+    
+    // Liste des statuts avec leur méthodologie
+    const methodologies = [
+        {
+            id: 'micro',
+            title: 'Micro-entreprise',
+            content: `
+                <p class="mb-2"><strong>Formules de calcul :</strong></p>
+                <ul class="list-disc pl-5 mb-3">
+                    <li>Cotisations sociales = CA × Taux (12,3% vente, 21,2% services)</li>
+                    <li>Revenu imposable = CA × (1 - Abattement forfaitaire)</li>
+                    <li>Impôt sur le revenu = Revenu imposable × TMI <em>ou</em> Calcul réel par tranches</li>
+                    <li>Revenu net = CA - Cotisations sociales - Impôt</li>
+                </ul>
+                <p class="mb-2"><strong>Hypothèses simplificatrices :</strong></p>
+                <ul class="list-disc pl-5">
+                    <li>Application directe du taux marginal d'imposition (en mode simplifié)</li>
+                    <li>Pas de prise en compte des charges réelles</li>
+                    <li>Pas de considération du versement libératoire</li>
+                </ul>
+            `
+        },
+        {
+            id: 'sasu',
+            title: 'SASU / SAS',
+            content: `
+                <p class="mb-2"><strong>Formules de calcul :</strong></p>
+                <ul class="list-disc pl-5 mb-3">
+                    <li>Résultat = CA × Taux de marge</li>
+                    <li>Rémunération = Résultat × Taux de rémunération</li>
+                    <li>Charges patronales = Rémunération × 55%</li>
+                    <li>Charges salariales = Rémunération × 22%</li>
+                    <li>Salaire net = Rémunération - Charges salariales</li>
+                    <li>IR = Salaire net × TMI <em>ou</em> Calcul réel par tranches</li>
+                    <li>IS = (Résultat - Rémunération) × Taux IS (15% jusqu'à 42 500€, 25% au-delà)</li>
+                    <li>Dividendes = Résultat après IS × % de distribution (100% par défaut)</li>
+                    <li>PFU = Dividendes × 30%</li>
+                    <li>Revenu net total = Salaire net après IR + Dividendes nets</li>
+                </ul>
+                <p class="mb-2"><strong>Options d'optimisation :</strong></p>
+                <ul class="list-disc pl-5">
+                    <li>Maximiser le salaire (70% par défaut)</li>
+                    <li>Équilibré (50/50)</li>
+                    <li>Minimiser le salaire (20% du résultat ou PASS)</li>
+                </ul>
+            `
+        },
+        {
+            id: 'eurl',
+            title: 'EURL',
+            content: `
+                <p class="mb-2"><strong>Formules de calcul IR :</strong></p>
+                <ul class="list-disc pl-5 mb-3">
+                    <li>Résultat = CA × Taux de marge</li>
+                    <li>Rémunération = Résultat × Taux de rémunération</li>
+                    <li>Cotisations TNS = Rémunération × 45%</li>
+                    <li>Bénéfice imposable = Résultat - Cotisations TNS</li>
+                    <li>IR = Bénéfice imposable × TMI <em>ou</em> Calcul réel par tranches</li>
+                    <li>Revenu net = Bénéfice imposable - IR</li>
+                </ul>
+                <p class="mb-2"><strong>Formules de calcul IS :</strong></p>
+                <ul class="list-disc pl-5">
+                    <li>Cotisations TNS = Rémunération × 45%</li>
+                    <li>IR = (Rémunération - Cotisations TNS) × TMI <em>ou</em> Calcul réel</li>
+                    <li>IS = (Résultat - Rémunération) × Taux IS</li>
+                    <li>PFU = Dividendes × 30%</li>
+                    <li>Revenu net total = Rémunération nette après IR + Dividendes nets</li>
+                </ul>
+            `
+        }
+    ];
+    
+    // Générer l'accordéon
+    methodologies.forEach(methodology => {
+        const accordionItem = document.createElement('div');
+        accordionItem.className = 'bg-blue-900 bg-opacity-30 rounded-lg overflow-hidden mb-3';
+        
+        accordionItem.innerHTML = `
+            <button class="accordion-toggle w-full flex justify-between items-center px-4 py-3 text-left font-medium">
+                ${methodology.title}
+                <i class="fas fa-plus"></i>
+            </button>
+            <div class="hidden px-4 py-3 border-t border-gray-700">
+                ${methodology.content}
+            </div>
+        `;
+        
+        methodologyAccordion.appendChild(accordionItem);
+    });
+    
+    // Attacher les événements aux boutons de l'accordéon
+    const toggleBtns = methodologyAccordion.querySelectorAll('.accordion-toggle');
+    toggleBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const content = this.nextElementSibling;
+            content.classList.toggle('hidden');
+            
+            // Changer l'icône
+            const icon = this.querySelector('i');
+            icon.classList.toggle('fa-plus');
+            icon.classList.toggle('fa-minus');
+        });
+    });
+}
+
 // Exposer l'initialisation au niveau global pour l'onglet
 window.initFiscalSimulator = initFiscalSimulator;
+window.generateMethodologyContent = generateMethodologyContent;
