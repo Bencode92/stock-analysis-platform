@@ -1,5 +1,5 @@
 // fiscal-guide.js - Simulateur fiscal simplifié pour l'onglet Guide fiscal
-// Version 2.2 - Mai 2025 - Améliorations visuelles
+// Version 2.3 - Mai 2025 - Affichage de tous les statuts par défaut
 
 document.addEventListener('DOMContentLoaded', function() {
     // S'assurer que l'onglet Guide fiscal initialise correctement ce code
@@ -166,6 +166,16 @@ function addCustomStyles() {
             background: rgba(17, 34, 64, 0.6);
             box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
         }
+
+        /* Message d'information sur les statuts */
+        .status-info-message {
+            background-color: rgba(0, 255, 135, 0.1);
+            border-left: 4px solid #00FF87;
+            padding: 0.75rem;
+            margin-bottom: 1rem;
+            border-radius: 0.5rem;
+            font-size: 0.9rem;
+        }
     `;
     document.head.appendChild(styleElement);
 }
@@ -223,14 +233,19 @@ function updateSimulatorInterface() {
             <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
                 <h3 class="font-medium mb-3 text-green-400">Options de simulation</h3>
                 
+                <!-- Message d'information sur les statuts -->
+                <div class="status-info-message mb-4">
+                    <i class="fas fa-info-circle mr-2"></i> Par défaut, tous les statuts juridiques sont inclus dans la simulation. Utilisez les filtres ci-dessous pour comparer des groupes spécifiques.
+                </div>
+                
                 <!-- Filtres de statuts avec boutons visuels -->
                 <div class="mb-4">
                     <label class="block text-gray-300 mb-2">Filtres rapides</label>
                     <div class="flex flex-wrap gap-2" id="status-filter-buttons">
-                        <button class="status-filter-btn px-3 py-2 rounded-md bg-green-500 text-gray-900 font-medium" data-filter="common">
+                        <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="common">
                             <i class="fas fa-star mr-1"></i> Recommandés
                         </button>
-                        <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="all">
+                        <button class="status-filter-btn px-3 py-2 rounded-md bg-green-500 text-gray-900 font-medium" data-filter="all">
                             <i class="fas fa-list mr-1"></i> Tous
                         </button>
                         <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="is_only">
@@ -256,7 +271,7 @@ function updateSimulatorInterface() {
                         <label class="block text-gray-300 mb-2">Statuts à comparer</label>
                         <select id="sim-status-filter" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
                             <option value="common">Statuts courants (5)</option>
-                            <option value="all">Tous les statuts (13)</option>
+                            <option value="all" selected>Tous les statuts (13)</option>
                             <option value="is_only">IS uniquement</option>
                             <option value="ir_only">IR uniquement</option>
                             <option value="commercial">Statuts commerciaux</option>
@@ -396,6 +411,18 @@ function updateSimulatorInterface() {
                 });
             }
             
+            // Mettre à jour les boutons de filtre
+            document.querySelectorAll('.status-filter-btn').forEach(btn => {
+                const filter = btn.getAttribute('data-filter');
+                if (filter === this.value) {
+                    btn.classList.remove('bg-blue-800', 'text-white');
+                    btn.classList.add('bg-green-500', 'text-gray-900', 'font-medium');
+                } else {
+                    btn.classList.remove('bg-green-500', 'text-gray-900', 'font-medium');
+                    btn.classList.add('bg-blue-800', 'text-white');
+                }
+            });
+            
             // Relancer la comparaison
             runComparison();
         });
@@ -405,11 +432,11 @@ function updateSimulatorInterface() {
             btn.addEventListener('click', function() {
                 // Mettre à jour l'apparence des boutons
                 document.querySelectorAll('.status-filter-btn').forEach(b => {
-                    b.classList.remove('bg-green-500', 'text-gray-900');
+                    b.classList.remove('bg-green-500', 'text-gray-900', 'font-medium');
                     b.classList.add('bg-blue-800', 'text-white');
                 });
                 this.classList.remove('bg-blue-800', 'text-white');
-                this.classList.add('bg-green-500', 'text-gray-900');
+                this.classList.add('bg-green-500', 'text-gray-900', 'font-medium');
                 
                 // Mettre à jour le select
                 const filter = this.getAttribute('data-filter');
@@ -443,7 +470,8 @@ function updateSimulatorInterface() {
             showDetails.addEventListener('change', runComparison);
         }
         
-        // Sélectionner par défaut les statuts courants
+        // Par défaut, sélectionner le filtre "all" pour afficher tous les statuts
+        statusFilter.value = "all"; // Définir la valeur en JavaScript aussi
         statusFilter.dispatchEvent(new Event('change'));
     }
 }
@@ -467,7 +495,7 @@ function getSelectedStatuses(filter) {
             // Récupérer les statuts cochés
             return Array.from(document.querySelectorAll('.status-checkbox:checked')).map(cb => cb.value);
         default:
-            return ['micro', 'ei', 'eurl', 'eurlIS', 'sasu'];
+            return ['micro', 'ei', 'eurl', 'eurlIS', 'sarl', 'sasu', 'sas', 'sa', 'snc', 'sci', 'selarl', 'selas', 'sca']; // Par défaut, tous les statuts
     }
 }
 
@@ -498,7 +526,7 @@ function runComparison() {
     
     // Obtenir les statuts à simuler selon le filtre sélectionné
     const statusFilter = document.getElementById('sim-status-filter');
-    const selectedStatuses = getSelectedStatuses(statusFilter ? statusFilter.value : 'common');
+    const selectedStatuses = getSelectedStatuses(statusFilter ? statusFilter.value : 'all'); // Par défaut, tous les statuts
     
     // Tableau pour stocker les résultats de simulation
     const resultats = [];
