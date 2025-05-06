@@ -739,9 +739,31 @@ function updateSimulatorInterface() {
             </div>
         `;
         
-        // Insérer avant le bouton de comparaison
-        const compareButton = simulatorContainer.querySelector('#sim-compare-btn').parentNode;
-        formContainer.insertBefore(optionsRow, compareButton);
+        // CORRECTION DE L'ERREUR: Insérer correctement dans le DOM
+        try {
+            // Essayer d'obtenir le bouton de comparaison
+            const compareButton = simulatorContainer.querySelector('#sim-compare-btn');
+            
+            if (compareButton) {
+                // Trouver le parent du bouton qui est dans le formContainer
+                const compareButtonWrapper = compareButton.closest('.col-span-1, .col-span-2');
+                
+                if (compareButtonWrapper && formContainer.contains(compareButtonWrapper)) {
+                    // Si le wrapper du bouton est dans formContainer, insérer avant lui
+                    formContainer.insertBefore(optionsRow, compareButtonWrapper);
+                } else {
+                    // Sinon, ajouter à la fin de formContainer
+                    formContainer.appendChild(optionsRow);
+                }
+            } else {
+                // Si le bouton n'est pas trouvé, ajouter à la fin du conteneur
+                formContainer.appendChild(optionsRow);
+            }
+        } catch (error) {
+            console.error("Erreur lors de l'insertion des options:", error);
+            // Méthode de secours: simplement ajouter à la fin
+            formContainer.appendChild(optionsRow);
+        }
         
         // Ajouter les événements
         const statusFilter = document.getElementById('sim-status-filter');
@@ -1638,6 +1660,133 @@ function getStatutFiscalInfo(statutId) {
     
     return infosFiscales[statutId] || `<p class="mb-2">Informations fiscales non disponibles pour ce statut.</p>`;
 }
+
+// Ajouter la fonction pour générer le graphique d'optimisation
+window.genererGraphiqueOptimisation = function(params, containerId) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    // Vérifier si Chart.js est disponible
+    if (!window.Chart) {
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-chart-line text-3xl text-purple-400 mb-3"></i>
+                <p>La bibliothèque Chart.js est requise pour afficher le graphique d'optimisation.</p>
+                <p class="text-xs mt-2">Ajoutez <code>&lt;script src="https://cdn.jsdelivr.net/npm/chart.js"&gt;&lt;/script&gt;</code> dans votre page.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Générer les données pour le graphique
+    const donneesGraphique = window.FiscalUtils.genererDonneesGraphiqueOptimisation(
+        params, 
+        p => window.SimulationsFiscales.simulerSASU(p)
+    );
+    
+    // Trouver le ratio optimal
+    let maxNet = 0;
+    let ratioOptimal = 50;
+    donneesGraphique.forEach(point => {
+        if (point.revenuNet > maxNet) {
+            maxNet = point.revenuNet;
+            ratioOptimal = point.ratio;
+        }
+    });
+    
+    // Formatter les valeurs
+    const formatter = new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: 'EUR',
+        maximumFractionDigits: 0
+    });
+    
+    // Créer le canvas pour le graphique
+    container.innerHTML = '';
+    const canvas = document.createElement('canvas');
+    canvas.height = 300;
+    container.appendChild(canvas);
+    
+    // Créer le graphique
+    new Chart(canvas, {
+        type: 'line',
+        data: {
+            labels: donneesGraphique.map(d => d.ratio + '%'),
+            datasets: [{
+                label: 'Revenu net total',
+                data: donneesGraphique.map(d => d.revenuNet),
+                borderColor: '#00FF87',
+                backgroundColor: 'rgba(0, 255, 135, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3
+            }, {
+                label: 'Rémunération nette',
+                data: donneesGraphique.map(d => d.repartition.remuneration),
+                borderColor: '#60A5FA',
+                borderWidth: 1,
+                borderDash: [5, 5],
+                fill: false,
+                tension: 0.3
+            }, {
+                label: 'Dividendes nets',
+                data: donneesGraphique.map(d => d.repartition.dividendes),
+                borderColor: '#EC4899',
+                borderWidth: 1,
+                borderDash: [5, 5],
+                fill: false,
+                tension: 0.3
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.dataset.label || '';
+                            const value = formatter.format(context.parsed.y);
+                            return `${label}: ${value}`;
+                        }
+                    }
+                },
+                legend: {
+                    labels: {
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        callback: function(value) {
+                            return formatter.format(value);
+                        }
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: 'rgba(255, 255, 255, 0.7)'
+                    }
+                }
+            }
+        }
+    });
+    
+    // Ajouter une petite légende en dessous
+    const legend = document.createElement('div');
+    legend.className = 'text-xs text-center mt-2 text-gray-400';
+    legend.innerHTML = `<i class="fas fa-info-circle mr-1"></i> Le graphique montre l'impact du ratio rémunération/dividendes sur le revenu net total. Ratio optimal: <strong>${ratioOptimal}%</strong>`;
+    container.appendChild(legend);
+};
 
 // Exposer l'initialisation au niveau global pour l'onglet
 window.initFiscalSimulator = initFiscalSimulator;
