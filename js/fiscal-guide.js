@@ -1,5 +1,5 @@
 // fiscal-guide.js - Simulateur fiscal simplifié pour l'onglet Guide fiscal
-// Version 3.1 - Mai 2025 - Optimisation spécifique par statut juridique
+// Version 3.2 - Mai 2025 - Optimisation automatique et dividendes toujours affichés
 
 document.addEventListener('DOMContentLoaded', function() {
     // S'assurer que l'onglet Guide fiscal initialise correctement ce code
@@ -156,7 +156,7 @@ function getMethodologyContent() {
         <div class="bg-purple-900 bg-opacity-20 border border-purple-800 p-6 rounded-xl mb-8">
             <h3 class="text-xl font-semibold text-purple-400 mb-4">Calcul avancé de l'impôt sur le revenu</h3>
             
-            <p class="mb-4">En mode expert, l'IR est calculé selon les tranches progressives 2025:</p>
+            <p class="mb-4">L'IR est calculé selon les tranches progressives 2025:</p>
             
             <div class="grid grid-cols-2 gap-4 text-sm mb-4">
                 <div class="bg-blue-900 bg-opacity-40 p-2 rounded">
@@ -343,152 +343,13 @@ function addCustomStyles() {
             box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
         }
         
-        /* Style pour les badges de mode avancé */
-        .mode-badge {
-            display: inline-flex;
-            align-items: center;
+        /* Style pour les ratio optimaux */
+        .ratio-optimal-value {
             padding: 0.2rem 0.5rem;
-            border-radius: 0.25rem;
-            font-size: 0.7rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-left: 0.5rem;
-        }
-        
-        .mode-badge-simple {
-            background-color: rgba(59, 130, 246, 0.2);
-            color: #60A5FA;
-        }
-        
-        .mode-badge-advanced {
-            background-color: rgba(236, 72, 153, 0.2);
-            color: #EC4899;
-        }
-        
-        /* Toggle switch pour le mode expert */
-        .toggle-switch {
-            position: relative;
-            display: inline-block;
-            width: 48px;
-            height: 24px;
-            margin: 0 0.5rem;
-        }
-        
-        .toggle-switch input {
-            opacity: 0;
-            width: 0;
-            height: 0;
-        }
-        
-        .toggle-slider {
-            position: absolute;
-            cursor: pointer;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(255, 255, 255, 0.2);
-            border-radius: 24px;
-            transition: .4s;
-        }
-        
-        .toggle-slider:before {
-            position: absolute;
-            content: "";
-            height: 18px;
-            width: 18px;
-            left: 3px;
-            bottom: 3px;
-            background-color: white;
-            border-radius: 50%;
-            transition: .4s;
-        }
-        
-        input:checked + .toggle-slider {
-            background-color: rgba(236, 72, 153, 0.6);
-        }
-        
-        input:focus + .toggle-slider {
-            box-shadow: 0 0 1px #EC4899;
-        }
-        
-        input:checked + .toggle-slider:before {
-            transform: translateX(24px);
-        }
-        
-        /* Tooltip d'info sur le mode expert */
-        .tooltip {
-            position: relative;
-            display: inline-block;
-            cursor: help;
-        }
-        
-        .tooltip .tooltip-text {
-            visibility: hidden;
-            width: 240px;
-            background-color: rgba(1, 42, 74, 0.95);
-            color: #fff;
-            text-align: left;
-            border-radius: 6px;
-            padding: 10px;
-            position: absolute;
-            z-index: 1;
-            bottom: 125%;
-            left: 50%;
-            transform: translateX(-50%);
-            opacity: 0;
-            transition: opacity 0.3s;
-            font-size: 0.75rem;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .tooltip:hover .tooltip-text {
-            visibility: visible;
-            opacity: 1;
-        }
-        
-        /* Styles pour les boutons d'optimisation */
-        .optimize-button {
-            display: inline-flex;
-            align-items: center;
             background-color: rgba(139, 92, 246, 0.2);
+            border-radius: 4px;
             color: #A78BFA;
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            border-radius: 4px;
-            padding: 0.25rem 0.75rem;
-            font-size: 0.8rem;
-            transition: all 0.2s;
-        }
-        
-        .optimize-button:hover {
-            background-color: rgba(139, 92, 246, 0.3);
-            transform: translateY(-1px);
-        }
-        
-        .optimize-button i {
-            margin-right: 0.5rem;
-        }
-        
-        /* Style pour les informations d'optimisation */
-        .optimization-info {
-            background-color: rgba(139, 92, 246, 0.1);
-            border-left: 3px solid rgba(139, 92, 246, 0.5);
-            padding: 8px 12px;
-            margin-top: 8px;
-            font-size: 0.85rem;
-            border-radius: 4px;
-        }
-        
-        /* Style pour le conteneur du graphique */
-        #optimization-chart {
-            background-color: rgba(1, 22, 39, 0.6);
-            padding: 1rem;
-            border-radius: 8px;
-            margin-top: 1rem;
-            border: 1px solid rgba(139, 92, 246, 0.3);
-            height: 300px;
+            font-weight: 600;
         }
     `;
     document.head.appendChild(styleElement);
@@ -536,7 +397,7 @@ function updateSimulatorInterface() {
     const simulatorContainer = document.getElementById('fiscal-simulator');
     if (!simulatorContainer) return;
     
-    // CORRECTION: Vérifier si les options existent déjà pour éviter les doublons
+    // Vérifier si les options existent déjà pour éviter les doublons
     if (document.getElementById('sim-options-container')) {
         console.log("Options de simulation déjà présentes, pas de reconstruction");
         return;
@@ -549,7 +410,7 @@ function updateSimulatorInterface() {
         // Ajouter une nouvelle ligne pour les options de simulation
         const optionsRow = document.createElement('div');
         optionsRow.className = 'col-span-1 md:col-span-2 mb-4';
-        optionsRow.id = 'sim-options-container'; // CORRECTION: Ajouter un ID pour pouvoir vérifier son existence
+        optionsRow.id = 'sim-options-container';
         optionsRow.innerHTML = `
             <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
                 <h3 class="font-medium mb-3 text-green-400">Options de simulation</h3>
@@ -601,47 +462,22 @@ function updateSimulatorInterface() {
                         </select>
                     </div>
                     <div>
-                        <label class="block text-gray-300 mb-2">Options avancées</label>
+                        <label class="block text-gray-300 mb-2">Fonctionnalités activées</label>
                         <div class="flex flex-col space-y-2">
                             <div class="flex items-center">
-                                <label class="inline-flex items-center">
-                                    <input type="checkbox" id="sim-show-details" class="form-checkbox h-4 w-4 text-green-400">
-                                    <span class="ml-2">Afficher les détails</span>
-                                </label>
+                                <span class="bg-pink-900 bg-opacity-20 px-3 py-1 rounded-md text-pink-300 font-medium">
+                                    <i class="fas fa-chart-line mr-2"></i>Mode expert activé
+                                </span>
+                                <input type="hidden" id="sim-expert-mode" checked>
                             </div>
-                            <div class="flex items-center">
-                                <span>Mode simplifié</span>
-                                <label class="toggle-switch mx-2">
-                                    <input type="checkbox" id="sim-expert-mode">
-                                    <span class="toggle-slider"></span>
-                                </label>
-                                <span>Mode expert</span>
-                                <div class="tooltip ml-2">
-                                    <i class="fas fa-info-circle text-blue-400"></i>
-                                    <div class="tooltip-text">
-                                        <p><strong>Mode expert:</strong></p>
-                                        <ul class="list-disc pl-4 mt-1">
-                                            <li>Calcul de l'IR par tranches progressives au lieu du TMI</li>
-                                            <li>Optimisation automatique du ratio rémunération/dividendes</li>
-                                            <li>Détails supplémentaires dans les résultats</li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="mt-2">
-                                <button id="optimize-ratio-btn" class="optimize-button">
-                                    <i class="fas fa-magic"></i> Optimiser le ratio rémunération/dividendes
-                                </button>
-                                <div id="optimization-info" class="optimization-info hidden">
-                                    Le ratio optimal sera calculé pour chaque statut à l'IS
-                                </div>
+                            <div>
+                                <span class="bg-purple-900 bg-opacity-20 px-3 py-1 rounded-md text-purple-300 font-medium">
+                                    <i class="fas fa-magic mr-2"></i>Optimisation automatique du ratio rémunération/dividendes
+                                </span>
                             </div>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Conteneur pour le graphique d'optimisation -->
-                <div id="optimization-chart-container" class="hidden mt-4"></div>
                 
                 <!-- Sélection personnalisée de statuts avec catégorisation -->
                 <div id="custom-status-options" class="hidden mt-4 p-4 rounded-lg">
@@ -746,7 +582,7 @@ function updateSimulatorInterface() {
             </div>
         `;
         
-        // CORRECTION: Simplification de l'insertion pour éviter les doublons
+        // Simplification de l'insertion pour éviter les doublons
         try {
             const compareButton = simulatorContainer.querySelector('#sim-compare-btn');
             if (compareButton) {
@@ -831,75 +667,8 @@ function updateSimulatorInterface() {
             checkbox.addEventListener('change', runComparison);
         });
         
-        // Option d'affichage des détails
-        const showDetails = document.getElementById('sim-show-details');
-        if (showDetails) {
-            showDetails.addEventListener('change', runComparison);
-        }
-        
-        // Mode expert
-        const expertMode = document.getElementById('sim-expert-mode');
-        if (expertMode) {
-            expertMode.addEventListener('change', runComparison);
-        }
-        
-        // Bouton d'optimisation
-        const optimizeBtn = document.getElementById('optimize-ratio-btn');
-        const optimizationInfo = document.getElementById('optimization-info');
-        const chartContainer = document.getElementById('optimization-chart-container');
-        
-        if (optimizeBtn && optimizationInfo && chartContainer) {
-            optimizeBtn.addEventListener('click', function() {
-                // Mettre à jour la valeur du slider
-                const salarySlider = document.getElementById('sim-salaire');
-                if (salarySlider) {
-                    // Récupérer les paramètres actuels
-                    const ca = parseFloat(document.getElementById('sim-ca').value) || 50000;
-                    const marge = parseFloat(document.getElementById('sim-marge').value) / 100 || 0.3;
-                    const tmi = parseFloat(document.getElementById('sim-tmi').value) || 30;
-                    
-                    // Déterminer le statut qui bénéficierait le plus de l'optimisation (SASU par défaut)
-                    const params = {
-                        ca: ca,
-                        tauxMarge: marge,
-                        tauxRemuneration: 0.7, // Valeur par défaut
-                        tmiActuel: tmi,
-                        modeExpert: expertMode.checked
-                    };
-                    
-                    const optimisationSASU = window.FiscalUtils.optimiserRatioRemuneration(
-                        params, 
-                        (p) => window.SimulationsFiscales.simulerSASU(p)
-                    );
-                    
-                    // Mettre à jour le ratio dans l'interface
-                    const ratioOptimal = Math.round(optimisationSASU.ratio * 100);
-                    salarySlider.value = ratioOptimal;
-                    
-                    // Afficher l'information d'optimisation
-                    optimizationInfo.innerHTML = `
-                        Ratio optimal : <strong>${ratioOptimal}%</strong> rémunération / <strong>${100-ratioOptimal}%</strong> dividendes 
-                        (gain estimé: +${Math.round((optimisationSASU.net - params.ca * marge * 0.5) / (params.ca * marge * 0.5) * 100)}% vs. 50/50)
-                    `;
-                    optimizationInfo.classList.remove('hidden');
-                    
-                    // Afficher le graphique d'optimisation
-                    chartContainer.classList.remove('hidden');
-                    chartContainer.innerHTML = '<div id="optimization-chart" class="h-64"></div>';
-                    
-                    // Générer le graphique d'optimisation si disponible
-                    if (window.genererGraphiqueOptimisation) {
-                        window.genererGraphiqueOptimisation(params, 'optimization-chart');
-                    }
-                    
-                    // Relancer la comparaison
-                    runComparison();
-                }
-            });
-        }
-        
         // Par défaut, sélectionner le filtre "all" pour afficher tous les statuts
-        statusFilter.value = "all"; // Définir la valeur en JavaScript aussi
+        statusFilter.value = "all";
         statusFilter.dispatchEvent(new Event('change'));
     }
 }
@@ -934,9 +703,8 @@ function runComparison() {
     const ratioSalaire = parseFloat(document.getElementById('sim-salaire').value) / 100 || 0.7;
     const tmi = parseFloat(document.getElementById('sim-tmi').value) || 30;
     
-    // Vérifier si le mode expert est activé
-    const expertMode = document.getElementById('sim-expert-mode');
-    const modeExpert = expertMode && expertMode.checked;
+    // Mode expert toujours activé
+    const modeExpert = true;
     
     const resultsBody = document.getElementById('sim-results-body');
     if (!resultsBody) return;
@@ -952,10 +720,6 @@ function runComparison() {
     
     // Vider les résultats précédents
     resultsBody.innerHTML = '';
-    
-    // Vérifier si on doit afficher les détails
-    const showDetails = document.getElementById('sim-show-details');
-    const displayDetails = showDetails && showDetails.checked;
     
     // Obtenir les statuts à simuler selon le filtre sélectionné
     const statusFilter = document.getElementById('sim-status-filter');
@@ -998,12 +762,10 @@ function runComparison() {
         'sca': '<span class="regime-badge is">IS</span>'
     };
     
-    // Déterminer si on doit optimiser le ratio pour les statuts à l'IS
-    const shouldOptimize = params.modeExpert && document.getElementById('optimization-info') && 
-                          !document.getElementById('optimization-info').classList.contains('hidden');
+    // Optimisation toujours activée pour les statuts à l'IS
+    const shouldOptimize = true;
     
     // Définir les stratégies d'optimisation par type de statut
-    // Nouvelle logique: certains statuts préfèrent moins de rémunération, d'autres plus
     const optimisationParStatut = {
         // Structures assimilées salarié: charge lourdes (favoriser dividendes)
         'sasu': { ratioMin: 0, ratioMax: 1, favoriserDividendes: true },
@@ -1355,7 +1117,8 @@ function runComparison() {
                     net: net,
                     sim: sim,
                     score: 100 * (net / ca),
-                    ratioOptimise: sim.ratioOptimise
+                    ratioOptimise: sim.ratioOptimise,
+                    dividendesNets: sim.dividendesNets || 0
                 });
             } catch (e) {
                 console.error(`Erreur lors de la simulation pour ${statutsComplets[statutId].nom}:`, e);
@@ -1389,128 +1152,83 @@ function runComparison() {
         ? scoresCompatibles.reduce((sum, score) => sum + score, 0) / scoresCompatibles.length 
         : 0;
     
-    // Modifier l'en-tête du tableau si nécessaire pour afficher les détails
+    // Modifier l'en-tête du tableau - toujours inclure les dividendes et optimisation
     const tableHeader = document.querySelector('#sim-results thead tr');
     if (tableHeader) {
-        if (displayDetails) {
-            // Ajouter des colonnes de détails si elles n'existent pas
-            if (tableHeader.querySelectorAll('th').length < 6) {
-                tableHeader.innerHTML = `
-                    <th class="px-4 py-3 rounded-tl-lg">Statut</th>
-                    <th class="px-4 py-3">Rémunération brute</th>
-                    <th class="px-4 py-3">Charges sociales</th>
-                    <th class="px-4 py-3">Impôts</th>
-                    <th class="px-4 py-3">Dividendes nets</th>
-                    <th class="px-4 py-3 rounded-tr-lg">Net en poche</th>
-                `;
-            }
-        } else {
-            // Revenir à l'affichage standard
-            tableHeader.innerHTML = `
-                <th class="px-4 py-3 rounded-tl-lg">Statut</th>
-                <th class="px-4 py-3">Rémunération brute</th>
-                <th class="px-4 py-3">Charges sociales</th>
-                <th class="px-4 py-3">Impôts</th>
-                <th class="px-4 py-3 rounded-tr-lg">Net en poche</th>
-            `;
-        }
+        tableHeader.innerHTML = `
+            <th class="px-4 py-3 rounded-tl-lg">Statut</th>
+            <th class="px-4 py-3">Rémunération brute</th>
+            <th class="px-4 py-3">Charges sociales</th>
+            <th class="px-4 py-3">Impôts</th>
+            <th class="px-4 py-3">Dividendes nets</th>
+            <th class="px-4 py-3">Ratio optimal</th>
+            <th class="px-4 py-3 rounded-tr-lg">Net en poche</th>
+        `;
     }
     
     // Afficher les résultats dans le tableau
     resultats.forEach((res, index) => {
         const isTopResult = index === 0;
-        const isGoodResult = res.score > scoresMoyen;
         
         const row = document.createElement('tr');
         row.className = isTopResult 
             ? 'result-top-row' 
             : (index % 2 === 0 ? 'bg-blue-900 bg-opacity-20' : '');
         
-        // Ajouter informations sur le ratio optimisé si disponible
-        let ratioInfo = '';
-        if (res.ratioOptimise && shouldOptimize) {
-            ratioInfo = `<div class="text-xs text-purple-400 mt-1">(Ratio optimal: ${Math.round(res.ratioOptimise*100)}% rém.)</div>`;
+        // Valeur d'optimisation du ratio
+        let optimisationValue = "";
+        if (res.ratioOptimise) {
+            optimisationValue = `<span class="ratio-optimal-value">${Math.round(res.ratioOptimise*100)}% rém.</span>`;
+        } else if (res.statutId === 'micro' || res.statutId === 'ei' || res.statutId === 'eurl' || res.statutId === 'snc' || res.statutId === 'sci') {
+            optimisationValue = "N/A";
+        } else {
+            optimisationValue = `${Math.round(ratioSalaire*100)}% (manuel)`;
         }
         
-        if (displayDetails && res.sim && res.score > 0) {
-            // Affichage détaillé avec dividendes séparés
-            const dividendesNets = res.sim.dividendesNets || 0;
-            const remunerationNette = res.net - dividendesNets;
-            
-            row.innerHTML = `
-                <td class="px-4 py-3 font-medium">
-                    ${isTopResult ? '<i class="fas fa-star text-yellow-400 mr-2"></i>' : ''}
-                    ${statutIcons[res.statutId] || ''} ${res.statut} ${regimeBadges[res.statutId] || ''}
-                    ${ratioInfo}
-                </td>
-                <td class="px-4 py-3">${res.brut === '-' ? '-' : formatter.format(res.brut)}</td>
-                <td class="px-4 py-3">${res.charges === '-' ? '-' : formatter.format(res.charges)}</td>
-                <td class="px-4 py-3">${res.impots === '-' ? '-' : formatter.format(res.impots)}</td>
-                <td class="px-4 py-3">${dividendesNets ? formatter.format(dividendesNets) : '-'}</td>
-                <td class="px-4 py-3">
-                    <span class="net-value ${isTopResult ? 'top' : ''}">${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}</span>
-                </td>
-            `;
-        } else {
-            // Affichage standard
-            row.innerHTML = `
-                <td class="px-4 py-3 font-medium">
-                    ${isTopResult ? '<i class="fas fa-star text-yellow-400 mr-2"></i>' : ''}
-                    ${statutIcons[res.statutId] || ''} ${res.statut} ${regimeBadges[res.statutId] || ''}
-                    ${ratioInfo}
-                </td>
-                <td class="px-4 py-3">${res.brut === '-' ? '-' : formatter.format(res.brut)}</td>
-                <td class="px-4 py-3">${res.charges === '-' ? '-' : formatter.format(res.charges)}</td>
-                <td class="px-4 py-3">${res.impots === '-' ? '-' : formatter.format(res.impots)}</td>
-                <td class="px-4 py-3">
-                    <span class="net-value ${isTopResult ? 'top' : ''}">${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}</span>
-                </td>
-            `;
-        }
+        // Format avec dividendes et optimisation
+        row.innerHTML = `
+            <td class="px-4 py-3 font-medium">
+                ${isTopResult ? '<i class="fas fa-star text-yellow-400 mr-2"></i>' : ''}
+                ${statutIcons[res.statutId] || ''} ${res.statut} ${regimeBadges[res.statutId] || ''}
+            </td>
+            <td class="px-4 py-3">${res.brut === '-' ? '-' : formatter.format(res.brut)}</td>
+            <td class="px-4 py-3">${res.charges === '-' ? '-' : formatter.format(res.charges)}</td>
+            <td class="px-4 py-3">${res.impots === '-' ? '-' : formatter.format(res.impots)}</td>
+            <td class="px-4 py-3">${res.dividendesNets ? formatter.format(res.dividendesNets) : '-'}</td>
+            <td class="px-4 py-3">${optimisationValue}</td>
+            <td class="px-4 py-3">
+                <span class="net-value ${isTopResult ? 'top' : ''}">${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}</span>
+            </td>
+        `;
         
         resultsBody.appendChild(row);
     });
     
     // Ajouter une ligne de mode de calcul
-    if (modeExpert) {
-        const modeRow = document.createElement('tr');
-        modeRow.className = 'bg-pink-900 bg-opacity-20 text-sm border-t border-pink-800';
-        
-        const colSpan = displayDetails ? '6' : '5';
-        modeRow.innerHTML = `
-            <td colspan="${colSpan}" class="px-4 py-2 font-medium text-pink-300">
-                <i class="fas fa-chart-line mr-2"></i> 
-                Mode expert activé : calcul par tranches progressives d'IR
-                ${shouldOptimize ? ' + optimisation du ratio rémunération/dividendes' : ''}
-            </td>
-        `;
-        
-        resultsBody.appendChild(modeRow);
-    }
+    const modeRow = document.createElement('tr');
+    modeRow.className = 'bg-pink-900 bg-opacity-20 text-sm border-t border-pink-800';
+    
+    modeRow.innerHTML = `
+        <td colspan="7" class="px-4 py-2 font-medium text-pink-300">
+            <i class="fas fa-chart-line mr-2"></i> 
+            Mode expert activé : calcul par tranches progressives d'IR + optimisation automatique du ratio rémunération/dividendes
+        </td>
+    `;
+    
+    resultsBody.appendChild(modeRow);
     
     // Ajouter ligne de ratio net/brut pour les statuts compatibles
     const ratioRow = document.createElement('tr');
     ratioRow.className = 'ratio-row';
     
-    if (displayDetails) {
-        ratioRow.innerHTML = `
-            <td class="px-4 py-2 italic" colspan="5">Ratio net/CA</td>
-            <td class="px-4 py-2 font-medium">
-                ${scoresCompatibles.length > 0 
-                    ? `${resultats[0].score.toFixed(1)}% (max) / ${scoresMoyen.toFixed(1)}% (moy)` 
-                    : 'N/A'}
-            </td>
-        `;
-    } else {
-        ratioRow.innerHTML = `
-            <td class="px-4 py-2 italic" colspan="4">Ratio net/CA</td>
-            <td class="px-4 py-2 font-medium">
-                ${scoresCompatibles.length > 0 
-                    ? `${resultats[0].score.toFixed(1)}% (max) / ${scoresMoyen.toFixed(1)}% (moy)` 
-                    : 'N/A'}
-            </td>
-        `;
-    }
+    ratioRow.innerHTML = `
+        <td class="px-4 py-2 italic" colspan="6">Ratio net/CA</td>
+        <td class="px-4 py-2 font-medium">
+            ${scoresCompatibles.length > 0 
+                ? `${resultats[0].score.toFixed(1)}% (max) / ${scoresMoyen.toFixed(1)}% (moy)` 
+                : 'N/A'}
+        </td>
+    `;
     
     resultsBody.appendChild(ratioRow);
 }
@@ -1722,133 +1440,6 @@ function getStatutFiscalInfo(statutId) {
     
     return infosFiscales[statutId] || `<p class="mb-2">Informations fiscales non disponibles pour ce statut.</p>`;
 }
-
-// Ajouter la fonction pour générer le graphique d'optimisation
-window.genererGraphiqueOptimisation = function(params, containerId) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    
-    // Vérifier si Chart.js est disponible
-    if (!window.Chart) {
-        container.innerHTML = `
-            <div class="text-center py-4">
-                <i class="fas fa-chart-line text-3xl text-purple-400 mb-3"></i>
-                <p>La bibliothèque Chart.js est requise pour afficher le graphique d'optimisation.</p>
-                <p class="text-xs mt-2">Ajoutez <code>&lt;script src="https://cdn.jsdelivr.net/npm/chart.js"&gt;&lt;/script&gt;</code> dans votre page.</p>
-            </div>
-        `;
-        return;
-    }
-    
-    // Générer les données pour le graphique
-    const donneesGraphique = window.FiscalUtils.genererDonneesGraphiqueOptimisation(
-        params, 
-        p => window.SimulationsFiscales.simulerSASU(p)
-    );
-    
-    // Trouver le ratio optimal
-    let maxNet = 0;
-    let ratioOptimal = 50;
-    donneesGraphique.forEach(point => {
-        if (point.revenuNet > maxNet) {
-            maxNet = point.revenuNet;
-            ratioOptimal = point.ratio;
-        }
-    });
-    
-    // Formatter les valeurs
-    const formatter = new Intl.NumberFormat('fr-FR', {
-        style: 'currency',
-        currency: 'EUR',
-        maximumFractionDigits: 0
-    });
-    
-    // Créer le canvas pour le graphique
-    container.innerHTML = '';
-    const canvas = document.createElement('canvas');
-    canvas.height = 300;
-    container.appendChild(canvas);
-    
-    // Créer le graphique
-    new Chart(canvas, {
-        type: 'line',
-        data: {
-            labels: donneesGraphique.map(d => d.ratio + '%'),
-            datasets: [{
-                label: 'Revenu net total',
-                data: donneesGraphique.map(d => d.revenuNet),
-                borderColor: '#00FF87',
-                backgroundColor: 'rgba(0, 255, 135, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.3
-            }, {
-                label: 'Rémunération nette',
-                data: donneesGraphique.map(d => d.repartition.remuneration),
-                borderColor: '#60A5FA',
-                borderWidth: 1,
-                borderDash: [5, 5],
-                fill: false,
-                tension: 0.3
-            }, {
-                label: 'Dividendes nets',
-                data: donneesGraphique.map(d => d.repartition.dividendes),
-                borderColor: '#EC4899',
-                borderWidth: 1,
-                borderDash: [5, 5],
-                fill: false,
-                tension: 0.3
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const label = context.dataset.label || '';
-                            const value = formatter.format(context.parsed.y);
-                            return `${label}: ${value}`;
-                        }
-                    }
-                },
-                legend: {
-                    labels: {
-                        color: 'rgba(255, 255, 255, 0.7)'
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)'
-                    },
-                    ticks: {
-                        color: 'rgba(255, 255, 255, 0.7)',
-                        callback: function(value) {
-                            return formatter.format(value);
-                        }
-                    }
-                },
-                x: {
-                    grid: {
-                        color: 'rgba(255, 255, 255, 0.1)'
-                    },
-                    ticks: {
-                        color: 'rgba(255, 255, 255, 0.7)'
-                    }
-                }
-            }
-        }
-    });
-    
-    // Ajouter une petite légende en dessous
-    const legend = document.createElement('div');
-    legend.className = 'text-xs text-center mt-2 text-gray-400';
-    legend.innerHTML = `<i class="fas fa-info-circle mr-1"></i> Le graphique montre l'impact du ratio rémunération/dividendes sur le revenu net total. Ratio optimal: <strong>${ratioOptimal}%</strong>`;
-    container.appendChild(legend);
-};
 
 // Exposer l'initialisation au niveau global pour l'onglet
 window.initFiscalSimulator = initFiscalSimulator;
