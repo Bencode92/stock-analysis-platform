@@ -1,5 +1,5 @@
 // fiscal-guide.js - Simulateur fiscal simplifié pour l'onglet Guide fiscal
-// Version 2.0 - Mai 2025 - Mise à jour pour inclure tous les statuts juridiques
+// Version 2.1 - Mai 2025 - Mise à jour pour améliorer la sélection des statuts juridiques
 
 document.addEventListener('DOMContentLoaded', function() {
     // S'assurer que l'onglet Guide fiscal initialise correctement ce code
@@ -67,12 +67,43 @@ function updateSimulatorInterface() {
         optionsRow.innerHTML = `
             <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
                 <h3 class="font-medium mb-3 text-green-400">Options de simulation</h3>
+                
+                <!-- Filtres de statuts avec boutons visuels -->
+                <div class="mb-4">
+                    <label class="block text-gray-300 mb-2">Filtres rapides</label>
+                    <div class="flex flex-wrap gap-2" id="status-filter-buttons">
+                        <button class="status-filter-btn px-3 py-2 rounded-md bg-green-500 text-gray-900 font-medium" data-filter="common">
+                            <i class="fas fa-star mr-1"></i> Recommandés
+                        </button>
+                        <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="all">
+                            <i class="fas fa-list mr-1"></i> Tous
+                        </button>
+                        <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="is_only">
+                            <i class="fas fa-building mr-1"></i> IS uniquement
+                        </button>
+                        <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="ir_only">
+                            <i class="fas fa-user mr-1"></i> IR uniquement
+                        </button>
+                        <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="commercial">
+                            <i class="fas fa-store mr-1"></i> Commercial
+                        </button>
+                        <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="liberal">
+                            <i class="fas fa-briefcase-medical mr-1"></i> Libéral
+                        </button>
+                        <button class="status-filter-btn px-3 py-2 rounded-md bg-blue-800 text-white" data-filter="custom">
+                            <i class="fas fa-sliders-h mr-1"></i> Personnalisé
+                        </button>
+                    </div>
+                </div>
+                
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="sim-options">
                     <div>
                         <label class="block text-gray-300 mb-2">Statuts à comparer</label>
                         <select id="sim-status-filter" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
                             <option value="common">Statuts courants (5)</option>
                             <option value="all">Tous les statuts (13)</option>
+                            <option value="is_only">IS uniquement</option>
+                            <option value="ir_only">IR uniquement</option>
                             <option value="commercial">Statuts commerciaux</option>
                             <option value="liberal">Professions libérales</option>
                             <option value="custom">Personnalisé</option>
@@ -89,8 +120,105 @@ function updateSimulatorInterface() {
                     </div>
                 </div>
                 
-                <div id="custom-status-options" class="hidden mt-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-sm">
-                    <!-- Les cases à cocher seront ajoutées ici -->
+                <!-- Sélection personnalisée de statuts avec catégorisation -->
+                <div id="custom-status-options" class="hidden mt-4 border border-gray-700 rounded-lg p-3 bg-blue-900 bg-opacity-20">
+                    <div class="mb-2 text-green-400 font-medium">Sélectionnez les statuts à comparer</div>
+                    
+                    <!-- Catégorie IS -->
+                    <div class="mb-3">
+                        <div class="text-sm text-gray-300 mb-1 border-b border-gray-700 pb-1">
+                            <i class="fas fa-building mr-1 text-blue-400"></i> Statuts à l'IS
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-sm">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="status-eurlIS" value="eurlIS" class="status-checkbox mr-2 h-4 w-4 text-green-400">
+                                <label for="status-eurlIS" class="text-sm">
+                                    <span class="text-xs bg-blue-800 text-white rounded px-1 mr-1">IS</span> EURL-IS
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="status-sasu" value="sasu" class="status-checkbox mr-2 h-4 w-4 text-green-400">
+                                <label for="status-sasu" class="text-sm">
+                                    <span class="text-xs bg-blue-800 text-white rounded px-1 mr-1">IS</span> SASU
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="status-sarl" value="sarl" class="status-checkbox mr-2 h-4 w-4 text-green-400">
+                                <label for="status-sarl" class="text-sm">
+                                    <span class="text-xs bg-blue-800 text-white rounded px-1 mr-1">IS</span> SARL
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="status-sas" value="sas" class="status-checkbox mr-2 h-4 w-4 text-green-400">
+                                <label for="status-sas" class="text-sm">
+                                    <span class="text-xs bg-blue-800 text-white rounded px-1 mr-1">IS</span> SAS
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="status-sa" value="sa" class="status-checkbox mr-2 h-4 w-4 text-green-400">
+                                <label for="status-sa" class="text-sm">
+                                    <span class="text-xs bg-blue-800 text-white rounded px-1 mr-1">IS</span> SA
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="status-selarl" value="selarl" class="status-checkbox mr-2 h-4 w-4 text-green-400">
+                                <label for="status-selarl" class="text-sm">
+                                    <span class="text-xs bg-blue-800 text-white rounded px-1 mr-1">IS</span> SELARL
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="status-selas" value="selas" class="status-checkbox mr-2 h-4 w-4 text-green-400">
+                                <label for="status-selas" class="text-sm">
+                                    <span class="text-xs bg-blue-800 text-white rounded px-1 mr-1">IS</span> SELAS
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="status-sca" value="sca" class="status-checkbox mr-2 h-4 w-4 text-green-400">
+                                <label for="status-sca" class="text-sm">
+                                    <span class="text-xs bg-blue-800 text-white rounded px-1 mr-1">IS</span> SCA
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Catégorie IR -->
+                    <div>
+                        <div class="text-sm text-gray-300 mb-1 border-b border-gray-700 pb-1">
+                            <i class="fas fa-user mr-1 text-green-400"></i> Statuts à l'IR
+                        </div>
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-sm">
+                            <div class="flex items-center">
+                                <input type="checkbox" id="status-micro" value="micro" class="status-checkbox mr-2 h-4 w-4 text-green-400">
+                                <label for="status-micro" class="text-sm">
+                                    <span class="text-xs bg-green-700 text-white rounded px-1 mr-1">IR</span> Micro
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="status-ei" value="ei" class="status-checkbox mr-2 h-4 w-4 text-green-400">
+                                <label for="status-ei" class="text-sm">
+                                    <span class="text-xs bg-green-700 text-white rounded px-1 mr-1">IR</span> EI
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="status-eurl" value="eurl" class="status-checkbox mr-2 h-4 w-4 text-green-400">
+                                <label for="status-eurl" class="text-sm">
+                                    <span class="text-xs bg-green-700 text-white rounded px-1 mr-1">IR</span> EURL-IR
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="status-snc" value="snc" class="status-checkbox mr-2 h-4 w-4 text-green-400">
+                                <label for="status-snc" class="text-sm">
+                                    <span class="text-xs bg-green-700 text-white rounded px-1 mr-1">IR</span> SNC
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="status-sci" value="sci" class="status-checkbox mr-2 h-4 w-4 text-green-400">
+                                <label for="status-sci" class="text-sm">
+                                    <span class="text-xs bg-green-700 text-white rounded px-1 mr-1">IR</span> SCI
+                                </label>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -99,42 +227,11 @@ function updateSimulatorInterface() {
         const compareButton = simulatorContainer.querySelector('#sim-compare-btn').parentNode;
         formContainer.insertBefore(optionsRow, compareButton);
         
-        // Ajouter les options personnalisées
-        const customStatusContainer = document.getElementById('custom-status-options');
-        
-        // Liste de tous les statuts disponibles
-        const allStatuses = [
-            { id: 'micro', label: 'Micro-entreprise' },
-            { id: 'ei', label: 'Entreprise Individuelle' },
-            { id: 'eurl', label: 'EURL à l\'IR' },
-            { id: 'eurlIS', label: 'EURL à l\'IS' },
-            { id: 'sarl', label: 'SARL' },
-            { id: 'sasu', label: 'SASU' },
-            { id: 'sas', label: 'SAS' },
-            { id: 'sa', label: 'SA' },
-            { id: 'snc', label: 'SNC' },
-            { id: 'sci', label: 'SCI' },
-            { id: 'selarl', label: 'SELARL' },
-            { id: 'selas', label: 'SELAS' },
-            { id: 'sca', label: 'SCA' }
-        ];
-        
-        // Ajouter une case à cocher pour chaque statut
-        allStatuses.forEach(status => {
-            const checkboxDiv = document.createElement('div');
-            checkboxDiv.className = 'flex items-center';
-            checkboxDiv.innerHTML = `
-                <input type="checkbox" id="status-${status.id}" value="${status.id}" class="status-checkbox mr-2 h-4 w-4 text-green-400">
-                <label for="status-${status.id}" class="text-sm">${status.label}</label>
-            `;
-            customStatusContainer.appendChild(checkboxDiv);
-        });
-        
         // Ajouter les événements
         const statusFilter = document.getElementById('sim-status-filter');
         statusFilter.addEventListener('change', function() {
             const isCustom = this.value === 'custom';
-            customStatusContainer.style.display = isCustom ? 'grid' : 'none';
+            document.getElementById('custom-status-options').style.display = isCustom ? 'block' : 'none';
             
             // Cocher/décocher les cases selon le filtre sélectionné
             if (!isCustom) {
@@ -146,6 +243,38 @@ function updateSimulatorInterface() {
             
             // Relancer la comparaison
             runComparison();
+        });
+        
+        // Ajouter des événements aux boutons de filtre
+        document.querySelectorAll('.status-filter-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Mettre à jour l'apparence des boutons
+                document.querySelectorAll('.status-filter-btn').forEach(b => {
+                    b.classList.remove('bg-green-500', 'text-gray-900');
+                    b.classList.add('bg-blue-800', 'text-white');
+                });
+                this.classList.remove('bg-blue-800', 'text-white');
+                this.classList.add('bg-green-500', 'text-gray-900');
+                
+                // Mettre à jour le select
+                const filter = this.getAttribute('data-filter');
+                statusFilter.value = filter;
+                
+                // Afficher/masquer les options personnalisées
+                const isCustom = filter === 'custom';
+                document.getElementById('custom-status-options').style.display = isCustom ? 'block' : 'none';
+                
+                // Mettre à jour les cases à cocher
+                if (!isCustom) {
+                    const selectedStatuses = getSelectedStatuses(filter);
+                    document.querySelectorAll('.status-checkbox').forEach(checkbox => {
+                        checkbox.checked = selectedStatuses.includes(checkbox.value);
+                    });
+                }
+                
+                // Relancer la comparaison
+                runComparison();
+            });
         });
         
         // Ajouter un événement aux cases à cocher
@@ -171,6 +300,10 @@ function getSelectedStatuses(filter) {
             return ['micro', 'ei', 'eurl', 'eurlIS', 'sasu'];
         case 'all':
             return ['micro', 'ei', 'eurl', 'eurlIS', 'sarl', 'sasu', 'sas', 'sa', 'snc', 'sci', 'selarl', 'selas', 'sca'];
+        case 'is_only':
+            return ['eurlIS', 'sasu', 'sarl', 'sas', 'sa', 'selarl', 'selas', 'sca'];
+        case 'ir_only':
+            return ['micro', 'ei', 'eurl', 'snc', 'sci'];
         case 'commercial':
             return ['micro', 'ei', 'eurl', 'eurlIS', 'sarl', 'sasu', 'sas', 'sa', 'snc'];
         case 'liberal':
@@ -214,6 +347,40 @@ function runComparison() {
     
     // Tableau pour stocker les résultats de simulation
     const resultats = [];
+    
+    // Association icônes pour les statuts
+    const statutIcons = {
+        'micro': '<i class="fas fa-store-alt text-green-400 mr-1"></i>',
+        'ei': '<i class="fas fa-user text-green-400 mr-1"></i>',
+        'eurl': '<i class="fas fa-user-tie text-green-400 mr-1"></i>',
+        'eurlIS': '<i class="fas fa-building text-blue-400 mr-1"></i>',
+        'sasu': '<i class="fas fa-user-shield text-blue-400 mr-1"></i>',
+        'sarl': '<i class="fas fa-users text-blue-400 mr-1"></i>',
+        'sas': '<i class="fas fa-building text-blue-400 mr-1"></i>',
+        'sa': '<i class="fas fa-landmark text-blue-400 mr-1"></i>',
+        'snc': '<i class="fas fa-handshake text-green-400 mr-1"></i>',
+        'sci': '<i class="fas fa-home text-green-400 mr-1"></i>',
+        'selarl': '<i class="fas fa-user-md text-blue-400 mr-1"></i>',
+        'selas': '<i class="fas fa-stethoscope text-blue-400 mr-1"></i>',
+        'sca': '<i class="fas fa-chart-line text-blue-400 mr-1"></i>'
+    };
+    
+    // Badge régime fiscal
+    const regimeBadges = {
+        'micro': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR</span>',
+        'ei': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR</span>',
+        'eurl': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR</span>',
+        'eurlIS': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
+        'sasu': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
+        'sarl': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
+        'sas': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
+        'sa': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
+        'snc': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR</span>',
+        'sci': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR</span>',
+        'selarl': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
+        'selas': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
+        'sca': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>'
+    };
     
     // Associer chaque statut à sa fonction de simulation et son nom d'affichage
     const statutsComplets = {
@@ -345,6 +512,7 @@ function runComparison() {
                 // Si incompatible, afficher un message
                 if (!sim.compatible) {
                     resultats.push({
+                        statutId: statutId,
                         statut: statut.nom,
                         brut: '-',
                         charges: '-',
@@ -395,6 +563,7 @@ function runComparison() {
                 }
                 
                 resultats.push({
+                    statutId: statutId,
                     statut: statut.nom,
                     brut: brut,
                     charges: charges,
@@ -406,6 +575,7 @@ function runComparison() {
             } catch (e) {
                 console.error(`Erreur lors de la simulation pour ${statutsComplets[statutId].nom}:`, e);
                 resultats.push({
+                    statutId: statutId,
                     statut: statutsComplets[statutId].nom,
                     brut: '-',
                     charges: '-',
@@ -479,25 +649,29 @@ function runComparison() {
             row.innerHTML = `
                 <td class="px-4 py-3 font-medium">
                     ${isTopResult ? '<i class="fas fa-star text-yellow-400 mr-2"></i>' : ''}
-                    ${res.statut}
+                    ${statutIcons[res.statutId] || ''} ${res.statut} ${regimeBadges[res.statutId] || ''}
                 </td>
                 <td class="px-4 py-3">${res.brut === '-' ? '-' : formatter.format(res.brut)}</td>
                 <td class="px-4 py-3">${res.charges === '-' ? '-' : formatter.format(res.charges)}</td>
                 <td class="px-4 py-3">${res.impots === '-' ? '-' : formatter.format(res.impots)}</td>
                 <td class="px-4 py-3">${dividendesNets ? formatter.format(dividendesNets) : '-'}</td>
-                <td class="px-4 py-3 font-medium ${isTopResult ? 'text-green-400' : (isGoodResult ? 'text-green-300' : '')}">${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}</td>
+                <td class="px-4 py-3 font-medium ${isTopResult ? 'text-green-400' : (isGoodResult ? 'text-green-300' : '')}">
+                    ${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}
+                </td>
             `;
         } else {
             // Affichage standard
             row.innerHTML = `
                 <td class="px-4 py-3 font-medium">
                     ${isTopResult ? '<i class="fas fa-star text-yellow-400 mr-2"></i>' : ''}
-                    ${res.statut}
+                    ${statutIcons[res.statutId] || ''} ${res.statut} ${regimeBadges[res.statutId] || ''}
                 </td>
                 <td class="px-4 py-3">${res.brut === '-' ? '-' : formatter.format(res.brut)}</td>
                 <td class="px-4 py-3">${res.charges === '-' ? '-' : formatter.format(res.charges)}</td>
                 <td class="px-4 py-3">${res.impots === '-' ? '-' : formatter.format(res.impots)}</td>
-                <td class="px-4 py-3 font-medium ${isTopResult ? 'text-green-400' : (isGoodResult ? 'text-green-300' : '')}">${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}</td>
+                <td class="px-4 py-3 font-medium ${isTopResult ? 'text-green-400' : (isGoodResult ? 'text-green-300' : '')}">
+                    ${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}
+                </td>
             `;
         }
         
@@ -549,6 +723,38 @@ function setupAccordion() {
         statuts = ['MICRO', 'EI', 'EURL', 'SASU', 'SARL', 'SAS', 'SA', 'SNC', 'SCI', 'SELARL', 'SELAS', 'SCA'];
     }
     
+    // Icônes pour les statuts juridiques
+    const statutIcons = {
+        'MICRO': '<i class="fas fa-store-alt text-green-400 mr-2"></i>',
+        'EI': '<i class="fas fa-user text-green-400 mr-2"></i>',
+        'EURL': '<i class="fas fa-user-tie text-green-400 mr-2"></i>',
+        'SASU': '<i class="fas fa-user-shield text-blue-400 mr-2"></i>',
+        'SARL': '<i class="fas fa-users text-blue-400 mr-2"></i>',
+        'SAS': '<i class="fas fa-building text-blue-400 mr-2"></i>',
+        'SA': '<i class="fas fa-landmark text-blue-400 mr-2"></i>',
+        'SNC': '<i class="fas fa-handshake text-green-400 mr-2"></i>',
+        'SCI': '<i class="fas fa-home text-green-400 mr-2"></i>',
+        'SELARL': '<i class="fas fa-user-md text-blue-400 mr-2"></i>',
+        'SELAS': '<i class="fas fa-stethoscope text-blue-400 mr-2"></i>',
+        'SCA': '<i class="fas fa-chart-line text-blue-400 mr-2"></i>'
+    };
+    
+    // Badge régime fiscal
+    const regimeBadges = {
+        'MICRO': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR</span>',
+        'EI': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR</span>',
+        'EURL': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR/IS</span>',
+        'SASU': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
+        'SARL': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
+        'SAS': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
+        'SA': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
+        'SNC': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR</span>',
+        'SCI': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR</span>',
+        'SELARL': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
+        'SELAS': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
+        'SCA': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>'
+    };
+    
     // Générer l'accordéon pour chaque statut
     statuts.forEach(statutId => {
         const nomStatut = window.legalStatuses && window.legalStatuses[statutId] 
@@ -562,7 +768,7 @@ function setupAccordion() {
         // Contenu de l'accordéon basé sur le statut
         accordionItem.innerHTML = `
             <button class="accordion-toggle w-full flex justify-between items-center px-4 py-3 text-left font-medium">
-                ${nomStatut}
+                ${statutIcons[statutId] || ''} ${nomStatut} ${regimeBadges[statutId] || ''}
                 <i class="fas fa-plus"></i>
             </button>
             <div class="hidden px-4 py-3 border-t border-gray-700">
@@ -581,7 +787,7 @@ function setupAccordion() {
             content.classList.toggle('hidden');
             
             // Changer l'icône
-            const icon = this.querySelector('i');
+            const icon = this.querySelector('i:last-child');
             icon.classList.toggle('fa-plus');
             icon.classList.toggle('fa-minus');
         });
