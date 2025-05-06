@@ -409,21 +409,10 @@ window.initComparatifStatuts = function() {
         // Injecter le CSS
         injectCSS();
 
-        // Créer la structure HTML de base simplifiée - SANS AUCUN ÉLÉMENT DESCRIPTIF DU HAUT
+        // Créer la structure HTML de base simplifiée - SANS LES FILTRES EN DOUBLE
         container.innerHTML = `
-            <div class="comparatif-container">
-                <div class="comparatif-filters">
-                    <!-- Uniquement les boutons de filtrage par catégorie -->
-                    <div class="criteria-buttons" id="criteria-buttons">
-                        <!-- Les boutons seront générés ici -->
-                    </div>
-                    
-                    <div class="filter-group" style="max-width: 300px;">
-                        <label class="filter-label">Rechercher:</label>
-                        <input type="text" id="search-input" class="search-input" placeholder="Rechercher un statut...">
-                    </div>
-                </div>
-                
+            <div class="comparatif-container">                
+                <!-- Uniquement le tableau sans les filtres en double -->
                 <div class="comparatif-table-container">
                     <table class="comparatif-table" id="comparatif-table">
                         <thead>
@@ -482,16 +471,6 @@ window.initComparatifStatuts = function() {
             { id: 'creation', label: 'Création et gestion' }
         ];
 
-        // Générer les boutons de critère
-        const criteriaButtons = document.getElementById('criteria-buttons');
-        criteria.forEach(criterion => {
-            const button = document.createElement('button');
-            button.className = 'criteria-button' + (criterion.id === 'all' ? ' active' : '');
-            button.setAttribute('data-criterion', criterion.id);
-            button.textContent = criterion.label;
-            criteriaButtons.appendChild(button);
-        });
-
         // Variables pour le filtrage
         let selectedCriterion = 'all';
         let searchTerm = '';
@@ -508,23 +487,6 @@ window.initComparatifStatuts = function() {
 
         // Charger et afficher les données
         loadStatutData();
-
-        // Ajouter les écouteurs d'événements pour le filtrage
-        document.querySelectorAll('.criteria-button').forEach(button => {
-            button.addEventListener('click', () => {
-                document.querySelectorAll('.criteria-button').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                button.classList.add('active');
-                selectedCriterion = button.getAttribute('data-criterion');
-                updateTable();
-            });
-        });
-
-        document.getElementById('search-input').addEventListener('input', (e) => {
-            searchTerm = e.target.value.toLowerCase();
-            updateTable();
-        });
 
         // Fonction pour générer une notation par étoiles
         function generateStarRating(rating) {
