@@ -398,9 +398,49 @@ function initUIEvents() {
                 tabContentContainer.style.display = 'block';
                 
                 // Si c'est l'onglet "Comparatif des statuts", initialiser le comparatif
-                if (tabName === 'Comparatif des statuts' && typeof initComparatifStatuts === 'function') {
-                    // Délai court pour permettre au DOM de se mettre à jour
-                    setTimeout(initComparatifStatuts, 100);
+                if (tabName === 'Comparatif des statuts') {
+                    // Vérifier si la fonction globale initComparatifStatuts existe
+                    if (typeof window.initComparatifStatuts === 'function') {
+                        // Délai court pour permettre au DOM de se mettre à jour
+                        setTimeout(() => {
+                            try {
+                                window.initComparatifStatuts();
+                                console.log("Tableau comparatif initialisé avec succès");
+                            } catch (error) {
+                                console.error("Erreur lors de l'initialisation du tableau comparatif:", error);
+                                // Fallback en cas d'erreur
+                                const comparatifContainer = document.getElementById('comparatif-container');
+                                if (comparatifContainer) {
+                                    comparatifContainer.innerHTML = `
+                                        <div class="bg-red-900 bg-opacity-20 p-4 rounded-lg text-center">
+                                            <p class="text-red-400"><i class="fas fa-exclamation-triangle mr-2"></i>Erreur lors du chargement du comparatif</p>
+                                            <button id="retry-comparatif" class="mt-3 bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+                                                <i class="fas fa-redo mr-2"></i>Réessayer
+                                            </button>
+                                        </div>
+                                    `;
+                                    
+                                    document.getElementById('retry-comparatif')?.addEventListener('click', () => {
+                                        if (typeof window.initComparatifStatuts === 'function') {
+                                            window.initComparatifStatuts();
+                                        }
+                                    });
+                                }
+                            }
+                        }, 100);
+                    } else {
+                        console.error("La fonction initComparatifStatuts n'est pas disponible");
+                        // Message d'erreur si la fonction n'est pas disponible
+                        const comparatifContainer = document.getElementById('comparatif-container');
+                        if (comparatifContainer) {
+                            comparatifContainer.innerHTML = `
+                                <div class="bg-yellow-900 bg-opacity-20 p-4 rounded-lg text-center">
+                                    <p class="text-yellow-400"><i class="fas fa-exclamation-circle mr-2"></i>Le module de comparaison n'est pas correctement chargé</p>
+                                    <p class="text-sm mt-2">Essayez de rafraîchir la page ou de vider le cache du navigateur</p>
+                                </div>
+                            `;
+                        }
+                    }
                 }
             } else {
                 // Afficher les éléments du simulateur
