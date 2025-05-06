@@ -13,35 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Initialiser le moteur de recommandation de manière asynchrone
     initRecommendationEngine();
-    
-    // Charger les outils fiscaux avancés
-    loadFiscalUtilities();
 });
-
-/**
- * Charge les outils fiscaux avancés
- */
-function loadFiscalUtilities() {
-    // Vérifier si les utilitaires fiscaux sont déjà chargés
-    if (window.FiscalUtils) {
-        console.log("FiscalUtils déjà chargé");
-        return;
-    }
-    
-    // Charger le script des utilitaires fiscaux
-    const script = document.createElement('script');
-    script.src = 'js/fiscal-utils.js?v=20250506_1';
-    script.async = true;
-    script.onload = () => {
-        console.log("FiscalUtils chargé avec succès");
-        // Déclencher un événement pour indiquer que les utilitaires sont disponibles
-        document.dispatchEvent(new CustomEvent('fiscalUtilsLoaded'));
-    };
-    script.onerror = (error) => {
-        console.error("Erreur lors du chargement de FiscalUtils:", error);
-    };
-    document.body.appendChild(script);
-}
 
 /**
  * Initialiser le moteur de recommandation de manière asynchrone
@@ -320,21 +292,10 @@ function initUIEvents() {
                 content: () => {
                     return `
                         <div class="max-w-4xl mx-auto mb-12">
-                            <h2 class="text-2xl font-bold mb-4 flex items-center">
-                                <i class="fas fa-calculator mr-3 text-green-400"></i>
-                                Guide fiscal pour entrepreneurs
-                            </h2>
+                            <h2 class="text-2xl font-bold mb-4">Guide fiscal pour entrepreneurs</h2>
+                            <p class="mb-6">Ce guide présente les principales informations fiscales à connaître pour chaque forme juridique, avec un simulateur simplifié.</p>
                             
-                            <div class="bg-blue-900 bg-opacity-20 p-4 rounded-lg mb-6">
-                                <p class="mb-2">Ce guide présente les principales informations fiscales à connaître pour chaque forme juridique, avec un simulateur amélioré.</p>
-                                <p>
-                                    <a href="docs/methodologie-calculs-fiscaux.md" target="_blank" class="text-green-400 hover:underline">
-                                        <i class="fas fa-file-alt mr-1"></i> Consulter la méthodologie détaillée
-                                    </a>
-                                </p>
-                            </div>
-                            
-                            <!-- Simulateur amélioré -->
+                            <!-- Simulateur simplifié -->
                             <div id="fiscal-simulator" class="max-w-4xl mx-auto bg-blue-900 bg-opacity-30 p-6 rounded-xl">
                                 <h2 class="text-2xl font-bold text-green-400 mb-4">Simulation rapide par statut juridique</h2>
                                 
@@ -378,25 +339,6 @@ function initUIEvents() {
                                     </div>
                                 </div>
                                 
-                                <!-- Options avancées -->
-                                <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-6">
-                                    <h3 class="font-medium mb-3 text-green-400">Options avancées</h3>
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label class="inline-flex items-center">
-                                                <input type="checkbox" id="sim-progressive-ir" class="form-checkbox h-4 w-4 text-green-400">
-                                                <span class="ml-2">Calcul progressif de l'IR</span>
-                                            </label>
-                                        </div>
-                                        <div>
-                                            <label class="inline-flex items-center">
-                                                <input type="checkbox" id="sim-optimize" class="form-checkbox h-4 w-4 text-green-400">
-                                                <span class="ml-2">Optimisation salaire/dividendes</span>
-                                            </label>
-                                        </div>
-                                    </div>
-                                </div>
-                                
                                 <div class="flex justify-center mb-6">
                                     <button id="sim-compare-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-medium py-3 px-6 rounded-lg transition">
                                         <i class="fas fa-calculator mr-2"></i> Comparer les statuts
@@ -422,7 +364,7 @@ function initUIEvents() {
                                 </div>
                                 
                                 <div class="mt-6 text-sm text-gray-400">
-                                    <p><i class="fas fa-info-circle mr-1"></i> Cette simulation est une estimation basée sur des hypothèses simplifiées. Pour une analyse détaillée, consultez un expert-comptable.</p>
+                                    <p><i class="fas fa-info-circle mr-1"></i> Cette simulation est une estimation simplifiée. Pour un calcul détaillé, utilisez le simulateur complet.</p>
                                 </div>
                             </div>
                             
@@ -494,9 +436,6 @@ function initUIEvents() {
                         }
                     }
                     
-                    // Initialiser les nouvelles options de simulation
-                    initAdvancedFiscalOptions();
-                    
                     // Initialiser l'accordéon
                     setTimeout(() => {
                         const toggleBtns = document.querySelectorAll('.accordion-toggle');
@@ -539,55 +478,6 @@ function initUIEvents() {
                         </div>
                     `;
                 }
-            },
-            'Méthodologie': {
-                content: () => {
-                    return `
-                        <div class="max-w-4xl mx-auto mb-12">
-                            <h2 class="text-2xl font-bold mb-4">Méthodologie de calcul</h2>
-                            <p class="mb-4">Comprendre comment fonctionnent nos simulations fiscales.</p>
-                            
-                            <div class="bg-blue-900 bg-opacity-30 p-6 rounded-lg mb-8">
-                                <h3 class="text-xl font-bold mb-3">Chargement du contenu</h3>
-                                <p class="mb-4">Le contenu détaillé de la méthodologie est en cours de chargement depuis le document Markdown...</p>
-                                
-                                <div class="text-center">
-                                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-400 mb-2"></div>
-                                </div>
-                            </div>
-                            
-                            <div id="methodologie-content">
-                                <!-- Le contenu de la méthodologie sera chargé ici -->
-                            </div>
-                        </div>
-                    `;
-                },
-                onLoad: () => {
-                    // Charger le contenu de la méthodologie
-                    fetch('docs/methodologie-calculs-fiscaux.md')
-                        .then(response => response.text())
-                        .then(text => {
-                            // Convertir le markdown en HTML (utilisation de bibliothèque simple ou affichage brut)
-                            document.getElementById('methodologie-content').innerHTML = `<pre class="bg-blue-900 bg-opacity-30 p-4 rounded-lg whitespace-pre-wrap">${text}</pre>`;
-                            
-                            // Masquer l'indicateur de chargement
-                            const loadingDiv = document.querySelector('.bg-blue-900.bg-opacity-30.p-6');
-                            if (loadingDiv) loadingDiv.style.display = 'none';
-                        })
-                        .catch(error => {
-                            console.error("Erreur lors du chargement de la méthodologie:", error);
-                            document.getElementById('methodologie-content').innerHTML = `
-                                <div class="bg-red-900 bg-opacity-20 p-4 rounded-lg text-center">
-                                    <p class="text-red-400"><i class="fas fa-exclamation-triangle mr-2"></i>Erreur lors du chargement de la méthodologie</p>
-                                    <p class="text-sm mt-2">Veuillez rafraîchir la page ou contactez l'administrateur</p>
-                                </div>
-                            `;
-                            
-                            // Masquer l'indicateur de chargement
-                            const loadingDiv = document.querySelector('.bg-blue-900.bg-opacity-30.p-6');
-                            if (loadingDiv) loadingDiv.style.display = 'none';
-                        });
-                }
             }
         };
         
@@ -602,28 +492,6 @@ function initUIEvents() {
             const tabNavigation = document.querySelector('.tab-navigation');
             if (contentWrapper && tabNavigation) {
                 contentWrapper.insertBefore(tabContentContainer, tabNavigation.nextSibling);
-            }
-        }
-        
-        // Ajouter l'onglet Méthodologie s'il n'existe pas
-        const methodologyTab = Array.from(tabItems).find(tab => tab.textContent.trim() === 'Méthodologie');
-        if (!methodologyTab) {
-            const tabNavigation = document.querySelector('.tab-navigation');
-            if (tabNavigation) {
-                const newTab = document.createElement('div');
-                newTab.className = 'tab-item';
-                newTab.textContent = 'Méthodologie';
-                tabNavigation.appendChild(newTab);
-                tabItems.forEach(item => item.classList.remove('active'));
-                // Ne pas l'activer tout de suite
-                
-                // Mettre à jour la collection d'onglets
-                const allTabs = document.querySelectorAll('.tab-item');
-                
-                // Rattacher les événements pour tous les onglets
-                allTabs.forEach((tab, index) => {
-                    tab.addEventListener('click', () => changeTab(index));
-                });
             }
         }
         
@@ -728,231 +596,5 @@ function initUIEvents() {
         
         // Activer l'onglet Simulateur par défaut
         changeTab(0);
-    }
-}
-
-/**
- * Initialiser les options avancées du simulateur fiscal
- */
-function initAdvancedFiscalOptions() {
-    const simCompareBtn = document.getElementById('sim-compare-btn');
-    const simProgressiveIR = document.getElementById('sim-progressive-ir');
-    const simOptimize = document.getElementById('sim-optimize');
-    
-    if (simCompareBtn && window.FiscalUtils) {
-        // Remplacer l'événement de clic existant par la nouvelle version
-        simCompareBtn.addEventListener('click', runAdvancedComparison);
-        
-        // Mettre à jour le tooltip du bouton
-        simCompareBtn.setAttribute('title', 'Lancer la simulation avec les options avancées');
-        
-        console.log("Options avancées du simulateur fiscal initialisées");
-    } else {
-        console.warn("FiscalUtils ou le bouton de comparaison non disponible");
-    }
-    
-    /**
-     * Exécuter la comparaison avancée avec les options sélectionnées
-     */
-    function runAdvancedComparison() {
-        // Récupérer les valeurs du formulaire
-        const ca = parseFloat(document.getElementById('sim-ca').value) || 50000;
-        const marge = parseFloat(document.getElementById('sim-marge').value) / 100 || 0.3;
-        const ratioSalaire = parseFloat(document.getElementById('sim-salaire').value) / 100 || 0.7;
-        const tmi = parseFloat(document.getElementById('sim-tmi').value) || 30;
-        
-        // Récupérer les options avancées
-        const useProgressiveIR = simProgressiveIR && simProgressiveIR.checked;
-        const optimize = simOptimize && simOptimize.checked;
-        
-        const resultsBody = document.getElementById('sim-results-body');
-        if (!resultsBody) return;
-        
-        // Afficher un indicateur de chargement
-        resultsBody.innerHTML = `
-            <tr>
-                <td colspan="5" class="text-center py-4">
-                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-green-400 mb-2"></div>
-                    <p>Calculs avancés en cours...</p>
-                </td>
-            </tr>
-        `;
-        
-        // Utiliser FiscalUtils si disponible, sinon utiliser la fonction standard
-        if (window.FiscalUtils && typeof window.SimulationsFiscalesV2 === 'object') {
-            // Utiliser la version avancée des simulations
-            const params = { ca, tauxMarge: marge, tauxRemuneration: ratioSalaire, tmiActuel: tmi };
-            
-            // Simuler quelques statuts avec la nouvelle méthode pour démonstration
-            Promise.all([
-                window.SimulationsFiscalesV2.simulerMicroEntrepriseV2(params, useProgressiveIR),
-                window.SimulationsFiscalesV2.simulerSASUV2(params, useProgressiveIR, optimize)
-            ])
-            .then(results => {
-                displayAdvancedResults(results, useProgressiveIR, optimize);
-            })
-            .catch(error => {
-                console.error("Erreur lors de la simulation avancée:", error);
-                resultsBody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="text-center py-4 text-red-400">
-                            <i class="fas fa-exclamation-triangle mr-2"></i>
-                            Erreur lors de la simulation avancée. Utilisation de la méthode standard à la place.
-                        </td>
-                    </tr>
-                `;
-                // Fallback à la méthode standard après un délai
-                setTimeout(() => {
-                    if (typeof window.runComparison === 'function') {
-                        window.runComparison();
-                    }
-                }, 1000);
-            });
-        } else {
-            // Utiliser la fonction standard existante
-            if (typeof window.runComparison === 'function') {
-                window.runComparison();
-            } else {
-                resultsBody.innerHTML = `
-                    <tr>
-                        <td colspan="5" class="text-center py-4 text-red-400">
-                            <i class="fas fa-exclamation-triangle mr-2"></i>
-                            Module de simulation non disponible. Veuillez rafraîchir la page.
-                        </td>
-                    </tr>
-                `;
-            }
-        }
-    }
-    
-    /**
-     * Affiche les résultats avancés dans le tableau
-     * @param {Array} results - Résultats des simulations avancées
-     * @param {boolean} useProgressiveIR - Si l'IR progressif a été utilisé
-     * @param {boolean} optimize - Si l'optimisation a été utilisée
-     */
-    function displayAdvancedResults(results, useProgressiveIR, optimize) {
-        const resultsBody = document.getElementById('sim-results-body');
-        if (!resultsBody) return;
-        
-        // Vider les résultats précédents
-        resultsBody.innerHTML = '';
-        
-        // Formater les nombres
-        const formatter = new Intl.NumberFormat('fr-FR', {
-            style: 'currency',
-            currency: 'EUR',
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        });
-        
-        // Afficher les badges pour les options activées
-        const headerRow = document.createElement('tr');
-        headerRow.className = 'bg-blue-900 bg-opacity-40 text-sm';
-        headerRow.innerHTML = `
-            <td colspan="5" class="px-4 py-2 text-center">
-                Options activées: 
-                ${useProgressiveIR ? '<span class="bg-green-600 text-white px-2 py-1 rounded-md text-xs mx-1">IR progressif</span>' : ''}
-                ${optimize ? '<span class="bg-green-600 text-white px-2 py-1 rounded-md text-xs mx-1">Optimisation auto</span>' : ''}
-                ${!useProgressiveIR && !optimize ? '<span class="bg-gray-600 text-white px-2 py-1 rounded-md text-xs mx-1">Standard</span>' : ''}
-            </td>
-        `;
-        resultsBody.appendChild(headerRow);
-        
-        // Afficher chaque résultat
-        results.forEach((res, index) => {
-            if (!res.compatible) {
-                const row = document.createElement('tr');
-                row.className = index % 2 === 0 ? 'bg-blue-900 bg-opacity-20' : '';
-                row.innerHTML = `
-                    <td class="px-4 py-3 font-medium">${res.typeEntreprise || ''}</td>
-                    <td colspan="4" class="px-4 py-3 text-red-400">${res.message || 'Incompatible'}</td>
-                `;
-                resultsBody.appendChild(row);
-                return;
-            }
-            
-            const isOptimized = res.optimisation;
-            const isTopResult = index === 0;
-            
-            const row = document.createElement('tr');
-            row.className = isTopResult 
-                ? 'bg-green-900 bg-opacity-20 font-medium' 
-                : (index % 2 === 0 ? 'bg-blue-900 bg-opacity-20' : '');
-            
-            // Pour les résultats optimisés, afficher différemment
-            if (isOptimized) {
-                row.innerHTML = `
-                    <td class="px-4 py-3 font-medium">
-                        ${isTopResult ? '<i class="fas fa-star text-yellow-400 mr-2"></i>' : ''}
-                        ${res.typeEntreprise}
-                        <div class="text-xs text-green-400 mt-1">Ratio optimal: ${Math.round(res.ratioOptimal * 100)}% salaire</div>
-                    </td>
-                    <td class="px-4 py-3">${formatter.format(res.remuneration)}</td>
-                    <td class="px-4 py-3">
-                        ${formatter.format(res.cotisationsSociales || 0)}
-                        <div class="text-xs text-gray-400 mt-1">~${Math.round((res.cotisationsSociales || 0) / res.remuneration * 100)}%</div>
-                    </td>
-                    <td class="px-4 py-3">
-                        ${formatter.format((res.impotRevenu || 0) + (res.prelevementForfaitaire || 0))}
-                        <div class="text-xs text-gray-400 mt-1">IR: ${formatter.format(res.impotRevenu || 0)}</div>
-                        ${res.prelevementForfaitaire ? `<div class="text-xs text-gray-400">PFU: ${formatter.format(res.prelevementForfaitaire)}</div>` : ''}
-                    </td>
-                    <td class="px-4 py-3 font-medium ${isTopResult ? 'text-green-400' : ''}">
-                        ${formatter.format(res.revenuNetTotal)}
-                        <div class="text-xs text-gray-400 mt-1">${Math.round(res.ratioNetCA)}% du CA</div>
-                    </td>
-                `;
-            } else {
-                row.innerHTML = `
-                    <td class="px-4 py-3 font-medium">
-                        ${isTopResult ? '<i class="fas fa-star text-yellow-400 mr-2"></i>' : ''}
-                        ${res.typeEntreprise}
-                    </td>
-                    <td class="px-4 py-3">${formatter.format(res.remuneration || res.ca)}</td>
-                    <td class="px-4 py-3">${formatter.format(res.cotisationsSociales || 0)}</td>
-                    <td class="px-4 py-3">${formatter.format((res.impotRevenu || 0) + (res.prelevementForfaitaire || 0))}</td>
-                    <td class="px-4 py-3 font-medium ${isTopResult ? 'text-green-400' : ''}">
-                        ${formatter.format(res.revenuNetTotal || res.revenuNetApresImpot)}
-                        <div class="text-xs text-gray-400 mt-1">${Math.round(res.ratioNetCA)}% du CA</div>
-                    </td>
-                `;
-            }
-            
-            resultsBody.appendChild(row);
-        });
-        
-        // Ajouter une note sur les calculs optimisés
-        if (optimize) {
-            const noteRow = document.createElement('tr');
-            noteRow.className = 'text-sm italic';
-            noteRow.innerHTML = `
-                <td colspan="5" class="px-4 py-2 text-center">
-                    <i class="fas fa-info-circle mr-1 text-blue-400"></i>
-                    L'optimisation recherche le meilleur ratio salaire/dividendes pour maximiser le revenu net
-                </td>
-            `;
-            resultsBody.appendChild(noteRow);
-        }
-        
-        // Ajouter un bouton pour voir plus de résultats complets
-        const moreRow = document.createElement('tr');
-        moreRow.className = 'border-t border-gray-700';
-        moreRow.innerHTML = `
-            <td colspan="5" class="px-4 py-3 text-center">
-                <button id="more-results-btn" class="bg-blue-700 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">
-                    <i class="fas fa-plus-circle mr-2"></i> Voir tous les statuts juridiques
-                </button>
-            </td>
-        `;
-        resultsBody.appendChild(moreRow);
-        
-        // Ajouter l'événement pour voir plus de résultats
-        document.getElementById('more-results-btn')?.addEventListener('click', () => {
-            // Si la fonction originale existe, l'appeler (pour l'instant)
-            if (typeof window.runComparison === 'function') {
-                window.runComparison();
-            }
-        });
     }
 }
