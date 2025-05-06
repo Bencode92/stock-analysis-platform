@@ -536,6 +536,12 @@ function updateSimulatorInterface() {
     const simulatorContainer = document.getElementById('fiscal-simulator');
     if (!simulatorContainer) return;
     
+    // CORRECTION: Vérifier si les options existent déjà pour éviter les doublons
+    if (document.getElementById('sim-options-container')) {
+        console.log("Options de simulation déjà présentes, pas de reconstruction");
+        return;
+    }
+    
     // Ajouter un sélecteur de statuts et des options de simulation avancées
     const formContainer = simulatorContainer.querySelector('.grid');
     
@@ -543,6 +549,7 @@ function updateSimulatorInterface() {
         // Ajouter une nouvelle ligne pour les options de simulation
         const optionsRow = document.createElement('div');
         optionsRow.className = 'col-span-1 md:col-span-2 mb-4';
+        optionsRow.id = 'sim-options-container'; // CORRECTION: Ajouter un ID pour pouvoir vérifier son existence
         optionsRow.innerHTML = `
             <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
                 <h3 class="font-medium mb-3 text-green-400">Options de simulation</h3>
@@ -739,29 +746,21 @@ function updateSimulatorInterface() {
             </div>
         `;
         
-        // CORRECTION DE L'ERREUR: Insérer correctement dans le DOM
+        // CORRECTION: Simplification de l'insertion pour éviter les doublons
         try {
-            // Essayer d'obtenir le bouton de comparaison
             const compareButton = simulatorContainer.querySelector('#sim-compare-btn');
-            
             if (compareButton) {
-                // Trouver le parent du bouton qui est dans le formContainer
                 const compareButtonWrapper = compareButton.closest('.col-span-1, .col-span-2');
-                
                 if (compareButtonWrapper && formContainer.contains(compareButtonWrapper)) {
-                    // Si le wrapper du bouton est dans formContainer, insérer avant lui
                     formContainer.insertBefore(optionsRow, compareButtonWrapper);
                 } else {
-                    // Sinon, ajouter à la fin de formContainer
                     formContainer.appendChild(optionsRow);
                 }
             } else {
-                // Si le bouton n'est pas trouvé, ajouter à la fin du conteneur
                 formContainer.appendChild(optionsRow);
             }
         } catch (error) {
             console.error("Erreur lors de l'insertion des options:", error);
-            // Méthode de secours: simplement ajouter à la fin
             formContainer.appendChild(optionsRow);
         }
         
