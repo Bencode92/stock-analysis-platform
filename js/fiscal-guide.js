@@ -480,6 +480,16 @@ function addCustomStyles() {
             font-size: 0.85rem;
             border-radius: 4px;
         }
+        
+        /* Style pour le conteneur du graphique */
+        #optimization-chart {
+            background-color: rgba(1, 22, 39, 0.6);
+            padding: 1rem;
+            border-radius: 8px;
+            margin-top: 1rem;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            height: 300px;
+        }
     `;
     document.head.appendChild(styleElement);
 }
@@ -622,6 +632,9 @@ function updateSimulatorInterface() {
                         </div>
                     </div>
                 </div>
+                
+                <!-- Conteneur pour le graphique d'optimisation -->
+                <div id="optimization-chart-container" class="hidden mt-4"></div>
                 
                 <!-- Sélection personnalisée de statuts avec catégorisation -->
                 <div id="custom-status-options" class="hidden mt-4 p-4 rounded-lg">
@@ -812,7 +825,9 @@ function updateSimulatorInterface() {
         // Bouton d'optimisation
         const optimizeBtn = document.getElementById('optimize-ratio-btn');
         const optimizationInfo = document.getElementById('optimization-info');
-        if (optimizeBtn && optimizationInfo) {
+        const chartContainer = document.getElementById('optimization-chart-container');
+        
+        if (optimizeBtn && optimizationInfo && chartContainer) {
             optimizeBtn.addEventListener('click', function() {
                 // Mettre à jour la valeur du slider
                 const salarySlider = document.getElementById('sim-salaire');
@@ -846,6 +861,15 @@ function updateSimulatorInterface() {
                         (gain estimé: +${Math.round((optimisationSASU.net - params.ca * marge * 0.5) / (params.ca * marge * 0.5) * 100)}% vs. 50/50)
                     `;
                     optimizationInfo.classList.remove('hidden');
+                    
+                    // Afficher le graphique d'optimisation
+                    chartContainer.classList.remove('hidden');
+                    chartContainer.innerHTML = '<div id="optimization-chart" class="h-64"></div>';
+                    
+                    // Générer le graphique d'optimisation si disponible
+                    if (window.genererGraphiqueOptimisation) {
+                        window.genererGraphiqueOptimisation(params, 'optimization-chart');
+                    }
                     
                     // Relancer la comparaison
                     runComparison();
