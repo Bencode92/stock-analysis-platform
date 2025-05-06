@@ -1,5 +1,5 @@
 // fiscal-guide.js - Simulateur fiscal simplifié pour l'onglet Guide fiscal
-// Version 2.3 - Mai 2025 - Affichage de tous les statuts par défaut
+// Version 3.0 - Mai 2025 - Calculs avancés avec tranches progressives IR et optimisation
 
 document.addEventListener('DOMContentLoaded', function() {
     // S'assurer que l'onglet Guide fiscal initialise correctement ce code
@@ -16,7 +16,183 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Ajouter les styles personnalisés pour le simulateur
     addCustomStyles();
+    
+    // Créer un contenu pour l'onglet méthodologie
+    setupMethodologyTab();
 });
+
+// Fonction pour configurer l'onglet méthodologie
+function setupMethodologyTab() {
+    // Écouter le clic sur l'onglet Méthodologie
+    const tabItems = document.querySelectorAll('.tab-item');
+    if (tabItems && tabItems.length > 4) { // L'onglet Méthodologie est le 5ème
+        tabItems[4].addEventListener('click', function() {
+            // Cacher le contenu du simulateur
+            document.getElementById('question-container').style.display = 'none';
+            document.getElementById('results-container').style.display = 'none';
+            document.querySelector('.progress-info').style.display = 'none';
+            document.querySelector('.progress-bar-container').style.display = 'none';
+            document.getElementById('progress-steps-container').style.display = 'none';
+            
+            // Afficher le contenu de l'onglet
+            const tabContainer = document.getElementById('tab-content-container');
+            tabContainer.style.display = 'block';
+            
+            // Générer le contenu de méthodologie
+            tabContainer.innerHTML = getMethodologyContent();
+            
+            // Mettre à jour l'onglet actif
+            tabItems.forEach(item => item.classList.remove('active'));
+            this.classList.add('active');
+        });
+    }
+}
+
+// Fonction pour générer le contenu de l'onglet méthodologie
+function getMethodologyContent() {
+    return `
+    <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-green-400 mb-6">Méthodologie de calcul</h2>
+        
+        <div class="bg-blue-900 bg-opacity-30 p-6 rounded-xl mb-8">
+            <h3 class="text-xl font-semibold mb-4">Introduction à la méthodologie</h3>
+            <p class="mb-4">Ce simulateur a été conçu pour vous offrir une estimation précise de l'impact fiscal et social des différents statuts juridiques. Les calculs s'appuient sur les barèmes officiels 2025 et les règles fiscales en vigueur à cette date.</p>
+            <p>Pour simplifier la présentation, certaines situations particulières ou niches fiscales ne sont pas prises en compte. Il est recommandé de consulter un expert-comptable pour une analyse personnalisée complète.</p>
+        </div>
+        
+        <h3 class="text-2xl font-bold text-green-400 mb-4">Fiches méthodologiques par statut</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <!-- Micro-entreprise -->
+            <div class="bg-blue-900 bg-opacity-20 p-4 rounded-lg border border-blue-800">
+                <h4 class="font-bold text-blue-400 mb-2 flex items-center">
+                    <i class="fas fa-store-alt mr-2"></i> Micro-entreprise
+                </h4>
+                <div class="text-sm">
+                    <p class="mb-2"><strong>Cotisations sociales:</strong> Calculées sur le CA (12.3% pour vente, 21.2% pour services)</p>
+                    <p class="mb-2"><strong>Abattement fiscal:</strong> 71% (vente), 50% (services BIC), 34% (BNC)</p>
+                    <p class="mb-2"><strong>Impôt sur le revenu:</strong> (CA × (1 - Abattement)) × Taux marginal</p>
+                    <p class="mb-2"><strong>Net en poche:</strong> CA - Cotisations - Impôt</p>
+                </div>
+            </div>
+            
+            <!-- EURL -->
+            <div class="bg-blue-900 bg-opacity-20 p-4 rounded-lg border border-blue-800">
+                <h4 class="font-bold text-blue-400 mb-2 flex items-center">
+                    <i class="fas fa-user-tie mr-2"></i> EURL
+                </h4>
+                <div class="text-sm">
+                    <p class="mb-2"><strong>IR:</strong> Transparence fiscale, le bénéfice est imposé au nom du gérant</p>
+                    <p class="mb-2"><strong>IS:</strong> Impôt société sur le bénéfice après rémunération + PFU sur dividendes</p>
+                    <p class="mb-2"><strong>Cotisations TNS:</strong> ~45% sur la rémunération</p>
+                    <p class="mb-2"><strong>Optimisation:</strong> Ratio rémunération/dividendes à l'IS</p>
+                </div>
+            </div>
+            
+            <!-- SASU -->
+            <div class="bg-blue-900 bg-opacity-20 p-4 rounded-lg border border-blue-800">
+                <h4 class="font-bold text-blue-400 mb-2 flex items-center">
+                    <i class="fas fa-user-shield mr-2"></i> SASU
+                </h4>
+                <div class="text-sm">
+                    <p class="mb-2"><strong>Charges sociales:</strong> ~80% sur salaire (55% patronales, 22% salariales)</p>
+                    <p class="mb-2"><strong>IS:</strong> 15% jusqu'à 42 500€, 25% au-delà</p>
+                    <p class="mb-2"><strong>Dividendes:</strong> PFU 30% (17.2% PS + 12.8% IR)</p>
+                    <p class="mb-2"><strong>Optimisation:</strong> Équilibre salaire/dividendes</p>
+                </div>
+            </div>
+            
+            <!-- Autres statuts -->
+            <div class="bg-blue-900 bg-opacity-20 p-4 rounded-lg border border-blue-800">
+                <h4 class="font-bold text-blue-400 mb-2 flex items-center">
+                    <i class="fas fa-building mr-2"></i> Autres statuts
+                </h4>
+                <div class="text-sm">
+                    <p class="mb-2">Chaque statut applique une combinaison spécifique de ces mécanismes:</p>
+                    <ul class="list-disc pl-4 mb-2">
+                        <li>Cotisations TNS ou charges assimilé salarié</li>
+                        <li>Imposition à l'IR ou IS + PFU</li>
+                        <li>Répartition entre rémunération et dividendes</li>
+                    </ul>
+                    <p>Le simulateur prend en compte les spécificités de chaque régime.</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-green-900 bg-opacity-20 border border-green-800 p-6 rounded-xl mb-8">
+            <h3 class="text-xl font-semibold text-green-400 mb-4">Exemple de calcul détaillé</h3>
+            
+            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-4">
+                <h4 class="font-medium mb-2">Micro-entreprise (BIC Services)</h4>
+                <div class="text-sm">
+                    <p class="mb-1">CA = 50 000€</p>
+                    <p class="mb-1">Cotisations sociales = 50 000 × 21.2% = 10 600€</p>
+                    <p class="mb-1">Abattement forfaitaire = 50 000 × 50% = 25 000€</p>
+                    <p class="mb-1">Revenu imposable = 50 000 - 25 000 = 25 000€</p>
+                    <p class="mb-1">Avec TMI à 30% → Impôt = 25 000 × 30% = 7 500€</p>
+                    <p class="mb-1">Revenu net = 50 000 - 10 600 - 7 500 = 31 900€</p>
+                </div>
+            </div>
+            
+            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
+                <h4 class="font-medium mb-2">SASU</h4>
+                <div class="text-sm">
+                    <p class="mb-1">CA = 50 000€, Marge = 30% → Résultat = 15 000€</p>
+                    <p class="mb-1">Rémunération brute (70%) = 10 500€</p>
+                    <p class="mb-1">Charges patronales = 10 500 × 55% = 5 775€</p>
+                    <p class="mb-1">Charges salariales = 10 500 × 22% = 2 310€</p>
+                    <p class="mb-1">Net avant IR = 8 190€</p>
+                    <p class="mb-1">IR (TMI 30%) = 8 190 × 30% = 2 457€</p>
+                    <p class="mb-1">Résultat après rémunération = 4 500€</p>
+                    <p class="mb-1">IS (15%) = 4 500 × 15% = 675€</p>
+                    <p class="mb-1">Dividendes bruts = 3 825€</p>
+                    <p class="mb-1">PFU (30%) = 3 825 × 30% = 1 148€</p>
+                    <p class="mb-1">Dividendes nets = 2 677€</p>
+                    <p class="mb-1">Net total = 5 733€ (salaire) + 2 677€ (dividendes) = 8 410€</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="bg-purple-900 bg-opacity-20 border border-purple-800 p-6 rounded-xl mb-8">
+            <h3 class="text-xl font-semibold text-purple-400 mb-4">Calcul avancé de l'impôt sur le revenu</h3>
+            
+            <p class="mb-4">En mode expert, l'IR est calculé selon les tranches progressives 2025:</p>
+            
+            <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+                <div class="bg-blue-900 bg-opacity-40 p-2 rounded">
+                    <strong>Tranche</strong>
+                </div>
+                <div class="bg-blue-900 bg-opacity-40 p-2 rounded">
+                    <strong>Taux</strong>
+                </div>
+                <div class="p-2">0€ à 11 294€</div>
+                <div class="p-2">0%</div>
+                <div class="p-2">11 295€ à 28 797€</div>
+                <div class="p-2">11%</div>
+                <div class="p-2">28 798€ à 82 341€</div>
+                <div class="p-2">30%</div>
+                <div class="p-2">82 342€ à 177 106€</div>
+                <div class="p-2">41%</div>
+                <div class="p-2">Au-delà de 177 106€</div>
+                <div class="p-2">45%</div>
+            </div>
+            
+            <p class="text-sm">Cette méthode est plus précise que l'application directe du TMI, particulièrement pour les revenus élevés ou à cheval sur plusieurs tranches.</p>
+        </div>
+        
+        <div class="bg-blue-900 bg-opacity-20 border border-blue-800 p-6 rounded-xl">
+            <h3 class="text-xl font-semibold mb-4">Limites et précautions</h3>
+            
+            <ul class="list-disc pl-6 space-y-2 text-sm">
+                <li>Ces calculs sont indicatifs et ne remplacent pas l'avis d'un expert-comptable.</li>
+                <li>Les éléments non pris en compte incluent: situation familiale détaillée, autres revenus, crédits d'impôt spécifiques, régimes spéciaux.</li>
+                <li>Tous les montants sont arrondis à l'euro près.</li>
+                <li>L'outil ne constitue pas un conseil fiscal personnalisé.</li>
+            </ul>
+        </div>
+    </div>
+    `;
+}
 
 // Fonction pour ajouter des styles personnalisés
 function addCustomStyles() {
@@ -166,15 +342,143 @@ function addCustomStyles() {
             background: rgba(17, 34, 64, 0.6);
             box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
         }
-
-        /* Message d'information sur les statuts */
-        .status-info-message {
-            background-color: rgba(0, 255, 135, 0.1);
-            border-left: 4px solid #00FF87;
-            padding: 0.75rem;
-            margin-bottom: 1rem;
-            border-radius: 0.5rem;
-            font-size: 0.9rem;
+        
+        /* Style pour les badges de mode avancé */
+        .mode-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-left: 0.5rem;
+        }
+        
+        .mode-badge-simple {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: #60A5FA;
+        }
+        
+        .mode-badge-advanced {
+            background-color: rgba(236, 72, 153, 0.2);
+            color: #EC4899;
+        }
+        
+        /* Toggle switch pour le mode expert */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+            margin: 0 0.5rem;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            transition: .4s;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: .4s;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: rgba(236, 72, 153, 0.6);
+        }
+        
+        input:focus + .toggle-slider {
+            box-shadow: 0 0 1px #EC4899;
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+        
+        /* Tooltip d'info sur le mode expert */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+        
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 240px;
+            background-color: rgba(1, 42, 74, 0.95);
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.75rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        /* Styles pour les boutons d'optimisation */
+        .optimize-button {
+            display: inline-flex;
+            align-items: center;
+            background-color: rgba(139, 92, 246, 0.2);
+            color: #A78BFA;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 4px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+        
+        .optimize-button:hover {
+            background-color: rgba(139, 92, 246, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .optimize-button i {
+            margin-right: 0.5rem;
+        }
+        
+        /* Style pour les informations d'optimisation */
+        .optimization-info {
+            background-color: rgba(139, 92, 246, 0.1);
+            border-left: 3px solid rgba(139, 92, 246, 0.5);
+            padding: 8px 12px;
+            margin-top: 8px;
+            font-size: 0.85rem;
+            border-radius: 4px;
         }
     `;
     document.head.appendChild(styleElement);
@@ -183,11 +487,11 @@ function addCustomStyles() {
 function initFiscalSimulator() {
     console.log("Initialisation du simulateur fiscal simplifié...");
     
-    // Attendre que SimulationsFiscales soit chargé
-    const checkSimEngine = setInterval(() => {
-        if (window.SimulationsFiscales) {
-            clearInterval(checkSimEngine);
-            console.log("SimulationsFiscales trouvé, configuration du simulateur...");
+    // Attendre que SimulationsFiscales et FiscalUtils soient chargés
+    const checkDependencies = setInterval(() => {
+        if (window.SimulationsFiscales && window.FiscalUtils) {
+            clearInterval(checkDependencies);
+            console.log("Dépendances trouvées, configuration du simulateur...");
             setupSimulator();
         }
     }, 200);
@@ -281,11 +585,40 @@ function updateSimulatorInterface() {
                     </div>
                     <div>
                         <label class="block text-gray-300 mb-2">Options avancées</label>
-                        <div>
-                            <label class="inline-flex items-center">
-                                <input type="checkbox" id="sim-show-details" class="form-checkbox h-4 w-4 text-green-400">
-                                <span class="ml-2">Afficher les détails</span>
-                            </label>
+                        <div class="flex flex-col space-y-2">
+                            <div class="flex items-center">
+                                <label class="inline-flex items-center">
+                                    <input type="checkbox" id="sim-show-details" class="form-checkbox h-4 w-4 text-green-400">
+                                    <span class="ml-2">Afficher les détails</span>
+                                </label>
+                            </div>
+                            <div class="flex items-center">
+                                <span>Mode simplifié</span>
+                                <label class="toggle-switch mx-2">
+                                    <input type="checkbox" id="sim-expert-mode">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <span>Mode expert</span>
+                                <div class="tooltip ml-2">
+                                    <i class="fas fa-info-circle text-blue-400"></i>
+                                    <div class="tooltip-text">
+                                        <p><strong>Mode expert:</strong></p>
+                                        <ul class="list-disc pl-4 mt-1">
+                                            <li>Calcul de l'IR par tranches progressives au lieu du TMI</li>
+                                            <li>Optimisation automatique du ratio rémunération/dividendes</li>
+                                            <li>Détails supplémentaires dans les résultats</li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mt-2">
+                                <button id="optimize-ratio-btn" class="optimize-button">
+                                    <i class="fas fa-magic"></i> Optimiser le ratio rémunération/dividendes
+                                </button>
+                                <div id="optimization-info" class="optimization-info hidden">
+                                    Le ratio optimal sera calculé pour chaque statut à l'IS
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -470,6 +803,56 @@ function updateSimulatorInterface() {
             showDetails.addEventListener('change', runComparison);
         }
         
+        // Mode expert
+        const expertMode = document.getElementById('sim-expert-mode');
+        if (expertMode) {
+            expertMode.addEventListener('change', runComparison);
+        }
+        
+        // Bouton d'optimisation
+        const optimizeBtn = document.getElementById('optimize-ratio-btn');
+        const optimizationInfo = document.getElementById('optimization-info');
+        if (optimizeBtn && optimizationInfo) {
+            optimizeBtn.addEventListener('click', function() {
+                // Mettre à jour la valeur du slider
+                const salarySlider = document.getElementById('sim-salaire');
+                if (salarySlider) {
+                    // Récupérer les paramètres actuels
+                    const ca = parseFloat(document.getElementById('sim-ca').value) || 50000;
+                    const marge = parseFloat(document.getElementById('sim-marge').value) / 100 || 0.3;
+                    const tmi = parseFloat(document.getElementById('sim-tmi').value) || 30;
+                    
+                    // Déterminer le statut qui bénéficierait le plus de l'optimisation (SASU par défaut)
+                    const params = {
+                        ca: ca,
+                        tauxMarge: marge,
+                        tauxRemuneration: 0.7, // Valeur par défaut
+                        tmiActuel: tmi,
+                        modeExpert: expertMode.checked
+                    };
+                    
+                    const optimisationSASU = window.FiscalUtils.optimiserRatioRemuneration(
+                        params, 
+                        (p) => window.SimulationsFiscales.simulerSASU(p)
+                    );
+                    
+                    // Mettre à jour le ratio dans l'interface
+                    const ratioOptimal = Math.round(optimisationSASU.ratio * 100);
+                    salarySlider.value = ratioOptimal;
+                    
+                    // Afficher l'information d'optimisation
+                    optimizationInfo.innerHTML = `
+                        Ratio optimal : <strong>${ratioOptimal}%</strong> rémunération / <strong>${100-ratioOptimal}%</strong> dividendes 
+                        (gain estimé: +${Math.round((optimisationSASU.net - params.ca * marge * 0.5) / (params.ca * marge * 0.5) * 100)}% vs. 50/50)
+                    `;
+                    optimizationInfo.classList.remove('hidden');
+                    
+                    // Relancer la comparaison
+                    runComparison();
+                }
+            });
+        }
+        
         // Par défaut, sélectionner le filtre "all" pour afficher tous les statuts
         statusFilter.value = "all"; // Définir la valeur en JavaScript aussi
         statusFilter.dispatchEvent(new Event('change'));
@@ -506,6 +889,10 @@ function runComparison() {
     const ratioSalaire = parseFloat(document.getElementById('sim-salaire').value) / 100 || 0.7;
     const tmi = parseFloat(document.getElementById('sim-tmi').value) || 30;
     
+    // Vérifier si le mode expert est activé
+    const expertMode = document.getElementById('sim-expert-mode');
+    const modeExpert = expertMode && expertMode.checked;
+    
     const resultsBody = document.getElementById('sim-results-body');
     if (!resultsBody) return;
     
@@ -514,7 +901,8 @@ function runComparison() {
         ca: ca,
         tauxMarge: marge,
         tauxRemuneration: ratioSalaire,
-        tmiActuel: tmi
+        tmiActuel: tmi,
+        modeExpert: modeExpert
     };
     
     // Vider les résultats précédents
@@ -565,6 +953,10 @@ function runComparison() {
         'sca': '<span class="regime-badge is">IS</span>'
     };
     
+    // Déterminer si on doit optimiser le ratio pour les statuts à l'IS
+    const shouldOptimize = params.modeExpert && document.getElementById('optimization-info') && 
+                          !document.getElementById('optimization-info').classList.contains('hidden');
+    
     // Associer chaque statut à sa fonction de simulation et son nom d'affichage
     const statutsComplets = {
         'micro': { 
@@ -572,7 +964,8 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerMicroEntreprise({
                 ca: ca,
                 typeMicro: 'BIC',
-                tmiActuel: tmi
+                tmiActuel: tmi,
+                modeExpert: modeExpert
             })
         },
         'ei': { 
@@ -580,7 +973,8 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerEI({
                 ca: ca,
                 tauxMarge: marge,
-                tmiActuel: tmi
+                tmiActuel: tmi,
+                modeExpert: modeExpert
             })
         },
         'eurl': { 
@@ -590,62 +984,124 @@ function runComparison() {
                 tauxMarge: marge,
                 tauxRemuneration: ratioSalaire,
                 optionIS: false,
-                tmiActuel: tmi
+                tmiActuel: tmi,
+                modeExpert: modeExpert
             })
         },
         'eurlIS': { 
             nom: 'EURL à l\'IS', 
-            simuler: () => window.SimulationsFiscales.simulerEURL({
-                ca: ca,
-                tauxMarge: marge,
-                tauxRemuneration: ratioSalaire,
-                optionIS: true,
-                tmiActuel: tmi
-            })
+            simuler: () => {
+                // Si optimisation activée, trouver le meilleur ratio
+                if (shouldOptimize) {
+                    const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
+                        params,
+                        (p) => window.SimulationsFiscales.simulerEURL({...p, optionIS: true})
+                    );
+                    return optimisation.resultat;
+                }
+                
+                return window.SimulationsFiscales.simulerEURL({
+                    ca: ca,
+                    tauxMarge: marge,
+                    tauxRemuneration: ratioSalaire,
+                    optionIS: true,
+                    tmiActuel: tmi,
+                    modeExpert: modeExpert
+                });
+            }
         },
         'sasu': { 
             nom: 'SASU', 
-            simuler: () => window.SimulationsFiscales.simulerSASU({
-                ca: ca,
-                tauxMarge: marge,
-                tauxRemuneration: ratioSalaire,
-                tmiActuel: tmi
-            })
+            simuler: () => {
+                // Si optimisation activée, trouver le meilleur ratio
+                if (shouldOptimize) {
+                    const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
+                        params,
+                        (p) => window.SimulationsFiscales.simulerSASU(p)
+                    );
+                    return optimisation.resultat;
+                }
+                
+                return window.SimulationsFiscales.simulerSASU({
+                    ca: ca,
+                    tauxMarge: marge,
+                    tauxRemuneration: ratioSalaire,
+                    tmiActuel: tmi,
+                    modeExpert: modeExpert
+                });
+            }
         },
         'sarl': { 
             nom: 'SARL', 
-            simuler: () => window.SimulationsFiscales.simulerSARL({
-                ca: ca,
-                tauxMarge: marge,
-                tauxRemuneration: ratioSalaire,
-                tmiActuel: tmi,
-                gerantMajoritaire: true
-            })
+            simuler: () => {
+                // Si optimisation activée, trouver le meilleur ratio
+                if (shouldOptimize) {
+                    const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
+                        params,
+                        (p) => window.SimulationsFiscales.simulerSARL({...p, gerantMajoritaire: true})
+                    );
+                    return optimisation.resultat;
+                }
+                
+                return window.SimulationsFiscales.simulerSARL({
+                    ca: ca,
+                    tauxMarge: marge,
+                    tauxRemuneration: ratioSalaire,
+                    tmiActuel: tmi,
+                    gerantMajoritaire: true,
+                    modeExpert: modeExpert
+                });
+            }
         },
         'sas': { 
             nom: 'SAS', 
-            simuler: () => window.SimulationsFiscales.simulerSAS({
-                ca: ca,
-                tauxMarge: marge,
-                tauxRemuneration: ratioSalaire,
-                tmiActuel: tmi
-            })
+            simuler: () => {
+                // Si optimisation activée, trouver le meilleur ratio
+                if (shouldOptimize) {
+                    const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
+                        params,
+                        (p) => window.SimulationsFiscales.simulerSAS(p)
+                    );
+                    return optimisation.resultat;
+                }
+                
+                return window.SimulationsFiscales.simulerSAS({
+                    ca: ca,
+                    tauxMarge: marge,
+                    tauxRemuneration: ratioSalaire,
+                    tmiActuel: tmi,
+                    modeExpert: modeExpert
+                });
+            }
         },
         'sa': { 
             nom: 'SA', 
-            simuler: () => window.SimulationsFiscales.simulerSA({
-                ca: ca,
-                tauxMarge: marge,
-                tauxRemuneration: ratioSalaire,
-                tmiActuel: tmi
-            })
+            simuler: () => {
+                // Si optimisation activée, trouver le meilleur ratio
+                if (shouldOptimize) {
+                    const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
+                        params,
+                        (p) => window.SimulationsFiscales.simulerSA(p)
+                    );
+                    return optimisation.resultat;
+                }
+                
+                return window.SimulationsFiscales.simulerSA({
+                    ca: ca,
+                    tauxMarge: marge,
+                    tauxRemuneration: ratioSalaire,
+                    tmiActuel: tmi,
+                    modeExpert: modeExpert
+                });
+            }
         },
         'snc': { 
             nom: 'SNC', 
             simuler: () => window.SimulationsFiscales.simulerSNC({
                 ca: ca,
                 tauxMarge: marge,
-                tmiActuel: tmi
+                tmiActuel: tmi,
+                modeExpert: modeExpert
             })
         },
         'sci': { 
@@ -653,35 +1109,72 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerSCI({
                 revenuLocatif: ca,
                 chargesDeductibles: ca * (1 - marge),
-                tmiActuel: tmi
+                tmiActuel: tmi,
+                modeExpert: modeExpert
             })
         },
         'selarl': { 
             nom: 'SELARL', 
-            simuler: () => window.SimulationsFiscales.simulerSELARL({
-                ca: ca,
-                tauxMarge: marge,
-                tauxRemuneration: ratioSalaire,
-                tmiActuel: tmi
-            })
+            simuler: () => {
+                // Si optimisation activée, trouver le meilleur ratio
+                if (shouldOptimize) {
+                    const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
+                        params,
+                        (p) => window.SimulationsFiscales.simulerSELARL(p)
+                    );
+                    return optimisation.resultat;
+                }
+                
+                return window.SimulationsFiscales.simulerSELARL({
+                    ca: ca,
+                    tauxMarge: marge,
+                    tauxRemuneration: ratioSalaire,
+                    tmiActuel: tmi,
+                    modeExpert: modeExpert
+                });
+            }
         },
         'selas': { 
             nom: 'SELAS', 
-            simuler: () => window.SimulationsFiscales.simulerSELAS({
-                ca: ca,
-                tauxMarge: marge,
-                tauxRemuneration: ratioSalaire,
-                tmiActuel: tmi
-            })
+            simuler: () => {
+                // Si optimisation activée, trouver le meilleur ratio
+                if (shouldOptimize) {
+                    const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
+                        params,
+                        (p) => window.SimulationsFiscales.simulerSELAS(p)
+                    );
+                    return optimisation.resultat;
+                }
+                
+                return window.SimulationsFiscales.simulerSELAS({
+                    ca: ca,
+                    tauxMarge: marge,
+                    tauxRemuneration: ratioSalaire,
+                    tmiActuel: tmi,
+                    modeExpert: modeExpert
+                });
+            }
         },
         'sca': { 
             nom: 'SCA', 
-            simuler: () => window.SimulationsFiscales.simulerSCA({
-                ca: ca,
-                tauxMarge: marge,
-                tauxRemuneration: ratioSalaire,
-                tmiActuel: tmi
-            })
+            simuler: () => {
+                // Si optimisation activée, trouver le meilleur ratio
+                if (shouldOptimize) {
+                    const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
+                        params,
+                        (p) => window.SimulationsFiscales.simulerSCA(p)
+                    );
+                    return optimisation.resultat;
+                }
+                
+                return window.SimulationsFiscales.simulerSCA({
+                    ca: ca,
+                    tauxMarge: marge,
+                    tauxRemuneration: ratioSalaire,
+                    tmiActuel: tmi,
+                    modeExpert: modeExpert
+                });
+            }
         }
     };
     
@@ -753,7 +1246,8 @@ function runComparison() {
                     impots: impots,
                     net: net,
                     sim: sim,
-                    score: 100 * (net / ca)
+                    score: 100 * (net / ca),
+                    ratioOptimise: sim.ratioOptimise
                 });
             } catch (e) {
                 console.error(`Erreur lors de la simulation pour ${statutsComplets[statutId].nom}:`, e);
@@ -824,6 +1318,12 @@ function runComparison() {
             ? 'result-top-row' 
             : (index % 2 === 0 ? 'bg-blue-900 bg-opacity-20' : '');
         
+        // Ajouter informations sur le ratio optimisé si disponible
+        let ratioInfo = '';
+        if (res.ratioOptimise && shouldOptimize) {
+            ratioInfo = `<div class="text-xs text-purple-400 mt-1">(Ratio optimal: ${Math.round(res.ratioOptimise*100)}% rém.)</div>`;
+        }
+        
         if (displayDetails && res.sim && res.score > 0) {
             // Affichage détaillé avec dividendes séparés
             const dividendesNets = res.sim.dividendesNets || 0;
@@ -833,6 +1333,7 @@ function runComparison() {
                 <td class="px-4 py-3 font-medium">
                     ${isTopResult ? '<i class="fas fa-star text-yellow-400 mr-2"></i>' : ''}
                     ${statutIcons[res.statutId] || ''} ${res.statut} ${regimeBadges[res.statutId] || ''}
+                    ${ratioInfo}
                 </td>
                 <td class="px-4 py-3">${res.brut === '-' ? '-' : formatter.format(res.brut)}</td>
                 <td class="px-4 py-3">${res.charges === '-' ? '-' : formatter.format(res.charges)}</td>
@@ -848,6 +1349,7 @@ function runComparison() {
                 <td class="px-4 py-3 font-medium">
                     ${isTopResult ? '<i class="fas fa-star text-yellow-400 mr-2"></i>' : ''}
                     ${statutIcons[res.statutId] || ''} ${res.statut} ${regimeBadges[res.statutId] || ''}
+                    ${ratioInfo}
                 </td>
                 <td class="px-4 py-3">${res.brut === '-' ? '-' : formatter.format(res.brut)}</td>
                 <td class="px-4 py-3">${res.charges === '-' ? '-' : formatter.format(res.charges)}</td>
@@ -860,6 +1362,23 @@ function runComparison() {
         
         resultsBody.appendChild(row);
     });
+    
+    // Ajouter une ligne de mode de calcul
+    if (modeExpert) {
+        const modeRow = document.createElement('tr');
+        modeRow.className = 'bg-pink-900 bg-opacity-20 text-sm border-t border-pink-800';
+        
+        const colSpan = displayDetails ? '6' : '5';
+        modeRow.innerHTML = `
+            <td colspan="${colSpan}" class="px-4 py-2 font-medium text-pink-300">
+                <i class="fas fa-chart-line mr-2"></i> 
+                Mode expert activé : calcul par tranches progressives d'IR
+                ${shouldOptimize ? ' + optimisation du ratio rémunération/dividendes' : ''}
+            </td>
+        `;
+        
+        resultsBody.appendChild(modeRow);
+    }
     
     // Ajouter ligne de ratio net/brut pour les statuts compatibles
     const ratioRow = document.createElement('tr');
