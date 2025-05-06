@@ -5,9 +5,11 @@
 
 // Fonction d'initialisation disponible globalement pour être appelée depuis app.js
 window.initComparatifStatuts = function() {
-    createComparatifTable('comparatif-container');
+    console.log("Initialisation du tableau comparatif des statuts");
+    window.createComparatifTable('comparatif-container');
 };
 
+// Encapsulation du reste du code dans une IIFE
 (function() {
     // Injecter le CSS nécessaire pour le tableau
     function injectCSS() {
@@ -281,8 +283,8 @@ window.initComparatifStatuts = function() {
         document.head.appendChild(style);
     }
 
-    // Fonction principale pour créer le tableau comparatif
-    function createComparatifTable(containerId) {
+    // Fonction principale pour créer le tableau comparatif - exposée globalement
+    window.createComparatifTable = function(containerId) {
         // S'assurer que le conteneur existe
         const container = document.getElementById(containerId);
         if (!container) {
@@ -569,14 +571,8 @@ window.initComparatifStatuts = function() {
         function renderTable(data) {
             updateTable();
         }
-    }
+    };
 
-    // Démarrer lorsque le DOM est chargé
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            // On n'initialise plus automatiquement ici, l'initialisation est faite via window.initComparatifStatuts
-        });
-    } else {
-        // On n'initialise plus automatiquement ici non plus
-    }
+    // Ne pas exécuter automatiquement au chargement pour éviter les conflits
+    // L'initialisation se fera via window.initComparatifStatuts
 })();
