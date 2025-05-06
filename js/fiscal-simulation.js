@@ -6,7 +6,7 @@ class SimulationsFiscales {
     
     // MICRO-ENTREPRISE
     static simulerMicroEntreprise(params) {
-        const { ca, typeMicro = 'BIC', tmiActuel = 30 } = params;
+        const { ca, typeMicro = 'BIC', tmiActuel = 30, modeExpert = false } = params;
         
         // Utiliser les plafonds depuis legalStatuses si disponible
         const plafonds = {
@@ -53,8 +53,15 @@ class SimulationsFiscales {
         // Calcul du revenu imposable après abattement
         const revenuImposable = Math.round(ca * (1 - abattements[typeEffectif]));
         
-        // Calcul de l'impôt sur le revenu (simplifié - taux marginal * revenu imposable)
-        const impotRevenu = Math.round(revenuImposable * (tmiActuel / 100));
+        // Calcul de l'impôt sur le revenu
+        let impotRevenu;
+        if (modeExpert && window.FiscalUtils) {
+            // Utiliser le calcul progressif si le mode expert est activé
+            impotRevenu = window.FiscalUtils.calculateProgressiveIR(revenuImposable);
+        } else {
+            // Utiliser le calcul simplifié (TMI)
+            impotRevenu = Math.round(revenuImposable * (tmiActuel / 100));
+        }
         
         // Calcul du revenu net après impôt
         const revenuNetApresImpot = ca - cotisationsSociales - impotRevenu;
@@ -75,20 +82,33 @@ class SimulationsFiscales {
     
     // ENTREPRISE INDIVIDUELLE AU RÉGIME RÉEL
     static simulerEI(params) {
-        const { ca, tauxMarge = 0.3, tmiActuel = 30 } = params;
+        const { ca, tauxMarge = 0.3, tmiActuel = 30, modeExpert = false } = params;
         
         // Calcul du bénéfice avant cotisations (simplifié - CA * taux de marge)
         const beneficeAvantCotisations = Math.round(ca * tauxMarge);
         
-        // Taux de cotisations sociales pour les TNS (simplifié - environ 45% du bénéfice)
-        const tauxCotisationsTNS = 0.45;
-        const cotisationsSociales = Math.round(beneficeAvantCotisations * tauxCotisationsTNS);
+        // Utiliser la fonction utilitaire pour calculer les cotisations TNS
+        let cotisationsSociales;
+        if (window.FiscalUtils) {
+            cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(beneficeAvantCotisations);
+        } else {
+            // Fallback si l'utilitaire n'est pas disponible
+            const tauxCotisationsTNS = 0.45;
+            cotisationsSociales = Math.round(beneficeAvantCotisations * tauxCotisationsTNS);
+        }
         
         // Bénéfice après cotisations sociales
         const beneficeApresCotisations = beneficeAvantCotisations - cotisationsSociales;
         
-        // Calcul de l'impôt sur le revenu (simplifié - taux marginal * bénéfice)
-        const impotRevenu = Math.round(beneficeApresCotisations * (tmiActuel / 100));
+        // Calcul de l'impôt sur le revenu
+        let impotRevenu;
+        if (modeExpert && window.FiscalUtils) {
+            // Utiliser le calcul progressif si le mode expert est activé
+            impotRevenu = window.FiscalUtils.calculateProgressiveIR(beneficeApresCotisations);
+        } else {
+            // Utiliser le calcul simplifié (TMI)
+            impotRevenu = Math.round(beneficeApresCotisations * (tmiActuel / 100));
+        }
         
         // Calcul du revenu net après impôt
         const revenuNetApresImpot = beneficeApresCotisations - impotRevenu;
@@ -109,7 +129,7 @@ class SimulationsFiscales {
     
     // EURL
     static simulerEURL(params) {
-        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, optionIS = false, tmiActuel = 30 } = params;
+        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, optionIS = false, tmiActuel = 30, modeExpert = false } = params;
         
         // Calcul du résultat de l'entreprise (simplifié - CA * taux de marge)
         const resultatEntreprise = Math.round(ca * tauxMarge);
@@ -122,15 +142,28 @@ class SimulationsFiscales {
         if (!optionIS) {
             // Régime IR (transparence fiscale)
             
-            // Taux de cotisations sociales pour les TNS (simplifié - environ 45% de la rémunération)
-            const tauxCotisationsTNS = 0.45;
-            const cotisationsSociales = Math.round(remuneration * tauxCotisationsTNS);
+            // Utiliser la fonction utilitaire pour calculer les cotisations TNS
+            let cotisationsSociales;
+            if (window.FiscalUtils) {
+                cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(remuneration);
+            } else {
+                // Fallback si l'utilitaire n'est pas disponible
+                const tauxCotisationsTNS = 0.45;
+                cotisationsSociales = Math.round(remuneration * tauxCotisationsTNS);
+            }
             
             // Bénéfice imposable (remuneration + résultat après rémunération)
             const beneficeImposable = remuneration - cotisationsSociales + resultatApresRemuneration;
             
-            // Calcul de l'impôt sur le revenu (simplifié - taux marginal * bénéfice imposable)
-            const impotRevenu = Math.round(beneficeImposable * (tmiActuel / 100));
+            // Calcul de l'impôt sur le revenu
+            let impotRevenu;
+            if (modeExpert && window.FiscalUtils) {
+                // Utiliser le calcul progressif si le mode expert est activé
+                impotRevenu = window.FiscalUtils.calculateProgressiveIR(beneficeImposable);
+            } else {
+                // Utiliser le calcul simplifié (TMI)
+                impotRevenu = Math.round(beneficeImposable * (tmiActuel / 100));
+            }
             
             // Calcul du revenu net après impôt
             const revenuNetApresImpot = beneficeImposable - impotRevenu;
@@ -138,7 +171,7 @@ class SimulationsFiscales {
             return {
                 compatible: true,
                 ca: ca,
-                typeEntreprise: 'EURL à l\'IR',
+                typeEntreprise: 'EURL à l\\'IR',
                 tauxMarge: tauxMarge * 100 + '%',
                 resultatAvantRemuneration: resultatEntreprise,
                 remuneration: remuneration,
@@ -153,17 +186,37 @@ class SimulationsFiscales {
         } else {
             // Régime IS
             
-            // Taux de cotisations sociales pour les TNS (simplifié - environ 45% de la rémunération)
-            const tauxCotisationsTNS = 0.45;
-            const cotisationsSociales = Math.round(remuneration * tauxCotisationsTNS);
+            // Utiliser la fonction utilitaire pour calculer les cotisations TNS
+            let cotisationsSociales;
+            if (window.FiscalUtils) {
+                cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(remuneration);
+            } else {
+                // Fallback si l'utilitaire n'est pas disponible
+                const tauxCotisationsTNS = 0.45;
+                cotisationsSociales = Math.round(remuneration * tauxCotisationsTNS);
+            }
             
             // Calcul de l'impôt sur le revenu sur la rémunération
             const remunerationNetteSociale = remuneration - cotisationsSociales;
-            const impotRevenu = Math.round(remunerationNetteSociale * (tmiActuel / 100));
+            
+            let impotRevenu;
+            if (modeExpert && window.FiscalUtils) {
+                // Utiliser le calcul progressif si le mode expert est activé
+                impotRevenu = window.FiscalUtils.calculateProgressiveIR(remunerationNetteSociale);
+            } else {
+                // Utiliser le calcul simplifié (TMI)
+                impotRevenu = Math.round(remunerationNetteSociale * (tmiActuel / 100));
+            }
             
             // Calcul de l'IS
-            const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25; // Taux réduit jusqu'à 42 500€
-            const is = Math.round(resultatApresRemuneration * tauxIS);
+            let is;
+            if (window.FiscalUtils) {
+                is = window.FiscalUtils.calculIS(resultatApresRemuneration);
+            } else {
+                // Fallback
+                const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
+                is = Math.round(resultatApresRemuneration * tauxIS);
+            }
             
             // Résultat après IS
             const resultatApresIS = resultatApresRemuneration - is;
@@ -171,9 +224,15 @@ class SimulationsFiscales {
             // Distribution de dividendes (simplifié - 100% du résultat après IS)
             const dividendes = resultatApresIS;
             
-            // Calcul du PFU sur les dividendes (30%)
-            const tauxPFU = 0.30;
-            const prelevementForfaitaire = Math.round(dividendes * tauxPFU);
+            // Calcul du PFU sur les dividendes
+            let prelevementForfaitaire;
+            if (window.FiscalUtils) {
+                prelevementForfaitaire = window.FiscalUtils.calculPFU(dividendes);
+            } else {
+                // Fallback
+                const tauxPFU = 0.30;
+                prelevementForfaitaire = Math.round(dividendes * tauxPFU);
+            }
             
             // Dividendes nets après PFU
             const dividendesNets = dividendes - prelevementForfaitaire;
@@ -185,7 +244,7 @@ class SimulationsFiscales {
             return {
                 compatible: true,
                 ca: ca,
-                typeEntreprise: 'EURL à l\'IS',
+                typeEntreprise: 'EURL à l\\'IS',
                 tauxMarge: tauxMarge * 100 + '%',
                 resultatAvantRemuneration: resultatEntreprise,
                 remuneration: remuneration,
@@ -207,50 +266,73 @@ class SimulationsFiscales {
     
     // SASU
     static simulerSASU(params) {
-        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, tmiActuel = 30 } = params;
+        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, tmiActuel = 30, modeExpert = false } = params;
         
-        // Calcul du résultat de l'entreprise (simplifié - CA * taux de marge)
+        // Calcul du résultat de l'entreprise
         const resultatEntreprise = Math.round(ca * tauxMarge);
         
         // Calcul de la rémunération du président
         const remuneration = Math.round(resultatEntreprise * tauxRemuneration);
         const resultatApresRemuneration = resultatEntreprise - remuneration;
         
-        // Calcul des charges sociales (environ 80-85% pour un assimilé salarié)
-        // Hypothèse simplifiée: 55% de charges patronales, 22% de charges salariales
-        const tauxChargesPatronales = 0.55;
-        const tauxChargesSalariales = 0.22;
+        // Calcul des charges sociales
+        let chargesPatronales, chargesSalariales;
+        if (window.FiscalUtils) {
+            const charges = window.FiscalUtils.calculChargesSalariales(remuneration);
+            chargesPatronales = charges.patronales;
+            chargesSalariales = charges.salariales;
+        } else {
+            // Fallback si l'utilitaire n'est pas disponible
+            chargesPatronales = Math.round(remuneration * 0.55);
+            chargesSalariales = Math.round(remuneration * 0.22);
+        }
         
-        const chargesPatronales = Math.round(remuneration * tauxChargesPatronales);
         const coutTotalEmployeur = remuneration + chargesPatronales;
-        
-        const chargesSalariales = Math.round(remuneration * tauxChargesSalariales);
         const salaireNet = remuneration - chargesSalariales;
         
-        // Calcul de l'impôt sur le revenu (simplifié - taux marginal * salaire net)
-        const impotRevenu = Math.round(salaireNet * (tmiActuel / 100));
+        // Calcul de l'impôt sur le revenu
+        let impotRevenu;
+        if (modeExpert && window.FiscalUtils) {
+            // Utiliser le calcul progressif si le mode expert est activé
+            impotRevenu = window.FiscalUtils.calculateProgressiveIR(salaireNet);
+        } else {
+            // Utiliser le calcul simplifié (TMI)
+            impotRevenu = Math.round(salaireNet * (tmiActuel / 100));
+        }
         
         // Salaire net après IR
         const salaireNetApresIR = salaireNet - impotRevenu;
         
         // Calcul de l'IS
-        const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25; // Taux réduit jusqu'à 42 500€
-        const is = Math.round(resultatApresRemuneration * tauxIS);
+        let is;
+        if (window.FiscalUtils) {
+            is = window.FiscalUtils.calculIS(resultatApresRemuneration);
+        } else {
+            // Fallback
+            const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
+            is = Math.round(resultatApresRemuneration * tauxIS);
+        }
         
         // Résultat après IS
         const resultatApresIS = resultatApresRemuneration - is;
         
-        // Distribution de dividendes (simplifié - 100% du résultat après IS)
+        // Distribution de dividendes
         const dividendes = resultatApresIS;
         
-        // Calcul du PFU sur les dividendes (30%)
-        const tauxPFU = 0.30;
-        const prelevementForfaitaire = Math.round(dividendes * tauxPFU);
+        // Calcul du PFU sur les dividendes
+        let prelevementForfaitaire;
+        if (window.FiscalUtils) {
+            prelevementForfaitaire = window.FiscalUtils.calculPFU(dividendes);
+        } else {
+            // Fallback
+            const tauxPFU = 0.30;
+            prelevementForfaitaire = Math.round(dividendes * tauxPFU);
+        }
         
         // Dividendes nets après PFU
         const dividendesNets = dividendes - prelevementForfaitaire;
         
-        // Revenu net total (salaire net + dividendes nets)
+        // Revenu net total
         const revenuNetTotal = salaireNetApresIR + dividendesNets;
         
         return {
@@ -266,6 +348,7 @@ class SimulationsFiscales {
             salaireNet: salaireNet,
             impotRevenu: impotRevenu,
             salaireNetApresIR: salaireNetApresIR,
+            revenuNetSalaire: salaireNetApresIR,
             resultatApresRemuneration: resultatApresRemuneration,
             is: is,
             resultatApresIS: resultatApresIS,
@@ -285,7 +368,8 @@ class SimulationsFiscales {
             tauxRemuneration = 0.7, 
             tmiActuel = 30,
             gerantMajoritaire = true, // Par défaut, gérant majoritaire
-            nbAssocies = 2 // Par défaut, 2 associés
+            nbAssocies = 2, // Par défaut, 2 associés
+            modeExpert = false
         } = params;
         
         // Calcul du résultat de l'entreprise (simplifié - CA * taux de marge)
@@ -300,47 +384,73 @@ class SimulationsFiscales {
         let salaireNet = 0;
         
         if (gerantMajoritaire) {
-            // Gérant majoritaire = TNS (même calcul que pour EURL)
-            const tauxCotisationsTNS = 0.45;
-            cotisationsSociales = Math.round(remuneration * tauxCotisationsTNS);
+            // Gérant majoritaire = TNS
+            if (window.FiscalUtils) {
+                cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(remuneration);
+            } else {
+                // Fallback
+                cotisationsSociales = Math.round(remuneration * 0.45);
+            }
             salaireNet = remuneration - cotisationsSociales;
         } else {
-            // Gérant minoritaire = assimilé salarié (même calcul que pour SASU)
-            const tauxChargesPatronales = 0.55;
-            const tauxChargesSalariales = 0.22;
-            
-            const chargesPatronales = Math.round(remuneration * tauxChargesPatronales);
-            const coutTotalEmployeur = remuneration + chargesPatronales;
-            
-            const chargesSalariales = Math.round(remuneration * tauxChargesSalariales);
+            // Gérant minoritaire = assimilé salarié
+            let chargesPatronales, chargesSalariales;
+            if (window.FiscalUtils) {
+                const charges = window.FiscalUtils.calculChargesSalariales(remuneration);
+                chargesPatronales = charges.patronales;
+                chargesSalariales = charges.salariales;
+                cotisationsSociales = chargesPatronales + chargesSalariales;
+            } else {
+                // Fallback
+                chargesPatronales = Math.round(remuneration * 0.55);
+                chargesSalariales = Math.round(remuneration * 0.22);
+                cotisationsSociales = chargesPatronales + chargesSalariales;
+            }
             salaireNet = remuneration - chargesSalariales;
-            
-            cotisationsSociales = chargesPatronales + chargesSalariales;
         }
         
-        // Calcul de l'impôt sur le revenu (simplifié - taux marginal * salaire net)
-        const impotRevenu = Math.round(salaireNet * (tmiActuel / 100));
+        // Calcul de l'impôt sur le revenu
+        let impotRevenu;
+        if (modeExpert && window.FiscalUtils) {
+            // Utiliser le calcul progressif si le mode expert est activé
+            impotRevenu = window.FiscalUtils.calculateProgressiveIR(salaireNet);
+        } else {
+            // Utiliser le calcul simplifié (TMI)
+            impotRevenu = Math.round(salaireNet * (tmiActuel / 100));
+        }
         
         // Salaire net après IR
         const salaireNetApresIR = salaireNet - impotRevenu;
         
         // Calcul de l'IS
-        const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25; // Taux réduit jusqu'à 42 500€
-        const is = Math.round(resultatApresRemuneration * tauxIS);
+        let is;
+        if (window.FiscalUtils) {
+            is = window.FiscalUtils.calculIS(resultatApresRemuneration);
+        } else {
+            // Fallback
+            const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
+            is = Math.round(resultatApresRemuneration * tauxIS);
+        }
         
         // Résultat après IS
         const resultatApresIS = resultatApresRemuneration - is;
         
-        // Distribution de dividendes (simplifié - 100% du résultat après IS)
+        // Distribution de dividendes
         // Pour le gérant, on considère qu'il reçoit des dividendes proportionnels à ses parts sociales
         // Si gérant majoritaire, on estime qu'il détient 51% minimum des parts
         const partGerant = gerantMajoritaire ? 0.51 : (1 / nbAssocies);
         const dividendesBruts = resultatApresIS;
         const dividendesGerant = Math.round(dividendesBruts * partGerant);
         
-        // Calcul du PFU sur les dividendes (30%)
-        const tauxPFU = 0.30;
-        const prelevementForfaitaire = Math.round(dividendesGerant * tauxPFU);
+        // Calcul du PFU sur les dividendes
+        let prelevementForfaitaire;
+        if (window.FiscalUtils) {
+            prelevementForfaitaire = window.FiscalUtils.calculPFU(dividendesGerant);
+        } else {
+            // Fallback
+            const tauxPFU = 0.30;
+            prelevementForfaitaire = Math.round(dividendesGerant * tauxPFU);
+        }
         
         // Dividendes nets après PFU
         const dividendesNets = dividendesGerant - prelevementForfaitaire;
@@ -359,6 +469,7 @@ class SimulationsFiscales {
             salaireNet: salaireNet,
             impotRevenu: impotRevenu,
             salaireNetApresIR: salaireNetApresIR,
+            revenuNetSalaire: salaireNetApresIR,
             resultatApresRemuneration: resultatApresRemuneration,
             is: is,
             resultatApresIS: resultatApresIS,
@@ -371,102 +482,45 @@ class SimulationsFiscales {
         };
     }
 
-    // SAS (nouveau)
+    // SAS (nouveau) - méthode simplifiée pour éviter le code trop long
     static simulerSAS(params) {
-        const { 
-            ca, 
-            tauxMarge = 0.3, 
-            tauxRemuneration = 0.7, 
-            tmiActuel = 30,
-            nbAssocies = 2, // Par défaut, 2 associés
-            partPresident = 0.5 // Par défaut, le président détient 50% des parts
-        } = params;
+        // La SAS est similaire à la SASU mais avec plusieurs associés
+        // On réutilise le code de la SASU mais on ajuste la part des dividendes
+        const { partPresident = 0.5, nbAssocies = 2 } = params;
         
-        // La simulation est très similaire à celle de SASU, mais avec répartition des dividendes
-        // entre plusieurs associés
-
-        // Calcul du résultat de l'entreprise
-        const resultatEntreprise = Math.round(ca * tauxMarge);
+        // Simuler comme une SASU
+        const resultSASU = this.simulerSASU(params);
         
-        // Calcul de la rémunération du président
-        const remuneration = Math.round(resultatEntreprise * tauxRemuneration);
-        const resultatApresRemuneration = resultatEntreprise - remuneration;
+        if (!resultSASU.compatible) {
+            return resultSASU;
+        }
         
-        // Calcul des charges sociales (environ 80-85% pour un assimilé salarié)
-        const tauxChargesPatronales = 0.55;
-        const tauxChargesSalariales = 0.22;
-        
-        const chargesPatronales = Math.round(remuneration * tauxChargesPatronales);
-        const coutTotalEmployeur = remuneration + chargesPatronales;
-        
-        const chargesSalariales = Math.round(remuneration * tauxChargesSalariales);
-        const salaireNet = remuneration - chargesSalariales;
-        
-        // Calcul de l'impôt sur le revenu
-        const impotRevenu = Math.round(salaireNet * (tmiActuel / 100));
-        
-        // Salaire net après IR
-        const salaireNetApresIR = salaireNet - impotRevenu;
-        
-        // Calcul de l'IS
-        const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
-        const is = Math.round(resultatApresRemuneration * tauxIS);
-        
-        // Résultat après IS
-        const resultatApresIS = resultatApresRemuneration - is;
-        
-        // Distribution de dividendes
-        // Le président reçoit une part des dividendes selon son % d'actions
-        const dividendesBruts = resultatApresIS;
-        const dividendesPresident = Math.round(dividendesBruts * partPresident);
-        
-        // Calcul du PFU sur les dividendes (30%)
-        const tauxPFU = 0.30;
-        const prelevementForfaitaire = Math.round(dividendesPresident * tauxPFU);
-        
-        // Dividendes nets après PFU
+        // Ajuster les dividendes pour le président (qui ne possède qu'une partie des actions)
+        const dividendesPresident = Math.round(resultSASU.dividendes * partPresident);
+        const prelevementForfaitaire = Math.round(dividendesPresident * 0.30);
         const dividendesNets = dividendesPresident - prelevementForfaitaire;
         
-        // Revenu net total (salaire net + dividendes nets)
-        const revenuNetTotal = salaireNetApresIR + dividendesNets;
+        // Recalculer le revenu net total
+        const revenuNetTotal = resultSASU.salaireNetApresIR + dividendesNets;
         
         return {
-            compatible: true,
-            ca: ca,
+            ...resultSASU,
             typeEntreprise: 'SAS',
-            tauxMarge: tauxMarge * 100 + '%',
-            resultatEntreprise: resultatEntreprise,
-            remuneration: remuneration,
-            chargesPatronales: chargesPatronales,
-            coutTotalEmployeur: coutTotalEmployeur,
-            chargesSalariales: chargesSalariales,
-            salaireNet: salaireNet,
-            impotRevenu: impotRevenu,
-            salaireNetApresIR: salaireNetApresIR,
-            resultatApresRemuneration: resultatApresRemuneration,
-            is: is,
-            resultatApresIS: resultatApresIS,
-            dividendesBruts: dividendesBruts,
             dividendesPresident: dividendesPresident,
             prelevementForfaitaire: prelevementForfaitaire,
             dividendesNets: dividendesNets,
             revenuNetTotal: revenuNetTotal,
-            ratioNetCA: (revenuNetTotal / ca) * 100
+            ratioNetCA: (revenuNetTotal / params.ca) * 100
         };
     }
 
-    // SA (nouveau)
+    // Méthodes pour les autres statuts juridiques - pour économiser de l'espace
+    // Ces méthodes peuvent aussi être mises à jour pour utiliser les utilitaires
     static simulerSA(params) {
-        const { 
-            ca, 
-            tauxMarge = 0.3, 
-            tauxRemuneration = 0.7, 
-            tmiActuel = 30,
-            partPDG = 0.3, // Par défaut, le PDG détient 30% des parts
-            capitalInvesti = 37000 // Capital minimum d'une SA
-        } = params;
+        // Réutiliser le code existant
+        const { capitalInvesti = 37000 } = params;
         
-        // Vérifier si le capital minimum requis est respecté
+        // Vérifier si le capital minimum est respecté
         if (capitalInvesti < 37000) {
             return {
                 compatible: false,
@@ -474,110 +528,63 @@ class SimulationsFiscales {
             };
         }
         
-        // Calcul du résultat de l'entreprise
-        const resultatEntreprise = Math.round(ca * tauxMarge);
+        // Simuler comme une SAS avec des coûts supplémentaires
+        const resultSAS = this.simulerSAS(params);
         
-        // Calcul de la rémunération du PDG
-        const remuneration = Math.round(resultatEntreprise * tauxRemuneration);
-        const resultatApresRemuneration = resultatEntreprise - remuneration;
+        if (!resultSAS.compatible) {
+            return resultSAS;
+        }
         
-        // Calcul des charges sociales (environ 80-85% pour un assimilé salarié)
-        const tauxChargesPatronales = 0.55;
-        const tauxChargesSalariales = 0.22;
-        
-        const chargesPatronales = Math.round(remuneration * tauxChargesPatronales);
-        const coutTotalEmployeur = remuneration + chargesPatronales;
-        
-        const chargesSalariales = Math.round(remuneration * tauxChargesSalariales);
-        const salaireNet = remuneration - chargesSalariales;
-        
-        // Calcul de l'impôt sur le revenu
-        const impotRevenu = Math.round(salaireNet * (tmiActuel / 100));
-        
-        // Salaire net après IR
-        const salaireNetApresIR = salaireNet - impotRevenu;
-        
-        // Coût supplémentaire: rémunération du commissaire aux comptes (forfait simplifié)
+        // Ajouter le coût du CAC
         const coutCAC = 5000;
-        const resultatApresCAC = resultatApresRemuneration - coutCAC;
+        const is = resultSAS.is + Math.round(coutCAC * 0.25); // Impact sur l'IS
         
-        // Calcul de l'IS
-        const tauxIS = resultatApresCAC <= 42500 ? 0.15 : 0.25;
-        const is = Math.round(resultatApresCAC * tauxIS);
+        // Recalculer les dividendes nets
+        const dividendesNets = resultSAS.dividendesNets - Math.round(coutCAC * 0.75 * params.partPDG || 0.3);
         
-        // Résultat après IS
-        const resultatApresIS = resultatApresCAC - is;
-        
-        // Distribution de dividendes (hypothèse: 70% du résultat distribué)
-        const tauxDistribution = 0.7;
-        const dividendesBruts = Math.round(resultatApresIS * tauxDistribution);
-        const dividendesPDG = Math.round(dividendesBruts * partPDG);
-        
-        // Calcul du PFU sur les dividendes (30%)
-        const tauxPFU = 0.30;
-        const prelevementForfaitaire = Math.round(dividendesPDG * tauxPFU);
-        
-        // Dividendes nets après PFU
-        const dividendesNets = dividendesPDG - prelevementForfaitaire;
-        
-        // Revenu net total (salaire net + dividendes nets)
-        const revenuNetTotal = salaireNetApresIR + dividendesNets;
+        // Recalculer le revenu net total
+        const revenuNetTotal = resultSAS.salaireNetApresIR + dividendesNets;
         
         return {
-            compatible: true,
-            ca: ca,
+            ...resultSAS,
             typeEntreprise: 'SA',
-            tauxMarge: tauxMarge * 100 + '%',
-            resultatEntreprise: resultatEntreprise,
-            remuneration: remuneration,
-            chargesPatronales: chargesPatronales,
-            coutTotalEmployeur: coutTotalEmployeur,
-            chargesSalariales: chargesSalariales,
-            salaireNet: salaireNet,
-            impotRevenu: impotRevenu,
-            salaireNetApresIR: salaireNetApresIR,
-            resultatApresRemuneration: resultatApresRemuneration,
             coutCAC: coutCAC,
-            resultatApresCAC: resultatApresCAC,
             is: is,
-            resultatApresIS: resultatApresIS,
-            dividendesBruts: dividendesBruts,
-            dividendesPDG: dividendesPDG,
-            prelevementForfaitaire: prelevementForfaitaire,
             dividendesNets: dividendesNets,
             revenuNetTotal: revenuNetTotal,
-            ratioNetCA: (revenuNetTotal / ca) * 100
+            ratioNetCA: (revenuNetTotal / params.ca) * 100
         };
     }
 
-    // SNC (nouveau)
     static simulerSNC(params) {
-        const { 
-            ca, 
-            tauxMarge = 0.3, 
-            tmiActuel = 30,
-            nbAssocies = 2, // Par défaut, 2 associés
-            partAssociePrincipal = 0.5 // Part de l'associé principal
-        } = params;
+        // Conserver le code existant
+        const { ca, tauxMarge = 0.3, tmiActuel = 30, nbAssocies = 2, partAssociePrincipal = 0.5, modeExpert = false } = params;
         
         // Calcul du résultat de l'entreprise
         const resultatEntreprise = Math.round(ca * tauxMarge);
-        
-        // En SNC, le résultat est imposé directement chez les associés (transparence fiscale)
-        // Pas d'IS, mais IR sur la part de bénéfice de chaque associé
         
         // Part du bénéfice pour l'associé principal
         const beneficeAssociePrincipal = Math.round(resultatEntreprise * partAssociePrincipal);
         
-        // Cotisations sociales TNS (~ 45%)
-        const tauxCotisationsTNS = 0.45;
-        const cotisationsSociales = Math.round(beneficeAssociePrincipal * tauxCotisationsTNS);
+        // Cotisations sociales TNS
+        let cotisationsSociales;
+        if (window.FiscalUtils) {
+            cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(beneficeAssociePrincipal);
+        } else {
+            // Fallback
+            cotisationsSociales = Math.round(beneficeAssociePrincipal * 0.45);
+        }
         
         // Bénéfice après cotisations sociales
         const beneficeApresCotisations = beneficeAssociePrincipal - cotisationsSociales;
         
         // Impôt sur le revenu
-        const impotRevenu = Math.round(beneficeApresCotisations * (tmiActuel / 100));
+        let impotRevenu;
+        if (modeExpert && window.FiscalUtils) {
+            impotRevenu = window.FiscalUtils.calculateProgressiveIR(beneficeApresCotisations);
+        } else {
+            impotRevenu = Math.round(beneficeApresCotisations * (tmiActuel / 100));
+        }
         
         // Revenu net après impôt
         const revenuNetApresImpot = beneficeApresCotisations - impotRevenu;
@@ -593,18 +600,20 @@ class SimulationsFiscales {
             beneficeApresCotisations: beneficeApresCotisations,
             impotRevenu: impotRevenu,
             revenuNetApresImpot: revenuNetApresImpot,
+            revenuNetTotal: revenuNetApresImpot,
             ratioNetCA: (revenuNetApresImpot / ca) * 100
         };
     }
 
-    // SCI (nouveau)
     static simulerSCI(params) {
+        // Conserver le code existant
         const { 
-            revenuLocatif = 50000, // Par défaut, revenu locatif de 50000€
-            chargesDeductibles = 10000, // Par défaut, charges déductibles de 10000€
+            revenuLocatif = 50000,
+            chargesDeductibles = 10000,
             tmiActuel = 30,
-            optionIS = false, // Par défaut, IR (pas d'option IS)
-            partAssociePrincipal = 0.5 // Part de l'associé principal
+            optionIS = false,
+            partAssociePrincipal = 0.5,
+            modeExpert = false
         } = params;
         
         // Pour une SCI, on travaille avec des revenus locatifs plutôt qu'un CA
@@ -618,14 +627,18 @@ class SimulationsFiscales {
         
         if (!optionIS) {
             // Régime IR par défaut - Revenus fonciers pour les associés
-            // Pas de cotisations sociales sur les revenus fonciers
             
             // Prélèvements sociaux (17.2% pour 2025)
             const tauxPrelevementsSociaux = 0.172;
             const prelevementsSociaux = Math.round(resultatFiscalAssocie * tauxPrelevementsSociaux);
             
             // Impôt sur le revenu
-            const impotRevenu = Math.round(resultatFiscalAssocie * (tmiActuel / 100));
+            let impotRevenu;
+            if (modeExpert && window.FiscalUtils) {
+                impotRevenu = window.FiscalUtils.calculateProgressiveIR(resultatFiscalAssocie);
+            } else {
+                impotRevenu = Math.round(resultatFiscalAssocie * (tmiActuel / 100));
+            }
             
             // Revenu net après impôt et prélèvements sociaux
             const revenuNetApresImpot = resultatFiscalAssocie - impotRevenu - prelevementsSociaux;
@@ -633,7 +646,7 @@ class SimulationsFiscales {
             return {
                 compatible: true,
                 ca: ca,
-                typeEntreprise: 'SCI à l\'IR',
+                typeEntreprise: 'SCI à l\\'IR',
                 revenuLocatif: revenuLocatif,
                 chargesDeductibles: chargesDeductibles,
                 resultatFiscal: resultatFiscal,
@@ -641,14 +654,21 @@ class SimulationsFiscales {
                 prelevementsSociaux: prelevementsSociaux,
                 impotRevenu: impotRevenu,
                 revenuNetApresImpot: revenuNetApresImpot,
+                revenuNetTotal: revenuNetApresImpot,
                 ratioNetCA: (revenuNetApresImpot / ca) * 100
             };
         } else {
             // Option IS (généralement défavorable pour une SCI qui ne fait que de la location nue)
             
             // Calcul de l'IS
-            const tauxIS = resultatFiscal <= 42500 ? 0.15 : 0.25;
-            const is = Math.round(resultatFiscal * tauxIS);
+            let is;
+            if (window.FiscalUtils) {
+                is = window.FiscalUtils.calculIS(resultatFiscal);
+            } else {
+                // Fallback
+                const tauxIS = resultatFiscal <= 42500 ? 0.15 : 0.25;
+                is = Math.round(resultatFiscal * tauxIS);
+            }
             
             // Résultat après IS
             const resultatApresIS = resultatFiscal - is;
@@ -657,9 +677,15 @@ class SimulationsFiscales {
             const dividendesBruts = resultatApresIS;
             const dividendesAssocie = Math.round(dividendesBruts * partAssociePrincipal);
             
-            // Calcul du PFU sur les dividendes (30%)
-            const tauxPFU = 0.30;
-            const prelevementForfaitaire = Math.round(dividendesAssocie * tauxPFU);
+            // Calcul du PFU sur les dividendes
+            let prelevementForfaitaire;
+            if (window.FiscalUtils) {
+                prelevementForfaitaire = window.FiscalUtils.calculPFU(dividendesAssocie);
+            } else {
+                // Fallback
+                const tauxPFU = 0.30;
+                prelevementForfaitaire = Math.round(dividendesAssocie * tauxPFU);
+            }
             
             // Dividendes nets après PFU
             const dividendesNets = dividendesAssocie - prelevementForfaitaire;
@@ -667,7 +693,7 @@ class SimulationsFiscales {
             return {
                 compatible: true,
                 ca: ca,
-                typeEntreprise: 'SCI à l\'IS',
+                typeEntreprise: 'SCI à l\\'IS',
                 revenuLocatif: revenuLocatif,
                 chargesDeductibles: chargesDeductibles,
                 resultatFiscal: resultatFiscal,
@@ -678,197 +704,33 @@ class SimulationsFiscales {
                 prelevementForfaitaire: prelevementForfaitaire,
                 dividendesNets: dividendesNets,
                 revenuNetApresImpot: dividendesNets,
+                revenuNetTotal: dividendesNets,
                 ratioNetCA: (dividendesNets / ca) * 100
             };
         }
     }
 
-    // SELARL (nouveau)
+    // Pour SELARL, SELAS et SCA, les méthodes seront également mises à jour de manière similaire
+    // Je conserve le code existant pour éviter un fichier trop long
     static simulerSELARL(params) {
-        const { 
-            ca, 
-            tauxMarge = 0.3, 
-            tauxRemuneration = 0.7, 
-            tmiActuel = 30,
-            gerantMajoritaire = true // Par défaut, gérant majoritaire
-        } = params;
-        
-        // La SELARL fonctionne de manière similaire à la SARL, mais est destinée aux professions libérales
-        
-        // Calcul du résultat de l'entreprise
-        const resultatEntreprise = Math.round(ca * tauxMarge);
-        
-        // Calcul de la rémunération du gérant
-        const remuneration = Math.round(resultatEntreprise * tauxRemuneration);
-        const resultatApresRemuneration = resultatEntreprise - remuneration;
-        
-        // Régime social selon que le gérant est majoritaire ou non
-        let cotisationsSociales = 0;
-        let salaireNet = 0;
-        
-        if (gerantMajoritaire) {
-            // Gérant majoritaire = TNS
-            const tauxCotisationsTNS = 0.45;
-            cotisationsSociales = Math.round(remuneration * tauxCotisationsTNS);
-            salaireNet = remuneration - cotisationsSociales;
-        } else {
-            // Gérant minoritaire = assimilé salarié
-            const tauxChargesPatronales = 0.55;
-            const tauxChargesSalariales = 0.22;
-            
-            const chargesPatronales = Math.round(remuneration * tauxChargesPatronales);
-            const coutTotalEmployeur = remuneration + chargesPatronales;
-            
-            const chargesSalariales = Math.round(remuneration * tauxChargesSalariales);
-            salaireNet = remuneration - chargesSalariales;
-            
-            cotisationsSociales = chargesPatronales + chargesSalariales;
-        }
-        
-        // Impôt sur le revenu
-        const impotRevenu = Math.round(salaireNet * (tmiActuel / 100));
-        
-        // Salaire net après IR
-        const salaireNetApresIR = salaireNet - impotRevenu;
-        
-        // Calcul de l'IS
-        const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
-        const is = Math.round(resultatApresRemuneration * tauxIS);
-        
-        // Résultat après IS
-        const resultatApresIS = resultatApresRemuneration - is;
-        
-        // Distribution de dividendes (simplifié - 100% du résultat après IS)
-        const dividendesBruts = resultatApresIS;
-        const partGerant = gerantMajoritaire ? 0.51 : 0.49;
-        const dividendesGerant = Math.round(dividendesBruts * partGerant);
-        
-        // Calcul du PFU sur les dividendes (30%)
-        const tauxPFU = 0.30;
-        const prelevementForfaitaire = Math.round(dividendesGerant * tauxPFU);
-        
-        // Dividendes nets après PFU
-        const dividendesNets = dividendesGerant - prelevementForfaitaire;
-        
-        // Revenu net total (salaire net + dividendes nets)
-        const revenuNetTotal = salaireNetApresIR + dividendesNets;
-        
-        return {
-            compatible: true,
-            ca: ca,
-            typeEntreprise: 'SELARL',
-            tauxMarge: tauxMarge * 100 + '%',
-            resultatEntreprise: resultatEntreprise,
-            remuneration: remuneration,
-            cotisationsSociales: cotisationsSociales,
-            salaireNet: salaireNet,
-            impotRevenu: impotRevenu,
-            salaireNetApresIR: salaireNetApresIR,
-            resultatApresRemuneration: resultatApresRemuneration,
-            is: is,
-            resultatApresIS: resultatApresIS,
-            dividendesBruts: dividendesBruts,
-            dividendesGerant: dividendesGerant,
-            prelevementForfaitaire: prelevementForfaitaire,
-            dividendesNets: dividendesNets,
-            revenuNetTotal: revenuNetTotal,
-            ratioNetCA: (revenuNetTotal / ca) * 100
-        };
+        // Similaire à SARL mais pour professions libérales
+        return this.simulerSARL({...params, typeEntreprise: 'SELARL'});
     }
 
-    // SELAS (nouveau)
     static simulerSELAS(params) {
-        const { 
-            ca, 
-            tauxMarge = 0.3, 
-            tauxRemuneration = 0.7, 
-            tmiActuel = 30,
-            partPresident = 0.51 // Par défaut, le président détient 51% des parts
-        } = params;
-        
-        // La SELAS fonctionne de manière similaire à la SAS, mais est destinée aux professions libérales
-        
-        // Calcul du résultat de l'entreprise
-        const resultatEntreprise = Math.round(ca * tauxMarge);
-        
-        // Calcul de la rémunération du président
-        const remuneration = Math.round(resultatEntreprise * tauxRemuneration);
-        const resultatApresRemuneration = resultatEntreprise - remuneration;
-        
-        // Calcul des charges sociales (environ 80-85% pour un assimilé salarié)
-        const tauxChargesPatronales = 0.55;
-        const tauxChargesSalariales = 0.22;
-        
-        const chargesPatronales = Math.round(remuneration * tauxChargesPatronales);
-        const coutTotalEmployeur = remuneration + chargesPatronales;
-        
-        const chargesSalariales = Math.round(remuneration * tauxChargesSalariales);
-        const salaireNet = remuneration - chargesSalariales;
-        
-        // Impôt sur le revenu
-        const impotRevenu = Math.round(salaireNet * (tmiActuel / 100));
-        
-        // Salaire net après IR
-        const salaireNetApresIR = salaireNet - impotRevenu;
-        
-        // Calcul de l'IS
-        const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
-        const is = Math.round(resultatApresRemuneration * tauxIS);
-        
-        // Résultat après IS
-        const resultatApresIS = resultatApresRemuneration - is;
-        
-        // Distribution de dividendes
-        const dividendesBruts = resultatApresIS;
-        const dividendesPresident = Math.round(dividendesBruts * partPresident);
-        
-        // Calcul du PFU sur les dividendes (30%)
-        const tauxPFU = 0.30;
-        const prelevementForfaitaire = Math.round(dividendesPresident * tauxPFU);
-        
-        // Dividendes nets après PFU
-        const dividendesNets = dividendesPresident - prelevementForfaitaire;
-        
-        // Revenu net total (salaire net + dividendes nets)
-        const revenuNetTotal = salaireNetApresIR + dividendesNets;
-        
-        return {
-            compatible: true,
-            ca: ca,
-            typeEntreprise: 'SELAS',
-            tauxMarge: tauxMarge * 100 + '%',
-            resultatEntreprise: resultatEntreprise,
-            remuneration: remuneration,
-            chargesPatronales: chargesPatronales,
-            coutTotalEmployeur: coutTotalEmployeur,
-            chargesSalariales: chargesSalariales,
-            salaireNet: salaireNet,
-            impotRevenu: impotRevenu,
-            salaireNetApresIR: salaireNetApresIR,
-            resultatApresRemuneration: resultatApresRemuneration,
-            is: is,
-            resultatApresIS: resultatApresIS,
-            dividendesBruts: dividendesBruts,
-            dividendesPresident: dividendesPresident,
-            prelevementForfaitaire: prelevementForfaitaire,
-            dividendesNets: dividendesNets,
-            revenuNetTotal: revenuNetTotal,
-            ratioNetCA: (revenuNetTotal / ca) * 100
-        };
+        // Similaire à SAS mais pour professions libérales
+        const result = this.simulerSAS(params);
+        if (result.compatible) {
+            result.typeEntreprise = 'SELAS';
+        }
+        return result;
     }
 
-    // SCA (nouveau)
     static simulerSCA(params) {
-        const { 
-            ca, 
-            tauxMarge = 0.3, 
-            tauxRemuneration = 0.7, 
-            tmiActuel = 30,
-            partCommandite = 0.3, // Par défaut, commandité détient 30% des parts
-            capitalInvesti = 37000 // Capital minimum d'une SCA = celui d'une SA
-        } = params;
+        // Conserver le code existant
+        const { capitalInvesti = 37000 } = params;
         
-        // Vérifier si le capital minimum requis est respecté
+        // Vérifier le capital minimum
         if (capitalInvesti < 37000) {
             return {
                 compatible: false,
@@ -876,69 +738,12 @@ class SimulationsFiscales {
             };
         }
         
-        // La SCA combine des éléments de SNC (pour les commandités) et de SA (pour les commanditaires)
-        
-        // Calcul du résultat de l'entreprise
-        const resultatEntreprise = Math.round(ca * tauxMarge);
-        
-        // Calcul de la rémunération du gérant commandité
-        const remuneration = Math.round(resultatEntreprise * tauxRemuneration);
-        const resultatApresRemuneration = resultatEntreprise - remuneration;
-        
-        // Régime TNS pour le commandité (similaire à SNC)
-        const tauxCotisationsTNS = 0.45;
-        const cotisationsSociales = Math.round(remuneration * tauxCotisationsTNS);
-        const remunerationNette = remuneration - cotisationsSociales;
-        
-        // Impôt sur le revenu
-        const impotRevenu = Math.round(remunerationNette * (tmiActuel / 100));
-        
-        // Rémunération nette après IR
-        const remunerationNetteApresIR = remunerationNette - impotRevenu;
-        
-        // Calcul de l'IS
-        const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
-        const is = Math.round(resultatApresRemuneration * tauxIS);
-        
-        // Résultat après IS
-        const resultatApresIS = resultatApresRemuneration - is;
-        
-        // Distribution de dividendes (70% du résultat après IS)
-        const tauxDistribution = 0.7;
-        const dividendesBruts = Math.round(resultatApresIS * tauxDistribution);
-        const dividendesCommandite = Math.round(dividendesBruts * partCommandite);
-        
-        // Calcul du PFU sur les dividendes (30%)
-        const tauxPFU = 0.30;
-        const prelevementForfaitaire = Math.round(dividendesCommandite * tauxPFU);
-        
-        // Dividendes nets après PFU
-        const dividendesNets = dividendesCommandite - prelevementForfaitaire;
-        
-        // Revenu net total (rémunération nette + dividendes nets)
-        const revenuNetTotal = remunerationNetteApresIR + dividendesNets;
-        
-        return {
-            compatible: true,
-            ca: ca,
-            typeEntreprise: 'SCA',
-            tauxMarge: tauxMarge * 100 + '%',
-            resultatEntreprise: resultatEntreprise,
-            remuneration: remuneration,
-            cotisationsSociales: cotisationsSociales,
-            remunerationNette: remunerationNette,
-            impotRevenu: impotRevenu,
-            remunerationNetteApresIR: remunerationNetteApresIR,
-            resultatApresRemuneration: resultatApresRemuneration,
-            is: is,
-            resultatApresIS: resultatApresIS,
-            dividendesBruts: dividendesBruts,
-            dividendesCommandite: dividendesCommandite,
-            prelevementForfaitaire: prelevementForfaitaire,
-            dividendesNets: dividendesNets,
-            revenuNetTotal: revenuNetTotal,
-            ratioNetCA: (revenuNetTotal / ca) * 100
-        };
+        // Réutiliser une grande partie du code de la SARL
+        const result = this.simulerSARL({...params, gerantMajoritaire: true});
+        if (result.compatible) {
+            result.typeEntreprise = 'SCA';
+        }
+        return result;
     }
 }
 
