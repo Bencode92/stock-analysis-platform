@@ -1,5 +1,5 @@
 // fiscal-guide.js - Simulateur fiscal simplifié pour l'onglet Guide fiscal
-// Version 3.0 - Mai 2025 - Calculs avancés avec tranches progressives IR et optimisation
+// Version 3.1 - Mai 2025 - Optimisation spécifique par statut juridique
 
 document.addEventListener('DOMContentLoaded', function() {
     // S'assurer que l'onglet Guide fiscal initialise correctement ce code
@@ -1003,6 +1003,29 @@ function runComparison() {
     const shouldOptimize = params.modeExpert && document.getElementById('optimization-info') && 
                           !document.getElementById('optimization-info').classList.contains('hidden');
     
+    // Définir les stratégies d'optimisation par type de statut
+    // Nouvelle logique: certains statuts préfèrent moins de rémunération, d'autres plus
+    const optimisationParStatut = {
+        // Structures assimilées salarié: charge lourdes (favoriser dividendes)
+        'sasu': { ratioMin: 0, ratioMax: 1, favoriserDividendes: true },
+        'sas': { ratioMin: 0, ratioMax: 1, favoriserDividendes: true },
+        'sa': { ratioMin: 0, ratioMax: 1, favoriserDividendes: true },
+        'selas': { ratioMin: 0, ratioMax: 1, favoriserDividendes: true },
+        
+        // Structures TNS: charges moins lourdes (plus équilibré)
+        'eurlIS': { ratioMin: 0, ratioMax: 1, favoriserDividendes: false },
+        'sarl': { ratioMin: 0, ratioMax: 1, favoriserDividendes: false },
+        'selarl': { ratioMin: 0, ratioMax: 1, favoriserDividendes: false },
+        'sca': { ratioMin: 0, ratioMax: 1, favoriserDividendes: false },
+        
+        // Structures sans distinction rémunération/dividendes (pas d'optimisation)
+        'micro': { ratioMin: 1, ratioMax: 1, favoriserDividendes: false }, // Tout en rémunération
+        'ei': { ratioMin: 1, ratioMax: 1, favoriserDividendes: false }, // Tout en rémunération
+        'eurl': { ratioMin: 1, ratioMax: 1, favoriserDividendes: false }, // Tout en rémunération
+        'snc': { ratioMin: 1, ratioMax: 1, favoriserDividendes: false }, // Tout en rémunération
+        'sci': { ratioMin: 1, ratioMax: 1, favoriserDividendes: false } // Pas de rémunération pour SCI
+    };
+    
     // Associer chaque statut à sa fonction de simulation et son nom d'affichage
     const statutsComplets = {
         'micro': { 
@@ -1037,10 +1060,15 @@ function runComparison() {
         'eurlIS': { 
             nom: 'EURL à l\'IS', 
             simuler: () => {
-                // Si optimisation activée, trouver le meilleur ratio
+                // Si optimisation activée, trouver le meilleur ratio selon les contraintes du statut
                 if (shouldOptimize) {
+                    const config = optimisationParStatut['eurlIS'];
                     const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
-                        params,
+                        { ...params, 
+                          ratioMin: config.ratioMin, 
+                          ratioMax: config.ratioMax, 
+                          favoriserDividendes: config.favoriserDividendes 
+                        },
                         (p) => window.SimulationsFiscales.simulerEURL({...p, optionIS: true})
                     );
                     return optimisation.resultat;
@@ -1059,10 +1087,15 @@ function runComparison() {
         'sasu': { 
             nom: 'SASU', 
             simuler: () => {
-                // Si optimisation activée, trouver le meilleur ratio
+                // Si optimisation activée, trouver le meilleur ratio selon les contraintes du statut
                 if (shouldOptimize) {
+                    const config = optimisationParStatut['sasu'];
                     const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
-                        params,
+                        { ...params, 
+                          ratioMin: config.ratioMin, 
+                          ratioMax: config.ratioMax, 
+                          favoriserDividendes: config.favoriserDividendes 
+                        },
                         (p) => window.SimulationsFiscales.simulerSASU(p)
                     );
                     return optimisation.resultat;
@@ -1080,10 +1113,15 @@ function runComparison() {
         'sarl': { 
             nom: 'SARL', 
             simuler: () => {
-                // Si optimisation activée, trouver le meilleur ratio
+                // Si optimisation activée, trouver le meilleur ratio selon les contraintes du statut
                 if (shouldOptimize) {
+                    const config = optimisationParStatut['sarl'];
                     const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
-                        params,
+                        { ...params, 
+                          ratioMin: config.ratioMin, 
+                          ratioMax: config.ratioMax, 
+                          favoriserDividendes: config.favoriserDividendes 
+                        },
                         (p) => window.SimulationsFiscales.simulerSARL({...p, gerantMajoritaire: true})
                     );
                     return optimisation.resultat;
@@ -1102,10 +1140,15 @@ function runComparison() {
         'sas': { 
             nom: 'SAS', 
             simuler: () => {
-                // Si optimisation activée, trouver le meilleur ratio
+                // Si optimisation activée, trouver le meilleur ratio selon les contraintes du statut
                 if (shouldOptimize) {
+                    const config = optimisationParStatut['sas'];
                     const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
-                        params,
+                        { ...params, 
+                          ratioMin: config.ratioMin, 
+                          ratioMax: config.ratioMax, 
+                          favoriserDividendes: config.favoriserDividendes 
+                        },
                         (p) => window.SimulationsFiscales.simulerSAS(p)
                     );
                     return optimisation.resultat;
@@ -1123,10 +1166,15 @@ function runComparison() {
         'sa': { 
             nom: 'SA', 
             simuler: () => {
-                // Si optimisation activée, trouver le meilleur ratio
+                // Si optimisation activée, trouver le meilleur ratio selon les contraintes du statut
                 if (shouldOptimize) {
+                    const config = optimisationParStatut['sa'];
                     const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
-                        params,
+                        { ...params, 
+                          ratioMin: config.ratioMin, 
+                          ratioMax: config.ratioMax, 
+                          favoriserDividendes: config.favoriserDividendes 
+                        },
                         (p) => window.SimulationsFiscales.simulerSA(p)
                     );
                     return optimisation.resultat;
@@ -1162,10 +1210,15 @@ function runComparison() {
         'selarl': { 
             nom: 'SELARL', 
             simuler: () => {
-                // Si optimisation activée, trouver le meilleur ratio
+                // Si optimisation activée, trouver le meilleur ratio selon les contraintes du statut
                 if (shouldOptimize) {
+                    const config = optimisationParStatut['selarl'];
                     const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
-                        params,
+                        { ...params, 
+                          ratioMin: config.ratioMin, 
+                          ratioMax: config.ratioMax, 
+                          favoriserDividendes: config.favoriserDividendes 
+                        },
                         (p) => window.SimulationsFiscales.simulerSELARL(p)
                     );
                     return optimisation.resultat;
@@ -1183,10 +1236,15 @@ function runComparison() {
         'selas': { 
             nom: 'SELAS', 
             simuler: () => {
-                // Si optimisation activée, trouver le meilleur ratio
+                // Si optimisation activée, trouver le meilleur ratio selon les contraintes du statut
                 if (shouldOptimize) {
+                    const config = optimisationParStatut['selas'];
                     const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
-                        params,
+                        { ...params, 
+                          ratioMin: config.ratioMin, 
+                          ratioMax: config.ratioMax, 
+                          favoriserDividendes: config.favoriserDividendes 
+                        },
                         (p) => window.SimulationsFiscales.simulerSELAS(p)
                     );
                     return optimisation.resultat;
@@ -1204,10 +1262,15 @@ function runComparison() {
         'sca': { 
             nom: 'SCA', 
             simuler: () => {
-                // Si optimisation activée, trouver le meilleur ratio
+                // Si optimisation activée, trouver le meilleur ratio selon les contraintes du statut
                 if (shouldOptimize) {
+                    const config = optimisationParStatut['sca'];
                     const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
-                        params,
+                        { ...params, 
+                          ratioMin: config.ratioMin, 
+                          ratioMax: config.ratioMax, 
+                          favoriserDividendes: config.favoriserDividendes 
+                        },
                         (p) => window.SimulationsFiscales.simulerSCA(p)
                     );
                     return optimisation.resultat;
