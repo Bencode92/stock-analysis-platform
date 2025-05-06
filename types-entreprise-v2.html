@@ -522,6 +522,134 @@
             transition: width 0.3s ease;
             box-shadow: 0 0 10px rgba(0, 255, 135, 0.4);
         }
+        
+        /* Style pour les badges de mode avancé */
+        .mode-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.25rem;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-left: 0.5rem;
+        }
+        
+        .mode-badge-simple {
+            background-color: rgba(59, 130, 246, 0.2);
+            color: #60A5FA;
+        }
+        
+        .mode-badge-advanced {
+            background-color: rgba(236, 72, 153, 0.2);
+            color: #EC4899;
+        }
+        
+        /* Toggle switch pour le mode expert */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+            margin: 0 0.5rem;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            border-radius: 24px;
+            transition: .4s;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            border-radius: 50%;
+            transition: .4s;
+        }
+        
+        input:checked + .toggle-slider {
+            background-color: rgba(236, 72, 153, 0.6);
+        }
+        
+        input:focus + .toggle-slider {
+            box-shadow: 0 0 1px #EC4899;
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+        
+        /* Tooltip d'info sur le mode expert */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+        
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 240px;
+            background-color: rgba(1, 42, 74, 0.95);
+            color: #fff;
+            text-align: left;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.75rem;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .tooltip:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        /* Styles pour les boutons d'optimisation */
+        .optimize-button {
+            display: inline-flex;
+            align-items: center;
+            background-color: rgba(139, 92, 246, 0.2);
+            color: #A78BFA;
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            border-radius: 4px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+        }
+        
+        .optimize-button:hover {
+            background-color: rgba(139, 92, 246, 0.3);
+            transform: translateY(-1px);
+        }
+        
+        .optimize-button i {
+            margin-right: 0.5rem;
+        }
     </style>
 </head>
 <body class="dark">
@@ -634,6 +762,7 @@
                 <div class="tab-item">Comparatif des statuts</div>
                 <div class="tab-item">Guide fiscal</div>
                 <div class="tab-item">Barèmes 2025</div>
+                <div class="tab-item">Méthodologie</div>
                 <div class="tab-item">Historique</div>
             </div>
 
@@ -722,7 +851,7 @@
             </p>
             <p class="flex items-center">
                 <i class="fas fa-clock text-green-400 mr-2"></i>
-                Dernière mise à jour: <span class="text-green-400 font-medium ml-1 update-time" id="lastUpdateDate">10/04/2025</span>
+                Dernière mise à jour: <span class="text-green-400 font-medium ml-1 update-time" id="lastUpdateDate">10/05/2025</span>
             </p>
         </div>
     </footer>
@@ -755,6 +884,8 @@
     <script src="js/glossary.js?v=20250430_1" defer></script>
     <!-- Script du comparatif des statuts juridiques -->
     <script src="js/comparatif-status.js?v=20250505_1" defer></script>
+    <!-- Utilitaires de calcul fiscal -->
+    <script src="js/fiscal-utils.js?v=20250506_1" defer></script>
     <!-- Script du moteur de simulation fiscale -->
     <script src="js/fiscal-simulation.js?v=20250506_1" defer></script>
     <!-- Script du guide fiscal avec simulateur -->
@@ -844,6 +975,11 @@
         document.addEventListener('legalStatusesLoaded', function() {
             console.log("Événement legalStatusesLoaded reçu - les données de statuts sont disponibles!");
             console.log("Vérification de legalStatuses après l'événement:", window.legalStatuses ? Object.keys(window.legalStatuses).length : "non disponible");
+        });
+        
+        // Écouteur pour les utilitaires fiscaux
+        document.addEventListener('fiscalUtilsReady', function() {
+            console.log("Utilitaires fiscaux chargés et prêts à l'emploi");
         });
         
         // Écouteur pour le glossaire juridique
