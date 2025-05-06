@@ -409,14 +409,14 @@ window.initComparatifStatuts = function() {
         // Injecter le CSS
         injectCSS();
 
-        // Créer la structure HTML de base simplifiée - SANS LA PARTIE TITRE ET DESCRIPTION EN BLANC
+        // Créer la structure HTML de base simplifiée - TOUT A ÉTÉ SUPPRIMÉ AU DÉBUT
         container.innerHTML = `
             <div class="comparatif-container">
                 <div class="comparatif-header">
-                    <!-- Suppression complète du titre et de la description -->
+                    <!-- Aucun texte d'introduction -->
                     
                     <div class="comparatif-filters">
-                        <!-- Conservation uniquement des boutons de filtrage par catégorie -->
+                        <!-- Uniquement les boutons de filtrage par catégorie -->
                         <div class="criteria-buttons" id="criteria-buttons">
                             <!-- Les boutons seront générés ici -->
                         </div>
@@ -499,17 +499,7 @@ window.initComparatifStatuts = function() {
         // Variables pour le filtrage
         let selectedCriterion = 'all';
         let searchTerm = '';
-        let compareStatuts = [];
         
-        // Fonction simplifiée pour la fonctionnalité de comparaison
-        function initComparisonEvents() {
-            // Fonction simplifiée - fonctionnalité de comparaison désactivée
-            console.log("Fonctionnalité de comparaison désactivée");
-        }
-        
-        // Initialiser la version simplifiée
-        initComparisonEvents();
-
         // Charger et afficher les données
         loadStatutData();
 
