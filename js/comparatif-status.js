@@ -388,10 +388,11 @@ window.initComparatifStatuts = function() {
                 color: #FF6B6B;
             }
 
-            .add-comparison-btn {
+            .add-comparison-btn,
+            .add-comparison-select {
                 padding: 0.375rem 0.75rem;
                 background-color: rgba(1, 42, 74, 0.5);
-                border: 1px dashed rgba(255, 255, 255, 0.3);
+                border: 1px solid rgba(0, 255, 135, 0.3);
                 border-radius: 4px;
                 font-size: 0.8125rem;
                 color: rgba(255, 255, 255, 0.7);
@@ -403,6 +404,27 @@ window.initComparatifStatuts = function() {
                 background-color: rgba(1, 42, 74, 0.7);
                 border-color: rgba(255, 255, 255, 0.5);
                 color: #fff;
+            }
+            
+            .status-dropdown {
+                margin-right: 0.5rem;
+                width: 200px;
+                padding: 0.5rem;
+                background-color: rgba(1, 42, 74, 0.7);
+                border: 1px solid rgba(0, 255, 135, 0.3);
+                border-radius: 4px;
+                color: #E6E6E6;
+                appearance: none;
+                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2300FF87' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+                background-repeat: no-repeat;
+                background-position: calc(100% - 0.75rem) center;
+                padding-right: 2rem;
+            }
+            
+            .status-dropdown:focus {
+                outline: none;
+                border-color: rgba(0, 255, 135, 0.5);
+                box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2);
             }
 
             /* 6. Tooltips informatifs */
@@ -427,44 +449,6 @@ window.initComparatifStatuts = function() {
                 box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
                 border: 1px solid rgba(0, 255, 135, 0.3);
                 margin-bottom: 5px;
-            }
-
-            /* Navigation par onglets dans le tableau */
-            .table-tabs {
-                display: flex;
-                overflow-x: auto;
-                border-bottom: 1px solid rgba(1, 42, 74, 0.8);
-                margin-bottom: 1rem;
-            }
-
-            .table-tab {
-                padding: 0.75rem 1.25rem;
-                font-size: 0.875rem;
-                font-weight: 500;
-                color: rgba(255, 255, 255, 0.7);
-                background: none;
-                border: none;
-                cursor: pointer;
-                position: relative;
-                white-space: nowrap;
-            }
-
-            .table-tab:hover {
-                color: rgba(255, 255, 255, 0.9);
-            }
-
-            .table-tab.active {
-                color: #00FF87;
-            }
-
-            .table-tab.active::after {
-                content: '';
-                position: absolute;
-                left: 0;
-                right: 0;
-                bottom: -1px;
-                height: 2px;
-                background-color: #00FF87;
             }
 
             /* Boutons d'action flottants */
@@ -525,15 +509,12 @@ window.initComparatifStatuts = function() {
                         Utilisez les filtres ci-dessous pour personnaliser l'affichage selon vos besoins.
                     </p>
                     
-                    <div class="table-tabs">
-                        <button class="table-tab active" data-category="general">Général</button>
-                        <button class="table-tab" data-category="fiscal">Fiscal</button>
-                        <button class="table-tab" data-category="social">Social</button>
-                        <button class="table-tab" data-category="creation">Création & Gestion</button>
-                    </div>
-                    
                     <div class="comparison-bar">
                         <div class="comparison-title">Comparer directement:</div>
+                        <select id="status-dropdown" class="status-dropdown">
+                            <option value="">Sélectionner un statut...</option>
+                            <!-- Les options seront générées ici -->
+                        </select>
                         <div class="comparison-items" id="comparison-items">
                             <!-- Les éléments de comparaison seront ici -->
                         </div>
@@ -643,7 +624,6 @@ window.initComparatifStatuts = function() {
         let selectedCriterion = 'all';
         let searchTerm = '';
         let compareStatuts = [];
-        let selectedCategory = 'general';
         
         // Initialiser les événements de comparaison
         initComparisonEvents();
@@ -668,16 +648,6 @@ window.initComparatifStatuts = function() {
             updateTable();
         });
         
-        // Ajouter les écouteurs d'événements pour les onglets
-        document.querySelectorAll('.table-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.table-tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                selectedCategory = tab.getAttribute('data-category');
-                updateTable();
-            });
-        });
-        
         // Ajouter les écouteurs d'événements pour les boutons d'action
         document.getElementById('download-pdf-btn').addEventListener('click', () => {
             alert('Fonctionnalité de téléchargement PDF à implémenter');
@@ -694,6 +664,35 @@ window.initComparatifStatuts = function() {
         // Fonction pour initialiser les événements de comparaison
         function initComparisonEvents() {
             const addComparisonBtn = document.getElementById('add-comparison-btn');
+            const statusDropdown = document.getElementById('status-dropdown');
+            
+            // Remplir la liste déroulante avec les statuts disponibles
+            function populateStatusDropdown() {
+                if (window.legalStatuses) {
+                    statusDropdown.innerHTML = '<option value="">Sélectionner un statut...</option>';
+                    
+                    // Trier les statuts par nom
+                    const statuts = Object.values(window.legalStatuses).sort((a, b) => 
+                        a.shortName.localeCompare(b.shortName));
+                    
+                    statuts.forEach(statut => {
+                        const option = document.createElement('option');
+                        option.value = statut.shortName;
+                        option.textContent = statut.shortName;
+                        statusDropdown.appendChild(option);
+                    });
+                }
+            }
+            
+            // Gérer le changement de sélection dans la liste déroulante
+            statusDropdown.addEventListener('change', () => {
+                if (statusDropdown.value) {
+                    addToComparison(statusDropdown.value);
+                    statusDropdown.value = ''; // Réinitialiser après la sélection
+                }
+            });
+            
+            // Gérer le clic sur le bouton Ajouter
             addComparisonBtn.addEventListener('click', () => {
                 if (window.legalStatuses) {
                     // Créer une liste des statuts disponibles pour sélection
@@ -712,6 +711,19 @@ window.initComparatifStatuts = function() {
                     }
                 }
             });
+            
+            // Initialiser la liste déroulante quand les données sont disponibles
+            if (window.legalStatuses) {
+                populateStatusDropdown();
+            } else {
+                // Vérifier périodiquement si les données sont disponibles
+                const checkInterval = setInterval(() => {
+                    if (window.legalStatuses) {
+                        populateStatusDropdown();
+                        clearInterval(checkInterval);
+                    }
+                }, 500);
+            }
         }
         
         // Fonction pour ajouter un statut à la comparaison
@@ -832,88 +844,46 @@ window.initComparatifStatuts = function() {
             }
         }
 
-        // Fonction pour obtenir les propriétés à afficher selon la catégorie et le critère sélectionnés
-        function getColumnsForCategoryAndCriterion(category, criterion) {
-            // Si nous sommes en mode comparaison, le critère est ignoré et on affiche selon la catégorie
-            if (compareStatuts.length > 0) {
-                switch (category) {
-                    case 'general':
-                        return [
-                            { key: 'name', label: 'Statut' },
-                            { key: 'associes', label: 'Nombre d\'associés' },
-                            { key: 'capital', label: 'Capital social' },
-                            { key: 'responsabilite', label: 'Responsabilité' }
-                        ];
-                    case 'fiscal':
-                        return [
-                            { key: 'name', label: 'Statut' },
-                            { key: 'fiscalite', label: 'Régime fiscal' },
-                            { key: 'fiscaliteOption', label: 'Option fiscale' },
-                            { key: 'regimeTVA', label: 'Régime TVA' }
-                        ];
-                    case 'social':
-                        return [
-                            { key: 'name', label: 'Statut' },
-                            { key: 'regimeSocial', label: 'Régime social' },
-                            { key: 'chargesSociales', label: 'Charges sociales' },
-                            { key: 'protectionPatrimoine', label: 'Protection patrimoine' }
-                        ];
-                    case 'creation':
-                        return [
-                            { key: 'name', label: 'Statut' },
-                            { key: 'formalites', label: 'Formalités' },
-                            { key: 'publicationComptes', label: 'Publication comptes' },
-                            { key: 'plafondCA', label: 'Plafond CA' }
-                        ];
-                    default:
-                        return [
-                            { key: 'name', label: 'Statut' },
-                            { key: 'associes', label: 'Nombre d\'associés' },
-                            { key: 'capital', label: 'Capital social' },
-                            { key: 'responsabilite', label: 'Responsabilité' }
-                        ];
-                }
-            } else {
-                // Dans le mode normal, on suit le critère sélectionné
-                switch (criterion) {
-                    case 'basic':
-                        return [
-                            { key: 'name', label: 'Statut' },
-                            { key: 'associes', label: 'Nombre d\'associés' },
-                            { key: 'capital', label: 'Capital social' },
-                            { key: 'responsabilite', label: 'Responsabilité' }
-                        ];
-                    case 'fiscal':
-                        return [
-                            { key: 'name', label: 'Statut' },
-                            { key: 'fiscalite', label: 'Régime fiscal' },
-                            { key: 'fiscaliteOption', label: 'Option fiscale' },
-                            { key: 'regimeTVA', label: 'Régime TVA' }
-                        ];
-                    case 'social':
-                        return [
-                            { key: 'name', label: 'Statut' },
-                            { key: 'regimeSocial', label: 'Régime social' },
-                            { key: 'chargesSociales', label: 'Charges sociales' },
-                            { key: 'protectionPatrimoine', label: 'Protection patrimoine' }
-                        ];
-                    case 'creation':
-                        return [
-                            { key: 'name', label: 'Statut' },
-                            { key: 'formalites', label: 'Formalités' },
-                            { key: 'publicationComptes', label: 'Publication comptes' },
-                            { key: 'plafondCA', label: 'Plafond CA' }
-                        ];
-                    default: // 'all'
-                        return [
-                            { key: 'name', label: 'Statut' },
-                            { key: 'associes', label: 'Nombre d\'associés' },
-                            { key: 'capital', label: 'Capital social' },
-                            { key: 'responsabilite', label: 'Responsabilité' },
-                            { key: 'fiscalite', label: 'Régime fiscal' },
-                            { key: 'regimeSocial', label: 'Régime social' }
-                        ];
-                }
+        // Fonction pour obtenir les propriétés à afficher selon le critère sélectionné
+        function getColumnsForCriterion(criterion) {
+            switch (criterion) {
+                case 'basic':
+                    return [
+                        { key: 'name', label: 'Statut' },
+                        { key: 'associes', label: 'Nombre d\'associés' },
+                        { key: 'capital', label: 'Capital social' },
+                        { key: 'responsabilite', label: 'Responsabilité' }
+                    ];
+                case 'fiscal':
+                    return [
+                        { key: 'name', label: 'Statut' },
+                        { key: 'fiscalite', label: 'Régime fiscal' },
+                        { key: 'fiscaliteOption', label: 'Option fiscale' },
+                        { key: 'regimeTVA', label: 'Régime TVA' }
+                    ];
+                case 'social':
+                    return [
+                        { key: 'name', label: 'Statut' },
+                        { key: 'regimeSocial', label: 'Régime social' },
+                        { key: 'chargesSociales', label: 'Charges sociales' },
+                        { key: 'protectionPatrimoine', label: 'Protection patrimoine' }
+                    ];
+                case 'creation':
+                    return [
+                        { key: 'name', label: 'Statut' },
+                        { key: 'formalites', label: 'Formalités' },
+                        { key: 'publicationComptes', label: 'Publication comptes' },
+                        { key: 'plafondCA', label: 'Plafond CA' }
+                    ];
+                default: // 'all'
+                    return [
+                        { key: 'name', label: 'Statut' },
+                        { key: 'associes', label: 'Nombre d\'associés' },
+                        { key: 'capital', label: 'Capital social' },
+                        { key: 'responsabilite', label: 'Responsabilité' },
+                        { key: 'fiscalite', label: 'Régime fiscal' },
+                        { key: 'regimeSocial', label: 'Régime social' }
+                    ];
             }
         }
 
@@ -943,8 +913,8 @@ window.initComparatifStatuts = function() {
         function updateTable() {
             if (!window.legalStatuses) return;
             
-            // Obtenir les colonnes à afficher selon la catégorie et le critère
-            const columns = getColumnsForCategoryAndCriterion(selectedCategory, selectedCriterion);
+            // Obtenir les colonnes à afficher selon le critère
+            const columns = getColumnsForCriterion(selectedCriterion);
             
             // Mettre à jour les en-têtes du tableau
             const tableHeaders = document.getElementById('table-headers');
