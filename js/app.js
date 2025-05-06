@@ -466,6 +466,81 @@ function initUIEvents() {
                     `;
                 }
             },
+            'Méthodologie': {
+                content: () => {
+                    return `
+                        <div class="max-w-4xl mx-auto mb-12">
+                            <h2 class="text-2xl font-bold mb-4">Méthodologie de calcul</h2>
+                            
+                            <!-- Introduction -->
+                            <div class="bg-blue-900 bg-opacity-30 p-6 rounded-xl mb-8">
+                                <h3 class="text-xl font-semibold text-green-400 mb-3">Introduction</h3>
+                                <p>Les simulations sont basées sur les barèmes officiels 2025 et les règles fiscales en vigueur. Nous avons appliqué certaines simplifications pour rendre les calculs plus accessibles tout en gardant une bonne précision.</p>
+                            </div>
+                            
+                            <!-- Accordéon pour les fiches par statut -->
+                            <div class="methodology-accordion space-y-4 mb-8" id="methodology-accordion">
+                                <!-- Sera rempli par generateMethodologyContent() -->
+                            </div>
+                            
+                            <!-- Exemples de calculs détaillés -->
+                            <div class="bg-blue-900 bg-opacity-30 p-6 rounded-xl mb-8">
+                                <h3 class="text-xl font-semibold text-green-400 mb-3">Exemples de calculs</h3>
+                                <div class="bg-blue-800 bg-opacity-30 p-4 rounded-lg my-4">
+                                    <h4 class="font-medium mb-2">Exemple pour Micro-entreprise (BIC Services)</h4>
+                                    <pre class="text-sm whitespace-pre-wrap">
+CA = 50 000€
+Cotisations sociales = 50 000 × 21,2% = 10 600€
+Abattement forfaitaire = 50 000 × 50% = 25 000€
+Revenu imposable = 50 000 - 25 000 = 25 000€
+Avec TMI à 30% → Impôt = 25 000 × 30% = 7 500€
+Revenu net = 50 000 - 10 600 - 7 500 = 31 900€
+                                    </pre>
+                                </div>
+                            </div>
+                            
+                            <!-- Limites et précautions -->
+                            <div class="bg-red-900 bg-opacity-20 p-6 border border-red-800 rounded-xl">
+                                <h3 class="text-xl font-semibold text-red-400 mb-3">Limites et précautions</h3>
+                                <p class="mb-3">Les calculs présentés sont indicatifs et ne remplacent pas l'avis d'un expert-comptable.</p>
+                                <ul class="list-disc pl-5 space-y-2">
+                                    <li>Les situations particulières comme le cumul d'activités, les régimes spéciaux ou les niches fiscales ne sont pas modélisés</li>
+                                    <li>Les arrondis peuvent créer de légères variations par rapport aux calculs exacts</li>
+                                    <li>Les barèmes utilisés sont ceux anticipés pour 2025 et peuvent être modifiés par de futures lois de finances</li>
+                                </ul>
+                            </div>
+                        </div>
+                    `;
+                },
+                onLoad: () => {
+                    // Initialiser le contenu méthodologique
+                    if (typeof window.generateMethodologyContent === 'function') {
+                        window.generateMethodologyContent();
+                    } else {
+                        console.log("Chargement des fonctions de méthodologie...");
+                        // Vérifier si le script existe déjà
+                        const scriptExists = document.querySelector('script[src*="fiscal-guide.js"]');
+                        if (!scriptExists) {
+                            // Charger le script si nécessaire
+                            const script = document.createElement('script');
+                            script.src = 'js/fiscal-guide.js?v=20250506_1';
+                            document.body.appendChild(script);
+                            script.onload = () => {
+                                if (typeof window.generateMethodologyContent === 'function') {
+                                    window.generateMethodologyContent();
+                                }
+                            };
+                        } else {
+                            // Attendre que le script soit chargé
+                            setTimeout(() => {
+                                if (typeof window.generateMethodologyContent === 'function') {
+                                    window.generateMethodologyContent();
+                                }
+                            }, 500);
+                        }
+                    }
+                }
+            },
             'Historique': {
                 content: () => {
                     return `
