@@ -277,9 +277,6 @@ function initUIEvents() {
                 content: () => {
                     return `
                         <div class="max-w-5xl mx-auto mb-12">
-                            <h2 class="text-2xl font-bold mb-4">Comparatif des formes juridiques</h2>
-                            <p class="mb-4">Le tableau comparatif ci-dessous présente les principales caractéristiques des différentes formes juridiques d'entreprise en France en 2025.</p>
-                            <!-- Suppression des filtres en double -->
                             <div id="comparatif-container" class="overflow-x-auto">
                                 <!-- Le tableau comparatif sera inséré ici par le JavaScript -->
                                 <div class="text-center p-4">
