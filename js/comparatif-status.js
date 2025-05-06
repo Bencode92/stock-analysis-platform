@@ -337,96 +337,6 @@ window.initComparatifStatuts = function() {
             .comparatif-table tr:nth-child(9) { animation-delay: 0.45s; }
             .comparatif-table tr:nth-child(10) { animation-delay: 0.5s; }
 
-            /* 5. Barre de comparaison interactive */
-            .comparison-bar {
-                display: flex;
-                align-items: center;
-                padding: 0.75rem 1rem;
-                background-color: rgba(1, 35, 65, 0.7);
-                border-radius: 8px;
-                margin-bottom: 1rem;
-                flex-wrap: wrap;
-                gap: 0.5rem;
-            }
-
-            .comparison-title {
-                font-size: 0.875rem;
-                font-weight: 500;
-                color: rgba(255, 255, 255, 0.8);
-                margin-right: 1rem;
-            }
-
-            .comparison-items {
-                display: flex;
-                flex-wrap: wrap;
-                gap: 0.5rem;
-                flex-grow: 1;
-            }
-
-            .comparison-item {
-                display: flex;
-                align-items: center;
-                padding: 0.375rem 0.75rem;
-                background-color: rgba(0, 255, 135, 0.15);
-                border: 1px solid rgba(0, 255, 135, 0.3);
-                border-radius: 4px;
-                font-size: 0.8125rem;
-                color: #00FF87;
-            }
-
-            .comparison-item .remove-btn {
-                background: none;
-                border: none;
-                color: rgba(255, 255, 255, 0.6);
-                font-size: 0.75rem;
-                margin-left: 0.5rem;
-                cursor: pointer;
-                padding: 2px;
-            }
-
-            .comparison-item .remove-btn:hover {
-                color: #FF6B6B;
-            }
-
-            .add-comparison-btn,
-            .add-comparison-select {
-                padding: 0.375rem 0.75rem;
-                background-color: rgba(1, 42, 74, 0.5);
-                border: 1px solid rgba(0, 255, 135, 0.3);
-                border-radius: 4px;
-                font-size: 0.8125rem;
-                color: rgba(255, 255, 255, 0.7);
-                cursor: pointer;
-                transition: all 0.2s;
-            }
-
-            .add-comparison-btn:hover {
-                background-color: rgba(1, 42, 74, 0.7);
-                border-color: rgba(255, 255, 255, 0.5);
-                color: #fff;
-            }
-            
-            .status-dropdown {
-                margin-right: 0.5rem;
-                width: 200px;
-                padding: 0.5rem;
-                background-color: rgba(1, 42, 74, 0.7);
-                border: 1px solid rgba(0, 255, 135, 0.3);
-                border-radius: 4px;
-                color: #E6E6E6;
-                appearance: none;
-                background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2300FF87' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
-                background-repeat: no-repeat;
-                background-position: calc(100% - 0.75rem) center;
-                padding-right: 2rem;
-            }
-            
-            .status-dropdown:focus {
-                outline: none;
-                border-color: rgba(0, 255, 135, 0.5);
-                box-shadow: 0 0 0 2px rgba(0, 255, 135, 0.2);
-            }
-
             /* 6. Tooltips informatifs */
             .info-tooltip {
                 position: relative;
@@ -499,36 +409,16 @@ window.initComparatifStatuts = function() {
         // Injecter le CSS
         injectCSS();
 
-        // Créer la structure HTML de base
+        // Créer la structure HTML de base simplifiée - SANS LA PARTIE TITRE ET DESCRIPTION EN BLANC
         container.innerHTML = `
             <div class="comparatif-container">
                 <div class="comparatif-header">
-                    <h2 class="comparatif-title">Comparatif des formes juridiques 2025</h2>
-                    <p class="comparatif-description">
-                        Tableau comparatif des principales caractéristiques des différentes formes juridiques en France.
-                        Utilisez les filtres ci-dessous pour personnaliser l'affichage selon vos besoins.
-                    </p>
-                    
-                    <div class="comparison-bar">
-                        <div class="comparison-title">Comparer directement:</div>
-                        <select id="status-dropdown" class="status-dropdown">
-                            <option value="">Sélectionner un statut...</option>
-                            <!-- Les options seront générées ici -->
-                        </select>
-                        <div class="comparison-items" id="comparison-items">
-                            <!-- Les éléments de comparaison seront ici -->
-                        </div>
-                        <button class="add-comparison-btn" id="add-comparison-btn">
-                            <i class="fas fa-plus mr-1"></i> Ajouter
-                        </button>
-                    </div>
+                    <!-- Suppression complète du titre et de la description -->
                     
                     <div class="comparatif-filters">
-                        <div class="filter-group">
-                            <label class="filter-label">Filtrer par critères:</label>
-                            <div class="criteria-buttons" id="criteria-buttons">
-                                <!-- Les boutons seront générés ici -->
-                            </div>
+                        <!-- Conservation uniquement des boutons de filtrage par catégorie -->
+                        <div class="criteria-buttons" id="criteria-buttons">
+                            <!-- Les boutons seront générés ici -->
                         </div>
                         
                         <div class="filter-group" style="max-width: 300px;">
@@ -568,22 +458,8 @@ window.initComparatifStatuts = function() {
                         </div>
                     </div>
                     <p class="notes-disclaimer">
-                        Les informations présentées sont à jour pour l'année 2025. Pour plus de détails ou pour une 
-                        recommandation personnalisée, utilisez notre simulateur.
+                        Les informations présentées sont à jour pour l'année 2025.
                     </p>
-                </div>
-                
-                <!-- Boutons d'action flottants -->
-                <div class="actions-floating-bar">
-                    <button class="action-btn" title="Télécharger en PDF" id="download-pdf-btn">
-                        <i class="fas fa-file-pdf"></i>
-                    </button>
-                    <button class="action-btn" title="Exporter en Excel" id="export-excel-btn">
-                        <i class="fas fa-file-excel"></i>
-                    </button>
-                    <button class="action-btn" title="Imprimer" id="print-btn">
-                        <i class="fas fa-print"></i>
-                    </button>
                 </div>
             </div>
         `;
@@ -620,12 +496,18 @@ window.initComparatifStatuts = function() {
             criteriaButtons.appendChild(button);
         });
 
-        // Variables pour le filtrage et la comparaison
+        // Variables pour le filtrage
         let selectedCriterion = 'all';
         let searchTerm = '';
         let compareStatuts = [];
         
-        // Initialiser les événements de comparaison
+        // Fonction simplifiée pour la fonctionnalité de comparaison
+        function initComparisonEvents() {
+            // Fonction simplifiée - fonctionnalité de comparaison désactivée
+            console.log("Fonctionnalité de comparaison désactivée");
+        }
+        
+        // Initialiser la version simplifiée
         initComparisonEvents();
 
         // Charger et afficher les données
@@ -647,134 +529,6 @@ window.initComparatifStatuts = function() {
             searchTerm = e.target.value.toLowerCase();
             updateTable();
         });
-        
-        // Ajouter les écouteurs d'événements pour les boutons d'action
-        document.getElementById('download-pdf-btn').addEventListener('click', () => {
-            alert('Fonctionnalité de téléchargement PDF à implémenter');
-        });
-        
-        document.getElementById('export-excel-btn').addEventListener('click', () => {
-            alert('Fonctionnalité d\'export Excel à implémenter');
-        });
-        
-        document.getElementById('print-btn').addEventListener('click', () => {
-            window.print();
-        });
-
-        // Fonction pour initialiser les événements de comparaison
-        function initComparisonEvents() {
-            const addComparisonBtn = document.getElementById('add-comparison-btn');
-            const statusDropdown = document.getElementById('status-dropdown');
-            
-            // Remplir la liste déroulante avec les statuts disponibles
-            function populateStatusDropdown() {
-                if (window.legalStatuses) {
-                    statusDropdown.innerHTML = '<option value="">Sélectionner un statut...</option>';
-                    
-                    // Trier les statuts par nom
-                    const statuts = Object.values(window.legalStatuses).sort((a, b) => 
-                        a.shortName.localeCompare(b.shortName));
-                    
-                    statuts.forEach(statut => {
-                        const option = document.createElement('option');
-                        option.value = statut.shortName;
-                        option.textContent = statut.shortName;
-                        statusDropdown.appendChild(option);
-                    });
-                }
-            }
-            
-            // Gérer le changement de sélection dans la liste déroulante
-            statusDropdown.addEventListener('change', () => {
-                if (statusDropdown.value) {
-                    addToComparison(statusDropdown.value);
-                    statusDropdown.value = ''; // Réinitialiser après la sélection
-                }
-            });
-            
-            // Gérer le clic sur le bouton Ajouter
-            addComparisonBtn.addEventListener('click', () => {
-                if (window.legalStatuses) {
-                    // Créer une liste des statuts disponibles pour sélection
-                    const statuts = Object.values(window.legalStatuses);
-                    if (statuts.length > 0) {
-                        // Trouver un statut qui n'est pas déjà dans la comparaison
-                        const availableStatuts = statuts.filter(statut => 
-                            !compareStatuts.includes(statut.shortName));
-                        
-                        if (availableStatuts.length > 0) {
-                            // Ajouter le premier statut disponible à la comparaison
-                            addToComparison(availableStatuts[0].shortName);
-                        } else {
-                            alert('Tous les statuts sont déjà inclus dans la comparaison');
-                        }
-                    }
-                }
-            });
-            
-            // Initialiser la liste déroulante quand les données sont disponibles
-            if (window.legalStatuses) {
-                populateStatusDropdown();
-            } else {
-                // Vérifier périodiquement si les données sont disponibles
-                const checkInterval = setInterval(() => {
-                    if (window.legalStatuses) {
-                        populateStatusDropdown();
-                        clearInterval(checkInterval);
-                    }
-                }, 500);
-            }
-        }
-        
-        // Fonction pour ajouter un statut à la comparaison
-        function addToComparison(statutShortName) {
-            if (compareStatuts.includes(statutShortName)) return;
-            
-            if (compareStatuts.length >= 3) {
-                // Limiter à 3 statuts maximum
-                compareStatuts.shift(); // Retirer le premier
-            }
-            
-            compareStatuts.push(statutShortName);
-            updateComparisonBar();
-            updateTable();
-        }
-        
-        // Fonction pour retirer un statut de la comparaison
-        function removeFromComparison(statutShortName) {
-            const index = compareStatuts.indexOf(statutShortName);
-            if (index !== -1) {
-                compareStatuts.splice(index, 1);
-                updateComparisonBar();
-                updateTable();
-            }
-        }
-        
-        // Fonction pour mettre à jour la barre de comparaison
-        function updateComparisonBar() {
-            const comparisonItems = document.getElementById('comparison-items');
-            comparisonItems.innerHTML = '';
-            
-            compareStatuts.forEach(shortName => {
-                const statut = Object.values(window.legalStatuses).find(s => s.shortName === shortName);
-                if (!statut) return;
-                
-                const itemDiv = document.createElement('div');
-                itemDiv.className = 'comparison-item';
-                itemDiv.setAttribute('data-status', shortName);
-                itemDiv.innerHTML = `
-                    <i class="fas ${statut.logo || 'fa-building'} mr-2"></i> ${shortName}
-                    <button class="remove-btn"><i class="fas fa-times"></i></button>
-                `;
-                
-                // Ajouter l'événement pour supprimer
-                itemDiv.querySelector('.remove-btn').addEventListener('click', () => {
-                    removeFromComparison(shortName);
-                });
-                
-                comparisonItems.appendChild(itemDiv);
-            });
-        }
 
         // Fonction pour générer une notation par étoiles
         function generateStarRating(rating) {
@@ -887,17 +641,11 @@ window.initComparatifStatuts = function() {
             }
         }
 
-        // Fonction pour filtrer les statuts en fonction du terme de recherche et de la comparaison
+        // Fonction pour filtrer les statuts en fonction du terme de recherche
         function filterStatuts(statuts, term) {
             let filteredList = Object.values(statuts);
             
-            // Si nous sommes en mode comparaison, filtrer uniquement les statuts sélectionnés
-            if (compareStatuts.length > 0) {
-                filteredList = filteredList.filter(statut => 
-                    compareStatuts.includes(statut.shortName));
-            }
-            
-            // Puis filtrer par terme de recherche
+            // Filtrer par terme de recherche
             if (term) {
                 filteredList = filteredList.filter(statut =>
                     statut.name.toLowerCase().includes(term) || 
@@ -1012,14 +760,6 @@ window.initComparatifStatuts = function() {
                 });
                 row.addEventListener('mouseout', () => {
                     row.style.backgroundColor = '';
-                });
-                
-                // Ajouter clic pour sélectionner pour comparaison
-                row.addEventListener('click', () => {
-                    const statut = filteredStatuts[index];
-                    if (statut) {
-                        addToComparison(statut.shortName);
-                    }
                 });
             });
         }
