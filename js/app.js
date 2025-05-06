@@ -293,12 +293,164 @@ function initUIEvents() {
                     return `
                         <div class="max-w-4xl mx-auto mb-12">
                             <h2 class="text-2xl font-bold mb-4">Guide fiscal pour entrepreneurs</h2>
-                            <p class="mb-4">Ce guide présente les principales informations fiscales à connaître pour chaque forme juridique.</p>
-                            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
-                                <p class="text-center">Contenu du guide fiscal en cours de chargement...</p>
+                            <p class="mb-6">Ce guide présente les principales informations fiscales à connaître pour chaque forme juridique, avec un simulateur simplifié.</p>
+                            
+                            <!-- Simulateur simplifié -->
+                            <div id="fiscal-simulator" class="max-w-4xl mx-auto bg-blue-900 bg-opacity-30 p-6 rounded-xl">
+                                <h2 class="text-2xl font-bold text-green-400 mb-4">Simulation rapide par statut juridique</h2>
+                                
+                                <!-- Formulaire de saisie -->
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                    <div>
+                                        <label class="block text-gray-300 mb-2">Chiffre d'affaires annuel</label>
+                                        <div class="relative">
+                                            <input type="number" id="sim-ca" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white" value="50000">
+                                            <span class="absolute right-3 top-2 text-gray-400">€</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-gray-300 mb-2">Taux de marge (%)</label>
+                                        <div class="relative">
+                                            <input type="number" id="sim-marge" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white" value="30" min="0" max="100">
+                                            <span class="absolute right-3 top-2 text-gray-400">%</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-gray-300 mb-2">Répartition salaire (%)</label>
+                                        <div class="relative">
+                                            <input type="number" id="sim-salaire" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white" value="70" min="0" max="100">
+                                            <span class="absolute right-3 top-2 text-gray-400">%</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div>
+                                        <label class="block text-gray-300 mb-2">Votre TMI actuelle (%)</label>
+                                        <div class="relative">
+                                            <select id="sim-tmi" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
+                                                <option value="0">Non imposable</option>
+                                                <option value="11">11%</option>
+                                                <option value="30" selected>30%</option>
+                                                <option value="41">41%</option>
+                                                <option value="45">45%</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex justify-center mb-6">
+                                    <button id="sim-compare-btn" class="bg-green-500 hover:bg-green-400 text-gray-900 font-medium py-3 px-6 rounded-lg transition">
+                                        <i class="fas fa-calculator mr-2"></i> Comparer les statuts
+                                    </button>
+                                </div>
+                                
+                                <!-- Résultats de simulation -->
+                                <div id="sim-results" class="overflow-x-auto">
+                                    <table class="w-full text-left">
+                                        <thead class="bg-blue-800 bg-opacity-50">
+                                            <tr>
+                                                <th class="px-4 py-3 rounded-tl-lg">Statut</th>
+                                                <th class="px-4 py-3">Rémunération brute</th>
+                                                <th class="px-4 py-3">Charges sociales</th>
+                                                <th class="px-4 py-3">Impôts</th>
+                                                <th class="px-4 py-3 rounded-tr-lg">Net en poche</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="sim-results-body" class="text-gray-300">
+                                            <!-- Les résultats seront injectés ici -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                <div class="mt-6 text-sm text-gray-400">
+                                    <p><i class="fas fa-info-circle mr-1"></i> Cette simulation est une estimation simplifiée. Pour un calcul détaillé, utilisez le simulateur complet.</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Informations fiscales par statut -->
+                            <div class="mt-10">
+                                <h3 class="text-xl font-bold mb-4">Informations fiscales par statut</h3>
+                                
+                                <!-- Accordéon avec infos fiscales -->
+                                <div class="space-y-4">
+                                    <div class="bg-blue-900 bg-opacity-30 rounded-lg overflow-hidden">
+                                        <button class="accordion-toggle w-full flex justify-between items-center px-4 py-3 text-left font-medium">
+                                            Micro-entreprise
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                        <div class="hidden px-4 py-3 border-t border-gray-700">
+                                            <p class="mb-2"><strong>Régime fiscal :</strong> IR avec abattement forfaitaire</p>
+                                            <p class="mb-2"><strong>Abattements :</strong> 71% (vente), 50% (services BIC), 34% (BNC)</p>
+                                            <p class="mb-2"><strong>Charges sociales :</strong> 12.3% (vente), 21.2% (services) du CA</p>
+                                            <p class="mb-2"><strong>Plafonds 2025 :</strong> 188 700€ (vente), 77 700€ (services)</p>
+                                            <p class="mb-2"><strong>Option versement libératoire :</strong> Possible si revenu fiscal N-2 < plafond</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-blue-900 bg-opacity-30 rounded-lg overflow-hidden">
+                                        <button class="accordion-toggle w-full flex justify-between items-center px-4 py-3 text-left font-medium">
+                                            EURL / SARL
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                        <div class="hidden px-4 py-3 border-t border-gray-700">
+                                            <p class="mb-2"><strong>Régime fiscal :</strong> IR par défaut (EURL), IS (SARL)</p>
+                                            <p class="mb-2"><strong>Option fiscale :</strong> EURL peut opter pour l'IS</p>
+                                            <p class="mb-2"><strong>Charges sociales :</strong> TNS (~40-45% sur rémunération)</p>
+                                            <p class="mb-2"><strong>Dividendes :</strong> Soumis aux prélèvements sociaux (17.2%) + PFU (12.8%) ou IR</p>
+                                            <p class="mb-2"><strong>IS :</strong> 15% jusqu'à 42 500€ de bénéfices, 25% au-delà</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-blue-900 bg-opacity-30 rounded-lg overflow-hidden">
+                                        <button class="accordion-toggle w-full flex justify-between items-center px-4 py-3 text-left font-medium">
+                                            SASU / SAS
+                                            <i class="fas fa-plus"></i>
+                                        </button>
+                                        <div class="hidden px-4 py-3 border-t border-gray-700">
+                                            <p class="mb-2"><strong>Régime fiscal :</strong> IS (Impôt sur les Sociétés)</p>
+                                            <p class="mb-2"><strong>Charges sociales :</strong> Environ 80-85% sur salaire brut (part salariale + patronale)</p>
+                                            <p class="mb-2"><strong>Rémunération président :</strong> Assimilé salarié</p>
+                                            <p class="mb-2"><strong>Dividendes :</strong> Soumis aux prélèvements sociaux (17.2%) + PFU (12.8%) ou IR</p>
+                                            <p class="mb-2"><strong>IS :</strong> 15% jusqu'à 42 500€ de bénéfices, 25% au-delà</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     `;
+                },
+                onLoad: () => {
+                    // Initialiser le simulateur fiscal
+                    if (typeof window.initFiscalSimulator === 'function') {
+                        window.initFiscalSimulator();
+                    } else {
+                        console.log("Chargement du script fiscal-guide.js...");
+                        // Vérifier si le script existe déjà
+                        const scriptExists = document.querySelector('script[src*="fiscal-guide.js"]');
+                        if (!scriptExists) {
+                            // Charger le script si nécessaire
+                            const script = document.createElement('script');
+                            script.src = 'js/fiscal-guide.js?v=20250506_1';
+                            document.body.appendChild(script);
+                        }
+                    }
+                    
+                    // Initialiser l'accordéon
+                    setTimeout(() => {
+                        const toggleBtns = document.querySelectorAll('.accordion-toggle');
+                        toggleBtns.forEach(btn => {
+                            btn.addEventListener('click', function() {
+                                const content = this.nextElementSibling;
+                                content.classList.toggle('hidden');
+                                
+                                // Changer l'icône
+                                const icon = this.querySelector('i');
+                                icon.classList.toggle('fa-plus');
+                                icon.classList.toggle('fa-minus');
+                            });
+                        });
+                    }, 100);
                 }
             },
             'Barèmes 2025': {
@@ -371,6 +523,11 @@ function initUIEvents() {
                 // Afficher le contenu de l'onglet
                 tabContentContainer.innerHTML = tabContents[tabName].content();
                 tabContentContainer.style.display = 'block';
+                
+                // Exécuter le code onLoad si défini
+                if (tabContents[tabName].onLoad) {
+                    tabContents[tabName].onLoad();
+                }
                 
                 // Si c'est l'onglet "Comparatif des statuts", initialiser le comparatif
                 if (tabName === 'Comparatif des statuts') {
