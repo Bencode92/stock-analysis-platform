@@ -171,7 +171,7 @@ class SimulationsFiscales {
             return {
                 compatible: true,
                 ca: ca,
-                typeEntreprise: 'EURL à l\\'IR',
+                typeEntreprise: "EURL à l'IR",
                 tauxMarge: tauxMarge * 100 + '%',
                 resultatAvantRemuneration: resultatEntreprise,
                 remuneration: remuneration,
@@ -244,7 +244,7 @@ class SimulationsFiscales {
             return {
                 compatible: true,
                 ca: ca,
-                typeEntreprise: 'EURL à l\\'IS',
+                typeEntreprise: "EURL à l'IS",
                 tauxMarge: tauxMarge * 100 + '%',
                 resultatAvantRemuneration: resultatEntreprise,
                 remuneration: remuneration,
@@ -646,7 +646,7 @@ class SimulationsFiscales {
             return {
                 compatible: true,
                 ca: ca,
-                typeEntreprise: 'SCI à l\\'IR',
+                typeEntreprise: "SCI à l'IR",
                 revenuLocatif: revenuLocatif,
                 chargesDeductibles: chargesDeductibles,
                 resultatFiscal: resultatFiscal,
@@ -693,7 +693,7 @@ class SimulationsFiscales {
             return {
                 compatible: true,
                 ca: ca,
-                typeEntreprise: 'SCI à l\\'IS',
+                typeEntreprise: "SCI à l'IS",
                 revenuLocatif: revenuLocatif,
                 chargesDeductibles: chargesDeductibles,
                 resultatFiscal: resultatFiscal,
