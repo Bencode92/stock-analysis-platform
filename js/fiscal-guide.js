@@ -1,5 +1,5 @@
 // fiscal-guide.js - Simulateur fiscal simplifié pour l'onglet Guide fiscal
-// Version 2.1 - Mai 2025 - Mise à jour pour améliorer la sélection des statuts juridiques
+// Version 2.2 - Mai 2025 - Améliorations visuelles
 
 document.addEventListener('DOMContentLoaded', function() {
     // S'assurer que l'onglet Guide fiscal initialise correctement ce code
@@ -13,7 +13,162 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('fiscal-simulator')) {
         initFiscalSimulator();
     }
+    
+    // Ajouter les styles personnalisés pour le simulateur
+    addCustomStyles();
 });
+
+// Fonction pour ajouter des styles personnalisés
+function addCustomStyles() {
+    const styleElement = document.createElement('style');
+    styleElement.textContent = `
+        /* Styles pour l'accordéon */
+        .accordion-toggle {
+            display: flex;
+            align-items: center;
+            border-radius: 8px;
+            transition: all 0.2s ease;
+            padding: 1rem 1.5rem;
+            background: rgba(13, 37, 87, 0.6);
+            margin-bottom: 0.5rem;
+            border-left: 4px solid transparent;
+        }
+        
+        .accordion-toggle:hover {
+            background: rgba(27, 60, 131, 0.7);
+            transform: translateX(3px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        .accordion-toggle.active {
+            border-left-color: #00FF87;
+        }
+        
+        .accordion-toggle i:first-of-type {
+            font-size: 1.25rem;
+            margin-right: 0.75rem;
+        }
+        
+        .status-badge {
+            margin-left: auto;
+            margin-right: 1rem;
+            font-weight: 500;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+        }
+        
+        .status-badge.ir {
+            background: rgba(0, 255, 135, 0.2);
+            color: #00FF87;
+        }
+        
+        .status-badge.is {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60A5FA;
+        }
+        
+        .status-badge.iris {
+            background: linear-gradient(90deg, rgba(0, 255, 135, 0.1), rgba(59, 130, 246, 0.1));
+            color: #A5F3C9;
+        }
+        
+        /* Styles pour le tableau de résultats */
+        #sim-results {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        #sim-results thead tr {
+            background: linear-gradient(90deg, #112240, #1A365D);
+        }
+        
+        #sim-results th {
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+        
+        #sim-results tbody tr {
+            transition: all 0.2s;
+        }
+        
+        #sim-results tbody tr:hover {
+            background-color: rgba(30, 58, 138, 0.5) !important;
+        }
+        
+        .result-top-row {
+            background: linear-gradient(90deg, rgba(0, 255, 135, 0.1), rgba(0, 204, 106, 0.05)) !important;
+            border-left: 4px solid #00FF87;
+        }
+        
+        .net-value {
+            font-weight: 600;
+            font-size: 1.05rem;
+        }
+        
+        .net-value.top {
+            color: #00FF87;
+        }
+        
+        .status-icon {
+            font-size: 1.2rem;
+            margin-right: 0.5rem;
+            vertical-align: middle;
+        }
+        
+        .ratio-row {
+            background: rgba(30, 58, 138, 0.2) !important;
+            font-style: italic;
+        }
+        
+        /* Styles pour les boutons de filtre */
+        .status-filter-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .status-filter-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Styles pour les badges de régime fiscal */
+        .regime-badge {
+            display: inline-block;
+            padding: 0.1rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+            vertical-align: middle;
+        }
+        
+        .regime-badge.ir {
+            background: rgba(0, 255, 135, 0.2);
+            color: #00FF87;
+        }
+        
+        .regime-badge.is {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60A5FA;
+        }
+        
+        /* Zone de sélection personnalisée */
+        #custom-status-options {
+            border-radius: 8px;
+            background: rgba(17, 34, 64, 0.6);
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
+        }
+    `;
+    document.head.appendChild(styleElement);
+}
 
 function initFiscalSimulator() {
     console.log("Initialisation du simulateur fiscal simplifié...");
@@ -121,7 +276,7 @@ function updateSimulatorInterface() {
                 </div>
                 
                 <!-- Sélection personnalisée de statuts avec catégorisation -->
-                <div id="custom-status-options" class="hidden mt-4 border border-gray-700 rounded-lg p-3 bg-blue-900 bg-opacity-20">
+                <div id="custom-status-options" class="hidden mt-4 p-4 rounded-lg">
                     <div class="mb-2 text-green-400 font-medium">Sélectionnez les statuts à comparer</div>
                     
                     <!-- Catégorie IS -->
@@ -129,53 +284,53 @@ function updateSimulatorInterface() {
                         <div class="text-sm text-gray-300 mb-1 border-b border-gray-700 pb-1">
                             <i class="fas fa-building mr-1 text-blue-400"></i> Statuts à l'IS
                         </div>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-sm">
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-sm">
                             <div class="flex items-center">
                                 <input type="checkbox" id="status-eurlIS" value="eurlIS" class="status-checkbox mr-2 h-4 w-4 text-green-400">
                                 <label for="status-eurlIS" class="text-sm">
-                                    <span class="text-xs bg-blue-800 text-white rounded px-1 mr-1">IS</span> EURL-IS
+                                    <span class="regime-badge is">IS</span> EURL-IS
                                 </label>
                             </div>
                             <div class="flex items-center">
                                 <input type="checkbox" id="status-sasu" value="sasu" class="status-checkbox mr-2 h-4 w-4 text-green-400">
                                 <label for="status-sasu" class="text-sm">
-                                    <span class="text-xs bg-blue-800 text-white rounded px-1 mr-1">IS</span> SASU
+                                    <span class="regime-badge is">IS</span> SASU
                                 </label>
                             </div>
                             <div class="flex items-center">
                                 <input type="checkbox" id="status-sarl" value="sarl" class="status-checkbox mr-2 h-4 w-4 text-green-400">
                                 <label for="status-sarl" class="text-sm">
-                                    <span class="text-xs bg-blue-800 text-white rounded px-1 mr-1">IS</span> SARL
+                                    <span class="regime-badge is">IS</span> SARL
                                 </label>
                             </div>
                             <div class="flex items-center">
                                 <input type="checkbox" id="status-sas" value="sas" class="status-checkbox mr-2 h-4 w-4 text-green-400">
                                 <label for="status-sas" class="text-sm">
-                                    <span class="text-xs bg-blue-800 text-white rounded px-1 mr-1">IS</span> SAS
+                                    <span class="regime-badge is">IS</span> SAS
                                 </label>
                             </div>
                             <div class="flex items-center">
                                 <input type="checkbox" id="status-sa" value="sa" class="status-checkbox mr-2 h-4 w-4 text-green-400">
                                 <label for="status-sa" class="text-sm">
-                                    <span class="text-xs bg-blue-800 text-white rounded px-1 mr-1">IS</span> SA
+                                    <span class="regime-badge is">IS</span> SA
                                 </label>
                             </div>
                             <div class="flex items-center">
                                 <input type="checkbox" id="status-selarl" value="selarl" class="status-checkbox mr-2 h-4 w-4 text-green-400">
                                 <label for="status-selarl" class="text-sm">
-                                    <span class="text-xs bg-blue-800 text-white rounded px-1 mr-1">IS</span> SELARL
+                                    <span class="regime-badge is">IS</span> SELARL
                                 </label>
                             </div>
                             <div class="flex items-center">
                                 <input type="checkbox" id="status-selas" value="selas" class="status-checkbox mr-2 h-4 w-4 text-green-400">
                                 <label for="status-selas" class="text-sm">
-                                    <span class="text-xs bg-blue-800 text-white rounded px-1 mr-1">IS</span> SELAS
+                                    <span class="regime-badge is">IS</span> SELAS
                                 </label>
                             </div>
                             <div class="flex items-center">
                                 <input type="checkbox" id="status-sca" value="sca" class="status-checkbox mr-2 h-4 w-4 text-green-400">
                                 <label for="status-sca" class="text-sm">
-                                    <span class="text-xs bg-blue-800 text-white rounded px-1 mr-1">IS</span> SCA
+                                    <span class="regime-badge is">IS</span> SCA
                                 </label>
                             </div>
                         </div>
@@ -186,35 +341,35 @@ function updateSimulatorInterface() {
                         <div class="text-sm text-gray-300 mb-1 border-b border-gray-700 pb-1">
                             <i class="fas fa-user mr-1 text-green-400"></i> Statuts à l'IR
                         </div>
-                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 text-sm">
+                        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-sm">
                             <div class="flex items-center">
                                 <input type="checkbox" id="status-micro" value="micro" class="status-checkbox mr-2 h-4 w-4 text-green-400">
                                 <label for="status-micro" class="text-sm">
-                                    <span class="text-xs bg-green-700 text-white rounded px-1 mr-1">IR</span> Micro
+                                    <span class="regime-badge ir">IR</span> Micro
                                 </label>
                             </div>
                             <div class="flex items-center">
                                 <input type="checkbox" id="status-ei" value="ei" class="status-checkbox mr-2 h-4 w-4 text-green-400">
                                 <label for="status-ei" class="text-sm">
-                                    <span class="text-xs bg-green-700 text-white rounded px-1 mr-1">IR</span> EI
+                                    <span class="regime-badge ir">IR</span> EI
                                 </label>
                             </div>
                             <div class="flex items-center">
                                 <input type="checkbox" id="status-eurl" value="eurl" class="status-checkbox mr-2 h-4 w-4 text-green-400">
                                 <label for="status-eurl" class="text-sm">
-                                    <span class="text-xs bg-green-700 text-white rounded px-1 mr-1">IR</span> EURL-IR
+                                    <span class="regime-badge ir">IR</span> EURL-IR
                                 </label>
                             </div>
                             <div class="flex items-center">
                                 <input type="checkbox" id="status-snc" value="snc" class="status-checkbox mr-2 h-4 w-4 text-green-400">
                                 <label for="status-snc" class="text-sm">
-                                    <span class="text-xs bg-green-700 text-white rounded px-1 mr-1">IR</span> SNC
+                                    <span class="regime-badge ir">IR</span> SNC
                                 </label>
                             </div>
                             <div class="flex items-center">
                                 <input type="checkbox" id="status-sci" value="sci" class="status-checkbox mr-2 h-4 w-4 text-green-400">
                                 <label for="status-sci" class="text-sm">
-                                    <span class="text-xs bg-green-700 text-white rounded px-1 mr-1">IR</span> SCI
+                                    <span class="regime-badge ir">IR</span> SCI
                                 </label>
                             </div>
                         </div>
@@ -350,36 +505,36 @@ function runComparison() {
     
     // Association icônes pour les statuts
     const statutIcons = {
-        'micro': '<i class="fas fa-store-alt text-green-400 mr-1"></i>',
-        'ei': '<i class="fas fa-user text-green-400 mr-1"></i>',
-        'eurl': '<i class="fas fa-user-tie text-green-400 mr-1"></i>',
-        'eurlIS': '<i class="fas fa-building text-blue-400 mr-1"></i>',
-        'sasu': '<i class="fas fa-user-shield text-blue-400 mr-1"></i>',
-        'sarl': '<i class="fas fa-users text-blue-400 mr-1"></i>',
-        'sas': '<i class="fas fa-building text-blue-400 mr-1"></i>',
-        'sa': '<i class="fas fa-landmark text-blue-400 mr-1"></i>',
-        'snc': '<i class="fas fa-handshake text-green-400 mr-1"></i>',
-        'sci': '<i class="fas fa-home text-green-400 mr-1"></i>',
-        'selarl': '<i class="fas fa-user-md text-blue-400 mr-1"></i>',
-        'selas': '<i class="fas fa-stethoscope text-blue-400 mr-1"></i>',
-        'sca': '<i class="fas fa-chart-line text-blue-400 mr-1"></i>'
+        'micro': '<i class="fas fa-store-alt text-green-400 status-icon"></i>',
+        'ei': '<i class="fas fa-user text-green-400 status-icon"></i>',
+        'eurl': '<i class="fas fa-user-tie text-green-400 status-icon"></i>',
+        'eurlIS': '<i class="fas fa-building text-blue-400 status-icon"></i>',
+        'sasu': '<i class="fas fa-user-shield text-blue-400 status-icon"></i>',
+        'sarl': '<i class="fas fa-users text-blue-400 status-icon"></i>',
+        'sas': '<i class="fas fa-building text-blue-400 status-icon"></i>',
+        'sa': '<i class="fas fa-landmark text-blue-400 status-icon"></i>',
+        'snc': '<i class="fas fa-handshake text-green-400 status-icon"></i>',
+        'sci': '<i class="fas fa-home text-green-400 status-icon"></i>',
+        'selarl': '<i class="fas fa-user-md text-blue-400 status-icon"></i>',
+        'selas': '<i class="fas fa-stethoscope text-blue-400 status-icon"></i>',
+        'sca': '<i class="fas fa-chart-line text-blue-400 status-icon"></i>'
     };
     
     // Badge régime fiscal
     const regimeBadges = {
-        'micro': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR</span>',
-        'ei': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR</span>',
-        'eurl': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR</span>',
-        'eurlIS': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
-        'sasu': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
-        'sarl': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
-        'sas': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
-        'sa': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
-        'snc': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR</span>',
-        'sci': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR</span>',
-        'selarl': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
-        'selas': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
-        'sca': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>'
+        'micro': '<span class="regime-badge ir">IR</span>',
+        'ei': '<span class="regime-badge ir">IR</span>',
+        'eurl': '<span class="regime-badge ir">IR</span>',
+        'eurlIS': '<span class="regime-badge is">IS</span>',
+        'sasu': '<span class="regime-badge is">IS</span>',
+        'sarl': '<span class="regime-badge is">IS</span>',
+        'sas': '<span class="regime-badge is">IS</span>',
+        'sa': '<span class="regime-badge is">IS</span>',
+        'snc': '<span class="regime-badge ir">IR</span>',
+        'sci': '<span class="regime-badge ir">IR</span>',
+        'selarl': '<span class="regime-badge is">IS</span>',
+        'selas': '<span class="regime-badge is">IS</span>',
+        'sca': '<span class="regime-badge is">IS</span>'
     };
     
     // Associer chaque statut à sa fonction de simulation et son nom d'affichage
@@ -638,7 +793,7 @@ function runComparison() {
         
         const row = document.createElement('tr');
         row.className = isTopResult 
-            ? 'bg-green-900 bg-opacity-20 font-medium' 
+            ? 'result-top-row' 
             : (index % 2 === 0 ? 'bg-blue-900 bg-opacity-20' : '');
         
         if (displayDetails && res.sim && res.score > 0) {
@@ -655,8 +810,8 @@ function runComparison() {
                 <td class="px-4 py-3">${res.charges === '-' ? '-' : formatter.format(res.charges)}</td>
                 <td class="px-4 py-3">${res.impots === '-' ? '-' : formatter.format(res.impots)}</td>
                 <td class="px-4 py-3">${dividendesNets ? formatter.format(dividendesNets) : '-'}</td>
-                <td class="px-4 py-3 font-medium ${isTopResult ? 'text-green-400' : (isGoodResult ? 'text-green-300' : '')}">
-                    ${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}
+                <td class="px-4 py-3">
+                    <span class="net-value ${isTopResult ? 'top' : ''}">${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}</span>
                 </td>
             `;
         } else {
@@ -669,8 +824,8 @@ function runComparison() {
                 <td class="px-4 py-3">${res.brut === '-' ? '-' : formatter.format(res.brut)}</td>
                 <td class="px-4 py-3">${res.charges === '-' ? '-' : formatter.format(res.charges)}</td>
                 <td class="px-4 py-3">${res.impots === '-' ? '-' : formatter.format(res.impots)}</td>
-                <td class="px-4 py-3 font-medium ${isTopResult ? 'text-green-400' : (isGoodResult ? 'text-green-300' : '')}">
-                    ${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}
+                <td class="px-4 py-3">
+                    <span class="net-value ${isTopResult ? 'top' : ''}">${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}</span>
                 </td>
             `;
         }
@@ -680,7 +835,7 @@ function runComparison() {
     
     // Ajouter ligne de ratio net/brut pour les statuts compatibles
     const ratioRow = document.createElement('tr');
-    ratioRow.className = 'border-t border-gray-700 text-sm';
+    ratioRow.className = 'ratio-row';
     
     if (displayDetails) {
         ratioRow.innerHTML = `
@@ -741,18 +896,18 @@ function setupAccordion() {
     
     // Badge régime fiscal
     const regimeBadges = {
-        'MICRO': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR</span>',
-        'EI': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR</span>',
-        'EURL': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR/IS</span>',
-        'SASU': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
-        'SARL': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
-        'SAS': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
-        'SA': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
-        'SNC': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR</span>',
-        'SCI': '<span class="text-xs bg-green-700 text-white rounded px-1 ml-1">IR</span>',
-        'SELARL': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
-        'SELAS': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>',
-        'SCA': '<span class="text-xs bg-blue-800 text-white rounded px-1 ml-1">IS</span>'
+        'MICRO': '<span class="status-badge ir">IR</span>',
+        'EI': '<span class="status-badge ir">IR</span>',
+        'EURL': '<span class="status-badge iris">IR/IS</span>',
+        'SASU': '<span class="status-badge is">IS</span>',
+        'SARL': '<span class="status-badge is">IS</span>',
+        'SAS': '<span class="status-badge is">IS</span>',
+        'SA': '<span class="status-badge is">IS</span>',
+        'SNC': '<span class="status-badge ir">IR</span>',
+        'SCI': '<span class="status-badge ir">IR</span>',
+        'SELARL': '<span class="status-badge is">IS</span>',
+        'SELAS': '<span class="status-badge is">IS</span>',
+        'SCA': '<span class="status-badge is">IS</span>'
     };
     
     // Générer l'accordéon pour chaque statut
@@ -763,15 +918,16 @@ function setupAccordion() {
         
         // Créer l'élément d'accordéon
         const accordionItem = document.createElement('div');
-        accordionItem.className = 'bg-blue-900 bg-opacity-30 rounded-lg overflow-hidden mb-3';
+        accordionItem.className = 'mb-3';
         
         // Contenu de l'accordéon basé sur le statut
         accordionItem.innerHTML = `
-            <button class="accordion-toggle w-full flex justify-between items-center px-4 py-3 text-left font-medium">
-                ${statutIcons[statutId] || ''} ${nomStatut} ${regimeBadges[statutId] || ''}
-                <i class="fas fa-plus"></i>
+            <button class="accordion-toggle w-full">
+                ${statutIcons[statutId] || ''} ${nomStatut} 
+                ${regimeBadges[statutId] || ''}
+                <i class="fas fa-plus ml-auto"></i>
             </button>
-            <div class="hidden px-4 py-3 border-t border-gray-700">
+            <div class="hidden px-4 py-3 border-t border-gray-700 bg-blue-900 bg-opacity-20 rounded-b-lg">
                 ${getStatutFiscalInfo(statutId)}
             </div>
         `;
@@ -790,6 +946,9 @@ function setupAccordion() {
             const icon = this.querySelector('i:last-child');
             icon.classList.toggle('fa-plus');
             icon.classList.toggle('fa-minus');
+            
+            // Ajouter/supprimer la classe active
+            this.classList.toggle('active');
         });
     });
 }
@@ -799,15 +958,15 @@ function getDefaultNomStatut(statutId) {
     const noms = {
         'MICRO': 'Micro-entreprise',
         'EI': 'Entreprise Individuelle',
-        'EURL': 'EURL',
-        'SASU': 'SASU',
-        'SARL': 'SARL',
-        'SAS': 'SAS',
+        'EURL': 'Entreprise Unipersonnelle à Responsabilité Limitée',
+        'SASU': 'Société par Actions Simplifiée Unipersonnelle',
+        'SARL': 'Société à Responsabilité Limitée',
+        'SAS': 'Société par Actions Simplifiée',
         'SA': 'Société Anonyme',
         'SNC': 'Société en Nom Collectif',
         'SCI': 'Société Civile Immobilière',
-        'SELARL': 'SELARL',
-        'SELAS': 'SELAS',
+        'SELARL': 'Société d\'Exercice Libéral à Responsabilité Limitée',
+        'SELAS': 'Société d\'Exercice Libéral par Actions Simplifiée',
         'SCA': 'Société en Commandite par Actions'
     };
     return noms[statutId] || statutId;
