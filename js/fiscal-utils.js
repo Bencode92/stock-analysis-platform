@@ -1,5 +1,5 @@
 // fiscal-utils.js - Utilitaires pour les calculs fiscaux
-// Version 1.1 - Mai 2025 - Mise à jour des taux 2025
+// Version 1.2 - Mai 2025 - Mise à jour des taux 2025
 
 class FiscalUtils {
     // Calcul d'IR par tranches progressives
