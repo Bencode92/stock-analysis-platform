@@ -1,5 +1,5 @@
 // fiscal-guide.js - Simulateur fiscal simplifié pour l'onglet Guide fiscal
-// Version 3.4 - Mai 2025 - Correction du traitement des taux de frais réels
+// Version 3.5 - Mai 2025 - Correction du traitement des taux de frais réels
 
 document.addEventListener('DOMContentLoaded', function() {
     // S'assurer que l'onglet Guide fiscal initialise correctement ce code
@@ -818,7 +818,7 @@ function runComparison() {
     const params = {
         ca: ca,
         tauxMarge: useAvgChargeRate ? undefined : marge,
-        tauxFrais: useAvgChargeRate ? (1 - marge) : null,
+        tauxFrais: useAvgChargeRate ? (1 - marge) : undefined, // Changé de null à undefined
         tauxRemuneration: ratioSalaire,
         tmiActuel: tmi,
         modeExpert: modeExpert
@@ -826,6 +826,7 @@ function runComparison() {
     
     // Logger pour debug
     console.log("Paramètres:", params);
+    console.log("useAvgChargeRate:", useAvgChargeRate);
     
     const resultsBody = document.getElementById('sim-results-body');
     if (!resultsBody) return;
@@ -1110,19 +1111,25 @@ function runComparison() {
         },
         'snc': { 
             nom: 'SNC', 
-            simuler: () => window.SimulationsFiscales.simulerSNC({
-                ...params,
-                ca: ca,
-                tmiActuel: tmi
-            })
+            simuler: () => {
+                console.log("Paramètres SNC:", {...params, ca: ca, tmiActuel: tmi});
+                return window.SimulationsFiscales.simulerSNC({
+                    ...params,
+                    ca: ca,
+                    tmiActuel: tmi
+                });
+            }
         },
         'sci': { 
             nom: 'SCI', 
-            simuler: () => window.SimulationsFiscales.simulerSCI({
-                ...params,
-                revenuLocatif: ca,
-                tmiActuel: tmi
-            })
+            simuler: () => {
+                console.log("Paramètres SCI:", {...params, revenuLocatif: ca, tmiActuel: tmi});
+                return window.SimulationsFiscales.simulerSCI({
+                    ...params,
+                    revenuLocatif: ca,
+                    tmiActuel: tmi
+                });
+            }
         },
         'selarl': { 
             nom: 'SELARL', 
