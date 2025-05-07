@@ -6,7 +6,7 @@ class SimulationsFiscales {
     
     // MICRO-ENTREPRISE
     static simulerMicroEntreprise(params) {
-        const { ca, typeMicro = 'BIC', tmiActuel = 30, modeExpert = false } = params;
+        const { ca, typeMicro = 'BIC', tmiActuel = 30, modeExpert = false, versementLiberatoire = false } = params;
         
         // Utiliser les plafonds depuis legalStatuses si disponible
         const plafonds = {
@@ -27,6 +27,13 @@ class SimulationsFiscales {
             'BIC_VENTE': 0.123, // 12.3%
             'BIC_SERVICE': 0.212, // 21.2%
             'BNC': 0.246 // 24.6% (mise à jour 2025)
+        };
+        
+        // Taux de versement libératoire de l'IR
+        const tauxVFL = {
+            'BIC_VENTE': 0.01, // 1%
+            'BIC_SERVICE': 0.017, // 1.7%
+            'BNC': 0.022 // 2.2%
         };
         
         // Déterminer le type de Micro
@@ -55,7 +62,11 @@ class SimulationsFiscales {
         
         // Calcul de l'impôt sur le revenu
         let impotRevenu;
-        if (modeExpert && window.FiscalUtils) {
+        
+        if (versementLiberatoire) {
+            // Calcul avec versement libératoire
+            impotRevenu = Math.round(ca * tauxVFL[typeEffectif]);
+        } else if (modeExpert && window.FiscalUtils) {
             // Utiliser le calcul progressif si le mode expert est activé
             impotRevenu = window.FiscalUtils.calculateProgressiveIR(revenuImposable);
         } else {
@@ -76,7 +87,8 @@ class SimulationsFiscales {
             cotisationsSociales: cotisationsSociales,
             impotRevenu: impotRevenu,
             revenuNetApresImpot: revenuNetApresImpot,
-            ratioNetCA: (revenuNetApresImpot / ca) * 100
+            ratioNetCA: (revenuNetApresImpot / ca) * 100,
+            versementLiberatoire: versementLiberatoire
         };
     }
     
@@ -171,7 +183,7 @@ class SimulationsFiscales {
             return {
                 compatible: true,
                 ca: ca,
-                typeEntreprise: "EURL à l'IR",
+                typeEntreprise: \"EURL à l'IR\",
                 tauxMarge: tauxMarge * 100 + '%',
                 resultatAvantRemuneration: resultatEntreprise,
                 remuneration: remuneration,
@@ -248,7 +260,7 @@ class SimulationsFiscales {
             return {
                 compatible: true,
                 ca: ca,
-                typeEntreprise: "EURL à l'IS",
+                typeEntreprise: \"EURL à l'IS\",
                 tauxMarge: tauxMarge * 100 + '%',
                 resultatAvantRemuneration: resultatEntreprise,
                 remuneration: remuneration,
@@ -660,7 +672,7 @@ class SimulationsFiscales {
             return {
                 compatible: true,
                 ca: ca,
-                typeEntreprise: "SCI à l'IR",
+                typeEntreprise: \"SCI à l'IR\",
                 revenuLocatif: revenuLocatif,
                 chargesDeductibles: chargesDeductibles,
                 resultatFiscal: resultatFiscal,
@@ -707,7 +719,7 @@ class SimulationsFiscales {
             return {
                 compatible: true,
                 ca: ca,
-                typeEntreprise: "SCI à l'IS",
+                typeEntreprise: \"SCI à l'IS\",
                 revenuLocatif: revenuLocatif,
                 chargesDeductibles: chargesDeductibles,
                 resultatFiscal: resultatFiscal,
@@ -766,7 +778,7 @@ window.SimulationsFiscales = SimulationsFiscales;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module SimulationsFiscales chargé et disponible globalement");
+    console.log(\"Module SimulationsFiscales chargé et disponible globalement\");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady'));
 });
