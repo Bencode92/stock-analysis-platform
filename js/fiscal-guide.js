@@ -499,9 +499,10 @@ function updateSimulatorInterface() {
                                 </span>
                                 <input type="hidden" id="sim-expert-mode" checked>
                             </div>
-                            <div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="use-optimal-ratio" class="mr-2 h-4 w-4">
                                 <span class="bg-purple-900 bg-opacity-20 px-3 py-1 rounded-md text-purple-300 font-medium">
-                                    <i class="fas fa-magic mr-2"></i>Optimisation automatique du ratio rémunération/dividendes
+                                    <i class="fas fa-magic mr-2"></i>Utiliser le ratio optimal (sinon indicatif uniquement)
                                 </span>
                             </div>
                         </div>
@@ -696,6 +697,12 @@ function updateSimulatorInterface() {
             checkbox.addEventListener('change', runComparison);
         });
         
+        // Ajouter un événement à la case à cocher du ratio optimal
+        const useOptimalRatioCheckbox = document.getElementById('use-optimal-ratio');
+        if (useOptimalRatioCheckbox) {
+            useOptimalRatioCheckbox.addEventListener('change', runComparison);
+        }
+        
         // Par défaut, sélectionner le filtre "all" pour afficher tous les statuts
         statusFilter.value = "all";
         statusFilter.dispatchEvent(new Event('change'));
@@ -791,8 +798,9 @@ function runComparison() {
         'sca': '<span class="regime-badge is">IS</span>'
     };
     
-    // Optimisation toujours activée pour les statuts à l'IS
-    const shouldOptimize = true;
+    // Optimisation conditionnelle selon la case à cocher
+    const shouldOptimize = document.getElementById('use-optimal-ratio') && 
+                          document.getElementById('use-optimal-ratio').checked;
     
     // Définir les stratégies d'optimisation par type de statut
     const optimisationParStatut = {
@@ -850,21 +858,25 @@ function runComparison() {
         'eurlIS': { 
             nom: 'EURL à l\'IS', 
             simuler: () => {
-                // Si optimisation activée, trouver le meilleur ratio selon les contraintes du statut
+                // Calculer avec optimisation (mais sans forcément l'utiliser)
+                const config = optimisationParStatut['eurlIS'];
+                // Toujours calculer le ratio optimal pour l'afficher comme indicateur
+                const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
+                    { ...params, 
+                      ratioMin: config.ratioMin, 
+                      ratioMax: config.ratioMax, 
+                      favoriserDividendes: config.favoriserDividendes 
+                    },
+                    (p) => window.SimulationsFiscales.simulerEURL({...p, optionIS: true})
+                );
+                
+                // Si optimisation activée, utiliser le résultat optimisé
                 if (shouldOptimize) {
-                    const config = optimisationParStatut['eurlIS'];
-                    const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
-                        { ...params, 
-                          ratioMin: config.ratioMin, 
-                          ratioMax: config.ratioMax, 
-                          favoriserDividendes: config.favoriserDividendes 
-                        },
-                        (p) => window.SimulationsFiscales.simulerEURL({...p, optionIS: true})
-                    );
                     return optimisation.resultat;
                 }
                 
-                return window.SimulationsFiscales.simulerEURL({
+                // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
+                const resultat = window.SimulationsFiscales.simulerEURL({
                     ca: ca,
                     tauxMarge: marge,
                     tauxRemuneration: ratioSalaire,
@@ -872,52 +884,70 @@ function runComparison() {
                     tmiActuel: tmi,
                     modeExpert: modeExpert
                 });
+                
+                // Ajouter l'information du ratio optimal comme référence
+                resultat.ratioOptimise = optimisation.resultat.ratioOptimise;
+                
+                return resultat;
             }
         },
         'sasu': { 
             nom: 'SASU', 
             simuler: () => {
-                // Si optimisation activée, trouver le meilleur ratio selon les contraintes du statut
+                // Calculer avec optimisation (mais sans forcément l'utiliser)
+                const config = optimisationParStatut['sasu'];
+                // Toujours calculer le ratio optimal pour l'afficher comme indicateur
+                const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
+                    { ...params, 
+                      ratioMin: config.ratioMin, 
+                      ratioMax: config.ratioMax, 
+                      favoriserDividendes: config.favoriserDividendes 
+                    },
+                    (p) => window.SimulationsFiscales.simulerSASU(p)
+                );
+                
+                // Si optimisation activée, utiliser le résultat optimisé
                 if (shouldOptimize) {
-                    const config = optimisationParStatut['sasu'];
-                    const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
-                        { ...params, 
-                          ratioMin: config.ratioMin, 
-                          ratioMax: config.ratioMax, 
-                          favoriserDividendes: config.favoriserDividendes 
-                        },
-                        (p) => window.SimulationsFiscales.simulerSASU(p)
-                    );
                     return optimisation.resultat;
                 }
                 
-                return window.SimulationsFiscales.simulerSASU({
+                // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
+                const resultat = window.SimulationsFiscales.simulerSASU({
                     ca: ca,
                     tauxMarge: marge,
                     tauxRemuneration: ratioSalaire,
                     tmiActuel: tmi,
                     modeExpert: modeExpert
                 });
+                
+                // Ajouter l'information du ratio optimal comme référence
+                resultat.ratioOptimise = optimisation.resultat.ratioOptimise;
+                
+                return resultat;
             }
         },
         'sarl': { 
             nom: 'SARL', 
             simuler: () => {
-                // Si optimisation activée, trouver le meilleur ratio selon les contraintes du statut
+                // Calculer avec optimisation (mais sans forcément l'utiliser)
+                const config = optimisationParStatut['sarl'];
+                // Toujours calculer le ratio optimal pour l'afficher comme indicateur
+                const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
+                    { ...params, 
+                      ratioMin: config.ratioMin, 
+                      ratioMax: config.ratioMax, 
+                      favoriserDividendes: config.favoriserDividendes 
+                    },
+                    (p) => window.SimulationsFiscales.simulerSARL({...p, gerantMajoritaire: true})
+                );
+                
+                // Si optimisation activée, utiliser le résultat optimisé
                 if (shouldOptimize) {
-                    const config = optimisationParStatut['sarl'];
-                    const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
-                        { ...params, 
-                          ratioMin: config.ratioMin, 
-                          ratioMax: config.ratioMax, 
-                          favoriserDividendes: config.favoriserDividendes 
-                        },
-                        (p) => window.SimulationsFiscales.simulerSARL({...p, gerantMajoritaire: true})
-                    );
                     return optimisation.resultat;
                 }
                 
-                return window.SimulationsFiscales.simulerSARL({
+                // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
+                const resultat = window.SimulationsFiscales.simulerSARL({
                     ca: ca,
                     tauxMarge: marge,
                     tauxRemuneration: ratioSalaire,
@@ -925,58 +955,81 @@ function runComparison() {
                     gerantMajoritaire: true,
                     modeExpert: modeExpert
                 });
+                
+                // Ajouter l'information du ratio optimal comme référence
+                resultat.ratioOptimise = optimisation.resultat.ratioOptimise;
+                
+                return resultat;
             }
         },
         'sas': { 
             nom: 'SAS', 
             simuler: () => {
-                // Si optimisation activée, trouver le meilleur ratio selon les contraintes du statut
+                // Calculer avec optimisation (mais sans forcément l'utiliser)
+                const config = optimisationParStatut['sas'];
+                // Toujours calculer le ratio optimal pour l'afficher comme indicateur
+                const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
+                    { ...params, 
+                      ratioMin: config.ratioMin, 
+                      ratioMax: config.ratioMax, 
+                      favoriserDividendes: config.favoriserDividendes 
+                    },
+                    (p) => window.SimulationsFiscales.simulerSAS(p)
+                );
+                
+                // Si optimisation activée, utiliser le résultat optimisé
                 if (shouldOptimize) {
-                    const config = optimisationParStatut['sas'];
-                    const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
-                        { ...params, 
-                          ratioMin: config.ratioMin, 
-                          ratioMax: config.ratioMax, 
-                          favoriserDividendes: config.favoriserDividendes 
-                        },
-                        (p) => window.SimulationsFiscales.simulerSAS(p)
-                    );
                     return optimisation.resultat;
                 }
                 
-                return window.SimulationsFiscales.simulerSAS({
+                // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
+                const resultat = window.SimulationsFiscales.simulerSAS({
                     ca: ca,
                     tauxMarge: marge,
                     tauxRemuneration: ratioSalaire,
                     tmiActuel: tmi,
                     modeExpert: modeExpert
                 });
+                
+                // Ajouter l'information du ratio optimal comme référence
+                resultat.ratioOptimise = optimisation.resultat.ratioOptimise;
+                
+                return resultat;
             }
         },
         'sa': { 
             nom: 'SA', 
             simuler: () => {
-                // Si optimisation activée, trouver le meilleur ratio selon les contraintes du statut
+                // Calculer avec optimisation (mais sans forcément l'utiliser)
+                const config = optimisationParStatut['sa'];
+                // Toujours calculer le ratio optimal pour l'afficher comme indicateur
+                const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
+                    { ...params, 
+                      ratioMin: config.ratioMin, 
+                      ratioMax: config.ratioMax, 
+                      favoriserDividendes: config.favoriserDividendes 
+                    },
+                    (p) => window.SimulationsFiscales.simulerSA(p)
+                );
+                
+                // Si optimisation activée, utiliser le résultat optimisé
                 if (shouldOptimize) {
-                    const config = optimisationParStatut['sa'];
-                    const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
-                        { ...params, 
-                          ratioMin: config.ratioMin, 
-                          ratioMax: config.ratioMax, 
-                          favoriserDividendes: config.favoriserDividendes 
-                        },
-                        (p) => window.SimulationsFiscales.simulerSA(p)
-                    );
                     return optimisation.resultat;
                 }
                 
-                return window.SimulationsFiscales.simulerSA({
+                // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
+                const resultat = window.SimulationsFiscales.simulerSA({
                     ca: ca,
                     tauxMarge: marge,
                     tauxRemuneration: ratioSalaire,
                     tmiActuel: tmi,
                     modeExpert: modeExpert
                 });
+                
+                // Ajouter l'information du ratio optimal comme référence
+                resultat.ratioOptimise = optimisation.resultat.ratioOptimise;
+                
+                return resultat;
             }
         },
         'snc': { 
@@ -1000,79 +1053,106 @@ function runComparison() {
         'selarl': { 
             nom: 'SELARL', 
             simuler: () => {
-                // Si optimisation activée, trouver le meilleur ratio selon les contraintes du statut
+                // Calculer avec optimisation (mais sans forcément l'utiliser)
+                const config = optimisationParStatut['selarl'];
+                // Toujours calculer le ratio optimal pour l'afficher comme indicateur
+                const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
+                    { ...params, 
+                      ratioMin: config.ratioMin, 
+                      ratioMax: config.ratioMax, 
+                      favoriserDividendes: config.favoriserDividendes 
+                    },
+                    (p) => window.SimulationsFiscales.simulerSELARL(p)
+                );
+                
+                // Si optimisation activée, utiliser le résultat optimisé
                 if (shouldOptimize) {
-                    const config = optimisationParStatut['selarl'];
-                    const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
-                        { ...params, 
-                          ratioMin: config.ratioMin, 
-                          ratioMax: config.ratioMax, 
-                          favoriserDividendes: config.favoriserDividendes 
-                        },
-                        (p) => window.SimulationsFiscales.simulerSELARL(p)
-                    );
                     return optimisation.resultat;
                 }
                 
-                return window.SimulationsFiscales.simulerSELARL({
+                // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
+                const resultat = window.SimulationsFiscales.simulerSELARL({
                     ca: ca,
                     tauxMarge: marge,
                     tauxRemuneration: ratioSalaire,
                     tmiActuel: tmi,
                     modeExpert: modeExpert
                 });
+                
+                // Ajouter l'information du ratio optimal comme référence
+                resultat.ratioOptimise = optimisation.resultat.ratioOptimise;
+                
+                return resultat;
             }
         },
         'selas': { 
             nom: 'SELAS', 
             simuler: () => {
-                // Si optimisation activée, trouver le meilleur ratio selon les contraintes du statut
+                // Calculer avec optimisation (mais sans forcément l'utiliser)
+                const config = optimisationParStatut['selas'];
+                // Toujours calculer le ratio optimal pour l'afficher comme indicateur
+                const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
+                    { ...params, 
+                      ratioMin: config.ratioMin, 
+                      ratioMax: config.ratioMax, 
+                      favoriserDividendes: config.favoriserDividendes 
+                    },
+                    (p) => window.SimulationsFiscales.simulerSELAS(p)
+                );
+                
+                // Si optimisation activée, utiliser le résultat optimisé
                 if (shouldOptimize) {
-                    const config = optimisationParStatut['selas'];
-                    const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
-                        { ...params, 
-                          ratioMin: config.ratioMin, 
-                          ratioMax: config.ratioMax, 
-                          favoriserDividendes: config.favoriserDividendes 
-                        },
-                        (p) => window.SimulationsFiscales.simulerSELAS(p)
-                    );
                     return optimisation.resultat;
                 }
                 
-                return window.SimulationsFiscales.simulerSELAS({
+                // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
+                const resultat = window.SimulationsFiscales.simulerSELAS({
                     ca: ca,
                     tauxMarge: marge,
                     tauxRemuneration: ratioSalaire,
                     tmiActuel: tmi,
                     modeExpert: modeExpert
                 });
+                
+                // Ajouter l'information du ratio optimal comme référence
+                resultat.ratioOptimise = optimisation.resultat.ratioOptimise;
+                
+                return resultat;
             }
         },
         'sca': { 
             nom: 'SCA', 
             simuler: () => {
-                // Si optimisation activée, trouver le meilleur ratio selon les contraintes du statut
+                // Calculer avec optimisation (mais sans forcément l'utiliser)
+                const config = optimisationParStatut['sca'];
+                // Toujours calculer le ratio optimal pour l'afficher comme indicateur
+                const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
+                    { ...params, 
+                      ratioMin: config.ratioMin, 
+                      ratioMax: config.ratioMax, 
+                      favoriserDividendes: config.favoriserDividendes 
+                    },
+                    (p) => window.SimulationsFiscales.simulerSCA(p)
+                );
+                
+                // Si optimisation activée, utiliser le résultat optimisé
                 if (shouldOptimize) {
-                    const config = optimisationParStatut['sca'];
-                    const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
-                        { ...params, 
-                          ratioMin: config.ratioMin, 
-                          ratioMax: config.ratioMax, 
-                          favoriserDividendes: config.favoriserDividendes 
-                        },
-                        (p) => window.SimulationsFiscales.simulerSCA(p)
-                    );
                     return optimisation.resultat;
                 }
                 
-                return window.SimulationsFiscales.simulerSCA({
+                // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
+                const resultat = window.SimulationsFiscales.simulerSCA({
                     ca: ca,
                     tauxMarge: marge,
                     tauxRemuneration: ratioSalaire,
                     tmiActuel: tmi,
                     modeExpert: modeExpert
                 });
+                
+                // Ajouter l'information du ratio optimal comme référence
+                resultat.ratioOptimise = optimisation.resultat.ratioOptimise;
+                
+                return resultat;
             }
         }
     };
@@ -1233,14 +1313,14 @@ function runComparison() {
         resultsBody.appendChild(row);
     });
     
-    // Ajouter une ligne de mode de calcul
+    // Ajouter une ligne de mode de calcul avec état de l'optimisation
     const modeRow = document.createElement('tr');
     modeRow.className = 'bg-pink-900 bg-opacity-20 text-sm border-t border-pink-800';
     
     modeRow.innerHTML = `
         <td colspan="7" class="px-4 py-2 font-medium text-pink-300">
             <i class="fas fa-chart-line mr-2"></i> 
-            Mode expert activé : calcul par tranches progressives d'IR + optimisation automatique du ratio rémunération/dividendes
+            Mode expert activé : calcul par tranches progressives d'IR + ${shouldOptimize ? 'optimisation automatique' : 'ratio manuel'} du ratio rémunération/dividendes
         </td>
     `;
     
