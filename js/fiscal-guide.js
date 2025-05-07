@@ -254,7 +254,6 @@ function addCustomStyles() {
             border-collapse: separate;
             border-spacing: 0;
             width: 100%;
-            min-width: 100%;
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -351,43 +350,6 @@ function addCustomStyles() {
             border-radius: 4px;
             color: #A78BFA;
             font-weight: 600;
-        }
-
-        /* Styles pour corriger le problème d'affichage du tableau */
-        #fiscal-simulator {
-            max-width: 100%;
-            width: 100%;
-            overflow-x: auto;
-        }
-        
-        #sim-results {
-            width: 100%;
-            min-width: 1000px;
-        }
-        
-        .tab-content {
-            overflow-x: auto;
-            width: 100%;
-        }
-        
-        #sim-results-container {
-            overflow-x: auto;
-            width: 100%;
-        }
-        
-        .bg-blue-900 {
-            width: 100%;
-        }
-        
-        @media (max-width: 1200px) {
-            #fiscal-simulator {
-                padding: 0;
-            }
-            
-            #sim-results-container {
-                overflow-x: auto;
-                width: 100%;
-            }
         }
     `;
     document.head.appendChild(styleElement);
