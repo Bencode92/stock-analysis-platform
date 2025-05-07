@@ -64,7 +64,7 @@ class SimulationsFiscales {
             };
         }
         
-        // Calcul des cotisations sociales
+        // Calcul des cotisations sociales (même avec VFL, les cotisations restent dues)
         const cotisationsSociales = Math.round(ca * tauxCotisations[typeEffectif]);
         
         // Ajout CFP (formation professionnelle) et CFE estimée
@@ -89,14 +89,8 @@ class SimulationsFiscales {
         }
         
         // Calcul du revenu net après impôt et toutes charges
-        let revenuNetApresImpot;
-        if (versementLiberatoire) {
-            // Le versement libératoire inclut déjà les cotisations sociales
-            revenuNetApresImpot = ca - impotRevenu - cfp - cfe;
-        } else {
-            // Calcul standard avec cotisations sociales séparées
-            revenuNetApresImpot = ca - cotisationsSociales - cfp - cfe - impotRevenu;
-        }
+        // Que ce soit avec ou sans VFL, les cotisations sociales sont toujours dues
+        const revenuNetApresImpot = ca - cotisationsSociales - cfp - cfe - impotRevenu;
         
         return {
             compatible: true,
@@ -120,20 +114,20 @@ class SimulationsFiscales {
         const { ca, tauxMarge = 0.3, tmiActuel = 30, modeExpert = false } = params;
         
         // Calcul du bénéfice avant cotisations (simplifié - CA * taux de marge)
-        const beneficeAvantCotisations = Math.round(ca * tauxMarge);
+        const beneficeBrut = Math.round(ca * tauxMarge);
         
         // Utiliser la formule fermée pour calculer les cotisations TNS
         let cotisationsSociales;
         if (window.FiscalUtils) {
-            cotisationsSociales = window.FiscalUtils.cotisationsTNSSurBenefice(beneficeAvantCotisations);
+            cotisationsSociales = window.FiscalUtils.cotisationsTNSSurBenefice(beneficeBrut);
         } else {
             // Fallback si l'utilitaire n'est pas disponible
             const tauxGlobal = 0.45;
-            cotisationsSociales = Math.round(beneficeAvantCotisations * tauxGlobal / (1 + tauxGlobal));
+            cotisationsSociales = Math.round(beneficeBrut * tauxGlobal / (1 + tauxGlobal));
         }
         
         // Bénéfice après cotisations sociales
-        const beneficeApresCotisations = beneficeAvantCotisations - cotisationsSociales;
+        const beneficeApresCotisations = beneficeBrut - cotisationsSociales;
         
         // Calcul de l'impôt sur le revenu
         let impotRevenu;
@@ -153,7 +147,7 @@ class SimulationsFiscales {
             ca: ca,
             typeEntreprise: 'Entreprise Individuelle',
             tauxMarge: tauxMarge * 100 + '%',
-            beneficeAvantCotisations: beneficeAvantCotisations,
+            beneficeBrut: beneficeBrut,
             cotisationsSociales: cotisationsSociales,
             beneficeApresCotisations: beneficeApresCotisations,
             impotRevenu: impotRevenu,
@@ -181,26 +175,22 @@ class SimulationsFiscales {
         // Calcul du résultat de l'entreprise (simplifié - CA * taux de marge)
         const resultatEntreprise = Math.round(ca * tauxMarge);
         
-        // Calcul de la rémunération du gérant
-        const remuneration = Math.round(resultatEntreprise * tauxRemuneration);
-        const resultatApresRemuneration = resultatEntreprise - remuneration;
-        
         // Simulation selon le régime d'imposition
         if (!optionIS) {
             // Régime IR (transparence fiscale)
             
-            // Utiliser la fonction utilitaire pour calculer les cotisations TNS
+            // Cotisations calculées sur le résultat total (pas de notion de rémunération en IR)
             let cotisationsSociales;
             if (window.FiscalUtils) {
-                cotisationsSociales = window.FiscalUtils.cotisationsTNSSurBenefice(remuneration);
+                cotisationsSociales = window.FiscalUtils.cotisationsTNSSurBenefice(resultatEntreprise);
             } else {
                 // Fallback si l'utilitaire n'est pas disponible
                 const tauxGlobal = 0.45;
-                cotisationsSociales = Math.round(remuneration * tauxGlobal / (1 + tauxGlobal));
+                cotisationsSociales = Math.round(resultatEntreprise * tauxGlobal / (1 + tauxGlobal));
             }
             
-            // Bénéfice imposable (remuneration + résultat après rémunération)
-            const beneficeImposable = remuneration - cotisationsSociales + resultatApresRemuneration;
+            // Bénéfice imposable = résultat - cotisations
+            const beneficeImposable = resultatEntreprise - cotisationsSociales;
             
             // Calcul de l'impôt sur le revenu
             let impotRevenu;
@@ -221,8 +211,6 @@ class SimulationsFiscales {
                 typeEntreprise: "EURL à l'IR",
                 tauxMarge: tauxMarge * 100 + '%',
                 resultatAvantRemuneration: resultatEntreprise,
-                remuneration: remuneration,
-                resultatApresRemuneration: resultatApresRemuneration,
                 cotisationsSociales: cotisationsSociales,
                 beneficeImposable: beneficeImposable,
                 impotRevenu: impotRevenu,
@@ -232,6 +220,10 @@ class SimulationsFiscales {
             };
         } else {
             // Régime IS
+            
+            // Calcul de la rémunération du gérant
+            const remuneration = Math.round(resultatEntreprise * tauxRemuneration);
+            const resultatApresRemuneration = resultatEntreprise - remuneration;
             
             // Utiliser la fonction utilitaire pour calculer les cotisations TNS
             let cotisationsSociales;
@@ -281,8 +273,10 @@ class SimulationsFiscales {
             
             // Calcul du PFU ou barème progressif sur les dividendes
             let prelevementForfaitaire;
-            const useBareme = optionBaremeDividendes;
-            if (useBareme && partDetention < 0.10) {
+            const useBareme = optionBaremeDividendes === true;
+            const eligibleBareme = optionIS === true && partDetention < 0.10;
+            
+            if (useBareme && eligibleBareme) {
                 // Barème progressif avec abattement de 40%
                 prelevementForfaitaire = window.FiscalUtils 
                     ? window.FiscalUtils.calculateProgressiveIR(dividendes * 0.6)
@@ -401,8 +395,10 @@ class SimulationsFiscales {
         
         // Calcul du PFU ou barème progressif sur les dividendes
         let prelevementForfaitaire;
-        const useBareme = optionBaremeDividendes;
-        if (useBareme && partDetention < 0.10) {
+        const useBareme = optionBaremeDividendes === true;
+        const eligibleBareme = partDetention < 0.10;
+        
+        if (useBareme && eligibleBareme) {
             // Barème progressif avec abattement de 40%
             prelevementForfaitaire = window.FiscalUtils 
                 ? window.FiscalUtils.calculateProgressiveIR(dividendes * 0.6)
@@ -552,8 +548,10 @@ class SimulationsFiscales {
         
         // Calcul du PFU ou barème progressif sur les dividendes
         let prelevementForfaitaire;
-        const useBareme = optionBaremeDividendes;
-        if (useBareme && partDetention < 0.10) {
+        const useBareme = optionBaremeDividendes === true;
+        const eligibleBareme = partDetention < 0.10;
+        
+        if (useBareme && eligibleBareme) {
             // Barème progressif avec abattement de 40%
             prelevementForfaitaire = window.FiscalUtils 
                 ? window.FiscalUtils.calculateProgressiveIR(dividendesGerant * 0.6)
