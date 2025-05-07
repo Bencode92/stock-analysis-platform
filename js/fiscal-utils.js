@@ -1,5 +1,5 @@
 // fiscal-utils.js - Utilitaires pour les calculs fiscaux
-// Version 1.2 - Mai 2025 - Mise à jour des taux 2025 et précision des calculs
+// Version 1.1 - Mai 2025 - Mise à jour des taux 2025
 
 // Constantes globales pour les taux de charges
 const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS
@@ -26,19 +26,6 @@ class FiscalUtils {
         }
         
         return Math.round(impot);
-    }
-    
-    // Taux de CFP selon le code APE
-    static tauxCFP(codeApe) {
-        const secteur = codeApe?.slice(0,2) ?? '';
-        if (['47','45','46','56','41','42','43'].includes(secteur)) return 0.001;  // commerce
-        if (['10','20','25','28','33'].includes(secteur))        return 0.003;  // artisanat
-        return 0.002;                                                             // libéral par défaut
-    }
-
-    // Vérification d'éligibilité au versement libératoire
-    static vflEligible(rfrN2, ca, plafondCA) {
-        return rfrN2 !== undefined && rfrN2 <= 27_478 && ca <= plafondCA; // seuil 2025 déclarant seul
     }
     
     // Optimisation du ratio rémunération/dividendes
@@ -98,50 +85,37 @@ class FiscalUtils {
         };
     }
     
-    // Calcul des cotisations TNS avec barème détaillé
-    static cotiTNS(revenuNet) {
-        const PASS = 47_100;                       // 2025
-        const malVieBase  = Math.min(revenuNet, PASS) * 0.172;
-        const malVieSup   = Math.max(0, revenuNet - PASS) * 0.07;
-        const allocFam    = revenuNet * 0.035;
-        const csg         = revenuNet * 0.092;
-        const crds        = revenuNet * 0.005;
-        return Math.round(malVieBase + malVieSup + allocFam + csg + crds);
+    // Calcul des cotisations TNS avec barème progressif
+    static calculCotisationsTNS(rem) {
+        const PASS = 47100;              // Plafond annuel SS 2025
+        const trancheA = Math.min(rem, PASS) * 0.28;   // maladie + vieillesse de base
+        const trancheB = Math.max(0, rem - PASS) * 0.17;
+        const csg = rem * 0.092;
+        const crds = rem * 0.005;
+        return Math.round(trancheA + trancheB + csg + crds);
     }
     
-    // Calcul des cotisations TNS sur bénéfice (formule fermée plus précise) - conservé pour compatibilité
+    // Calcul des cotisations TNS sur bénéfice (formule fermée plus précise)
     static cotisationsTNSSurBenefice(beneficeBrut) {
-        return this.cotiTNS(beneficeBrut);
+        const tauxGlobal = 0.45;
+        return Math.round(beneficeBrut * tauxGlobal / (1 + tauxGlobal));
     }
     
     // Calcul des cotisations TNS sur dividendes
-    static cotTNSDividendes(div, capitalSocial) {
-        const base = Math.max(0, div - 0.10 * capitalSocial);
-        return this.cotiTNS(base);          // taux plein, sans abattement
+    static cotTNSDividendes(dividendes, capitalSocial) {
+        const base = Math.max(0, dividendes - 0.10 * capitalSocial);
+        // Utiliser 75% du taux normal des cotisations TNS (exclut certaines cotisations)
+        return Math.round(this.cotisationsTNSSurBenefice(base) * 0.75);
     }
     
-    // Calcul des charges assimilé salarié détaillées avec allègement Fillon
-    static chargesAssimileSalarie(brut) {
-        const PASS = 47_100;
-        const retraiteBasePat = Math.min(brut, PASS) * 0.08;
-        const retraiteBaseSal = Math.min(brut, PASS) * 0.068;
-        // ajustez / complétez avec retraite compl., chômage, maladie, etc.
-        const csgCRDS         = brut * 0.098;
-        const fillon          = brut < 1.6*PASS ? - brut * 0.281 * ( (1.6*PASS - brut) / (1.6*PASS - 1.0*PASS) ) : 0;
-        const patTot = Math.max(0, brut*0.28 + retraiteBasePat + fillon);
-        const salTot = Math.round(retraiteBaseSal + csgCRDS + brut*0.02); // autres lignes
-        return { patronales: Math.round(patTot), salariales: salTot };
-    }
-    
-    // Calcul des charges salariales (conservé pour compatibilité)
+    // Calcul des charges salariales
     static calculChargesSalariales(remuneration) {
-        return this.chargesAssimileSalarie(remuneration);
-    }
-    
-    // Coefficient ACRE selon l'année de début d'activité
-    static coefACRE(anneeDebut) {
-        const diff = new Date().getFullYear() - anneeDebut;
-        return diff === 0 ? 0.25 : diff === 1 ? 0.5 : diff === 2 ? 0.75 : 1;
+        // Taux moyens 2025 - peuvent varier selon secteur, allègements et part des charges plafonnées
+        return {
+            patronales: Math.round(remuneration * 0.45),
+            salariales: Math.round(remuneration * 0.22),
+            total: Math.round(remuneration * 0.67)
+        };
     }
     
     // Calcul PFU sur dividendes
@@ -150,15 +124,13 @@ class FiscalUtils {
     }
     
     // Calcul IS selon tranches et conditions d'éligibilité au taux réduit
-    static calculIS(bn, {ca=0, capitalEstLibere=true, detentionPersPhysiques75=true}={}) {
-        const seuil15 = 42_750, seuil3_3 = 763_000;
-        const part15  = Math.min(bn, seuil15);
-        const part25  = Math.max(0, bn - seuil15);
-        const taux15ok = ca < 10_000_000 && capitalEstLibere && detentionPersPhysiques75;
-        const isBrut  = part15*(taux15ok?0.15:0.25) + part25*0.25;
-        // contribution sociale
-        const css = (bn > seuil3_3 && ca >= 7_630_000) ? Math.round(isBrut * 0.033) : 0;
-        return Math.round(isBrut + css);
+    static calculIS(resultat, params = {}) {
+        const seuil = 42750; // Seuil revalorisé 2025
+        const okTauxReduit = resultat <= seuil
+          && (params.ca ?? Infinity) < 10_000_000
+          && (params.capitalEstLibere !== false)
+          && (params.detentionPersPhysiques75 !== false);
+        return Math.round(resultat * (okTauxReduit ? 0.15 : 0.25));
     }
     
     // Création de données pour le graphique d'optimisation
