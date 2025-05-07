@@ -1,6 +1,8 @@
 // fiscal-utils.js - Utilitaires pour les calculs fiscaux
 // Version 1.1 - Mai 2025 - Mise à jour des taux 2025
 
+const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS
+
 class FiscalUtils {
     // Calcul d'IR par tranches progressives
     static calculateProgressiveIR(revenuImposable) {
@@ -28,8 +30,8 @@ class FiscalUtils {
         let meilleurRatio = 0.5;
         let meilleurNet = 0;
         
-        // Tester différents ratios de 0% à 90% par pas de 5%
-        for(let ratio = 0.0; ratio <= 0.9; ratio += 0.05) {
+        // Tester différents ratios de 0% à 100% par pas de 5%
+        for(let ratio = 0.0; ratio <= 1.0; ratio += 0.05) {
             const paramsTest = {...params, tauxRemuneration: ratio};
             const resultat = simulationFunc(paramsTest);
             
@@ -73,6 +75,12 @@ class FiscalUtils {
         return Math.round(trancheA + trancheB + csg + crds);
     }
     
+    // Calcul des cotisations TNS sur bénéfice brut (formule fermée)
+    static cotisationsTNSSurBenefice(beneficeBrut) {
+        const tauxGlobal = 0.45;
+        return Math.round(beneficeBrut * tauxGlobal / (1 + tauxGlobal));
+    }
+    
     // Calcul des cotisations TNS sur dividendes
     static cotTNSDividendes(dividendes, capitalSocial) {
         const base = Math.max(0, dividendes - 0.10 * capitalSocial);
@@ -94,11 +102,14 @@ class FiscalUtils {
         return Math.round(dividendes * 0.30);
     }
     
-    // Calcul IS selon tranches
-    static calculIS(resultat) {
+    // Calcul IS selon tranches avec paramètres additionnels
+    static calculIS(resultat, params = {}) {
         const seuil = 42500;
-        const tauxIS = resultat <= seuil ? 0.15 : 0.25;
-        return Math.round(resultat * tauxIS);
+        const okTauxReduit = resultat <= seuil 
+            && (params.ca ?? Infinity) < 10000000
+            && (params.capitalEstLibere ?? true)
+            && (params.detentionPersPhysiques75 ?? true);
+        return Math.round(resultat * (okTauxReduit ? 0.15 : 0.25));
     }
     
     // Création de données pour le graphique d'optimisation
