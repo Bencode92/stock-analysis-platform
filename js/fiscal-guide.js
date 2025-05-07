@@ -662,6 +662,16 @@ function updateSimulatorInterface() {
                     </div>
                 </div>
                 
+                <!-- Ajouter le sélecteur de type d'activité pour micro-entreprise -->
+                <div class="mt-4">
+                    <label class="block text-gray-300 mb-2">Type d'activité pour Micro-entreprise</label>
+                    <select id="micro-type" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
+                        <option value="BIC_SERVICE" selected>BIC Services (abattement 50%)</option>
+                        <option value="BIC_VENTE">BIC Vente (abattement 71%)</option>
+                        <option value="BNC">BNC (abattement 34%)</option>
+                    </select>
+                </div>
+                
                 <!-- Avertissement sur les limites du simulateur -->
                 <div class="fiscal-warning mt-4">
                     <p><i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i> <strong>Limites du simulateur:</strong> Ce simulateur simplifie certains aspects fiscaux pour faciliter la comparaison. Pour une analyse complète, consultez un expert-comptable.</p>
@@ -850,8 +860,8 @@ function updateSimulatorInterface() {
             });
         });
         
-        // Ajouter un événement aux cases à cocher
-        document.querySelectorAll('.status-checkbox, #use-optimal-ratio, #use-avg-charge-rate').forEach(checkbox => {
+        // Ajouter un événement aux cases à cocher et au type micro-entreprise
+        document.querySelectorAll('.status-checkbox, #use-optimal-ratio, #use-avg-charge-rate, #micro-type').forEach(checkbox => {
             checkbox.addEventListener('change', runComparison);
         });
         
@@ -985,7 +995,7 @@ function runComparison() {
             nom: 'Micro-entreprise', 
             simuler: () => window.SimulationsFiscales.simulerMicroEntreprise({
                 ca: ca,
-                typeMicro: 'BIC',
+                typeMicro: document.getElementById('micro-type').value,
                 tmiActuel: tmi,
                 modeExpert: modeExpert
             })
@@ -2110,106 +2120,80 @@ function getStatutFiscalInfo(statutId) {
             <p class="mb-2"><strong>Régime fiscal :</strong> IR avec abattement forfaitaire</p>
             <p class="mb-2"><strong>Abattements :</strong> 71% (vente), 50% (services BIC), 34% (BNC)</p>
             <p class="mb-2"><strong>Charges sociales :</strong> 12.3% (vente), 21.2% (services) du CA</p>
-            <p class="mb-2"><strong>Plafonds 2025 :</strong> 188 700€ (vente), 77 700€ (services)</p>
-            <p class="mb-2"><strong>Option versement libératoire :</strong> Possible si revenu fiscal N-2 < plafond</p>
-            <p class="mb-2"><strong>Optimisation fiscale :</strong> Idéal quand les charges réelles sont inférieures à l'abattement forfaitaire</p>
+            <p class="mb-2"><strong>Plafonds 2025 :</strong> 188 700€ (vente) / 77 700€ (services)</p>
         `,
         'EI': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IR par défaut</p>
-            <p class="mb-2"><strong>Option IS :</strong> Possible (permet dividendes)</p>
-            <p class="mb-2"><strong>Charges sociales :</strong> Environ 45% sur le bénéfice</p>
-            <p class="mb-2"><strong>Plafonds :</strong> Aucun</p>
-            <p class="mb-2"><strong>Déductions fiscales :</strong> Toutes charges réelles liées à l'activité</p>
-            <p class="mb-2"><strong>Particularité :</strong> Patrimoine professionnel distinct depuis 2022</p>
+            <p class="mb-2"><strong>Régime fiscal :</strong> IR, imposition sur le bénéfice</p>
+            <p class="mb-2"><strong>Cotisations sociales :</strong> ~45% du bénéfice</p>
+            <p class="mb-2"><strong>Avantages :</strong> Simplicité de gestion, frais réels déductibles</p>
+            <p class="mb-2"><strong>Inconvénients :</strong> Pas de distinction entre patrimoine privé/pro</p>
         `,
         'EURL': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IR par défaut (gérant associé unique)</p>
-            <p class="mb-2"><strong>Option fiscale :</strong> IS possible</p>
-            <p class="mb-2"><strong>Charges sociales :</strong> TNS (~40-45% sur rémunération)</p>
-            <p class="mb-2"><strong>Dividendes :</strong> Soumis aux prélèvements sociaux (17.2%) + PFU (12.8%) ou IR</p>
-            <p class="mb-2"><strong>IS :</strong> 15% jusqu'à 42 500€ de bénéfices, 25% au-delà</p>
-            <p class="mb-2"><strong>Optimisation :</strong> À l'IS, les TNS avec dividendes > 10% du capital social sont soumis aux cotisations sociales</p>
+            <p class="mb-2"><strong>Régimes fiscaux possibles :</strong> IR par défaut ou option IS</p>
+            <p class="mb-2"><strong>IR :</strong> Imposition sur la totalité du bénéfice</p>
+            <p class="mb-2"><strong>IS :</strong> Impôt sur les sociétés + PFU sur dividendes</p>
+            <p class="mb-2"><strong>Cotisations sociales :</strong> Environ 45% de la rémunération du gérant (TNS)</p>
         `,
         'SASU': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IS (Impôt sur les Sociétés)</p>
-            <p class="mb-2"><strong>Charges sociales :</strong> Environ 80-85% sur salaire brut (part salariale + patronale)</p>
-            <p class="mb-2"><strong>Rémunération président :</strong> Assimilé salarié</p>
-            <p class="mb-2"><strong>Dividendes :</strong> Soumis aux prélèvements sociaux (17.2%) + PFU (12.8%) ou IR</p>
-            <p class="mb-2"><strong>IS :</strong> 15% jusqu'à 42 500€ de bénéfices, 25% au-delà</p>
-            <p class="mb-2"><strong>Optimisation :</strong> Charges sociales lourdes sur salaire → favoriser les dividendes</p>
+            <p class="mb-2"><strong>Régime fiscal :</strong> IS uniquement</p>
+            <p class="mb-2"><strong>Social :</strong> Président assimilé salarié</p>
+            <p class="mb-2"><strong>Cotisations :</strong> ~80% sur rémunération (22% salariales, 55% patronales)</p>
+            <p class="mb-2"><strong>Fiscalité :</strong> IS (15%/25%) + PFU 30% sur dividendes</p>
+            <p class="mb-2"><strong>Optimisation:</strong> Favoriser les dividendes</p>
         `,
         'SARL': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IS (option IR possible sur 5 ans)</p>
-            <p class="mb-2"><strong>Charges sociales :</strong> TNS pour gérant majoritaire, assimilé salarié pour gérant minoritaire</p>
-            <p class="mb-2"><strong>Dividendes :</strong> Soumis aux prélèvements sociaux (17.2%) + PFU (12.8%) ou IR</p>
-            <p class="mb-2"><strong>Dividendes gérant majoritaire :</strong> Soumis aux cotisations TNS si > 10% du capital social</p>
-            <p class="mb-2"><strong>IS :</strong> 15% jusqu'à 42 500€ de bénéfices, 25% au-delà</p>
-            <p class="mb-2"><strong>Particularité :</strong> Structure flexible adaptée aux PME et entreprises familiales</p>
+            <p class="mb-2"><strong>Régime fiscal :</strong> IS presque toujours</p>
+            <p class="mb-2"><strong>Social gérant majoritaire :</strong> TNS (~45% de cotisations)</p>
+            <p class="mb-2"><strong>Social gérant minoritaire :</strong> Assimilé salarié (~80%)</p>
+            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes (ou dividendes TNS >10% capital)</p>
         `,
         'SAS': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IS</p>
-            <p class="mb-2"><strong>Charges sociales :</strong> Assimilé salarié pour le président</p>
-            <p class="mb-2"><strong>Dividendes :</strong> Soumis aux prélèvements sociaux (17.2%) + PFU (12.8%) ou IR</p>
-            <p class="mb-2"><strong>IS :</strong> 15% jusqu'à 42 500€ de bénéfices, 25% au-delà</p>
-            <p class="mb-2"><strong>Optimisation :</strong> Charges sociales lourdes sur salaire → favoriser les dividendes</p>
-            <p class="mb-2"><strong>Particularité :</strong> Adaptée aux structures avec investisseurs</p>
+            <p class="mb-2"><strong>Régime fiscal :</strong> IS (impôt sur les sociétés)</p>
+            <p class="mb-2"><strong>Social :</strong> Président assimilé salarié</p>
+            <p class="mb-2"><strong>Cotisations :</strong> ~80% sur rémunération (22% salariales, 55% patronales)</p>
+            <p class="mb-2"><strong>Fiscalité :</strong> IS (15%/25%) + PFU 30% sur dividendes</p>
+            <p class="mb-2"><strong>Capital minimal :</strong> Libre (1€ suffit)</p>
         `,
         'SA': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IS</p>
-            <p class="mb-2"><strong>Capital minimum :</strong> 37 000€</p>
-            <p class="mb-2"><strong>Charges sociales :</strong> Assimilé salarié pour les dirigeants</p>
-            <p class="mb-2"><strong>Dividendes :</strong> Soumis aux prélèvements sociaux (17.2%) + PFU (12.8%) ou IR</p>
-            <p class="mb-2"><strong>IS :</strong> 15% jusqu'à 42 500€ de bénéfices, 25% au-delà</p>
-            <p class="mb-2"><strong>Coûts supplémentaires :</strong> Commissaire aux comptes obligatoire</p>
-            <p class="mb-2"><strong>Particularité :</strong> Structure pour grandes entreprises ou cotation en bourse</p>
+            <p class="mb-2"><strong>Régime fiscal :</strong> IS (impôt sur les sociétés)</p>
+            <p class="mb-2"><strong>Social :</strong> Président du CA assimilé salarié</p>
+            <p class="mb-2"><strong>Particularités :</strong> Conseil d'administration obligatoire (3 membres min)</p>
+            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
+            <p class="mb-2"><strong>Capital minimal :</strong> 37 000€</p>
         `,
         'SNC': `
             <p class="mb-2"><strong>Régime fiscal :</strong> IR (transparence fiscale)</p>
-            <p class="mb-2"><strong>Option IS :</strong> Possible</p>
-            <p class="mb-2"><strong>Charges sociales :</strong> TNS pour les associés</p>
-            <p class="mb-2"><strong>Particularité :</strong> Imposition directe des bénéfices aux associés (IR)</p>
-            <p class="mb-2"><strong>Responsabilité :</strong> Indéfinie et solidaire des associés</p>
-            <p class="mb-2"><strong>Usages :</strong> Principalement pour professions réglementées ou activités spécifiques</p>
+            <p class="mb-2"><strong>Particularités :</strong> Responsabilité indéfinie et solidaire des associés</p>
+            <p class="mb-2"><strong>Social :</strong> Gérants et associés = TNS</p>
+            <p class="mb-2"><strong>Fiscalité :</strong> Bénéfice imposé directement chez les associés</p>
         `,
         'SCI': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IR par défaut (transparence fiscale)</p>
-            <p class="mb-2"><strong>Option IS :</strong> Possible mais généralement défavorable</p>
-            <p class="mb-2"><strong>TVA :</strong> Exonération possible pour location nue</p>
-            <p class="mb-2"><strong>Particularité :</strong> Revenus fonciers pour les associés à l'IR</p>
-            <p class="mb-2"><strong>Déductions à l'IR :</strong> Charges, intérêts d'emprunt, amortissements (meublé pro)</p>
-            <p class="mb-2"><strong>Usage :</strong> Gestion et transmission de patrimoine immobilier</p>
+            <p class="mb-2"><strong>Régime fiscal :</strong> IR par défaut, option IS possible</p>
+            <p class="mb-2"><strong>Activité :</strong> Gestion immobilière (location nue principalement)</p>
+            <p class="mb-2"><strong>IR :</strong> Revenus fonciers pour les associés + prélèvements sociaux 17.2%</p>
+            <p class="mb-2"><strong>IS :</strong> Rarement avantageux sauf activité commerciale</p>
         `,
         'SELARL': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IS</p>
-            <p class="mb-2"><strong>Charges sociales :</strong> TNS pour gérant majoritaire</p>
-            <p class="mb-2"><strong>Dividendes :</strong> Soumis aux prélèvements sociaux (17.2%) + PFU (12.8%) ou IR</p>
-            <p class="mb-2"><strong>Dividendes gérant majoritaire :</strong> Soumis aux cotisations TNS si > 10% du capital social</p>
-            <p class="mb-2"><strong>IS :</strong> 15% jusqu'à 42 500€ de bénéfices, 25% au-delà</p>
-            <p class="mb-2"><strong>Particularité :</strong> Réservée aux professions libérales réglementées</p>
-            <p class="mb-2"><strong>Avantages fiscaux :</strong> Possibilité de constituer une société holding</p>
+            <p class="mb-2"><strong>Régime fiscal :</strong> IS presque toujours</p>
+            <p class="mb-2"><strong>Particularités :</strong> Réservée aux professions libérales réglementées</p>
+            <p class="mb-2"><strong>Social :</strong> Gérant majoritaire = TNS</p>
+            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes (ou dividendes TNS >10% capital)</p>
         `,
         'SELAS': `
             <p class="mb-2"><strong>Régime fiscal :</strong> IS</p>
-            <p class="mb-2"><strong>Charges sociales :</strong> Assimilé salarié pour le président</p>
-            <p class="mb-2"><strong>Dividendes :</strong> Soumis aux prélèvements sociaux (17.2%) + PFU (12.8%) ou IR</p>
-            <p class="mb-2"><strong>IS :</strong> 15% jusqu'à 42 500€ de bénéfices, 25% au-delà</p>
-            <p class="mb-2"><strong>Optimisation :</strong> Charges sociales lourdes sur salaire → favoriser les dividendes</p>
-            <p class="mb-2"><strong>Particularité :</strong> Réservée aux professions libérales réglementées</p>
-            <p class="mb-2"><strong>Avantages :</strong> Combine flexibilité de la SAS et exercice libéral</p>
+            <p class="mb-2"><strong>Particularités :</strong> Réservée aux professions libérales réglementées</p>
+            <p class="mb-2"><strong>Social :</strong> Président assimilé salarié</p>
+            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
+            <p class="mb-2"><strong>Capital minimal :</strong> Libre</p>
         `,
         'SCA': `
             <p class="mb-2"><strong>Régime fiscal :</strong> IS</p>
-            <p class="mb-2"><strong>Structure :</strong> Commandités (responsabilité illimitée) et commanditaires (limitée)</p>
-            <p class="mb-2"><strong>Dividendes :</strong> Soumis aux prélèvements sociaux (17.2%) + PFU (12.8%) ou IR</p>
-            <p class="mb-2"><strong>IS :</strong> 15% jusqu'à 42 500€ de bénéfices, 25% au-delà</p>
-            <p class="mb-2"><strong>Capital minimum :</strong> 37 000€</p>
-            <p class="mb-2"><strong>Particularité :</strong> Protection contre les OPA hostiles</p>
-            <p class="mb-2"><strong>Usage :</strong> Structure familiale cherchant à lever des fonds</p>
+            <p class="mb-2"><strong>Structure :</strong> Commandités (responsabilité illimitée) et commanditaires</p>
+            <p class="mb-2"><strong>Social :</strong> Gérants = TNS</p>
+            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
+            <p class="mb-2"><strong>Capital minimal :</strong> 37 000€</p>
         `
     };
     
-    return infosFiscales[statutId] || `<p class="mb-2">Informations fiscales non disponibles pour ce statut.</p>`;
+    return infosFiscales[statutId] || `<p>Informations non disponibles pour ${statutId}</p>`;
 }
-
-// Exposer l'initialisation au niveau global pour l'onglet
-window.initFiscalSimulator = initFiscalSimulator;
