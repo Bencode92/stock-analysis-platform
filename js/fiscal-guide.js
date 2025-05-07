@@ -1,5 +1,5 @@
 // fiscal-guide.js - Simulateur fiscal simplifié pour l'onglet Guide fiscal
-// Version 3.5 - Mai 2025 - Correction du traitement des taux de frais réels
+// Version 3.6 - Mai 2025 - Ajout de la fonction de détail des calculs
 
 document.addEventListener('DOMContentLoaded', function() {
     // S'assurer que l'onglet Guide fiscal initialise correctement ce code
@@ -432,6 +432,88 @@ function addCustomStyles() {
         .info-tooltip:hover .tooltiptext {
             visibility: visible;
             opacity: 1;
+        }
+        
+        /* Styles pour le modal de détail */
+        .detail-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .detail-content {
+            background-color: rgba(1, 42, 74, 0.95);
+            border-radius: 12px;
+            border: 1px solid rgba(0, 255, 135, 0.3);
+            padding: 2rem;
+            max-width: 800px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .close-modal:hover {
+            color: var(--primary-color);
+            transform: scale(1.1);
+        }
+        
+        .detail-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        
+        .detail-table th {
+            text-align: left;
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--primary-color);
+        }
+        
+        .detail-table td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        
+        .detail-table tr:nth-child(even) {
+            background-color: rgba(255, 255, 255, 0.03);
+        }
+        
+        .detail-category {
+            margin-top: 1.5rem;
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid rgba(0, 255, 135, 0.3);
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        
+        .cursor-pointer {
+            cursor: pointer;
+        }
+        
+        .show-detail-btn:hover {
+            text-decoration: underline;
+            color: var(--primary-color);
         }
     `;
     document.head.appendChild(styleElement);
@@ -1422,11 +1504,12 @@ function runComparison() {
             <td class="px-4 py-3">${res.dividendesNets ? formatter.format(res.dividendesNets) : '-'}</td>
             <td class="px-4 py-3">${optimisationValue}</td>
             <td class="px-4 py-3">
-                <span class="net-value ${isTopResult ? 'top' : ''}">
+                <span class="net-value ${isTopResult ? 'top' : ''} cursor-pointer show-detail-btn" data-statut="${res.statutId}">
                     ${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}
                 </span>
                 ${isTopResult ? 
                 '<div class="text-xs text-green-400 mt-1"><i class="fas fa-check-circle mr-1"></i>Optimal pour ce CA</div>' : ''}
+                <div class="text-xs text-blue-400 mt-1"><i class="fas fa-info-circle mr-1"></i>Cliquez pour détails</div>
             </td>
         `;
         
@@ -1483,6 +1566,428 @@ function runComparison() {
     `;
     
     resultsBody.appendChild(warningRow);
+    
+    // Ajouter les gestionnaires d'événements pour afficher les détails
+    const detailButtons = document.querySelectorAll('.show-detail-btn');
+    detailButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const statutId = this.getAttribute('data-statut');
+            showCalculationDetails(statutId, resultats);
+        });
+    });
+}
+
+// Fonction pour afficher le détail des calculs
+function showCalculationDetails(statutId, simulationResults) {
+    // Trouver les résultats pour ce statut
+    const result = simulationResults.find(r => r.statutId === statutId);
+    if (!result) return;
+    
+    // Formatter les nombres
+    const formatter = new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    });
+    
+    // Créer le modal
+    const modal = document.createElement('div');
+    modal.className = 'detail-modal';
+    
+    // Adapter l'affichage en fonction du statut juridique
+    let detailContent = '';
+    
+    if (statutId === 'micro') {
+        detailContent = `
+            <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - Micro-entreprise</h2>
+            
+            <div class="detail-category">Données de base</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Chiffre d'affaires</td>
+                    <td>${formatter.format(result.sim.ca)}</td>
+                </tr>
+                <tr>
+                    <td>Type de micro-entreprise</td>
+                    <td>${result.sim.typeMicro || 'BIC'}</td>
+                </tr>
+                <tr>
+                    <td>Abattement forfaitaire</td>
+                    <td>${result.sim.abattement}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Charges sociales</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Base de calcul</td>
+                    <td>${formatter.format(result.sim.ca)}</td>
+                </tr>
+                <tr>
+                    <td>Taux de cotisations sociales</td>
+                    <td>${(result.sim.cotisationsSociales / result.sim.ca * 100).toFixed(1)}%</td>
+                </tr>
+                <tr>
+                    <td>Montant des cotisations sociales</td>
+                    <td>${formatter.format(result.sim.cotisationsSociales)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Impôt sur le revenu</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Revenu imposable après abattement</td>
+                    <td>${formatter.format(result.sim.revenuImposable)}</td>
+                </tr>
+                <tr>
+                    <td>Impôt sur le revenu</td>
+                    <td>${formatter.format(result.sim.impotRevenu)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Résultat final</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Chiffre d'affaires</td>
+                    <td>${formatter.format(result.sim.ca)}</td>
+                </tr>
+                <tr>
+                    <td>- Cotisations sociales</td>
+                    <td>${formatter.format(result.sim.cotisationsSociales)}</td>
+                </tr>
+                <tr>
+                    <td>- Impôt sur le revenu</td>
+                    <td>${formatter.format(result.sim.impotRevenu)}</td>
+                </tr>
+                <tr>
+                    <td><strong>= Revenu net en poche</strong></td>
+                    <td><strong>${formatter.format(result.sim.revenuNetApresImpot)}</strong></td>
+                </tr>
+                <tr>
+                    <td>Ratio Net/CA</td>
+                    <td>${result.sim.ratioNetCA.toFixed(1)}%</td>
+                </tr>
+            </table>
+        `;
+    } else if (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa') {
+        // Cas des structures avec dirigeant assimilé salarié (SASU, SAS, etc.)
+        detailContent = `
+            <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - ${result.statut}</h2>
+            
+            <div class="detail-category">Données de base</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Chiffre d'affaires</td>
+                    <td>${formatter.format(result.sim.ca)}</td>
+                </tr>
+                <tr>
+                    <td>Résultat de l'entreprise (marge)</td>
+                    <td>${formatter.format(result.sim.resultatEntreprise)}</td>
+                </tr>
+                <tr>
+                    <td>Ratio rémunération/dividendes ${result.sim.ratioOptimise ? '(optimisé)' : '(manuel)'}</td>
+                    <td>${result.sim.ratioOptimise ? (result.sim.ratioOptimise * 100).toFixed(0) : (result.ratioEffectif * 100).toFixed(0)}% / ${result.sim.ratioOptimise ? (100 - result.sim.ratioOptimise * 100).toFixed(0) : (100 - result.ratioEffectif * 100).toFixed(0)}%</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Rémunération</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Rémunération brute</td>
+                    <td>${formatter.format(result.sim.remuneration)}</td>
+                </tr>
+                <tr>
+                    <td>Charges patronales</td>
+                    <td>${formatter.format(result.sim.chargesPatronales)}</td>
+                </tr>
+                <tr>
+                    <td>Charges salariales</td>
+                    <td>${formatter.format(result.sim.chargesSalariales)}</td>
+                </tr>
+                <tr>
+                    <td>Coût total employeur</td>
+                    <td>${formatter.format(result.sim.coutTotalEmployeur || (result.sim.remuneration + result.sim.chargesPatronales))}</td>
+                </tr>
+                <tr>
+                    <td>Salaire net avant IR</td>
+                    <td>${formatter.format(result.sim.salaireNet)}</td>
+                </tr>
+                <tr>
+                    <td>Impôt sur le revenu</td>
+                    <td>${formatter.format(result.sim.impotRevenu)}</td>
+                </tr>
+                <tr>
+                    <td>Salaire net après IR</td>
+                    <td>${formatter.format(result.sim.salaireNetApresIR)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Dividendes</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Résultat après rémunération</td>
+                    <td>${formatter.format(result.sim.resultatApresRemuneration)}</td>
+                </tr>
+                <tr>
+                    <td>Impôt sur les sociétés</td>
+                    <td>${formatter.format(result.sim.is)}</td>
+                </tr>
+                <tr>
+                    <td>Résultat après IS</td>
+                    <td>${formatter.format(result.sim.resultatApresIS)}</td>
+                </tr>
+                <tr>
+                    <td>Dividendes bruts</td>
+                    <td>${formatter.format(result.sim.dividendes)}</td>
+                </tr>
+                <tr>
+                    <td>Prélèvement Forfaitaire Unique (30%)</td>
+                    <td>${formatter.format(result.sim.prelevementForfaitaire)}</td>
+                </tr>
+                <tr>
+                    <td>Dividendes nets</td>
+                    <td>${formatter.format(result.sim.dividendesNets)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Résultat final</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Salaire net après IR</td>
+                    <td>${formatter.format(result.sim.salaireNetApresIR)}</td>
+                </tr>
+                <tr>
+                    <td>+ Dividendes nets</td>
+                    <td>${formatter.format(result.sim.dividendesNets)}</td>
+                </tr>
+                <tr>
+                    <td><strong>= Revenu net total</strong></td>
+                    <td><strong>${formatter.format(result.sim.revenuNetTotal)}</strong></td>
+                </tr>
+                <tr>
+                    <td>Ratio Net/CA</td>
+                    <td>${result.sim.ratioNetCA.toFixed(1)}%</td>
+                </tr>
+            </table>
+        `;
+    } else if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl') {
+        // Cas des structures à l'IS avec un gérant TNS
+        detailContent = `
+            <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - ${result.statut}</h2>
+            
+            <div class="detail-category">Données de base</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Chiffre d'affaires</td>
+                    <td>${formatter.format(result.sim.ca)}</td>
+                </tr>
+                <tr>
+                    <td>Résultat de l'entreprise</td>
+                    <td>${formatter.format(result.sim.resultatAvantRemuneration || result.sim.resultatEntreprise)}</td>
+                </tr>
+                <tr>
+                    <td>Ratio rémunération/dividendes ${result.sim.ratioOptimise ? '(optimisé)' : '(manuel)'}</td>
+                    <td>${result.sim.ratioOptimise ? (result.sim.ratioOptimise * 100).toFixed(0) : (result.ratioEffectif * 100).toFixed(0)}% / ${result.sim.ratioOptimise ? (100 - result.sim.ratioOptimise * 100).toFixed(0) : (100 - result.ratioEffectif * 100).toFixed(0)}%</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Rémunération</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Rémunération brute</td>
+                    <td>${formatter.format(result.sim.remuneration)}</td>
+                </tr>
+                <tr>
+                    <td>Cotisations sociales TNS</td>
+                    <td>${formatter.format(result.sim.cotisationsSociales)}</td>
+                </tr>
+                <tr>
+                    <td>Revenu net social</td>
+                    <td>${formatter.format(result.sim.remunerationNetteSociale)}</td>
+                </tr>
+                <tr>
+                    <td>Impôt sur le revenu</td>
+                    <td>${formatter.format(result.sim.impotRevenu)}</td>
+                </tr>
+                <tr>
+                    <td>Revenu net après IR</td>
+                    <td>${formatter.format(result.sim.revenuNetSalaire)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Dividendes</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Résultat après rémunération</td>
+                    <td>${formatter.format(result.sim.resultatApresRemuneration)}</td>
+                </tr>
+                <tr>
+                    <td>Impôt sur les sociétés</td>
+                    <td>${formatter.format(result.sim.is)}</td>
+                </tr>
+                <tr>
+                    <td>Résultat après IS</td>
+                    <td>${formatter.format(result.sim.resultatApresIS)}</td>
+                </tr>
+                <tr>
+                    <td>Dividendes bruts</td>
+                    <td>${formatter.format(result.sim.dividendes)}</td>
+                </tr>
+                <tr>
+                    <td>Prélèvement Forfaitaire Unique (30%)</td>
+                    <td>${formatter.format(result.sim.prelevementForfaitaire)}</td>
+                </tr>
+                <tr>
+                    <td>Dividendes nets</td>
+                    <td>${formatter.format(result.sim.dividendesNets)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Résultat final</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Revenu net après IR</td>
+                    <td>${formatter.format(result.sim.revenuNetSalaire)}</td>
+                </tr>
+                <tr>
+                    <td>+ Dividendes nets</td>
+                    <td>${formatter.format(result.sim.dividendesNets)}</td>
+                </tr>
+                <tr>
+                    <td><strong>= Revenu net total</strong></td>
+                    <td><strong>${formatter.format(result.sim.revenuNetTotal)}</strong></td>
+                </tr>
+                <tr>
+                    <td>Ratio Net/CA</td>
+                    <td>${result.sim.ratioNetCA.toFixed(1)}%</td>
+                </tr>
+            </table>
+        `;
+    } else if (statutId === 'ei' || statutId === 'eurl' || statutId === 'snc') {
+        // Cas des entreprises à l'IR
+        detailContent = `
+            <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - ${result.statut}</h2>
+            
+            <div class="detail-category">Données de base</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Chiffre d'affaires</td>
+                    <td>${formatter.format(result.sim.ca)}</td>
+                </tr>
+                <tr>
+                    <td>Bénéfice avant cotisations</td>
+                    <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Charges sociales</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Base de calcul</td>
+                    <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
+                </tr>
+                <tr>
+                    <td>Taux de cotisations sociales TNS</td>
+                    <td>~45%</td>
+                </tr>
+                <tr>
+                    <td>Montant des cotisations sociales</td>
+                    <td>${formatter.format(result.sim.cotisationsSociales)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Impôt sur le revenu</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Bénéfice après cotisations</td>
+                    <td>${formatter.format(result.sim.beneficeApresCotisations || result.sim.beneficeImposable)}</td>
+                </tr>
+                <tr>
+                    <td>Impôt sur le revenu</td>
+                    <td>${formatter.format(result.sim.impotRevenu)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Résultat final</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Bénéfice avant cotisations</td>
+                    <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
+                </tr>
+                <tr>
+                    <td>- Cotisations sociales</td>
+                    <td>${formatter.format(result.sim.cotisationsSociales)}</td>
+                </tr>
+                <tr>
+                    <td>- Impôt sur le revenu</td>
+                    <td>${formatter.format(result.sim.impotRevenu)}</td>
+                </tr>
+                <tr>
+                    <td><strong>= Revenu net en poche</strong></td>
+                    <td><strong>${formatter.format(result.sim.revenuNetApresImpot)}</strong></td>
+                </tr>
+                <tr>
+                    <td>Ratio Net/CA</td>
+                    <td>${result.sim.ratioNetCA.toFixed(1)}%</td>
+                </tr>
+            </table>
+        `;
+    } else {
+        // Cas par défaut
+        detailContent = `
+            <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - ${result.statut}</h2>
+            
+            <div class="detail-category">Résultat final</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Chiffre d'affaires</td>
+                    <td>${formatter.format(result.sim.ca)}</td>
+                </tr>
+                <tr>
+                    <td>Charges sociales</td>
+                    <td>${formatter.format(result.charges)}</td>
+                </tr>
+                <tr>
+                    <td>Impôts (IR + IS + PFU)</td>
+                    <td>${formatter.format(result.impots)}</td>
+                </tr>
+                <tr>
+                    <td><strong>Revenu net total</strong></td>
+                    <td><strong>${formatter.format(result.net)}</strong></td>
+                </tr>
+                <tr>
+                    <td>Ratio Net/CA</td>
+                    <td>${(result.score || 0).toFixed(1)}%</td>
+                </tr>
+            </table>
+            
+            <div class="mt-4 p-4 bg-blue-900 bg-opacity-30 rounded-lg text-sm">
+                <p><i class="fas fa-info-circle text-blue-400 mr-2"></i> Les calculs détaillés pour ce statut sont spécifiques et complexes. Pour plus d'informations, consultez la documentation fiscale ou un expert-comptable.</p>
+            </div>
+        `;
+    }
+    
+    modal.innerHTML = `
+        <div class="detail-content">
+            <span class="close-modal"><i class="fas fa-times"></i></span>
+            ${detailContent}
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Ajouter un gestionnaire d'événement pour fermer le modal
+    modal.querySelector('.close-modal').addEventListener('click', function() {
+        document.body.removeChild(modal);
+    });
+    
+    // Fermer le modal en cliquant en dehors du contenu
+    modal.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            document.body.removeChild(modal);
+        }
+    });
 }
 
 // Configurer l'accordéon pour les sections d'informations fiscales
