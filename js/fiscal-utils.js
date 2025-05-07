@@ -31,8 +31,8 @@ class FiscalUtils {
         let meilleurRatio = 0.5;
         let meilleurNet = 0;
         
-        // Tester différents ratios de 10% à 90% par pas de 5%
-        for(let ratio = 0.1; ratio <= 0.9; ratio += 0.05) {
+        // Tester différents ratios de 0% à 90% par pas de 5%
+        for(let ratio = 0.0; ratio <= 0.9; ratio += 0.05) {
             const paramsTest = {...params, tauxRemuneration: ratio};
             const resultat = simulationFunc(paramsTest);
             
@@ -70,6 +70,12 @@ class FiscalUtils {
     static calculCotisationsTNS(remuneration) {
         // Taux forfaitaire moyen (37-47% selon assiette). Ajustez au besoin.
         return Math.round(remuneration * 0.45);
+    }
+    
+    // Calcul des cotisations TNS sur dividendes
+    static cotTNSDividendes(dividendes, capitalSocial) {
+        const base = Math.max(0, dividendes - 0.10 * capitalSocial);
+        return Math.round(base * 0.17); // taux 2025
     }
     
     // Calcul des charges salariales
