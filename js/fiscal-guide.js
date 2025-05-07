@@ -250,10 +250,20 @@ function addCustomStyles() {
         }
         
         /* Styles pour le tableau de résultats */
+        /* Conteneur de tableau avec défilement horizontal */
+        #sim-results-container {
+            width: 100%;
+            overflow-x: auto;
+            margin-bottom: 2rem;
+            padding-bottom: 0.5rem;
+            -webkit-overflow-scrolling: touch;
+        }
+        
         #sim-results {
             border-collapse: separate;
             border-spacing: 0;
             width: 100%;
+            min-width: 900px; /* Largeur minimum pour assurer que toutes les colonnes sont visibles */
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -264,12 +274,13 @@ function addCustomStyles() {
         }
         
         #sim-results th {
-            padding: 1rem 1.5rem;
+            padding: 1rem 1rem;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             text-align: left;
+            white-space: nowrap;
         }
         
         #sim-results tbody tr {
@@ -278,6 +289,11 @@ function addCustomStyles() {
         
         #sim-results tbody tr:hover {
             background-color: rgba(30, 58, 138, 0.5) !important;
+        }
+        
+        #sim-results td {
+            padding: 0.75rem 1rem;
+            white-space: nowrap;
         }
         
         .result-top-row {
@@ -350,6 +366,20 @@ function addCustomStyles() {
             border-radius: 4px;
             color: #A78BFA;
             font-weight: 600;
+        }
+        
+        /* Ajout de styles pour rendre l'interface plus responsive */
+        @media (max-width: 768px) {
+            #sim-results-container {
+                margin-left: -1rem;
+                margin-right: -1rem;
+                width: calc(100% + 2rem);
+            }
+            
+            .content-wrapper {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
         }
     `;
     document.head.appendChild(styleElement);
@@ -705,6 +735,38 @@ function runComparison() {
     
     // Mode expert toujours activé
     const modeExpert = true;
+    
+    const resultsContainer = document.querySelector('#sim-results');
+    if (!resultsContainer) {
+        // Si le tableau n'existe pas encore, créer son conteneur avec la classe pour le défilement
+        const resultsTableContainer = document.createElement('div');
+        resultsTableContainer.id = 'sim-results-container';
+        
+        const resultsTable = document.createElement('table');
+        resultsTable.id = 'sim-results';
+        resultsTable.innerHTML = `
+            <thead>
+                <tr>
+                    <th class="px-4 py-3 rounded-tl-lg">Statut</th>
+                    <th class="px-4 py-3">Rémunération brute</th>
+                    <th class="px-4 py-3">Charges sociales</th>
+                    <th class="px-4 py-3">Impôts</th>
+                    <th class="px-4 py-3">Dividendes nets</th>
+                    <th class="px-4 py-3">Ratio optimal</th>
+                    <th class="px-4 py-3 rounded-tr-lg">Net en poche</th>
+                </tr>
+            </thead>
+            <tbody id="sim-results-body"></tbody>
+        `;
+        
+        resultsTableContainer.appendChild(resultsTable);
+        
+        // Trouver l'élément results-container
+        const container = document.getElementById('results-container');
+        if (container) {
+            container.appendChild(resultsTableContainer);
+        }
+    }
     
     const resultsBody = document.getElementById('sim-results-body');
     if (!resultsBody) return;
