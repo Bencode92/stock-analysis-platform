@@ -254,6 +254,9 @@ function addCustomStyles() {
             border-collapse: separate;
             border-spacing: 0;
             width: 100%;
+            min-width: 100%;
+            table-layout: fixed;
+            background-color: rgba(30, 64, 175, 0.2);
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -270,6 +273,13 @@ function addCustomStyles() {
             letter-spacing: 0.5px;
             font-size: 0.9rem;
             text-align: left;
+            white-space: normal;
+            word-break: break-word;
+        }
+        
+        #sim-results td {
+            white-space: normal;
+            word-break: break-word;
         }
         
         #sim-results tbody tr {
@@ -350,6 +360,25 @@ function addCustomStyles() {
             border-radius: 4px;
             color: #A78BFA;
             font-weight: 600;
+        }
+
+        /* Conteneur du tableau : il doit prendre toute la largeur sans scroll */
+        #sim-results-container {
+            width: 100%;
+            overflow: visible;
+            padding: 0;
+        }
+
+        /* Fond général : pour éviter toute troncature visuelle */
+        .tab-content,
+        .tab-pane,
+        .container,
+        .container-md,
+        .container-lg {
+            width: 100% !important;
+            max-width: 100% !important;
+            overflow: visible !important;
+            padding: 0 !important;
         }
     `;
     document.head.appendChild(styleElement);
