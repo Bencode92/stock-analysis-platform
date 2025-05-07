@@ -987,7 +987,7 @@ function runComparison() {
             }
         },
         'eurl': { 
-            nom: 'EURL à l\\'IR', 
+            nom: 'EURL à l\'IR', 
             simuler: () => window.SimulationsFiscales.simulerEURL({
                 ca: ca,
                 tauxMarge: marge,
@@ -999,7 +999,7 @@ function runComparison() {
             })
         },
         'eurlIS': { 
-            nom: 'EURL à l\\'IS', 
+            nom: 'EURL à l\'IS', 
             simuler: () => {
                 // Calculer avec optimisation (mais sans forcément l'utiliser)
                 const config = optimisationParStatut['eurlIS'];
