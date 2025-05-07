@@ -1,5 +1,5 @@
 // fiscal-guide.js - Simulateur fiscal simplifié pour l'onglet Guide fiscal
-// Version 3.2 - Mai 2025 - Optimisation automatique et dividendes toujours affichés
+// Version 3.3 - Mai 2025 - Améliorations des optimisations fiscales et traitement spécifique par statut
 
 document.addEventListener('DOMContentLoaded', function() {
     // S'assurer que l'onglet Guide fiscal initialise correctement ce code
@@ -85,7 +85,8 @@ function getMethodologyContent() {
                     <p class="mb-2"><strong>IR:</strong> Transparence fiscale, le bénéfice est imposé au nom du gérant</p>
                     <p class="mb-2"><strong>IS:</strong> Impôt société sur le bénéfice après rémunération + PFU sur dividendes</p>
                     <p class="mb-2"><strong>Cotisations TNS:</strong> ~45% sur la rémunération</p>
-                    <p class="mb-2"><strong>Optimisation:</strong> Ratio rémunération/dividendes à l'IS</p>
+                    <p class="mb-2"><strong>Dividendes TNS:</strong> Soumis aux cotisations sociales au-delà de 10% du capital</p>
+                    <p class="mb-2"><strong>Optimisation:</strong> Équilibre entre rémunération et dividendes à l'IS</p>
                 </div>
             </div>
             
@@ -98,7 +99,7 @@ function getMethodologyContent() {
                     <p class="mb-2"><strong>Charges sociales:</strong> ~80% sur salaire (55% patronales, 22% salariales)</p>
                     <p class="mb-2"><strong>IS:</strong> 15% jusqu'à 42 500€, 25% au-delà</p>
                     <p class="mb-2"><strong>Dividendes:</strong> PFU 30% (17.2% PS + 12.8% IR)</p>
-                    <p class="mb-2"><strong>Optimisation:</strong> Équilibre salaire/dividendes</p>
+                    <p class="mb-2"><strong>Optimisation:</strong> Favoriser les dividendes (charges sociales lourdes)</p>
                 </div>
             </div>
             
@@ -380,6 +381,58 @@ function addCustomStyles() {
             overflow: visible !important;
             padding: 0 !important;
         }
+        
+        /* Styles pour les limitations fiscales */
+        .fiscal-limits-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 4px;
+            background-color: rgba(219, 39, 119, 0.15);
+            color: #F472B6;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+        
+        /* Styles pour la section d'avertissements */
+        .fiscal-warning {
+            background-color: rgba(251, 191, 36, 0.1);
+            border-left: 3px solid #F59E0B;
+            padding: 0.75rem 1rem;
+            margin: 1rem 0;
+            font-size: 0.85rem;
+        }
+        
+        /* Style pour l'infobulle */
+        .info-tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+        
+        .info-tooltip .tooltiptext {
+            visibility: hidden;
+            width: 250px;
+            background-color: rgba(17, 24, 39, 0.95);
+            color: #F3F4F6;
+            text-align: center;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -125px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.75rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        .info-tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
     `;
     document.head.appendChild(styleElement);
 }
@@ -498,15 +551,48 @@ function updateSimulatorInterface() {
                                     <i class="fas fa-chart-line mr-2"></i>Mode expert activé
                                 </span>
                                 <input type="hidden" id="sim-expert-mode" checked>
+                                <span class="info-tooltip ml-2">
+                                    <i class="fas fa-question-circle text-gray-400"></i>
+                                    <span class="tooltiptext">Le mode expert utilise le calcul par tranches progressives d'IR plutôt que le TMI simple.</span>
+                                </span>
                             </div>
                             <div class="flex items-center">
-                                <input type="checkbox" id="use-optimal-ratio" class="mr-2 h-4 w-4">
+                                <input type="checkbox" id="use-optimal-ratio" class="mr-2 h-4 w-4" checked>
                                 <span class="bg-purple-900 bg-opacity-20 px-3 py-1 rounded-md text-purple-300 font-medium">
-                                    <i class="fas fa-magic mr-2"></i>Utiliser le ratio optimal (sinon indicatif uniquement)
+                                    <i class="fas fa-magic mr-2"></i>Utiliser le ratio optimal rémunération/dividendes
+                                </span>
+                                <span class="info-tooltip ml-2">
+                                    <i class="fas fa-question-circle text-gray-400"></i>
+                                    <span class="tooltiptext">Optimise automatiquement le ratio entre rémunération et dividendes pour maximiser le revenu net.</span>
+                                </span>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="compare-ei-is" class="mr-2 h-4 w-4">
+                                <span class="bg-cyan-900 bg-opacity-20 px-3 py-1 rounded-md text-cyan-300 font-medium">
+                                    <i class="fas fa-toggle-on mr-2"></i>Comparer EI/EURL avec option IS
+                                </span>
+                                <span class="info-tooltip ml-2">
+                                    <i class="fas fa-question-circle text-gray-400"></i>
+                                    <span class="tooltiptext">Ajoute des variantes avec option IS pour les EI et EURL à l'IR.</span>
+                                </span>
+                            </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="use-avg-charge-rate" class="mr-2 h-4 w-4" checked>
+                                <span class="bg-amber-900 bg-opacity-20 px-3 py-1 rounded-md text-amber-300 font-medium">
+                                    <i class="fas fa-percentage mr-2"></i>Taux de charge réel (frais professionnels)
+                                </span>
+                                <span class="info-tooltip ml-2">
+                                    <i class="fas fa-question-circle text-gray-400"></i>
+                                    <span class="tooltiptext">Utilise le taux de charge pour calculer les frais déductibles réels plutôt qu'un taux de marge fixe.</span>
                                 </span>
                             </div>
                         </div>
                     </div>
+                </div>
+                
+                <!-- Avertissement sur les limites du simulateur -->
+                <div class="fiscal-warning mt-4">
+                    <p><i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i> <strong>Limites du simulateur:</strong> Ce simulateur simplifie certains aspects fiscaux pour faciliter la comparaison. Pour une analyse complète, consultez un expert-comptable.</p>
                 </div>
                 
                 <!-- Sélection personnalisée de statuts avec catégorisation -->
@@ -693,15 +779,9 @@ function updateSimulatorInterface() {
         });
         
         // Ajouter un événement aux cases à cocher
-        document.querySelectorAll('.status-checkbox').forEach(checkbox => {
+        document.querySelectorAll('.status-checkbox, #use-optimal-ratio, #compare-ei-is, #use-avg-charge-rate').forEach(checkbox => {
             checkbox.addEventListener('change', runComparison);
         });
-        
-        // Ajouter un événement à la case à cocher du ratio optimal
-        const useOptimalRatioCheckbox = document.getElementById('use-optimal-ratio');
-        if (useOptimalRatioCheckbox) {
-            useOptimalRatioCheckbox.addEventListener('change', runComparison);
-        }
         
         // Par défaut, sélectionner le filtre "all" pour afficher tous les statuts
         statusFilter.value = "all";
@@ -739,8 +819,14 @@ function runComparison() {
     const ratioSalaire = parseFloat(document.getElementById('sim-salaire').value) / 100 || 0.7;
     const tmi = parseFloat(document.getElementById('sim-tmi').value) || 30;
     
-    // Mode expert toujours activé
-    const modeExpert = true;
+    // Récupérer les options avancées
+    const modeExpert = true; // Toujours activé
+    const useOptimalRatio = document.getElementById('use-optimal-ratio') && document.getElementById('use-optimal-ratio').checked;
+    const compareEiIs = document.getElementById('compare-ei-is') && document.getElementById('compare-ei-is').checked;
+    const useAvgChargeRate = document.getElementById('use-avg-charge-rate') && document.getElementById('use-avg-charge-rate').checked;
+    
+    // Calculer le taux de frais réels (l'inverse du taux de marge)
+    const tauxFrais = useAvgChargeRate ? (1 - marge) : 0;
     
     const resultsBody = document.getElementById('sim-results-body');
     if (!resultsBody) return;
@@ -751,7 +837,8 @@ function runComparison() {
         tauxMarge: marge,
         tauxRemuneration: ratioSalaire,
         tmiActuel: tmi,
-        modeExpert: modeExpert
+        modeExpert: modeExpert,
+        tauxFrais: tauxFrais
     };
     
     // Vider les résultats précédents
@@ -761,6 +848,17 @@ function runComparison() {
     const statusFilter = document.getElementById('sim-status-filter');
     const selectedStatuses = getSelectedStatuses(statusFilter ? statusFilter.value : 'all'); // Par défaut, tous les statuts
     
+    // Si l'option de comparaison EI/EURL avec IS est activée, ajouter des variantes
+    let statutsEffectifs = [...selectedStatuses];
+    if (compareEiIs) {
+        if (selectedStatuses.includes('ei')) {
+            statutsEffectifs.push('eiIS');
+        }
+        if (selectedStatuses.includes('eurl') && !selectedStatuses.includes('eurlIS')) {
+            statutsEffectifs.push('eurlIS');
+        }
+    }
+    
     // Tableau pour stocker les résultats de simulation
     const resultats = [];
     
@@ -768,6 +866,7 @@ function runComparison() {
     const statutIcons = {
         'micro': '<i class="fas fa-store-alt text-green-400 status-icon"></i>',
         'ei': '<i class="fas fa-user text-green-400 status-icon"></i>',
+        'eiIS': '<i class="fas fa-user-tie text-blue-400 status-icon"></i>',
         'eurl': '<i class="fas fa-user-tie text-green-400 status-icon"></i>',
         'eurlIS': '<i class="fas fa-building text-blue-400 status-icon"></i>',
         'sasu': '<i class="fas fa-user-shield text-blue-400 status-icon"></i>',
@@ -785,6 +884,7 @@ function runComparison() {
     const regimeBadges = {
         'micro': '<span class="regime-badge ir">IR</span>',
         'ei': '<span class="regime-badge ir">IR</span>',
+        'eiIS': '<span class="regime-badge is">IS</span>',
         'eurl': '<span class="regime-badge ir">IR</span>',
         'eurlIS': '<span class="regime-badge is">IS</span>',
         'sasu': '<span class="regime-badge is">IS</span>',
@@ -798,30 +898,27 @@ function runComparison() {
         'sca': '<span class="regime-badge is">IS</span>'
     };
     
-    // Optimisation conditionnelle selon la case à cocher
-    const shouldOptimize = document.getElementById('use-optimal-ratio') && 
-                          document.getElementById('use-optimal-ratio').checked;
-    
     // Définir les stratégies d'optimisation par type de statut
     const optimisationParStatut = {
-        // Structures assimilées salarié: charge lourdes (favoriser dividendes)
-        'sasu': { ratioMin: 0, ratioMax: 1, favoriserDividendes: true },
-        'sas': { ratioMin: 0, ratioMax: 1, favoriserDividendes: true },
-        'sa': { ratioMin: 0, ratioMax: 1, favoriserDividendes: true },
-        'selas': { ratioMin: 0, ratioMax: 1, favoriserDividendes: true },
+        // Structures assimilées salarié: charges lourdes (favoriser dividendes)
+        'sasu': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: true, minRatioForFiscal: 0.1, capitalSocial: 1000 },
+        'sas': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: true, minRatioForFiscal: 0.1, capitalSocial: 1000 },
+        'sa': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: true, minRatioForFiscal: 0.1, capitalSocial: 37000 },
+        'selas': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: true, minRatioForFiscal: 0.1, capitalSocial: 37000 },
         
-        // Structures TNS: charges moins lourdes (plus équilibré)
-        'eurlIS': { ratioMin: 0, ratioMax: 1, favoriserDividendes: false },
-        'sarl': { ratioMin: 0, ratioMax: 1, favoriserDividendes: false },
-        'selarl': { ratioMin: 0, ratioMax: 1, favoriserDividendes: false },
-        'sca': { ratioMin: 0, ratioMax: 1, favoriserDividendes: false },
+        // Structures TNS: charges sociales sur dividendes >10% du capital (équilibre)
+        'eurlIS': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 0.5, capitalSocial: 1 },
+        'eiIS': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 0.5, capitalSocial: 1 },
+        'sarl': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 0.5, capitalSocial: 1 },
+        'selarl': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 0.5, capitalSocial: 1 },
+        'sca': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 0.5, capitalSocial: 37000 },
         
         // Structures sans distinction rémunération/dividendes (pas d'optimisation)
-        'micro': { ratioMin: 1, ratioMax: 1, favoriserDividendes: false }, // Tout en rémunération
-        'ei': { ratioMin: 1, ratioMax: 1, favoriserDividendes: false }, // Tout en rémunération
-        'eurl': { ratioMin: 1, ratioMax: 1, favoriserDividendes: false }, // Tout en rémunération
-        'snc': { ratioMin: 1, ratioMax: 1, favoriserDividendes: false }, // Tout en rémunération
-        'sci': { ratioMin: 1, ratioMax: 1, favoriserDividendes: false } // Pas de rémunération pour SCI
+        'micro': { ratioMin: 1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 1, capitalSocial: 0 },
+        'ei': { ratioMin: 1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 1, capitalSocial: 0 },
+        'eurl': { ratioMin: 1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 1, capitalSocial: 1 },
+        'snc': { ratioMin: 1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 1, capitalSocial: 0 },
+        'sci': { ratioMin: 1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 1, capitalSocial: 0 }
     };
     
     // Associer chaque statut à sa fonction de simulation et son nom d'affichage
@@ -840,15 +937,61 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerEI({
                 ca: ca,
                 tauxMarge: marge,
+                tauxFrais: tauxFrais,
                 tmiActuel: tmi,
                 modeExpert: modeExpert
             })
         },
+        'eiIS': { 
+            nom: 'EI avec option IS', 
+            simuler: () => {
+                // Simuler une EI avec option IS (similaire à EURL IS mais avec particularités fiscales)
+                const config = optimisationParStatut['eiIS'];
+                
+                // Toujours calculer le ratio optimal pour l'afficher comme indicateur
+                const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
+                    { ...params, 
+                      ratioMin: config.ratioMin, 
+                      ratioMax: config.ratioMax, 
+                      favoriserDividendes: config.favoriserDividendes,
+                      capitalSocial: config.capitalSocial
+                    },
+                    (p) => window.SimulationsFiscales.simulerEURL({...p, optionIS: true})
+                );
+                
+                // Si optimisation activée, utiliser le résultat optimisé
+                if (useOptimalRatio) {
+                    const resultat = optimisation.resultat;
+                    resultat.typeEntreprise = "EI avec option IS";
+                    return resultat;
+                }
+                
+                // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
+                const resultat = window.SimulationsFiscales.simulerEURL({
+                    ca: ca,
+                    tauxMarge: marge,
+                    tauxFrais: tauxFrais,
+                    tauxRemuneration: ratioSalaire,
+                    optionIS: true,
+                    tmiActuel: tmi,
+                    modeExpert: modeExpert
+                });
+                
+                // Modifier le type d'entreprise
+                resultat.typeEntreprise = "EI avec option IS";
+                
+                // Ajouter l'information du ratio optimal comme référence
+                resultat.ratioOptimise = optimisation.resultat.ratioOptimise;
+                
+                return resultat;
+            }
+        },
         'eurl': { 
-            nom: 'EURL à l\'IR', 
+            nom: 'EURL à l\\'IR', 
             simuler: () => window.SimulationsFiscales.simulerEURL({
                 ca: ca,
                 tauxMarge: marge,
+                tauxFrais: tauxFrais,
                 tauxRemuneration: ratioSalaire,
                 optionIS: false,
                 tmiActuel: tmi,
@@ -856,22 +999,24 @@ function runComparison() {
             })
         },
         'eurlIS': { 
-            nom: 'EURL à l\'IS', 
+            nom: 'EURL à l\\'IS', 
             simuler: () => {
                 // Calculer avec optimisation (mais sans forcément l'utiliser)
                 const config = optimisationParStatut['eurlIS'];
+                
                 // Toujours calculer le ratio optimal pour l'afficher comme indicateur
                 const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
                     { ...params, 
                       ratioMin: config.ratioMin, 
                       ratioMax: config.ratioMax, 
-                      favoriserDividendes: config.favoriserDividendes 
+                      favoriserDividendes: config.favoriserDividendes,
+                      capitalSocial: config.capitalSocial
                     },
                     (p) => window.SimulationsFiscales.simulerEURL({...p, optionIS: true})
                 );
                 
                 // Si optimisation activée, utiliser le résultat optimisé
-                if (shouldOptimize) {
+                if (useOptimalRatio) {
                     return optimisation.resultat;
                 }
                 
@@ -879,6 +1024,7 @@ function runComparison() {
                 const resultat = window.SimulationsFiscales.simulerEURL({
                     ca: ca,
                     tauxMarge: marge,
+                    tauxFrais: tauxFrais,
                     tauxRemuneration: ratioSalaire,
                     optionIS: true,
                     tmiActuel: tmi,
@@ -896,18 +1042,20 @@ function runComparison() {
             simuler: () => {
                 // Calculer avec optimisation (mais sans forcément l'utiliser)
                 const config = optimisationParStatut['sasu'];
+                
                 // Toujours calculer le ratio optimal pour l'afficher comme indicateur
                 const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
                     { ...params, 
                       ratioMin: config.ratioMin, 
                       ratioMax: config.ratioMax, 
-                      favoriserDividendes: config.favoriserDividendes 
+                      favoriserDividendes: config.favoriserDividendes,
+                      capitalSocial: config.capitalSocial
                     },
                     (p) => window.SimulationsFiscales.simulerSASU(p)
                 );
                 
                 // Si optimisation activée, utiliser le résultat optimisé
-                if (shouldOptimize) {
+                if (useOptimalRatio) {
                     return optimisation.resultat;
                 }
                 
@@ -915,6 +1063,7 @@ function runComparison() {
                 const resultat = window.SimulationsFiscales.simulerSASU({
                     ca: ca,
                     tauxMarge: marge,
+                    tauxFrais: tauxFrais,
                     tauxRemuneration: ratioSalaire,
                     tmiActuel: tmi,
                     modeExpert: modeExpert
@@ -931,18 +1080,20 @@ function runComparison() {
             simuler: () => {
                 // Calculer avec optimisation (mais sans forcément l'utiliser)
                 const config = optimisationParStatut['sarl'];
+                
                 // Toujours calculer le ratio optimal pour l'afficher comme indicateur
                 const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
                     { ...params, 
                       ratioMin: config.ratioMin, 
                       ratioMax: config.ratioMax, 
-                      favoriserDividendes: config.favoriserDividendes 
+                      favoriserDividendes: config.favoriserDividendes,
+                      capitalSocial: config.capitalSocial
                     },
                     (p) => window.SimulationsFiscales.simulerSARL({...p, gerantMajoritaire: true})
                 );
                 
                 // Si optimisation activée, utiliser le résultat optimisé
-                if (shouldOptimize) {
+                if (useOptimalRatio) {
                     return optimisation.resultat;
                 }
                 
@@ -950,6 +1101,7 @@ function runComparison() {
                 const resultat = window.SimulationsFiscales.simulerSARL({
                     ca: ca,
                     tauxMarge: marge,
+                    tauxFrais: tauxFrais,
                     tauxRemuneration: ratioSalaire,
                     tmiActuel: tmi,
                     gerantMajoritaire: true,
@@ -967,18 +1119,20 @@ function runComparison() {
             simuler: () => {
                 // Calculer avec optimisation (mais sans forcément l'utiliser)
                 const config = optimisationParStatut['sas'];
+                
                 // Toujours calculer le ratio optimal pour l'afficher comme indicateur
                 const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
                     { ...params, 
                       ratioMin: config.ratioMin, 
                       ratioMax: config.ratioMax, 
-                      favoriserDividendes: config.favoriserDividendes 
+                      favoriserDividendes: config.favoriserDividendes,
+                      capitalSocial: config.capitalSocial
                     },
                     (p) => window.SimulationsFiscales.simulerSAS(p)
                 );
                 
                 // Si optimisation activée, utiliser le résultat optimisé
-                if (shouldOptimize) {
+                if (useOptimalRatio) {
                     return optimisation.resultat;
                 }
                 
@@ -986,6 +1140,7 @@ function runComparison() {
                 const resultat = window.SimulationsFiscales.simulerSAS({
                     ca: ca,
                     tauxMarge: marge,
+                    tauxFrais: tauxFrais,
                     tauxRemuneration: ratioSalaire,
                     tmiActuel: tmi,
                     modeExpert: modeExpert
@@ -1002,18 +1157,20 @@ function runComparison() {
             simuler: () => {
                 // Calculer avec optimisation (mais sans forcément l'utiliser)
                 const config = optimisationParStatut['sa'];
+                
                 // Toujours calculer le ratio optimal pour l'afficher comme indicateur
                 const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
                     { ...params, 
                       ratioMin: config.ratioMin, 
                       ratioMax: config.ratioMax, 
-                      favoriserDividendes: config.favoriserDividendes 
+                      favoriserDividendes: config.favoriserDividendes,
+                      capitalSocial: config.capitalSocial
                     },
                     (p) => window.SimulationsFiscales.simulerSA(p)
                 );
                 
                 // Si optimisation activée, utiliser le résultat optimisé
-                if (shouldOptimize) {
+                if (useOptimalRatio) {
                     return optimisation.resultat;
                 }
                 
@@ -1021,9 +1178,11 @@ function runComparison() {
                 const resultat = window.SimulationsFiscales.simulerSA({
                     ca: ca,
                     tauxMarge: marge,
+                    tauxFrais: tauxFrais,
                     tauxRemuneration: ratioSalaire,
                     tmiActuel: tmi,
-                    modeExpert: modeExpert
+                    modeExpert: modeExpert,
+                    capitalInvesti: 37000 // Minimum légal
                 });
                 
                 // Ajouter l'information du ratio optimal comme référence
@@ -1037,6 +1196,7 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerSNC({
                 ca: ca,
                 tauxMarge: marge,
+                tauxFrais: tauxFrais,
                 tmiActuel: tmi,
                 modeExpert: modeExpert
             })
@@ -1055,18 +1215,20 @@ function runComparison() {
             simuler: () => {
                 // Calculer avec optimisation (mais sans forcément l'utiliser)
                 const config = optimisationParStatut['selarl'];
+                
                 // Toujours calculer le ratio optimal pour l'afficher comme indicateur
                 const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
                     { ...params, 
                       ratioMin: config.ratioMin, 
                       ratioMax: config.ratioMax, 
-                      favoriserDividendes: config.favoriserDividendes 
+                      favoriserDividendes: config.favoriserDividendes,
+                      capitalSocial: config.capitalSocial
                     },
                     (p) => window.SimulationsFiscales.simulerSELARL(p)
                 );
                 
                 // Si optimisation activée, utiliser le résultat optimisé
-                if (shouldOptimize) {
+                if (useOptimalRatio) {
                     return optimisation.resultat;
                 }
                 
@@ -1074,6 +1236,7 @@ function runComparison() {
                 const resultat = window.SimulationsFiscales.simulerSELARL({
                     ca: ca,
                     tauxMarge: marge,
+                    tauxFrais: tauxFrais,
                     tauxRemuneration: ratioSalaire,
                     tmiActuel: tmi,
                     modeExpert: modeExpert
@@ -1090,18 +1253,20 @@ function runComparison() {
             simuler: () => {
                 // Calculer avec optimisation (mais sans forcément l'utiliser)
                 const config = optimisationParStatut['selas'];
+                
                 // Toujours calculer le ratio optimal pour l'afficher comme indicateur
                 const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
                     { ...params, 
                       ratioMin: config.ratioMin, 
                       ratioMax: config.ratioMax, 
-                      favoriserDividendes: config.favoriserDividendes 
+                      favoriserDividendes: config.favoriserDividendes,
+                      capitalSocial: config.capitalSocial
                     },
                     (p) => window.SimulationsFiscales.simulerSELAS(p)
                 );
                 
                 // Si optimisation activée, utiliser le résultat optimisé
-                if (shouldOptimize) {
+                if (useOptimalRatio) {
                     return optimisation.resultat;
                 }
                 
@@ -1109,6 +1274,7 @@ function runComparison() {
                 const resultat = window.SimulationsFiscales.simulerSELAS({
                     ca: ca,
                     tauxMarge: marge,
+                    tauxFrais: tauxFrais,
                     tauxRemuneration: ratioSalaire,
                     tmiActuel: tmi,
                     modeExpert: modeExpert
@@ -1125,18 +1291,20 @@ function runComparison() {
             simuler: () => {
                 // Calculer avec optimisation (mais sans forcément l'utiliser)
                 const config = optimisationParStatut['sca'];
+                
                 // Toujours calculer le ratio optimal pour l'afficher comme indicateur
                 const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
                     { ...params, 
                       ratioMin: config.ratioMin, 
                       ratioMax: config.ratioMax, 
-                      favoriserDividendes: config.favoriserDividendes 
+                      favoriserDividendes: config.favoriserDividendes,
+                      capitalSocial: config.capitalSocial
                     },
-                    (p) => window.SimulationsFiscales.simulerSCA(p)
+                    (p) => window.SimulationsFiscales.simulerSCA({...p, capitalInvesti: 37000})
                 );
                 
                 // Si optimisation activée, utiliser le résultat optimisé
-                if (shouldOptimize) {
+                if (useOptimalRatio) {
                     return optimisation.resultat;
                 }
                 
@@ -1144,9 +1312,11 @@ function runComparison() {
                 const resultat = window.SimulationsFiscales.simulerSCA({
                     ca: ca,
                     tauxMarge: marge,
+                    tauxFrais: tauxFrais,
                     tauxRemuneration: ratioSalaire,
                     tmiActuel: tmi,
-                    modeExpert: modeExpert
+                    modeExpert: modeExpert,
+                    capitalInvesti: 37000 // Minimum légal
                 });
                 
                 // Ajouter l'information du ratio optimal comme référence
@@ -1158,7 +1328,7 @@ function runComparison() {
     };
     
     // Simuler chaque statut sélectionné
-    for (const statutId of selectedStatuses) {
+    for (const statutId of statutsEffectifs) {
         if (statutsComplets[statutId]) {
             try {
                 const statut = statutsComplets[statutId];
@@ -1211,11 +1381,30 @@ function runComparison() {
                     net = sim.revenuNetApresImpot;
                 } else {
                     // Cas général pour les statuts à l'IS (SASU, EURL-IS, SAS, SARL, etc.)
-                    brut = sim.remuneration || sim.resultatEntreprise * ratioSalaire;
+                    brut = sim.remuneration || sim.resultatEntreprise * (useOptimalRatio ? sim.ratioOptimise : ratioSalaire);
                     charges = sim.cotisationsSociales || (sim.chargesPatronales + sim.chargesSalariales);
                     impots = (sim.impotRevenu || 0) + (sim.is || 0) + (sim.prelevementForfaitaire || 0);
                     net = sim.revenuNetTotal || sim.revenuNetApresImpot;
                 }
+                
+                // Calcul du score avec prise en compte de la progressivité fiscale
+                const scoreNet = 100 * (net / ca); // Score standard
+                
+                // Coefficient d'évolutivité: moins favorable aux statuts forfaitaires à CA élevé
+                let coeffEvolution = 1;
+                if (statutId === 'micro' && ca > 30000) {
+                    // Pénaliser légèrement la micro pour CA important (moins évolutif)
+                    coeffEvolution = 0.95;
+                } else if ((statutId === 'sasu' || statutId === 'sas' || statutId === 'selas') && ca > 80000) {
+                    // Légèrement favorable aux structures avec assimilé salarié à CA élevé
+                    coeffEvolution = 1.05;
+                }
+                
+                // Score avec coefficient d'évolutivité
+                const score = scoreNet * coeffEvolution;
+                
+                // Calculer la répartition rémunération/dividendes
+                const ratioEffectif = useOptimalRatio && sim.ratioOptimise ? sim.ratioOptimise : ratioSalaire;
                 
                 resultats.push({
                     statutId: statutId,
@@ -1225,9 +1414,10 @@ function runComparison() {
                     impots: impots,
                     net: net,
                     sim: sim,
-                    score: 100 * (net / ca),
+                    score: score,
                     ratioOptimise: sim.ratioOptimise,
-                    dividendesNets: sim.dividendesNets || 0
+                    dividendesNets: sim.dividendesNets || 0,
+                    ratioEffectif: ratioEffectif
                 });
             } catch (e) {
                 console.error(`Erreur lors de la simulation pour ${statutsComplets[statutId].nom}:`, e);
@@ -1287,9 +1477,17 @@ function runComparison() {
         // Valeur d'optimisation du ratio
         let optimisationValue = "";
         if (res.ratioOptimise) {
-            optimisationValue = `<span class="ratio-optimal-value">${Math.round(res.ratioOptimise*100)}% rém.</span>`;
-        } else if (res.statutId === 'micro' || res.statutId === 'ei' || res.statutId === 'eurl' || res.statutId === 'snc' || res.statutId === 'sci') {
-            optimisationValue = "N/A";
+            const ratioDisplay = Math.round(res.ratioOptimise*100);
+            const isMicroOrEI = res.statutId === 'micro' || res.statutId === 'ei' || res.statutId === 'eurl' || res.statutId === 'snc' || res.statutId === 'sci';
+            
+            if (useOptimalRatio && !isMicroOrEI) {
+                optimisationValue = `<span class="ratio-optimal-value">${ratioDisplay}% rém.</span>`;
+            } else if (isMicroOrEI) {
+                optimisationValue = "N/A";
+            } else {
+                const ratioManuel = Math.round(ratioSalaire*100); 
+                optimisationValue = `${ratioDisplay}% <small>(${ratioManuel}% manuel)</small>`;
+            }
         } else {
             optimisationValue = `${Math.round(ratioSalaire*100)}% (manuel)`;
         }
@@ -1306,7 +1504,11 @@ function runComparison() {
             <td class="px-4 py-3">${res.dividendesNets ? formatter.format(res.dividendesNets) : '-'}</td>
             <td class="px-4 py-3">${optimisationValue}</td>
             <td class="px-4 py-3">
-                <span class="net-value ${isTopResult ? 'top' : ''}">${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}</span>
+                <span class="net-value ${isTopResult ? 'top' : ''}">
+                    ${res.net === '-' ? '-' : (typeof res.net === 'string' ? res.net : formatter.format(res.net))}
+                </span>
+                ${isTopResult ? 
+                '<div class="text-xs text-green-400 mt-1"><i class="fas fa-check-circle mr-1"></i>Optimal pour ce CA</div>' : ''}
             </td>
         `;
         
@@ -1320,7 +1522,9 @@ function runComparison() {
     modeRow.innerHTML = `
         <td colspan="7" class="px-4 py-2 font-medium text-pink-300">
             <i class="fas fa-chart-line mr-2"></i> 
-            Mode expert activé : calcul par tranches progressives d'IR + ${shouldOptimize ? 'optimisation automatique' : 'ratio manuel'} du ratio rémunération/dividendes
+            Mode expert activé : calcul par tranches progressives d'IR + ${useOptimalRatio ? 'optimisation automatique' : 'ratio manuel'} du ratio rémunération/dividendes
+            ${useAvgChargeRate ? ' + calcul avec frais réels' : ''}
+            ${compareEiIs ? ' + comparaison EI/EURL avec option IS' : ''}
         </td>
     `;
     
@@ -1340,6 +1544,28 @@ function runComparison() {
     `;
     
     resultsBody.appendChild(ratioRow);
+    
+    // Ajouter avertissement sur les limites de la simulation
+    const warningRow = document.createElement('tr');
+    warningRow.className = 'bg-blue-900 bg-opacity-30 text-xs border-t border-blue-800';
+    
+    warningRow.innerHTML = `
+        <td colspan="7" class="px-4 py-3">
+            <div class="flex items-start">
+                <i class="fas fa-info-circle text-blue-400 mr-2 mt-0.5"></i>
+                <div>
+                    <strong class="text-blue-400">Note sur les limites de la simulation :</strong>
+                    <ul class="mt-1 space-y-1 text-gray-300">
+                        <li>• Les statuts à l'IR (Micro, EI, EURL IR) permettent plus de déductions fiscales que ce qui est simulé ici.</li>
+                        <li>• Dans le régime Micro, l'abattement forfaitaire peut être avantageux si vos charges réelles sont faibles.</li>
+                        <li>• Pour les statuts à l'IS, certaines optimisations spécifiques ne sont pas prises en compte (épargne salariale, etc.).</li>
+                    </ul>
+                </div>
+            </div>
+        </td>
+    `;
+    
+    resultsBody.appendChild(warningRow);
 }
 
 // Configurer l'accordéon pour les sections d'informations fiscales
@@ -1464,12 +1690,14 @@ function getStatutFiscalInfo(statutId) {
             <p class="mb-2"><strong>Charges sociales :</strong> 12.3% (vente), 21.2% (services) du CA</p>
             <p class="mb-2"><strong>Plafonds 2025 :</strong> 188 700€ (vente), 77 700€ (services)</p>
             <p class="mb-2"><strong>Option versement libératoire :</strong> Possible si revenu fiscal N-2 < plafond</p>
+            <p class="mb-2"><strong>Optimisation fiscale :</strong> Idéal quand les charges réelles sont inférieures à l'abattement forfaitaire</p>
         `,
         'EI': `
             <p class="mb-2"><strong>Régime fiscal :</strong> IR par défaut</p>
-            <p class="mb-2"><strong>Option IS :</strong> Possible</p>
+            <p class="mb-2"><strong>Option IS :</strong> Possible (permet dividendes)</p>
             <p class="mb-2"><strong>Charges sociales :</strong> Environ 45% sur le bénéfice</p>
             <p class="mb-2"><strong>Plafonds :</strong> Aucun</p>
+            <p class="mb-2"><strong>Déductions fiscales :</strong> Toutes charges réelles liées à l'activité</p>
             <p class="mb-2"><strong>Particularité :</strong> Patrimoine professionnel distinct depuis 2022</p>
         `,
         'EURL': `
@@ -1478,6 +1706,7 @@ function getStatutFiscalInfo(statutId) {
             <p class="mb-2"><strong>Charges sociales :</strong> TNS (~40-45% sur rémunération)</p>
             <p class="mb-2"><strong>Dividendes :</strong> Soumis aux prélèvements sociaux (17.2%) + PFU (12.8%) ou IR</p>
             <p class="mb-2"><strong>IS :</strong> 15% jusqu'à 42 500€ de bénéfices, 25% au-delà</p>
+            <p class="mb-2"><strong>Optimisation :</strong> À l'IS, les TNS avec dividendes > 10% du capital social sont soumis aux cotisations sociales</p>
         `,
         'SASU': `
             <p class="mb-2"><strong>Régime fiscal :</strong> IS (Impôt sur les Sociétés)</p>
@@ -1485,11 +1714,13 @@ function getStatutFiscalInfo(statutId) {
             <p class="mb-2"><strong>Rémunération président :</strong> Assimilé salarié</p>
             <p class="mb-2"><strong>Dividendes :</strong> Soumis aux prélèvements sociaux (17.2%) + PFU (12.8%) ou IR</p>
             <p class="mb-2"><strong>IS :</strong> 15% jusqu'à 42 500€ de bénéfices, 25% au-delà</p>
+            <p class="mb-2"><strong>Optimisation :</strong> Charges sociales lourdes sur salaire → favoriser les dividendes</p>
         `,
         'SARL': `
             <p class="mb-2"><strong>Régime fiscal :</strong> IS (option IR possible sur 5 ans)</p>
             <p class="mb-2"><strong>Charges sociales :</strong> TNS pour gérant majoritaire, assimilé salarié pour gérant minoritaire</p>
             <p class="mb-2"><strong>Dividendes :</strong> Soumis aux prélèvements sociaux (17.2%) + PFU (12.8%) ou IR</p>
+            <p class="mb-2"><strong>Dividendes gérant majoritaire :</strong> Soumis aux cotisations TNS si > 10% du capital social</p>
             <p class="mb-2"><strong>IS :</strong> 15% jusqu'à 42 500€ de bénéfices, 25% au-delà</p>
             <p class="mb-2"><strong>Particularité :</strong> Structure flexible adaptée aux PME et entreprises familiales</p>
         `,
@@ -1498,6 +1729,7 @@ function getStatutFiscalInfo(statutId) {
             <p class="mb-2"><strong>Charges sociales :</strong> Assimilé salarié pour le président</p>
             <p class="mb-2"><strong>Dividendes :</strong> Soumis aux prélèvements sociaux (17.2%) + PFU (12.8%) ou IR</p>
             <p class="mb-2"><strong>IS :</strong> 15% jusqu'à 42 500€ de bénéfices, 25% au-delà</p>
+            <p class="mb-2"><strong>Optimisation :</strong> Charges sociales lourdes sur salaire → favoriser les dividendes</p>
             <p class="mb-2"><strong>Particularité :</strong> Adaptée aux structures avec investisseurs</p>
         `,
         'SA': `
@@ -1506,6 +1738,7 @@ function getStatutFiscalInfo(statutId) {
             <p class="mb-2"><strong>Charges sociales :</strong> Assimilé salarié pour les dirigeants</p>
             <p class="mb-2"><strong>Dividendes :</strong> Soumis aux prélèvements sociaux (17.2%) + PFU (12.8%) ou IR</p>
             <p class="mb-2"><strong>IS :</strong> 15% jusqu'à 42 500€ de bénéfices, 25% au-delà</p>
+            <p class="mb-2"><strong>Coûts supplémentaires :</strong> Commissaire aux comptes obligatoire</p>
             <p class="mb-2"><strong>Particularité :</strong> Structure pour grandes entreprises ou cotation en bourse</p>
         `,
         'SNC': `
@@ -1514,26 +1747,31 @@ function getStatutFiscalInfo(statutId) {
             <p class="mb-2"><strong>Charges sociales :</strong> TNS pour les associés</p>
             <p class="mb-2"><strong>Particularité :</strong> Imposition directe des bénéfices aux associés (IR)</p>
             <p class="mb-2"><strong>Responsabilité :</strong> Indéfinie et solidaire des associés</p>
+            <p class="mb-2"><strong>Usages :</strong> Principalement pour professions réglementées ou activités spécifiques</p>
         `,
         'SCI': `
             <p class="mb-2"><strong>Régime fiscal :</strong> IR par défaut (transparence fiscale)</p>
             <p class="mb-2"><strong>Option IS :</strong> Possible mais généralement défavorable</p>
             <p class="mb-2"><strong>TVA :</strong> Exonération possible pour location nue</p>
             <p class="mb-2"><strong>Particularité :</strong> Revenus fonciers pour les associés à l'IR</p>
+            <p class="mb-2"><strong>Déductions à l'IR :</strong> Charges, intérêts d'emprunt, amortissements (meublé pro)</p>
             <p class="mb-2"><strong>Usage :</strong> Gestion et transmission de patrimoine immobilier</p>
         `,
         'SELARL': `
             <p class="mb-2"><strong>Régime fiscal :</strong> IS</p>
             <p class="mb-2"><strong>Charges sociales :</strong> TNS pour gérant majoritaire</p>
             <p class="mb-2"><strong>Dividendes :</strong> Soumis aux prélèvements sociaux (17.2%) + PFU (12.8%) ou IR</p>
+            <p class="mb-2"><strong>Dividendes gérant majoritaire :</strong> Soumis aux cotisations TNS si > 10% du capital social</p>
             <p class="mb-2"><strong>IS :</strong> 15% jusqu'à 42 500€ de bénéfices, 25% au-delà</p>
             <p class="mb-2"><strong>Particularité :</strong> Réservée aux professions libérales réglementées</p>
+            <p class="mb-2"><strong>Avantages fiscaux :</strong> Possibilité de constituer une société holding</p>
         `,
         'SELAS': `
             <p class="mb-2"><strong>Régime fiscal :</strong> IS</p>
             <p class="mb-2"><strong>Charges sociales :</strong> Assimilé salarié pour le président</p>
             <p class="mb-2"><strong>Dividendes :</strong> Soumis aux prélèvements sociaux (17.2%) + PFU (12.8%) ou IR</p>
             <p class="mb-2"><strong>IS :</strong> 15% jusqu'à 42 500€ de bénéfices, 25% au-delà</p>
+            <p class="mb-2"><strong>Optimisation :</strong> Charges sociales lourdes sur salaire → favoriser les dividendes</p>
             <p class="mb-2"><strong>Particularité :</strong> Réservée aux professions libérales réglementées</p>
             <p class="mb-2"><strong>Avantages :</strong> Combine flexibilité de la SAS et exercice libéral</p>
         `,
@@ -1542,6 +1780,7 @@ function getStatutFiscalInfo(statutId) {
             <p class="mb-2"><strong>Structure :</strong> Commandités (responsabilité illimitée) et commanditaires (limitée)</p>
             <p class="mb-2"><strong>Dividendes :</strong> Soumis aux prélèvements sociaux (17.2%) + PFU (12.8%) ou IR</p>
             <p class="mb-2"><strong>IS :</strong> 15% jusqu'à 42 500€ de bénéfices, 25% au-delà</p>
+            <p class="mb-2"><strong>Capital minimum :</strong> 37 000€</p>
             <p class="mb-2"><strong>Particularité :</strong> Protection contre les OPA hostiles</p>
             <p class="mb-2"><strong>Usage :</strong> Structure familiale cherchant à lever des fonds</p>
         `
