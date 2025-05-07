@@ -567,16 +567,6 @@ function updateSimulatorInterface() {
                                 </span>
                             </div>
                             <div class="flex items-center">
-                                <input type="checkbox" id="compare-ei-is" class="mr-2 h-4 w-4">
-                                <span class="bg-cyan-900 bg-opacity-20 px-3 py-1 rounded-md text-cyan-300 font-medium">
-                                    <i class="fas fa-toggle-on mr-2"></i>Comparer EI/EURL avec option IS
-                                </span>
-                                <span class="info-tooltip ml-2">
-                                    <i class="fas fa-question-circle text-gray-400"></i>
-                                    <span class="tooltiptext">Ajoute des variantes avec option IS pour les EI et EURL à l'IR.</span>
-                                </span>
-                            </div>
-                            <div class="flex items-center">
                                 <input type="checkbox" id="use-avg-charge-rate" class="mr-2 h-4 w-4" checked>
                                 <span class="bg-amber-900 bg-opacity-20 px-3 py-1 rounded-md text-amber-300 font-medium">
                                     <i class="fas fa-percentage mr-2"></i>Taux de charge réel (frais professionnels)
@@ -779,7 +769,7 @@ function updateSimulatorInterface() {
         });
         
         // Ajouter un événement aux cases à cocher
-        document.querySelectorAll('.status-checkbox, #use-optimal-ratio, #compare-ei-is, #use-avg-charge-rate').forEach(checkbox => {
+        document.querySelectorAll('.status-checkbox, #use-optimal-ratio, #use-avg-charge-rate').forEach(checkbox => {
             checkbox.addEventListener('change', runComparison);
         });
         
@@ -822,7 +812,6 @@ function runComparison() {
     // Récupérer les options avancées
     const modeExpert = true; // Toujours activé
     const useOptimalRatio = document.getElementById('use-optimal-ratio') && document.getElementById('use-optimal-ratio').checked;
-    const compareEiIs = document.getElementById('compare-ei-is') && document.getElementById('compare-ei-is').checked;
     const useAvgChargeRate = document.getElementById('use-avg-charge-rate') && document.getElementById('use-avg-charge-rate').checked;
     
     // Définir marge ou frais de façon exclusive selon l'option
@@ -835,6 +824,9 @@ function runComparison() {
         modeExpert: modeExpert
     };
     
+    // Logger pour debug
+    console.log("Paramètres:", params);
+    
     const resultsBody = document.getElementById('sim-results-body');
     if (!resultsBody) return;
     
@@ -845,17 +837,6 @@ function runComparison() {
     const statusFilter = document.getElementById('sim-status-filter');
     const selectedStatuses = getSelectedStatuses(statusFilter ? statusFilter.value : 'all'); // Par défaut, tous les statuts
     
-    // Si l'option de comparaison EI/EURL avec IS est activée, ajouter des variantes
-    let statutsEffectifs = [...selectedStatuses];
-    if (compareEiIs) {
-        if (selectedStatuses.includes('ei')) {
-            statutsEffectifs.push('eiIS');
-        }
-        if (selectedStatuses.includes('eurl') && !selectedStatuses.includes('eurlIS')) {
-            statutsEffectifs.push('eurlIS');
-        }
-    }
-    
     // Tableau pour stocker les résultats de simulation
     const resultats = [];
     
@@ -863,7 +844,6 @@ function runComparison() {
     const statutIcons = {
         'micro': '<i class="fas fa-store-alt text-green-400 status-icon"></i>',
         'ei': '<i class="fas fa-user text-green-400 status-icon"></i>',
-        'eiIS': '<i class="fas fa-user-tie text-blue-400 status-icon"></i>',
         'eurl': '<i class="fas fa-user-tie text-green-400 status-icon"></i>',
         'eurlIS': '<i class="fas fa-building text-blue-400 status-icon"></i>',
         'sasu': '<i class="fas fa-user-shield text-blue-400 status-icon"></i>',
@@ -881,7 +861,6 @@ function runComparison() {
     const regimeBadges = {
         'micro': '<span class="regime-badge ir">IR</span>',
         'ei': '<span class="regime-badge ir">IR</span>',
-        'eiIS': '<span class="regime-badge is">IS</span>',
         'eurl': '<span class="regime-badge ir">IR</span>',
         'eurlIS': '<span class="regime-badge is">IS</span>',
         'sasu': '<span class="regime-badge is">IS</span>',
@@ -905,7 +884,6 @@ function runComparison() {
         
         // Structures TNS: charges sociales sur dividendes >10% du capital (équilibre)
         'eurlIS': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 0.5, capitalSocial: 1 },
-        'eiIS': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 0.5, capitalSocial: 1 },
         'sarl': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 0.5, capitalSocial: 1 },
         'selarl': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 0.5, capitalSocial: 1 },
         'sca': { ratioMin: 0.1, ratioMax: 1, favoriserDividendes: false, minRatioForFiscal: 0.5, capitalSocial: 37000 },
@@ -936,48 +914,6 @@ function runComparison() {
                 ca: ca,
                 tmiActuel: tmi
             })
-        },
-        'eiIS': { 
-            nom: 'EI avec option IS', 
-            simuler: () => {
-                // Simuler une EI avec option IS (similaire à EURL IS mais avec particularités fiscales)
-                const config = optimisationParStatut['eiIS'];
-                
-                // Toujours calculer le ratio optimal pour l'afficher comme indicateur
-                const optimisation = window.FiscalUtils.optimiserRatioRemuneration(
-                    { ...params, 
-                      ratioMin: config.ratioMin, 
-                      ratioMax: config.ratioMax, 
-                      favoriserDividendes: config.favoriserDividendes,
-                      capitalSocial: config.capitalSocial
-                    },
-                    (p) => window.SimulationsFiscales.simulerEURL({...p, optionIS: true})
-                );
-                
-                // Si optimisation activée, utiliser le résultat optimisé
-                if (useOptimalRatio) {
-                    const resultat = optimisation.resultat;
-                    resultat.typeEntreprise = "EI avec option IS";
-                    return resultat;
-                }
-                
-                // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
-                const resultat = window.SimulationsFiscales.simulerEURL({
-                    ...params,
-                    ca: ca,
-                    tauxRemuneration: ratioSalaire,
-                    optionIS: true,
-                    tmiActuel: tmi
-                });
-                
-                // Modifier le type d'entreprise
-                resultat.typeEntreprise = "EI avec option IS";
-                
-                // Ajouter l'information du ratio optimal comme référence
-                resultat.ratioOptimise = optimisation.resultat.ratioOptimise;
-                
-                return resultat;
-            }
         },
         'eurl': { 
             nom: 'EURL à l\'IR', 
@@ -1183,10 +1119,10 @@ function runComparison() {
         'sci': { 
             nom: 'SCI', 
             simuler: () => window.SimulationsFiscales.simulerSCI({
+                ...params,
                 revenuLocatif: ca,
-                chargesDeductibles: ca * (1 - marge),
-                tmiActuel: tmi,
-                modeExpert: modeExpert
+                chargesDeductibles: useAvgChargeRate ? ca * params.tauxFrais : ca * (1 - marge),
+                tmiActuel: tmi
             })
         },
         'selarl': { 
@@ -1301,7 +1237,7 @@ function runComparison() {
     };
     
     // Simuler chaque statut sélectionné
-    for (const statutId of statutsEffectifs) {
+    for (const statutId of selectedStatuses) {
         if (statutsComplets[statutId]) {
             try {
                 const statut = statutsComplets[statutId];
@@ -1500,7 +1436,6 @@ function runComparison() {
             <i class="fas fa-chart-line mr-2"></i> 
             Mode expert activé : calcul par tranches progressives d'IR + ${useOptimalRatio ? 'optimisation automatique' : 'ratio manuel'} du ratio rémunération/dividendes
             ${useAvgChargeRate ? ' + calcul avec frais réels' : ''}
-            ${compareEiIs ? ' + comparaison EI/EURL avec option IS' : ''}
         </td>
     `;
     
