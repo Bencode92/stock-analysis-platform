@@ -17,6 +17,8 @@ class SimulationsFiscales {
         const modeExpert = params.modeExpert || false;
         // Important: récupérer explicitement le versement libératoire
         const versementLiberatoire = params.versementLiberatoire === true;
+        // Récupérer l'année de création pour l'exonération CFE
+        const anneeCreation = params.anneeCreation || new Date().getFullYear();
         
         // Utiliser les plafonds depuis legalStatuses si disponible
         const plafonds = {
@@ -67,9 +69,12 @@ class SimulationsFiscales {
         // Calcul des cotisations sociales (même avec VFL, les cotisations restent dues)
         const cotisationsSociales = Math.round(ca * tauxCotisations[typeEffectif]);
         
-        // Ajout CFP (formation professionnelle) et CFE estimée
-        const cfp = Math.round(ca * 0.001);  // 0,1% du CA
-        const cfe = params.cfe || 0;         // Estimation forfaitaire ou paramètre
+        // Ajout CFP (formation professionnelle) avec plafond à 120€
+        const cfp = Math.round(Math.min(ca * 0.001, 120));
+        
+        // Exonération CFE = année de création + 1ère année civile complète
+        const anneeCourante = new Date().getFullYear();
+        const cfe = (anneeCourante - anneeCreation < 2) ? 0 : (params.cfe || 0);
 
         // Calcul du revenu imposable après abattement
         const revenuImposable = Math.round(ca * (1 - abattements[typeEffectif]));
