@@ -26,7 +26,7 @@ class SimulationsFiscales {
         const tauxCotisations = {
             'BIC_VENTE': 0.123, // 12.3%
             'BIC_SERVICE': 0.212, // 21.2%
-            'BNC': 0.212 // 21.2%
+            'BNC': 0.246 // 24.6% (mise à jour 2025)
         };
         
         // Déterminer le type de Micro
@@ -129,7 +129,7 @@ class SimulationsFiscales {
     
     // EURL
     static simulerEURL(params) {
-        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, optionIS = false, tmiActuel = 30, modeExpert = false } = params;
+        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, optionIS = false, tmiActuel = 30, modeExpert = false, capitalSocial = 1 } = params;
         
         // Calcul du résultat de l'entreprise (simplifié - CA * taux de marge)
         const resultatEntreprise = Math.round(ca * tauxMarge);
@@ -224,6 +224,10 @@ class SimulationsFiscales {
             // Distribution de dividendes (simplifié - 100% du résultat après IS)
             const dividendes = resultatApresIS;
             
+            // Cotisations TNS sur dividendes > 10% du capital social
+            const baseTNSDiv = Math.max(0, dividendes - 0.10 * capitalSocial);
+            const cotTNSDiv = Math.round(baseTNSDiv * 0.17); // 17% URSSAF 2025
+            
             // Calcul du PFU sur les dividendes
             let prelevementForfaitaire;
             if (window.FiscalUtils) {
@@ -234,8 +238,8 @@ class SimulationsFiscales {
                 prelevementForfaitaire = Math.round(dividendes * tauxPFU);
             }
             
-            // Dividendes nets après PFU
-            const dividendesNets = dividendes - prelevementForfaitaire;
+            // Dividendes nets après PFU et cotisations TNS
+            const dividendesNets = dividendes - prelevementForfaitaire - cotTNSDiv;
             
             // Revenu net total (rémunération nette + dividendes nets)
             const revenuNetSalaire = remunerationNetteSociale - impotRevenu;
@@ -256,6 +260,7 @@ class SimulationsFiscales {
                 is: is,
                 resultatApresIS: resultatApresIS,
                 dividendes: dividendes,
+                cotTNSDiv: cotTNSDiv,
                 prelevementForfaitaire: prelevementForfaitaire,
                 dividendesNets: dividendesNets,
                 revenuNetTotal: revenuNetTotal,
@@ -369,7 +374,8 @@ class SimulationsFiscales {
             tmiActuel = 30,
             gerantMajoritaire = true, // Par défaut, gérant majoritaire
             nbAssocies = 2, // Par défaut, 2 associés
-            modeExpert = false
+            modeExpert = false,
+            capitalSocial = 1
         } = params;
         
         // Calcul du résultat de l'entreprise (simplifié - CA * taux de marge)
@@ -442,6 +448,13 @@ class SimulationsFiscales {
         const dividendesBruts = resultatApresIS;
         const dividendesGerant = Math.round(dividendesBruts * partGerant);
         
+        // Cotisations TNS sur dividendes > 10% du capital social pour gérant majoritaire
+        let cotTNSDiv = 0;
+        if (gerantMajoritaire) {
+            const baseTNSDiv = Math.max(0, dividendesGerant - 0.10 * capitalSocial);
+            cotTNSDiv = Math.round(baseTNSDiv * 0.17); // 17% URSSAF 2025
+        }
+        
         // Calcul du PFU sur les dividendes
         let prelevementForfaitaire;
         if (window.FiscalUtils) {
@@ -452,8 +465,8 @@ class SimulationsFiscales {
             prelevementForfaitaire = Math.round(dividendesGerant * tauxPFU);
         }
         
-        // Dividendes nets après PFU
-        const dividendesNets = dividendesGerant - prelevementForfaitaire;
+        // Dividendes nets après PFU et cotisations TNS
+        const dividendesNets = dividendesGerant - prelevementForfaitaire - cotTNSDiv;
         
         // Revenu net total (salaire net + dividendes nets)
         const revenuNetTotal = salaireNetApresIR + dividendesNets;
@@ -475,6 +488,7 @@ class SimulationsFiscales {
             resultatApresIS: resultatApresIS,
             dividendesBruts: dividendesBruts,
             dividendesGerant: dividendesGerant,
+            cotTNSDiv: cotTNSDiv,
             prelevementForfaitaire: prelevementForfaitaire,
             dividendesNets: dividendesNets,
             revenuNetTotal: revenuNetTotal,
