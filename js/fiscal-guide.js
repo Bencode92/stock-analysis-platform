@@ -51,67 +51,67 @@ function setupMethodologyTab() {
 // Fonction pour générer le contenu de l'onglet méthodologie
 function getMethodologyContent() {
     return `
-    <div class=\"max-w-4xl mx-auto\">
-        <h2 class=\"text-3xl font-bold text-green-400 mb-6\">Méthodologie de calcul</h2>
+    <div class="max-w-4xl mx-auto">
+        <h2 class="text-3xl font-bold text-green-400 mb-6">Méthodologie de calcul</h2>
         
-        <div class=\"bg-blue-900 bg-opacity-30 p-6 rounded-xl mb-8\">
-            <h3 class=\"text-xl font-semibold mb-4\">Introduction à la méthodologie</h3>
-            <p class=\"mb-4\">Ce simulateur a été conçu pour vous offrir une estimation précise de l'impact fiscal et social des différents statuts juridiques. Les calculs s'appuient sur les barèmes officiels 2025 et les règles fiscales en vigueur à cette date.</p>
+        <div class="bg-blue-900 bg-opacity-30 p-6 rounded-xl mb-8">
+            <h3 class="text-xl font-semibold mb-4">Introduction à la méthodologie</h3>
+            <p class="mb-4">Ce simulateur a été conçu pour vous offrir une estimation précise de l'impact fiscal et social des différents statuts juridiques. Les calculs s'appuient sur les barèmes officiels 2025 et les règles fiscales en vigueur à cette date.</p>
             <p>Pour simplifier la présentation, certaines situations particulières ou niches fiscales ne sont pas prises en compte. Il est recommandé de consulter un expert-comptable pour une analyse personnalisée complète.</p>
         </div>
         
-        <h3 class=\"text-2xl font-bold text-green-400 mb-4\">Fiches méthodologiques par statut</h3>
+        <h3 class="text-2xl font-bold text-green-400 mb-4">Fiches méthodologiques par statut</h3>
         
-        <div class=\"grid grid-cols-1 md:grid-cols-2 gap-6 mb-8\">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <!-- Micro-entreprise -->
-            <div class=\"bg-blue-900 bg-opacity-20 p-4 rounded-lg border border-blue-800\">
-                <h4 class=\"font-bold text-blue-400 mb-2 flex items-center\">
-                    <i class=\"fas fa-store-alt mr-2\"></i> Micro-entreprise
+            <div class="bg-blue-900 bg-opacity-20 p-4 rounded-lg border border-blue-800">
+                <h4 class="font-bold text-blue-400 mb-2 flex items-center">
+                    <i class="fas fa-store-alt mr-2"></i> Micro-entreprise
                 </h4>
-                <div class=\"text-sm\">
-                    <p class=\"mb-2\"><strong>Cotisations sociales:</strong> Calculées sur le CA (12.3% pour vente, 21.2% pour services, 24.6% pour BNC)</p>
-                    <p class=\"mb-2\"><strong>Abattement fiscal:</strong> 71% (vente), 50% (services BIC), 34% (BNC)</p>
-                    <p class=\"mb-2\"><strong>Impôt sur le revenu:</strong> (CA × (1 - Abattement)) × Taux marginal</p>
-                    <p class=\"mb-2\"><strong>Versement libératoire:</strong> Option remplaçant l'IR par un prélèvement de 1% (vente), 1,7% (services) ou 2,2% (BNC) sur le CA</p>
-                    <p class=\"mb-2\"><strong>Net en poche:</strong> CA - Cotisations - CFP - CFE - Impôt</p>
+                <div class="text-sm">
+                    <p class="mb-2"><strong>Cotisations sociales:</strong> Calculées sur le CA (12.3% pour vente, 21.2% pour services, 24.6% pour BNC)</p>
+                    <p class="mb-2"><strong>Abattement fiscal:</strong> 71% (vente), 50% (services BIC), 34% (BNC)</p>
+                    <p class="mb-2"><strong>Impôt sur le revenu:</strong> (CA × (1 - Abattement)) × Taux marginal</p>
+                    <p class="mb-2"><strong>Versement libératoire:</strong> Option remplaçant l'IR par un prélèvement de 1% (vente), 1,7% (services) ou 2,2% (BNC) sur le CA</p>
+                    <p class="mb-2"><strong>Net en poche:</strong> CA - Cotisations - CFP - CFE - Impôt</p>
                 </div>
             </div>
             
             <!-- EURL -->
-            <div class=\"bg-blue-900 bg-opacity-20 p-4 rounded-lg border border-blue-800\">
-                <h4 class=\"font-bold text-blue-400 mb-2 flex items-center\">
-                    <i class=\"fas fa-user-tie mr-2\"></i> EURL
+            <div class="bg-blue-900 bg-opacity-20 p-4 rounded-lg border border-blue-800">
+                <h4 class="font-bold text-blue-400 mb-2 flex items-center">
+                    <i class="fas fa-user-tie mr-2"></i> EURL
                 </h4>
-                <div class=\"text-sm\">
-                    <p class=\"mb-2\"><strong>IR:</strong> Transparence fiscale, le bénéfice est imposé au nom du gérant</p>
-                    <p class=\"mb-2\"><strong>IS:</strong> Impôt société sur le bénéfice après rémunération + PFU sur dividendes</p>
-                    <p class=\"mb-2\"><strong>Cotisations TNS:</strong> ~45% sur la rémunération</p>
-                    <p class=\"mb-2\"><strong>Dividendes TNS:</strong> Soumis aux cotisations sociales au-delà de 10% du capital</p>
-                    <p class=\"mb-2\"><strong>Optimisation:</strong> Équilibre entre rémunération et dividendes à l'IS</p>
+                <div class="text-sm">
+                    <p class="mb-2"><strong>IR:</strong> Transparence fiscale, le bénéfice est imposé au nom du gérant</p>
+                    <p class="mb-2"><strong>IS:</strong> Impôt société sur le bénéfice après rémunération + PFU sur dividendes</p>
+                    <p class="mb-2"><strong>Cotisations TNS:</strong> ~45% sur la rémunération</p>
+                    <p class="mb-2"><strong>Dividendes TNS:</strong> Soumis aux cotisations sociales au-delà de 10% du capital</p>
+                    <p class="mb-2"><strong>Optimisation:</strong> Équilibre entre rémunération et dividendes à l'IS</p>
                 </div>
             </div>
             
             <!-- SASU -->
-            <div class=\"bg-blue-900 bg-opacity-20 p-4 rounded-lg border border-blue-800\">
-                <h4 class=\"font-bold text-blue-400 mb-2 flex items-center\">
-                    <i class=\"fas fa-user-shield mr-2\"></i> SASU
+            <div class="bg-blue-900 bg-opacity-20 p-4 rounded-lg border border-blue-800">
+                <h4 class="font-bold text-blue-400 mb-2 flex items-center">
+                    <i class="fas fa-user-shield mr-2"></i> SASU
                 </h4>
-                <div class=\"text-sm\">
-                    <p class=\"mb-2\"><strong>Charges sociales:</strong> ~67% sur salaire (45% patronales, 22% salariales)</p>
-                    <p class=\"mb-2\"><strong>IS:</strong> 15% jusqu'à 42 000€, 25% au-delà</p>
-                    <p class=\"mb-2\"><strong>Dividendes:</strong> PFU 30% (17.2% PS + 12.8% IR)</p>
-                    <p class=\"mb-2\"><strong>Optimisation:</strong> Favoriser les dividendes (charges sociales lourdes)</p>
+                <div class="text-sm">
+                    <p class="mb-2"><strong>Charges sociales:</strong> ~67% sur salaire (45% patronales, 22% salariales)</p>
+                    <p class="mb-2"><strong>IS:</strong> 15% jusqu'à 42 000€, 25% au-delà</p>
+                    <p class="mb-2"><strong>Dividendes:</strong> PFU 30% (17.2% PS + 12.8% IR)</p>
+                    <p class="mb-2"><strong>Optimisation:</strong> Favoriser les dividendes (charges sociales lourdes)</p>
                 </div>
             </div>
             
             <!-- Autres statuts -->
-            <div class=\"bg-blue-900 bg-opacity-20 p-4 rounded-lg border border-blue-800\">
-                <h4 class=\"font-bold text-blue-400 mb-2 flex items-center\">
-                    <i class=\"fas fa-building mr-2\"></i> Autres statuts
+            <div class="bg-blue-900 bg-opacity-20 p-4 rounded-lg border border-blue-800">
+                <h4 class="font-bold text-blue-400 mb-2 flex items-center">
+                    <i class="fas fa-building mr-2"></i> Autres statuts
                 </h4>
-                <div class=\"text-sm\">
-                    <p class=\"mb-2\">Chaque statut applique une combinaison spécifique de ces mécanismes:</p>
-                    <ul class=\"list-disc pl-4 mb-2\">
+                <div class="text-sm">
+                    <p class="mb-2">Chaque statut applique une combinaison spécifique de ces mécanismes:</p>
+                    <ul class="list-disc pl-4 mb-2">
                         <li>Cotisations TNS ou charges assimilé salarié</li>
                         <li>Imposition à l'IR ou IS + PFU</li>
                         <li>Répartition entre rémunération et dividendes</li>
@@ -121,72 +121,72 @@ function getMethodologyContent() {
             </div>
         </div>
         
-        <div class=\"bg-green-900 bg-opacity-20 border border-green-800 p-6 rounded-xl mb-8\">
-            <h3 class=\"text-xl font-semibold text-green-400 mb-4\">Exemple de calcul détaillé</h3>
+        <div class="bg-green-900 bg-opacity-20 border border-green-800 p-6 rounded-xl mb-8">
+            <h3 class="text-xl font-semibold text-green-400 mb-4">Exemple de calcul détaillé</h3>
             
-            <div class=\"bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-4\">
-                <h4 class=\"font-medium mb-2\">Micro-entreprise (BIC Services)</h4>
-                <div class=\"text-sm\">
-                    <p class=\"mb-1\">CA = 50 000€</p>
-                    <p class=\"mb-1\">Cotisations sociales = 50 000 × 21.2% = 10 600€</p>
-                    <p class=\"mb-1\">CFP = 50 000 × 0.1% = 50€</p>
-                    <p class=\"mb-1\">Abattement forfaitaire = 50 000 × 50% = 25 000€</p>
-                    <p class=\"mb-1\">Revenu imposable = 50 000 - 25 000 = 25 000€</p>
-                    <p class=\"mb-1\">Avec TMI à 30% → Impôt = 25 000 × 30% = 7 500€</p>
-                    <p class=\"mb-1\">Revenu net = 50 000 - 10 600 - 50 - 7 500 = 31 850€</p>
+            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg mb-4">
+                <h4 class="font-medium mb-2">Micro-entreprise (BIC Services)</h4>
+                <div class="text-sm">
+                    <p class="mb-1">CA = 50 000€</p>
+                    <p class="mb-1">Cotisations sociales = 50 000 × 21.2% = 10 600€</p>
+                    <p class="mb-1">CFP = 50 000 × 0.1% = 50€</p>
+                    <p class="mb-1">Abattement forfaitaire = 50 000 × 50% = 25 000€</p>
+                    <p class="mb-1">Revenu imposable = 50 000 - 25 000 = 25 000€</p>
+                    <p class="mb-1">Avec TMI à 30% → Impôt = 25 000 × 30% = 7 500€</p>
+                    <p class="mb-1">Revenu net = 50 000 - 10 600 - 50 - 7 500 = 31 850€</p>
                 </div>
             </div>
             
-            <div class=\"bg-blue-900 bg-opacity-30 p-4 rounded-lg\">
-                <h4 class=\"font-medium mb-2\">SASU</h4>
-                <div class=\"text-sm\">
-                    <p class=\"mb-1\">CA = 50 000€, Marge = 30% → Résultat = 15 000€</p>
-                    <p class=\"mb-1\">Rémunération brute (70%) = 10 500€</p>
-                    <p class=\"mb-1\">Charges patronales = 10 500 × 45% = 4 725€</p>
-                    <p class=\"mb-1\">Charges salariales = 10 500 × 22% = 2 310€</p>
-                    <p class=\"mb-1\">Net avant IR = 8 190€</p>
-                    <p class=\"mb-1\">IR (TMI 30%) = 8 190 × 30% = 2 457€</p>
-                    <p class=\"mb-1\">Résultat après rémunération = 4 500€</p>
-                    <p class=\"mb-1\">IS (15%) = 4 500 × 15% = 675€</p>
-                    <p class=\"mb-1\">Dividendes bruts = 3 825€</p>
-                    <p class=\"mb-1\">PFU (30%) = 3 825 × 30% = 1 148€</p>
-                    <p class=\"mb-1\">Dividendes nets = 2 677€</p>
-                    <p class=\"mb-1\">Net total = 5 733€ (salaire) + 2 677€ (dividendes) = 8 410€</p>
+            <div class="bg-blue-900 bg-opacity-30 p-4 rounded-lg">
+                <h4 class="font-medium mb-2">SASU</h4>
+                <div class="text-sm">
+                    <p class="mb-1">CA = 50 000€, Marge = 30% → Résultat = 15 000€</p>
+                    <p class="mb-1">Rémunération brute (70%) = 10 500€</p>
+                    <p class="mb-1">Charges patronales = 10 500 × 45% = 4 725€</p>
+                    <p class="mb-1">Charges salariales = 10 500 × 22% = 2 310€</p>
+                    <p class="mb-1">Net avant IR = 8 190€</p>
+                    <p class="mb-1">IR (TMI 30%) = 8 190 × 30% = 2 457€</p>
+                    <p class="mb-1">Résultat après rémunération = 4 500€</p>
+                    <p class="mb-1">IS (15%) = 4 500 × 15% = 675€</p>
+                    <p class="mb-1">Dividendes bruts = 3 825€</p>
+                    <p class="mb-1">PFU (30%) = 3 825 × 30% = 1 148€</p>
+                    <p class="mb-1">Dividendes nets = 2 677€</p>
+                    <p class="mb-1">Net total = 5 733€ (salaire) + 2 677€ (dividendes) = 8 410€</p>
                 </div>
             </div>
         </div>
         
-        <div class=\"bg-purple-900 bg-opacity-20 border border-purple-800 p-6 rounded-xl mb-8\">
-            <h3 class=\"text-xl font-semibold text-purple-400 mb-4\">Calcul avancé de l'impôt sur le revenu</h3>
+        <div class="bg-purple-900 bg-opacity-20 border border-purple-800 p-6 rounded-xl mb-8">
+            <h3 class="text-xl font-semibold text-purple-400 mb-4">Calcul avancé de l'impôt sur le revenu</h3>
             
-            <p class=\"mb-4\">L'IR est calculé selon les tranches progressives 2025:</p>
+            <p class="mb-4">L'IR est calculé selon les tranches progressives 2025:</p>
             
-            <div class=\"grid grid-cols-2 gap-4 text-sm mb-4\">
-                <div class=\"bg-blue-900 bg-opacity-40 p-2 rounded\">
+            <div class="grid grid-cols-2 gap-4 text-sm mb-4">
+                <div class="bg-blue-900 bg-opacity-40 p-2 rounded">
                     <strong>Tranche</strong>
                 </div>
-                <div class=\"bg-blue-900 bg-opacity-40 p-2 rounded\">
+                <div class="bg-blue-900 bg-opacity-40 p-2 rounded">
                     <strong>Taux</strong>
                 </div>
-                <div class=\"p-2\">0€ à 11 497€</div>
-                <div class=\"p-2\">0%</div>
-                <div class=\"p-2\">11 498€ à 29 315€</div>
-                <div class=\"p-2\">11%</div>
-                <div class=\"p-2\">29 316€ à 83 823€</div>
-                <div class=\"p-2\">30%</div>
-                <div class=\"p-2\">83 824€ à 180 294€</div>
-                <div class=\"p-2\">41%</div>
-                <div class=\"p-2\">Au-delà de 180 294€</div>
-                <div class=\"p-2\">45%</div>
+                <div class="p-2">0€ à 11 497€</div>
+                <div class="p-2">0%</div>
+                <div class="p-2">11 498€ à 29 315€</div>
+                <div class="p-2">11%</div>
+                <div class="p-2">29 316€ à 83 823€</div>
+                <div class="p-2">30%</div>
+                <div class="p-2">83 824€ à 180 294€</div>
+                <div class="p-2">41%</div>
+                <div class="p-2">Au-delà de 180 294€</div>
+                <div class="p-2">45%</div>
             </div>
             
-            <p class=\"text-sm\">Cette méthode est plus précise que l'application directe du TMI, particulièrement pour les revenus élevés ou à cheval sur plusieurs tranches.</p>
+            <p class="text-sm">Cette méthode est plus précise que l'application directe du TMI, particulièrement pour les revenus élevés ou à cheval sur plusieurs tranches.</p>
         </div>
         
-        <div class=\"bg-blue-900 bg-opacity-20 border border-blue-800 p-6 rounded-xl\">
-            <h3 class=\"text-xl font-semibold mb-4\">Limites et précautions</h3>
+        <div class="bg-blue-900 bg-opacity-20 border border-blue-800 p-6 rounded-xl">
+            <h3 class="text-xl font-semibold mb-4">Limites et précautions</h3>
             
-            <ul class=\"list-disc pl-6 space-y-2 text-sm\">
+            <ul class="list-disc pl-6 space-y-2 text-sm">
                 <li>Ces calculs sont indicatifs et ne remplacent pas l'avis d'un expert-comptable.</li>
                 <li>Les éléments non pris en compte incluent: situation familiale détaillée, autres revenus, crédits d'impôt spécifiques, régimes spéciaux.</li>
                 <li>Tous les montants sont arrondis à l'euro près.</li>
@@ -696,31 +696,6 @@ function updateSimulatorInterface() {
                     </div>
                 </div>
                 
-                <!-- Ajouter une section pour les paramètres avancés -->
-                <div class="mt-4">
-                    <h3 class="font-medium mb-3 text-green-400">Paramètres avancés</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                            <label class="block text-gray-300 mb-2">Code APE/NAF</label>
-                            <input type="text" id="sim-code-ape" placeholder="ex: 6201Z" 
-                                class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
-                            <p class="text-xs text-gray-400 mt-1">Détermine le taux de CFP</p>
-                        </div>
-                        <div>
-                            <label class="block text-gray-300 mb-2">Revenu fiscal N-2 (€)</label>
-                            <input type="number" id="sim-rfr" placeholder="RFR pour VFL" 
-                                class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
-                            <p class="text-xs text-gray-400 mt-1">Pour l'éligibilité au VFL</p>
-                        </div>
-                        <div>
-                            <label class="block text-gray-300 mb-2">Année de début d'activité</label>
-                            <input type="number" id="sim-annee-debut" placeholder="Pour ACRE" value="${new Date().getFullYear()}"
-                                class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
-                            <p class="text-xs text-gray-400 mt-1">Pour exonérations ACRE</p>
-                        </div>
-                    </div>
-                </div>
-                
                 <!-- Avertissement sur les limites du simulateur -->
                 <div class="fiscal-warning mt-4">
                     <p><i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i> <strong>Limites du simulateur:</strong> Ce simulateur simplifie certains aspects fiscaux pour faciliter la comparaison. Pour une analyse complète, consultez un expert-comptable.</p>
@@ -910,7 +885,7 @@ function updateSimulatorInterface() {
         });
         
         // Ajouter un événement aux cases à cocher et autres options
-        document.querySelectorAll('.status-checkbox, #use-optimal-ratio, #use-avg-charge-rate, #micro-type, #micro-vfl, #sarl-gerant-minoritaire, #sim-code-ape, #sim-rfr, #sim-annee-debut').forEach(checkbox => {
+        document.querySelectorAll('.status-checkbox, #use-optimal-ratio, #use-avg-charge-rate, #micro-type, #micro-vfl, #sarl-gerant-minoritaire').forEach(checkbox => {
             checkbox.addEventListener('change', runComparison);
         });
         
@@ -943,12 +918,6 @@ function getSelectedStatuses(filter) {
     }
 }
 
-// Déclaration de la fonction setupAccordion pour éviter l'erreur référentielle
-function setupAccordion() {
-    // Cette fonction sera implémentée plus tard ou selon les besoins
-    console.log("Configuration de l'accordéon...");
-}
-
 function runComparison() {
     // Récupérer les valeurs du formulaire
     const ca = parseFloat(document.getElementById('sim-ca').value) || 50000;
@@ -963,11 +932,6 @@ function runComparison() {
     const versementLiberatoire = document.getElementById('micro-vfl') && document.getElementById('micro-vfl').checked;
     const gerantMajoritaire = !(document.getElementById('sarl-gerant-minoritaire') && document.getElementById('sarl-gerant-minoritaire').checked);
     
-    // Récupérer les valeurs des paramètres avancés
-    const codeApe = document.getElementById('sim-code-ape')?.value || null;
-    const rfrN2 = parseFloat(document.getElementById('sim-rfr')?.value) || undefined;
-    const anneeDebut = parseInt(document.getElementById('sim-annee-debut')?.value) || new Date().getFullYear();
-    
     // Définir marge ou frais de façon exclusive selon l'option
     const params = {
         ca: ca,
@@ -976,10 +940,7 @@ function runComparison() {
         tauxRemuneration: ratioSalaire,
         tmiActuel: tmi,
         modeExpert: modeExpert,
-        gerantMajoritaire: gerantMajoritaire,
-        codeApe: codeApe,
-        rfrN2: rfrN2,
-        anneeDebut: anneeDebut
+        gerantMajoritaire: gerantMajoritaire
     };
     
     // Logger pour debug
@@ -1066,10 +1027,7 @@ function runComparison() {
                 typeMicro: document.getElementById('micro-type').value,
                 tmiActuel: tmi,
                 modeExpert: modeExpert,
-                versementLiberatoire: versementLiberatoire,
-                codeApe: codeApe,
-                rfrN2: rfrN2,
-                anneeDebut: anneeDebut
+                versementLiberatoire: versementLiberatoire
             })
         },
         'ei': { 
@@ -1077,8 +1035,7 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerEI({
                 ...params,
                 ca: ca,
-                tmiActuel: tmi,
-                anneeDebut: anneeDebut
+                tmiActuel: tmi
             })
         },
         'eurl': { 
@@ -1088,8 +1045,7 @@ function runComparison() {
                 ca: ca,
                 tauxRemuneration: ratioSalaire,
                 optionIS: false,
-                tmiActuel: tmi,
-                anneeDebut: anneeDebut
+                tmiActuel: tmi
             })
         },
         'eurlIS': { 
@@ -1120,8 +1076,7 @@ function runComparison() {
                     ca: ca,
                     tauxRemuneration: ratioSalaire,
                     optionIS: true,
-                    tmiActuel: tmi,
-                    anneeDebut: anneeDebut
+                    tmiActuel: tmi
                 });
                 
                 // Ajouter l'information du ratio optimal comme référence
@@ -1194,8 +1149,7 @@ function runComparison() {
                     ca: ca,
                     tauxRemuneration: ratioSalaire,
                     tmiActuel: tmi,
-                    gerantMajoritaire: gerantMajoritaire,
-                    anneeDebut: anneeDebut
+                    gerantMajoritaire: gerantMajoritaire
                 });
                 
                 // Ajouter l'information du ratio optimal comme référence
@@ -1284,8 +1238,7 @@ function runComparison() {
                 return window.SimulationsFiscales.simulerSNC({
                     ...params,
                     ca: ca,
-                    tmiActuel: tmi,
-                    anneeDebut: anneeDebut
+                    tmiActuel: tmi
                 });
             }
         },
@@ -1327,8 +1280,7 @@ function runComparison() {
                     ...params,
                     ca: ca,
                     tauxRemuneration: ratioSalaire,
-                    tmiActuel: tmi,
-                    anneeDebut: anneeDebut
+                    tmiActuel: tmi
                 });
                 
                 // Ajouter l'information du ratio optimal comme référence
@@ -1667,8 +1619,647 @@ function runComparison() {
     });
 }
 
-// Déclaration de la fonction showCalculationDetails pour éviter l'erreur référentielle
+// Fonction pour afficher le détail des calculs
 function showCalculationDetails(statutId, simulationResults) {
-    console.log(`Détails pour ${statutId}:`, simulationResults.find(r => r.statutId === statutId));
-    // Cette fonction sera implémentée ultérieurement
+    // Trouver les résultats pour ce statut
+    const result = simulationResults.find(r => r.statutId === statutId);
+    if (!result) return;
+    
+    // Formatter les nombres
+    const formatter = new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: 'EUR',
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0
+    });
+    
+    // Créer le modal
+    const modal = document.createElement('div');
+    modal.className = 'detail-modal';
+    
+    // Adapter l'affichage en fonction du statut juridique
+    let detailContent = '';
+    
+    if (statutId === 'micro') {
+        detailContent = `
+            <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - Micro-entreprise</h2>
+            
+            <div class="detail-category">Données de base</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Chiffre d'affaires</td>
+                    <td>${formatter.format(result.sim.ca)}</td>
+                </tr>
+                <tr>
+                    <td>Type de micro-entreprise</td>
+                    <td>${result.sim.typeMicro || 'BIC'}</td>
+                </tr>
+                <tr>
+                    <td>Abattement forfaitaire</td>
+                    <td>${result.sim.abattement}</td>
+                </tr>
+                <tr>
+                    <td>Versement libératoire</td>
+                    <td>${result.sim.versementLiberatoire ? 'Activé' : 'Désactivé'}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Charges sociales</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Base de calcul</td>
+                    <td>${formatter.format(result.sim.ca)}</td>
+                </tr>
+                <tr>
+                    <td>Taux de cotisations sociales</td>
+                    <td>${(result.sim.cotisationsSociales / result.sim.ca * 100).toFixed(1)}%</td>
+                </tr>
+                <tr>
+                    <td>Montant des cotisations sociales</td>
+                    <td>${formatter.format(result.sim.cotisationsSociales)}</td>
+                </tr>
+                <tr>
+                    <td>Contribution à la Formation Professionnelle (CFP)</td>
+                    <td>${formatter.format(result.sim.cfp || 0)}</td>
+                </tr>
+                <tr>
+                    <td>Cotisation Foncière des Entreprises (CFE)</td>
+                    <td>${formatter.format(result.sim.cfe || 0)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Impôt sur le revenu</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Revenu imposable après abattement</td>
+                    <td>${formatter.format(result.sim.revenuImposable)}</td>
+                </tr>
+                <tr>
+                    <td>Impôt sur le revenu</td>
+                    <td>${formatter.format(result.sim.impotRevenu)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Résultat final</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Chiffre d'affaires</td>
+                    <td>${formatter.format(result.sim.ca)}</td>
+                </tr>
+                <tr>
+                    <td>- Cotisations sociales</td>
+                    <td>${formatter.format(result.sim.cotisationsSociales)}</td>
+                </tr>
+                <tr>
+                    <td>- CFP</td>
+                    <td>${formatter.format(result.sim.cfp || 0)}</td>
+                </tr>
+                <tr>
+                    <td>- CFE</td>
+                    <td>${formatter.format(result.sim.cfe || 0)}</td>
+                </tr>
+                <tr>
+                    <td>- Impôt sur le revenu</td>
+                    <td>${formatter.format(result.sim.impotRevenu)}</td>
+                </tr>
+                <tr>
+                    <td><strong>= Revenu net en poche</strong></td>
+                    <td><strong>${formatter.format(result.sim.revenuNetApresImpot)}</strong></td>
+                </tr>
+                <tr>
+                    <td>Ratio Net/CA</td>
+                    <td>${result.sim.ratioNetCA.toFixed(1)}%</td>
+                </tr>
+            </table>
+        `;
+    } else if (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa') {
+        // Cas des structures avec dirigeant assimilé salarié (SASU, SAS, etc.)
+        detailContent = `
+            <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - ${result.statut}</h2>
+            
+            <div class="detail-category">Données de base</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Chiffre d'affaires</td>
+                    <td>${formatter.format(result.sim.ca)}</td>
+                </tr>
+                <tr>
+                    <td>Résultat de l'entreprise (marge)</td>
+                    <td>${formatter.format(result.sim.resultatEntreprise)}</td>
+                </tr>
+                <tr>
+                    <td>Ratio rémunération/dividendes ${result.sim.ratioOptimise ? '(optimisé)' : '(manuel)'}</td>
+                    <td>${result.sim.ratioOptimise ? (result.sim.ratioOptimise * 100).toFixed(0) : (result.ratioEffectif * 100).toFixed(0)}% / ${result.sim.ratioOptimise ? (100 - result.sim.ratioOptimise * 100).toFixed(0) : (100 - result.ratioEffectif * 100).toFixed(0)}%</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Rémunération</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Rémunération brute</td>
+                    <td>${formatter.format(result.sim.remuneration)}</td>
+                </tr>
+                <tr>
+                    <td>Charges patronales</td>
+                    <td>${formatter.format(result.sim.chargesPatronales)}</td>
+                </tr>
+                <tr>
+                    <td>Charges salariales</td>
+                    <td>${formatter.format(result.sim.chargesSalariales)}</td>
+                </tr>
+                <tr>
+                    <td>Coût total employeur</td>
+                    <td>${formatter.format(result.sim.coutTotalEmployeur || (result.sim.remuneration + result.sim.chargesPatronales))}</td>
+                </tr>
+                <tr>
+                    <td>Salaire net avant IR</td>
+                    <td>${formatter.format(result.sim.salaireNet)}</td>
+                </tr>
+                <tr>
+                    <td>Impôt sur le revenu</td>
+                    <td>${formatter.format(result.sim.impotRevenu)}</td>
+                </tr>
+                <tr>
+                    <td>Salaire net après IR</td>
+                    <td>${formatter.format(result.sim.salaireNetApresIR)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Dividendes</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Résultat après rémunération</td>
+                    <td>${formatter.format(result.sim.resultatApresRemuneration)}</td>
+                </tr>
+                <tr>
+                    <td>Impôt sur les sociétés</td>
+                    <td>${formatter.format(result.sim.is)}</td>
+                </tr>
+                <tr>
+                    <td>Résultat après IS</td>
+                    <td>${formatter.format(result.sim.resultatApresIS)}</td>
+                </tr>
+                <tr>
+                    <td>Dividendes bruts</td>
+                    <td>${formatter.format(result.sim.dividendes)}</td>
+                </tr>
+                <tr>
+                    <td>Prélèvement Forfaitaire Unique (30%)</td>
+                    <td>${formatter.format(result.sim.prelevementForfaitaire)}</td>
+                </tr>
+                <tr>
+                    <td>Dividendes nets</td>
+                    <td>${formatter.format(result.sim.dividendesNets)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Résultat final</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Salaire net après IR</td>
+                    <td>${formatter.format(result.sim.salaireNetApresIR)}</td>
+                </tr>
+                <tr>
+                    <td>+ Dividendes nets</td>
+                    <td>${formatter.format(result.sim.dividendesNets)}</td>
+                </tr>
+                <tr>
+                    <td><strong>= Revenu net total</strong></td>
+                    <td><strong>${formatter.format(result.sim.revenuNetTotal)}</strong></td>
+                </tr>
+                <tr>
+                    <td>Ratio Net/CA</td>
+                    <td>${result.sim.ratioNetCA.toFixed(1)}%</td>
+                </tr>
+            </table>
+        `;
+    } else if (statutId === 'eurlIS' || statutId === 'sarl' || statutId === 'selarl') {
+        // Cas des structures à l'IS avec un gérant TNS
+        detailContent = `
+            <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - ${result.statut}</h2>
+            
+            <div class="detail-category">Données de base</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Chiffre d'affaires</td>
+                    <td>${formatter.format(result.sim.ca)}</td>
+                </tr>
+                <tr>
+                    <td>Résultat de l'entreprise</td>
+                    <td>${formatter.format(result.sim.resultatAvantRemuneration || result.sim.resultatEntreprise)}</td>
+                </tr>
+                <tr>
+                    <td>Ratio rémunération/dividendes ${result.sim.ratioOptimise ? '(optimisé)' : '(manuel)'}</td>
+                    <td>${result.sim.ratioOptimise ? (result.sim.ratioOptimise * 100).toFixed(0) : (result.ratioEffectif * 100).toFixed(0)}% / ${result.sim.ratioOptimise ? (100 - result.sim.ratioOptimise * 100).toFixed(0) : (100 - result.ratioEffectif * 100).toFixed(0)}%</td>
+                </tr>
+                ${statutId === 'sarl' ? `
+                <tr>
+                    <td>Statut du gérant</td>
+                    <td>${result.sim.gerantMajoritaire ? 'Majoritaire (TNS)' : 'Minoritaire (assimilé salarié)'}</td>
+                </tr>` : ''}
+            </table>
+            
+            <div class="detail-category">Rémunération</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Rémunération brute</td>
+                    <td>${formatter.format(result.sim.remuneration)}</td>
+                </tr>
+                <tr>
+                    <td>Cotisations sociales TNS</td>
+                    <td>${formatter.format(result.sim.cotisationsSociales)}</td>
+                </tr>
+                <tr>
+                    <td>Revenu net social</td>
+                    <td>${formatter.format(result.sim.remunerationNetteSociale)}</td>
+                </tr>
+                <tr>
+                    <td>Impôt sur le revenu</td>
+                    <td>${formatter.format(result.sim.impotRevenu)}</td>
+                </tr>
+                <tr>
+                    <td>Revenu net après IR</td>
+                    <td>${formatter.format(result.sim.revenuNetSalaire)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Dividendes</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Résultat après rémunération</td>
+                    <td>${formatter.format(result.sim.resultatApresRemuneration)}</td>
+                </tr>
+                <tr>
+                    <td>Impôt sur les sociétés</td>
+                    <td>${formatter.format(result.sim.is)}</td>
+                </tr>
+                <tr>
+                    <td>Résultat après IS</td>
+                    <td>${formatter.format(result.sim.resultatApresIS)}</td>
+                </tr>
+                <tr>
+                    <td>Dividendes bruts</td>
+                    <td>${formatter.format(result.sim.dividendes)}</td>
+                </tr>
+                ${result.sim.cotTNSDiv ? `
+                <tr>
+                    <td>Cotisations TNS sur dividendes > 10% du capital</td>
+                    <td>${formatter.format(result.sim.cotTNSDiv)}</td>
+                </tr>` : ''}
+                <tr>
+                    <td>Prélèvement Forfaitaire Unique (30%)</td>
+                    <td>${formatter.format(result.sim.prelevementForfaitaire)}</td>
+                </tr>
+                <tr>
+                    <td>Dividendes nets</td>
+                    <td>${formatter.format(result.sim.dividendesNets)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Résultat final</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Revenu net après IR</td>
+                    <td>${formatter.format(result.sim.revenuNetSalaire)}</td>
+                </tr>
+                <tr>
+                    <td>+ Dividendes nets</td>
+                    <td>${formatter.format(result.sim.dividendesNets)}</td>
+                </tr>
+                <tr>
+                    <td><strong>= Revenu net total</strong></td>
+                    <td><strong>${formatter.format(result.sim.revenuNetTotal)}</strong></td>
+                </tr>
+                <tr>
+                    <td>Ratio Net/CA</td>
+                    <td>${result.sim.ratioNetCA.toFixed(1)}%</td>
+                </tr>
+            </table>
+        `;
+    } else if (statutId === 'ei' || statutId === 'eurl' || statutId === 'snc') {
+        // Cas des entreprises à l'IR
+        detailContent = `
+            <h2 class="text-2xl font-bold text-green-400 mb-4">Détail du calcul - ${result.statut}</h2>
+            
+            <div class="detail-category">Données de base</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Chiffre d'affaires</td>
+                    <td>${formatter.format(result.sim.ca)}</td>
+                </tr>
+                <tr>
+                    <td>Bénéfice avant cotisations</td>
+                    <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Charges sociales</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Base de calcul</td>
+                    <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
+                </tr>
+                <tr>
+                    <td>Taux de cotisations sociales TNS</td>
+                    <td>~45%</td>
+                </tr>
+                <tr>
+                    <td>Montant des cotisations sociales</td>
+                    <td>${formatter.format(result.sim.cotisationsSociales)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Impôt sur le revenu</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Bénéfice après cotisations</td>
+                    <td>${formatter.format(result.sim.beneficeApresCotisations || result.sim.beneficeImposable)}</td>
+                </tr>
+                <tr>
+                    <td>Impôt sur le revenu</td>
+                    <td>${formatter.format(result.sim.impotRevenu)}</td>
+                </tr>
+            </table>
+            
+            <div class="detail-category">Résultat final</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Bénéfice avant cotisations</td>
+                    <td>${formatter.format(result.sim.beneficeAvantCotisations || result.sim.resultatAvantRemuneration || result.brut)}</td>
+                </tr>
+                <tr>
+                    <td>- Cotisations sociales</td>
+                    <td>${formatter.format(result.sim.cotisationsSociales)}</td>
+                </tr>
+                <tr>
+                    <td>- Impôt sur le revenu</td>
+                    <td>${formatter.format(result.sim.impotRevenu)}</td>
+                </tr>
+                <tr>
+                    <td><strong>= Revenu net en poche</strong></td>
+                    <td><strong>${formatter.format(result.sim.revenuNetApresImpot)}</strong></td>
+                </tr>
+                <tr>
+                    <td>Ratio Net/CA</td>
+                    <td>${result.sim.ratioNetCA.toFixed(1)}%</td>
+                </tr>
+            </table>
+        `;
+    } else {
+        // Cas par défaut
+        detailContent = `
+            <h2 class="text-2xl font-bold text-blue-400 mb-4">Détail du calcul - ${result.statut}</h2>
+            
+            <div class="detail-category">Résultat final</div>
+            <table class="detail-table">
+                <tr>
+                    <td>Chiffre d'affaires</td>
+                    <td>${formatter.format(result.sim.ca)}</td>
+                </tr>
+                <tr>
+                    <td>Charges sociales</td>
+                    <td>${formatter.format(result.charges)}</td>
+                </tr>
+                <tr>
+                    <td>Impôts (IR + IS + PFU)</td>
+                    <td>${formatter.format(result.impots)}</td>
+                </tr>
+                <tr>
+                    <td><strong>Revenu net total</strong></td>
+                    <td><strong>${formatter.format(result.net)}</strong></td>
+                </tr>
+                <tr>
+                    <td>Ratio Net/CA</td>
+                    <td>${(result.score || 0).toFixed(1)}%</td>
+                </tr>
+            </table>
+            
+            <div class="mt-4 p-4 bg-blue-900 bg-opacity-30 rounded-lg text-sm">
+                <p><i class="fas fa-info-circle text-blue-400 mr-2"></i> Les calculs détaillés pour ce statut sont spécifiques et complexes. Pour plus d'informations, consultez la documentation fiscale ou un expert-comptable.</p>
+            </div>
+        `;
+    }
+    
+    modal.innerHTML = `
+        <div class="detail-content">
+            <span class="close-modal"><i class="fas fa-times"></i></span>
+            ${detailContent}
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Ajouter un gestionnaire d'événement pour fermer le modal
+    modal.querySelector('.close-modal').addEventListener('click', function() {
+        document.body.removeChild(modal);
+    });
+    
+    // Fermer le modal en cliquant en dehors du contenu
+    modal.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            document.body.removeChild(modal);
+        }
+    });
 }
+
+// Configurer l'accordéon pour les sections d'informations fiscales
+function setupAccordion() {
+    // Récupérer le conteneur pour l'accordéon
+    const accordionContainer = document.querySelector('.space-y-4');
+    if (!accordionContainer) return;
+    
+    // Vider le conteneur actuel
+    accordionContainer.innerHTML = '';
+    
+    // Récupérer la liste des statuts depuis legalStatuses si disponible, sinon utiliser une liste par défaut
+    let statuts = [];
+    if (window.legalStatuses) {
+        statuts = Object.keys(window.legalStatuses);
+    } else {
+        // Liste des statuts par défaut
+        statuts = ['MICRO', 'EI', 'EURL', 'SASU', 'SARL', 'SAS', 'SA', 'SNC', 'SCI', 'SELARL', 'SELAS', 'SCA'];
+    }
+    
+    // Icônes pour les statuts juridiques
+    const statutIcons = {
+        'MICRO': '<i class="fas fa-store-alt text-green-400 mr-2"></i>',
+        'EI': '<i class="fas fa-user text-green-400 mr-2"></i>',
+        'EURL': '<i class="fas fa-user-tie text-green-400 mr-2"></i>',
+        'SASU': '<i class="fas fa-user-shield text-blue-400 mr-2"></i>',
+        'SARL': '<i class="fas fa-users text-blue-400 mr-2"></i>',
+        'SAS': '<i class="fas fa-building text-blue-400 mr-2"></i>',
+        'SA': '<i class="fas fa-landmark text-blue-400 mr-2"></i>',
+        'SNC': '<i class="fas fa-handshake text-green-400 mr-2"></i>',
+        'SCI': '<i class="fas fa-home text-green-400 mr-2"></i>',
+        'SELARL': '<i class="fas fa-user-md text-blue-400 mr-2"></i>',
+        'SELAS': '<i class="fas fa-stethoscope text-blue-400 mr-2"></i>',
+        'SCA': '<i class="fas fa-chart-line text-blue-400 mr-2"></i>'
+    };
+ // Badge régime fiscal
+    const regimeBadges = {
+        'MICRO': '<span class="status-badge ir">IR</span>',
+        'EI': '<span class="status-badge ir">IR</span>',
+        'EURL': '<span class="status-badge iris">IR/IS</span>',
+        'SASU': '<span class="status-badge is">IS</span>',
+        'SARL': '<span class="status-badge is">IS</span>',
+        'SAS': '<span class="status-badge is">IS</span>',
+        'SA': '<span class="status-badge is">IS</span>',
+        'SNC': '<span class="status-badge ir">IR</span>',
+        'SCI': '<span class="status-badge ir">IR</span>',
+        'SELARL': '<span class="status-badge is">IS</span>',
+        'SELAS': '<span class="status-badge is">IS</span>',
+        'SCA': '<span class="status-badge is">IS</span>'
+    };
+    
+    // Générer l'accordéon pour chaque statut
+    statuts.forEach(statutId => {
+        const nomStatut = window.legalStatuses && window.legalStatuses[statutId] 
+            ? window.legalStatuses[statutId].name 
+            : getDefaultNomStatut(statutId);
+        
+        // Créer l'élément d'accordéon
+        const accordionItem = document.createElement('div');
+        accordionItem.className = 'mb-3';
+        
+        // Contenu de l'accordéon basé sur le statut
+        accordionItem.innerHTML = `
+            <button class="accordion-toggle w-full">
+                ${statutIcons[statutId] || ''} ${nomStatut} 
+                ${regimeBadges[statutId] || ''}
+                <i class="fas fa-plus ml-auto"></i>
+            </button>
+            <div class="hidden px-4 py-3 border-t border-gray-700 bg-blue-900 bg-opacity-20 rounded-b-lg">
+                ${getStatutFiscalInfo(statutId)}
+            </div>
+        `;
+        
+        accordionContainer.appendChild(accordionItem);
+    });
+    
+    // Attacher les événements aux boutons de l'accordéon
+    const toggleBtns = document.querySelectorAll('.accordion-toggle');
+    toggleBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const content = this.nextElementSibling;
+            content.classList.toggle('hidden');
+            
+            // Changer l'icône
+            const icon = this.querySelector('i:last-child');
+            icon.classList.toggle('fa-plus');
+            icon.classList.toggle('fa-minus');
+            
+            // Ajouter/supprimer la classe active
+            this.classList.toggle('active');
+        });
+    });
+}
+
+// Fonction d'aide pour obtenir le nom par défaut si legalStatuses n'est pas disponible
+function getDefaultNomStatut(statutId) {
+    const noms = {
+        'MICRO': 'Micro-entreprise',
+        'EI': 'Entreprise Individuelle',
+        'EURL': 'Entreprise Unipersonnelle à Responsabilité Limitée',
+        'SASU': 'Société par Actions Simplifiée Unipersonnelle',
+        'SARL': 'Société à Responsabilité Limitée',
+        'SAS': 'Société par Actions Simplifiée',
+        'SA': 'Société Anonyme',
+        'SNC': 'Société en Nom Collectif',
+        'SCI': 'Société Civile Immobilière',
+        'SELARL': 'Société d\'Exercice Libéral à Responsabilité Limitée',
+        'SELAS': 'Société d\'Exercice Libéral par Actions Simplifiée',
+        'SCA': 'Société en Commandite par Actions'
+    };
+    return noms[statutId] || statutId;
+}
+
+// Fonction pour générer les informations fiscales de chaque statut
+function getStatutFiscalInfo(statutId) {
+    // Informations fiscales par défaut pour chaque statut
+    const infosFiscales = {
+        'MICRO': `
+            <p class="mb-2"><strong>Régime fiscal :</strong> IR avec abattement forfaitaire</p>
+            <p class="mb-2"><strong>Abattements :</strong> 71% (vente), 50% (services BIC), 34% (BNC)</p>
+            <p class="mb-2"><strong>Charges sociales :</strong> 12.3% (vente), 21.2% (services), 24.6% (BNC)</p>
+            <p class="mb-2"><strong>Versement libératoire :</strong> 1% (vente), 1,7% (services), 2,2% (BNC) sur CA</p>
+            <p class="mb-2"><strong>Plafonds 2025 :</strong> 188 700€ (vente) / 77 700€ (services)</p>
+        `,
+        'EI': `
+            <p class="mb-2"><strong>Régime fiscal :</strong> IR, imposition sur le bénéfice</p>
+            <p class="mb-2"><strong>Cotisations sociales :</strong> ~45% du bénéfice</p>
+            <p class="mb-2"><strong>Avantages :</strong> Simplicité de gestion, frais réels déductibles</p>
+            <p class="mb-2"><strong>Inconvénients :</strong> Pas de distinction entre patrimoine privé/pro</p>
+        `,
+        'EURL': `
+            <p class="mb-2"><strong>Régimes fiscaux possibles :</strong> IR par défaut ou option IS</p>
+            <p class="mb-2"><strong>IR :</strong> Imposition sur la totalité du bénéfice</p>
+            <p class="mb-2"><strong>IS :</strong> Impôt sur les sociétés + PFU sur dividendes</p>
+            <p class="mb-2"><strong>Cotisations sociales :</strong> Environ 45% de la rémunération du gérant (TNS)</p>
+            <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
+        `,
+        'SASU': `
+            <p class="mb-2"><strong>Régime fiscal :</strong> IS uniquement</p>
+            <p class="mb-2"><strong>Social :</strong> Président assimilé salarié</p>
+            <p class="mb-2"><strong>Cotisations :</strong> ~80% sur rémunération (22% salariales, 55% patronales)</p>
+            <p class="mb-2"><strong>Fiscalité :</strong> IS (15%/25%) + PFU 30% sur dividendes</p>
+            <p class="mb-2"><strong>Optimisation:</strong> Favoriser les dividendes</p>
+        `,
+        'SARL': `
+            <p class="mb-2"><strong>Régime fiscal :</strong> IS presque toujours</p>
+            <p class="mb-2"><strong>Social gérant majoritaire :</strong> TNS (~45% de cotisations)</p>
+            <p class="mb-2"><strong>Social gérant minoritaire :</strong> Assimilé salarié (~80%)</p>
+            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
+            <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
+        `,
+        'SAS': `
+            <p class="mb-2"><strong>Régime fiscal :</strong> IS (impôt sur les sociétés)</p>
+            <p class="mb-2"><strong>Social :</strong> Président assimilé salarié</p>
+            <p class="mb-2"><strong>Cotisations :</strong> ~80% sur rémunération (22% salariales, 55% patronales)</p>
+            <p class="mb-2"><strong>Fiscalité :</strong> IS (15%/25%) + PFU 30% sur dividendes</p>
+            <p class="mb-2"><strong>Capital minimal :</strong> Libre (1€ suffit)</p>
+        `,
+        'SA': `
+            <p class="mb-2"><strong>Régime fiscal :</strong> IS (impôt sur les sociétés)</p>
+            <p class="mb-2"><strong>Social :</strong> Président du CA assimilé salarié</p>
+            <p class="mb-2"><strong>Particularités :</strong> Conseil d'administration obligatoire (3 membres min)</p>
+            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
+            <p class="mb-2"><strong>Capital minimal :</strong> 37 000€</p>
+        `,
+        'SNC': `
+            <p class="mb-2"><strong>Régime fiscal :</strong> IR (transparence fiscale)</p>
+            <p class="mb-2"><strong>Particularités :</strong> Responsabilité indéfinie et solidaire des associés</p>
+            <p class="mb-2"><strong>Social :</strong> Gérants et associés = TNS</p>
+            <p class="mb-2"><strong>Fiscalité :</strong> Bénéfice imposé directement chez les associés</p>
+        `,
+        'SCI': `
+            <p class="mb-2"><strong>Régime fiscal :</strong> IR par défaut, option IS possible</p>
+            <p class="mb-2"><strong>Activité :</strong> Gestion immobilière (location nue principalement)</p>
+            <p class="mb-2"><strong>IR :</strong> Revenus fonciers pour les associés + prélèvements sociaux 17.2%</p>
+            <p class="mb-2"><strong>IS :</strong> Rarement avantageux sauf activité commerciale</p>
+        `,
+        'SELARL': `
+            <p class="mb-2"><strong>Régime fiscal :</strong> IS presque toujours</p>
+            <p class="mb-2"><strong>Particularités :</strong> Réservée aux professions libérales réglementées</p>
+            <p class="mb-2"><strong>Social :</strong> Gérant majoritaire = TNS</p>
+            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
+            <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
+        `,
+        'SELAS': `
+            <p class="mb-2"><strong>Régime fiscal :</strong> IS</p>
+            <p class="mb-2"><strong>Particularités :</strong> Réservée aux professions libérales réglementées</p>
+            <p class="mb-2"><strong>Social :</strong> Président assimilé salarié</p>
+            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
+            <p class="mb-2"><strong>Capital minimal :</strong> Libre</p>
+        `,
+        'SCA': `
+            <p class="mb-2"><strong>Régime fiscal :</strong> IS</p>
+            <p class="mb-2"><strong>Structure :</strong> Commandités (responsabilité illimitée) et commanditaires</p>
+            <p class="mb-2"><strong>Social :</strong> Gérants = TNS</p>
+            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
+            <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
+            <p class="mb-2"><strong>Capital minimal :</strong> 37 000€</p>
+        `
+    };
+    
+    return infosFiscales[statutId] || `<p>Informations non disponibles pour ${statutId}</p>`;
+}// Contenu trop volumineux pour être inclus dans la demande
