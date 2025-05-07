@@ -2,7 +2,8 @@
 // Version 2.1 - Mai 2025 - Étendu avec tous les statuts juridiques et mise à jour des taux 2025
 
 // Constantes globales pour les taux
-const CSG_IMPOSABLE = 0.024; // 9,2% x 17,4% (fraction imposable 2025)
+const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS
+const TAUX_CH_SAL = 0.22;            // Taux moyen charges salariales 2025
 
 // Classe pour les simulations fiscales des différents statuts juridiques
 class SimulationsFiscales {
@@ -63,10 +64,8 @@ class SimulationsFiscales {
             };
         }
         
-        // Calcul des cotisations sociales (0 si versement libératoire)
-        const cotisationsSociales = versementLiberatoire 
-            ? 0 
-            : Math.round(ca * tauxCotisations[typeEffectif]);
+        // Calcul des cotisations sociales
+        const cotisationsSociales = Math.round(ca * tauxCotisations[typeEffectif]);
         
         // Ajout CFP (formation professionnelle) et CFE estimée
         const cfp = Math.round(ca * 0.001);  // 0,1% du CA
@@ -123,14 +122,14 @@ class SimulationsFiscales {
         // Calcul du bénéfice avant cotisations (simplifié - CA * taux de marge)
         const beneficeAvantCotisations = Math.round(ca * tauxMarge);
         
-        // Utiliser la fonction utilitaire pour calculer les cotisations TNS
+        // Utiliser la formule fermée pour calculer les cotisations TNS
         let cotisationsSociales;
         if (window.FiscalUtils) {
-            cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(beneficeAvantCotisations);
+            cotisationsSociales = window.FiscalUtils.cotisationsTNSSurBenefice(beneficeAvantCotisations);
         } else {
             // Fallback si l'utilitaire n'est pas disponible
-            const tauxCotisationsTNS = 0.45;
-            cotisationsSociales = Math.round(beneficeAvantCotisations * tauxCotisationsTNS);
+            const tauxGlobal = 0.45;
+            cotisationsSociales = Math.round(beneficeAvantCotisations * tauxGlobal / (1 + tauxGlobal));
         }
         
         // Bénéfice après cotisations sociales
@@ -165,7 +164,19 @@ class SimulationsFiscales {
     
     // EURL
     static simulerEURL(params) {
-        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, optionIS = false, tmiActuel = 30, modeExpert = false, capitalSocial = 1 } = params;
+        const { 
+            ca, 
+            tauxMarge = 0.3, 
+            tauxRemuneration = 0.7, 
+            optionIS = false, 
+            tmiActuel = 30, 
+            modeExpert = false, 
+            capitalSocial = 1,
+            optionBaremeDividendes = false,
+            partDetention = 1,
+            capitalEstLibere = true,
+            detentionPersPhysiques75 = true
+        } = params;
         
         // Calcul du résultat de l'entreprise (simplifié - CA * taux de marge)
         const resultatEntreprise = Math.round(ca * tauxMarge);
@@ -181,11 +192,11 @@ class SimulationsFiscales {
             // Utiliser la fonction utilitaire pour calculer les cotisations TNS
             let cotisationsSociales;
             if (window.FiscalUtils) {
-                cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(remuneration);
+                cotisationsSociales = window.FiscalUtils.cotisationsTNSSurBenefice(remuneration);
             } else {
                 // Fallback si l'utilitaire n'est pas disponible
-                const tauxCotisationsTNS = 0.45;
-                cotisationsSociales = Math.round(remuneration * tauxCotisationsTNS);
+                const tauxGlobal = 0.45;
+                cotisationsSociales = Math.round(remuneration * tauxGlobal / (1 + tauxGlobal));
             }
             
             // Bénéfice imposable (remuneration + résultat après rémunération)
@@ -225,11 +236,11 @@ class SimulationsFiscales {
             // Utiliser la fonction utilitaire pour calculer les cotisations TNS
             let cotisationsSociales;
             if (window.FiscalUtils) {
-                cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(remuneration);
+                cotisationsSociales = window.FiscalUtils.cotisationsTNSSurBenefice(remuneration);
             } else {
                 // Fallback si l'utilitaire n'est pas disponible
-                const tauxCotisationsTNS = 0.45;
-                cotisationsSociales = Math.round(remuneration * tauxCotisationsTNS);
+                const tauxGlobal = 0.45;
+                cotisationsSociales = Math.round(remuneration * tauxGlobal / (1 + tauxGlobal));
             }
             
             // Calcul de l'impôt sur le revenu sur la rémunération
@@ -244,10 +255,14 @@ class SimulationsFiscales {
                 impotRevenu = Math.round(remunerationNetteSociale * (tmiActuel / 100));
             }
             
-            // Calcul de l'IS
+            // Calcul de l'IS avec paramètres supplémentaires
             let is;
             if (window.FiscalUtils) {
-                is = window.FiscalUtils.calculIS(resultatApresRemuneration);
+                is = window.FiscalUtils.calculIS(resultatApresRemuneration, {
+                    ca: ca,
+                    capitalEstLibere: capitalEstLibere,
+                    detentionPersPhysiques75: detentionPersPhysiques75
+                });
             } else {
                 // Fallback
                 const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
@@ -264,9 +279,15 @@ class SimulationsFiscales {
             const baseTNSDiv = Math.max(0, dividendes - 0.10 * capitalSocial);
             const cotTNSDiv = Math.round(baseTNSDiv * 0.45); // 45% URSSAF 2025
             
-            // Calcul du PFU sur les dividendes
+            // Calcul du PFU ou barème progressif sur les dividendes
             let prelevementForfaitaire;
-            if (window.FiscalUtils) {
+            const useBareme = optionBaremeDividendes;
+            if (useBareme && partDetention < 0.10) {
+                // Barème progressif avec abattement de 40%
+                prelevementForfaitaire = window.FiscalUtils 
+                    ? window.FiscalUtils.calculateProgressiveIR(dividendes * 0.6)
+                    : Math.round(dividendes * 0.6 * (tmiActuel / 100));
+            } else if (window.FiscalUtils) {
                 prelevementForfaitaire = window.FiscalUtils.calculPFU(dividendes);
             } else {
                 // Fallback
@@ -300,14 +321,25 @@ class SimulationsFiscales {
                 prelevementForfaitaire: prelevementForfaitaire,
                 dividendesNets: dividendesNets,
                 revenuNetTotal: revenuNetTotal,
-                ratioNetCA: (revenuNetTotal / ca) * 100
+                ratioNetCA: (revenuNetTotal / ca) * 100,
+                optionBaremeDividendes: optionBaremeDividendes
             };
         }
     }
     
     // SASU
     static simulerSASU(params) {
-        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, tmiActuel = 30, modeExpert = false } = params;
+        const { 
+            ca, 
+            tauxMarge = 0.3, 
+            tauxRemuneration = 0.7, 
+            tmiActuel = 30, 
+            modeExpert = false,
+            optionBaremeDividendes = false,
+            partDetention = 1,
+            capitalEstLibere = true,
+            detentionPersPhysiques75 = true 
+        } = params;
         
         // Calcul du résultat de l'entreprise
         const resultatEntreprise = Math.round(ca * tauxMarge);
@@ -325,14 +357,14 @@ class SimulationsFiscales {
         } else {
             // Fallback si l'utilitaire n'est pas disponible
             chargesPatronales = Math.round(remuneration * 0.45);
-            chargesSalariales = Math.round(remuneration * 0.22);
+            chargesSalariales = Math.round(remuneration * TAUX_CH_SAL);
         }
         
         const coutTotalEmployeur = remuneration + chargesPatronales;
         const salaireNet = remuneration - chargesSalariales;
         
         // Calcul du net imposable (incluant la CSG imposable)
-        const netImposable = salaireNet + (salaireNet * CSG_IMPOSABLE);
+        const netImposable = salaireNet + (salaireNet * CSG_CRDS_IMPOSABLE);
         
         // Calcul de l'impôt sur le revenu
         let impotRevenu;
@@ -350,7 +382,11 @@ class SimulationsFiscales {
         // Calcul de l'IS
         let is;
         if (window.FiscalUtils) {
-            is = window.FiscalUtils.calculIS(resultatApresRemuneration);
+            is = window.FiscalUtils.calculIS(resultatApresRemuneration, {
+                ca: ca,
+                capitalEstLibere: capitalEstLibere,
+                detentionPersPhysiques75: detentionPersPhysiques75
+            });
         } else {
             // Fallback
             const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
@@ -363,9 +399,15 @@ class SimulationsFiscales {
         // Distribution de dividendes
         const dividendes = resultatApresIS;
         
-        // Calcul du PFU sur les dividendes
+        // Calcul du PFU ou barème progressif sur les dividendes
         let prelevementForfaitaire;
-        if (window.FiscalUtils) {
+        const useBareme = optionBaremeDividendes;
+        if (useBareme && partDetention < 0.10) {
+            // Barème progressif avec abattement de 40%
+            prelevementForfaitaire = window.FiscalUtils 
+                ? window.FiscalUtils.calculateProgressiveIR(dividendes * 0.6)
+                : Math.round(dividendes * 0.6 * (tmiActuel / 100));
+        } else if (window.FiscalUtils) {
             prelevementForfaitaire = window.FiscalUtils.calculPFU(dividendes);
         } else {
             // Fallback
@@ -401,7 +443,8 @@ class SimulationsFiscales {
             prelevementForfaitaire: prelevementForfaitaire,
             dividendesNets: dividendesNets,
             revenuNetTotal: revenuNetTotal,
-            ratioNetCA: (revenuNetTotal / ca) * 100
+            ratioNetCA: (revenuNetTotal / ca) * 100,
+            optionBaremeDividendes: optionBaremeDividendes
         };
     }
 
@@ -415,7 +458,11 @@ class SimulationsFiscales {
             gerantMajoritaire = true, // Par défaut, gérant majoritaire
             nbAssocies = 2, // Par défaut, 2 associés
             modeExpert = false,
-            capitalSocial = 1
+            capitalSocial = 1,
+            optionBaremeDividendes = false,
+            partDetention = 0.51,
+            capitalEstLibere = true,
+            detentionPersPhysiques75 = true
         } = params;
         
         // Calcul du résultat de l'entreprise (simplifié - CA * taux de marge)
@@ -433,10 +480,11 @@ class SimulationsFiscales {
         if (gerantMajoritaire) {
             // Gérant majoritaire = TNS
             if (window.FiscalUtils) {
-                cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(remuneration);
+                cotisationsSociales = window.FiscalUtils.cotisationsTNSSurBenefice(remuneration);
             } else {
                 // Fallback
-                cotisationsSociales = Math.round(remuneration * 0.45);
+                const tauxGlobal = 0.45;
+                cotisationsSociales = Math.round(remuneration * tauxGlobal / (1 + tauxGlobal));
             }
             salaireNet = remuneration - cotisationsSociales;
             netImposable = salaireNet;
@@ -451,11 +499,11 @@ class SimulationsFiscales {
             } else {
                 // Fallback
                 chargesPatronales = Math.round(remuneration * 0.45);
-                chargesSalariales = Math.round(remuneration * 0.22);
+                chargesSalariales = Math.round(remuneration * TAUX_CH_SAL);
                 cotisationsSociales = chargesPatronales + chargesSalariales;
             }
             salaireNet = remuneration - chargesSalariales;
-            netImposable = salaireNet + (salaireNet * CSG_IMPOSABLE); // Ajout CSG imposable pour assimilé salarié
+            netImposable = salaireNet + (salaireNet * CSG_CRDS_IMPOSABLE); // Ajout CSG imposable pour assimilé salarié
         }
         
         // Calcul de l'impôt sur le revenu
@@ -474,7 +522,11 @@ class SimulationsFiscales {
         // Calcul de l'IS
         let is;
         if (window.FiscalUtils) {
-            is = window.FiscalUtils.calculIS(resultatApresRemuneration);
+            is = window.FiscalUtils.calculIS(resultatApresRemuneration, {
+                ca: ca,
+                capitalEstLibere: capitalEstLibere,
+                detentionPersPhysiques75: detentionPersPhysiques75
+            });
         } else {
             // Fallback
             const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
@@ -487,7 +539,7 @@ class SimulationsFiscales {
         // Distribution de dividendes
         // Pour le gérant, on considère qu'il reçoit des dividendes proportionnels à ses parts sociales
         // Si gérant majoritaire, on estime qu'il détient 51% minimum des parts
-        const partGerant = gerantMajoritaire ? 0.51 : (1 / nbAssocies);
+        const partGerant = gerantMajoritaire ? Math.max(0.51, partDetention) : (1 / nbAssocies);
         const dividendesBruts = resultatApresIS;
         const dividendesGerant = Math.round(dividendesBruts * partGerant);
         
@@ -498,9 +550,15 @@ class SimulationsFiscales {
             cotTNSDiv = Math.round(baseTNSDiv * 0.45); // 45% URSSAF 2025
         }
         
-        // Calcul du PFU sur les dividendes
+        // Calcul du PFU ou barème progressif sur les dividendes
         let prelevementForfaitaire;
-        if (window.FiscalUtils) {
+        const useBareme = optionBaremeDividendes;
+        if (useBareme && partDetention < 0.10) {
+            // Barème progressif avec abattement de 40%
+            prelevementForfaitaire = window.FiscalUtils 
+                ? window.FiscalUtils.calculateProgressiveIR(dividendesGerant * 0.6)
+                : Math.round(dividendesGerant * 0.6 * (tmiActuel / 100));
+        } else if (window.FiscalUtils) {
             prelevementForfaitaire = window.FiscalUtils.calculPFU(dividendesGerant);
         } else {
             // Fallback
@@ -536,7 +594,8 @@ class SimulationsFiscales {
             prelevementForfaitaire: prelevementForfaitaire,
             dividendesNets: dividendesNets,
             revenuNetTotal: revenuNetTotal,
-            ratioNetCA: (revenuNetTotal / ca) * 100
+            ratioNetCA: (revenuNetTotal / ca) * 100,
+            optionBaremeDividendes: optionBaremeDividendes
         };
     }
 
@@ -576,7 +635,11 @@ class SimulationsFiscales {
     // Ces méthodes peuvent aussi être mises à jour pour utiliser les utilitaires
     static simulerSA(params) {
         // Réutiliser le code existant
-        const { capitalInvesti = 37000 } = params;
+        const { 
+            capitalInvesti = 37000,
+            capitalEstLibere = true,
+            detentionPersPhysiques75 = true
+        } = params;
         
         // Vérifier si le capital minimum est respecté
         if (capitalInvesti < 37000) {
@@ -599,7 +662,11 @@ class SimulationsFiscales {
         // Recalculer l'IS en déduisant le coût du CAC du résultat
         const resultatAvantIS = resultSAS.resultatApresRemuneration - coutCAC;
         const is = window.FiscalUtils ? 
-            window.FiscalUtils.calculIS(resultatAvantIS) : 
+            window.FiscalUtils.calculIS(resultatAvantIS, {
+                ca: params.ca,
+                capitalEstLibere: capitalEstLibere,
+                detentionPersPhysiques75: detentionPersPhysiques75
+            }) : 
             (resultatAvantIS <= 42500 ? Math.round(resultatAvantIS * 0.15) : Math.round(resultatAvantIS * 0.25));
         
         // Recalculer les dividendes nets
@@ -642,10 +709,11 @@ class SimulationsFiscales {
         // Cotisations sociales TNS
         let cotisationsSociales;
         if (window.FiscalUtils) {
-            cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(beneficeAssociePrincipal);
+            cotisationsSociales = window.FiscalUtils.cotisationsTNSSurBenefice(beneficeAssociePrincipal);
         } else {
             // Fallback
-            cotisationsSociales = Math.round(beneficeAssociePrincipal * 0.45);
+            const tauxGlobal = 0.45;
+            cotisationsSociales = Math.round(beneficeAssociePrincipal * tauxGlobal / (1 + tauxGlobal));
         }
         
         // Bénéfice après cotisations sociales
@@ -686,7 +754,9 @@ class SimulationsFiscales {
             tmiActuel = 30,
             optionIS = false,
             partAssociePrincipal = 0.5,
-            modeExpert = false
+            modeExpert = false,
+            capitalEstLibere = true,
+            detentionPersPhysiques75 = true
         } = params;
         
         // Pour une SCI, on travaille avec des revenus locatifs plutôt qu'un CA
@@ -736,7 +806,11 @@ class SimulationsFiscales {
             // Calcul de l'IS
             let is;
             if (window.FiscalUtils) {
-                is = window.FiscalUtils.calculIS(resultatFiscal);
+                is = window.FiscalUtils.calculIS(resultatFiscal, {
+                    ca: ca,
+                    capitalEstLibere: capitalEstLibere,
+                    detentionPersPhysiques75: detentionPersPhysiques75
+                });
             } else {
                 // Fallback
                 const tauxIS = resultatFiscal <= 42500 ? 0.15 : 0.25;
