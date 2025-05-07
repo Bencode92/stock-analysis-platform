@@ -2,7 +2,7 @@
 // Version 2.1 - Mai 2025 - Étendu avec tous les statuts juridiques et mise à jour des taux 2025
 
 // Constantes globales pour les taux
-const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS
+// Utilisation de CSG_CRDS_IMPOSABLE depuis fiscal-utils.js
 const TAUX_CH_SAL = 0.22;            // Taux moyen charges salariales 2025
 
 // Classe pour les simulations fiscales des différents statuts juridiques
