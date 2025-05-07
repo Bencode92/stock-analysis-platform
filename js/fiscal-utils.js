@@ -1,5 +1,5 @@
 // fiscal-utils.js - Utilitaires pour les calculs fiscaux
-// Version 1.0 - Mai 2025
+// Version 1.1 - Mai 2025 - Mise à jour des taux 2025
 
 class FiscalUtils {
     // Calcul d'IR par tranches progressives
@@ -66,24 +66,28 @@ class FiscalUtils {
         };
     }
     
-    // Calcul des cotisations TNS
-    static calculCotisationsTNS(remuneration) {
-        // Taux forfaitaire moyen (37-47% selon assiette). Ajustez au besoin.
-        return Math.round(remuneration * 0.45);
+    // Calcul des cotisations TNS avec barème progressif
+    static calculCotisationsTNS(rem) {
+        const PASS = 46000;              // Plafond annuel SS 2025
+        const trancheA = Math.min(rem, PASS) * 0.28;   // maladie + vieillesse de base
+        const trancheB = Math.max(0, rem - PASS) * 0.17;
+        const csg = rem * 0.092;
+        const crds = rem * 0.005;
+        return Math.round(trancheA + trancheB + csg + crds);
     }
     
     // Calcul des cotisations TNS sur dividendes
     static cotTNSDividendes(dividendes, capitalSocial) {
         const base = Math.max(0, dividendes - 0.10 * capitalSocial);
-        return Math.round(base * 0.17); // taux 2025
+        return Math.round(base * 0.45); // taux global 2025
     }
     
     // Calcul des charges salariales
     static calculChargesSalariales(remuneration) {
         return {
-            patronales: Math.round(remuneration * 0.55),
+            patronales: Math.round(remuneration * 0.45),
             salariales: Math.round(remuneration * 0.22),
-            total: Math.round(remuneration * 0.77)
+            total: Math.round(remuneration * 0.67)
         };
     }
     
@@ -94,7 +98,7 @@ class FiscalUtils {
     
     // Calcul IS selon tranches
     static calculIS(resultat) {
-        const tauxIS = resultat <= 42500 ? 0.15 : 0.25;
+        const tauxIS = resultat <= 42000 ? 0.15 : 0.25;
         return Math.round(resultat * tauxIS);
     }
     
