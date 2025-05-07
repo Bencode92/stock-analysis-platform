@@ -3,6 +3,8 @@
 
 // Constantes globales pour les taux de charges
 const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS
+// Exposer la constante au niveau global pour qu'elle soit accessible dans fiscal-simulation.js
+window.CSG_CRDS_IMPOSABLE = CSG_CRDS_IMPOSABLE;
 
 class FiscalUtils {
     // Calcul d'IR par tranches progressives
