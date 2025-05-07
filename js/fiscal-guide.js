@@ -198,105 +198,6 @@ function getMethodologyContent() {
 function addCustomStyles() {
     const styleElement = document.createElement('style');
     styleElement.textContent = `
-        /* Styles pour élargir l'arrière-plan et éviter la troncature */
-        body, html, .container, .main-content {
-            overflow-x: hidden !important;
-        }
-        
-        #fiscal-simulator {
-            overflow-x: visible !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            width: 100% !important;
-            max-width: none !important;
-            position: relative !important;
-        }
-        
-        #fiscal-simulator::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100vw;
-            right: -100vw;
-            bottom: 0;
-            background: rgba(17, 24, 39, 0.95);
-            z-index: -1;
-        }
-        
-        .bg-blue-900, .bg-blue-900.bg-opacity-30 {
-            background-color: transparent !important;
-            width: 100% !important;
-            padding: 2rem !important;
-        }
-        
-        /* Styles pour le tableau de résultats */
-        #sim-results-container {
-            width: 100% !important;
-            overflow-x: auto !important;
-        }
-        
-        #sim-results {
-            border-collapse: separate;
-            border-spacing: 0;
-            width: 100%;
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-            table-layout: fixed;
-        }
-        
-        #sim-results th, #sim-results td {
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-        
-        #sim-results thead tr {
-            background: linear-gradient(90deg, #112240, #1A365D);
-        }
-        
-        #sim-results th {
-            padding: 1rem 1.5rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-size: 0.9rem;
-            text-align: left;
-        }
-        
-        #sim-results tbody tr {
-            transition: all 0.2s;
-        }
-        
-        #sim-results tbody tr:hover {
-            background-color: rgba(30, 58, 138, 0.5) !important;
-        }
-        
-        .result-top-row {
-            background: linear-gradient(90deg, rgba(0, 255, 135, 0.1), rgba(0, 204, 106, 0.05)) !important;
-            border-left: 4px solid #00FF87;
-        }
-        
-        .net-value {
-            font-weight: 600;
-            font-size: 1.05rem;
-        }
-        
-        .net-value.top {
-            color: #00FF87;
-        }
-        
-        .status-icon {
-            font-size: 1.2rem;
-            margin-right: 0.5rem;
-            vertical-align: middle;
-        }
-        
-        .ratio-row {
-            background: rgba(30, 58, 138, 0.2) !important;
-            font-style: italic;
-        }
-        
         /* Styles pour l'accordéon */
         .accordion-toggle {
             display: flex;
@@ -348,6 +249,63 @@ function addCustomStyles() {
             color: #A5F3C9;
         }
         
+        /* Styles pour le tableau de résultats */
+        #sim-results {
+            border-collapse: separate;
+            border-spacing: 0;
+            width: 100%;
+            min-width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        #sim-results thead tr {
+            background: linear-gradient(90deg, #112240, #1A365D);
+        }
+        
+        #sim-results th {
+            padding: 1rem 1.5rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+        
+        #sim-results tbody tr {
+            transition: all 0.2s;
+        }
+        
+        #sim-results tbody tr:hover {
+            background-color: rgba(30, 58, 138, 0.5) !important;
+        }
+        
+        .result-top-row {
+            background: linear-gradient(90deg, rgba(0, 255, 135, 0.1), rgba(0, 204, 106, 0.05)) !important;
+            border-left: 4px solid #00FF87;
+        }
+        
+        .net-value {
+            font-weight: 600;
+            font-size: 1.05rem;
+        }
+        
+        .net-value.top {
+            color: #00FF87;
+        }
+        
+        .status-icon {
+            font-size: 1.2rem;
+            margin-right: 0.5rem;
+            vertical-align: middle;
+        }
+        
+        .ratio-row {
+            background: rgba(30, 58, 138, 0.2) !important;
+            font-style: italic;
+        }
+        
         /* Styles pour les boutons de filtre */
         .status-filter-btn {
             transition: all 0.2s ease;
@@ -394,24 +352,43 @@ function addCustomStyles() {
             color: #A78BFA;
             font-weight: 600;
         }
-        
-        /* Adaptations pour la grille et les options */
-        .grid {
-            width: 100% !important;
+
+        /* Styles pour corriger le problème d'affichage du tableau */
+        #fiscal-simulator {
+            max-width: 100%;
+            width: 100%;
+            overflow-x: auto;
         }
         
-        #sim-options-container {
-            width: 100% !important;
+        #sim-results {
+            width: 100%;
+            min-width: 1000px;
         }
         
-        /* Ajustements pour les colonnes du tableau */
-        #sim-results th:nth-child(1), #sim-results td:nth-child(1) { width: 20%; }
-        #sim-results th:nth-child(2), #sim-results td:nth-child(2), 
-        #sim-results th:nth-child(3), #sim-results td:nth-child(3),
-        #sim-results th:nth-child(4), #sim-results td:nth-child(4),
-        #sim-results th:nth-child(5), #sim-results td:nth-child(5) { width: 12%; }
-        #sim-results th:nth-child(6), #sim-results td:nth-child(6) { width: 15%; }
-        #sim-results th:nth-child(7), #sim-results td:nth-child(7) { width: 17%; }
+        .tab-content {
+            overflow-x: auto;
+            width: 100%;
+        }
+        
+        #sim-results-container {
+            overflow-x: auto;
+            width: 100%;
+        }
+        
+        .bg-blue-900 {
+            width: 100%;
+        }
+        
+        @media (max-width: 1200px) {
+            #fiscal-simulator {
+                padding: 0;
+            }
+            
+            #sim-results-container {
+                overflow-x: auto;
+                width: 100%;
+            }
+        }
     `;
     document.head.appendChild(styleElement);
 }
