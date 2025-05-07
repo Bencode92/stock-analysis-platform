@@ -13,14 +13,11 @@ class FiscalUtils {
         ];
         
         let impot = 0;
-        let reste = revenuImposable;
-        
-        for(let i = 0; i < tranches.length; i++) {
-            const min = i > 0 ? tranches[i-1].max + 1 : 0;
-            const montantTranche = Math.min(Math.max(0, reste), tranches[i].max - min);
-            impot += montantTranche * tranches[i].taux;
-            reste -= montantTranche;
-            if(reste <= 0) break;
+        let min = 0;
+        for (const t of tranches) {
+            const taxable = Math.max(0, Math.min(revenuImposable - min, t.max - min));
+            impot += taxable * t.taux;
+            min = t.max;
         }
         
         return Math.round(impot);
@@ -68,7 +65,7 @@ class FiscalUtils {
     
     // Calcul des cotisations TNS avec barème progressif
     static calculCotisationsTNS(rem) {
-        const PASS = 46000;              // Plafond annuel SS 2025
+        const PASS = 47100;              // Plafond annuel SS 2025
         const trancheA = Math.min(rem, PASS) * 0.28;   // maladie + vieillesse de base
         const trancheB = Math.max(0, rem - PASS) * 0.17;
         const csg = rem * 0.092;
@@ -84,6 +81,7 @@ class FiscalUtils {
     
     // Calcul des charges salariales
     static calculChargesSalariales(remuneration) {
+        // Taux moyens 2025 - peuvent varier selon secteur, allègements et part des charges plafonnées
         return {
             patronales: Math.round(remuneration * 0.45),
             salariales: Math.round(remuneration * 0.22),
@@ -98,7 +96,8 @@ class FiscalUtils {
     
     // Calcul IS selon tranches
     static calculIS(resultat) {
-        const tauxIS = resultat <= 42000 ? 0.15 : 0.25;
+        const seuil = 42500;
+        const tauxIS = resultat <= seuil ? 0.15 : 0.25;
         return Math.round(resultat * tauxIS);
     }
     
