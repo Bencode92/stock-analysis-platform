@@ -825,21 +825,18 @@ function runComparison() {
     const compareEiIs = document.getElementById('compare-ei-is') && document.getElementById('compare-ei-is').checked;
     const useAvgChargeRate = document.getElementById('use-avg-charge-rate') && document.getElementById('use-avg-charge-rate').checked;
     
-    // Calculer le taux de frais réels (l'inverse du taux de marge)
-    const tauxFrais = useAvgChargeRate ? (1 - marge) : 0;
+    // Définir marge ou frais de façon exclusive selon l'option
+    const params = {
+        ca: ca,
+        tauxMarge: useAvgChargeRate ? undefined : marge,
+        tauxFrais: useAvgChargeRate ? (1 - marge) : 0,
+        tauxRemuneration: ratioSalaire,
+        tmiActuel: tmi,
+        modeExpert: modeExpert
+    };
     
     const resultsBody = document.getElementById('sim-results-body');
     if (!resultsBody) return;
-    
-    // Paramètres communs pour toutes les simulations
-    const params = {
-        ca: ca,
-        tauxMarge: marge,
-        tauxRemuneration: ratioSalaire,
-        tmiActuel: tmi,
-        modeExpert: modeExpert,
-        tauxFrais: tauxFrais
-    };
     
     // Vider les résultats précédents
     resultsBody.innerHTML = '';
@@ -935,11 +932,9 @@ function runComparison() {
         'ei': { 
             nom: 'Entreprise Individuelle', 
             simuler: () => window.SimulationsFiscales.simulerEI({
+                ...params,
                 ca: ca,
-                tauxMarge: marge,
-                tauxFrais: tauxFrais,
-                tmiActuel: tmi,
-                modeExpert: modeExpert
+                tmiActuel: tmi
             })
         },
         'eiIS': { 
@@ -968,13 +963,11 @@ function runComparison() {
                 
                 // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
                 const resultat = window.SimulationsFiscales.simulerEURL({
+                    ...params,
                     ca: ca,
-                    tauxMarge: marge,
-                    tauxFrais: tauxFrais,
                     tauxRemuneration: ratioSalaire,
                     optionIS: true,
-                    tmiActuel: tmi,
-                    modeExpert: modeExpert
+                    tmiActuel: tmi
                 });
                 
                 // Modifier le type d'entreprise
@@ -989,13 +982,11 @@ function runComparison() {
         'eurl': { 
             nom: 'EURL à l\'IR', 
             simuler: () => window.SimulationsFiscales.simulerEURL({
+                ...params,
                 ca: ca,
-                tauxMarge: marge,
-                tauxFrais: tauxFrais,
                 tauxRemuneration: ratioSalaire,
                 optionIS: false,
-                tmiActuel: tmi,
-                modeExpert: modeExpert
+                tmiActuel: tmi
             })
         },
         'eurlIS': { 
@@ -1022,13 +1013,11 @@ function runComparison() {
                 
                 // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
                 const resultat = window.SimulationsFiscales.simulerEURL({
+                    ...params,
                     ca: ca,
-                    tauxMarge: marge,
-                    tauxFrais: tauxFrais,
                     tauxRemuneration: ratioSalaire,
                     optionIS: true,
-                    tmiActuel: tmi,
-                    modeExpert: modeExpert
+                    tmiActuel: tmi
                 });
                 
                 // Ajouter l'information du ratio optimal comme référence
@@ -1061,12 +1050,10 @@ function runComparison() {
                 
                 // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
                 const resultat = window.SimulationsFiscales.simulerSASU({
+                    ...params,
                     ca: ca,
-                    tauxMarge: marge,
-                    tauxFrais: tauxFrais,
                     tauxRemuneration: ratioSalaire,
-                    tmiActuel: tmi,
-                    modeExpert: modeExpert
+                    tmiActuel: tmi
                 });
                 
                 // Ajouter l'information du ratio optimal comme référence
@@ -1099,13 +1086,11 @@ function runComparison() {
                 
                 // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
                 const resultat = window.SimulationsFiscales.simulerSARL({
+                    ...params,
                     ca: ca,
-                    tauxMarge: marge,
-                    tauxFrais: tauxFrais,
                     tauxRemuneration: ratioSalaire,
                     tmiActuel: tmi,
-                    gerantMajoritaire: true,
-                    modeExpert: modeExpert
+                    gerantMajoritaire: true
                 });
                 
                 // Ajouter l'information du ratio optimal comme référence
@@ -1138,12 +1123,10 @@ function runComparison() {
                 
                 // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
                 const resultat = window.SimulationsFiscales.simulerSAS({
+                    ...params,
                     ca: ca,
-                    tauxMarge: marge,
-                    tauxFrais: tauxFrais,
                     tauxRemuneration: ratioSalaire,
-                    tmiActuel: tmi,
-                    modeExpert: modeExpert
+                    tmiActuel: tmi
                 });
                 
                 // Ajouter l'information du ratio optimal comme référence
@@ -1176,12 +1159,10 @@ function runComparison() {
                 
                 // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
                 const resultat = window.SimulationsFiscales.simulerSA({
+                    ...params,
                     ca: ca,
-                    tauxMarge: marge,
-                    tauxFrais: tauxFrais,
                     tauxRemuneration: ratioSalaire,
                     tmiActuel: tmi,
-                    modeExpert: modeExpert,
                     capitalInvesti: 37000 // Minimum légal
                 });
                 
@@ -1194,11 +1175,9 @@ function runComparison() {
         'snc': { 
             nom: 'SNC', 
             simuler: () => window.SimulationsFiscales.simulerSNC({
+                ...params,
                 ca: ca,
-                tauxMarge: marge,
-                tauxFrais: tauxFrais,
-                tmiActuel: tmi,
-                modeExpert: modeExpert
+                tmiActuel: tmi
             })
         },
         'sci': { 
@@ -1234,12 +1213,10 @@ function runComparison() {
                 
                 // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
                 const resultat = window.SimulationsFiscales.simulerSELARL({
+                    ...params,
                     ca: ca,
-                    tauxMarge: marge,
-                    tauxFrais: tauxFrais,
                     tauxRemuneration: ratioSalaire,
-                    tmiActuel: tmi,
-                    modeExpert: modeExpert
+                    tmiActuel: tmi
                 });
                 
                 // Ajouter l'information du ratio optimal comme référence
@@ -1272,12 +1249,10 @@ function runComparison() {
                 
                 // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
                 const resultat = window.SimulationsFiscales.simulerSELAS({
+                    ...params,
                     ca: ca,
-                    tauxMarge: marge,
-                    tauxFrais: tauxFrais,
                     tauxRemuneration: ratioSalaire,
-                    tmiActuel: tmi,
-                    modeExpert: modeExpert
+                    tmiActuel: tmi
                 });
                 
                 // Ajouter l'information du ratio optimal comme référence
@@ -1310,12 +1285,10 @@ function runComparison() {
                 
                 // Sinon, utiliser le ratio manuel mais conserver l'info du ratio optimal
                 const resultat = window.SimulationsFiscales.simulerSCA({
+                    ...params,
                     ca: ca,
-                    tauxMarge: marge,
-                    tauxFrais: tauxFrais,
                     tauxRemuneration: ratioSalaire,
                     tmiActuel: tmi,
-                    modeExpert: modeExpert,
                     capitalInvesti: 37000 // Minimum légal
                 });
                 
@@ -1333,6 +1306,9 @@ function runComparison() {
             try {
                 const statut = statutsComplets[statutId];
                 const sim = statut.simuler();
+                
+                // Debug pour vérifier que les paramètres sont bien passés
+                console.log(`Simulation ${statutId}:`, sim);
                 
                 // Si incompatible, afficher un message
                 if (!sim.compatible) {
