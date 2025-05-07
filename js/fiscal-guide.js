@@ -1,5 +1,5 @@
 // fiscal-guide.js - Simulateur fiscal simplifié pour l'onglet Guide fiscal
-// Version 3.3 - Mai 2025 - Améliorations des optimisations fiscales et traitement spécifique par statut
+// Version 3.4 - Mai 2025 - Correction du traitement des taux de frais réels
 
 document.addEventListener('DOMContentLoaded', function() {
     // S'assurer que l'onglet Guide fiscal initialise correctement ce code
@@ -818,7 +818,7 @@ function runComparison() {
     const params = {
         ca: ca,
         tauxMarge: useAvgChargeRate ? undefined : marge,
-        tauxFrais: useAvgChargeRate ? (1 - marge) : 0,
+        tauxFrais: useAvgChargeRate ? (1 - marge) : null,
         tauxRemuneration: ratioSalaire,
         tmiActuel: tmi,
         modeExpert: modeExpert
@@ -1121,7 +1121,6 @@ function runComparison() {
             simuler: () => window.SimulationsFiscales.simulerSCI({
                 ...params,
                 revenuLocatif: ca,
-                chargesDeductibles: useAvgChargeRate ? ca * params.tauxFrais : ca * (1 - marge),
                 tmiActuel: tmi
             })
         },
