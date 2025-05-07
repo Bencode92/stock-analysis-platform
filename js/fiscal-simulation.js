@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 2.0 - Mai 2025 - Étendu avec tous les statuts juridiques
+// Version 2.1 - Mai 2025 - Étendu avec tous les statuts juridiques et mise à jour des taux 2025
 
 // Classe pour les simulations fiscales des différents statuts juridiques
 class SimulationsFiscales {
@@ -13,8 +13,6 @@ class SimulationsFiscales {
         const modeExpert = params.modeExpert || false;
         // Important: récupérer explicitement le versement libératoire
         const versementLiberatoire = params.versementLiberatoire === true;
-        
-        console.log("Paramètres Micro:", { ca, typeMicro, tmiActuel, modeExpert, versementLiberatoire });
         
         // Utiliser les plafonds depuis legalStatuses si disponible
         const plafonds = {
@@ -65,6 +63,10 @@ class SimulationsFiscales {
         // Calcul des cotisations sociales
         const cotisationsSociales = Math.round(ca * tauxCotisations[typeEffectif]);
         
+        // Ajout CFP (formation professionnelle) et CFE estimée
+        const cfp = Math.round(ca * 0.001);  // 0,1% du CA
+        const cfe = params.cfe || 0;         // Estimation forfaitaire ou paramètre
+
         // Calcul du revenu imposable après abattement
         const revenuImposable = Math.round(ca * (1 - abattements[typeEffectif]));
         
@@ -74,19 +76,16 @@ class SimulationsFiscales {
         if (versementLiberatoire) {
             // Calcul avec versement libératoire
             impotRevenu = Math.round(ca * tauxVFL[typeEffectif]);
-            console.log("VFL activé - Impôt:", impotRevenu);
         } else if (modeExpert && window.FiscalUtils) {
             // Utiliser le calcul progressif si le mode expert est activé
             impotRevenu = window.FiscalUtils.calculateProgressiveIR(revenuImposable);
-            console.log("Mode expert - Impôt progressif:", impotRevenu);
         } else {
             // Utiliser le calcul simplifié (TMI)
             impotRevenu = Math.round(revenuImposable * (tmiActuel / 100));
-            console.log("Mode simple - Impôt TMI:", impotRevenu);
         }
         
-        // Calcul du revenu net après impôt
-        const revenuNetApresImpot = ca - cotisationsSociales - impotRevenu;
+        // Calcul du revenu net après impôt et toutes charges
+        const revenuNetApresImpot = ca - cotisationsSociales - cfp - cfe - impotRevenu;
         
         return {
             compatible: true,
@@ -96,6 +95,8 @@ class SimulationsFiscales {
             abattement: abattements[typeEffectif] * 100 + '%',
             revenuImposable: revenuImposable,
             cotisationsSociales: cotisationsSociales,
+            cfp: cfp,
+            cfe: cfe,
             impotRevenu: impotRevenu,
             revenuNetApresImpot: revenuNetApresImpot,
             ratioNetCA: (revenuNetApresImpot / ca) * 100,
@@ -237,7 +238,7 @@ class SimulationsFiscales {
                 is = window.FiscalUtils.calculIS(resultatApresRemuneration);
             } else {
                 // Fallback
-                const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
+                const tauxIS = resultatApresRemuneration <= 42000 ? 0.15 : 0.25;
                 is = Math.round(resultatApresRemuneration * tauxIS);
             }
             
@@ -249,7 +250,7 @@ class SimulationsFiscales {
             
             // Cotisations TNS sur dividendes > 10% du capital social
             const baseTNSDiv = Math.max(0, dividendes - 0.10 * capitalSocial);
-            const cotTNSDiv = Math.round(baseTNSDiv * 0.17); // 17% URSSAF 2025
+            const cotTNSDiv = Math.round(baseTNSDiv * 0.45); // 45% URSSAF 2025
             
             // Calcul du PFU sur les dividendes
             let prelevementForfaitaire;
@@ -311,7 +312,7 @@ class SimulationsFiscales {
             chargesSalariales = charges.salariales;
         } else {
             // Fallback si l'utilitaire n'est pas disponible
-            chargesPatronales = Math.round(remuneration * 0.55);
+            chargesPatronales = Math.round(remuneration * 0.45);
             chargesSalariales = Math.round(remuneration * 0.22);
         }
         
@@ -337,7 +338,7 @@ class SimulationsFiscales {
             is = window.FiscalUtils.calculIS(resultatApresRemuneration);
         } else {
             // Fallback
-            const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
+            const tauxIS = resultatApresRemuneration <= 42000 ? 0.15 : 0.25;
             is = Math.round(resultatApresRemuneration * tauxIS);
         }
         
@@ -431,7 +432,7 @@ class SimulationsFiscales {
                 cotisationsSociales = chargesPatronales + chargesSalariales;
             } else {
                 // Fallback
-                chargesPatronales = Math.round(remuneration * 0.55);
+                chargesPatronales = Math.round(remuneration * 0.45);
                 chargesSalariales = Math.round(remuneration * 0.22);
                 cotisationsSociales = chargesPatronales + chargesSalariales;
             }
@@ -457,7 +458,7 @@ class SimulationsFiscales {
             is = window.FiscalUtils.calculIS(resultatApresRemuneration);
         } else {
             // Fallback
-            const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
+            const tauxIS = resultatApresRemuneration <= 42000 ? 0.15 : 0.25;
             is = Math.round(resultatApresRemuneration * tauxIS);
         }
         
@@ -475,7 +476,7 @@ class SimulationsFiscales {
         let cotTNSDiv = 0;
         if (gerantMajoritaire) {
             const baseTNSDiv = Math.max(0, dividendesGerant - 0.10 * capitalSocial);
-            cotTNSDiv = Math.round(baseTNSDiv * 0.17); // 17% URSSAF 2025
+            cotTNSDiv = Math.round(baseTNSDiv * 0.45); // 45% URSSAF 2025
         }
         
         // Calcul du PFU sur les dividendes
@@ -703,7 +704,7 @@ class SimulationsFiscales {
                 is = window.FiscalUtils.calculIS(resultatFiscal);
             } else {
                 // Fallback
-                const tauxIS = resultatFiscal <= 42500 ? 0.15 : 0.25;
+                const tauxIS = resultatFiscal <= 42000 ? 0.15 : 0.25;
                 is = Math.round(resultatFiscal * tauxIS);
             }
             
