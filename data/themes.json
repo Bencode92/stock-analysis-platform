@@ -2,17 +2,28 @@
   "themes": {
     "weekly": {
       "macroeconomics": {
-        "recession": {
-          "count": 3,
+        "geopolitics": {
+          "count": 6,
           "articles": [
-            "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
-            "US tariffs, Europe slowdown reshape global solar panels trade",
-            "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows"
+            "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks",
+            "U.S. Stock Futures Up on U.S, China Trade Talk Optimism",
+            "Apple shares fall despite earnings beat as Services, China sales disappoint",
+            "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows",
+            "Paul Tudor Jones says stock market will hit new lows even if Trump cuts China tariffs to 50%",
+            "Trump tariffs and export curbs on China cast a cloud over major chip stocks"
           ],
           "keywords": {
-            "growth": {
+            "war": {
               "count": 1,
               "examples": [
+                "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks"
+              ]
+            },
+            "china": {
+              "count": 5,
+              "examples": [
+                "U.S. Stock Futures Up on U.S, China Trade Talk Optimism",
+                "Apple shares fall despite earnings beat as Services, China sales disappoint",
                 "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows"
               ]
             }
@@ -22,71 +33,40 @@
             "neutral": 33.3,
             "negative": 33.3
           },
-          "gpt_summary": "📰 The theme **recession** was detected in **3 articles** during the period, mainly through topics like: growth (1). Sentiment is mixed (33.3% positive, 33.3% negative). Examples of articles: « The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown », « US tariffs, Europe slowdown reshape global solar panels trade », « China's services growth hits 7-month low as tariffs bite, Caixin PMI shows »."
-        },
-        "monetary_policy": {
-          "count": 3,
-          "articles": [
-            "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
-            "Tariff Headlines Lead Overnights Higher, Fed's Market Moving Potential",
-            "ECB's de Guindos optimistic about continued rate cuts in Presse interview"
-          ],
-          "keywords": {
-            "central bank": {
-              "count": 2,
-              "examples": [
-                "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
-                "ECB's de Guindos optimistic about continued rate cuts in Presse interview"
-              ]
-            },
-            "rate cut": {
-              "count": 1,
-              "examples": [
-                "ECB's de Guindos optimistic about continued rate cuts in Presse interview"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 66.7,
-            "negative": 33.3
-          },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **3 articles** during the period, mainly through topics like: central bank (2), rate cut (1). Sentiment is mostly negative (33.3% vs 0.0% positive). Examples of articles: « The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown », « Tariff Headlines Lead Overnights Higher, Fed's Market Moving Potential », « ECB's de Guindos optimistic about continued rate cuts in Presse interview »."
-        },
-        "geopolitics": {
-          "count": 3,
-          "articles": [
-            "Apple shares fall despite earnings beat as Services, China sales disappoint",
-            "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows",
-            "Apple: Positive iPhone And China Sales But With Risks"
-          ],
-          "keywords": {
-            "china": {
-              "count": 2,
-              "examples": [
-                "Apple shares fall despite earnings beat as Services, China sales disappoint",
-                "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 100.0,
-            "neutral": 0.0,
-            "negative": 0.0
-          },
-          "gpt_summary": "📰 The theme **geopolitics** was detected in **3 articles** during the period, mainly through topics like: china (2). Sentiment is mostly positive (100.0% vs 0.0% negative). Examples of articles: « Apple shares fall despite earnings beat as Services, China sales disappoint », « China's services growth hits 7-month low as tariffs bite, Caixin PMI shows », « Apple: Positive iPhone And China Sales But With Risks »."
+          "gpt_summary": "📰 The theme **geopolitics** was detected in **6 articles** during the period, mainly through topics like: china (5), war (1). Sentiment is mixed (33.3% positive, 33.3% negative). Examples of articles: « US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks », « U.S. Stock Futures Up on U.S, China Trade Talk Optimism », « Apple shares fall despite earnings beat as Services, China sales disappoint »."
         },
         "inflation": {
-          "count": 2,
+          "count": 4,
           "articles": [
+            "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
             "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
+            "Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold",
             "10-year Treasury yield jumps after stronger-than-expected jobs report"
           ],
           "keywords": {
-            "interest rate": {
+            "price": {
               "count": 1,
               "examples": [
-                "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown"
+                "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds"
+              ]
+            },
+            "prices": {
+              "count": 1,
+              "examples": [
+                "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds"
+              ]
+            },
+            "interest rate": {
+              "count": 2,
+              "examples": [
+                "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
+                "Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold"
+              ]
+            },
+            "inflation": {
+              "count": 1,
+              "examples": [
+                "Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold"
               ]
             },
             "yield": {
@@ -103,31 +83,103 @@
             }
           },
           "sentiment_distribution": {
+            "positive": 25.0,
+            "neutral": 50.0,
+            "negative": 25.0
+          },
+          "gpt_summary": "📰 The theme **inflation** was detected in **4 articles** during the period, mainly through topics like: interest rate (2), price (1), prices (1), inflation (1), yield (1). Sentiment is mixed (25.0% positive, 25.0% negative). Examples of articles: « Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds », « The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown », « Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold »."
+        },
+        "monetary_policy": {
+          "count": 4,
+          "articles": [
+            "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
+            "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
+            "Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold",
+            "ECB's de Guindos optimistic about continued rate cuts in Presse interview"
+          ],
+          "keywords": {
+            "fed": {
+              "count": 2,
+              "examples": [
+                "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
+                "Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold"
+              ]
+            },
+            "central bank": {
+              "count": 2,
+              "examples": [
+                "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
+                "ECB's de Guindos optimistic about continued rate cuts in Presse interview"
+              ]
+            },
+            "rate cut": {
+              "count": 1,
+              "examples": [
+                "ECB's de Guindos optimistic about continued rate cuts in Presse interview"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 0.0,
+            "neutral": 75.0,
+            "negative": 25.0
+          },
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **4 articles** during the period, mainly through topics like: fed (2), central bank (2), rate cut (1). Sentiment is mostly negative (25.0% vs 0.0% positive). Examples of articles: « Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds », « The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown », « Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold »."
+        },
+        "recession": {
+          "count": 2,
+          "articles": [
+            "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
+            "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows"
+          ],
+          "keywords": {
+            "growth": {
+              "count": 1,
+              "examples": [
+                "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows"
+              ]
+            }
+          },
+          "sentiment_distribution": {
             "positive": 50.0,
             "neutral": 0.0,
             "negative": 50.0
           },
-          "gpt_summary": "📰 The theme **inflation** was detected in **2 articles** during the period, mainly through topics like: interest rate (1), yield (1), yields (1). Sentiment is mixed (50.0% positive, 50.0% negative). Examples of articles: « The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown », « 10-year Treasury yield jumps after stronger-than-expected jobs report »."
+          "gpt_summary": "📰 The theme **recession** was detected in **2 articles** during the period, mainly through topics like: growth (1). Sentiment is mixed (50.0% positive, 50.0% negative). Examples of articles: « The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown », « China's services growth hits 7-month low as tariffs bite, Caixin PMI shows »."
         }
       },
       "sectors": {
         "technology": {
-          "count": 7,
+          "count": 8,
           "articles": [
-            "Buffett's Dairy Queen on guard as tariffs weigh on desire to dine out",
             "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
+            "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks",
             "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows",
+            "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
             "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
             "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again",
             "Apple looks to add AI search to company's browser, Bloomberg reports",
-            "Apollo CEO: Resetting trade terms was 'long overdue,' but 'how we did it' created uncertainty"
+            "Why Indian markets are undeterred by strikes against Pakistan"
           ],
           "keywords": {
             "ai": {
-              "count": 6,
+              "count": 7,
               "examples": [
-                "Buffett's Dairy Queen on guard as tariffs weigh on desire to dine out",
+                "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks",
                 "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows",
+                "Trump tariffs and export curbs on China cast a cloud over major chip stocks"
+              ]
+            },
+            "cyber": {
+              "count": 1,
+              "examples": [
+                "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks"
+              ]
+            },
+            "data": {
+              "count": 2,
+              "examples": [
+                "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks",
                 "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week"
               ]
             },
@@ -137,27 +189,84 @@
                 "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
                 "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again"
               ]
-            },
-            "data": {
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 37.5,
+            "neutral": 25.0,
+            "negative": 37.5
+          },
+          "gpt_summary": "📰 The theme **technology** was detected in **8 articles** during the period, mainly through topics like: ai (7), data (2), tech (2), cyber (1). Sentiment is mixed (37.5% positive, 37.5% negative). Examples of articles: « The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown », « US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks », « China's services growth hits 7-month low as tariffs bite, Caixin PMI shows »."
+        },
+        "finance": {
+          "count": 5,
+          "articles": [
+            "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
+            "10-year Treasury yield jumps after stronger-than-expected jobs report",
+            "Risks To Financial Stability In America",
+            "Treasury Secretary Bessent tells investors Trump's policies will deliver 'golden age economy'",
+            "Treasury Secretary Bessent Delivers Annual Testimony to Congress"
+          ],
+          "keywords": {
+            "rates": {
               "count": 1,
               "examples": [
-                "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week"
+                "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds"
+              ]
+            },
+            "treasury": {
+              "count": 3,
+              "examples": [
+                "10-year Treasury yield jumps after stronger-than-expected jobs report",
+                "Treasury Secretary Bessent tells investors Trump's policies will deliver 'golden age economy'",
+                "Treasury Secretary Bessent Delivers Annual Testimony to Congress"
+              ]
+            },
+            "financial": {
+              "count": 2,
+              "examples": [
+                "Risks To Financial Stability In America",
+                "Treasury Secretary Bessent Delivers Annual Testimony to Congress"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 28.6,
-            "neutral": 28.6,
-            "negative": 42.9
+            "positive": 20.0,
+            "neutral": 60.0,
+            "negative": 20.0
           },
-          "gpt_summary": "📰 The theme **technology** was detected in **7 articles** during the period, mainly through topics like: ai (6), tech (2), data (1). Sentiment is mixed (28.6% positive, 42.9% negative). Examples of articles: « Buffett's Dairy Queen on guard as tariffs weigh on desire to dine out », « The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown », « China's services growth hits 7-month low as tariffs bite, Caixin PMI shows »."
+          "gpt_summary": "📰 The theme **finance** was detected in **5 articles** during the period, mainly through topics like: treasury (3), financial (2), rates (1). Sentiment is mixed (20.0% positive, 20.0% negative). Examples of articles: « Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds », « 10-year Treasury yield jumps after stronger-than-expected jobs report », « Risks To Financial Stability In America »."
+        },
+        "transport": {
+          "count": 4,
+          "articles": [
+            "Apple: 3 Reasons To Load Up The Truck",
+            "10-year Treasury yield jumps after stronger-than-expected jobs report",
+            "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
+            "Apple looks to add AI search to company's browser, Bloomberg reports"
+          ],
+          "keywords": {
+            "port": {
+              "count": 3,
+              "examples": [
+                "Apple: 3 Reasons To Load Up The Truck",
+                "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
+                "Apple looks to add AI search to company's browser, Bloomberg reports"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 25.0,
+            "neutral": 50.0,
+            "negative": 25.0
+          },
+          "gpt_summary": "📰 The theme **transport** was detected in **4 articles** during the period, mainly through topics like: port (3). Sentiment is mixed (25.0% positive, 25.0% negative). Examples of articles: « Apple: 3 Reasons To Load Up The Truck », « 10-year Treasury yield jumps after stronger-than-expected jobs report », « Trump tariffs and export curbs on China cast a cloud over major chip stocks »."
         },
         "consumer": {
-          "count": 3,
+          "count": 2,
           "articles": [
             "US consumer watchdog asks court to scrap medical debt regulation",
-            "Apple shares fall despite earnings beat as Services, China sales disappoint",
-            "Apple: Positive iPhone And China Sales But With Risks"
+            "Apple shares fall despite earnings beat as Services, China sales disappoint"
           ],
           "keywords": {
             "consumer": {
@@ -167,72 +276,18 @@
               ]
             },
             "sales": {
-              "count": 2,
-              "examples": [
-                "Apple shares fall despite earnings beat as Services, China sales disappoint",
-                "Apple: Positive iPhone And China Sales But With Risks"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 66.7,
-            "neutral": 33.3,
-            "negative": 0.0
-          },
-          "gpt_summary": "📰 The theme **consumer** was detected in **3 articles** during the period, mainly through topics like: sales (2), consumer (1). Sentiment is mostly positive (66.7% vs 0.0% negative). Examples of articles: « US consumer watchdog asks court to scrap medical debt regulation », « Apple shares fall despite earnings beat as Services, China sales disappoint », « Apple: Positive iPhone And China Sales But With Risks »."
-        },
-        "transport": {
-          "count": 3,
-          "articles": [
-            "Apple: 3 Reasons To Load Up The Truck",
-            "10-year Treasury yield jumps after stronger-than-expected jobs report",
-            "Apple looks to add AI search to company's browser, Bloomberg reports"
-          ],
-          "keywords": {
-            "port": {
-              "count": 2,
-              "examples": [
-                "Apple: 3 Reasons To Load Up The Truck",
-                "Apple looks to add AI search to company's browser, Bloomberg reports"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 33.3,
-            "neutral": 33.3,
-            "negative": 33.3
-          },
-          "gpt_summary": "📰 The theme **transport** was detected in **3 articles** during the period, mainly through topics like: port (2). Sentiment is mixed (33.3% positive, 33.3% negative). Examples of articles: « Apple: 3 Reasons To Load Up The Truck », « 10-year Treasury yield jumps after stronger-than-expected jobs report », « Apple looks to add AI search to company's browser, Bloomberg reports »."
-        },
-        "finance": {
-          "count": 3,
-          "articles": [
-            "10-year Treasury yield jumps after stronger-than-expected jobs report",
-            "Treasury Secretary Bessent tells investors Trump's policies will deliver 'golden age economy'",
-            "BNY CEO on Clients' Tariff Questions, US Treasury Market"
-          ],
-          "keywords": {
-            "treasury": {
-              "count": 3,
-              "examples": [
-                "10-year Treasury yield jumps after stronger-than-expected jobs report",
-                "Treasury Secretary Bessent tells investors Trump's policies will deliver 'golden age economy'",
-                "BNY CEO on Clients' Tariff Questions, US Treasury Market"
-              ]
-            },
-            "banks": {
               "count": 1,
               "examples": [
-                "BNY CEO on Clients' Tariff Questions, US Treasury Market"
+                "Apple shares fall despite earnings beat as Services, China sales disappoint"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 33.3,
-            "neutral": 66.7,
+            "positive": 50.0,
+            "neutral": 50.0,
             "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **finance** was detected in **3 articles** during the period, mainly through topics like: treasury (3), banks (1). Sentiment is mostly positive (33.3% vs 0.0% negative). Examples of articles: « 10-year Treasury yield jumps after stronger-than-expected jobs report », « Treasury Secretary Bessent tells investors Trump's policies will deliver 'golden age economy' », « BNY CEO on Clients' Tariff Questions, US Treasury Market »."
+          "gpt_summary": "📰 The theme **consumer** was detected in **2 articles** during the period, mainly through topics like: consumer (1), sales (1). Sentiment is mostly positive (50.0% vs 0.0% negative). Examples of articles: « US consumer watchdog asks court to scrap medical debt regulation », « Apple shares fall despite earnings beat as Services, China sales disappoint »."
         },
         "healthcare": {
           "count": 1,
@@ -256,65 +311,41 @@
         }
       },
       "regions": {
-        "global": {
-          "count": 5,
-          "articles": [
-            "US tariffs, Europe slowdown reshape global solar panels trade",
-            "JPMorgan Flags Overvaluation in U.S. Equities, Favors Select International Markets",
-            "Apple edges past expectations as world girds for tariff impact",
-            "Global M&A activity plunges to 20-year low",
-            "Ives: A.I. in \"Total Different World,\" AAPL to Beat Tariffs, Big TSLA Overhang Removed"
-          ],
-          "keywords": {
-            "international": {
-              "count": 1,
-              "examples": [
-                "JPMorgan Flags Overvaluation in U.S. Equities, Favors Select International Markets"
-              ]
-            },
-            "global": {
-              "count": 2,
-              "examples": [
-                "JPMorgan Flags Overvaluation in U.S. Equities, Favors Select International Markets",
-                "Global M&A activity plunges to 20-year low"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 40.0,
-            "neutral": 20.0,
-            "negative": 40.0
-          },
-          "gpt_summary": "📰 The theme **global** was detected in **5 articles** during the period, mainly through topics like: global (2), international (1). Sentiment is mixed (40.0% positive, 40.0% negative). Examples of articles: « US tariffs, Europe slowdown reshape global solar panels trade », « JPMorgan Flags Overvaluation in U.S. Equities, Favors Select International Markets », « Apple edges past expectations as world girds for tariff impact »."
-        },
         "usa": {
-          "count": 4,
+          "count": 8,
           "articles": [
+            "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
             "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
-            "Tariff Headlines Lead Overnights Higher, Fed's Market Moving Potential",
+            "Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold",
             "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
-            "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again"
+            "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again",
+            "Risks To Financial Stability In America",
+            "US stocks open in the red: Dow slips 300 points, S&P down 0.8%",
+            "S&P 500 Erases Losses From Trump Global Tariff Policy"
           ],
           "keywords": {
             "fed": {
-              "count": 2,
+              "count": 6,
               "examples": [
-                "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
-                "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again"
+                "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
+                "Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold",
+                "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week"
               ]
             },
             "nasdaq": {
-              "count": 2,
+              "count": 3,
               "examples": [
                 "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
-                "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again"
+                "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again",
+                "US stocks open in the red: Dow slips 300 points, S&P down 0.8%"
               ]
             },
             "dow jones": {
-              "count": 2,
+              "count": 3,
               "examples": [
                 "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
-                "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again"
+                "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again",
+                "US stocks open in the red: Dow slips 300 points, S&P down 0.8%"
               ]
             },
             "america": {
@@ -322,45 +353,62 @@
               "examples": [
                 "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again"
               ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 25.0,
-            "neutral": 25.0,
-            "negative": 50.0
-          },
-          "gpt_summary": "📰 The theme **usa** was detected in **4 articles** during the period, mainly through topics like: fed (2), nasdaq (2), dow jones (2), america (1). Sentiment is mostly negative (50.0% vs 25.0% positive). Examples of articles: « The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown », « Tariff Headlines Lead Overnights Higher, Fed's Market Moving Potential », « S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week »."
-        },
-        "asia": {
-          "count": 4,
-          "articles": [
-            "Apple shares fall despite earnings beat as Services, China sales disappoint",
-            "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows",
-            "Apple: Positive iPhone And China Sales But With Risks",
-            "Apple's India pivot is 'hall of fame' for CEO Tim Cook's accomplishments, analyst says"
-          ],
-          "keywords": {
-            "china": {
+            },
+            "s&p": {
               "count": 2,
               "examples": [
-                "Apple shares fall despite earnings beat as Services, China sales disappoint",
-                "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows"
+                "US stocks open in the red: Dow slips 300 points, S&P down 0.8%",
+                "S&P 500 Erases Losses From Trump Global Tariff Policy"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 75.0,
+            "positive": 12.5,
             "neutral": 25.0,
-            "negative": 0.0
+            "negative": 62.5
           },
-          "gpt_summary": "📰 The theme **asia** was detected in **4 articles** during the period, mainly through topics like: china (2). Sentiment is mostly positive (75.0% vs 0.0% negative). Examples of articles: « Apple shares fall despite earnings beat as Services, China sales disappoint », « China's services growth hits 7-month low as tariffs bite, Caixin PMI shows », « Apple: Positive iPhone And China Sales But With Risks »."
+          "gpt_summary": "📰 The theme **usa** was detected in **8 articles** during the period, mainly through topics like: fed (6), nasdaq (3), dow jones (3), s&p (2), america (1). Sentiment is mostly negative (62.5% vs 12.5% positive). Examples of articles: « Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds », « The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown », « Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold »."
+        },
+        "asia": {
+          "count": 7,
+          "articles": [
+            "U.S. Stock Futures Up on U.S, China Trade Talk Optimism",
+            "Apple shares fall despite earnings beat as Services, China sales disappoint",
+            "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows",
+            "Paul Tudor Jones says stock market will hit new lows even if Trump cuts China tariffs to 50%",
+            "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
+            "Why Indian markets are undeterred by strikes against Pakistan",
+            "Apple's India pivot is 'hall of fame' for CEO Tim Cook's accomplishments, analyst says"
+          ],
+          "keywords": {
+            "china": {
+              "count": 5,
+              "examples": [
+                "U.S. Stock Futures Up on U.S, China Trade Talk Optimism",
+                "Apple shares fall despite earnings beat as Services, China sales disappoint",
+                "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows"
+              ]
+            },
+            "india": {
+              "count": 1,
+              "examples": [
+                "Why Indian markets are undeterred by strikes against Pakistan"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 42.9,
+            "neutral": 42.9,
+            "negative": 14.3
+          },
+          "gpt_summary": "📰 The theme **asia** was detected in **7 articles** during the period, mainly through topics like: china (5), india (1). Sentiment is mostly positive (42.9% vs 14.3% negative). Examples of articles: « U.S. Stock Futures Up on U.S, China Trade Talk Optimism », « Apple shares fall despite earnings beat as Services, China sales disappoint », « China's services growth hits 7-month low as tariffs bite, Caixin PMI shows »."
         },
         "europe": {
           "count": 3,
           "articles": [
             "ECB's de Guindos optimistic about continued rate cuts in Presse interview",
-            "US tariffs, Europe slowdown reshape global solar panels trade",
-            "Hong Kong DIY watch brand sets sights on Europe amid Trump tariffs"
+            "Hong Kong DIY watch brand sets sights on Europe amid Trump tariffs",
+            "Eurozone Shoppers Spend Less as Tariffs Weigh on Mood"
           ],
           "keywords": {
             "europe": {
@@ -370,9 +418,10 @@
               ]
             },
             "eu": {
-              "count": 1,
+              "count": 2,
               "examples": [
-                "ECB's de Guindos optimistic about continued rate cuts in Presse interview"
+                "ECB's de Guindos optimistic about continued rate cuts in Presse interview",
+                "Eurozone Shoppers Spend Less as Tariffs Weigh on Mood"
               ]
             }
           },
@@ -381,78 +430,45 @@
             "neutral": 100.0,
             "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **europe** was detected in **3 articles** during the period, mainly through topics like: europe (1), eu (1). Sentiment is mixed (0.0% positive, 0.0% negative). Examples of articles: « ECB's de Guindos optimistic about continued rate cuts in Presse interview », « US tariffs, Europe slowdown reshape global solar panels trade », « Hong Kong DIY watch brand sets sights on Europe amid Trump tariffs »."
+          "gpt_summary": "📰 The theme **europe** was detected in **3 articles** during the period, mainly through topics like: eu (2), europe (1). Sentiment is mixed (0.0% positive, 0.0% negative). Examples of articles: « ECB's de Guindos optimistic about continued rate cuts in Presse interview », « Hong Kong DIY watch brand sets sights on Europe amid Trump tariffs », « Eurozone Shoppers Spend Less as Tariffs Weigh on Mood »."
+        },
+        "global": {
+          "count": 3,
+          "articles": [
+            "Apple edges past expectations as world girds for tariff impact",
+            "S&P 500 Erases Losses From Trump Global Tariff Policy",
+            "Ives: A.I. in \"Total Different World,\" AAPL to Beat Tariffs, Big TSLA Overhang Removed"
+          ],
+          "keywords": {
+            "global": {
+              "count": 1,
+              "examples": [
+                "S&P 500 Erases Losses From Trump Global Tariff Policy"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 66.7,
+            "neutral": 0.0,
+            "negative": 33.3
+          },
+          "gpt_summary": "📰 The theme **global** was detected in **3 articles** during the period, mainly through topics like: global (1). Sentiment is mostly positive (66.7% vs 33.3% negative). Examples of articles: « Apple edges past expectations as world girds for tariff impact », « S&P 500 Erases Losses From Trump Global Tariff Policy », « Ives: A.I. in \"Total Different World,\" AAPL to Beat Tariffs, Big TSLA Overhang Removed »."
         }
       }
     },
     "monthly": {
       "macroeconomics": {
-        "geopolitics": {
-          "count": 15,
-          "articles": [
-            "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
-            "Trump tariffs risk US electronics shortages, Taiwan's Pegatron says",
-            "Continued job growth could help ward off a recession, Jim Cramer says",
-            "EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports",
-            "Why Trump's tariffs won't push China and Europe closer",
-            "Dollar Slides to Multiyear Lows as U.S.-China Tariff War Escalates",
-            "China set to leave lending rates steady, but tariffs raise easing bets",
-            "Apple shares fall despite earnings beat as Services, China sales disappoint",
-            "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows",
-            "US chipmakers outsourcing manufacturing will escape China's tariffs",
-            "Jim Cramer on how Trump's stance on China harms Nvidia and Apple",
-            "Apple: Positive iPhone And China Sales But With Risks",
-            "Weekly Commentary: Normal Deleveraging And Trade Wars",
-            "Warren Buffett's Net Worth Jumps $12 Billion",
-            "Middle East countries should promote regional collaboration to manage trade volatility: PwC"
-          ],
-          "keywords": {
-            "taiwan": {
-              "count": 1,
-              "examples": [
-                "Trump tariffs risk US electronics shortages, Taiwan's Pegatron says"
-              ]
-            },
-            "war": {
-              "count": 5,
-              "examples": [
-                "Continued job growth could help ward off a recession, Jim Cramer says",
-                "Dollar Slides to Multiyear Lows as U.S.-China Tariff War Escalates",
-                "China set to leave lending rates steady, but tariffs raise easing bets"
-              ]
-            },
-            "china": {
-              "count": 7,
-              "examples": [
-                "EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports",
-                "Why Trump's tariffs won't push China and Europe closer",
-                "China set to leave lending rates steady, but tariffs raise easing bets"
-              ]
-            },
-            "middle east": {
-              "count": 1,
-              "examples": [
-                "Middle East countries should promote regional collaboration to manage trade volatility: PwC"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 26.7,
-            "neutral": 60.0,
-            "negative": 13.3
-          },
-          "gpt_summary": "📰 The theme **geopolitics** was detected in **15 articles** during the period, mainly through topics like: china (7), war (5), taiwan (1), middle east (1). Sentiment is mixed (26.7% positive, 13.3% negative). Examples of articles: « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon », « Trump tariffs risk US electronics shortages, Taiwan's Pegatron says », « Continued job growth could help ward off a recession, Jim Cramer says »."
-        },
         "monetary_policy": {
-          "count": 13,
+          "count": 14,
           "articles": [
             "Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth",
             "Huntington's Q1 profit rises as Fed rate cuts temper deposit costs",
             "Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump",
             "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
+            "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
             "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
             "President Trump is threatening to fire Federal Reserve Chair Jerome Powell unless he cuts interest rates to cushion the economic blow from tariffs. The tension has put the two on a collision course.",
-            "Tariff Headlines Lead Overnights Higher, Fed's Market Moving Potential",
+            "Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold",
             "Fed's Powell is an exemplary central banker, ECB's Villeroy says",
             "ECB's de Guindos optimistic about continued rate cuts in Presse interview",
             "Donald Trump escalates feud with Fed chair Jerome Powell, calling him 'too late and wrong' on interest rates",
@@ -462,7 +478,7 @@
           ],
           "keywords": {
             "fed": {
-              "count": 8,
+              "count": 10,
               "examples": [
                 "Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth",
                 "Huntington's Q1 profit rises as Fed rate cuts temper deposit costs",
@@ -500,21 +516,72 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 30.8,
-            "neutral": 30.8,
-            "negative": 38.5
+            "positive": 28.6,
+            "neutral": 35.7,
+            "negative": 35.7
           },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **13 articles** during the period, mainly through topics like: fed (8), central bank (8), rate cut (3), ecb (2), monetary (1). Sentiment is mixed (30.8% positive, 38.5% negative). Examples of articles: « Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth », « Huntington's Q1 profit rises as Fed rate cuts temper deposit costs », « Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump »."
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **14 articles** during the period, mainly through topics like: fed (10), central bank (8), rate cut (3), ecb (2), monetary (1). Sentiment is mixed (28.6% positive, 35.7% negative). Examples of articles: « Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth », « Huntington's Q1 profit rises as Fed rate cuts temper deposit costs », « Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump »."
+        },
+        "geopolitics": {
+          "count": 14,
+          "articles": [
+            "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
+            "Trump tariffs risk US electronics shortages, Taiwan's Pegatron says",
+            "Continued job growth could help ward off a recession, Jim Cramer says",
+            "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks",
+            "EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports",
+            "Why Trump's tariffs won't push China and Europe closer",
+            "Dollar Slides to Multiyear Lows as U.S.-China Tariff War Escalates",
+            "U.S. Stock Futures Up on U.S, China Trade Talk Optimism",
+            "China set to leave lending rates steady, but tariffs raise easing bets",
+            "Apple shares fall despite earnings beat as Services, China sales disappoint",
+            "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows",
+            "US chipmakers outsourcing manufacturing will escape China's tariffs",
+            "Paul Tudor Jones says stock market will hit new lows even if Trump cuts China tariffs to 50%",
+            "Trump tariffs and export curbs on China cast a cloud over major chip stocks"
+          ],
+          "keywords": {
+            "taiwan": {
+              "count": 1,
+              "examples": [
+                "Trump tariffs risk US electronics shortages, Taiwan's Pegatron says"
+              ]
+            },
+            "war": {
+              "count": 4,
+              "examples": [
+                "Continued job growth could help ward off a recession, Jim Cramer says",
+                "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks",
+                "Dollar Slides to Multiyear Lows as U.S.-China Tariff War Escalates"
+              ]
+            },
+            "china": {
+              "count": 9,
+              "examples": [
+                "EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports",
+                "Why Trump's tariffs won't push China and Europe closer",
+                "U.S. Stock Futures Up on U.S, China Trade Talk Optimism"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 14.3,
+            "neutral": 57.1,
+            "negative": 28.6
+          },
+          "gpt_summary": "📰 The theme **geopolitics** was detected in **14 articles** during the period, mainly through topics like: china (9), war (4), taiwan (1). Sentiment is mixed (14.3% positive, 28.6% negative). Examples of articles: « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon », « Trump tariffs risk US electronics shortages, Taiwan's Pegatron says », « Continued job growth could help ward off a recession, Jim Cramer says »."
         },
         "inflation": {
-          "count": 11,
+          "count": 13,
           "articles": [
             "Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth",
             "US bond funds suffer fifth weekly outflow on tariff-driven inflation fears",
             "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
+            "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
             "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports",
             "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
             "President Trump is threatening to fire Federal Reserve Chair Jerome Powell unless he cuts interest rates to cushion the economic blow from tariffs. The tension has put the two on a collision course.",
+            "Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold",
             "Donald Trump escalates feud with Fed chair Jerome Powell, calling him 'too late and wrong' on interest rates",
             "10-year Treasury yield jumps after stronger-than-expected jobs report",
             "Singapore's high-yield stocks gain from tariff-induced flight to safety",
@@ -523,28 +590,32 @@
           ],
           "keywords": {
             "inflation": {
-              "count": 2,
+              "count": 3,
               "examples": [
                 "Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth",
-                "US bond funds suffer fifth weekly outflow on tariff-driven inflation fears"
+                "US bond funds suffer fifth weekly outflow on tariff-driven inflation fears",
+                "Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold"
               ]
             },
             "price": {
-              "count": 1,
+              "count": 2,
               "examples": [
+                "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
                 "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports"
               ]
             },
             "prices": {
-              "count": 1,
+              "count": 2,
               "examples": [
+                "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
                 "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports"
               ]
             },
             "interest rate": {
-              "count": 2,
+              "count": 3,
               "examples": [
                 "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
+                "Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold",
                 "Donald Trump escalates feud with Fed chair Jerome Powell, calling him 'too late and wrong' on interest rates"
               ]
             },
@@ -563,19 +634,18 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 36.4,
-            "neutral": 9.1,
-            "negative": 54.5
+            "positive": 30.8,
+            "neutral": 23.1,
+            "negative": 46.2
           },
-          "gpt_summary": "📰 The theme **inflation** was detected in **11 articles** during the period, mainly through topics like: inflation (2), interest rate (2), yield (2), price (1), prices (1). Sentiment is mixed (36.4% positive, 54.5% negative). Examples of articles: « Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth », « US bond funds suffer fifth weekly outflow on tariff-driven inflation fears », « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon »."
+          "gpt_summary": "📰 The theme **inflation** was detected in **13 articles** during the period, mainly through topics like: inflation (3), interest rate (3), price (2), prices (2), yield (2). Sentiment is mixed (30.8% positive, 46.2% negative). Examples of articles: « Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth », « US bond funds suffer fifth weekly outflow on tariff-driven inflation fears », « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon »."
         },
         "recession": {
-          "count": 9,
+          "count": 8,
           "articles": [
             "Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth",
             "Continued job growth could help ward off a recession, Jim Cramer says",
             "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
-            "US tariffs, Europe slowdown reshape global solar panels trade",
             "It's 'crystal clear' that tariffs could hit growth in the short term, ECB's Knot says",
             "Jim Cramer talks lessons learned from the European debt crisis",
             "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows",
@@ -600,11 +670,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 33.3,
-            "neutral": 33.3,
-            "negative": 33.3
+            "positive": 37.5,
+            "neutral": 25.0,
+            "negative": 37.5
           },
-          "gpt_summary": "📰 The theme **recession** was detected in **9 articles** during the period, mainly through topics like: growth (4), recession (2). Sentiment is mixed (33.3% positive, 33.3% negative). Examples of articles: « Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth », « Continued job growth could help ward off a recession, Jim Cramer says », « The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown »."
+          "gpt_summary": "📰 The theme **recession** was detected in **8 articles** during the period, mainly through topics like: growth (4), recession (2). Sentiment is mixed (37.5% positive, 37.5% negative). Examples of articles: « Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth », « Continued job growth could help ward off a recession, Jim Cramer says », « The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown »."
         }
       },
       "sectors": {
@@ -612,7 +682,6 @@
           "count": 32,
           "articles": [
             "CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine",
-            "Buffett's Dairy Queen on guard as tariffs weigh on desire to dine out",
             "Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump",
             "Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline",
             "Bullish trade in Apple options reaps gains as shares jump on tariff exemption",
@@ -623,10 +692,12 @@
             "Italy agrees with US to oppose 'discriminatory' tech taxes",
             "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
             "President Trump is threatening to fire Federal Reserve Chair Jerome Powell unless he cuts interest rates to cushion the economic blow from tariffs. The tension has put the two on a collision course.",
+            "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks",
             "Apple shares lead tech higher after tariff exemptions",
             "Donald Trump escalates feud with Fed chair Jerome Powell, calling him 'too late and wrong' on interest rates",
             "China set to leave lending rates steady, but tariffs raise easing bets",
             "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows",
+            "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
             "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
             "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again",
             "Apple looks to add AI search to company's browser, Bloomberg reports",
@@ -634,37 +705,42 @@
             "The biggest questions facing Big Tech ahead of earnings",
             "Apple airlifts 600 tons of iPhones from India 'to beat' Trump tariffs, sources say",
             "Apple airlifted iPhones worth a record $2 billion from India in March as Trump tariffs loomed",
+            "Why Indian markets are undeterred by strikes against Pakistan",
             "Unrealistic to shift all U.S. iPhone assembly to India, Apple bear Craig Moffett writes to clients",
             "Former Cisco CEO discusses why he's bullish on tech and AI",
             "Apple Supplier Luxshare to Maintain Vietnam Production Hub to Support U.S. Market",
             "Singapore's high-yield stocks gain from tariff-induced flight to safety",
             "Despite Cutting Apple's Price Target, Wedbush's Dan Ives Remains Bullish on the Stock for the Long Term. Should You?",
             "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty",
-            "Apple vs. Dell Technologies: Which PC Maker Stock is a Better Buy?",
-            "Apollo CEO: Resetting trade terms was 'long overdue,' but 'how we did it' created uncertainty",
-            "The scramble to get goods to the U.S. ahead of President Trump's tariffs has already led to huge distortions in global trade patterns and economic data. It isn't over yet"
+            "Apple vs. Dell Technologies: Which PC Maker Stock is a Better Buy?"
           ],
           "keywords": {
             "ai": {
-              "count": 21,
+              "count": 22,
               "examples": [
-                "Buffett's Dairy Queen on guard as tariffs weigh on desire to dine out",
                 "Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump",
-                "Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline"
+                "Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline",
+                "Trump tariffs risk US electronics shortages, Taiwan's Pegatron says"
               ]
             },
             "data": {
               "count": 6,
               "examples": [
                 "Stocks lower as megacaps weigh with earnings, data on deck",
-                "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
-                "Apple takes top spot for first-quarter smartphone sales, data shows"
+                "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks",
+                "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week"
               ]
             },
             "digital": {
               "count": 1,
               "examples": [
                 "Italy agrees with US to oppose 'discriminatory' tech taxes"
+              ]
+            },
+            "cyber": {
+              "count": 1,
+              "examples": [
+                "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks"
               ]
             },
             "tech": {
@@ -677,14 +753,99 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 31.2,
-            "neutral": 34.4,
+            "positive": 34.4,
+            "neutral": 31.2,
             "negative": 34.4
           },
-          "gpt_summary": "📰 The theme **technology** was detected in **32 articles** during the period, mainly through topics like: ai (21), data (6), tech (6), digital (1). Sentiment is mixed (31.2% positive, 34.4% negative). Examples of articles: « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « Buffett's Dairy Queen on guard as tariffs weigh on desire to dine out », « Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump »."
+          "gpt_summary": "📰 The theme **technology** was detected in **32 articles** during the period, mainly through topics like: ai (22), data (6), tech (6), digital (1), cyber (1). Sentiment is mixed (34.4% positive, 34.4% negative). Examples of articles: « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump », « Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline »."
+        },
+        "finance": {
+          "count": 11,
+          "articles": [
+            "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
+            "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
+            "Emirates executive says no impact seen from US tariffs, but airline remains vigilant",
+            "President Trump is threatening to fire Federal Reserve Chair Jerome Powell unless he cuts interest rates to cushion the economic blow from tariffs. The tension has put the two on a collision course.",
+            "I’ve hit every financial milestone, yet I feel empty – am I sacrificing real happiness for more digits?",
+            "Donald Trump escalates feud with Fed chair Jerome Powell, calling him 'too late and wrong' on interest rates",
+            "China set to leave lending rates steady, but tariffs raise easing bets",
+            "10-year Treasury yield jumps after stronger-than-expected jobs report",
+            "Risks To Financial Stability In America",
+            "Treasury Secretary Bessent tells investors Trump's policies will deliver 'golden age economy'",
+            "Treasury Secretary Bessent Delivers Annual Testimony to Congress"
+          ],
+          "keywords": {
+            "rates": {
+              "count": 5,
+              "examples": [
+                "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
+                "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
+                "Emirates executive says no impact seen from US tariffs, but airline remains vigilant"
+              ]
+            },
+            "financial": {
+              "count": 3,
+              "examples": [
+                "I’ve hit every financial milestone, yet I feel empty – am I sacrificing real happiness for more digits?",
+                "Risks To Financial Stability In America",
+                "Treasury Secretary Bessent Delivers Annual Testimony to Congress"
+              ]
+            },
+            "treasury": {
+              "count": 3,
+              "examples": [
+                "10-year Treasury yield jumps after stronger-than-expected jobs report",
+                "Treasury Secretary Bessent tells investors Trump's policies will deliver 'golden age economy'",
+                "Treasury Secretary Bessent Delivers Annual Testimony to Congress"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 9.1,
+            "neutral": 36.4,
+            "negative": 54.5
+          },
+          "gpt_summary": "📰 The theme **finance** was detected in **11 articles** during the period, mainly through topics like: rates (5), financial (3), treasury (3). Sentiment is mostly negative (54.5% vs 9.1% positive). Examples of articles: « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon », « Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds », « Emirates executive says no impact seen from US tariffs, but airline remains vigilant »."
+        },
+        "transport": {
+          "count": 10,
+          "articles": [
+            "Emirates executive says no impact seen from US tariffs, but airline remains vigilant",
+            "US begins probes into pharmaceutical, chip imports, setting stage for tariffs",
+            "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports",
+            "Apple: 3 Reasons To Load Up The Truck",
+            "EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports",
+            "10-year Treasury yield jumps after stronger-than-expected jobs report",
+            "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
+            "Apple looks to add AI search to company's browser, Bloomberg reports",
+            "Apple Supplier Luxshare to Maintain Vietnam Production Hub to Support U.S. Market",
+            "The Death Cross Is Now in Place: Our 5% Dividend Stock Safety Net Portfolio Rules"
+          ],
+          "keywords": {
+            "airline": {
+              "count": 1,
+              "examples": [
+                "Emirates executive says no impact seen from US tariffs, but airline remains vigilant"
+              ]
+            },
+            "port": {
+              "count": 7,
+              "examples": [
+                "US begins probes into pharmaceutical, chip imports, setting stage for tariffs",
+                "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports",
+                "Apple: 3 Reasons To Load Up The Truck"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 10.0,
+            "neutral": 60.0,
+            "negative": 30.0
+          },
+          "gpt_summary": "📰 The theme **transport** was detected in **10 articles** during the period, mainly through topics like: port (7), airline (1). Sentiment is mixed (10.0% positive, 30.0% negative). Examples of articles: « Emirates executive says no impact seen from US tariffs, but airline remains vigilant », « US begins probes into pharmaceutical, chip imports, setting stage for tariffs », « Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports »."
         },
         "consumer": {
-          "count": 9,
+          "count": 8,
           "articles": [
             "CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine",
             "Buy now, stock up or delay: Here's what consumers are snapping up or putting off in face of tariffs",
@@ -692,7 +853,6 @@
             "US consumer watchdog asks court to scrap medical debt regulation",
             "Private credit secondary sales set to rise as market turmoil spurs hunt for cash",
             "Apple shares fall despite earnings beat as Services, China sales disappoint",
-            "Apple: Positive iPhone And China Sales But With Risks",
             "Apple takes top spot for first-quarter smartphone sales, data shows",
             "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty"
           ],
@@ -712,106 +872,20 @@
               ]
             },
             "sales": {
-              "count": 4,
+              "count": 3,
               "examples": [
                 "Private credit secondary sales set to rise as market turmoil spurs hunt for cash",
                 "Apple shares fall despite earnings beat as Services, China sales disappoint",
-                "Apple: Positive iPhone And China Sales But With Risks"
+                "Apple takes top spot for first-quarter smartphone sales, data shows"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 55.6,
-            "neutral": 22.2,
-            "negative": 22.2
+            "positive": 50.0,
+            "neutral": 25.0,
+            "negative": 25.0
           },
-          "gpt_summary": "📰 The theme **consumer** was detected in **9 articles** during the period, mainly through topics like: sales (4), consumer (3), purchase (1). Sentiment is mostly positive (55.6% vs 22.2% negative). Examples of articles: « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « Buy now, stock up or delay: Here's what consumers are snapping up or putting off in face of tariffs », « Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline »."
-        },
-        "finance": {
-          "count": 9,
-          "articles": [
-            "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
-            "Emirates executive says no impact seen from US tariffs, but airline remains vigilant",
-            "President Trump is threatening to fire Federal Reserve Chair Jerome Powell unless he cuts interest rates to cushion the economic blow from tariffs. The tension has put the two on a collision course.",
-            "I’ve hit every financial milestone, yet I feel empty – am I sacrificing real happiness for more digits?",
-            "Donald Trump escalates feud with Fed chair Jerome Powell, calling him 'too late and wrong' on interest rates",
-            "China set to leave lending rates steady, but tariffs raise easing bets",
-            "10-year Treasury yield jumps after stronger-than-expected jobs report",
-            "Treasury Secretary Bessent tells investors Trump's policies will deliver 'golden age economy'",
-            "BNY CEO on Clients' Tariff Questions, US Treasury Market"
-          ],
-          "keywords": {
-            "rates": {
-              "count": 4,
-              "examples": [
-                "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
-                "Emirates executive says no impact seen from US tariffs, but airline remains vigilant",
-                "Donald Trump escalates feud with Fed chair Jerome Powell, calling him 'too late and wrong' on interest rates"
-              ]
-            },
-            "financial": {
-              "count": 1,
-              "examples": [
-                "I’ve hit every financial milestone, yet I feel empty – am I sacrificing real happiness for more digits?"
-              ]
-            },
-            "treasury": {
-              "count": 3,
-              "examples": [
-                "10-year Treasury yield jumps after stronger-than-expected jobs report",
-                "Treasury Secretary Bessent tells investors Trump's policies will deliver 'golden age economy'",
-                "BNY CEO on Clients' Tariff Questions, US Treasury Market"
-              ]
-            },
-            "banks": {
-              "count": 1,
-              "examples": [
-                "BNY CEO on Clients' Tariff Questions, US Treasury Market"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 11.1,
-            "neutral": 33.3,
-            "negative": 55.6
-          },
-          "gpt_summary": "📰 The theme **finance** was detected in **9 articles** during the period, mainly through topics like: rates (4), treasury (3), financial (1), banks (1). Sentiment is mostly negative (55.6% vs 11.1% positive). Examples of articles: « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon », « Emirates executive says no impact seen from US tariffs, but airline remains vigilant », « President Trump is threatening to fire Federal Reserve Chair Jerome Powell unless he cuts interest rates to cushion the economic blow from tariffs. The tension has put the two on a collision course. »."
-        },
-        "transport": {
-          "count": 9,
-          "articles": [
-            "Emirates executive says no impact seen from US tariffs, but airline remains vigilant",
-            "US begins probes into pharmaceutical, chip imports, setting stage for tariffs",
-            "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports",
-            "Apple: 3 Reasons To Load Up The Truck",
-            "EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports",
-            "10-year Treasury yield jumps after stronger-than-expected jobs report",
-            "Apple looks to add AI search to company's browser, Bloomberg reports",
-            "Apple Supplier Luxshare to Maintain Vietnam Production Hub to Support U.S. Market",
-            "The Death Cross Is Now in Place: Our 5% Dividend Stock Safety Net Portfolio Rules"
-          ],
-          "keywords": {
-            "airline": {
-              "count": 1,
-              "examples": [
-                "Emirates executive says no impact seen from US tariffs, but airline remains vigilant"
-              ]
-            },
-            "port": {
-              "count": 6,
-              "examples": [
-                "US begins probes into pharmaceutical, chip imports, setting stage for tariffs",
-                "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports",
-                "Apple: 3 Reasons To Load Up The Truck"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 11.1,
-            "neutral": 55.6,
-            "negative": 33.3
-          },
-          "gpt_summary": "📰 The theme **transport** was detected in **9 articles** during the period, mainly through topics like: port (6), airline (1). Sentiment is mostly negative (33.3% vs 11.1% positive). Examples of articles: « Emirates executive says no impact seen from US tariffs, but airline remains vigilant », « US begins probes into pharmaceutical, chip imports, setting stage for tariffs », « Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports »."
+          "gpt_summary": "📰 The theme **consumer** was detected in **8 articles** during the period, mainly through topics like: consumer (3), sales (3), purchase (1). Sentiment is mostly positive (50.0% vs 25.0% negative). Examples of articles: « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « Buy now, stock up or delay: Here's what consumers are snapping up or putting off in face of tariffs », « Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline »."
         },
         "industry": {
           "count": 6,
@@ -909,10 +983,9 @@
           "gpt_summary": "📰 The theme **energy** was detected in **2 articles** during the period, mainly through topics like: oil (1), energy (1). Sentiment is mixed (0.0% positive, 0.0% negative). Examples of articles: « Private credit secondary sales set to rise as market turmoil spurs hunt for cash », « Stocks Snap Back In April Amid Tariff Turmoil And Recession Fears »."
         },
         "defense": {
-          "count": 2,
+          "count": 1,
           "articles": [
-            "Italy agrees with US to oppose 'discriminatory' tech taxes",
-            "Jim Cramer on how Trump's stance on China harms Nvidia and Apple"
+            "Italy agrees with US to oppose 'discriminatory' tech taxes"
           ],
           "keywords": {
             "nato": {
@@ -923,38 +996,42 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 50.0,
-            "neutral": 50.0,
+            "positive": 100.0,
+            "neutral": 0.0,
             "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **defense** was detected in **2 articles** during the period, mainly through topics like: nato (1). Sentiment is mostly positive (50.0% vs 0.0% negative). Examples of articles: « Italy agrees with US to oppose 'discriminatory' tech taxes », « Jim Cramer on how Trump's stance on China harms Nvidia and Apple »."
+          "gpt_summary": "📰 The theme **defense** was detected in **1 articles** during the period, mainly through topics like: nato (1). Sentiment is mostly positive (100.0% vs 0.0% negative). Examples of articles: « Italy agrees with US to oppose 'discriminatory' tech taxes »."
         }
       },
       "regions": {
         "usa": {
-          "count": 17,
+          "count": 21,
           "articles": [
             "Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth",
             "Huntington's Q1 profit rises as Fed rate cuts temper deposit costs",
             "Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump",
             "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
+            "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
             "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports",
             "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
             "President Trump is threatening to fire Federal Reserve Chair Jerome Powell unless he cuts interest rates to cushion the economic blow from tariffs. The tension has put the two on a collision course.",
-            "Tariff Headlines Lead Overnights Higher, Fed's Market Moving Potential",
+            "Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold",
             "Fed's Powell is an exemplary central banker, ECB's Villeroy says",
             "Donald Trump escalates feud with Fed chair Jerome Powell, calling him 'too late and wrong' on interest rates",
             "Live Nasdaq Composite: CSX (Nasdaq: CSX) Rises Amid Pivot to Earnings",
             "Live Nasdaq Composite: Gold Up, APLD (Nasdaq: APLD) Rises 5% in Bright Spot",
             "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
             "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again",
+            "Risks To Financial Stability In America",
             "Trump team thinks Apple's iPhones should be made in USA. Analysts are doubtful.",
+            "US stocks open in the red: Dow slips 300 points, S&P down 0.8%",
             "Ferguson: It is unwise to call into question the independence of the Fed",
+            "S&P 500 Erases Losses From Trump Global Tariff Policy",
             "Weekly Market Pulse: Peak America?"
           ],
           "keywords": {
             "fed": {
-              "count": 12,
+              "count": 16,
               "examples": [
                 "Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth",
                 "Huntington's Q1 profit rises as Fed rate cuts temper deposit costs",
@@ -968,7 +1045,7 @@
               ]
             },
             "nasdaq": {
-              "count": 4,
+              "count": 5,
               "examples": [
                 "Live Nasdaq Composite: CSX (Nasdaq: CSX) Rises Amid Pivot to Earnings",
                 "Live Nasdaq Composite: Gold Up, APLD (Nasdaq: APLD) Rises 5% in Bright Spot",
@@ -976,7 +1053,7 @@
               ]
             },
             "dow jones": {
-              "count": 4,
+              "count": 5,
               "examples": [
                 "Live Nasdaq Composite: CSX (Nasdaq: CSX) Rises Amid Pivot to Earnings",
                 "Live Nasdaq Composite: Gold Up, APLD (Nasdaq: APLD) Rises 5% in Bright Spot",
@@ -988,46 +1065,55 @@
               "examples": [
                 "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again"
               ]
+            },
+            "s&p": {
+              "count": 2,
+              "examples": [
+                "US stocks open in the red: Dow slips 300 points, S&P down 0.8%",
+                "S&P 500 Erases Losses From Trump Global Tariff Policy"
+              ]
             }
           },
           "sentiment_distribution": {
-            "positive": 17.6,
-            "neutral": 47.1,
-            "negative": 35.3
+            "positive": 14.3,
+            "neutral": 42.9,
+            "negative": 42.9
           },
-          "gpt_summary": "📰 The theme **usa** was detected in **17 articles** during the period, mainly through topics like: fed (12), nasdaq (4), dow jones (4), washington (1), america (1). Sentiment is mixed (17.6% positive, 35.3% negative). Examples of articles: « Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth », « Huntington's Q1 profit rises as Fed rate cuts temper deposit costs », « Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump »."
+          "gpt_summary": "📰 The theme **usa** was detected in **21 articles** during the period, mainly through topics like: fed (16), nasdaq (5), dow jones (5), s&p (2), washington (1). Sentiment is mostly negative (42.9% vs 14.3% positive). Examples of articles: « Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth », « Huntington's Q1 profit rises as Fed rate cuts temper deposit costs », « Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump »."
         },
         "asia": {
-          "count": 16,
+          "count": 18,
           "articles": [
             "EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports",
             "Why Trump's tariffs won't push China and Europe closer",
             "Dollar Slides to Multiyear Lows as U.S.-China Tariff War Escalates",
+            "U.S. Stock Futures Up on U.S, China Trade Talk Optimism",
             "China set to leave lending rates steady, but tariffs raise easing bets",
             "Apple shares fall despite earnings beat as Services, China sales disappoint",
             "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say",
             "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows",
             "US chipmakers outsourcing manufacturing will escape China's tariffs",
-            "Jim Cramer on how Trump's stance on China harms Nvidia and Apple",
-            "Apple: Positive iPhone And China Sales But With Risks",
+            "Paul Tudor Jones says stock market will hit new lows even if Trump cuts China tariffs to 50%",
+            "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
             "Apple airlifts 600 tons of iPhones from India 'to beat' Trump tariffs, sources say",
             "Apple airlifted iPhones worth a record $2 billion from India in March as Trump tariffs loomed",
             "India queries Apple, Xiaomi in e-commerce probe of Amazon, Flipkart, sources say",
+            "Why Indian markets are undeterred by strikes against Pakistan",
             "Unrealistic to shift all U.S. iPhone assembly to India, Apple bear Craig Moffett writes to clients",
             "Apple's India pivot is 'hall of fame' for CEO Tim Cook's accomplishments, analyst says",
             "Street's biggest Apple bear says a production move to India is unrealistic"
           ],
           "keywords": {
             "china": {
-              "count": 8,
+              "count": 10,
               "examples": [
                 "EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports",
                 "Why Trump's tariffs won't push China and Europe closer",
-                "China set to leave lending rates steady, but tariffs raise easing bets"
+                "U.S. Stock Futures Up on U.S, China Trade Talk Optimism"
               ]
             },
             "india": {
-              "count": 5,
+              "count": 6,
               "examples": [
                 "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say",
                 "Apple airlifts 600 tons of iPhones from India 'to beat' Trump tariffs, sources say",
@@ -1036,11 +1122,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 31.2,
-            "neutral": 68.8,
-            "negative": 0.0
+            "positive": 27.8,
+            "neutral": 66.7,
+            "negative": 5.6
           },
-          "gpt_summary": "📰 The theme **asia** was detected in **16 articles** during the period, mainly through topics like: china (8), india (5). Sentiment is mostly positive (31.2% vs 0.0% negative). Examples of articles: « EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports », « Why Trump's tariffs won't push China and Europe closer », « Dollar Slides to Multiyear Lows as U.S.-China Tariff War Escalates »."
+          "gpt_summary": "📰 The theme **asia** was detected in **18 articles** during the period, mainly through topics like: china (10), india (6). Sentiment is mostly positive (27.8% vs 5.6% negative). Examples of articles: « EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports », « Why Trump's tariffs won't push China and Europe closer », « Dollar Slides to Multiyear Lows as U.S.-China Tariff War Escalates »."
         },
         "europe": {
           "count": 11,
@@ -1049,17 +1135,17 @@
             "Italy agrees with US to oppose 'discriminatory' tech taxes",
             "Fed's Powell is an exemplary central banker, ECB's Villeroy says",
             "ECB's de Guindos optimistic about continued rate cuts in Presse interview",
-            "US tariffs, Europe slowdown reshape global solar panels trade",
             "Donald Trump escalates feud with Fed chair Jerome Powell, calling him 'too late and wrong' on interest rates",
             "EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports",
             "Hong Kong DIY watch brand sets sights on Europe amid Trump tariffs",
             "Why Trump's tariffs won't push China and Europe closer",
             "It's 'crystal clear' that tariffs could hit growth in the short term, ECB's Knot says",
-            "Jim Cramer talks lessons learned from the European debt crisis"
+            "Jim Cramer talks lessons learned from the European debt crisis",
+            "Eurozone Shoppers Spend Less as Tariffs Weigh on Mood"
           ],
           "keywords": {
             "eu": {
-              "count": 6,
+              "count": 7,
               "examples": [
                 "US begins probes into pharmaceutical, chip imports, setting stage for tariffs",
                 "Fed's Powell is an exemplary central banker, ECB's Villeroy says",
@@ -1100,42 +1186,33 @@
             "neutral": 54.5,
             "negative": 27.3
           },
-          "gpt_summary": "📰 The theme **europe** was detected in **11 articles** during the period, mainly through topics like: eu (6), europe (5), ecb (2), european union (2), italy (1). Sentiment is mixed (18.2% positive, 27.3% negative). Examples of articles: « US begins probes into pharmaceutical, chip imports, setting stage for tariffs », « Italy agrees with US to oppose 'discriminatory' tech taxes », « Fed's Powell is an exemplary central banker, ECB's Villeroy says »."
+          "gpt_summary": "📰 The theme **europe** was detected in **11 articles** during the period, mainly through topics like: eu (7), europe (5), ecb (2), european union (2), italy (1). Sentiment is mixed (18.2% positive, 27.3% negative). Examples of articles: « US begins probes into pharmaceutical, chip imports, setting stage for tariffs », « Italy agrees with US to oppose 'discriminatory' tech taxes », « Fed's Powell is an exemplary central banker, ECB's Villeroy says »."
         },
         "global": {
-          "count": 8,
+          "count": 5,
           "articles": [
-            "US tariffs, Europe slowdown reshape global solar panels trade",
-            "JPMorgan Flags Overvaluation in U.S. Equities, Favors Select International Markets",
             "Global economy recession risks surge on US tariff shockwaves",
             "Apple edges past expectations as world girds for tariff impact",
             "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty",
-            "Global M&A activity plunges to 20-year low",
-            "Ives: A.I. in \"Total Different World,\" AAPL to Beat Tariffs, Big TSLA Overhang Removed",
-            "The scramble to get goods to the U.S. ahead of President Trump's tariffs has already led to huge distortions in global trade patterns and economic data. It isn't over yet"
+            "S&P 500 Erases Losses From Trump Global Tariff Policy",
+            "Ives: A.I. in \"Total Different World,\" AAPL to Beat Tariffs, Big TSLA Overhang Removed"
           ],
           "keywords": {
-            "international": {
-              "count": 1,
-              "examples": [
-                "JPMorgan Flags Overvaluation in U.S. Equities, Favors Select International Markets"
-              ]
-            },
             "global": {
-              "count": 5,
+              "count": 3,
               "examples": [
-                "JPMorgan Flags Overvaluation in U.S. Equities, Favors Select International Markets",
                 "Global economy recession risks surge on US tariff shockwaves",
-                "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty"
+                "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty",
+                "S&P 500 Erases Losses From Trump Global Tariff Policy"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 37.5,
-            "neutral": 25.0,
-            "negative": 37.5
+            "positive": 60.0,
+            "neutral": 0.0,
+            "negative": 40.0
           },
-          "gpt_summary": "📰 The theme **global** was detected in **8 articles** during the period, mainly through topics like: global (5), international (1). Sentiment is mixed (37.5% positive, 37.5% negative). Examples of articles: « US tariffs, Europe slowdown reshape global solar panels trade », « JPMorgan Flags Overvaluation in U.S. Equities, Favors Select International Markets », « Global economy recession risks surge on US tariff shockwaves »."
+          "gpt_summary": "📰 The theme **global** was detected in **5 articles** during the period, mainly through topics like: global (3). Sentiment is mixed (60.0% positive, 40.0% negative). Examples of articles: « Global economy recession risks surge on US tariff shockwaves », « Apple edges past expectations as world girds for tariff impact », « Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty »."
         },
         "blocs": {
           "count": 1,
@@ -1156,50 +1233,29 @@
             "negative": 0.0
           },
           "gpt_summary": "📰 The theme **blocs** was detected in **1 articles** during the period, mainly through topics like: nato (1). Sentiment is mostly positive (100.0% vs 0.0% negative). Examples of articles: « Italy agrees with US to oppose 'discriminatory' tech taxes »."
-        },
-        "latam": {
-          "count": 1,
-          "articles": [
-            "Bessent on Trade Talks, Powell Future, Argentina, Dollar"
-          ],
-          "keywords": {
-            "argentina": {
-              "count": 1,
-              "examples": [
-                "Bessent on Trade Talks, Powell Future, Argentina, Dollar"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 100.0,
-            "neutral": 0.0,
-            "negative": 0.0
-          },
-          "gpt_summary": "📰 The theme **latam** was detected in **1 articles** during the period, mainly through topics like: argentina (1). Sentiment is mostly positive (100.0% vs 0.0% negative). Examples of articles: « Bessent on Trade Talks, Powell Future, Argentina, Dollar »."
         }
       }
     },
     "quarterly": {
       "macroeconomics": {
         "geopolitics": {
-          "count": 16,
+          "count": 15,
           "articles": [
             "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
             "Trump tariffs risk US electronics shortages, Taiwan's Pegatron says",
             "Continued job growth could help ward off a recession, Jim Cramer says",
+            "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks",
             "EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports",
             "Why Trump's tariffs won't push China and Europe closer",
             "Dollar Slides to Multiyear Lows as U.S.-China Tariff War Escalates",
+            "U.S. Stock Futures Up on U.S, China Trade Talk Optimism",
             "China set to leave lending rates steady, but tariffs raise easing bets",
             "Apple shares fall despite earnings beat as Services, China sales disappoint",
             "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows",
             "US chipmakers outsourcing manufacturing will escape China's tariffs",
-            "Jim Cramer on how Trump's stance on China harms Nvidia and Apple",
-            "Apple: Positive iPhone And China Sales But With Risks",
-            "Weekly Commentary: Normal Deleveraging And Trade Wars",
-            "Tariffs, tech, and the hidden cost of your iPhone: Leading investment bank warns of supply chain fallout",
-            "Warren Buffett's Net Worth Jumps $12 Billion",
-            "Middle East countries should promote regional collaboration to manage trade volatility: PwC"
+            "Paul Tudor Jones says stock market will hit new lows even if Trump cuts China tariffs to 50%",
+            "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
+            "Tariffs, tech, and the hidden cost of your iPhone: Leading investment bank warns of supply chain fallout"
           ],
           "keywords": {
             "taiwan": {
@@ -1209,45 +1265,40 @@
               ]
             },
             "war": {
-              "count": 6,
+              "count": 5,
               "examples": [
                 "Continued job growth could help ward off a recession, Jim Cramer says",
-                "Dollar Slides to Multiyear Lows as U.S.-China Tariff War Escalates",
-                "China set to leave lending rates steady, but tariffs raise easing bets"
+                "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks",
+                "Dollar Slides to Multiyear Lows as U.S.-China Tariff War Escalates"
               ]
             },
             "china": {
-              "count": 7,
+              "count": 9,
               "examples": [
                 "EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports",
                 "Why Trump's tariffs won't push China and Europe closer",
-                "China set to leave lending rates steady, but tariffs raise easing bets"
-              ]
-            },
-            "middle east": {
-              "count": 1,
-              "examples": [
-                "Middle East countries should promote regional collaboration to manage trade volatility: PwC"
+                "U.S. Stock Futures Up on U.S, China Trade Talk Optimism"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 25.0,
-            "neutral": 56.2,
-            "negative": 18.8
+            "positive": 13.3,
+            "neutral": 53.3,
+            "negative": 33.3
           },
-          "gpt_summary": "📰 The theme **geopolitics** was detected in **16 articles** during the period, mainly through topics like: china (7), war (6), taiwan (1), middle east (1). Sentiment is mixed (25.0% positive, 18.8% negative). Examples of articles: « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon », « Trump tariffs risk US electronics shortages, Taiwan's Pegatron says », « Continued job growth could help ward off a recession, Jim Cramer says »."
+          "gpt_summary": "📰 The theme **geopolitics** was detected in **15 articles** during the period, mainly through topics like: china (9), war (5), taiwan (1). Sentiment is mixed (13.3% positive, 33.3% negative). Examples of articles: « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon », « Trump tariffs risk US electronics shortages, Taiwan's Pegatron says », « Continued job growth could help ward off a recession, Jim Cramer says »."
         },
         "monetary_policy": {
-          "count": 13,
+          "count": 14,
           "articles": [
             "Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth",
             "Huntington's Q1 profit rises as Fed rate cuts temper deposit costs",
             "Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump",
             "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
+            "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
             "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
             "President Trump is threatening to fire Federal Reserve Chair Jerome Powell unless he cuts interest rates to cushion the economic blow from tariffs. The tension has put the two on a collision course.",
-            "Tariff Headlines Lead Overnights Higher, Fed's Market Moving Potential",
+            "Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold",
             "Fed's Powell is an exemplary central banker, ECB's Villeroy says",
             "ECB's de Guindos optimistic about continued rate cuts in Presse interview",
             "Donald Trump escalates feud with Fed chair Jerome Powell, calling him 'too late and wrong' on interest rates",
@@ -1257,7 +1308,7 @@
           ],
           "keywords": {
             "fed": {
-              "count": 8,
+              "count": 10,
               "examples": [
                 "Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth",
                 "Huntington's Q1 profit rises as Fed rate cuts temper deposit costs",
@@ -1295,21 +1346,23 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 30.8,
-            "neutral": 30.8,
-            "negative": 38.5
+            "positive": 28.6,
+            "neutral": 35.7,
+            "negative": 35.7
           },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **13 articles** during the period, mainly through topics like: fed (8), central bank (8), rate cut (3), ecb (2), monetary (1). Sentiment is mixed (30.8% positive, 38.5% negative). Examples of articles: « Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth », « Huntington's Q1 profit rises as Fed rate cuts temper deposit costs », « Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump »."
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **14 articles** during the period, mainly through topics like: fed (10), central bank (8), rate cut (3), ecb (2), monetary (1). Sentiment is mixed (28.6% positive, 35.7% negative). Examples of articles: « Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth », « Huntington's Q1 profit rises as Fed rate cuts temper deposit costs », « Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump »."
         },
         "inflation": {
-          "count": 11,
+          "count": 13,
           "articles": [
             "Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth",
             "US bond funds suffer fifth weekly outflow on tariff-driven inflation fears",
             "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
+            "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
             "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports",
             "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
             "President Trump is threatening to fire Federal Reserve Chair Jerome Powell unless he cuts interest rates to cushion the economic blow from tariffs. The tension has put the two on a collision course.",
+            "Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold",
             "Donald Trump escalates feud with Fed chair Jerome Powell, calling him 'too late and wrong' on interest rates",
             "10-year Treasury yield jumps after stronger-than-expected jobs report",
             "Singapore's high-yield stocks gain from tariff-induced flight to safety",
@@ -1318,28 +1371,32 @@
           ],
           "keywords": {
             "inflation": {
-              "count": 2,
+              "count": 3,
               "examples": [
                 "Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth",
-                "US bond funds suffer fifth weekly outflow on tariff-driven inflation fears"
+                "US bond funds suffer fifth weekly outflow on tariff-driven inflation fears",
+                "Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold"
               ]
             },
             "price": {
-              "count": 1,
+              "count": 2,
               "examples": [
+                "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
                 "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports"
               ]
             },
             "prices": {
-              "count": 1,
+              "count": 2,
               "examples": [
+                "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
                 "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports"
               ]
             },
             "interest rate": {
-              "count": 2,
+              "count": 3,
               "examples": [
                 "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
+                "Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold",
                 "Donald Trump escalates feud with Fed chair Jerome Powell, calling him 'too late and wrong' on interest rates"
               ]
             },
@@ -1358,19 +1415,18 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 36.4,
-            "neutral": 9.1,
-            "negative": 54.5
+            "positive": 30.8,
+            "neutral": 23.1,
+            "negative": 46.2
           },
-          "gpt_summary": "📰 The theme **inflation** was detected in **11 articles** during the period, mainly through topics like: inflation (2), interest rate (2), yield (2), price (1), prices (1). Sentiment is mixed (36.4% positive, 54.5% negative). Examples of articles: « Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth », « US bond funds suffer fifth weekly outflow on tariff-driven inflation fears », « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon »."
+          "gpt_summary": "📰 The theme **inflation** was detected in **13 articles** during the period, mainly through topics like: inflation (3), interest rate (3), price (2), prices (2), yield (2). Sentiment is mixed (30.8% positive, 46.2% negative). Examples of articles: « Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth », « US bond funds suffer fifth weekly outflow on tariff-driven inflation fears », « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon »."
         },
         "recession": {
-          "count": 9,
+          "count": 8,
           "articles": [
             "Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth",
             "Continued job growth could help ward off a recession, Jim Cramer says",
             "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
-            "US tariffs, Europe slowdown reshape global solar panels trade",
             "It's 'crystal clear' that tariffs could hit growth in the short term, ECB's Knot says",
             "Jim Cramer talks lessons learned from the European debt crisis",
             "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows",
@@ -1395,11 +1451,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 33.3,
-            "neutral": 33.3,
-            "negative": 33.3
+            "positive": 37.5,
+            "neutral": 25.0,
+            "negative": 37.5
           },
-          "gpt_summary": "📰 The theme **recession** was detected in **9 articles** during the period, mainly through topics like: growth (4), recession (2). Sentiment is mixed (33.3% positive, 33.3% negative). Examples of articles: « Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth », « Continued job growth could help ward off a recession, Jim Cramer says », « The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown »."
+          "gpt_summary": "📰 The theme **recession** was detected in **8 articles** during the period, mainly through topics like: growth (4), recession (2). Sentiment is mixed (37.5% positive, 37.5% negative). Examples of articles: « Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth », « Continued job growth could help ward off a recession, Jim Cramer says », « The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown »."
         }
       },
       "sectors": {
@@ -1407,7 +1463,6 @@
           "count": 34,
           "articles": [
             "CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine",
-            "Buffett's Dairy Queen on guard as tariffs weigh on desire to dine out",
             "Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump",
             "Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline",
             "Bullish trade in Apple options reaps gains as shares jump on tariff exemption",
@@ -1418,11 +1473,13 @@
             "Italy agrees with US to oppose 'discriminatory' tech taxes",
             "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
             "President Trump is threatening to fire Federal Reserve Chair Jerome Powell unless he cuts interest rates to cushion the economic blow from tariffs. The tension has put the two on a collision course.",
+            "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks",
             "Apple appealing against UK government's 'back door' order, tribunal confirms",
             "Apple shares lead tech higher after tariff exemptions",
             "Donald Trump escalates feud with Fed chair Jerome Powell, calling him 'too late and wrong' on interest rates",
             "China set to leave lending rates steady, but tariffs raise easing bets",
             "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows",
+            "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
             "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
             "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again",
             "Apple looks to add AI search to company's browser, Bloomberg reports",
@@ -1430,6 +1487,7 @@
             "The biggest questions facing Big Tech ahead of earnings",
             "Apple airlifts 600 tons of iPhones from India 'to beat' Trump tariffs, sources say",
             "Apple airlifted iPhones worth a record $2 billion from India in March as Trump tariffs loomed",
+            "Why Indian markets are undeterred by strikes against Pakistan",
             "Unrealistic to shift all U.S. iPhone assembly to India, Apple bear Craig Moffett writes to clients",
             "Former Cisco CEO discusses why he's bullish on tech and AI",
             "Apple Supplier Luxshare to Maintain Vietnam Production Hub to Support U.S. Market",
@@ -1437,31 +1495,35 @@
             "Tariffs, tech, and the hidden cost of your iPhone: Leading investment bank warns of supply chain fallout",
             "Despite Cutting Apple's Price Target, Wedbush's Dan Ives Remains Bullish on the Stock for the Long Term. Should You?",
             "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty",
-            "Apple vs. Dell Technologies: Which PC Maker Stock is a Better Buy?",
-            "Apollo CEO: Resetting trade terms was 'long overdue,' but 'how we did it' created uncertainty",
-            "The scramble to get goods to the U.S. ahead of President Trump's tariffs has already led to huge distortions in global trade patterns and economic data. It isn't over yet"
+            "Apple vs. Dell Technologies: Which PC Maker Stock is a Better Buy?"
           ],
           "keywords": {
             "ai": {
-              "count": 23,
+              "count": 24,
               "examples": [
-                "Buffett's Dairy Queen on guard as tariffs weigh on desire to dine out",
                 "Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump",
-                "Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline"
+                "Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline",
+                "Trump tariffs risk US electronics shortages, Taiwan's Pegatron says"
               ]
             },
             "data": {
               "count": 6,
               "examples": [
                 "Stocks lower as megacaps weigh with earnings, data on deck",
-                "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
-                "Apple takes top spot for first-quarter smartphone sales, data shows"
+                "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks",
+                "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week"
               ]
             },
             "digital": {
               "count": 1,
               "examples": [
                 "Italy agrees with US to oppose 'discriminatory' tech taxes"
+              ]
+            },
+            "cyber": {
+              "count": 1,
+              "examples": [
+                "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks"
               ]
             },
             "cloud": {
@@ -1480,14 +1542,99 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 32.4,
-            "neutral": 32.4,
+            "positive": 35.3,
+            "neutral": 29.4,
             "negative": 35.3
           },
-          "gpt_summary": "📰 The theme **technology** was detected in **34 articles** during the period, mainly through topics like: ai (23), tech (7), data (6), digital (1), cloud (1). Sentiment is mixed (32.4% positive, 35.3% negative). Examples of articles: « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « Buffett's Dairy Queen on guard as tariffs weigh on desire to dine out », « Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump »."
+          "gpt_summary": "📰 The theme **technology** was detected in **34 articles** during the period, mainly through topics like: ai (24), tech (7), data (6), digital (1), cyber (1). Sentiment is mixed (35.3% positive, 35.3% negative). Examples of articles: « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump », « Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline »."
+        },
+        "finance": {
+          "count": 11,
+          "articles": [
+            "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
+            "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
+            "Emirates executive says no impact seen from US tariffs, but airline remains vigilant",
+            "President Trump is threatening to fire Federal Reserve Chair Jerome Powell unless he cuts interest rates to cushion the economic blow from tariffs. The tension has put the two on a collision course.",
+            "I’ve hit every financial milestone, yet I feel empty – am I sacrificing real happiness for more digits?",
+            "Donald Trump escalates feud with Fed chair Jerome Powell, calling him 'too late and wrong' on interest rates",
+            "China set to leave lending rates steady, but tariffs raise easing bets",
+            "10-year Treasury yield jumps after stronger-than-expected jobs report",
+            "Risks To Financial Stability In America",
+            "Treasury Secretary Bessent tells investors Trump's policies will deliver 'golden age economy'",
+            "Treasury Secretary Bessent Delivers Annual Testimony to Congress"
+          ],
+          "keywords": {
+            "rates": {
+              "count": 5,
+              "examples": [
+                "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
+                "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
+                "Emirates executive says no impact seen from US tariffs, but airline remains vigilant"
+              ]
+            },
+            "financial": {
+              "count": 3,
+              "examples": [
+                "I’ve hit every financial milestone, yet I feel empty – am I sacrificing real happiness for more digits?",
+                "Risks To Financial Stability In America",
+                "Treasury Secretary Bessent Delivers Annual Testimony to Congress"
+              ]
+            },
+            "treasury": {
+              "count": 3,
+              "examples": [
+                "10-year Treasury yield jumps after stronger-than-expected jobs report",
+                "Treasury Secretary Bessent tells investors Trump's policies will deliver 'golden age economy'",
+                "Treasury Secretary Bessent Delivers Annual Testimony to Congress"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 9.1,
+            "neutral": 36.4,
+            "negative": 54.5
+          },
+          "gpt_summary": "📰 The theme **finance** was detected in **11 articles** during the period, mainly through topics like: rates (5), financial (3), treasury (3). Sentiment is mostly negative (54.5% vs 9.1% positive). Examples of articles: « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon », « Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds », « Emirates executive says no impact seen from US tariffs, but airline remains vigilant »."
+        },
+        "transport": {
+          "count": 10,
+          "articles": [
+            "Emirates executive says no impact seen from US tariffs, but airline remains vigilant",
+            "US begins probes into pharmaceutical, chip imports, setting stage for tariffs",
+            "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports",
+            "Apple: 3 Reasons To Load Up The Truck",
+            "EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports",
+            "10-year Treasury yield jumps after stronger-than-expected jobs report",
+            "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
+            "Apple looks to add AI search to company's browser, Bloomberg reports",
+            "Apple Supplier Luxshare to Maintain Vietnam Production Hub to Support U.S. Market",
+            "The Death Cross Is Now in Place: Our 5% Dividend Stock Safety Net Portfolio Rules"
+          ],
+          "keywords": {
+            "airline": {
+              "count": 1,
+              "examples": [
+                "Emirates executive says no impact seen from US tariffs, but airline remains vigilant"
+              ]
+            },
+            "port": {
+              "count": 7,
+              "examples": [
+                "US begins probes into pharmaceutical, chip imports, setting stage for tariffs",
+                "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports",
+                "Apple: 3 Reasons To Load Up The Truck"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 10.0,
+            "neutral": 60.0,
+            "negative": 30.0
+          },
+          "gpt_summary": "📰 The theme **transport** was detected in **10 articles** during the period, mainly through topics like: port (7), airline (1). Sentiment is mixed (10.0% positive, 30.0% negative). Examples of articles: « Emirates executive says no impact seen from US tariffs, but airline remains vigilant », « US begins probes into pharmaceutical, chip imports, setting stage for tariffs », « Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports »."
         },
         "consumer": {
-          "count": 9,
+          "count": 8,
           "articles": [
             "CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine",
             "Buy now, stock up or delay: Here's what consumers are snapping up or putting off in face of tariffs",
@@ -1495,7 +1642,6 @@
             "US consumer watchdog asks court to scrap medical debt regulation",
             "Private credit secondary sales set to rise as market turmoil spurs hunt for cash",
             "Apple shares fall despite earnings beat as Services, China sales disappoint",
-            "Apple: Positive iPhone And China Sales But With Risks",
             "Apple takes top spot for first-quarter smartphone sales, data shows",
             "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty"
           ],
@@ -1515,106 +1661,20 @@
               ]
             },
             "sales": {
-              "count": 4,
+              "count": 3,
               "examples": [
                 "Private credit secondary sales set to rise as market turmoil spurs hunt for cash",
                 "Apple shares fall despite earnings beat as Services, China sales disappoint",
-                "Apple: Positive iPhone And China Sales But With Risks"
+                "Apple takes top spot for first-quarter smartphone sales, data shows"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 55.6,
-            "neutral": 22.2,
-            "negative": 22.2
+            "positive": 50.0,
+            "neutral": 25.0,
+            "negative": 25.0
           },
-          "gpt_summary": "📰 The theme **consumer** was detected in **9 articles** during the period, mainly through topics like: sales (4), consumer (3), purchase (1). Sentiment is mostly positive (55.6% vs 22.2% negative). Examples of articles: « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « Buy now, stock up or delay: Here's what consumers are snapping up or putting off in face of tariffs », « Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline »."
-        },
-        "finance": {
-          "count": 9,
-          "articles": [
-            "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
-            "Emirates executive says no impact seen from US tariffs, but airline remains vigilant",
-            "President Trump is threatening to fire Federal Reserve Chair Jerome Powell unless he cuts interest rates to cushion the economic blow from tariffs. The tension has put the two on a collision course.",
-            "I’ve hit every financial milestone, yet I feel empty – am I sacrificing real happiness for more digits?",
-            "Donald Trump escalates feud with Fed chair Jerome Powell, calling him 'too late and wrong' on interest rates",
-            "China set to leave lending rates steady, but tariffs raise easing bets",
-            "10-year Treasury yield jumps after stronger-than-expected jobs report",
-            "Treasury Secretary Bessent tells investors Trump's policies will deliver 'golden age economy'",
-            "BNY CEO on Clients' Tariff Questions, US Treasury Market"
-          ],
-          "keywords": {
-            "rates": {
-              "count": 4,
-              "examples": [
-                "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
-                "Emirates executive says no impact seen from US tariffs, but airline remains vigilant",
-                "Donald Trump escalates feud with Fed chair Jerome Powell, calling him 'too late and wrong' on interest rates"
-              ]
-            },
-            "financial": {
-              "count": 1,
-              "examples": [
-                "I’ve hit every financial milestone, yet I feel empty – am I sacrificing real happiness for more digits?"
-              ]
-            },
-            "treasury": {
-              "count": 3,
-              "examples": [
-                "10-year Treasury yield jumps after stronger-than-expected jobs report",
-                "Treasury Secretary Bessent tells investors Trump's policies will deliver 'golden age economy'",
-                "BNY CEO on Clients' Tariff Questions, US Treasury Market"
-              ]
-            },
-            "banks": {
-              "count": 1,
-              "examples": [
-                "BNY CEO on Clients' Tariff Questions, US Treasury Market"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 11.1,
-            "neutral": 33.3,
-            "negative": 55.6
-          },
-          "gpt_summary": "📰 The theme **finance** was detected in **9 articles** during the period, mainly through topics like: rates (4), treasury (3), financial (1), banks (1). Sentiment is mostly negative (55.6% vs 11.1% positive). Examples of articles: « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon », « Emirates executive says no impact seen from US tariffs, but airline remains vigilant », « President Trump is threatening to fire Federal Reserve Chair Jerome Powell unless he cuts interest rates to cushion the economic blow from tariffs. The tension has put the two on a collision course. »."
-        },
-        "transport": {
-          "count": 9,
-          "articles": [
-            "Emirates executive says no impact seen from US tariffs, but airline remains vigilant",
-            "US begins probes into pharmaceutical, chip imports, setting stage for tariffs",
-            "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports",
-            "Apple: 3 Reasons To Load Up The Truck",
-            "EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports",
-            "10-year Treasury yield jumps after stronger-than-expected jobs report",
-            "Apple looks to add AI search to company's browser, Bloomberg reports",
-            "Apple Supplier Luxshare to Maintain Vietnam Production Hub to Support U.S. Market",
-            "The Death Cross Is Now in Place: Our 5% Dividend Stock Safety Net Portfolio Rules"
-          ],
-          "keywords": {
-            "airline": {
-              "count": 1,
-              "examples": [
-                "Emirates executive says no impact seen from US tariffs, but airline remains vigilant"
-              ]
-            },
-            "port": {
-              "count": 6,
-              "examples": [
-                "US begins probes into pharmaceutical, chip imports, setting stage for tariffs",
-                "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports",
-                "Apple: 3 Reasons To Load Up The Truck"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 11.1,
-            "neutral": 55.6,
-            "negative": 33.3
-          },
-          "gpt_summary": "📰 The theme **transport** was detected in **9 articles** during the period, mainly through topics like: port (6), airline (1). Sentiment is mostly negative (33.3% vs 11.1% positive). Examples of articles: « Emirates executive says no impact seen from US tariffs, but airline remains vigilant », « US begins probes into pharmaceutical, chip imports, setting stage for tariffs », « Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports »."
+          "gpt_summary": "📰 The theme **consumer** was detected in **8 articles** during the period, mainly through topics like: consumer (3), sales (3), purchase (1). Sentiment is mostly positive (50.0% vs 25.0% negative). Examples of articles: « CNBC Daily Open: Consumers are worried over the economy. The White House insists it'll be fine », « Buy now, stock up or delay: Here's what consumers are snapping up or putting off in face of tariffs », « Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline »."
         },
         "industry": {
           "count": 7,
@@ -1713,10 +1773,9 @@
           "gpt_summary": "📰 The theme **energy** was detected in **2 articles** during the period, mainly through topics like: oil (1), energy (1). Sentiment is mixed (0.0% positive, 0.0% negative). Examples of articles: « Private credit secondary sales set to rise as market turmoil spurs hunt for cash », « Stocks Snap Back In April Amid Tariff Turmoil And Recession Fears »."
         },
         "defense": {
-          "count": 2,
+          "count": 1,
           "articles": [
-            "Italy agrees with US to oppose 'discriminatory' tech taxes",
-            "Jim Cramer on how Trump's stance on China harms Nvidia and Apple"
+            "Italy agrees with US to oppose 'discriminatory' tech taxes"
           ],
           "keywords": {
             "nato": {
@@ -1727,38 +1786,42 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 50.0,
-            "neutral": 50.0,
+            "positive": 100.0,
+            "neutral": 0.0,
             "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **defense** was detected in **2 articles** during the period, mainly through topics like: nato (1). Sentiment is mostly positive (50.0% vs 0.0% negative). Examples of articles: « Italy agrees with US to oppose 'discriminatory' tech taxes », « Jim Cramer on how Trump's stance on China harms Nvidia and Apple »."
+          "gpt_summary": "📰 The theme **defense** was detected in **1 articles** during the period, mainly through topics like: nato (1). Sentiment is mostly positive (100.0% vs 0.0% negative). Examples of articles: « Italy agrees with US to oppose 'discriminatory' tech taxes »."
         }
       },
       "regions": {
         "usa": {
-          "count": 17,
+          "count": 21,
           "articles": [
             "Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth",
             "Huntington's Q1 profit rises as Fed rate cuts temper deposit costs",
             "Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump",
             "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
+            "Wobbling economy will push the Fed to cut interest rates later this year, CNBC survey finds",
             "Apple CEO spoke with Lutnick about tariffs impact on iPhone prices, Washington Post reports",
             "The Fed must confront difficult decisions this week on whether to defend against inflation or against an economic slowdown",
             "President Trump is threatening to fire Federal Reserve Chair Jerome Powell unless he cuts interest rates to cushion the economic blow from tariffs. The tension has put the two on a collision course.",
-            "Tariff Headlines Lead Overnights Higher, Fed's Market Moving Potential",
+            "Market Outlook: FED Interest Rate Decision And SPY Upgrade To Hold",
             "Fed's Powell is an exemplary central banker, ECB's Villeroy says",
             "Donald Trump escalates feud with Fed chair Jerome Powell, calling him 'too late and wrong' on interest rates",
             "Live Nasdaq Composite: CSX (Nasdaq: CSX) Rises Amid Pivot to Earnings",
             "Live Nasdaq Composite: Gold Up, APLD (Nasdaq: APLD) Rises 5% in Bright Spot",
             "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
             "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again",
+            "Risks To Financial Stability In America",
             "Trump team thinks Apple's iPhones should be made in USA. Analysts are doubtful.",
+            "US stocks open in the red: Dow slips 300 points, S&P down 0.8%",
             "Ferguson: It is unwise to call into question the independence of the Fed",
+            "S&P 500 Erases Losses From Trump Global Tariff Policy",
             "Weekly Market Pulse: Peak America?"
           ],
           "keywords": {
             "fed": {
-              "count": 12,
+              "count": 16,
               "examples": [
                 "Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth",
                 "Huntington's Q1 profit rises as Fed rate cuts temper deposit costs",
@@ -1772,7 +1835,7 @@
               ]
             },
             "nasdaq": {
-              "count": 4,
+              "count": 5,
               "examples": [
                 "Live Nasdaq Composite: CSX (Nasdaq: CSX) Rises Amid Pivot to Earnings",
                 "Live Nasdaq Composite: Gold Up, APLD (Nasdaq: APLD) Rises 5% in Bright Spot",
@@ -1780,7 +1843,7 @@
               ]
             },
             "dow jones": {
-              "count": 4,
+              "count": 5,
               "examples": [
                 "Live Nasdaq Composite: CSX (Nasdaq: CSX) Rises Amid Pivot to Earnings",
                 "Live Nasdaq Composite: Gold Up, APLD (Nasdaq: APLD) Rises 5% in Bright Spot",
@@ -1792,46 +1855,55 @@
               "examples": [
                 "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again"
               ]
+            },
+            "s&p": {
+              "count": 2,
+              "examples": [
+                "US stocks open in the red: Dow slips 300 points, S&P down 0.8%",
+                "S&P 500 Erases Losses From Trump Global Tariff Policy"
+              ]
             }
           },
           "sentiment_distribution": {
-            "positive": 17.6,
-            "neutral": 47.1,
-            "negative": 35.3
+            "positive": 14.3,
+            "neutral": 42.9,
+            "negative": 42.9
           },
-          "gpt_summary": "📰 The theme **usa** was detected in **17 articles** during the period, mainly through topics like: fed (12), nasdaq (4), dow jones (4), washington (1), america (1). Sentiment is mixed (17.6% positive, 35.3% negative). Examples of articles: « Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth », « Huntington's Q1 profit rises as Fed rate cuts temper deposit costs », « Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump »."
+          "gpt_summary": "📰 The theme **usa** was detected in **21 articles** during the period, mainly through topics like: fed (16), nasdaq (5), dow jones (5), s&p (2), washington (1). Sentiment is mostly negative (42.9% vs 14.3% positive). Examples of articles: « Powell indicates tariffs could pose a challenge for the Fed between controlling inflation and boosting growth », « Huntington's Q1 profit rises as Fed rate cuts temper deposit costs », « Fed chair Powell signals cautious stance amid tariff uncertainty, stocks slump »."
         },
         "asia": {
-          "count": 16,
+          "count": 18,
           "articles": [
             "EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports",
             "Why Trump's tariffs won't push China and Europe closer",
             "Dollar Slides to Multiyear Lows as U.S.-China Tariff War Escalates",
+            "U.S. Stock Futures Up on U.S, China Trade Talk Optimism",
             "China set to leave lending rates steady, but tariffs raise easing bets",
             "Apple shares fall despite earnings beat as Services, China sales disappoint",
             "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say",
             "China's services growth hits 7-month low as tariffs bite, Caixin PMI shows",
             "US chipmakers outsourcing manufacturing will escape China's tariffs",
-            "Jim Cramer on how Trump's stance on China harms Nvidia and Apple",
-            "Apple: Positive iPhone And China Sales But With Risks",
+            "Paul Tudor Jones says stock market will hit new lows even if Trump cuts China tariffs to 50%",
+            "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
             "Apple airlifts 600 tons of iPhones from India 'to beat' Trump tariffs, sources say",
             "Apple airlifted iPhones worth a record $2 billion from India in March as Trump tariffs loomed",
             "India queries Apple, Xiaomi in e-commerce probe of Amazon, Flipkart, sources say",
+            "Why Indian markets are undeterred by strikes against Pakistan",
             "Unrealistic to shift all U.S. iPhone assembly to India, Apple bear Craig Moffett writes to clients",
             "Apple's India pivot is 'hall of fame' for CEO Tim Cook's accomplishments, analyst says",
             "Street's biggest Apple bear says a production move to India is unrealistic"
           ],
           "keywords": {
             "china": {
-              "count": 8,
+              "count": 10,
               "examples": [
                 "EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports",
                 "Why Trump's tariffs won't push China and Europe closer",
-                "China set to leave lending rates steady, but tariffs raise easing bets"
+                "U.S. Stock Futures Up on U.S, China Trade Talk Optimism"
               ]
             },
             "india": {
-              "count": 5,
+              "count": 6,
               "examples": [
                 "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say",
                 "Apple airlifts 600 tons of iPhones from India 'to beat' Trump tariffs, sources say",
@@ -1840,11 +1912,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 31.2,
-            "neutral": 68.8,
-            "negative": 0.0
+            "positive": 27.8,
+            "neutral": 66.7,
+            "negative": 5.6
           },
-          "gpt_summary": "📰 The theme **asia** was detected in **16 articles** during the period, mainly through topics like: china (8), india (5). Sentiment is mostly positive (31.2% vs 0.0% negative). Examples of articles: « EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports », « Why Trump's tariffs won't push China and Europe closer », « Dollar Slides to Multiyear Lows as U.S.-China Tariff War Escalates »."
+          "gpt_summary": "📰 The theme **asia** was detected in **18 articles** during the period, mainly through topics like: china (10), india (6). Sentiment is mostly positive (27.8% vs 5.6% negative). Examples of articles: « EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports », « Why Trump's tariffs won't push China and Europe closer », « Dollar Slides to Multiyear Lows as U.S.-China Tariff War Escalates »."
         },
         "europe": {
           "count": 11,
@@ -1853,17 +1925,17 @@
             "Italy agrees with US to oppose 'discriminatory' tech taxes",
             "Fed's Powell is an exemplary central banker, ECB's Villeroy says",
             "ECB's de Guindos optimistic about continued rate cuts in Presse interview",
-            "US tariffs, Europe slowdown reshape global solar panels trade",
             "Donald Trump escalates feud with Fed chair Jerome Powell, calling him 'too late and wrong' on interest rates",
             "EU, China start talks on lifting EU tariffs on Chinese electric vehicles, Handelsblatt reports",
             "Hong Kong DIY watch brand sets sights on Europe amid Trump tariffs",
             "Why Trump's tariffs won't push China and Europe closer",
             "It's 'crystal clear' that tariffs could hit growth in the short term, ECB's Knot says",
-            "Jim Cramer talks lessons learned from the European debt crisis"
+            "Jim Cramer talks lessons learned from the European debt crisis",
+            "Eurozone Shoppers Spend Less as Tariffs Weigh on Mood"
           ],
           "keywords": {
             "eu": {
-              "count": 6,
+              "count": 7,
               "examples": [
                 "US begins probes into pharmaceutical, chip imports, setting stage for tariffs",
                 "Fed's Powell is an exemplary central banker, ECB's Villeroy says",
@@ -1904,42 +1976,33 @@
             "neutral": 54.5,
             "negative": 27.3
           },
-          "gpt_summary": "📰 The theme **europe** was detected in **11 articles** during the period, mainly through topics like: eu (6), europe (5), ecb (2), european union (2), italy (1). Sentiment is mixed (18.2% positive, 27.3% negative). Examples of articles: « US begins probes into pharmaceutical, chip imports, setting stage for tariffs », « Italy agrees with US to oppose 'discriminatory' tech taxes », « Fed's Powell is an exemplary central banker, ECB's Villeroy says »."
+          "gpt_summary": "📰 The theme **europe** was detected in **11 articles** during the period, mainly through topics like: eu (7), europe (5), ecb (2), european union (2), italy (1). Sentiment is mixed (18.2% positive, 27.3% negative). Examples of articles: « US begins probes into pharmaceutical, chip imports, setting stage for tariffs », « Italy agrees with US to oppose 'discriminatory' tech taxes », « Fed's Powell is an exemplary central banker, ECB's Villeroy says »."
         },
         "global": {
-          "count": 8,
+          "count": 5,
           "articles": [
-            "US tariffs, Europe slowdown reshape global solar panels trade",
-            "JPMorgan Flags Overvaluation in U.S. Equities, Favors Select International Markets",
             "Global economy recession risks surge on US tariff shockwaves",
             "Apple edges past expectations as world girds for tariff impact",
             "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty",
-            "Global M&A activity plunges to 20-year low",
-            "Ives: A.I. in \"Total Different World,\" AAPL to Beat Tariffs, Big TSLA Overhang Removed",
-            "The scramble to get goods to the U.S. ahead of President Trump's tariffs has already led to huge distortions in global trade patterns and economic data. It isn't over yet"
+            "S&P 500 Erases Losses From Trump Global Tariff Policy",
+            "Ives: A.I. in \"Total Different World,\" AAPL to Beat Tariffs, Big TSLA Overhang Removed"
           ],
           "keywords": {
-            "international": {
-              "count": 1,
-              "examples": [
-                "JPMorgan Flags Overvaluation in U.S. Equities, Favors Select International Markets"
-              ]
-            },
             "global": {
-              "count": 5,
+              "count": 3,
               "examples": [
-                "JPMorgan Flags Overvaluation in U.S. Equities, Favors Select International Markets",
                 "Global economy recession risks surge on US tariff shockwaves",
-                "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty"
+                "Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty",
+                "S&P 500 Erases Losses From Trump Global Tariff Policy"
               ]
             }
           },
           "sentiment_distribution": {
-            "positive": 37.5,
-            "neutral": 25.0,
-            "negative": 37.5
+            "positive": 60.0,
+            "neutral": 0.0,
+            "negative": 40.0
           },
-          "gpt_summary": "📰 The theme **global** was detected in **8 articles** during the period, mainly through topics like: global (5), international (1). Sentiment is mixed (37.5% positive, 37.5% negative). Examples of articles: « US tariffs, Europe slowdown reshape global solar panels trade », « JPMorgan Flags Overvaluation in U.S. Equities, Favors Select International Markets », « Global economy recession risks surge on US tariff shockwaves »."
+          "gpt_summary": "📰 The theme **global** was detected in **5 articles** during the period, mainly through topics like: global (3). Sentiment is mixed (60.0% positive, 40.0% negative). Examples of articles: « Global economy recession risks surge on US tariff shockwaves », « Apple edges past expectations as world girds for tariff impact », « Big Picture Ahead: Consumer Confidence & Global Trade Uncertainty »."
         },
         "blocs": {
           "count": 1,
@@ -1960,30 +2023,10 @@
             "negative": 0.0
           },
           "gpt_summary": "📰 The theme **blocs** was detected in **1 articles** during the period, mainly through topics like: nato (1). Sentiment is mostly positive (100.0% vs 0.0% negative). Examples of articles: « Italy agrees with US to oppose 'discriminatory' tech taxes »."
-        },
-        "latam": {
-          "count": 1,
-          "articles": [
-            "Bessent on Trade Talks, Powell Future, Argentina, Dollar"
-          ],
-          "keywords": {
-            "argentina": {
-              "count": 1,
-              "examples": [
-                "Bessent on Trade Talks, Powell Future, Argentina, Dollar"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 100.0,
-            "neutral": 0.0,
-            "negative": 0.0
-          },
-          "gpt_summary": "📰 The theme **latam** was detected in **1 articles** during the period, mainly through topics like: argentina (1). Sentiment is mostly positive (100.0% vs 0.0% negative). Examples of articles: « Bessent on Trade Talks, Powell Future, Argentina, Dollar »."
         }
       }
     }
   },
-  "lastUpdated": "2025-05-07T16:22:00.120567",
-  "analysisCount": 109
+  "lastUpdated": "2025-05-07T20:14:38.677259",
+  "analysisCount": 110
 }
