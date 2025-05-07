@@ -1,6 +1,9 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
 // Version 2.1 - Mai 2025 - Étendu avec tous les statuts juridiques et mise à jour des taux 2025
 
+// Constantes globales pour les taux
+const CSG_IMPOSABLE = 0.024; // 9,2% x 17,4% (fraction imposable 2025)
+
 // Classe pour les simulations fiscales des différents statuts juridiques
 class SimulationsFiscales {
     
@@ -56,12 +59,14 @@ class SimulationsFiscales {
         if (ca > plafonds[typeEffectif]) {
             return {
                 compatible: false,
-                message: `CA supérieur au plafond micro-entreprise de ${plafonds[typeEffectif]}€`
+                message: `CA supérieur au plafond micro-entreprise de ${plafonds[typeEffectif]}€. Basculez au régime réel simplifié ou facturez sous société.`
             };
         }
         
-        // Calcul des cotisations sociales
-        const cotisationsSociales = Math.round(ca * tauxCotisations[typeEffectif]);
+        // Calcul des cotisations sociales (0 si versement libératoire)
+        const cotisationsSociales = versementLiberatoire 
+            ? 0 
+            : Math.round(ca * tauxCotisations[typeEffectif]);
         
         // Ajout CFP (formation professionnelle) et CFE estimée
         const cfp = Math.round(ca * 0.001);  // 0,1% du CA
@@ -85,7 +90,14 @@ class SimulationsFiscales {
         }
         
         // Calcul du revenu net après impôt et toutes charges
-        const revenuNetApresImpot = ca - cotisationsSociales - cfp - cfe - impotRevenu;
+        let revenuNetApresImpot;
+        if (versementLiberatoire) {
+            // Le versement libératoire inclut déjà les cotisations sociales
+            revenuNetApresImpot = ca - impotRevenu - cfp - cfe;
+        } else {
+            // Calcul standard avec cotisations sociales séparées
+            revenuNetApresImpot = ca - cotisationsSociales - cfp - cfe - impotRevenu;
+        }
         
         return {
             compatible: true,
@@ -238,7 +250,7 @@ class SimulationsFiscales {
                 is = window.FiscalUtils.calculIS(resultatApresRemuneration);
             } else {
                 // Fallback
-                const tauxIS = resultatApresRemuneration <= 42000 ? 0.15 : 0.25;
+                const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
                 is = Math.round(resultatApresRemuneration * tauxIS);
             }
             
@@ -319,14 +331,17 @@ class SimulationsFiscales {
         const coutTotalEmployeur = remuneration + chargesPatronales;
         const salaireNet = remuneration - chargesSalariales;
         
+        // Calcul du net imposable (incluant la CSG imposable)
+        const netImposable = salaireNet + (salaireNet * CSG_IMPOSABLE);
+        
         // Calcul de l'impôt sur le revenu
         let impotRevenu;
         if (modeExpert && window.FiscalUtils) {
             // Utiliser le calcul progressif si le mode expert est activé
-            impotRevenu = window.FiscalUtils.calculateProgressiveIR(salaireNet);
+            impotRevenu = window.FiscalUtils.calculateProgressiveIR(netImposable);
         } else {
             // Utiliser le calcul simplifié (TMI)
-            impotRevenu = Math.round(salaireNet * (tmiActuel / 100));
+            impotRevenu = Math.round(netImposable * (tmiActuel / 100));
         }
         
         // Salaire net après IR
@@ -338,7 +353,7 @@ class SimulationsFiscales {
             is = window.FiscalUtils.calculIS(resultatApresRemuneration);
         } else {
             // Fallback
-            const tauxIS = resultatApresRemuneration <= 42000 ? 0.15 : 0.25;
+            const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
             is = Math.round(resultatApresRemuneration * tauxIS);
         }
         
@@ -375,6 +390,7 @@ class SimulationsFiscales {
             coutTotalEmployeur: coutTotalEmployeur,
             chargesSalariales: chargesSalariales,
             salaireNet: salaireNet,
+            netImposable: netImposable,
             impotRevenu: impotRevenu,
             salaireNetApresIR: salaireNetApresIR,
             revenuNetSalaire: salaireNetApresIR,
@@ -412,6 +428,7 @@ class SimulationsFiscales {
         // Régime social différent selon que le gérant est majoritaire ou non
         let cotisationsSociales = 0;
         let salaireNet = 0;
+        let netImposable = 0;
         
         if (gerantMajoritaire) {
             // Gérant majoritaire = TNS
@@ -422,6 +439,7 @@ class SimulationsFiscales {
                 cotisationsSociales = Math.round(remuneration * 0.45);
             }
             salaireNet = remuneration - cotisationsSociales;
+            netImposable = salaireNet;
         } else {
             // Gérant minoritaire = assimilé salarié
             let chargesPatronales, chargesSalariales;
@@ -437,16 +455,17 @@ class SimulationsFiscales {
                 cotisationsSociales = chargesPatronales + chargesSalariales;
             }
             salaireNet = remuneration - chargesSalariales;
+            netImposable = salaireNet + (salaireNet * CSG_IMPOSABLE); // Ajout CSG imposable pour assimilé salarié
         }
         
         // Calcul de l'impôt sur le revenu
         let impotRevenu;
         if (modeExpert && window.FiscalUtils) {
             // Utiliser le calcul progressif si le mode expert est activé
-            impotRevenu = window.FiscalUtils.calculateProgressiveIR(salaireNet);
+            impotRevenu = window.FiscalUtils.calculateProgressiveIR(netImposable);
         } else {
             // Utiliser le calcul simplifié (TMI)
-            impotRevenu = Math.round(salaireNet * (tmiActuel / 100));
+            impotRevenu = Math.round(netImposable * (tmiActuel / 100));
         }
         
         // Salaire net après IR
@@ -458,7 +477,7 @@ class SimulationsFiscales {
             is = window.FiscalUtils.calculIS(resultatApresRemuneration);
         } else {
             // Fallback
-            const tauxIS = resultatApresRemuneration <= 42000 ? 0.15 : 0.25;
+            const tauxIS = resultatApresRemuneration <= 42500 ? 0.15 : 0.25;
             is = Math.round(resultatApresRemuneration * tauxIS);
         }
         
@@ -504,6 +523,7 @@ class SimulationsFiscales {
             remuneration: remuneration,
             cotisationsSociales: cotisationsSociales,
             salaireNet: salaireNet,
+            netImposable: netImposable,
             impotRevenu: impotRevenu,
             salaireNetApresIR: salaireNetApresIR,
             revenuNetSalaire: salaireNetApresIR,
@@ -573,12 +593,22 @@ class SimulationsFiscales {
             return resultSAS;
         }
         
-        // Ajouter le coût du CAC
+        // Ajouter le coût du CAC (déductible avant IS)
         const coutCAC = 5000;
-        const is = resultSAS.is + Math.round(coutCAC * 0.25); // Impact sur l'IS
+        
+        // Recalculer l'IS en déduisant le coût du CAC du résultat
+        const resultatAvantIS = resultSAS.resultatApresRemuneration - coutCAC;
+        const is = window.FiscalUtils ? 
+            window.FiscalUtils.calculIS(resultatAvantIS) : 
+            (resultatAvantIS <= 42500 ? Math.round(resultatAvantIS * 0.15) : Math.round(resultatAvantIS * 0.25));
         
         // Recalculer les dividendes nets
-        const dividendesNets = resultSAS.dividendesNets - Math.round(coutCAC * 0.75 * params.partPDG || 0.3);
+        const resultatApresIS = resultatAvantIS - is;
+        // Disponible après prise en charge du CAC
+        const disponibleApresCAC = Math.max(0, resultatApresIS);
+        const dividendesPresident = Math.round(disponibleApresCAC * (params.partPDG || 0.3));
+        const prelevementForfaitaire = Math.round(dividendesPresident * 0.30);
+        const dividendesNets = dividendesPresident - prelevementForfaitaire;
         
         // Recalculer le revenu net total
         const revenuNetTotal = resultSAS.salaireNetApresIR + dividendesNets;
@@ -588,6 +618,11 @@ class SimulationsFiscales {
             typeEntreprise: 'SA',
             coutCAC: coutCAC,
             is: is,
+            resultatAvantIS: resultatAvantIS,
+            resultatApresIS: resultatApresIS,
+            disponibleApresCAC: disponibleApresCAC,
+            dividendesPresident: dividendesPresident,
+            prelevementForfaitaire: prelevementForfaitaire,
             dividendesNets: dividendesNets,
             revenuNetTotal: revenuNetTotal,
             ratioNetCA: (revenuNetTotal / params.ca) * 100
@@ -704,7 +739,7 @@ class SimulationsFiscales {
                 is = window.FiscalUtils.calculIS(resultatFiscal);
             } else {
                 // Fallback
-                const tauxIS = resultatFiscal <= 42000 ? 0.15 : 0.25;
+                const tauxIS = resultatFiscal <= 42500 ? 0.15 : 0.25;
                 is = Math.round(resultatFiscal * tauxIS);
             }
             
