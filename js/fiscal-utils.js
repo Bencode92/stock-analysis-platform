@@ -1,6 +1,7 @@
 // fiscal-utils.js - Utilitaires pour les calculs fiscaux
 // Version 1.1 - Mai 2025 - Mise à jour des taux 2025
 
+// Constantes globales pour les taux de charges
 const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS
 
 class FiscalUtils {
@@ -75,7 +76,7 @@ class FiscalUtils {
         return Math.round(trancheA + trancheB + csg + crds);
     }
     
-    // Calcul des cotisations TNS sur bénéfice brut (formule fermée)
+    // Calcul des cotisations TNS sur bénéfice (formule fermée plus précise)
     static cotisationsTNSSurBenefice(beneficeBrut) {
         const tauxGlobal = 0.45;
         return Math.round(beneficeBrut * tauxGlobal / (1 + tauxGlobal));
@@ -102,13 +103,13 @@ class FiscalUtils {
         return Math.round(dividendes * 0.30);
     }
     
-    // Calcul IS selon tranches avec paramètres additionnels
+    // Calcul IS selon tranches et conditions d'éligibilité au taux réduit
     static calculIS(resultat, params = {}) {
         const seuil = 42500;
-        const okTauxReduit = resultat <= seuil 
-            && (params.ca ?? Infinity) < 10000000
-            && (params.capitalEstLibere ?? true)
-            && (params.detentionPersPhysiques75 ?? true);
+        const okTauxReduit = resultat <= seuil
+          && (params.ca ?? Infinity) < 10_000_000
+          && (params.capitalEstLibere !== false)
+          && (params.detentionPersPhysiques75 !== false);
         return Math.round(resultat * (okTauxReduit ? 0.15 : 0.25));
     }
     
