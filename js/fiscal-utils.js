@@ -5,11 +5,11 @@ class FiscalUtils {
     // Calcul d'IR par tranches progressives
     static calculateProgressiveIR(revenuImposable) {
         const tranches = [
-            { max: 11294, taux: 0 },
-            { max: 28797, taux: 0.11 },
-            { max: 82341, taux: 0.30 },
-            { max: 177106, taux: 0.41 },
-            { max: Infinity, taux: 0.45 }
+            { max: 11497, taux: 0   },  // Mise à jour barème 2025
+            { max: 29315, taux: 0.11},
+            { max: 83823, taux: 0.30},
+            { max: 180294, taux: 0.41},
+            { max: Infinity, taux: 0.45}
         ];
         
         let impot = 0;
@@ -68,6 +68,7 @@ class FiscalUtils {
     
     // Calcul des cotisations TNS
     static calculCotisationsTNS(remuneration) {
+        // Taux forfaitaire moyen (37-47% selon assiette). Ajustez au besoin.
         return Math.round(remuneration * 0.45);
     }
     
