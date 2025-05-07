@@ -1,10 +1,7 @@
 // fiscal-utils.js - Utilitaires pour les calculs fiscaux
 // Version 1.1 - Mai 2025 - Mise à jour des taux 2025
 
-// Constantes globales pour les taux de charges
 const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS
-// Exposer la constante au niveau global pour qu'elle soit accessible dans fiscal-simulation.js
-window.CSG_CRDS_IMPOSABLE = CSG_CRDS_IMPOSABLE;
 
 class FiscalUtils {
     // Calcul d'IR par tranches progressives
@@ -33,25 +30,8 @@ class FiscalUtils {
         let meilleurRatio = 0.5;
         let meilleurNet = 0;
         
-        // Déterminer si c'est un statut TNS (pour le seuil minimum de ratio)
-        const isTNS = ['eurlIS', 'sarl', 'selarl', 'sca'].includes(params.typeEntreprise);
-        const capitalSocial = params.capitalSocial || 1;
-        
-        // Ratio minimum pour éviter que les dividendes ne dépassent trop le seuil de 10% du capital
-        let ratioMinimum = params.ratioMin || 0;
-        if (isTNS && params.ca > 0) {
-            // Calculer le ratio minimum qui limite les dividendes (approx.)
-            const margeEffective = params.tauxMarge ?? (params.tauxFrais ? (1 - params.tauxFrais) : 0.3);
-            const resultatEstime = params.ca * margeEffective; 
-            const dividendesMax = 0.10 * capitalSocial;
-            const minRatioForTax = Math.max(0, 1 - (dividendesMax / (resultatEstime * 0.85))); // 0.85 pour tenir compte de l'IS
-            
-            // Prendre le plus grand entre le ratio min défini et celui calculé
-            ratioMinimum = Math.max(ratioMinimum, minRatioForTax);
-        }
-        
-        // Tester différents ratios de ratioMinimum à 100% par pas de 5%
-        for(let ratio = Math.max(ratioMinimum, 0.0); ratio <= 1.0; ratio += 0.05) {
+        // Tester différents ratios de 0% à 100% par pas de 5%
+        for(let ratio = 0.0; ratio <= 1.0; ratio += 0.05) {
             const paramsTest = {...params, tauxRemuneration: ratio};
             const resultat = simulationFunc(paramsTest);
             
@@ -62,7 +42,7 @@ class FiscalUtils {
         }
         
         // Affiner autour du meilleur résultat
-        for(let ratio = Math.max(ratioMinimum, Math.max(0.01, meilleurRatio-0.04)); 
+        for(let ratio = Math.max(0.01, meilleurRatio-0.04); 
             ratio <= Math.min(0.99, meilleurRatio+0.04); 
             ratio += 0.01) {
             const paramsTest = {...params, tauxRemuneration: ratio};
@@ -95,7 +75,7 @@ class FiscalUtils {
         return Math.round(trancheA + trancheB + csg + crds);
     }
     
-    // Calcul des cotisations TNS sur bénéfice (formule fermée plus précise)
+    // Calcul des cotisations TNS sur bénéfice brut (formule fermée)
     static cotisationsTNSSurBenefice(beneficeBrut) {
         const tauxGlobal = 0.45;
         return Math.round(beneficeBrut * tauxGlobal / (1 + tauxGlobal));
@@ -104,8 +84,7 @@ class FiscalUtils {
     // Calcul des cotisations TNS sur dividendes
     static cotTNSDividendes(dividendes, capitalSocial) {
         const base = Math.max(0, dividendes - 0.10 * capitalSocial);
-        // Utiliser 75% du taux normal des cotisations TNS (exclut certaines cotisations)
-        return Math.round(this.cotisationsTNSSurBenefice(base) * 0.75);
+        return Math.round(base * 0.45); // taux global 2025
     }
     
     // Calcul des charges salariales
@@ -123,13 +102,13 @@ class FiscalUtils {
         return Math.round(dividendes * 0.30);
     }
     
-    // Calcul IS selon tranches et conditions d'éligibilité au taux réduit
+    // Calcul IS selon tranches avec paramètres additionnels
     static calculIS(resultat, params = {}) {
-        const seuil = 42750; // Seuil revalorisé 2025
-        const okTauxReduit = resultat <= seuil
-          && (params.ca ?? Infinity) < 10_000_000
-          && (params.capitalEstLibere !== false)
-          && (params.detentionPersPhysiques75 !== false);
+        const seuil = 42500;
+        const okTauxReduit = resultat <= seuil 
+            && (params.ca ?? Infinity) < 10000000
+            && (params.capitalEstLibere ?? true)
+            && (params.detentionPersPhysiques75 ?? true);
         return Math.round(resultat * (okTauxReduit ? 0.15 : 0.25));
     }
     
