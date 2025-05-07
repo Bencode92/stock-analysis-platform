@@ -69,9 +69,10 @@ function getMethodologyContent() {
                     <i class="fas fa-store-alt mr-2"></i> Micro-entreprise
                 </h4>
                 <div class="text-sm">
-                    <p class="mb-2"><strong>Cotisations sociales:</strong> Calculées sur le CA (12.3% pour vente, 21.2% pour services)</p>
+                    <p class="mb-2"><strong>Cotisations sociales:</strong> Calculées sur le CA (12.3% pour vente, 21.2% pour services, 24.6% pour BNC)</p>
                     <p class="mb-2"><strong>Abattement fiscal:</strong> 71% (vente), 50% (services BIC), 34% (BNC)</p>
                     <p class="mb-2"><strong>Impôt sur le revenu:</strong> (CA × (1 - Abattement)) × Taux marginal</p>
+                    <p class="mb-2"><strong>Versement libératoire:</strong> Option remplaçant l'IR par un prélèvement de 1% (vente), 1,7% (services) ou 2,2% (BNC) sur le CA</p>
                     <p class="mb-2"><strong>Net en poche:</strong> CA - Cotisations - Impôt</p>
                 </div>
             </div>
@@ -166,15 +167,15 @@ function getMethodologyContent() {
                 <div class="bg-blue-900 bg-opacity-40 p-2 rounded">
                     <strong>Taux</strong>
                 </div>
-                <div class="p-2">0€ à 11 294€</div>
+                <div class="p-2">0€ à 11 497€</div>
                 <div class="p-2">0%</div>
-                <div class="p-2">11 295€ à 28 797€</div>
+                <div class="p-2">11 498€ à 29 315€</div>
                 <div class="p-2">11%</div>
-                <div class="p-2">28 798€ à 82 341€</div>
+                <div class="p-2">29 316€ à 83 823€</div>
                 <div class="p-2">30%</div>
-                <div class="p-2">82 342€ à 177 106€</div>
+                <div class="p-2">83 824€ à 180 294€</div>
                 <div class="p-2">41%</div>
-                <div class="p-2">Au-delà de 177 106€</div>
+                <div class="p-2">Au-delà de 180 294€</div>
                 <div class="p-2">45%</div>
             </div>
             
@@ -658,6 +659,16 @@ function updateSimulatorInterface() {
                                     <span class="tooltiptext">Utilise le taux de charge pour calculer les frais déductibles réels plutôt qu'un taux de marge fixe.</span>
                                 </span>
                             </div>
+                            <div class="flex items-center">
+                                <input type="checkbox" id="sarl-gerant-minoritaire" class="mr-2 h-4 w-4">
+                                <span class="bg-blue-900 bg-opacity-20 px-3 py-1 rounded-md text-blue-300 font-medium">
+                                    <i class="fas fa-users mr-2"></i>Gérant minoritaire pour SARL
+                                </span>
+                                <span class="info-tooltip ml-2">
+                                    <i class="fas fa-question-circle text-gray-400"></i>
+                                    <span class="tooltiptext">Le gérant détient moins de 50% des parts sociales (assimilé salarié).</span>
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -670,6 +681,18 @@ function updateSimulatorInterface() {
                         <option value="BIC_VENTE">BIC Vente (abattement 71%)</option>
                         <option value="BNC">BNC (abattement 34%)</option>
                     </select>
+                </div>
+                
+                <!-- Option versement libératoire pour micro-entreprise -->
+                <div class="mt-2">
+                    <div class="flex items-center">
+                        <input type="checkbox" id="micro-vfl" class="mr-2 h-4 w-4">
+                        <label for="micro-vfl" class="text-gray-300">Versement libératoire de l'impôt sur le revenu</label>
+                        <span class="info-tooltip ml-2">
+                            <i class="fas fa-question-circle text-gray-400"></i>
+                            <span class="tooltiptext">Remplace l'IR par un prélèvement de 1% (vente), 1,7% (services) ou 2,2% (libéral) sur votre CA.</span>
+                        </span>
+                    </div>
                 </div>
                 
                 <!-- Avertissement sur les limites du simulateur -->
@@ -860,8 +883,8 @@ function updateSimulatorInterface() {
             });
         });
         
-        // Ajouter un événement aux cases à cocher et au type micro-entreprise
-        document.querySelectorAll('.status-checkbox, #use-optimal-ratio, #use-avg-charge-rate, #micro-type').forEach(checkbox => {
+        // Ajouter un événement aux cases à cocher et autres options
+        document.querySelectorAll('.status-checkbox, #use-optimal-ratio, #use-avg-charge-rate, #micro-type, #micro-vfl, #sarl-gerant-minoritaire').forEach(checkbox => {
             checkbox.addEventListener('change', runComparison);
         });
         
@@ -905,6 +928,8 @@ function runComparison() {
     const modeExpert = true; // Toujours activé
     const useOptimalRatio = document.getElementById('use-optimal-ratio') && document.getElementById('use-optimal-ratio').checked;
     const useAvgChargeRate = document.getElementById('use-avg-charge-rate') && document.getElementById('use-avg-charge-rate').checked;
+    const versementLiberatoire = document.getElementById('micro-vfl') && document.getElementById('micro-vfl').checked;
+    const gerantMajoritaire = !(document.getElementById('sarl-gerant-minoritaire') && document.getElementById('sarl-gerant-minoritaire').checked);
     
     // Définir marge ou frais de façon exclusive selon l'option
     const params = {
@@ -913,12 +938,15 @@ function runComparison() {
         tauxFrais: useAvgChargeRate ? (1 - marge) : undefined, // Changé de null à undefined
         tauxRemuneration: ratioSalaire,
         tmiActuel: tmi,
-        modeExpert: modeExpert
+        modeExpert: modeExpert,
+        gerantMajoritaire: gerantMajoritaire
     };
     
     // Logger pour debug
     console.log("Paramètres:", params);
     console.log("useAvgChargeRate:", useAvgChargeRate);
+    console.log("versementLiberatoire:", versementLiberatoire);
+    console.log("gerantMajoritaire:", gerantMajoritaire);
     
     const resultsBody = document.getElementById('sim-results-body');
     if (!resultsBody) return;
@@ -997,7 +1025,8 @@ function runComparison() {
                 ca: ca,
                 typeMicro: document.getElementById('micro-type').value,
                 tmiActuel: tmi,
-                modeExpert: modeExpert
+                modeExpert: modeExpert,
+                versementLiberatoire: versementLiberatoire
             })
         },
         'ei': { 
@@ -1105,7 +1134,7 @@ function runComparison() {
                       favoriserDividendes: config.favoriserDividendes,
                       capitalSocial: config.capitalSocial
                     },
-                    (p) => window.SimulationsFiscales.simulerSARL({...p, gerantMajoritaire: true})
+                    (p) => window.SimulationsFiscales.simulerSARL({...p, gerantMajoritaire: gerantMajoritaire})
                 );
                 
                 // Si optimisation activée, utiliser le résultat optimisé
@@ -1119,7 +1148,7 @@ function runComparison() {
                     ca: ca,
                     tauxRemuneration: ratioSalaire,
                     tmiActuel: tmi,
-                    gerantMajoritaire: true
+                    gerantMajoritaire: gerantMajoritaire
                 });
                 
                 // Ajouter l'information du ratio optimal comme référence
@@ -1394,6 +1423,7 @@ function runComparison() {
                     brut = sim.remuneration || sim.resultatEntreprise * (useOptimalRatio ? sim.ratioOptimise : ratioSalaire);
                     charges = sim.cotisationsSociales || (sim.chargesPatronales + sim.chargesSalariales);
                     impots = (sim.impotRevenu || 0) + (sim.is || 0) + (sim.prelevementForfaitaire || 0);
+                    if (sim.cotTNSDiv) impots += sim.cotTNSDiv; // Ajout des cotisations TNS sur dividendes
                     net = sim.revenuNetTotal || sim.revenuNetApresImpot;
                 }
                 
@@ -1535,6 +1565,7 @@ function runComparison() {
             <i class="fas fa-chart-line mr-2"></i> 
             Mode expert activé : calcul par tranches progressives d'IR + ${useOptimalRatio ? 'optimisation automatique' : 'ratio manuel'} du ratio rémunération/dividendes
             ${useAvgChargeRate ? ' + calcul avec frais réels' : ''}
+            ${versementLiberatoire ? ' + versement libératoire pour micro-entreprise' : ''}
         </td>
     `;
     
@@ -1625,6 +1656,10 @@ function showCalculationDetails(statutId, simulationResults) {
                 <tr>
                     <td>Abattement forfaitaire</td>
                     <td>${result.sim.abattement}</td>
+                </tr>
+                <tr>
+                    <td>Versement libératoire</td>
+                    <td>${result.sim.versementLiberatoire ? 'Activé' : 'Désactivé'}</td>
                 </tr>
             </table>
             
@@ -1800,6 +1835,11 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>Ratio rémunération/dividendes ${result.sim.ratioOptimise ? '(optimisé)' : '(manuel)'}</td>
                     <td>${result.sim.ratioOptimise ? (result.sim.ratioOptimise * 100).toFixed(0) : (result.ratioEffectif * 100).toFixed(0)}% / ${result.sim.ratioOptimise ? (100 - result.sim.ratioOptimise * 100).toFixed(0) : (100 - result.ratioEffectif * 100).toFixed(0)}%</td>
                 </tr>
+                ${statutId === 'sarl' ? `
+                <tr>
+                    <td>Statut du gérant</td>
+                    <td>${result.sim.gerantMajoritaire ? 'Majoritaire (TNS)' : 'Minoritaire (assimilé salarié)'}</td>
+                </tr>` : ''}
             </table>
             
             <div class="detail-category">Rémunération</div>
@@ -1844,6 +1884,11 @@ function showCalculationDetails(statutId, simulationResults) {
                     <td>Dividendes bruts</td>
                     <td>${formatter.format(result.sim.dividendes)}</td>
                 </tr>
+                ${result.sim.cotTNSDiv ? `
+                <tr>
+                    <td>Cotisations TNS sur dividendes > 10% du capital</td>
+                    <td>${formatter.format(result.sim.cotTNSDiv)}</td>
+                </tr>` : ''}
                 <tr>
                     <td>Prélèvement Forfaitaire Unique (30%)</td>
                     <td>${formatter.format(result.sim.prelevementForfaitaire)}</td>
@@ -2119,7 +2164,8 @@ function getStatutFiscalInfo(statutId) {
         'MICRO': `
             <p class="mb-2"><strong>Régime fiscal :</strong> IR avec abattement forfaitaire</p>
             <p class="mb-2"><strong>Abattements :</strong> 71% (vente), 50% (services BIC), 34% (BNC)</p>
-            <p class="mb-2"><strong>Charges sociales :</strong> 12.3% (vente), 21.2% (services) du CA</p>
+            <p class="mb-2"><strong>Charges sociales :</strong> 12.3% (vente), 21.2% (services), 24.6% (BNC)</p>
+            <p class="mb-2"><strong>Versement libératoire :</strong> 1% (vente), 1,7% (services), 2,2% (BNC) sur CA</p>
             <p class="mb-2"><strong>Plafonds 2025 :</strong> 188 700€ (vente) / 77 700€ (services)</p>
         `,
         'EI': `
@@ -2133,6 +2179,7 @@ function getStatutFiscalInfo(statutId) {
             <p class="mb-2"><strong>IR :</strong> Imposition sur la totalité du bénéfice</p>
             <p class="mb-2"><strong>IS :</strong> Impôt sur les sociétés + PFU sur dividendes</p>
             <p class="mb-2"><strong>Cotisations sociales :</strong> Environ 45% de la rémunération du gérant (TNS)</p>
+            <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
         `,
         'SASU': `
             <p class="mb-2"><strong>Régime fiscal :</strong> IS uniquement</p>
@@ -2145,7 +2192,8 @@ function getStatutFiscalInfo(statutId) {
             <p class="mb-2"><strong>Régime fiscal :</strong> IS presque toujours</p>
             <p class="mb-2"><strong>Social gérant majoritaire :</strong> TNS (~45% de cotisations)</p>
             <p class="mb-2"><strong>Social gérant minoritaire :</strong> Assimilé salarié (~80%)</p>
-            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes (ou dividendes TNS >10% capital)</p>
+            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
+            <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
         `,
         'SAS': `
             <p class="mb-2"><strong>Régime fiscal :</strong> IS (impôt sur les sociétés)</p>
@@ -2177,7 +2225,8 @@ function getStatutFiscalInfo(statutId) {
             <p class="mb-2"><strong>Régime fiscal :</strong> IS presque toujours</p>
             <p class="mb-2"><strong>Particularités :</strong> Réservée aux professions libérales réglementées</p>
             <p class="mb-2"><strong>Social :</strong> Gérant majoritaire = TNS</p>
-            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes (ou dividendes TNS >10% capital)</p>
+            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
+            <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
         `,
         'SELAS': `
             <p class="mb-2"><strong>Régime fiscal :</strong> IS</p>
@@ -2191,6 +2240,7 @@ function getStatutFiscalInfo(statutId) {
             <p class="mb-2"><strong>Structure :</strong> Commandités (responsabilité illimitée) et commanditaires</p>
             <p class="mb-2"><strong>Social :</strong> Gérants = TNS</p>
             <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
+            <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
             <p class="mb-2"><strong>Capital minimal :</strong> 37 000€</p>
         `
     };
