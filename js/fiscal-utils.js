@@ -33,8 +33,25 @@ class FiscalUtils {
         let meilleurRatio = 0.5;
         let meilleurNet = 0;
         
-        // Tester différents ratios de 0% à 100% par pas de 5%
-        for(let ratio = 0.0; ratio <= 1.0; ratio += 0.05) {
+        // Déterminer si c'est un statut TNS (pour le seuil minimum de ratio)
+        const isTNS = ['eurlIS', 'sarl', 'selarl', 'sca'].includes(params.typeEntreprise);
+        const capitalSocial = params.capitalSocial || 1;
+        
+        // Ratio minimum pour éviter que les dividendes ne dépassent trop le seuil de 10% du capital
+        let ratioMinimum = params.ratioMin || 0;
+        if (isTNS && params.ca > 0) {
+            // Calculer le ratio minimum qui limite les dividendes (approx.)
+            const margeEffective = params.tauxMarge ?? (params.tauxFrais ? (1 - params.tauxFrais) : 0.3);
+            const resultatEstime = params.ca * margeEffective; 
+            const dividendesMax = 0.10 * capitalSocial;
+            const minRatioForTax = Math.max(0, 1 - (dividendesMax / (resultatEstime * 0.85))); // 0.85 pour tenir compte de l'IS
+            
+            // Prendre le plus grand entre le ratio min défini et celui calculé
+            ratioMinimum = Math.max(ratioMinimum, minRatioForTax);
+        }
+        
+        // Tester différents ratios de ratioMinimum à 100% par pas de 5%
+        for(let ratio = Math.max(ratioMinimum, 0.0); ratio <= 1.0; ratio += 0.05) {
             const paramsTest = {...params, tauxRemuneration: ratio};
             const resultat = simulationFunc(paramsTest);
             
@@ -45,7 +62,7 @@ class FiscalUtils {
         }
         
         // Affiner autour du meilleur résultat
-        for(let ratio = Math.max(0.01, meilleurRatio-0.04); 
+        for(let ratio = Math.max(ratioMinimum, Math.max(0.01, meilleurRatio-0.04)); 
             ratio <= Math.min(0.99, meilleurRatio+0.04); 
             ratio += 0.01) {
             const paramsTest = {...params, tauxRemuneration: ratio};
@@ -87,7 +104,8 @@ class FiscalUtils {
     // Calcul des cotisations TNS sur dividendes
     static cotTNSDividendes(dividendes, capitalSocial) {
         const base = Math.max(0, dividendes - 0.10 * capitalSocial);
-        return Math.round(base * 0.45); // taux global 2025
+        // Utiliser 75% du taux normal des cotisations TNS (exclut certaines cotisations)
+        return Math.round(this.cotisationsTNSSurBenefice(base) * 0.75);
     }
     
     // Calcul des charges salariales
@@ -107,7 +125,7 @@ class FiscalUtils {
     
     // Calcul IS selon tranches et conditions d'éligibilité au taux réduit
     static calculIS(resultat, params = {}) {
-        const seuil = 42500;
+        const seuil = 42750; // Seuil revalorisé 2025
         const okTauxReduit = resultat <= seuil
           && (params.ca ?? Infinity) < 10_000_000
           && (params.capitalEstLibere !== false)
