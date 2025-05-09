@@ -44,6 +44,40 @@
           },
           "gpt_summary": "📰 The theme **monetary_policy** was detected in **6 articles** during the period, mainly through topics like: central bank (3), fed (3), rate cut (2). Sentiment is mostly negative (50.0% vs 16.7% positive). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « The Federal Reserve, facing risks of higher inflation and unemployment, held rates steady Wednesday. The Bank of England is expected to cut rates », « Fed Chair Powell's next move: Former Fed economist outlines 3 things to watch »."
         },
+        "geopolitics": {
+          "count": 6,
+          "articles": [
+            "Federal Reserve warns of impact of Trump tariffs as US interest rates held",
+            "Moody's warns of risk posed by rising retail exposure to private credit",
+            "Powell Warns Of Stagflation, But No One Is Listening",
+            "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
+            "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks",
+            "Trump tariffs and export curbs on China cast a cloud over major chip stocks"
+          ],
+          "keywords": {
+            "war": {
+              "count": 4,
+              "examples": [
+                "Moody's warns of risk posed by rising retail exposure to private credit",
+                "Powell Warns Of Stagflation, But No One Is Listening",
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This"
+              ]
+            },
+            "china": {
+              "count": 2,
+              "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
+                "Trump tariffs and export curbs on China cast a cloud over major chip stocks"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 33.3,
+            "neutral": 16.7,
+            "negative": 50.0
+          },
+          "gpt_summary": "📰 The theme **geopolitics** was detected in **6 articles** during the period, mainly through topics like: war (4), china (2). Sentiment is mixed (33.3% positive, 50.0% negative). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « Moody's warns of risk posed by rising retail exposure to private credit », « Powell Warns Of Stagflation, But No One Is Listening »."
+        },
         "inflation": {
           "count": 5,
           "articles": [
@@ -95,36 +129,6 @@
             "negative": 100.0
           },
           "gpt_summary": "📰 The theme **inflation** was detected in **5 articles** during the period, mainly through topics like: inflation (3), price (2), prices (2), interest rate (1), consumer price (1). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « 'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices », « U.S. tariff pressure has retailers evaluating their prices »."
-        },
-        "geopolitics": {
-          "count": 4,
-          "articles": [
-            "Federal Reserve warns of impact of Trump tariffs as US interest rates held",
-            "Moody's warns of risk posed by rising retail exposure to private credit",
-            "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks",
-            "Trump tariffs and export curbs on China cast a cloud over major chip stocks"
-          ],
-          "keywords": {
-            "war": {
-              "count": 2,
-              "examples": [
-                "Moody's warns of risk posed by rising retail exposure to private credit",
-                "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks"
-              ]
-            },
-            "china": {
-              "count": 1,
-              "examples": [
-                "Trump tariffs and export curbs on China cast a cloud over major chip stocks"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 25.0,
-            "negative": 75.0
-          },
-          "gpt_summary": "📰 The theme **geopolitics** was detected in **4 articles** during the period, mainly through topics like: war (2), china (1). Sentiment is mostly negative (75.0% vs 0.0% positive). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « Moody's warns of risk posed by rising retail exposure to private credit », « US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks »."
         },
         "recession": {
           "count": 1,
@@ -315,10 +319,11 @@
       },
       "regions": {
         "usa": {
-          "count": 11,
+          "count": 12,
           "articles": [
             "Federal Reserve warns of impact of Trump tariffs as US interest rates held",
             "Billionaire Ken Griffin calls tariffs a 'painfully regressive tax,' hitting working class Americans the hardest",
+            "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
             "The Federal Reserve, facing risks of higher inflation and unemployment, held rates steady Wednesday. The Bank of England is expected to cut rates",
             "Fed Chair Powell's next move: Former Fed economist outlines 3 things to watch",
             "Live Nasdaq Composite: Markets Rise on Fed Day Amid Trade Deal Hopes",
@@ -330,6 +335,36 @@
             "Global central banks diverge as tariff risks hamper US Fed"
           ],
           "keywords": {
+            "nasdaq": {
+              "count": 6,
+              "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
+                "Live Nasdaq Composite: Markets Rise on Fed Day Amid Trade Deal Hopes",
+                "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week"
+              ]
+            },
+            "dow jones": {
+              "count": 6,
+              "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
+                "Live Nasdaq Composite: Markets Rise on Fed Day Amid Trade Deal Hopes",
+                "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week"
+              ]
+            },
+            "america": {
+              "count": 3,
+              "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
+                "Live Nasdaq Composite: Markets Rise on Fed Day Amid Trade Deal Hopes",
+                "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again"
+              ]
+            },
+            "washington": {
+              "count": 1,
+              "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This"
+              ]
+            },
             "fed": {
               "count": 7,
               "examples": [
@@ -337,56 +372,41 @@
                 "Live Nasdaq Composite: Markets Rise on Fed Day Amid Trade Deal Hopes",
                 "Why the Fed will likely ignore Trump's calls for interest rate cuts"
               ]
-            },
-            "nasdaq": {
-              "count": 5,
-              "examples": [
-                "Live Nasdaq Composite: Markets Rise on Fed Day Amid Trade Deal Hopes",
-                "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
-                "S&P 500 INDEX (SPX) Live: Broader Markets Rise on Bullish Trade Optimism"
-              ]
-            },
-            "dow jones": {
-              "count": 5,
-              "examples": [
-                "Live Nasdaq Composite: Markets Rise on Fed Day Amid Trade Deal Hopes",
-                "S&P 500 INDEX (SPX) Live: The Markets Turn Cautious in Data-Filled Week",
-                "S&P 500 INDEX (SPX) Live: Broader Markets Rise on Bullish Trade Optimism"
-              ]
-            },
-            "america": {
-              "count": 2,
-              "examples": [
-                "Live Nasdaq Composite: Markets Rise on Fed Day Amid Trade Deal Hopes",
-                "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again"
-              ]
             }
           },
           "sentiment_distribution": {
-            "positive": 27.3,
-            "neutral": 27.3,
-            "negative": 45.5
+            "positive": 33.3,
+            "neutral": 25.0,
+            "negative": 41.7
           },
-          "gpt_summary": "📰 The theme **usa** was detected in **11 articles** during the period, mainly through topics like: fed (7), nasdaq (5), dow jones (5), america (2). Sentiment is mixed (27.3% positive, 45.5% negative). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « Billionaire Ken Griffin calls tariffs a 'painfully regressive tax,' hitting working class Americans the hardest », « The Federal Reserve, facing risks of higher inflation and unemployment, held rates steady Wednesday. The Bank of England is expected to cut rates »."
+          "gpt_summary": "📰 The theme **usa** was detected in **12 articles** during the period, mainly through topics like: fed (7), nasdaq (6), dow jones (6), america (3), washington (1). Sentiment is mixed (33.3% positive, 41.7% negative). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « Billionaire Ken Griffin calls tariffs a 'painfully regressive tax,' hitting working class Americans the hardest », « Live Nasdaq Composite: Markets Rise as China Tariffs Do This »."
         },
         "asia": {
-          "count": 3,
+          "count": 4,
           "articles": [
+            "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
             "Tariffs and trusts: How Asia-focused investment companies are navigating the trade headwinds",
             "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
             "Why Indian markets are undeterred by strikes against Pakistan"
           ],
           "keywords": {
+            "china": {
+              "count": 2,
+              "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
+                "Trump tariffs and export curbs on China cast a cloud over major chip stocks"
+              ]
+            },
+            "beijing": {
+              "count": 1,
+              "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This"
+              ]
+            },
             "asia": {
               "count": 1,
               "examples": [
                 "Tariffs and trusts: How Asia-focused investment companies are navigating the trade headwinds"
-              ]
-            },
-            "china": {
-              "count": 1,
-              "examples": [
-                "Trump tariffs and export curbs on China cast a cloud over major chip stocks"
               ]
             },
             "india": {
@@ -397,11 +417,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 66.7,
-            "neutral": 33.3,
+            "positive": 75.0,
+            "neutral": 25.0,
             "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **asia** was detected in **3 articles** during the period, mainly through topics like: asia (1), china (1), india (1). Sentiment is mostly positive (66.7% vs 0.0% negative). Examples of articles: « Tariffs and trusts: How Asia-focused investment companies are navigating the trade headwinds », « Trump tariffs and export curbs on China cast a cloud over major chip stocks », « Why Indian markets are undeterred by strikes against Pakistan »."
+          "gpt_summary": "📰 The theme **asia** was detected in **4 articles** during the period, mainly through topics like: china (2), beijing (1), asia (1), india (1). Sentiment is mostly positive (75.0% vs 0.0% negative). Examples of articles: « Live Nasdaq Composite: Markets Rise as China Tariffs Do This », « Tariffs and trusts: How Asia-focused investment companies are navigating the trade headwinds », « Trump tariffs and export curbs on China cast a cloud over major chip stocks »."
         },
         "global": {
           "count": 3,
@@ -426,23 +446,20 @@
           "gpt_summary": "📰 The theme **global** was detected in **3 articles** during the period, mainly through topics like: global (1). Sentiment is mixed (33.3% positive, 33.3% negative). Examples of articles: « Global central banks diverge as tariff risks hamper US Fed », « Singapore's ruling party boosts vote share in landslide victory as country navigates global uncertainty », « Global M&A activity plunges to 20-year low »."
         },
         "europe": {
-          "count": 2,
+          "count": 1,
           "articles": [
-            "What items are in the EU's new response measures to Trump tariffs?",
             "EU sets out 95 bln euro countermeasures to U.S. tariffs"
           ],
           "keywords": {
             "europe": {
-              "count": 2,
+              "count": 1,
               "examples": [
-                "What items are in the EU's new response measures to Trump tariffs?",
                 "EU sets out 95 bln euro countermeasures to U.S. tariffs"
               ]
             },
             "eu": {
-              "count": 2,
+              "count": 1,
               "examples": [
-                "What items are in the EU's new response measures to Trump tariffs?",
                 "EU sets out 95 bln euro countermeasures to U.S. tariffs"
               ]
             }
@@ -452,21 +469,23 @@
             "neutral": 0.0,
             "negative": 100.0
           },
-          "gpt_summary": "📰 The theme **europe** was detected in **2 articles** during the period, mainly through topics like: europe (2), eu (2). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « What items are in the EU's new response measures to Trump tariffs? », « EU sets out 95 bln euro countermeasures to U.S. tariffs »."
+          "gpt_summary": "📰 The theme **europe** was detected in **1 articles** during the period, mainly through topics like: europe (1), eu (1). Sentiment is mostly negative (100.0% vs 0.0% positive). Examples of articles: « EU sets out 95 bln euro countermeasures to U.S. tariffs »."
         }
       }
     },
     "monthly": {
       "macroeconomics": {
         "geopolitics": {
-          "count": 15,
+          "count": 17,
           "articles": [
             "Federal Reserve warns of impact of Trump tariffs as US interest rates held",
             "Moody's warns of risk posed by rising retail exposure to private credit",
             "US auto industry warns new auto parts tariffs will hike prices, cut sales",
             "Warren Buffett Sees Right Through Trump’s Tariffs",
             "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
+            "Powell Warns Of Stagflation, But No One Is Listening",
             "Continued job growth could help ward off a recession, Jim Cramer says",
+            "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
             "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks",
             "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
             "Jim Cramer on how Trump's stance on China harms Nvidia and Apple",
@@ -479,7 +498,7 @@
           ],
           "keywords": {
             "war": {
-              "count": 8,
+              "count": 10,
               "examples": [
                 "Moody's warns of risk posed by rising retail exposure to private credit",
                 "US auto industry warns new auto parts tariffs will hike prices, cut sales",
@@ -487,11 +506,11 @@
               ]
             },
             "china": {
-              "count": 5,
+              "count": 6,
               "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
                 "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
-                "Jim Cramer on how Trump's stance on China harms Nvidia and Apple",
-                "Here's how China could retaliate against U.S. tariffs"
+                "Jim Cramer on how Trump's stance on China harms Nvidia and Apple"
               ]
             },
             "tensions": {
@@ -508,14 +527,14 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 20.0,
-            "neutral": 33.3,
-            "negative": 46.7
+            "positive": 29.4,
+            "neutral": 29.4,
+            "negative": 41.2
           },
-          "gpt_summary": "📰 The theme **geopolitics** was detected in **15 articles** during the period, mainly through topics like: war (8), china (5), tensions (1), geopolitical (1). Sentiment is mostly negative (46.7% vs 20.0% positive). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « Moody's warns of risk posed by rising retail exposure to private credit », « US auto industry warns new auto parts tariffs will hike prices, cut sales »."
+          "gpt_summary": "📰 The theme **geopolitics** was detected in **17 articles** during the period, mainly through topics like: war (10), china (6), tensions (1), geopolitical (1). Sentiment is mixed (29.4% positive, 41.2% negative). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « Moody's warns of risk posed by rising retail exposure to private credit », « US auto industry warns new auto parts tariffs will hike prices, cut sales »."
         },
         "monetary_policy": {
-          "count": 11,
+          "count": 12,
           "articles": [
             "Federal Reserve warns of impact of Trump tariffs as US interest rates held",
             "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
@@ -523,6 +542,7 @@
             "The Federal Reserve, facing risks of higher inflation and unemployment, held rates steady Wednesday. The Bank of England is expected to cut rates",
             "Fed Chair Powell's next move: Former Fed economist outlines 3 things to watch",
             "Euro zone bank lending continued to pick up before tariffs, ECB data shows",
+            "Tariffs to Weaken Growth and Inflation, Says ECB's Cipollone",
             "Live Nasdaq Composite: Markets Rise on Fed Day Amid Trade Deal Hopes",
             "Why the Fed will likely ignore Trump's calls for interest rate cuts",
             "Global central banks diverge as tariff risks hamper US Fed",
@@ -531,7 +551,7 @@
           ],
           "keywords": {
             "central bank": {
-              "count": 6,
+              "count": 7,
               "examples": [
                 "Federal Reserve warns of impact of Trump tariffs as US interest rates held",
                 "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
@@ -556,14 +576,14 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 18.2,
-            "neutral": 45.5,
-            "negative": 36.4
+            "positive": 25.0,
+            "neutral": 41.7,
+            "negative": 33.3
           },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **11 articles** during the period, mainly through topics like: fed (7), central bank (6), rate cut (3). Sentiment is mixed (18.2% positive, 36.4% negative). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon », « Fed Governor Waller sees tariff inflation as 'transitory' in 'Tush Push' comparison »."
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **12 articles** during the period, mainly through topics like: central bank (7), fed (7), rate cut (3). Sentiment is mixed (25.0% positive, 33.3% negative). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon », « Fed Governor Waller sees tariff inflation as 'transitory' in 'Tush Push' comparison »."
         },
         "inflation": {
-          "count": 9,
+          "count": 10,
           "articles": [
             "Federal Reserve warns of impact of Trump tariffs as US interest rates held",
             "'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices",
@@ -572,6 +592,7 @@
             "U.S. tariff pressure has retailers evaluating their prices",
             "Fed Governor Waller sees tariff inflation as 'transitory' in 'Tush Push' comparison",
             "The Federal Reserve, facing risks of higher inflation and unemployment, held rates steady Wednesday. The Bank of England is expected to cut rates",
+            "Tariffs to Weaken Growth and Inflation, Says ECB's Cipollone",
             "Why the Fed will likely ignore Trump's calls for interest rate cuts",
             "Despite Cutting Apple's Price Target, Wedbush's Dan Ives Remains Bullish on the Stock for the Long Term. Should You?"
           ],
@@ -614,16 +635,17 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 11.1,
-            "neutral": 11.1,
-            "negative": 77.8
+            "positive": 20.0,
+            "neutral": 10.0,
+            "negative": 70.0
           },
-          "gpt_summary": "📰 The theme **inflation** was detected in **9 articles** during the period, mainly through topics like: price (4), prices (4), inflation (3), interest rate (1), consumer price (1). Sentiment is mostly negative (77.8% vs 11.1% positive). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « 'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices », « US auto industry warns new auto parts tariffs will hike prices, cut sales »."
+          "gpt_summary": "📰 The theme **inflation** was detected in **10 articles** during the period, mainly through topics like: price (4), prices (4), inflation (3), interest rate (1), consumer price (1). Sentiment is mostly negative (70.0% vs 20.0% positive). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « 'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices », « US auto industry warns new auto parts tariffs will hike prices, cut sales »."
         },
         "recession": {
-          "count": 5,
+          "count": 6,
           "articles": [
             "Continued job growth could help ward off a recession, Jim Cramer says",
+            "Tariffs to Weaken Growth and Inflation, Says ECB's Cipollone",
             "Empty shelves, ‘For Lease' signs and job layoffs point to recession by summer",
             "Japan exports growth misses expectations, rising by a modest 3.9% in March as tariffs bite",
             "Summer Recession Forecasted By Apollo: Is This S&P 500 Rally Built To Last?",
@@ -653,16 +675,16 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 80.0,
-            "negative": 20.0
+            "positive": 16.7,
+            "neutral": 66.7,
+            "negative": 16.7
           },
-          "gpt_summary": "📰 The theme **recession** was detected in **5 articles** during the period, mainly through topics like: recession (3), growth (2), GDP (1). Sentiment is mixed (0.0% positive, 20.0% negative). Examples of articles: « Continued job growth could help ward off a recession, Jim Cramer says », « Empty shelves, ‘For Lease' signs and job layoffs point to recession by summer », « Japan exports growth misses expectations, rising by a modest 3.9% in March as tariffs bite »."
+          "gpt_summary": "📰 The theme **recession** was detected in **6 articles** during the period, mainly through topics like: recession (3), growth (2), GDP (1). Sentiment is mixed (16.7% positive, 16.7% negative). Examples of articles: « Continued job growth could help ward off a recession, Jim Cramer says », « Tariffs to Weaken Growth and Inflation, Says ECB's Cipollone », « Empty shelves, ‘For Lease' signs and job layoffs point to recession by summer »."
         }
       },
       "sectors": {
         "technology": {
-          "count": 33,
+          "count": 32,
           "articles": [
             "US banks flag risks to consumer spending from tariff policy uncertainties",
             "'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices",
@@ -673,7 +695,6 @@
             "Apple's issues go deeper than tariffs, as analysts worry about AI challenges",
             "Billionaire Ken Griffin calls tariffs a 'painfully regressive tax,' hitting working class Americans the hardest",
             "Emirates executive says no impact seen from US tariffs, but airline remains vigilant",
-            "US retail sales surge in March due to motor vehicle buying ahead of tariffs",
             "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks",
             "Fed Chair Powell's next move: Former Fed economist outlines 3 things to watch",
             "Euro zone bank lending continued to pick up before tariffs, ECB data shows",
@@ -700,7 +721,7 @@
           ],
           "keywords": {
             "ai": {
-              "count": 25,
+              "count": 24,
               "examples": [
                 "Moody's warns of risk posed by rising retail exposure to private credit",
                 "Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline",
@@ -738,73 +759,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 27.3,
-            "neutral": 33.3,
-            "negative": 39.4
+            "positive": 25.0,
+            "neutral": 34.4,
+            "negative": 40.6
           },
-          "gpt_summary": "📰 The theme **technology** was detected in **33 articles** during the period, mainly through topics like: ai (25), tech (7), data (5), digital (2), cyber (1). Sentiment is mixed (27.3% positive, 39.4% negative). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « 'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices », « Moody's warns of risk posed by rising retail exposure to private credit »."
-        },
-        "consumer": {
-          "count": 11,
-          "articles": [
-            "US banks flag risks to consumer spending from tariff policy uncertainties",
-            "'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices",
-            "Moody's warns of risk posed by rising retail exposure to private credit",
-            "Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline",
-            "US auto industry warns new auto parts tariffs will hike prices, cut sales",
-            "U.S. tariff pressure has retailers evaluating their prices",
-            "US consumer watchdog to scrap scores of financial oversight policies issued since 2011",
-            "Apple clears Spotify update under new rules allowing purchases within apps",
-            "US retail sales surge in March due to motor vehicle buying ahead of tariffs",
-            "Euro zone consumers happy to ditch US products if hit by tariffs, study finds",
-            "Wedbush's Dan Ives: The use cases are exploding for AI, regulation will not stop spending"
-          ],
-          "keywords": {
-            "consumer": {
-              "count": 4,
-              "examples": [
-                "US banks flag risks to consumer spending from tariff policy uncertainties",
-                "'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices",
-                "US consumer watchdog to scrap scores of financial oversight policies issued since 2011"
-              ]
-            },
-            "spending": {
-              "count": 3,
-              "examples": [
-                "US banks flag risks to consumer spending from tariff policy uncertainties",
-                "'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices",
-                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
-              ]
-            },
-            "retail": {
-              "count": 2,
-              "examples": [
-                "Moody's warns of risk posed by rising retail exposure to private credit",
-                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
-              ]
-            },
-            "sales": {
-              "count": 3,
-              "examples": [
-                "US auto industry warns new auto parts tariffs will hike prices, cut sales",
-                "U.S. tariff pressure has retailers evaluating their prices",
-                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
-              ]
-            },
-            "purchase": {
-              "count": 2,
-              "examples": [
-                "Apple clears Spotify update under new rules allowing purchases within apps",
-                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 9.1,
-            "neutral": 27.3,
-            "negative": 63.6
-          },
-          "gpt_summary": "📰 The theme **consumer** was detected in **11 articles** during the period, mainly through topics like: consumer (4), spending (3), sales (3), retail (2), purchase (2). Sentiment is mostly negative (63.6% vs 9.1% positive). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « 'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices », « Moody's warns of risk posed by rising retail exposure to private credit »."
+          "gpt_summary": "📰 The theme **technology** was detected in **32 articles** during the period, mainly through topics like: ai (24), tech (7), data (5), digital (2), cyber (1). Sentiment is mixed (25.0% positive, 40.6% negative). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « 'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices », « Moody's warns of risk posed by rising retail exposure to private credit »."
         },
         "finance": {
           "count": 10,
@@ -855,6 +814,63 @@
             "negative": 60.0
           },
           "gpt_summary": "📰 The theme **finance** was detected in **10 articles** during the period, mainly through topics like: rates (4), financial (2), banks (1), treasury (1). Sentiment is mostly negative (60.0% vs 0.0% positive). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon »."
+        },
+        "consumer": {
+          "count": 10,
+          "articles": [
+            "US banks flag risks to consumer spending from tariff policy uncertainties",
+            "'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices",
+            "Moody's warns of risk posed by rising retail exposure to private credit",
+            "Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline",
+            "US auto industry warns new auto parts tariffs will hike prices, cut sales",
+            "U.S. tariff pressure has retailers evaluating their prices",
+            "US consumer watchdog to scrap scores of financial oversight policies issued since 2011",
+            "Apple clears Spotify update under new rules allowing purchases within apps",
+            "Euro zone consumers happy to ditch US products if hit by tariffs, study finds",
+            "Wedbush's Dan Ives: The use cases are exploding for AI, regulation will not stop spending"
+          ],
+          "keywords": {
+            "consumer": {
+              "count": 4,
+              "examples": [
+                "US banks flag risks to consumer spending from tariff policy uncertainties",
+                "'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices",
+                "US consumer watchdog to scrap scores of financial oversight policies issued since 2011"
+              ]
+            },
+            "spending": {
+              "count": 2,
+              "examples": [
+                "US banks flag risks to consumer spending from tariff policy uncertainties",
+                "'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices"
+              ]
+            },
+            "retail": {
+              "count": 1,
+              "examples": [
+                "Moody's warns of risk posed by rising retail exposure to private credit"
+              ]
+            },
+            "sales": {
+              "count": 2,
+              "examples": [
+                "US auto industry warns new auto parts tariffs will hike prices, cut sales",
+                "U.S. tariff pressure has retailers evaluating their prices"
+              ]
+            },
+            "purchase": {
+              "count": 1,
+              "examples": [
+                "Apple clears Spotify update under new rules allowing purchases within apps"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 0.0,
+            "neutral": 30.0,
+            "negative": 70.0
+          },
+          "gpt_summary": "📰 The theme **consumer** was detected in **10 articles** during the period, mainly through topics like: consumer (4), spending (2), sales (2), retail (1), purchase (1). Sentiment is mostly negative (70.0% vs 0.0% positive). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « 'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices », « Moody's warns of risk posed by rising retail exposure to private credit »."
         },
         "transport": {
           "count": 9,
@@ -943,11 +959,12 @@
       },
       "regions": {
         "usa": {
-          "count": 20,
+          "count": 21,
           "articles": [
             "Federal Reserve warns of impact of Trump tariffs as US interest rates held",
             "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
             "Billionaire Ken Griffin calls tariffs a 'painfully regressive tax,' hitting working class Americans the hardest",
+            "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
             "Fed Governor Waller sees tariff inflation as 'transitory' in 'Tush Push' comparison",
             "The Federal Reserve, facing risks of higher inflation and unemployment, held rates steady Wednesday. The Bank of England is expected to cut rates",
             "Fed Chair Powell's next move: Former Fed economist outlines 3 things to watch",
@@ -976,27 +993,33 @@
               ]
             },
             "nasdaq": {
-              "count": 7,
+              "count": 8,
               "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
                 "Live Nasdaq Composite: Markets Rise on Fed Day Amid Trade Deal Hopes",
-                "Live Nasdaq Composite: AMZN (Nasdaq: AMZN), CEG (Nasdaq: CEG) Fall in Sea of Red",
-                "Live Nasdaq Composite: Markets Stand Still on Tariff and Tech Tussle"
+                "Live Nasdaq Composite: AMZN (Nasdaq: AMZN), CEG (Nasdaq: CEG) Fall in Sea of Red"
               ]
             },
             "dow jones": {
-              "count": 7,
+              "count": 8,
               "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
                 "Live Nasdaq Composite: Markets Rise on Fed Day Amid Trade Deal Hopes",
-                "Live Nasdaq Composite: AMZN (Nasdaq: AMZN), CEG (Nasdaq: CEG) Fall in Sea of Red",
-                "Live Nasdaq Composite: Markets Stand Still on Tariff and Tech Tussle"
+                "Live Nasdaq Composite: AMZN (Nasdaq: AMZN), CEG (Nasdaq: CEG) Fall in Sea of Red"
               ]
             },
             "america": {
-              "count": 3,
+              "count": 4,
               "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
                 "Live Nasdaq Composite: Markets Rise on Fed Day Amid Trade Deal Hopes",
-                "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again",
-                "Apple moving iPhone production into U.S. has extremely low odds, says Bank of America's Wamsi Mohan"
+                "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again"
+              ]
+            },
+            "washington": {
+              "count": 1,
+              "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This"
               ]
             },
             "s&p": {
@@ -1007,15 +1030,16 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 20.0,
-            "neutral": 45.0,
-            "negative": 35.0
+            "positive": 23.8,
+            "neutral": 42.9,
+            "negative": 33.3
           },
-          "gpt_summary": "📰 The theme **usa** was detected in **20 articles** during the period, mainly through topics like: fed (11), nasdaq (7), dow jones (7), america (3), s&p (1). Sentiment is mixed (20.0% positive, 35.0% negative). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon », « Billionaire Ken Griffin calls tariffs a 'painfully regressive tax,' hitting working class Americans the hardest »."
+          "gpt_summary": "📰 The theme **usa** was detected in **21 articles** during the period, mainly through topics like: fed (11), nasdaq (8), dow jones (8), america (4), washington (1). Sentiment is mixed (23.8% positive, 33.3% negative). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon », « Billionaire Ken Griffin calls tariffs a 'painfully regressive tax,' hitting working class Americans the hardest »."
         },
         "asia": {
-          "count": 17,
+          "count": 18,
           "articles": [
+            "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
             "Tariffs and trusts: How Asia-focused investment companies are navigating the trade headwinds",
             "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say",
             "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
@@ -1035,18 +1059,24 @@
             "Apple's Anti-Tariff Tactic: Flying 1.5 Million iPhones From India"
           ],
           "keywords": {
+            "china": {
+              "count": 7,
+              "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
+                "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say",
+                "Trump tariffs and export curbs on China cast a cloud over major chip stocks"
+              ]
+            },
+            "beijing": {
+              "count": 1,
+              "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This"
+              ]
+            },
             "asia": {
               "count": 1,
               "examples": [
                 "Tariffs and trusts: How Asia-focused investment companies are navigating the trade headwinds"
-              ]
-            },
-            "china": {
-              "count": 6,
-              "examples": [
-                "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say",
-                "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
-                "Jim Cramer on how Trump's stance on China harms Nvidia and Apple"
               ]
             },
             "india": {
@@ -1067,18 +1097,17 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 35.3,
-            "neutral": 64.7,
+            "positive": 38.9,
+            "neutral": 61.1,
             "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **asia** was detected in **17 articles** during the period, mainly through topics like: china (6), india (6), japan (3), asia (1). Sentiment is mostly positive (35.3% vs 0.0% negative). Examples of articles: « Tariffs and trusts: How Asia-focused investment companies are navigating the trade headwinds », « New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say », « Trump tariffs and export curbs on China cast a cloud over major chip stocks »."
+          "gpt_summary": "📰 The theme **asia** was detected in **18 articles** during the period, mainly through topics like: china (7), india (6), japan (3), beijing (1), asia (1). Sentiment is mostly positive (38.9% vs 0.0% negative). Examples of articles: « Live Nasdaq Composite: Markets Rise as China Tariffs Do This », « Tariffs and trusts: How Asia-focused investment companies are navigating the trade headwinds », « New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say »."
         },
         "europe": {
           "count": 11,
           "articles": [
             "Euro zone bank lending continued to pick up before tariffs, ECB data shows",
             "Euro zone consumers happy to ditch US products if hit by tariffs, study finds",
-            "What items are in the EU's new response measures to Trump tariffs?",
             "EU sets out 95 bln euro countermeasures to U.S. tariffs",
             "Explainer: What happens to Apple and Meta after the EU fine?",
             "Meta, Apple fined 700 million euros for violating EU antitrust rules",
@@ -1086,6 +1115,7 @@
             "EU spokesperson: Apple and Meta fines are \"proportionate\"",
             "US calls EU fines on Apple and Meta 'economic extortion'",
             "Apple fined $571 million and Meta $228 million for breaching European Union antitrust rules",
+            "Tariffs to Weaken Growth and Inflation, Says ECB's Cipollone",
             "Recession risk rises sharply - Reuters poll"
           ],
           "keywords": {
@@ -1094,7 +1124,7 @@
               "examples": [
                 "Euro zone bank lending continued to pick up before tariffs, ECB data shows",
                 "Euro zone consumers happy to ditch US products if hit by tariffs, study finds",
-                "What items are in the EU's new response measures to Trump tariffs?"
+                "EU sets out 95 bln euro countermeasures to U.S. tariffs"
               ]
             },
             "eu": {
@@ -1102,7 +1132,7 @@
               "examples": [
                 "Euro zone bank lending continued to pick up before tariffs, ECB data shows",
                 "Euro zone consumers happy to ditch US products if hit by tariffs, study finds",
-                "What items are in the EU's new response measures to Trump tariffs?"
+                "EU sets out 95 bln euro countermeasures to U.S. tariffs"
               ]
             },
             "european union": {
@@ -1115,11 +1145,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 0.0,
+            "positive": 9.1,
             "neutral": 81.8,
-            "negative": 18.2
+            "negative": 9.1
           },
-          "gpt_summary": "📰 The theme **europe** was detected in **11 articles** during the period, mainly through topics like: eu (11), europe (10), european union (6). Sentiment is mixed (0.0% positive, 18.2% negative). Examples of articles: « Euro zone bank lending continued to pick up before tariffs, ECB data shows », « Euro zone consumers happy to ditch US products if hit by tariffs, study finds », « What items are in the EU's new response measures to Trump tariffs? »."
+          "gpt_summary": "📰 The theme **europe** was detected in **11 articles** during the period, mainly through topics like: eu (11), europe (10), european union (6). Sentiment is mixed (9.1% positive, 9.1% negative). Examples of articles: « Euro zone bank lending continued to pick up before tariffs, ECB data shows », « Euro zone consumers happy to ditch US products if hit by tariffs, study finds », « EU sets out 95 bln euro countermeasures to U.S. tariffs »."
         },
         "global": {
           "count": 7,
@@ -1166,14 +1196,16 @@
     "quarterly": {
       "macroeconomics": {
         "geopolitics": {
-          "count": 15,
+          "count": 17,
           "articles": [
             "Federal Reserve warns of impact of Trump tariffs as US interest rates held",
             "Moody's warns of risk posed by rising retail exposure to private credit",
             "US auto industry warns new auto parts tariffs will hike prices, cut sales",
             "Warren Buffett Sees Right Through Trump’s Tariffs",
             "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
+            "Powell Warns Of Stagflation, But No One Is Listening",
             "Continued job growth could help ward off a recession, Jim Cramer says",
+            "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
             "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks",
             "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
             "Jim Cramer on how Trump's stance on China harms Nvidia and Apple",
@@ -1186,7 +1218,7 @@
           ],
           "keywords": {
             "war": {
-              "count": 8,
+              "count": 10,
               "examples": [
                 "Moody's warns of risk posed by rising retail exposure to private credit",
                 "US auto industry warns new auto parts tariffs will hike prices, cut sales",
@@ -1194,11 +1226,11 @@
               ]
             },
             "china": {
-              "count": 5,
+              "count": 6,
               "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
                 "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
-                "Jim Cramer on how Trump's stance on China harms Nvidia and Apple",
-                "Here's how China could retaliate against U.S. tariffs"
+                "Jim Cramer on how Trump's stance on China harms Nvidia and Apple"
               ]
             },
             "tensions": {
@@ -1215,14 +1247,14 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 20.0,
-            "neutral": 33.3,
-            "negative": 46.7
+            "positive": 29.4,
+            "neutral": 29.4,
+            "negative": 41.2
           },
-          "gpt_summary": "📰 The theme **geopolitics** was detected in **15 articles** during the period, mainly through topics like: war (8), china (5), tensions (1), geopolitical (1). Sentiment is mostly negative (46.7% vs 20.0% positive). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « Moody's warns of risk posed by rising retail exposure to private credit », « US auto industry warns new auto parts tariffs will hike prices, cut sales »."
+          "gpt_summary": "📰 The theme **geopolitics** was detected in **17 articles** during the period, mainly through topics like: war (10), china (6), tensions (1), geopolitical (1). Sentiment is mixed (29.4% positive, 41.2% negative). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « Moody's warns of risk posed by rising retail exposure to private credit », « US auto industry warns new auto parts tariffs will hike prices, cut sales »."
         },
         "monetary_policy": {
-          "count": 11,
+          "count": 12,
           "articles": [
             "Federal Reserve warns of impact of Trump tariffs as US interest rates held",
             "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
@@ -1230,6 +1262,7 @@
             "The Federal Reserve, facing risks of higher inflation and unemployment, held rates steady Wednesday. The Bank of England is expected to cut rates",
             "Fed Chair Powell's next move: Former Fed economist outlines 3 things to watch",
             "Euro zone bank lending continued to pick up before tariffs, ECB data shows",
+            "Tariffs to Weaken Growth and Inflation, Says ECB's Cipollone",
             "Live Nasdaq Composite: Markets Rise on Fed Day Amid Trade Deal Hopes",
             "Why the Fed will likely ignore Trump's calls for interest rate cuts",
             "Global central banks diverge as tariff risks hamper US Fed",
@@ -1238,7 +1271,7 @@
           ],
           "keywords": {
             "central bank": {
-              "count": 6,
+              "count": 7,
               "examples": [
                 "Federal Reserve warns of impact of Trump tariffs as US interest rates held",
                 "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
@@ -1263,14 +1296,14 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 18.2,
-            "neutral": 45.5,
-            "negative": 36.4
+            "positive": 25.0,
+            "neutral": 41.7,
+            "negative": 33.3
           },
-          "gpt_summary": "📰 The theme **monetary_policy** was detected in **11 articles** during the period, mainly through topics like: fed (7), central bank (6), rate cut (3). Sentiment is mixed (18.2% positive, 36.4% negative). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon », « Fed Governor Waller sees tariff inflation as 'transitory' in 'Tush Push' comparison »."
+          "gpt_summary": "📰 The theme **monetary_policy** was detected in **12 articles** during the period, mainly through topics like: central bank (7), fed (7), rate cut (3). Sentiment is mixed (25.0% positive, 33.3% negative). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon », « Fed Governor Waller sees tariff inflation as 'transitory' in 'Tush Push' comparison »."
         },
         "inflation": {
-          "count": 9,
+          "count": 10,
           "articles": [
             "Federal Reserve warns of impact of Trump tariffs as US interest rates held",
             "'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices",
@@ -1279,6 +1312,7 @@
             "U.S. tariff pressure has retailers evaluating their prices",
             "Fed Governor Waller sees tariff inflation as 'transitory' in 'Tush Push' comparison",
             "The Federal Reserve, facing risks of higher inflation and unemployment, held rates steady Wednesday. The Bank of England is expected to cut rates",
+            "Tariffs to Weaken Growth and Inflation, Says ECB's Cipollone",
             "Why the Fed will likely ignore Trump's calls for interest rate cuts",
             "Despite Cutting Apple's Price Target, Wedbush's Dan Ives Remains Bullish on the Stock for the Long Term. Should You?"
           ],
@@ -1321,16 +1355,17 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 11.1,
-            "neutral": 11.1,
-            "negative": 77.8
+            "positive": 20.0,
+            "neutral": 10.0,
+            "negative": 70.0
           },
-          "gpt_summary": "📰 The theme **inflation** was detected in **9 articles** during the period, mainly through topics like: price (4), prices (4), inflation (3), interest rate (1), consumer price (1). Sentiment is mostly negative (77.8% vs 11.1% positive). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « 'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices », « US auto industry warns new auto parts tariffs will hike prices, cut sales »."
+          "gpt_summary": "📰 The theme **inflation** was detected in **10 articles** during the period, mainly through topics like: price (4), prices (4), inflation (3), interest rate (1), consumer price (1). Sentiment is mostly negative (70.0% vs 20.0% positive). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « 'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices », « US auto industry warns new auto parts tariffs will hike prices, cut sales »."
         },
         "recession": {
-          "count": 5,
+          "count": 6,
           "articles": [
             "Continued job growth could help ward off a recession, Jim Cramer says",
+            "Tariffs to Weaken Growth and Inflation, Says ECB's Cipollone",
             "Empty shelves, ‘For Lease' signs and job layoffs point to recession by summer",
             "Japan exports growth misses expectations, rising by a modest 3.9% in March as tariffs bite",
             "Summer Recession Forecasted By Apollo: Is This S&P 500 Rally Built To Last?",
@@ -1360,16 +1395,16 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 0.0,
-            "neutral": 80.0,
-            "negative": 20.0
+            "positive": 16.7,
+            "neutral": 66.7,
+            "negative": 16.7
           },
-          "gpt_summary": "📰 The theme **recession** was detected in **5 articles** during the period, mainly through topics like: recession (3), growth (2), GDP (1). Sentiment is mixed (0.0% positive, 20.0% negative). Examples of articles: « Continued job growth could help ward off a recession, Jim Cramer says », « Empty shelves, ‘For Lease' signs and job layoffs point to recession by summer », « Japan exports growth misses expectations, rising by a modest 3.9% in March as tariffs bite »."
+          "gpt_summary": "📰 The theme **recession** was detected in **6 articles** during the period, mainly through topics like: recession (3), growth (2), GDP (1). Sentiment is mixed (16.7% positive, 16.7% negative). Examples of articles: « Continued job growth could help ward off a recession, Jim Cramer says », « Tariffs to Weaken Growth and Inflation, Says ECB's Cipollone », « Empty shelves, ‘For Lease' signs and job layoffs point to recession by summer »."
         }
       },
       "sectors": {
         "technology": {
-          "count": 33,
+          "count": 32,
           "articles": [
             "US banks flag risks to consumer spending from tariff policy uncertainties",
             "'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices",
@@ -1380,7 +1415,6 @@
             "Apple's issues go deeper than tariffs, as analysts worry about AI challenges",
             "Billionaire Ken Griffin calls tariffs a 'painfully regressive tax,' hitting working class Americans the hardest",
             "Emirates executive says no impact seen from US tariffs, but airline remains vigilant",
-            "US retail sales surge in March due to motor vehicle buying ahead of tariffs",
             "US lawmakers criticise UK backdoor order to Apple, warn of cybercriminal risks",
             "Fed Chair Powell's next move: Former Fed economist outlines 3 things to watch",
             "Euro zone bank lending continued to pick up before tariffs, ECB data shows",
@@ -1407,7 +1441,7 @@
           ],
           "keywords": {
             "ai": {
-              "count": 25,
+              "count": 24,
               "examples": [
                 "Moody's warns of risk posed by rising retail exposure to private credit",
                 "Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline",
@@ -1445,73 +1479,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 27.3,
-            "neutral": 33.3,
-            "negative": 39.4
+            "positive": 25.0,
+            "neutral": 34.4,
+            "negative": 40.6
           },
-          "gpt_summary": "📰 The theme **technology** was detected in **33 articles** during the period, mainly through topics like: ai (25), tech (7), data (5), digital (2), cyber (1). Sentiment is mixed (27.3% positive, 39.4% negative). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « 'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices », « Moody's warns of risk posed by rising retail exposure to private credit »."
-        },
-        "consumer": {
-          "count": 11,
-          "articles": [
-            "US banks flag risks to consumer spending from tariff policy uncertainties",
-            "'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices",
-            "Moody's warns of risk posed by rising retail exposure to private credit",
-            "Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline",
-            "US auto industry warns new auto parts tariffs will hike prices, cut sales",
-            "U.S. tariff pressure has retailers evaluating their prices",
-            "US consumer watchdog to scrap scores of financial oversight policies issued since 2011",
-            "Apple clears Spotify update under new rules allowing purchases within apps",
-            "US retail sales surge in March due to motor vehicle buying ahead of tariffs",
-            "Euro zone consumers happy to ditch US products if hit by tariffs, study finds",
-            "Wedbush's Dan Ives: The use cases are exploding for AI, regulation will not stop spending"
-          ],
-          "keywords": {
-            "consumer": {
-              "count": 4,
-              "examples": [
-                "US banks flag risks to consumer spending from tariff policy uncertainties",
-                "'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices",
-                "US consumer watchdog to scrap scores of financial oversight policies issued since 2011"
-              ]
-            },
-            "spending": {
-              "count": 3,
-              "examples": [
-                "US banks flag risks to consumer spending from tariff policy uncertainties",
-                "'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices",
-                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
-              ]
-            },
-            "retail": {
-              "count": 2,
-              "examples": [
-                "Moody's warns of risk posed by rising retail exposure to private credit",
-                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
-              ]
-            },
-            "sales": {
-              "count": 3,
-              "examples": [
-                "US auto industry warns new auto parts tariffs will hike prices, cut sales",
-                "U.S. tariff pressure has retailers evaluating their prices",
-                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
-              ]
-            },
-            "purchase": {
-              "count": 2,
-              "examples": [
-                "Apple clears Spotify update under new rules allowing purchases within apps",
-                "US retail sales surge in March due to motor vehicle buying ahead of tariffs"
-              ]
-            }
-          },
-          "sentiment_distribution": {
-            "positive": 9.1,
-            "neutral": 27.3,
-            "negative": 63.6
-          },
-          "gpt_summary": "📰 The theme **consumer** was detected in **11 articles** during the period, mainly through topics like: consumer (4), spending (3), sales (3), retail (2), purchase (2). Sentiment is mostly negative (63.6% vs 9.1% positive). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « 'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices », « Moody's warns of risk posed by rising retail exposure to private credit »."
+          "gpt_summary": "📰 The theme **technology** was detected in **32 articles** during the period, mainly through topics like: ai (24), tech (7), data (5), digital (2), cyber (1). Sentiment is mixed (25.0% positive, 40.6% negative). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « 'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices », « Moody's warns of risk posed by rising retail exposure to private credit »."
         },
         "finance": {
           "count": 10,
@@ -1562,6 +1534,63 @@
             "negative": 60.0
           },
           "gpt_summary": "📰 The theme **finance** was detected in **10 articles** during the period, mainly through topics like: rates (4), financial (2), banks (1), treasury (1). Sentiment is mostly negative (60.0% vs 0.0% positive). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon »."
+        },
+        "consumer": {
+          "count": 10,
+          "articles": [
+            "US banks flag risks to consumer spending from tariff policy uncertainties",
+            "'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices",
+            "Moody's warns of risk posed by rising retail exposure to private credit",
+            "Apple investors seek clarity on tariffs, AI strategy as iPhone sales decline",
+            "US auto industry warns new auto parts tariffs will hike prices, cut sales",
+            "U.S. tariff pressure has retailers evaluating their prices",
+            "US consumer watchdog to scrap scores of financial oversight policies issued since 2011",
+            "Apple clears Spotify update under new rules allowing purchases within apps",
+            "Euro zone consumers happy to ditch US products if hit by tariffs, study finds",
+            "Wedbush's Dan Ives: The use cases are exploding for AI, regulation will not stop spending"
+          ],
+          "keywords": {
+            "consumer": {
+              "count": 4,
+              "examples": [
+                "US banks flag risks to consumer spending from tariff policy uncertainties",
+                "'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices",
+                "US consumer watchdog to scrap scores of financial oversight policies issued since 2011"
+              ]
+            },
+            "spending": {
+              "count": 2,
+              "examples": [
+                "US banks flag risks to consumer spending from tariff policy uncertainties",
+                "'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices"
+              ]
+            },
+            "retail": {
+              "count": 1,
+              "examples": [
+                "Moody's warns of risk posed by rising retail exposure to private credit"
+              ]
+            },
+            "sales": {
+              "count": 2,
+              "examples": [
+                "US auto industry warns new auto parts tariffs will hike prices, cut sales",
+                "U.S. tariff pressure has retailers evaluating their prices"
+              ]
+            },
+            "purchase": {
+              "count": 1,
+              "examples": [
+                "Apple clears Spotify update under new rules allowing purchases within apps"
+              ]
+            }
+          },
+          "sentiment_distribution": {
+            "positive": 0.0,
+            "neutral": 30.0,
+            "negative": 70.0
+          },
+          "gpt_summary": "📰 The theme **consumer** was detected in **10 articles** during the period, mainly through topics like: consumer (4), spending (2), sales (2), retail (1), purchase (1). Sentiment is mostly negative (70.0% vs 0.0% positive). Examples of articles: « US banks flag risks to consumer spending from tariff policy uncertainties », « 'Dumpster fire': Retailers urge shoppers to buy now before tariffs raise prices », « Moody's warns of risk posed by rising retail exposure to private credit »."
         },
         "transport": {
           "count": 9,
@@ -1650,11 +1679,12 @@
       },
       "regions": {
         "usa": {
-          "count": 20,
+          "count": 21,
           "articles": [
             "Federal Reserve warns of impact of Trump tariffs as US interest rates held",
             "President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon",
             "Billionaire Ken Griffin calls tariffs a 'painfully regressive tax,' hitting working class Americans the hardest",
+            "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
             "Fed Governor Waller sees tariff inflation as 'transitory' in 'Tush Push' comparison",
             "The Federal Reserve, facing risks of higher inflation and unemployment, held rates steady Wednesday. The Bank of England is expected to cut rates",
             "Fed Chair Powell's next move: Former Fed economist outlines 3 things to watch",
@@ -1683,27 +1713,33 @@
               ]
             },
             "nasdaq": {
-              "count": 7,
+              "count": 8,
               "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
                 "Live Nasdaq Composite: Markets Rise on Fed Day Amid Trade Deal Hopes",
-                "Live Nasdaq Composite: AMZN (Nasdaq: AMZN), CEG (Nasdaq: CEG) Fall in Sea of Red",
-                "Live Nasdaq Composite: Markets Stand Still on Tariff and Tech Tussle"
+                "Live Nasdaq Composite: AMZN (Nasdaq: AMZN), CEG (Nasdaq: CEG) Fall in Sea of Red"
               ]
             },
             "dow jones": {
-              "count": 7,
+              "count": 8,
               "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
                 "Live Nasdaq Composite: Markets Rise on Fed Day Amid Trade Deal Hopes",
-                "Live Nasdaq Composite: AMZN (Nasdaq: AMZN), CEG (Nasdaq: CEG) Fall in Sea of Red",
-                "Live Nasdaq Composite: Markets Stand Still on Tariff and Tech Tussle"
+                "Live Nasdaq Composite: AMZN (Nasdaq: AMZN), CEG (Nasdaq: CEG) Fall in Sea of Red"
               ]
             },
             "america": {
-              "count": 3,
+              "count": 4,
               "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
                 "Live Nasdaq Composite: Markets Rise on Fed Day Amid Trade Deal Hopes",
-                "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again",
-                "Apple moving iPhone production into U.S. has extremely low odds, says Bank of America's Wamsi Mohan"
+                "Live Nasdaq Composite: Fear Grips Markets as Investor Sentiment Shifts Yet Again"
+              ]
+            },
+            "washington": {
+              "count": 1,
+              "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This"
               ]
             },
             "s&p": {
@@ -1714,15 +1750,16 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 20.0,
-            "neutral": 45.0,
-            "negative": 35.0
+            "positive": 23.8,
+            "neutral": 42.9,
+            "negative": 33.3
           },
-          "gpt_summary": "📰 The theme **usa** was detected in **20 articles** during the period, mainly through topics like: fed (11), nasdaq (7), dow jones (7), america (3), s&p (1). Sentiment is mixed (20.0% positive, 35.0% negative). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon », « Billionaire Ken Griffin calls tariffs a 'painfully regressive tax,' hitting working class Americans the hardest »."
+          "gpt_summary": "📰 The theme **usa** was detected in **21 articles** during the period, mainly through topics like: fed (11), nasdaq (8), dow jones (8), america (4), washington (1). Sentiment is mixed (23.8% positive, 33.3% negative). Examples of articles: « Federal Reserve warns of impact of Trump tariffs as US interest rates held », « President Trump is signaling that he will blame the Federal Reserve for any economic weakness that results from his trade war if the central bank doesn't cut interest rates soon », « Billionaire Ken Griffin calls tariffs a 'painfully regressive tax,' hitting working class Americans the hardest »."
         },
         "asia": {
-          "count": 17,
+          "count": 18,
           "articles": [
+            "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
             "Tariffs and trusts: How Asia-focused investment companies are navigating the trade headwinds",
             "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say",
             "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
@@ -1742,18 +1779,24 @@
             "Apple's Anti-Tariff Tactic: Flying 1.5 Million iPhones From India"
           ],
           "keywords": {
+            "china": {
+              "count": 7,
+              "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This",
+                "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say",
+                "Trump tariffs and export curbs on China cast a cloud over major chip stocks"
+              ]
+            },
+            "beijing": {
+              "count": 1,
+              "examples": [
+                "Live Nasdaq Composite: Markets Rise as China Tariffs Do This"
+              ]
+            },
             "asia": {
               "count": 1,
               "examples": [
                 "Tariffs and trusts: How Asia-focused investment companies are navigating the trade headwinds"
-              ]
-            },
-            "china": {
-              "count": 6,
-              "examples": [
-                "New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say",
-                "Trump tariffs and export curbs on China cast a cloud over major chip stocks",
-                "Jim Cramer on how Trump's stance on China harms Nvidia and Apple"
               ]
             },
             "india": {
@@ -1774,18 +1817,17 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 35.3,
-            "neutral": 64.7,
+            "positive": 38.9,
+            "neutral": 61.1,
             "negative": 0.0
           },
-          "gpt_summary": "📰 The theme **asia** was detected in **17 articles** during the period, mainly through topics like: china (6), india (6), japan (3), asia (1). Sentiment is mostly positive (35.3% vs 0.0% negative). Examples of articles: « Tariffs and trusts: How Asia-focused investment companies are navigating the trade headwinds », « New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say », « Trump tariffs and export curbs on China cast a cloud over major chip stocks »."
+          "gpt_summary": "📰 The theme **asia** was detected in **18 articles** during the period, mainly through topics like: china (7), india (6), japan (3), beijing (1), asia (1). Sentiment is mostly positive (38.9% vs 0.0% negative). Examples of articles: « Live Nasdaq Composite: Markets Rise as China Tariffs Do This », « Tariffs and trusts: How Asia-focused investment companies are navigating the trade headwinds », « New Tata plant starts iPhone production, Foxconn close behind as Apple looks to India, sources say »."
         },
         "europe": {
           "count": 11,
           "articles": [
             "Euro zone bank lending continued to pick up before tariffs, ECB data shows",
             "Euro zone consumers happy to ditch US products if hit by tariffs, study finds",
-            "What items are in the EU's new response measures to Trump tariffs?",
             "EU sets out 95 bln euro countermeasures to U.S. tariffs",
             "Explainer: What happens to Apple and Meta after the EU fine?",
             "Meta, Apple fined 700 million euros for violating EU antitrust rules",
@@ -1793,6 +1835,7 @@
             "EU spokesperson: Apple and Meta fines are \"proportionate\"",
             "US calls EU fines on Apple and Meta 'economic extortion'",
             "Apple fined $571 million and Meta $228 million for breaching European Union antitrust rules",
+            "Tariffs to Weaken Growth and Inflation, Says ECB's Cipollone",
             "Recession risk rises sharply - Reuters poll"
           ],
           "keywords": {
@@ -1801,7 +1844,7 @@
               "examples": [
                 "Euro zone bank lending continued to pick up before tariffs, ECB data shows",
                 "Euro zone consumers happy to ditch US products if hit by tariffs, study finds",
-                "What items are in the EU's new response measures to Trump tariffs?"
+                "EU sets out 95 bln euro countermeasures to U.S. tariffs"
               ]
             },
             "eu": {
@@ -1809,7 +1852,7 @@
               "examples": [
                 "Euro zone bank lending continued to pick up before tariffs, ECB data shows",
                 "Euro zone consumers happy to ditch US products if hit by tariffs, study finds",
-                "What items are in the EU's new response measures to Trump tariffs?"
+                "EU sets out 95 bln euro countermeasures to U.S. tariffs"
               ]
             },
             "european union": {
@@ -1822,11 +1865,11 @@
             }
           },
           "sentiment_distribution": {
-            "positive": 0.0,
+            "positive": 9.1,
             "neutral": 81.8,
-            "negative": 18.2
+            "negative": 9.1
           },
-          "gpt_summary": "📰 The theme **europe** was detected in **11 articles** during the period, mainly through topics like: eu (11), europe (10), european union (6). Sentiment is mixed (0.0% positive, 18.2% negative). Examples of articles: « Euro zone bank lending continued to pick up before tariffs, ECB data shows », « Euro zone consumers happy to ditch US products if hit by tariffs, study finds », « What items are in the EU's new response measures to Trump tariffs? »."
+          "gpt_summary": "📰 The theme **europe** was detected in **11 articles** during the period, mainly through topics like: eu (11), europe (10), european union (6). Sentiment is mixed (9.1% positive, 9.1% negative). Examples of articles: « Euro zone bank lending continued to pick up before tariffs, ECB data shows », « Euro zone consumers happy to ditch US products if hit by tariffs, study finds », « EU sets out 95 bln euro countermeasures to U.S. tariffs »."
         },
         "global": {
           "count": 7,
@@ -1871,6 +1914,6 @@
       }
     }
   },
-  "lastUpdated": "2025-05-09T20:14:16.576944",
+  "lastUpdated": "2025-05-09T20:18:59.273853",
   "analysisCount": 103
 }
