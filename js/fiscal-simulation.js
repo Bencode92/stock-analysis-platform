@@ -183,7 +183,7 @@ class SimulationsFiscales {
             return {
                 compatible: true,
                 ca: ca,
-                typeEntreprise: \"EURL à l'IR\",
+                typeEntreprise: "EURL à l'IR",
                 tauxMarge: tauxMarge * 100 + '%',
                 resultatAvantRemuneration: resultatEntreprise,
                 remuneration: remuneration,
@@ -237,8 +237,14 @@ class SimulationsFiscales {
             const dividendes = resultatApresIS;
             
             // Cotisations TNS sur dividendes > 10% du capital social
-            const baseTNSDiv = Math.max(0, dividendes - 0.10 * capitalSocial);
-            const cotTNSDiv = Math.round(baseTNSDiv * 0.17); // 17% URSSAF 2025
+            let cotTNSDiv;
+            if (window.FiscalUtils) {
+                cotTNSDiv = window.FiscalUtils.cotTNSDividendes(dividendes, capitalSocial);
+            } else {
+                // Fallback
+                const baseTNSDiv = Math.max(0, dividendes - 0.10 * capitalSocial);
+                cotTNSDiv = Math.round(baseTNSDiv * 0.45); // Taux moyen 45% (barème TNS)
+            }
             
             // Calcul du PFU sur les dividendes
             let prelevementForfaitaire;
@@ -260,7 +266,7 @@ class SimulationsFiscales {
             return {
                 compatible: true,
                 ca: ca,
-                typeEntreprise: \"EURL à l'IS\",
+                typeEntreprise: "EURL à l'IS",
                 tauxMarge: tauxMarge * 100 + '%',
                 resultatAvantRemuneration: resultatEntreprise,
                 remuneration: remuneration,
@@ -300,7 +306,7 @@ class SimulationsFiscales {
             chargesSalariales = charges.salariales;
         } else {
             // Fallback si l'utilitaire n'est pas disponible
-            chargesPatronales = Math.round(remuneration * 0.55);
+            chargesPatronales = Math.round(remuneration * 0.45); // taux moyen 2025
             chargesSalariales = Math.round(remuneration * 0.22);
         }
         
@@ -420,7 +426,7 @@ class SimulationsFiscales {
                 cotisationsSociales = chargesPatronales + chargesSalariales;
             } else {
                 // Fallback
-                chargesPatronales = Math.round(remuneration * 0.55);
+                chargesPatronales = Math.round(remuneration * 0.45); // taux moyen 2025
                 chargesSalariales = Math.round(remuneration * 0.22);
                 cotisationsSociales = chargesPatronales + chargesSalariales;
             }
@@ -463,8 +469,13 @@ class SimulationsFiscales {
         // Cotisations TNS sur dividendes > 10% du capital social pour gérant majoritaire
         let cotTNSDiv = 0;
         if (gerantMajoritaire) {
-            const baseTNSDiv = Math.max(0, dividendesGerant - 0.10 * capitalSocial);
-            cotTNSDiv = Math.round(baseTNSDiv * 0.17); // 17% URSSAF 2025
+            if (window.FiscalUtils) {
+                cotTNSDiv = window.FiscalUtils.cotTNSDividendes(dividendesGerant, capitalSocial);
+            } else {
+                // Fallback
+                const baseTNSDiv = Math.max(0, dividendesGerant - 0.10 * capitalSocial);
+                cotTNSDiv = Math.round(baseTNSDiv * 0.45); // Taux moyen 45% (barème TNS)
+            }
         }
         
         // Calcul du PFU sur les dividendes
@@ -672,7 +683,7 @@ class SimulationsFiscales {
             return {
                 compatible: true,
                 ca: ca,
-                typeEntreprise: \"SCI à l'IR\",
+                typeEntreprise: "SCI à l'IR",
                 revenuLocatif: revenuLocatif,
                 chargesDeductibles: chargesDeductibles,
                 resultatFiscal: resultatFiscal,
@@ -719,7 +730,7 @@ class SimulationsFiscales {
             return {
                 compatible: true,
                 ca: ca,
-                typeEntreprise: \"SCI à l'IS\",
+                typeEntreprise: "SCI à l'IS",
                 revenuLocatif: revenuLocatif,
                 chargesDeductibles: chargesDeductibles,
                 resultatFiscal: resultatFiscal,
@@ -778,7 +789,7 @@ window.SimulationsFiscales = SimulationsFiscales;
 
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log(\"Module SimulationsFiscales chargé et disponible globalement\");
+    console.log("Module SimulationsFiscales chargé et disponible globalement");
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady'));
 });
