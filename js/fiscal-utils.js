@@ -3,6 +3,25 @@
 
 const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS = 2,9%
 
+// SMIC annuel 2025 pour les calculs de plages
+const SMIC_ANNUEL_2025 = 21060;
+
+// Table paramétrable des charges sociales SASU (2025)
+const CHARGES_SASU_2025 = [
+    { secteur: "Tous", taille: "<50", plage: "<1.6", tauxPatronal: 0.28, tauxSalarial: 0.21 },
+    { secteur: "Tous", taille: "<50", plage: "1.6-2.5", tauxPatronal: 0.33, tauxSalarial: 0.21 },
+    { secteur: "Tous", taille: "<50", plage: ">2.5", tauxPatronal: 0.41, tauxSalarial: 0.21 },
+    { secteur: "Tous", taille: ">=50", plage: "<1.6", tauxPatronal: 0.32, tauxSalarial: 0.21 },
+    { secteur: "Tous", taille: ">=50", plage: "1.6-2.5", tauxPatronal: 0.36, tauxSalarial: 0.21 },
+    { secteur: "Tous", taille: ">=50", plage: ">2.5", tauxPatronal: 0.43, tauxSalarial: 0.21 },
+    { secteur: "Commerce", taille: "<50", plage: "<1.6", tauxPatronal: 0.28, tauxSalarial: 0.21 },
+    { secteur: "Commerce", taille: "<50", plage: ">2.5", tauxPatronal: 0.41, tauxSalarial: 0.22 },
+    { secteur: "Industrie", taille: "<50", plage: "<1.6", tauxPatronal: 0.30, tauxSalarial: 0.21 },
+    { secteur: "Industrie", taille: ">=50", plage: ">2.5", tauxPatronal: 0.45, tauxSalarial: 0.22 },
+    { secteur: "Services", taille: "<50", plage: "<1.6", tauxPatronal: 0.29, tauxSalarial: 0.21 },
+    { secteur: "Services", taille: ">=50", plage: ">2.5", tauxPatronal: 0.43, tauxSalarial: 0.22 }
+];
+
 class FiscalUtils {
     // Calcul d'IR par tranches progressives
     static calculateProgressiveIR(revenuImposable) {
@@ -91,13 +110,35 @@ class FiscalUtils {
         return Math.round(partA + partB);
     }
     
-    // Calcul des charges salariales
-    static calculChargesSalariales(remuneration) {
-        // Taux moyens 2025 - peuvent varier selon secteur, allègements et part des charges plafonnées
+    // Calcul des charges salariales avec table paramétrable
+    static calculChargesSalariales(remuneration, params = {}) {
+        // Paramètres optionnels avec valeurs par défaut
+        const secteur = params.secteur || "Tous";
+        const taille = params.taille || "<50";
+        
+        // Déterminer la plage de salaire par rapport au SMIC
+        const ratio = remuneration / SMIC_ANNUEL_2025;
+        let plage = ratio < 1.6 ? "<1.6" : (ratio <= 2.5 ? "1.6-2.5" : ">2.5");
+        
+        // Rechercher les taux dans la table
+        let tauxPatronal = 0.45; // Valeur par défaut
+        let tauxSalarial = 0.22; // Valeur par défaut
+        
+        // Recherche du taux le plus spécifique possible
+        for (const ligne of CHARGES_SASU_2025) {
+            if ((ligne.secteur === secteur || ligne.secteur === "Tous") &&
+                (ligne.taille === taille) &&
+                ligne.plage === plage) {
+                tauxPatronal = ligne.tauxPatronal;
+                tauxSalarial = ligne.tauxSalarial;
+                break;
+            }
+        }
+        
         return {
-            patronales: Math.round(remuneration * 0.45),
-            salariales: Math.round(remuneration * 0.22),
-            total: Math.round(remuneration * 0.67)
+            patronales: Math.round(remuneration * tauxPatronal),
+            salariales: Math.round(remuneration * tauxSalarial),
+            total: Math.round(remuneration * (tauxPatronal + tauxSalarial))
         };
     }
     
