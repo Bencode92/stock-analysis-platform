@@ -289,7 +289,7 @@ class SimulationsFiscales {
     
     // SASU
     static simulerSASU(params) {
-        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, tmiActuel = 30, modeExpert = false } = params;
+        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, tmiActuel = 30, modeExpert = false, secteur = "Tous", taille = "<50" } = params;
         
         // Calcul du résultat de l'entreprise
         const resultatEntreprise = Math.round(ca * tauxMarge);
@@ -298,10 +298,10 @@ class SimulationsFiscales {
         const remuneration = Math.round(resultatEntreprise * tauxRemuneration);
         const resultatApresRemuneration = resultatEntreprise - remuneration;
         
-        // Calcul des charges sociales
+        // Calcul des charges sociales avec paramètres sectoriels
         let chargesPatronales, chargesSalariales;
         if (window.FiscalUtils) {
-            const charges = window.FiscalUtils.calculChargesSalariales(remuneration);
+            const charges = window.FiscalUtils.calculChargesSalariales(remuneration, { secteur, taille });
             chargesPatronales = charges.patronales;
             chargesSalariales = charges.salariales;
         } else {
@@ -379,7 +379,9 @@ class SimulationsFiscales {
             prelevementForfaitaire: prelevementForfaitaire,
             dividendesNets: dividendesNets,
             revenuNetTotal: revenuNetTotal,
-            ratioNetCA: (revenuNetTotal / ca) * 100
+            ratioNetCA: (revenuNetTotal / ca) * 100,
+            secteur: secteur,
+            taille: taille
         };
     }
 
@@ -393,7 +395,9 @@ class SimulationsFiscales {
             gerantMajoritaire = true, // Par défaut, gérant majoritaire
             nbAssocies = 2, // Par défaut, 2 associés
             modeExpert = false,
-            capitalSocial = 1
+            capitalSocial = 1,
+            secteur = "Tous",
+            taille = "<50"
         } = params;
         
         // Calcul du résultat de l'entreprise (simplifié - CA * taux de marge)
@@ -420,7 +424,7 @@ class SimulationsFiscales {
             // Gérant minoritaire = assimilé salarié
             let chargesPatronales, chargesSalariales;
             if (window.FiscalUtils) {
-                const charges = window.FiscalUtils.calculChargesSalariales(remuneration);
+                const charges = window.FiscalUtils.calculChargesSalariales(remuneration, { secteur, taille });
                 chargesPatronales = charges.patronales;
                 chargesSalariales = charges.salariales;
                 cotisationsSociales = chargesPatronales + chargesSalariales;
@@ -515,7 +519,10 @@ class SimulationsFiscales {
             prelevementForfaitaire: prelevementForfaitaire,
             dividendesNets: dividendesNets,
             revenuNetTotal: revenuNetTotal,
-            ratioNetCA: (revenuNetTotal / ca) * 100
+            ratioNetCA: (revenuNetTotal / ca) * 100,
+            gerantMajoritaire: gerantMajoritaire,
+            secteur: secteur,
+            taille: taille
         };
     }
 
@@ -643,18 +650,29 @@ class SimulationsFiscales {
     }
 
     static simulerSCI(params) {
-        // Conserver le code existant
+        // Paramètres avec valeurs par défaut
         const { 
             revenuLocatif = 50000,
             chargesDeductibles = 10000,
             tmiActuel = 30,
             optionIS = false,
             partAssociePrincipal = 0.5,
-            modeExpert = false
+            modeExpert = false,
+            typeLocation = "nue", // Nouveau: 'nue' ou 'meublee'
+            valeurBien = 300000,  // Nouveau: valeur du bien immobilier
+            tauxAmortissement = 0.02, // Nouveau: taux d'amortissement annuel
+            dureeDetention = 15    // Nouveau: durée de détention prévue
         } = params;
         
         // Pour une SCI, on travaille avec des revenus locatifs plutôt qu'un CA
         const ca = revenuLocatif;
+        
+        // Location meublée = obligatoire IS si >10% du CA
+        const locationMeublee = typeLocation === "meublee";
+        const isObligatoire = locationMeublee; // La location meublée en SCI => IS obligatoire
+        
+        // Choix du régime fiscal
+        const optionISEffective = optionIS || isObligatoire;
         
         // Résultat fiscal = revenus locatifs - charges déductibles
         const resultatFiscal = revenuLocatif - chargesDeductibles;
@@ -662,7 +680,18 @@ class SimulationsFiscales {
         // Part du résultat fiscal pour l'associé principal
         const resultatFiscalAssocie = Math.round(resultatFiscal * partAssociePrincipal);
         
-        if (!optionIS) {
+        // Calcul de l'amortissement (uniquement en IS)
+        const amortissementAnnuel = optionISEffective ? Math.round(valeurBien * tauxAmortissement) : 0;
+        const resultatApresAmortissement = Math.max(0, resultatFiscal - amortissementAnnuel);
+        
+        // Avertissement location meublée sans IS
+        const avertissementMeublee = locationMeublee && !optionISEffective ? 
+            "Attention: La location meublée en SCI à l'IR peut être requalifiée en activité commerciale. L'option IS est généralement obligatoire." : "";
+        
+        // Avantage fiscal amortissement
+        const avantageAmortissement = optionISEffective ? Math.round(amortissementAnnuel * 0.25) : 0; // 25% = taux IS moyen
+        
+        if (!optionISEffective) {
             // Régime IR par défaut - Revenus fonciers pour les associés
             
             // Prélèvements sociaux (17.2% pour 2025)
@@ -684,6 +713,7 @@ class SimulationsFiscales {
                 compatible: true,
                 ca: ca,
                 typeEntreprise: "SCI à l'IR",
+                typeLocation: typeLocation,
                 revenuLocatif: revenuLocatif,
                 chargesDeductibles: chargesDeductibles,
                 resultatFiscal: resultatFiscal,
@@ -692,23 +722,25 @@ class SimulationsFiscales {
                 impotRevenu: impotRevenu,
                 revenuNetApresImpot: revenuNetApresImpot,
                 revenuNetTotal: revenuNetApresImpot,
-                ratioNetCA: (revenuNetApresImpot / ca) * 100
+                ratioNetCA: (revenuNetApresImpot / ca) * 100,
+                amortissementPossible: false,
+                avertissementMeublee: avertissementMeublee
             };
         } else {
-            // Option IS (généralement défavorable pour une SCI qui ne fait que de la location nue)
+            // Option IS (généralement défavorable pour location nue, mais intéressant pour meublée)
             
-            // Calcul de l'IS
+            // Calcul de l'IS sur résultat après amortissement
             let is;
             if (window.FiscalUtils) {
-                is = window.FiscalUtils.calculIS(resultatFiscal);
+                is = window.FiscalUtils.calculIS(resultatApresAmortissement);
             } else {
                 // Fallback
-                const tauxIS = resultatFiscal <= 42500 ? 0.15 : 0.25;
-                is = Math.round(resultatFiscal * tauxIS);
+                const tauxIS = resultatApresAmortissement <= 42500 ? 0.15 : 0.25;
+                is = Math.round(resultatApresAmortissement * tauxIS);
             }
             
             // Résultat après IS
-            const resultatApresIS = resultatFiscal - is;
+            const resultatApresIS = resultatApresAmortissement - is;
             
             // Distribution de dividendes (100% du résultat après IS)
             const dividendesBruts = resultatApresIS;
@@ -727,13 +759,25 @@ class SimulationsFiscales {
             // Dividendes nets après PFU
             const dividendesNets = dividendesAssocie - prelevementForfaitaire;
             
+            // Message explicatif si meublée
+            const infoLocationMeublee = locationMeublee ? 
+                "L'option IS permet d'amortir le bien meublé, ce qui réduit l'imposition à court terme." : 
+                "Attention: l'option IS est généralement défavorable pour une SCI en location nue (impossible de revenir à l'IR).";
+            
+            // Total économie sur durée d'amortissement
+            const economieAmortissementDuree = avantageAmortissement * dureeDetention;
+            
             return {
                 compatible: true,
                 ca: ca,
                 typeEntreprise: "SCI à l'IS",
+                typeLocation: typeLocation,
                 revenuLocatif: revenuLocatif,
                 chargesDeductibles: chargesDeductibles,
+                valeurBien: valeurBien,
+                amortissementAnnuel: amortissementAnnuel,
                 resultatFiscal: resultatFiscal,
+                resultatApresAmortissement: resultatApresAmortissement,
                 is: is,
                 resultatApresIS: resultatApresIS,
                 dividendesBruts: dividendesBruts,
@@ -742,7 +786,11 @@ class SimulationsFiscales {
                 dividendesNets: dividendesNets,
                 revenuNetApresImpot: dividendesNets,
                 revenuNetTotal: dividendesNets,
-                ratioNetCA: (dividendesNets / ca) * 100
+                ratioNetCA: (dividendesNets / ca) * 100,
+                avantageAmortissement: avantageAmortissement,
+                economieAmortissementDuree: economieAmortissementDuree,
+                amortissementPossible: true,
+                infoLocationMeublee: infoLocationMeublee
             };
         }
     }
