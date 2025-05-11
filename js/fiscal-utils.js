@@ -1,7 +1,7 @@
 // fiscal-utils.js - Utilitaires pour les calculs fiscaux
 // Version 1.1 - Mai 2025 - Mise à jour des taux 2025
 
-const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS
+const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS = 2,9%
 
 class FiscalUtils {
     // Calcul d'IR par tranches progressives
@@ -83,8 +83,12 @@ class FiscalUtils {
     
     // Calcul des cotisations TNS sur dividendes
     static cotTNSDividendes(dividendes, capitalSocial) {
+        // Calcul précis avec les tranches 2025
+        const PASS = 47100;
         const base = Math.max(0, dividendes - 0.10 * capitalSocial);
-        return Math.round(base * 0.45); // taux global 2025
+        const partA = Math.min(base, PASS) * 0.28;
+        const partB = Math.max(0, base - PASS) * 0.1775;
+        return Math.round(partA + partB);
     }
     
     // Calcul des charges salariales
