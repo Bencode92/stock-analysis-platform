@@ -696,6 +696,31 @@ function updateSimulatorInterface() {
                     </div>
                 </div>
                 
+                <!-- Ajouter une section pour les paramètres avancés -->
+                <div class="mt-4">
+                    <h3 class="font-medium mb-3 text-green-400">Paramètres avancés</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-gray-300 mb-2">Code APE/NAF</label>
+                            <input type="text" id="sim-code-ape" placeholder="ex: 6201Z" 
+                                class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
+                            <p class="text-xs text-gray-400 mt-1">Détermine le taux de CFP</p>
+                        </div>
+                        <div>
+                            <label class="block text-gray-300 mb-2">Revenu fiscal N-2 (€)</label>
+                            <input type="number" id="sim-rfr" placeholder="RFR pour VFL" 
+                                class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
+                            <p class="text-xs text-gray-400 mt-1">Pour l'éligibilité au VFL</p>
+                        </div>
+                        <div>
+                            <label class="block text-gray-300 mb-2">Année de début d'activité</label>
+                            <input type="number" id="sim-annee-debut" placeholder="Pour ACRE" value="${new Date().getFullYear()}"
+                                class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
+                            <p class="text-xs text-gray-400 mt-1">Pour exonérations ACRE</p>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Avertissement sur les limites du simulateur -->
                 <div class="fiscal-warning mt-4">
                     <p><i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i> <strong>Limites du simulateur:</strong> Ce simulateur simplifie certains aspects fiscaux pour faciliter la comparaison. Pour une analyse complète, consultez un expert-comptable.</p>
@@ -885,7 +910,7 @@ function updateSimulatorInterface() {
         });
         
         // Ajouter un événement aux cases à cocher et autres options
-        document.querySelectorAll('.status-checkbox, #use-optimal-ratio, #use-avg-charge-rate, #micro-type, #micro-vfl, #sarl-gerant-minoritaire').forEach(checkbox => {
+        document.querySelectorAll('.status-checkbox, #use-optimal-ratio, #use-avg-charge-rate, #micro-type, #micro-vfl, #sarl-gerant-minoritaire, #sim-code-ape, #sim-rfr, #sim-annee-debut').forEach(checkbox => {
             checkbox.addEventListener('change', runComparison);
         });
         
@@ -932,6 +957,11 @@ function runComparison() {
     const versementLiberatoire = document.getElementById('micro-vfl') && document.getElementById('micro-vfl').checked;
     const gerantMajoritaire = !(document.getElementById('sarl-gerant-minoritaire') && document.getElementById('sarl-gerant-minoritaire').checked);
     
+    // Récupérer les valeurs des paramètres avancés
+    const codeApe = document.getElementById('sim-code-ape')?.value || null;
+    const rfrN2 = parseFloat(document.getElementById('sim-rfr')?.value) || undefined;
+    const anneeDebut = parseInt(document.getElementById('sim-annee-debut')?.value) || new Date().getFullYear();
+    
     // Définir marge ou frais de façon exclusive selon l'option
     const params = {
         ca: ca,
@@ -940,7 +970,10 @@ function runComparison() {
         tauxRemuneration: ratioSalaire,
         tmiActuel: tmi,
         modeExpert: modeExpert,
-        gerantMajoritaire: gerantMajoritaire
+        gerantMajoritaire: gerantMajoritaire,
+        codeApe: codeApe,
+        rfrN2: rfrN2,
+        anneeDebut: anneeDebut
     };
     
     // Logger pour debug
@@ -948,6 +981,7 @@ function runComparison() {
     console.log("useAvgChargeRate:", useAvgChargeRate);
     console.log("versementLiberatoire:", versementLiberatoire);
     console.log("gerantMajoritaire:", gerantMajoritaire);
+    console.log("Paramètres avancés:", { codeApe, rfrN2, anneeDebut });
     
     const resultsBody = document.getElementById('sim-results-body');
     if (!resultsBody) return;
@@ -1027,7 +1061,10 @@ function runComparison() {
                 typeMicro: document.getElementById('micro-type').value,
                 tmiActuel: tmi,
                 modeExpert: modeExpert,
-                versementLiberatoire: versementLiberatoire
+                versementLiberatoire: versementLiberatoire,
+                codeApe: codeApe,
+                rfrN2: rfrN2,
+                anneeDebut: anneeDebut
             })
         },
         'ei': { 
@@ -2081,185 +2118,164 @@ function setupAccordion() {
     }
     
     // Icônes pour les statuts juridiques
-    const statutIcons = {
-        'MICRO': '<i class="fas fa-store-alt text-green-400 mr-2"></i>',
-        'EI': '<i class="fas fa-user text-green-400 mr-2"></i>',
-        'EURL': '<i class="fas fa-user-tie text-green-400 mr-2"></i>',
-        'SASU': '<i class="fas fa-user-shield text-blue-400 mr-2"></i>',
-        'SARL': '<i class="fas fa-users text-blue-400 mr-2"></i>',
-        'SAS': '<i class="fas fa-building text-blue-400 mr-2"></i>',
-        'SA': '<i class="fas fa-landmark text-blue-400 mr-2"></i>',
-        'SNC': '<i class="fas fa-handshake text-green-400 mr-2"></i>',
-        'SCI': '<i class="fas fa-home text-green-400 mr-2"></i>',
-        'SELARL': '<i class="fas fa-user-md text-blue-400 mr-2"></i>',
-        'SELAS': '<i class="fas fa-stethoscope text-blue-400 mr-2"></i>',
-        'SCA': '<i class="fas fa-chart-line text-blue-400 mr-2"></i>'
-    };
- // Badge régime fiscal
-    const regimeBadges = {
-        'MICRO': '<span class="status-badge ir">IR</span>',
-        'EI': '<span class="status-badge ir">IR</span>',
-        'EURL': '<span class="status-badge iris">IR/IS</span>',
-        'SASU': '<span class="status-badge is">IS</span>',
-        'SARL': '<span class="status-badge is">IS</span>',
-        'SAS': '<span class="status-badge is">IS</span>',
-        'SA': '<span class="status-badge is">IS</span>',
-        'SNC': '<span class="status-badge ir">IR</span>',
-        'SCI': '<span class="status-badge ir">IR</span>',
-        'SELARL': '<span class="status-badge is">IS</span>',
-        'SELAS': '<span class="status-badge is">IS</span>',
-        'SCA': '<span class="status-badge is">IS</span>'
+    const statusIcons = {
+        'MICRO': 'fa-store-alt',
+        'EI': 'fa-user',
+        'EURL': 'fa-user-tie',
+        'SASU': 'fa-user-shield',
+        'SARL': 'fa-users',
+        'SAS': 'fa-building',
+        'SA': 'fa-landmark',
+        'SNC': 'fa-handshake',
+        'SCI': 'fa-home',
+        'SELARL': 'fa-user-md',
+        'SELAS': 'fa-stethoscope',
+        'SCA': 'fa-chart-line'
     };
     
-    // Générer l'accordéon pour chaque statut
-    statuts.forEach(statutId => {
-        const nomStatut = window.legalStatuses && window.legalStatuses[statutId] 
-            ? window.legalStatuses[statutId].name 
-            : getDefaultNomStatut(statutId);
-        
-        // Créer l'élément d'accordéon
+    // Créer l'accordéon
+    for (const statut of statuts) {
         const accordionItem = document.createElement('div');
-        accordionItem.className = 'mb-3';
+        accordionItem.className = 'accordion-item';
         
-        // Contenu de l'accordéon basé sur le statut
+        // Déterminer l'impôt principal (IR, IS ou mixte)
+        let taxRegime = 'iris';
+        let taxBadgeClass = 'iris';
+        let taxBadgeText = 'IR/IS';
+        
+        if (['MICRO', 'EI', 'SNC', 'SCI'].includes(statut)) {
+            taxRegime = 'ir';
+            taxBadgeClass = 'ir';
+            taxBadgeText = 'IR';
+        } else if (['SASU', 'SAS', 'SA', 'SELAS', 'SELARL', 'SCA'].includes(statut)) {
+            taxRegime = 'is';
+            taxBadgeClass = 'is';
+            taxBadgeText = 'IS';
+        }
+        
+        // Créer le toggle de l'accordéon
         accordionItem.innerHTML = `
-            <button class="accordion-toggle w-full">
-                ${statutIcons[statutId] || ''} ${nomStatut} 
-                ${regimeBadges[statutId] || ''}
-                <i class="fas fa-plus ml-auto"></i>
-            </button>
-            <div class="hidden px-4 py-3 border-t border-gray-700 bg-blue-900 bg-opacity-20 rounded-b-lg">
-                ${getStatutFiscalInfo(statutId)}
+            <div class="accordion-toggle cursor-pointer" data-status="${statut.toLowerCase()}">
+                <i class="fas ${statusIcons[statut] || 'fa-building'}"></i>
+                <span class="accordion-title">${statut}</span>
+                <span class="status-badge ${taxBadgeClass}">${taxBadgeText}</span>
+                <i class="fas fa-chevron-right transition-transform duration-200"></i>
+            </div>
+            <div class="accordion-content hidden p-4 text-sm text-gray-300 bg-blue-900 bg-opacity-10 rounded-md mb-4 border border-blue-800 border-opacity-50">
+                <div class="content-loading">Chargement...</div>
             </div>
         `;
         
         accordionContainer.appendChild(accordionItem);
-    });
+    }
     
-    // Attacher les événements aux boutons de l'accordéon
-    const toggleBtns = document.querySelectorAll('.accordion-toggle');
-    toggleBtns.forEach(btn => {
-        btn.addEventListener('click', function() {
+    // Ajouter des événements de clic aux toggles de l'accordéon
+    const toggles = document.querySelectorAll('.accordion-toggle');
+    toggles.forEach(toggle => {
+        toggle.addEventListener('click', function() {
             const content = this.nextElementSibling;
-            content.classList.toggle('hidden');
+            const isActive = this.classList.contains('active');
             
-            // Changer l'icône
-            const icon = this.querySelector('i:last-child');
-            icon.classList.toggle('fa-plus');
-            icon.classList.toggle('fa-minus');
+            // Fermer tous les contenus et réinitialiser les toggles
+            document.querySelectorAll('.accordion-content').forEach(item => {
+                item.classList.add('hidden');
+            });
+            document.querySelectorAll('.accordion-toggle').forEach(item => {
+                item.classList.remove('active');
+                item.querySelector('.fa-chevron-right').style.transform = 'rotate(0)';
+            });
             
-            // Ajouter/supprimer la classe active
-            this.classList.toggle('active');
+            // Si l'élément n'était pas actif, l'ouvrir
+            if (!isActive) {
+                content.classList.remove('hidden');
+                this.classList.add('active');
+                this.querySelector('.fa-chevron-right').style.transform = 'rotate(90deg)';
+                
+                // Charger le contenu si ce n'est pas déjà fait
+                if (content.querySelector('.content-loading')) {
+                    const statusId = this.getAttribute('data-status');
+                    loadStatusContent(statusId, content);
+                }
+            }
         });
     });
 }
 
-// Fonction d'aide pour obtenir le nom par défaut si legalStatuses n'est pas disponible
-function getDefaultNomStatut(statutId) {
-    const noms = {
-        'MICRO': 'Micro-entreprise',
-        'EI': 'Entreprise Individuelle',
-        'EURL': 'Entreprise Unipersonnelle à Responsabilité Limitée',
-        'SASU': 'Société par Actions Simplifiée Unipersonnelle',
-        'SARL': 'Société à Responsabilité Limitée',
-        'SAS': 'Société par Actions Simplifiée',
-        'SA': 'Société Anonyme',
-        'SNC': 'Société en Nom Collectif',
-        'SCI': 'Société Civile Immobilière',
-        'SELARL': 'Société d\'Exercice Libéral à Responsabilité Limitée',
-        'SELAS': 'Société d\'Exercice Libéral par Actions Simplifiée',
-        'SCA': 'Société en Commandite par Actions'
-    };
-    return noms[statutId] || statutId;
+// Fonction pour charger le contenu détaillé de chaque statut juridique
+function loadStatusContent(statusId, contentElement) {
+    // Simuler un chargement
+    setTimeout(() => {
+        // Obtenir le contenu selon le statut
+        let content = '';
+        switch(statusId) {
+            case 'micro':
+                content = `
+                    <div class="space-y-4">
+                        <div>
+                            <h3 class="font-semibold text-green-400 mb-2">Caractéristiques principales</h3>
+                            <ul class="list-disc pl-4 space-y-1">
+                                <li>Régime simplifié sans formalité de création d'entreprise</li>
+                                <li>Comptabilité ultra-simplifiée (livre chronologique des encaissements)</li>
+                                <li>Pas de TVA (franchise en base)</li>
+                                <li>Limité à un plafond de CA : 188 700€ (vente) ou 77 700€ (services)</li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h3 class="font-semibold text-green-400 mb-2">Calcul des charges et impositions</h3>
+                            <div class="bg-blue-900 bg-opacity-20 p-3 rounded">
+                                <p class="mb-2"><strong>Cotisations sociales :</strong> Calculées directement sur le CA</p>
+                                <ul class="list-disc pl-4 space-y-1">
+                                    <li>Vente de marchandises : 12,3% du CA</li>
+                                    <li>Prestations de services BIC : 21,2% du CA</li>
+                                    <li>Professions libérales BNC : 24,6% du CA</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="bg-blue-900 bg-opacity-20 p-3 rounded mt-2">
+                                <p class="mb-2"><strong>Imposition sur le revenu :</strong> Bénéficie d'un abattement forfaitaire</p>
+                                <ul class="list-disc pl-4 space-y-1">
+                                    <li>Abattement de 71% pour la vente de marchandises</li>
+                                    <li>Abattement de 50% pour les prestations de services BIC</li>
+                                    <li>Abattement de 34% pour les professions libérales BNC</li>
+                                    <li>Option possible pour le versement libératoire : de 1% à 2,2% du CA</li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h3 class="font-semibold text-green-400 mb-2">Avantages</h3>
+                            <ul class="list-disc pl-4 space-y-1 text-green-300">
+                                <li>Extrême simplicité de gestion</li>
+                                <li>Abattement forfaitaire particulièrement avantageux si peu de charges réelles</li>
+                                <li>ACRE : exonération partielle de cotisations en début d'activité</li>
+                                <li>Possibilité de cumul avec un emploi salarié ou la retraite</li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h3 class="font-semibold text-green-400 mb-2">Inconvénients</h3>
+                            <ul class="list-disc pl-4 space-y-1 text-red-300">
+                                <li>Couverture sociale minimale (particulièrement pour la retraite)</li>
+                                <li>Pas de déduction des charges réelles</li>
+                                <li>Limité en chiffre d'affaires</li>
+                                <li>Image parfois moins professionnelle</li>
+                            </ul>
+                        </div>
+                        
+                        <div>
+                            <h3 class="font-semibold text-green-400 mb-2">Recommandé pour</h3>
+                            <p>Activité à titre complémentaire, phase de test, activité avec peu de charges, activité occasionnelle, début d'activité</p>
+                        </div>
+                    </div>
+                `;
+                break;
+            // Ajouter d'autres statuts...
+            default:
+                content = `<p>Informations détaillées sur le statut ${statusId.toUpperCase()} en cours de rédaction.</p>`;
+        }
+        
+        // Mettre à jour le contenu
+        contentElement.innerHTML = content;
+    }, 300);
 }
-
-// Fonction pour générer les informations fiscales de chaque statut
-function getStatutFiscalInfo(statutId) {
-    // Informations fiscales par défaut pour chaque statut
-    const infosFiscales = {
-        'MICRO': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IR avec abattement forfaitaire</p>
-            <p class="mb-2"><strong>Abattements :</strong> 71% (vente), 50% (services BIC), 34% (BNC)</p>
-            <p class="mb-2"><strong>Charges sociales :</strong> 12.3% (vente), 21.2% (services), 24.6% (BNC)</p>
-            <p class="mb-2"><strong>Versement libératoire :</strong> 1% (vente), 1,7% (services), 2,2% (BNC) sur CA</p>
-            <p class="mb-2"><strong>Plafonds 2025 :</strong> 188 700€ (vente) / 77 700€ (services)</p>
-        `,
-        'EI': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IR, imposition sur le bénéfice</p>
-            <p class="mb-2"><strong>Cotisations sociales :</strong> ~45% du bénéfice</p>
-            <p class="mb-2"><strong>Avantages :</strong> Simplicité de gestion, frais réels déductibles</p>
-            <p class="mb-2"><strong>Inconvénients :</strong> Pas de distinction entre patrimoine privé/pro</p>
-        `,
-        'EURL': `
-            <p class="mb-2"><strong>Régimes fiscaux possibles :</strong> IR par défaut ou option IS</p>
-            <p class="mb-2"><strong>IR :</strong> Imposition sur la totalité du bénéfice</p>
-            <p class="mb-2"><strong>IS :</strong> Impôt sur les sociétés + PFU sur dividendes</p>
-            <p class="mb-2"><strong>Cotisations sociales :</strong> Environ 45% de la rémunération du gérant (TNS)</p>
-            <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
-        `,
-        'SASU': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IS uniquement</p>
-            <p class="mb-2"><strong>Social :</strong> Président assimilé salarié</p>
-            <p class="mb-2"><strong>Cotisations :</strong> ~80% sur rémunération (22% salariales, 55% patronales)</p>
-            <p class="mb-2"><strong>Fiscalité :</strong> IS (15%/25%) + PFU 30% sur dividendes</p>
-            <p class="mb-2"><strong>Optimisation:</strong> Favoriser les dividendes</p>
-        `,
-        'SARL': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IS presque toujours</p>
-            <p class="mb-2"><strong>Social gérant majoritaire :</strong> TNS (~45% de cotisations)</p>
-            <p class="mb-2"><strong>Social gérant minoritaire :</strong> Assimilé salarié (~80%)</p>
-            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
-            <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
-        `,
-        'SAS': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IS (impôt sur les sociétés)</p>
-            <p class="mb-2"><strong>Social :</strong> Président assimilé salarié</p>
-            <p class="mb-2"><strong>Cotisations :</strong> ~80% sur rémunération (22% salariales, 55% patronales)</p>
-            <p class="mb-2"><strong>Fiscalité :</strong> IS (15%/25%) + PFU 30% sur dividendes</p>
-            <p class="mb-2"><strong>Capital minimal :</strong> Libre (1€ suffit)</p>
-        `,
-        'SA': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IS (impôt sur les sociétés)</p>
-            <p class="mb-2"><strong>Social :</strong> Président du CA assimilé salarié</p>
-            <p class="mb-2"><strong>Particularités :</strong> Conseil d'administration obligatoire (3 membres min)</p>
-            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
-            <p class="mb-2"><strong>Capital minimal :</strong> 37 000€</p>
-        `,
-        'SNC': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IR (transparence fiscale)</p>
-            <p class="mb-2"><strong>Particularités :</strong> Responsabilité indéfinie et solidaire des associés</p>
-            <p class="mb-2"><strong>Social :</strong> Gérants et associés = TNS</p>
-            <p class="mb-2"><strong>Fiscalité :</strong> Bénéfice imposé directement chez les associés</p>
-        `,
-        'SCI': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IR par défaut, option IS possible</p>
-            <p class="mb-2"><strong>Activité :</strong> Gestion immobilière (location nue principalement)</p>
-            <p class="mb-2"><strong>IR :</strong> Revenus fonciers pour les associés + prélèvements sociaux 17.2%</p>
-            <p class="mb-2"><strong>IS :</strong> Rarement avantageux sauf activité commerciale</p>
-        `,
-        'SELARL': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IS presque toujours</p>
-            <p class="mb-2"><strong>Particularités :</strong> Réservée aux professions libérales réglementées</p>
-            <p class="mb-2"><strong>Social :</strong> Gérant majoritaire = TNS</p>
-            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
-            <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
-        `,
-        'SELAS': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IS</p>
-            <p class="mb-2"><strong>Particularités :</strong> Réservée aux professions libérales réglementées</p>
-            <p class="mb-2"><strong>Social :</strong> Président assimilé salarié</p>
-            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
-            <p class="mb-2"><strong>Capital minimal :</strong> Libre</p>
-        `,
-        'SCA': `
-            <p class="mb-2"><strong>Régime fiscal :</strong> IS</p>
-            <p class="mb-2"><strong>Structure :</strong> Commandités (responsabilité illimitée) et commanditaires</p>
-            <p class="mb-2"><strong>Social :</strong> Gérants = TNS</p>
-            <p class="mb-2"><strong>Fiscalité :</strong> IS + PFU 30% sur dividendes</p>
-            <p class="mb-2"><strong>Dividendes TNS :</strong> Cotisations (17%) sur dividendes > 10% du capital</p>
-            <p class="mb-2"><strong>Capital minimal :</strong> 37 000€</p>
-        `
-    };
-    
-    return infosFiscales[statutId] || `<p>Informations non disponibles pour ${statutId}</p>`;
-}// Contenu trop volumineux pour être inclus dans la demande
