@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 2.1 - Mai 2025 - Amélioration des options sectorielles
+// Version 2.2 - Mai 2025 - Correction du support des options sectorielles
 
 // Classe pour les simulations fiscales des différents statuts juridiques
 class SimulationsFiscales {
@@ -287,9 +287,22 @@ class SimulationsFiscales {
         }
     }
     
-    // SASU
+    // SASU - Amélioré pour garantir que les options sectorielles sont prises en compte
     static simulerSASU(params) {
-        const { ca, tauxMarge = 0.3, tauxRemuneration = 0.7, tmiActuel = 30, modeExpert = false, secteur = "Tous", taille = "<50" } = params;
+        // Extraire tous les paramètres avec des valeurs par défaut
+        const { 
+            ca, 
+            tauxMarge = 0.3, 
+            tauxRemuneration = 0.7, 
+            tmiActuel = 30, 
+            modeExpert = false, 
+            // Récupération des paramètres sectoriels avec des valeurs par défaut
+            secteur = window.sectorOptions?.secteur || "Tous", 
+            taille = window.sectorOptions?.taille || "<50" 
+        } = params;
+        
+        // Log de diagnostic pour confirmer les paramètres sectoriels utilisés
+        console.log(`SimulationsFiscales.simulerSASU - Paramètres sectoriels: secteur=${secteur}, taille=${taille}`);
         
         // Calcul du résultat de l'entreprise
         const resultatEntreprise = Math.round(ca * tauxMarge);
@@ -304,7 +317,11 @@ class SimulationsFiscales {
         
         if (window.FiscalUtils) {
             // Utiliser la fonction améliorée qui supporte les secteurs et tailles
-            const charges = window.FiscalUtils.calculChargesSalariales(remuneration, { secteur, taille });
+            // Transmettre explicitement les valeurs sectorielles dans l'appel
+            const charges = window.FiscalUtils.calculChargesSalariales(remuneration, { 
+                secteur: secteur, 
+                taille: taille 
+            });
             
             // Récupérer les charges calculées et les détails
             chargesPatronales = charges.patronales;
@@ -314,7 +331,9 @@ class SimulationsFiscales {
             infoCharges = {
                 tauxPatronal: charges.tauxPatronal,
                 tauxSalarial: charges.tauxSalarial,
-                description: charges.description || 'Taux sectoriels appliqués'
+                description: charges.description || 'Taux sectoriels appliqués',
+                secteurApplique: secteur,
+                tailleApplique: taille
             };
             
             // Debug important - afficher les paramètres utilisés
@@ -328,7 +347,9 @@ class SimulationsFiscales {
             infoCharges = {
                 tauxPatronal: 0.45,
                 tauxSalarial: 0.22,
-                description: 'Taux par défaut (FiscalUtils non disponible)'
+                description: 'Taux par défaut (FiscalUtils non disponible)',
+                secteurApplique: 'Non applicable',
+                tailleApplique: 'Non applicable'
             };
         }
         
@@ -419,8 +440,9 @@ class SimulationsFiscales {
             nbAssocies = 2, // Par défaut, 2 associés
             modeExpert = false,
             capitalSocial = 1,
-            secteur = "Tous",
-            taille = "<50"
+            // Récupération des paramètres sectoriels comme pour SASU
+            secteur = window.sectorOptions?.secteur || "Tous",
+            taille = window.sectorOptions?.taille || "<50"
         } = params;
         
         // Calcul du résultat de l'entreprise (simplifié - CA * taux de marge)
@@ -458,7 +480,11 @@ class SimulationsFiscales {
             // Gérant minoritaire = assimilé salarié
             let chargesPatronales, chargesSalariales;
             if (window.FiscalUtils) {
-                const charges = window.FiscalUtils.calculChargesSalariales(remuneration, { secteur, taille });
+                // Utiliser les paramètres sectoriels explicitement
+                const charges = window.FiscalUtils.calculChargesSalariales(remuneration, { 
+                    secteur: secteur, 
+                    taille: taille 
+                });
                 chargesPatronales = charges.patronales;
                 chargesSalariales = charges.salariales;
                 cotisationsSociales = chargesPatronales + chargesSalariales;
@@ -467,7 +493,9 @@ class SimulationsFiscales {
                     type: 'Assimilé salarié',
                     tauxPatronal: charges.tauxPatronal,
                     tauxSalarial: charges.tauxSalarial,
-                    description: charges.description || 'Charges assimilé salarié'
+                    description: charges.description || 'Charges assimilé salarié',
+                    secteurApplique: secteur,
+                    tailleApplique: taille
                 };
                 
                 // Debug important - afficher les paramètres utilisés
@@ -580,12 +608,19 @@ class SimulationsFiscales {
 
     // SAS (nouveau) - méthode simplifiée pour éviter le code trop long
     static simulerSAS(params) {
+        // Récupérer les paramètres sectoriels comme pour SASU
+        const paramsComplets = {
+            ...params,
+            secteur: params.secteur || window.sectorOptions?.secteur || "Tous",
+            taille: params.taille || window.sectorOptions?.taille || "<50"
+        };
+        
         // La SAS est similaire à la SASU mais avec plusieurs associés
         // On réutilise le code de la SASU mais on ajuste la part des dividendes
-        const { partPresident = 0.5, nbAssocies = 2 } = params;
+        const { partPresident = 0.5, nbAssocies = 2 } = paramsComplets;
         
         // Simuler comme une SASU
-        const resultSASU = this.simulerSASU(params);
+        const resultSASU = this.simulerSASU(paramsComplets);
         
         if (!resultSASU.compatible) {
             return resultSASU;
@@ -606,15 +641,22 @@ class SimulationsFiscales {
             prelevementForfaitaire: prelevementForfaitaire,
             dividendesNets: dividendesNets,
             revenuNetTotal: revenuNetTotal,
-            ratioNetCA: (revenuNetTotal / params.ca) * 100
+            ratioNetCA: (revenuNetTotal / paramsComplets.ca) * 100
         };
     }
 
     // Méthodes pour les autres statuts juridiques - pour économiser de l'espace
     // Ces méthodes peuvent aussi être mises à jour pour utiliser les utilitaires
     static simulerSA(params) {
+        // Récupérer les paramètres sectoriels comme pour SASU
+        const paramsComplets = {
+            ...params,
+            secteur: params.secteur || window.sectorOptions?.secteur || "Tous",
+            taille: params.taille || window.sectorOptions?.taille || "<50"
+        };
+        
         // Réutiliser le code existant
-        const { capitalInvesti = 37000 } = params;
+        const { capitalInvesti = 37000 } = paramsComplets;
         
         // Vérifier si le capital minimum est respecté
         if (capitalInvesti < 37000) {
@@ -625,7 +667,7 @@ class SimulationsFiscales {
         }
         
         // Simuler comme une SAS avec des coûts supplémentaires
-        const resultSAS = this.simulerSAS(params);
+        const resultSAS = this.simulerSAS(paramsComplets);
         
         if (!resultSAS.compatible) {
             return resultSAS;
@@ -636,7 +678,7 @@ class SimulationsFiscales {
         const is = resultSAS.is + Math.round(coutCAC * 0.25); // Impact sur l'IS
         
         // Recalculer les dividendes nets
-        const dividendesNets = resultSAS.dividendesNets - Math.round(coutCAC * 0.75 * params.partPDG || 0.3);
+        const dividendesNets = resultSAS.dividendesNets - Math.round(coutCAC * 0.75 * paramsComplets.partPDG || 0.3);
         
         // Recalculer le revenu net total
         const revenuNetTotal = resultSAS.salaireNetApresIR + dividendesNets;
@@ -648,7 +690,7 @@ class SimulationsFiscales {
             is: is,
             dividendesNets: dividendesNets,
             revenuNetTotal: revenuNetTotal,
-            ratioNetCA: (revenuNetTotal / params.ca) * 100
+            ratioNetCA: (revenuNetTotal / paramsComplets.ca) * 100
         };
     }
 
@@ -850,13 +892,26 @@ class SimulationsFiscales {
     // Pour SELARL, SELAS et SCA, les méthodes seront également mises à jour de manière similaire
     // Je conserve le code existant pour éviter un fichier trop long
     static simulerSELARL(params) {
+        // Récupérer les paramètres sectoriels comme pour SASU
+        const paramsComplets = {
+            ...params,
+            secteur: params.secteur || window.sectorOptions?.secteur || "Tous",
+            taille: params.taille || window.sectorOptions?.taille || "<50",
+            typeEntreprise: 'SELARL'
+        };
         // Similaire à SARL mais pour professions libérales
-        return this.simulerSARL({...params, typeEntreprise: 'SELARL'});
+        return this.simulerSARL(paramsComplets);
     }
 
     static simulerSELAS(params) {
+        // Récupérer les paramètres sectoriels comme pour SASU
+        const paramsComplets = {
+            ...params,
+            secteur: params.secteur || window.sectorOptions?.secteur || "Tous",
+            taille: params.taille || window.sectorOptions?.taille || "<50"
+        };
         // Similaire à SAS mais pour professions libérales
-        const result = this.simulerSAS(params);
+        const result = this.simulerSAS(paramsComplets);
         if (result.compatible) {
             result.typeEntreprise = 'SELAS';
         }
@@ -864,8 +919,14 @@ class SimulationsFiscales {
     }
 
     static simulerSCA(params) {
+        // Récupérer les paramètres sectoriels comme pour SASU
+        const paramsComplets = {
+            ...params,
+            secteur: params.secteur || window.sectorOptions?.secteur || "Tous",
+            taille: params.taille || window.sectorOptions?.taille || "<50"
+        };
         // Conserver le code existant
-        const { capitalInvesti = 37000 } = params;
+        const { capitalInvesti = 37000 } = paramsComplets;
         
         // Vérifier le capital minimum
         if (capitalInvesti < 37000) {
@@ -876,7 +937,7 @@ class SimulationsFiscales {
         }
         
         // Réutiliser une grande partie du code de la SARL
-        const result = this.simulerSARL({...params, gerantMajoritaire: true});
+        const result = this.simulerSARL({...paramsComplets, gerantMajoritaire: true});
         if (result.compatible) {
             result.typeEntreprise = 'SCA';
         }
@@ -890,6 +951,16 @@ window.SimulationsFiscales = SimulationsFiscales;
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
     console.log("Module SimulationsFiscales chargé et disponible globalement");
+    
+    // Créer l'objet sectorOptions global s'il n'existe pas
+    if (!window.sectorOptions) {
+        window.sectorOptions = {
+            secteur: "Tous",
+            taille: "<50"
+        };
+        console.log("SimulationsFiscales: Création de l'objet sectorOptions global par défaut");
+    }
+    
     // Déclencher un événement pour signaler que les simulations fiscales sont prêtes
     document.dispatchEvent(new CustomEvent('simulationsFiscalesReady'));
 });
