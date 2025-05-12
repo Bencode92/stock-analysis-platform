@@ -1429,7 +1429,7 @@ function runComparison() {
                  // Recalculer explicitement le net en tenant compte des charges mises à jour
                 const revenuNetSalaire = sim.salaireNetApresIR || sim.revenuNetSalaire || 0;
                    const dividendesNets = sim.dividendesNets || 0;
-               net = revenuNetSalaire + dividendesNets;
+                 net = sim.revenuNetTotal || (revenuNetSalaire + dividendesNets);
     
                   // Log de debug pour vérifier les valeurs
                      console.log(`[FIX] ${statutId} - Charges: ${charges}, Salaire net: ${revenuNetSalaire}, Dividendes: ${dividendesNets}, NET: ${net}`);
