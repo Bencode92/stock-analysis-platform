@@ -889,7 +889,7 @@
     <!-- Script du comparatif des statuts juridiques -->
     <script src="js/comparatif-status.js?v=20250505_1" defer></script>
     <!-- Utilitaires de calcul fiscal -->
-    <script src="js/fiscal-utils.js?v=20250506_2" defer></script>
+    <script src="js/fiscal-utils.js?v=20250512_1" defer></script>
     <!-- Script du moteur de simulation fiscale -->
     <script src="js/fiscal-simulation.js?v=20250506_2" defer></script>
     <!-- Script du graphique d'optimisation ratio rémunération/dividendes -->
@@ -996,6 +996,218 @@
                 refreshGlossary();
             });
         });
+    });
+    </script>
+    
+    <!-- Script pour ajouter les options sectorielles directement -->
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Attendre que le simulateur soit initialisé
+        const checkInterval = setInterval(function() {
+            const guideTab = document.querySelector('.tab-item:nth-child(3)');
+            if (guideTab) {
+                guideTab.addEventListener('click', function() {
+                    console.log("Guide fiscal tab clicked");
+                    // Attendre que l'onglet se charge
+                    setTimeout(addSectorOptions, 500);
+                });
+            }
+            
+            // Si nous sommes déjà sur l'onglet Guide fiscal
+            if (document.querySelector('.tab-item:nth-child(3).active')) {
+                setTimeout(addSectorOptions, 500);
+                clearInterval(checkInterval);
+            }
+        }, 500);
+        
+        function addSectorOptions() {
+            // Vérifier si les options existent déjà
+            if (document.getElementById('secteur-options-container')) {
+                console.log("Les options sectorielles existent déjà");
+                return;
+            }
+            
+            // Vérifier que le simulateur est chargé
+            const simOptionsContainer = document.getElementById('sim-options-container');
+            const formContainer = document.querySelector('#fiscal-simulator .grid');
+            
+            if (!simOptionsContainer || !formContainer) {
+                console.log("Le simulateur fiscal n'est pas encore chargé, nouvelle tentative dans 500ms");
+                setTimeout(addSectorOptions, 500);
+                return;
+            }
+            
+            console.log("Simulateur fiscal détecté - ajout des options sectorielles");
+            
+            // Créer la section d'options sectorielles
+            const optionsSection = document.createElement('div');
+            optionsSection.className = 'mt-4';
+            optionsSection.id = 'secteur-options-container';
+            optionsSection.innerHTML = `
+                <div class="bg-indigo-900 bg-opacity-20 border border-indigo-800 p-4 rounded-lg mb-2">
+                    <h4 class="font-medium mb-3 text-indigo-400"><i class="fas fa-industry mr-2"></i>Paramètres sectoriels (charges sociales)</h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-gray-300 mb-2">Secteur d'activité</label>
+                            <select id="secteur-activite" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
+                                <option value="Tous" selected>Tous secteurs</option>
+                                <option value="Services">Services</option>
+                                <option value="Commerce">Commerce</option>
+                                <option value="Industrie">Industrie</option>
+                            </select>
+                            <div class="text-xs text-gray-400 mt-1">Impact sur le taux de cotisations patronales et AT/MP</div>
+                        </div>
+                        <div>
+                            <label class="block text-gray-300 mb-2">Taille de l'entreprise</label>
+                            <select id="taille-entreprise" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
+                                <option value="<50" selected>Moins de 50 salariés</option>
+                                <option value=">=50">50 salariés ou plus</option>
+                            </select>
+                            <div class="text-xs text-gray-400 mt-1">Impact sur le FNAL et autres cotisations</div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3 bg-blue-900 bg-opacity-30 p-3 rounded-lg text-xs">
+                        <p><i class="fas fa-info-circle text-blue-400 mr-1"></i> Ces paramètres affectent uniquement les charges sociales des structures avec dirigeant assimilé salarié (SASU, SAS, SARL gérant minoritaire...)</p>
+                    </div>
+                </div>
+            `;
+            
+            // Trouver où insérer nos options - chercher différentes cibles possibles
+            const microTypeContainer = document.getElementById('micro-type')?.closest('.mt-4');
+            const fiscalWarning = document.querySelector('.fiscal-warning');
+            
+            // Insérer à l'endroit approprié
+            if (microTypeContainer) {
+                formContainer.insertBefore(optionsSection, microTypeContainer.nextElementSibling);
+                console.log("Options sectorielles insérées après le type micro");
+            } else if (fiscalWarning) {
+                formContainer.insertBefore(optionsSection, fiscalWarning);
+                console.log("Options sectorielles insérées avant l'avertissement fiscal");
+            } else {
+                // Fallback: ajouter à la fin du formulaire
+                formContainer.appendChild(optionsSection);
+                console.log("Options sectorielles ajoutées à la fin du formulaire");
+            }
+            
+            // Créer une variable globale pour stocker les paramètres sectoriels
+            window.simulationParams = {
+                secteur: "Tous",
+                taille: "<50"
+            };
+            
+            // Ajouter les écouteurs d'événements pour les sélecteurs
+            document.getElementById('secteur-activite')?.addEventListener('change', function() {
+                window.simulationParams.secteur = this.value;
+                if (typeof window.runComparison === 'function') {
+                    console.log("Secteur changé à", this.value, "- relance de la simulation");
+                    window.runComparison();
+                }
+            });
+            
+            document.getElementById('taille-entreprise')?.addEventListener('change', function() {
+                window.simulationParams.taille = this.value;
+                if (typeof window.runComparison === 'function') {
+                    console.log("Taille changée à", this.value, "- relance de la simulation");
+                    window.runComparison();
+                }
+            });
+            
+            console.log("Patching les simulateurs pour utiliser les paramètres sectoriels");
+            
+            // Modifier les simulateurs pour qu'ils utilisent les paramètres sectoriels
+            if (window.SimulationsFiscales) {
+                // Sauvegarder les méthodes originales
+                const originalSasuSim = window.SimulationsFiscales.simulerSASU;
+                const originalSasSim = window.SimulationsFiscales.simulerSAS;
+                const originalSarlSim = window.SimulationsFiscales.simulerSARL;
+                
+                // Remplacer les méthodes par des versions qui utilisent nos paramètres
+                window.SimulationsFiscales.simulerSASU = function(params) {
+                    const paramsEtendus = {
+                        ...params,
+                        secteur: window.simulationParams?.secteur || "Tous",
+                        taille: window.simulationParams?.taille || "<50"
+                    };
+                    console.log("simulerSASU appelé avec secteur:", paramsEtendus.secteur, "et taille:", paramsEtendus.taille);
+                    return originalSasuSim.call(this, paramsEtendus);
+                };
+                
+                window.SimulationsFiscales.simulerSAS = function(params) {
+                    const paramsEtendus = {
+                        ...params,
+                        secteur: window.simulationParams?.secteur || "Tous",
+                        taille: window.simulationParams?.taille || "<50"
+                    };
+                    return originalSasSim.call(this, paramsEtendus);
+                };
+                
+                window.SimulationsFiscales.simulerSARL = function(params) {
+                    const paramsEtendus = {
+                        ...params,
+                        secteur: window.simulationParams?.secteur || "Tous",
+                        taille: window.simulationParams?.taille || "<50"
+                    };
+                    return originalSarlSim.call(this, paramsEtendus);
+                };
+            }
+            
+            // Étendre la fonction d'affichage des détails de calcul
+            if (typeof window.showCalculationDetails === 'function') {
+                const originalShowDetails = window.showCalculationDetails;
+                window.showCalculationDetails = function(statutId, simulationResults) {
+                    // Appeler la fonction originale
+                    originalShowDetails.call(this, statutId, simulationResults);
+                    
+                    // Ajouter nos informations sectorielles aux détails
+                    setTimeout(() => {
+                        const modal = document.querySelector('.detail-modal');
+                        if (!modal) return;
+                        
+                        const result = simulationResults.find(r => r.statutId === statutId);
+                        if (!result) return;
+                        
+                        // Ajouter les infos sectorielles pour certains statuts
+                        if (statutId === 'sasu' || statutId === 'sas' || statutId === 'sa' || 
+                            (statutId === 'sarl' && result.sim && !result.sim.gerantMajoritaire)) {
+                            
+                            // Trouver la section "Données de base"
+                            const sectionsHeader = modal.querySelectorAll('.detail-category');
+                            for (const header of sectionsHeader) {
+                                if (header.textContent.includes('Données de base')) {
+                                    const tableAfter = header.nextElementSibling;
+                                    if (tableAfter && tableAfter.tagName === 'TABLE') {
+                                        // Ajouter une ligne pour le secteur et la taille
+                                        const tbody = tableAfter.querySelector('tbody') || tableAfter;
+                                        const newRow1 = document.createElement('tr');
+                                        newRow1.innerHTML = `
+                                            <td>Secteur d'activité</td>
+                                            <td>${window.simulationParams.secteur || 'Tous secteurs'}</td>
+                                        `;
+                                        const newRow2 = document.createElement('tr');
+                                        newRow2.innerHTML = `
+                                            <td>Taille de l'entreprise</td>
+                                            <td>${window.simulationParams.taille || '<50'} salariés</td>
+                                        `;
+                                        tbody.appendChild(newRow1);
+                                        tbody.appendChild(newRow2);
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }, 100);
+                };
+            }
+            
+            console.log("Configuration des options sectorielles terminée");
+            
+            // Forcer une nouvelle simulation pour tenir compte des options
+            if (typeof window.runComparison === 'function') {
+                window.runComparison();
+            }
+        }
     });
     </script>
 </body>
