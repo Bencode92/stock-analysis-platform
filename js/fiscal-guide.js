@@ -520,6 +520,36 @@ function addCustomStyles() {
     `;
     document.head.appendChild(styleElement);
 }
+function setupSectorOptions() {
+    // Récupérer les sélecteurs de secteur et taille
+    const secteurSelect = document.querySelector('#secteur-select, [id$="secteur-select"]');
+    const tailleSelect = document.querySelector('#taille-select, [id$="taille-select"]');
+    
+    if (secteurSelect && tailleSelect) {
+        console.log("Initialisation des écouteurs pour options sectorielles");
+        
+        // Ajouter des écouteurs d'événements
+        secteurSelect.addEventListener('change', function() {
+            window.sectorOptions = {
+                secteur: this.value,
+                taille: tailleSelect.value
+            };
+            console.log("Options sectorielles mises à jour:", window.sectorOptions);
+            runComparison();
+        });
+        
+        tailleSelect.addEventListener('change', function() {
+            window.sectorOptions = {
+                secteur: secteurSelect.value,
+                taille: this.value
+            };
+            console.log("Options sectorielles mises à jour:", window.sectorOptions);
+            runComparison();
+        });
+    } else {
+        console.warn("Sélecteurs de secteur/taille non trouvés");
+    }
+}
 
 function initFiscalSimulator() {
     console.log("Initialisation du simulateur fiscal simplifié...");
@@ -530,6 +560,7 @@ function initFiscalSimulator() {
             clearInterval(checkDependencies);
             console.log("Dépendances trouvées, configuration du simulateur...");
             setupSimulator();
+            setupSectorOptions(); // Ajout de cette ligne
         }
     }, 200);
 }
@@ -925,6 +956,18 @@ function runComparison() {
     const ratioSalaire = parseFloat(document.getElementById('sim-salaire').value) / 100 || 0.7;
     const tmi = parseFloat(document.getElementById('sim-tmi').value) || 30;
     
+    // Récupérer les options sectorielles actuelles
+    const secteurSelect = document.querySelector('#secteur-select, [id$="secteur-select"]');
+    const tailleSelect = document.querySelector('#taille-select, [id$="taille-select"]');
+    
+    if (secteurSelect && tailleSelect) {
+        window.sectorOptions = {
+            secteur: secteurSelect.value,
+            taille: tailleSelect.value
+        };
+        console.log("runComparison: Options sectorielles utilisées:", window.sectorOptions);
+    }
+    
     // Récupérer les options avancées
     const modeExpert = true; // Toujours activé
     const useOptimalRatio = document.getElementById('use-optimal-ratio') && document.getElementById('use-optimal-ratio').checked;
@@ -940,8 +983,11 @@ function runComparison() {
         tauxRemuneration: ratioSalaire,
         tmiActuel: tmi,
         modeExpert: modeExpert,
-        gerantMajoritaire: gerantMajoritaire
+        gerantMajoritaire: gerantMajoritaire,
+        secteur: window.sectorOptions?.secteur, // Ajouter ces paramètres
+        taille: window.sectorOptions?.taille
     };
+
     
     // Logger pour debug
     console.log("Paramètres:", params);
