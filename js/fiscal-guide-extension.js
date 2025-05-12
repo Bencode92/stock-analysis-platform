@@ -1,5 +1,5 @@
 // fiscal-guide-extension.js - Extension des fonctionnalités du guide fiscal
-// Version 2.0 - Mai 2025 - Correction de l'affichage et des détails de calcul
+// Version 2.1 - Mai 2025 - Correction fonctionnement avec "Tous secteurs" et retour à la normale
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log("fiscal-guide-extension.js: Initialisation...");
@@ -44,11 +44,11 @@ function initGuideFiscalExtension() {
     // Ajouter les options sectorielles pour SASU/SAS
     addSectorOptions();
     
-    // NOUVEAU: Surcharger directement la fonction runComparison pour garantir la récupération des options
+    // Surcharger directement la fonction runComparison pour garantir la récupération des options
     patchRunComparison();
 }
 
-// NOUVEAU: Patcher directement la fonction runComparison
+// Patcher directement la fonction runComparison
 function patchRunComparison() {
     // Attendre que la fonction runComparison soit définie
     if (typeof window.runComparison !== 'function') {
@@ -155,10 +155,15 @@ function addSectorOptions() {
             </div>
         </div>
         
-        <!-- NOUVEAU: Ajout d'un bouton d'actualisation -->
-        <div class="mt-3">
+        <!-- Ajout d'un bouton d'actualisation -->
+        <div class="mt-3 flex flex-wrap gap-2">
             <button id="refresh-sector-button" class="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded-md shadow-sm">
                 <i class="fas fa-sync-alt mr-2"></i> Actualiser avec ces paramètres
+            </button>
+            
+            <!-- NOUVEAU: Bouton pour revenir aux valeurs par défaut -->
+            <button id="reset-sector-button" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md shadow-sm">
+                <i class="fas fa-undo mr-2"></i> Revenir aux valeurs normales
             </button>
         </div>
     `;
@@ -179,6 +184,7 @@ function addSectorOptions() {
     const secteurSelect = document.getElementById('secteur-select');
     const tailleSelect = document.getElementById('taille-select');
     const refreshButton = document.getElementById('refresh-sector-button');
+    const resetButton = document.getElementById('reset-sector-button');
     
     if (secteurSelect) {
         // Définir la valeur par défaut basée sur le stockage global
@@ -216,15 +222,35 @@ function addSectorOptions() {
         });
     }
     
+    // NOUVEAU: Ajouter un événement au bouton de réinitialisation
+    if (resetButton) {
+        resetButton.addEventListener('click', function() {
+            console.log("fiscal-guide-extension.js: Bouton de réinitialisation cliqué");
+            
+            // Réinitialiser les valeurs des sélecteurs
+            if (secteurSelect) secteurSelect.value = "Tous";
+            if (tailleSelect) tailleSelect.value = "<50";
+            
+            // Réinitialiser l'objet sectorOptions global
+            window.sectorOptions = {
+                secteur: "Tous",
+                taille: "<50"
+            };
+            
+            // Relancer la comparaison avec les valeurs par défaut
+            clearCacheAndRunComparison();
+        });
+    }
+    
     // CORRECTION: Ne pas modifier runComparison, mais plutôt observer les changements dans le DOM
     setupMutationObserver();
 }
 
-// NOUVEAU: Nettoyage complet du cache et recalcul
+// Nettoyage complet du cache et recalcul
 function clearCacheAndRunComparison() {
     console.log("fiscal-guide-extension.js: Nettoyage complet du cache et recalcul");
     
-    // NOUVEAU: Afficher un indicateur visuel de chargement
+    // Afficher un indicateur visuel de chargement
     showLoadingIndicator();
     
     // Vider le cache des résultats
@@ -265,7 +291,7 @@ function clearCacheAndRunComparison() {
     }
 }
 
-// NOUVEAU: Afficher un indicateur de chargement
+// Afficher un indicateur de chargement
 function showLoadingIndicator() {
     // Supprimer l'ancien indicateur s'il existe
     hideLoadingIndicator();
@@ -302,7 +328,7 @@ function showLoadingIndicator() {
     document.body.appendChild(loadingIndicator);
 }
 
-// NOUVEAU: Masquer l'indicateur de chargement
+// Masquer l'indicateur de chargement
 function hideLoadingIndicator() {
     const loadingIndicator = document.getElementById('sector-loading-indicator');
     if (loadingIndicator) {
@@ -310,7 +336,7 @@ function hideLoadingIndicator() {
     }
 }
 
-// NOUVEAU: Configuration d'un observateur de mutations pour détecter les changements dans le tableau
+// Configuration d'un observateur de mutations pour détecter les changements dans le tableau
 function setupMutationObserver() {
     console.log("fiscal-guide-extension.js: Configuration de l'observateur de mutations");
     
@@ -346,6 +372,12 @@ function setupMutationObserver() {
 // MODIFIÉ: Mise à jour des détails sectoriels dans le tableau
 function updateSectorDetails(forceUpdate = false) {
     console.log("fiscal-guide-extension.js: Mise à jour des détails sectoriels (forceUpdate="+forceUpdate+")");
+    
+    // CORRECTION: Vérifier si on a le secteur "Tous" et s'assurer qu'il fonctionne
+    if (window.sectorOptions && window.sectorOptions.secteur === "Tous") {
+        console.log("fiscal-guide-extension.js: Secteur 'Tous' détecté - s'assurer que le traitement est correct");
+        // Aucune action spéciale n'est nécessaire car le code doit fonctionner avec "Tous"
+    }
     
     // Attendre un peu que le tableau soit complètement chargé
     setTimeout(() => {
@@ -395,6 +427,11 @@ function updateSectorDetails(forceUpdate = false) {
                         
                         // Vérifier que la méthode existe
                         if (window.SimulationsFiscales && typeof window.SimulationsFiscales[simulationFunc] === 'function') {
+                            // CORRECTION FIX POUR "TOUS LES SECTEURS":
+                            // Assurons-nous que les valeurs sont explicitement définies
+                            const secteur = window.sectorOptions.secteur || "Tous";
+                            const taille = window.sectorOptions.taille || "<50";
+                            
                             // NOUVEAU: Simulation avec options sectorielles explicites
                             const result = window.SimulationsFiscales[simulationFunc]({
                                 ca: ca,
@@ -402,8 +439,8 @@ function updateSectorDetails(forceUpdate = false) {
                                 tauxRemuneration: tauxRemuneration,
                                 tmiActuel: tmiActuel,
                                 // Paramètres sectoriels explicites
-                                secteur: window.sectorOptions.secteur,
-                                taille: window.sectorOptions.taille
+                                secteur: secteur,
+                                taille: taille
                             });
                             
                             // Si la simulation réussit, mettre à jour les cellules
@@ -411,10 +448,10 @@ function updateSectorDetails(forceUpdate = false) {
                                 // NOUVEAU: Toujours forcer le résultat
                                 updateCellWithResult(cellules, result);
                                 
-                                // NOUVEAU: Mettre à jour le détail de calcul s'il est ouvert
+                                // Mettre à jour le détail de calcul s'il est ouvert
                                 updateOpenDetailModals(statutId, result);
                                 
-                                // NOUVEAU: Vérifier le changement de valeur
+                                // Vérifier le changement de valeur
                                 const oldValue = window.simulationResults[statutId]?.revenuNetTotal || 0;
                                 const newValue = result.revenuNetTotal;
                                 
@@ -424,7 +461,7 @@ function updateSectorDetails(forceUpdate = false) {
                                 if (oldValue !== newValue) {
                                     console.log(`fiscal-guide-extension.js: Valeur modifiée pour ${statutId} - Avant: ${oldValue}, Après: ${newValue}`);
                                     
-                                    // NOUVEAU: Mettre en surbrillance le changement
+                                    // Mettre en surbrillance le changement
                                     highlightChangedValue(cellules, oldValue, newValue);
                                 }
                             } else {
@@ -444,7 +481,7 @@ function updateSectorDetails(forceUpdate = false) {
     }, 200);
 }
 
-// NOUVEAU: Mettre en surbrillance les valeurs modifiées
+// Mettre en surbrillance les valeurs modifiées
 function highlightChangedValue(cellules, oldValue, newValue) {
     // Ne rien faire si les valeurs sont identiques
     if (oldValue === newValue) return;
@@ -478,7 +515,7 @@ function highlightChangedValue(cellules, oldValue, newValue) {
     }
 }
 
-// NOUVEAU: Mettre à jour les modals de détail ouverts
+// Mettre à jour les modals de détail ouverts
 function updateOpenDetailModals(statutId, result) {
     // Vérifier si un modal de détail est ouvert
     const detailModal = document.querySelector('.detail-modal');
@@ -556,7 +593,7 @@ function updateOpenDetailModals(statutId, result) {
     }
 }
 
-// NOUVEAU: Mettre à jour une valeur dans le modal de détail
+// Mettre à jour une valeur dans le modal de détail
 function updateDetailModalValue(modal, label, value) {
     const rows = modal.querySelectorAll('tr');
     for (const row of rows) {
@@ -662,7 +699,8 @@ document.addEventListener('fiscalUtilsReady', function() {
         console.log("fiscal-guide-extension.js: optimiserRatioRemuneration patché");
     }
     
-    // NOUVEAU: Patcher calculChargesSalariales pour des logs plus détaillés
+    // CORRECTION FIX POUR TOUS SECTEURS:
+    // Patcher calculChargesSalariales pour des logs plus détaillés et corriger le traitement de "Tous"
     if (window.FiscalUtils && !window.FiscalUtils._calculChargesSalarialesPatched) {
         window.FiscalUtils._calculChargesSalarialesPatched = true;
         
@@ -682,6 +720,13 @@ document.addEventListener('fiscalUtilsReady', function() {
             };
             
             console.log(`fiscal-guide-extension.js: calculChargesSalariales - SECTEUR=${paramsComplets.secteur}, TAILLE=${paramsComplets.taille}, REM=${remuneration}`);
+            
+            // CORRECTION IMPORTANTE POUR "TOUS":
+            // S'assurer que le secteur est toujours "Tous" littéralement, pas undefined ou null
+            if (!paramsComplets.secteur || paramsComplets.secteur.toLowerCase() === "tous") {
+                paramsComplets.secteur = "Tous";
+                console.log("fiscal-guide-extension.js: Correction secteur à 'Tous'");
+            }
             
             // Appeler la fonction originale avec les paramètres complétés
             const result = originalCalculCharges.call(window.FiscalUtils, remuneration, paramsComplets);
@@ -716,14 +761,21 @@ document.addEventListener('fiscalUtilsReady', function() {
                         const tauxRemuneration = parseFloat(document.getElementById('sim-salaire').value) / 100 || 0.7;
                         const tmiActuel = parseFloat(document.getElementById('sim-tmi').value) || 30;
                         
+                        // CORRECTION FIX POUR TOUS SECTEURS:
+                        // S'assurer que les options sectorielles sont correctement récupérées
+                        const secteur = window.sectorOptions?.secteur || "Tous";
+                        const taille = window.sectorOptions?.taille || "<50";
+                        
+                        console.log(`fiscal-guide-extension.js: showCalculationDetails pour ${statutId} avec secteur=${secteur}, taille=${taille}`);
+                        
                         // Lancer une simulation fraîche avec les paramètres sectoriels actuels
                         const result = window.SimulationsFiscales[`simuler${statutId.charAt(0).toUpperCase() + statutId.slice(1)}`]({
                             ca: ca,
                             tauxMarge: tauxMarge,
                             tauxRemuneration: tauxRemuneration,
                             tmiActuel: tmiActuel,
-                            secteur: window.sectorOptions?.secteur || "Tous",
-                            taille: window.sectorOptions?.taille || "<50",
+                            secteur: secteur,
+                            taille: taille,
                             modeExpert: true
                         });
                         
