@@ -521,23 +521,38 @@ function addCustomStyles() {
     document.head.appendChild(styleElement);
 }
 function setupSectorOptions() {
-    // Code de débogage pour vérifier si les éléments sont trouvés
+    // Find selector elements
     const secteurSelect = document.querySelector('#secteur-select, [id$="secteur-select"]');
     const tailleSelect = document.querySelector('#taille-select, [id$="taille-select"]');
     console.log("Éléments trouvés:", !!secteurSelect, !!tailleSelect);
-    if (secteurSelect) console.log("ID secteur:", secteurSelect.id);
-    if (tailleSelect) console.log("ID taille:", tailleSelect.id);
     
+    // CRITICAL: Initialize immediately at load time
     if (secteurSelect && tailleSelect) {
-        console.log("Initialisation des écouteurs pour options sectorielles");
+        // Set initial values right away
+        window.sectorOptions = {
+            secteur: secteurSelect.value,
+            taille: tailleSelect.value
+        };
+        console.log("Options sectorielles initiales:", window.sectorOptions);
         
-        // Ajouter des écouteurs d'événements
+        // Broadcast initial values
+        document.dispatchEvent(new CustomEvent('sectorOptionsChanged', { 
+            detail: window.sectorOptions 
+        }));
+        
+        // Add change listeners
         secteurSelect.addEventListener('change', function() {
             window.sectorOptions = {
                 secteur: this.value,
                 taille: tailleSelect.value
             };
             console.log("Options sectorielles mises à jour:", window.sectorOptions);
+            
+            // Broadcast changes
+            document.dispatchEvent(new CustomEvent('sectorOptionsChanged', { 
+                detail: window.sectorOptions 
+            }));
+            
             runComparison();
         });
         
@@ -547,12 +562,28 @@ function setupSectorOptions() {
                 taille: this.value
             };
             console.log("Options sectorielles mises à jour:", window.sectorOptions);
+            
+            // Broadcast changes
+            document.dispatchEvent(new CustomEvent('sectorOptionsChanged', { 
+                detail: window.sectorOptions 
+            }));
+            
             runComparison();
         });
     } else {
-        console.warn("Sélecteurs de secteur/taille non trouvés");
+        // Set defaults if elements not found
+        window.sectorOptions = {
+            secteur: "Tous",
+            taille: "<50"
+        };
+        console.log("Options sectorielles par défaut:", window.sectorOptions);
     }
 }
+
+// Add listener for debugging
+document.addEventListener('sectorOptionsChanged', function(e) {
+    console.log("ÉVÉNEMENT: Options sectorielles modifiées:", e.detail);
+});
 
 function initFiscalSimulator() {
     console.log("Initialisation du simulateur fiscal simplifié...");
