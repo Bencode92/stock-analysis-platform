@@ -1,30 +1,62 @@
 // fiscal-guide-extension.js - Extension pour les options sectorielles du simulateur fiscal
-// Version 1.0 - Mai 2025
+// Version 1.1 - Mai 2025
 
+// Écouter l'événement personnalisé fiscalGuideReady
+document.addEventListener('fiscalGuideReady', function() {
+    console.log("Événement fiscalGuideReady reçu, initialisation de l'extension...");
+    initSectorOptions();
+});
+
+// Conserver également l'écoute sur DOMContentLoaded pour la compatibilité
 document.addEventListener('DOMContentLoaded', function() {
     console.log("Extension pour options sectorielles chargée");
     
-    // Vérifier périodiquement si le simulateur est initialisé
-    const checkSimulatorReady = setInterval(() => {
-        // Chercher des éléments qui indiquent que le simulateur fiscal est prêt
+    // Si après 2 secondes l'événement n'a pas été déclenché, essayer quand même
+    setTimeout(() => {
         const simContainer = document.getElementById('fiscal-simulator');
         const simOptions = document.getElementById('sim-options-container');
         
         if (simContainer && simOptions) {
-            clearInterval(checkSimulatorReady);
-            console.log("Simulateur fiscal détecté, initialisation de l'extension...");
+            console.log("Détection tardive du simulateur, initialisation de l'extension...");
             initSectorOptions();
+        } else {
+            console.warn("Extension fiscale: impossible de trouver les éléments du simulateur après 2s:", {
+                simContainer: !!simContainer,
+                simOptions: !!simOptions
+            });
+            
+            // Afficher tous les IDs présents pour déboguer
+            const allIds = Array.from(document.querySelectorAll('[id]')).map(el => el.id);
+            console.log("IDs disponibles dans la page:", allIds);
+            
+            // Dernière tentative: vérifier périodiquement pendant 10 secondes
+            const checkSimulatorReady = setInterval(() => {
+                const simContainer = document.getElementById('fiscal-simulator');
+                const simOptions = document.getElementById('sim-options-container');
+                
+                if (simContainer && simOptions) {
+                    clearInterval(checkSimulatorReady);
+                    console.log("Simulateur fiscal détecté tardivement, initialisation de l'extension...");
+                    initSectorOptions();
+                }
+            }, 500);
+            
+            // Durée maximale d'attente: 10 secondes
+            setTimeout(() => {
+                clearInterval(checkSimulatorReady);
+            }, 10000);
         }
-    }, 500);
-    
-    // Durée maximale d'attente: 10 secondes
-    setTimeout(() => {
-        clearInterval(checkSimulatorReady);
-    }, 10000);
+    }, 2000);
 });
 
 // Fonction principale pour initialiser les options sectorielles
 function initSectorOptions() {
+    // Éviter l'initialisation multiple
+    if (document.getElementById('secteur-options-container')) {
+        console.log("Options sectorielles déjà initialisées, ignoré.");
+        return;
+    }
+    
     // 1. Créer le conteneur d'options sectorielles
     const sectorOptionsContainer = document.createElement('div');
     sectorOptionsContainer.className = 'mt-4';
@@ -123,6 +155,8 @@ function insertSectorOptions(optionsElement) {
         } else {
             simContainer.appendChild(optionsElement);
         }
+    } else {
+        console.error("Impossible de trouver un conteneur valide pour les options sectorielles");
     }
 }
 
