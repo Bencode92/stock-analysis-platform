@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 2.0 - Mai 2025 - Étendu avec tous les statuts juridiques
+// Version 2.1 - Mai 2025 - Amélioration des options sectorielles
 
 // Classe pour les simulations fiscales des différents statuts juridiques
 class SimulationsFiscales {
@@ -300,14 +300,36 @@ class SimulationsFiscales {
         
         // Calcul des charges sociales avec paramètres sectoriels
         let chargesPatronales, chargesSalariales;
+        let infoCharges = {};
+        
         if (window.FiscalUtils) {
+            // Utiliser la fonction améliorée qui supporte les secteurs et tailles
             const charges = window.FiscalUtils.calculChargesSalariales(remuneration, { secteur, taille });
+            
+            // Récupérer les charges calculées et les détails
             chargesPatronales = charges.patronales;
             chargesSalariales = charges.salariales;
+            
+            // Stocker des informations supplémentaires sur les taux appliqués
+            infoCharges = {
+                tauxPatronal: charges.tauxPatronal,
+                tauxSalarial: charges.tauxSalarial,
+                description: charges.description || 'Taux sectoriels appliqués'
+            };
+            
+            // Debug important - afficher les paramètres utilisés
+            console.log(`SASU - Impact sectoriel: ${secteur}, ${taille} - Taux patronal: ${(charges.tauxPatronal*100).toFixed(1)}%, Taux salarial: ${(charges.tauxSalarial*100).toFixed(1)}%`);
+            console.log(`SASU - Description des taux: ${charges.description}`);
         } else {
             // Fallback si l'utilitaire n'est pas disponible
             chargesPatronales = Math.round(remuneration * 0.45); // taux moyen 2025
             chargesSalariales = Math.round(remuneration * 0.22);
+            
+            infoCharges = {
+                tauxPatronal: 0.45,
+                tauxSalarial: 0.22,
+                description: 'Taux par défaut (FiscalUtils non disponible)'
+            };
         }
         
         const coutTotalEmployeur = remuneration + chargesPatronales;
@@ -381,7 +403,8 @@ class SimulationsFiscales {
             revenuNetTotal: revenuNetTotal,
             ratioNetCA: (revenuNetTotal / ca) * 100,
             secteur: secteur,
-            taille: taille
+            taille: taille,
+            infoCharges: infoCharges
         };
     }
 
@@ -410,14 +433,25 @@ class SimulationsFiscales {
         // Régime social différent selon que le gérant est majoritaire ou non
         let cotisationsSociales = 0;
         let salaireNet = 0;
+        let infoCharges = {};
         
         if (gerantMajoritaire) {
             // Gérant majoritaire = TNS
             if (window.FiscalUtils) {
                 cotisationsSociales = window.FiscalUtils.calculCotisationsTNS(remuneration);
+                infoCharges = {
+                    type: 'TNS',
+                    tauxGlobal: 0.45,
+                    description: 'Cotisations TNS gérant majoritaire'
+                };
             } else {
                 // Fallback
                 cotisationsSociales = Math.round(remuneration * 0.45);
+                infoCharges = {
+                    type: 'TNS',
+                    tauxGlobal: 0.45,
+                    description: 'Cotisations TNS (taux par défaut)'
+                };
             }
             salaireNet = remuneration - cotisationsSociales;
         } else {
@@ -428,11 +462,28 @@ class SimulationsFiscales {
                 chargesPatronales = charges.patronales;
                 chargesSalariales = charges.salariales;
                 cotisationsSociales = chargesPatronales + chargesSalariales;
+                
+                infoCharges = {
+                    type: 'Assimilé salarié',
+                    tauxPatronal: charges.tauxPatronal,
+                    tauxSalarial: charges.tauxSalarial,
+                    description: charges.description || 'Charges assimilé salarié'
+                };
+                
+                // Debug important - afficher les paramètres utilisés
+                console.log(`SARL (gérant minoritaire) - Impact sectoriel: ${secteur}, ${taille} - Taux patronal: ${(charges.tauxPatronal*100).toFixed(1)}%, Taux salarial: ${(charges.tauxSalarial*100).toFixed(1)}%`);
             } else {
                 // Fallback
                 chargesPatronales = Math.round(remuneration * 0.45); // taux moyen 2025
                 chargesSalariales = Math.round(remuneration * 0.22);
                 cotisationsSociales = chargesPatronales + chargesSalariales;
+                
+                infoCharges = {
+                    type: 'Assimilé salarié',
+                    tauxPatronal: 0.45,
+                    tauxSalarial: 0.22,
+                    description: 'Charges assimilé salarié (taux par défaut)'
+                };
             }
             salaireNet = remuneration - chargesSalariales;
         }
@@ -522,7 +573,8 @@ class SimulationsFiscales {
             ratioNetCA: (revenuNetTotal / ca) * 100,
             gerantMajoritaire: gerantMajoritaire,
             secteur: secteur,
-            taille: taille
+            taille: taille,
+            infoCharges: infoCharges
         };
     }
 
