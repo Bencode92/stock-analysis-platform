@@ -521,9 +521,12 @@ function addCustomStyles() {
     document.head.appendChild(styleElement);
 }
 function setupSectorOptions() {
-    // Récupérer les sélecteurs de secteur et taille
+    // Code de débogage pour vérifier si les éléments sont trouvés
     const secteurSelect = document.querySelector('#secteur-select, [id$="secteur-select"]');
     const tailleSelect = document.querySelector('#taille-select, [id$="taille-select"]');
+    console.log("Éléments trouvés:", !!secteurSelect, !!tailleSelect);
+    if (secteurSelect) console.log("ID secteur:", secteurSelect.id);
+    if (tailleSelect) console.log("ID taille:", tailleSelect.id);
     
     if (secteurSelect && tailleSelect) {
         console.log("Initialisation des écouteurs pour options sectorielles");
