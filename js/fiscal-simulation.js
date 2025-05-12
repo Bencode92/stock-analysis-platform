@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 2.5 - Mai 2025 - Correction du calcul du net en poche avec options sectorielles
+// Version 2.6 - Mai 2025 - Correction du calcul du net en poche avec options sectorielles
 
 // Classe pour les simulations fiscales des différents statuts juridiques
 class SimulationsFiscales {
@@ -296,13 +296,14 @@ class SimulationsFiscales {
             tauxRemuneration = 0.7, 
             tmiActuel = 30, 
             modeExpert = false, 
-            // Récupération des paramètres sectoriels avec des valeurs par défaut
+            // CORRECTION MAJEURE: Toujours récupérer les options sectorielles directement
+            // depuis window.sectorOptions pour garantir leur prise en compte
             secteur = window.sectorOptions?.secteur || "Tous", 
             taille = window.sectorOptions?.taille || "<50" 
         } = params;
         
         // Log de diagnostic pour confirmer les paramètres sectoriels utilisés
-        console.log(`SimulationsFiscales.simulerSASU - Paramètres sectoriels: secteur=${secteur}, taille=${taille}`);
+        console.log(`SASU - Paramètres sectoriels: secteur=${secteur}, taille=${taille}`);
         
         // Calcul du résultat de l'entreprise
         const resultatEntreprise = Math.round(ca * tauxMarge);
@@ -311,13 +312,13 @@ class SimulationsFiscales {
         const remuneration = Math.round(resultatEntreprise * tauxRemuneration);
         const resultatApresRemuneration = resultatEntreprise - remuneration;
         
-        // Calcul des charges sociales avec paramètres sectoriels
+        // CORRECTION: Calcul des charges sociales avec paramètres sectoriels
+        // Toujours utiliser les valeurs récupérées directement de window.sectorOptions
         let chargesPatronales, chargesSalariales;
         let infoCharges = {};
         
         if (window.FiscalUtils) {
-            // CORRECTION: Utiliser la fonction améliorée avec les paramètres sectoriels
-            // et s'assurer que ces paramètres sont correctement transmis
+            // CORRECTION: Utiliser la fonction avec les paramètres sectoriels actuels
             const charges = window.FiscalUtils.calculChargesSalariales(remuneration, { 
                 secteur: secteur, 
                 taille: taille 
@@ -338,7 +339,6 @@ class SimulationsFiscales {
             
             // Debug important - afficher les paramètres utilisés
             console.log(`SASU - Impact sectoriel: ${secteur}, ${taille} - Taux patronal: ${(charges.tauxPatronal*100).toFixed(1)}%, Taux salarial: ${(charges.tauxSalarial*100).toFixed(1)}%`);
-            console.log(`SASU - Description des taux: ${charges.description}`);
         } else {
             // Fallback si l'utilitaire n'est pas disponible
             chargesPatronales = Math.round(remuneration * 0.45); // taux moyen 2025
@@ -402,7 +402,7 @@ class SimulationsFiscales {
         // Dividendes nets après PFU
         const dividendesNets = dividendes - prelevementForfaitaire;
         
-        // CORRECTION: Recalculer le revenu net total pour s'assurer que les changements de
+        // CORRECTION MAJEURE: Recalculer le revenu net total pour s'assurer que les changements de
         // charges sociales se reflètent dans le net en poche final
         const revenuNetTotal = salaireNetApresIR + dividendesNets;
         
@@ -434,7 +434,7 @@ class SimulationsFiscales {
             dividendesNets: dividendesNets,
             revenuNetTotal: revenuNetTotal,
             ratioNetCA: (revenuNetTotal / ca) * 100,
-            secteur: secteur,
+            secteur: secteur,  // IMPORTANT: Inclure ces paramètres dans le résultat
             taille: taille,
             infoCharges: infoCharges
         };
@@ -451,7 +451,7 @@ class SimulationsFiscales {
             nbAssocies = 2, // Par défaut, 2 associés
             modeExpert = false,
             capitalSocial = 1,
-            // Récupération des paramètres sectoriels comme pour SASU
+            // CORRECTION MAJEURE: Récupérer les options sectorielles de window.sectorOptions
             secteur = window.sectorOptions?.secteur || "Tous",
             taille = window.sectorOptions?.taille || "<50"
         } = params;
@@ -512,7 +512,6 @@ class SimulationsFiscales {
                 
                 // Debug important - afficher les paramètres utilisés
                 console.log(`SARL (gérant minoritaire) - Impact sectoriel: ${secteur}, ${taille} - Taux patronal: ${(charges.tauxPatronal*100).toFixed(1)}%, Taux salarial: ${(charges.tauxSalarial*100).toFixed(1)}%`);
-                console.log(`SARL - Valeurs intermédiaires: remuneration=${remuneration}, chargesPatronales=${chargesPatronales}, chargesSalariales=${chargesSalariales}`);
             } else {
                 // Fallback
                 chargesPatronales = Math.round(remuneration * 0.45); // taux moyen 2025
@@ -587,7 +586,7 @@ class SimulationsFiscales {
         // Dividendes nets après PFU et cotisations TNS
         const dividendesNets = dividendesGerant - prelevementForfaitaire - cotTNSDiv;
         
-        // CORRECTION: Recalculer le revenu net total pour refléter les changements de charges
+        // CORRECTION MAJEURE: Recalculer le revenu net total pour refléter les changements de charges
         const revenuNetTotal = salaireNetApresIR + dividendesNets;
         
         // Log supplémentaire pour débugger
@@ -621,7 +620,7 @@ class SimulationsFiscales {
             revenuNetTotal: revenuNetTotal,
             ratioNetCA: (revenuNetTotal / ca) * 100,
             gerantMajoritaire: gerantMajoritaire,
-            secteur: secteur,
+            secteur: secteur, // IMPORTANT: Inclure ces paramètres dans le résultat
             taille: taille,
             infoCharges: infoCharges
         };
@@ -629,11 +628,11 @@ class SimulationsFiscales {
 
     // SAS (nouveau) - CORRIGÉ pour les options sectorielles
     static simulerSAS(params) {
-        // Récupérer les paramètres sectoriels et s'assurer qu'ils sont transmis
+        // CORRECTION MAJEURE: Récupérer les paramètres sectoriels directement
         const paramsComplets = {
             ...params,
-            secteur: params.secteur || window.sectorOptions?.secteur || "Tous",
-            taille: params.taille || window.sectorOptions?.taille || "<50"
+            secteur: window.sectorOptions?.secteur || "Tous",
+            taille: window.sectorOptions?.taille || "<50"
         };
         
         // Logs pour traçage des paramètres sectoriels
@@ -655,7 +654,7 @@ class SimulationsFiscales {
         const prelevementForfaitaire = Math.round(dividendesPresident * 0.30);
         const dividendesNets = dividendesPresident - prelevementForfaitaire;
         
-        // CORRECTION: Recalculer le revenu net total pour refléter les changements de charges
+        // CORRECTION MAJEURE: Recalculer le revenu net total pour refléter les changements de charges
         const revenuNetTotal = resultSASU.salaireNetApresIR + dividendesNets;
         
         // Log supplémentaire pour débugger
@@ -671,18 +670,20 @@ class SimulationsFiscales {
             prelevementForfaitaire: prelevementForfaitaire,
             dividendesNets: dividendesNets,
             revenuNetTotal: revenuNetTotal,
-            ratioNetCA: (revenuNetTotal / paramsComplets.ca) * 100
+            ratioNetCA: (revenuNetTotal / paramsComplets.ca) * 100,
+            secteur: paramsComplets.secteur, // IMPORTANT: Garantir que ces infos sont présentes
+            taille: paramsComplets.taille
         };
     }
 
     // Méthodes pour les autres statuts juridiques - pour économiser de l'espace
     // Ces méthodes peuvent aussi être mises à jour pour utiliser les utilitaires
     static simulerSA(params) {
-        // Récupérer les paramètres sectoriels comme pour SASU
+        // CORRECTION MAJEURE: Récupérer les paramètres sectoriels directement
         const paramsComplets = {
             ...params,
-            secteur: params.secteur || window.sectorOptions?.secteur || "Tous",
-            taille: params.taille || window.sectorOptions?.taille || "<50"
+            secteur: window.sectorOptions?.secteur || "Tous",
+            taille: window.sectorOptions?.taille || "<50"
         };
         
         // Logs pour traçage
@@ -713,7 +714,7 @@ class SimulationsFiscales {
         // Recalculer les dividendes nets
         const dividendesNets = resultSAS.dividendesNets - Math.round(coutCAC * 0.75 * paramsComplets.partPDG || 0.3);
         
-        // CORRECTION: Recalculer le revenu net total pour refléter les changements de charges
+        // CORRECTION MAJEURE: Recalculer le revenu net total pour refléter les changements
         const revenuNetTotal = resultSAS.salaireNetApresIR + dividendesNets;
         
         // Log supplémentaire pour débugger
@@ -729,7 +730,9 @@ class SimulationsFiscales {
             is: is,
             dividendesNets: dividendesNets,
             revenuNetTotal: revenuNetTotal,
-            ratioNetCA: (revenuNetTotal / paramsComplets.ca) * 100
+            ratioNetCA: (revenuNetTotal / paramsComplets.ca) * 100,
+            secteur: paramsComplets.secteur, // IMPORTANT: Garantir que ces infos sont présentes
+            taille: paramsComplets.taille
         };
     }
 
@@ -930,11 +933,11 @@ class SimulationsFiscales {
 
     // Pour SELARL, SELAS et SCA, intégration des paramètres sectoriels
     static simulerSELARL(params) {
-        // Récupérer les paramètres sectoriels comme pour SASU
+        // CORRECTION MAJEURE: Récupérer les paramètres sectoriels directement
         const paramsComplets = {
             ...params,
-            secteur: params.secteur || window.sectorOptions?.secteur || "Tous",
-            taille: params.taille || window.sectorOptions?.taille || "<50",
+            secteur: window.sectorOptions?.secteur || "Tous",
+            taille: window.sectorOptions?.taille || "<50",
             typeEntreprise: 'SELARL'
         };
         
@@ -945,11 +948,11 @@ class SimulationsFiscales {
     }
 
     static simulerSELAS(params) {
-        // Récupérer les paramètres sectoriels comme pour SASU
+        // CORRECTION MAJEURE: Récupérer les paramètres sectoriels directement
         const paramsComplets = {
             ...params,
-            secteur: params.secteur || window.sectorOptions?.secteur || "Tous",
-            taille: params.taille || window.sectorOptions?.taille || "<50"
+            secteur: window.sectorOptions?.secteur || "Tous",
+            taille: window.sectorOptions?.taille || "<50"
         };
         
         console.log(`SELAS - Paramètres sectoriels: secteur=${paramsComplets.secteur}, taille=${paramsComplets.taille}`);
@@ -963,11 +966,11 @@ class SimulationsFiscales {
     }
 
     static simulerSCA(params) {
-        // Récupérer les paramètres sectoriels comme pour SASU
+        // CORRECTION MAJEURE: Récupérer les paramètres sectoriels directement
         const paramsComplets = {
             ...params,
-            secteur: params.secteur || window.sectorOptions?.secteur || "Tous",
-            taille: params.taille || window.sectorOptions?.taille || "<50"
+            secteur: window.sectorOptions?.secteur || "Tous",
+            taille: window.sectorOptions?.taille || "<50"
         };
         
         console.log(`SCA - Paramètres sectoriels: secteur=${paramsComplets.secteur}, taille=${paramsComplets.taille}`);
