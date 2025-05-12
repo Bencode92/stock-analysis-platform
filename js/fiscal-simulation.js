@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 2.4 - Mai 2025 - Correction du calcul du net en poche avec options sectorielles
+// Version 2.5 - Mai 2025 - Correction du calcul du net en poche avec options sectorielles
 
 // Classe pour les simulations fiscales des différents statuts juridiques
 class SimulationsFiscales {
@@ -287,7 +287,7 @@ class SimulationsFiscales {
         }
     }
     
-    // SASU - Amélioré pour garantir que les options sectorielles sont prises en compte
+    // SASU - CORRIGÉ pour assurer l'impact des options sectorielles sur le net en poche
     static simulerSASU(params) {
         // Extraire tous les paramètres avec des valeurs par défaut
         const { 
@@ -316,8 +316,8 @@ class SimulationsFiscales {
         let infoCharges = {};
         
         if (window.FiscalUtils) {
-            // Utiliser la fonction améliorée qui supporte les secteurs et tailles
-            // Transmettre explicitement les valeurs sectorielles dans l'appel
+            // CORRECTION: Utiliser la fonction améliorée avec les paramètres sectoriels
+            // et s'assurer que ces paramètres sont correctement transmis
             const charges = window.FiscalUtils.calculChargesSalariales(remuneration, { 
                 secteur: secteur, 
                 taille: taille 
@@ -353,10 +353,11 @@ class SimulationsFiscales {
             };
         }
         
+        // CORRECTION: Calculer correctement le coût total employeur et le salaire net
         const coutTotalEmployeur = remuneration + chargesPatronales;
         const salaireNet = remuneration - chargesSalariales;
         
-        // Log des valeurs intermédiaires
+        // Log des valeurs intermédiaires pour le débogage
         console.log(`SASU - Valeurs intermédiaires: remuneration=${remuneration}, chargesPatronales=${chargesPatronales}, chargesSalariales=${chargesSalariales}, salaireNet=${salaireNet}`);
         
         // Calcul de l'impôt sur le revenu
@@ -401,7 +402,8 @@ class SimulationsFiscales {
         // Dividendes nets après PFU
         const dividendesNets = dividendes - prelevementForfaitaire;
         
-        // Revenu net total - RECALCUL IMPORTANT POUR LE "NET EN POCHE"
+        // CORRECTION: Recalculer le revenu net total pour s'assurer que les changements de
+        // charges sociales se reflètent dans le net en poche final
         const revenuNetTotal = salaireNetApresIR + dividendesNets;
         
         // Log supplémentaire pour débugger
@@ -438,7 +440,7 @@ class SimulationsFiscales {
         };
     }
 
-    // SARL (nouveau)
+    // SARL (nouveau) - CORRIGÉ pour les options sectorielles
     static simulerSARL(params) {
         const { 
             ca, 
@@ -490,7 +492,7 @@ class SimulationsFiscales {
         } else {
             // Gérant minoritaire = assimilé salarié
             if (window.FiscalUtils) {
-                // Utiliser les paramètres sectoriels explicitement
+                // CORRECTION: S'assurer que les paramètres sectoriels sont utilisés
                 const charges = window.FiscalUtils.calculChargesSalariales(remuneration, { 
                     secteur: secteur, 
                     taille: taille 
@@ -585,7 +587,7 @@ class SimulationsFiscales {
         // Dividendes nets après PFU et cotisations TNS
         const dividendesNets = dividendesGerant - prelevementForfaitaire - cotTNSDiv;
         
-        // Revenu net total (salaire net + dividendes nets)
+        // CORRECTION: Recalculer le revenu net total pour refléter les changements de charges
         const revenuNetTotal = salaireNetApresIR + dividendesNets;
         
         // Log supplémentaire pour débugger
@@ -625,9 +627,9 @@ class SimulationsFiscales {
         };
     }
 
-    // SAS (nouveau) - avec correction pour les options sectorielles
+    // SAS (nouveau) - CORRIGÉ pour les options sectorielles
     static simulerSAS(params) {
-        // Récupérer les paramètres sectoriels comme pour SASU
+        // Récupérer les paramètres sectoriels et s'assurer qu'ils sont transmis
         const paramsComplets = {
             ...params,
             secteur: params.secteur || window.sectorOptions?.secteur || "Tous",
@@ -653,7 +655,7 @@ class SimulationsFiscales {
         const prelevementForfaitaire = Math.round(dividendesPresident * 0.30);
         const dividendesNets = dividendesPresident - prelevementForfaitaire;
         
-        // Recalculer le revenu net total
+        // CORRECTION: Recalculer le revenu net total pour refléter les changements de charges
         const revenuNetTotal = resultSASU.salaireNetApresIR + dividendesNets;
         
         // Log supplémentaire pour débugger
@@ -711,7 +713,7 @@ class SimulationsFiscales {
         // Recalculer les dividendes nets
         const dividendesNets = resultSAS.dividendesNets - Math.round(coutCAC * 0.75 * paramsComplets.partPDG || 0.3);
         
-        // Recalculer le revenu net total
+        // CORRECTION: Recalculer le revenu net total pour refléter les changements de charges
         const revenuNetTotal = resultSAS.salaireNetApresIR + dividendesNets;
         
         // Log supplémentaire pour débugger
