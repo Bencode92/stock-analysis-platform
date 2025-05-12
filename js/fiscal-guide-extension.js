@@ -1,5 +1,5 @@
 // fiscal-guide-extension.js - Extension des fonctionnalités du guide fiscal
-// Version 2.1 - Mai 2025 - Correction fonctionnement avec "Tous secteurs" et retour à la normale
+// Version 2.2 - Mai 2025 - Correction des problèmes de casse des secteurs
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log("fiscal-guide-extension.js: Initialisation...");
@@ -26,6 +26,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// NOUVEAU: Fonction de normalisation des secteurs (première lettre majuscule, reste minuscule)
+function formatSecteur(secteur) {
+    if (!secteur) return "Tous";
+    return secteur.charAt(0).toUpperCase() + secteur.slice(1).toLowerCase();
+}
 
 function initGuideFiscalExtension() {
     console.log("fiscal-guide-extension.js: Initialisation des extensions du guide fiscal");
@@ -65,9 +71,11 @@ function patchRunComparison() {
     
     // Remplacer par notre version
     window.runComparison = function() {
-        // S'assurer que les options sectorielles sont définies
+        // S'assurer que les options sectorielles sont définies avec casse normalisée
         if (!window.sectorOptions) {
             window.sectorOptions = { secteur: "Tous", taille: "<50" };
+        } else if (window.sectorOptions.secteur) {
+            window.sectorOptions.secteur = formatSecteur(window.sectorOptions.secteur);
         }
         
         console.log(`fiscal-guide-extension.js: runComparison patché - secteur=${window.sectorOptions.secteur}, taille=${window.sectorOptions.taille}`);
@@ -161,10 +169,25 @@ function addSectorOptions() {
                 <i class="fas fa-sync-alt mr-2"></i> Actualiser avec ces paramètres
             </button>
             
-            <!-- NOUVEAU: Bouton pour revenir aux valeurs par défaut -->
+            <!-- Bouton pour revenir aux valeurs par défaut -->
             <button id="reset-sector-button" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-md shadow-sm">
                 <i class="fas fa-undo mr-2"></i> Revenir aux valeurs normales
             </button>
+        </div>
+        
+        <!-- NOUVEAU: Affichage des écarts de charges -->
+        <div id="sector-charges-comparison" class="mt-3 p-3 bg-gray-900 bg-opacity-40 rounded-lg text-xs hidden">
+            <div class="flex items-center mb-2">
+                <span class="block font-medium text-purple-300"><i class="fas fa-chart-line mr-1"></i> Impact sur les charges</span>
+                <div class="ml-auto">
+                    <button id="refresh-comparison-button" class="px-1 py-1 bg-purple-800 hover:bg-purple-700 text-white rounded-sm text-xs">
+                        <i class="fas fa-calculator"></i>
+                    </button>
+                </div>
+            </div>
+            <div id="charges-comparison-content">
+                <!-- Contenu dynamique -->
+            </div>
         </div>
     `;
     
@@ -185,32 +208,47 @@ function addSectorOptions() {
     const tailleSelect = document.getElementById('taille-select');
     const refreshButton = document.getElementById('refresh-sector-button');
     const resetButton = document.getElementById('reset-sector-button');
+    const comparisonButton = document.getElementById('refresh-comparison-button');
     
     if (secteurSelect) {
+        // CORRECTION: Utiliser les options avec casse correcte
+        secteurSelect.innerHTML = `
+            <option value="Tous">Tous secteurs</option>
+            <option value="Commerce">Commerce</option>
+            <option value="Industrie">Industrie</option>
+            <option value="Services">Services</option>
+        `;
+        
         // Définir la valeur par défaut basée sur le stockage global
         if (window.sectorOptions && window.sectorOptions.secteur) {
-            secteurSelect.value = window.sectorOptions.secteur;
+            secteurSelect.value = formatSecteur(window.sectorOptions.secteur);
         }
         
         secteurSelect.addEventListener('change', function() {
             console.log("fiscal-guide-extension.js: Secteur changé:", this.value);
-            // Mettre à jour l'objet sectorOptions global
+            // Mettre à jour l'objet sectorOptions global avec la bonne casse
             if (!window.sectorOptions) window.sectorOptions = {};
-            window.sectorOptions.secteur = this.value;
+            window.sectorOptions.secteur = formatSecteur(this.value);
+            
+            // Montrer la comparaison des charges
+            updateChargesComparison();
         });
     }
     
     if (tailleSelect) {
         // Définir la valeur par défaut basée sur le stockage global
         if (window.sectorOptions && window.sectorOptions.taille) {
-            tailleSelect.value = window.sectorOptions.taille;
+            tailleSelect.value = window.sectorOptions.taille.trim();
         }
         
         tailleSelect.addEventListener('change', function() {
             console.log("fiscal-guide-extension.js: Taille changée:", this.value);
             // Mettre à jour l'objet sectorOptions global
             if (!window.sectorOptions) window.sectorOptions = {};
-            window.sectorOptions.taille = this.value;
+            window.sectorOptions.taille = this.value.trim();
+            
+            // Montrer la comparaison des charges
+            updateChargesComparison();
         });
     }
     
@@ -222,7 +260,7 @@ function addSectorOptions() {
         });
     }
     
-    // NOUVEAU: Ajouter un événement au bouton de réinitialisation
+    // Ajouter un événement au bouton de réinitialisation
     if (resetButton) {
         resetButton.addEventListener('click', function() {
             console.log("fiscal-guide-extension.js: Bouton de réinitialisation cliqué");
@@ -242,8 +280,91 @@ function addSectorOptions() {
         });
     }
     
+    // Ajouter un événement au bouton de comparaison
+    if (comparisonButton) {
+        comparisonButton.addEventListener('click', function() {
+            updateChargesComparison();
+        });
+    }
+    
+    // Afficher la comparaison des charges
+    updateChargesComparison();
+    
     // CORRECTION: Ne pas modifier runComparison, mais plutôt observer les changements dans le DOM
     setupMutationObserver();
+}
+
+// NOUVEAU: Comparaison des taux de charges entre secteurs
+function updateChargesComparison() {
+    if (!window.FiscalUtils || !window.FiscalUtils.analyserImpactSectoriel) return;
+    
+    const comparisonContainer = document.getElementById('sector-charges-comparison');
+    if (!comparisonContainer) return;
+    
+    // Afficher le conteneur
+    comparisonContainer.classList.remove('hidden');
+    
+    // Récupérer le salaire pour lequel faire la comparaison
+    const salaireRef = parseFloat(document.getElementById('sim-ca').value) * 
+                       (parseFloat(document.getElementById('sim-marge').value) / 100) * 
+                       (parseFloat(document.getElementById('sim-salaire').value) / 100) || 50000;
+    
+    // Arrondir pour l'affichage
+    const salaireDisplay = Math.round(salaireRef);
+    
+    // Récupérer les résultats pour tous les secteurs
+    const resultats = window.FiscalUtils.analyserImpactSectoriel(salaireRef);
+    
+    // Trouver le secteur et la taille actuels
+    const secteurActuel = formatSecteur(window.sectorOptions?.secteur || "Tous");
+    const tailleActuelle = window.sectorOptions?.taille || "<50";
+    
+    // Générer le contenu
+    let content = `<div class="text-gray-400 mb-2">Pour une rémunération brute de ${salaireDisplay.toLocaleString('fr-FR')} €</div>`;
+    content += `<table class="w-full text-sm">
+                <thead>
+                    <tr class="bg-blue-900 bg-opacity-30">
+                        <th class="text-left py-1 px-2">Secteur</th>
+                        <th class="text-right py-1 px-2">Charges</th>
+                        <th class="text-right py-1 px-2">Net</th>
+                        <th class="text-right py-1 px-2">Écart</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+    
+    // Trouver la valeur pour "Tous" comme référence
+    const refResult = resultats.find(r => r.secteur === "Tous" && r.taille === tailleActuelle);
+    const refCharges = refResult ? refResult.total : 0;
+    const refNet = salaireRef - (refResult ? refResult.salariales : 0);
+    
+    // Ajouter les lignes par secteur
+    const secteurs = ["Tous", "Commerce", "Industrie", "Services"];
+    secteurs.forEach(secteur => {
+        const resultat = resultats.find(r => r.secteur === secteur && r.taille === tailleActuelle);
+        if (resultat) {
+            const charges = resultat.total;
+            const net = salaireRef - resultat.salariales;
+            const ecartPct = refCharges > 0 ? ((charges - refCharges) / refCharges * 100) : 0;
+            const ecartNet = net - refNet;
+            
+            const estActif = secteur === secteurActuel;
+            
+            content += `<tr class="${estActif ? 'bg-green-900 bg-opacity-30' : ''} ${secteur !== 'Tous' ? (ecartPct > 0 ? 'text-red-300' : 'text-green-300') : ''}">
+                        <td class="py-1 px-2 font-medium">${secteur}</td>
+                        <td class="text-right py-1 px-2">${charges.toLocaleString('fr-FR')} € (${(charges/salaireRef*100).toFixed(1)}%)</td>
+                        <td class="text-right py-1 px-2">${net.toLocaleString('fr-FR')} €</td>
+                        <td class="text-right py-1 px-2">${ecartPct.toFixed(1)}% (${ecartNet > 0 ? '+' : ''}${ecartNet.toLocaleString('fr-FR')} €)</td>
+                    </tr>`;
+        }
+    });
+    
+    content += `</tbody></table>`;
+    
+    // Ajouter le contenu au conteneur
+    const contentContainer = document.getElementById('charges-comparison-content');
+    if (contentContainer) {
+        contentContainer.innerHTML = content;
+    }
 }
 
 // Nettoyage complet du cache et recalcul
@@ -374,9 +495,10 @@ function updateSectorDetails(forceUpdate = false) {
     console.log("fiscal-guide-extension.js: Mise à jour des détails sectoriels (forceUpdate="+forceUpdate+")");
     
     // CORRECTION: Vérifier si on a le secteur "Tous" et s'assurer qu'il fonctionne
-    if (window.sectorOptions && window.sectorOptions.secteur === "Tous") {
-        console.log("fiscal-guide-extension.js: Secteur 'Tous' détecté - s'assurer que le traitement est correct");
-        // Aucune action spéciale n'est nécessaire car le code doit fonctionner avec "Tous"
+    if (window.sectorOptions && window.sectorOptions.secteur) {
+        // Normaliser la casse du secteur
+        window.sectorOptions.secteur = formatSecteur(window.sectorOptions.secteur);
+        console.log("fiscal-guide-extension.js: Secteur normalisé à '" + window.sectorOptions.secteur + "'");
     }
     
     // Attendre un peu que le tableau soit complètement chargé
@@ -408,11 +530,15 @@ function updateSectorDetails(forceUpdate = false) {
                             };
                         }
                         
+                        // Normaliser le secteur
+                        const secteur = formatSecteur(window.sectorOptions.secteur);
+                        const taille = window.sectorOptions.taille.trim();
+                        
                         // Log pour débogage
                         console.log(`fiscal-guide-extension.js: Simulation ${statutId} avec:`, {
                             ca, tauxMarge, tauxRemuneration, tmiActuel,
-                            secteur: window.sectorOptions.secteur,
-                            taille: window.sectorOptions.taille
+                            secteur: secteur,
+                            taille: taille
                         });
                         
                         // Définir la méthode de simulation à utiliser
@@ -427,18 +553,13 @@ function updateSectorDetails(forceUpdate = false) {
                         
                         // Vérifier que la méthode existe
                         if (window.SimulationsFiscales && typeof window.SimulationsFiscales[simulationFunc] === 'function') {
-                            // CORRECTION FIX POUR "TOUS LES SECTEURS":
-                            // Assurons-nous que les valeurs sont explicitement définies
-                            const secteur = window.sectorOptions.secteur || "Tous";
-                            const taille = window.sectorOptions.taille || "<50";
-                            
                             // NOUVEAU: Simulation avec options sectorielles explicites
                             const result = window.SimulationsFiscales[simulationFunc]({
                                 ca: ca,
                                 tauxMarge: tauxMarge,
                                 tauxRemuneration: tauxRemuneration,
                                 tmiActuel: tmiActuel,
-                                // Paramètres sectoriels explicites
+                                // Paramètres sectoriels explicites normalisés
                                 secteur: secteur,
                                 taille: taille
                             });
@@ -683,10 +804,13 @@ document.addEventListener('fiscalUtilsReady', function() {
                 taille: window.sectorOptions?.taille || "<50"
             };
             
+            // Normaliser le secteur
+            const secteur = formatSecteur(secteurOptions.secteur);
+            
             // Fusionner avec les paramètres fournis
             const paramsComplets = {
                 ...params,
-                secteur: secteurOptions.secteur,  // Toujours forcer secteur
+                secteur: secteur,  // Toujours forcer secteur
                 taille: secteurOptions.taille     // Toujours forcer taille
             };
             
@@ -699,8 +823,8 @@ document.addEventListener('fiscalUtilsReady', function() {
         console.log("fiscal-guide-extension.js: optimiserRatioRemuneration patché");
     }
     
-    // CORRECTION FIX POUR TOUS SECTEURS:
-    // Patcher calculChargesSalariales pour des logs plus détaillés et corriger le traitement de "Tous"
+    // CORRECTION MAJEURE POUR TOUS SECTEURS:
+    // Patcher calculChargesSalariales pour normaliser la casse des secteurs
     if (window.FiscalUtils && !window.FiscalUtils._calculChargesSalarialesPatched) {
         window.FiscalUtils._calculChargesSalarialesPatched = true;
         
@@ -719,14 +843,10 @@ document.addEventListener('fiscalUtilsReady', function() {
                 taille: params.taille || secteurOptions.taille
             };
             
-            console.log(`fiscal-guide-extension.js: calculChargesSalariales - SECTEUR=${paramsComplets.secteur}, TAILLE=${paramsComplets.taille}, REM=${remuneration}`);
+            // CORRECTION MAJEURE: Normaliser le secteur
+            paramsComplets.secteur = formatSecteur(paramsComplets.secteur);
             
-            // CORRECTION IMPORTANTE POUR "TOUS":
-            // S'assurer que le secteur est toujours "Tous" littéralement, pas undefined ou null
-            if (!paramsComplets.secteur || paramsComplets.secteur.toLowerCase() === "tous") {
-                paramsComplets.secteur = "Tous";
-                console.log("fiscal-guide-extension.js: Correction secteur à 'Tous'");
-            }
+            console.log(`fiscal-guide-extension.js: calculChargesSalariales - SECTEUR=${paramsComplets.secteur}, TAILLE=${paramsComplets.taille}, REM=${remuneration}`);
             
             // Appeler la fonction originale avec les paramètres complétés
             const result = originalCalculCharges.call(window.FiscalUtils, remuneration, paramsComplets);
@@ -761,10 +881,9 @@ document.addEventListener('fiscalUtilsReady', function() {
                         const tauxRemuneration = parseFloat(document.getElementById('sim-salaire').value) / 100 || 0.7;
                         const tmiActuel = parseFloat(document.getElementById('sim-tmi').value) || 30;
                         
-                        // CORRECTION FIX POUR TOUS SECTEURS:
-                        // S'assurer que les options sectorielles sont correctement récupérées
-                        const secteur = window.sectorOptions?.secteur || "Tous";
-                        const taille = window.sectorOptions?.taille || "<50";
+                        // CORRECTION: Normaliser le secteur
+                        const secteur = formatSecteur(window.sectorOptions?.secteur || "Tous");
+                        const taille = (window.sectorOptions?.taille || "<50").trim();
                         
                         console.log(`fiscal-guide-extension.js: showCalculationDetails pour ${statutId} avec secteur=${secteur}, taille=${taille}`);
                         
