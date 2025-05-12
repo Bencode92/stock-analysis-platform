@@ -1,5 +1,5 @@
 // fiscal-simulation.js - Moteur de calcul fiscal pour le simulateur
-// Version 2.2 - Mai 2025 - Correction du support des options sectorielles
+// Version 2.3 - Mai 2025 - Correction du calcul du net en poche avec options sectorielles
 
 // Classe pour les simulations fiscales des différents statuts juridiques
 class SimulationsFiscales {
@@ -398,8 +398,14 @@ class SimulationsFiscales {
         // Dividendes nets après PFU
         const dividendesNets = dividendes - prelevementForfaitaire;
         
-        // Revenu net total
+        // Revenu net total - RECALCUL IMPORTANT POUR LE "NET EN POCHE"
         const revenuNetTotal = salaireNetApresIR + dividendesNets;
+        
+        // Log supplémentaire pour débugger
+        console.log("SASU - Composantes du revenu net:");
+        console.log(`- Salaire net après IR: ${salaireNetApresIR}`);
+        console.log(`- Dividendes nets: ${dividendesNets}`);
+        console.log(`= TOTAL NET EN POCHE: ${revenuNetTotal}`);
         
         return {
             compatible: true,
@@ -577,6 +583,12 @@ class SimulationsFiscales {
         // Revenu net total (salaire net + dividendes nets)
         const revenuNetTotal = salaireNetApresIR + dividendesNets;
         
+        // Log supplémentaire pour débugger
+        console.log("SARL - Composantes du revenu net:");
+        console.log(`- Salaire net après IR: ${salaireNetApresIR}`);
+        console.log(`- Dividendes nets: ${dividendesNets}`);
+        console.log(`= TOTAL NET EN POCHE: ${revenuNetTotal}`);
+        
         return {
             compatible: true,
             ca: ca,
@@ -634,6 +646,12 @@ class SimulationsFiscales {
         // Recalculer le revenu net total
         const revenuNetTotal = resultSASU.salaireNetApresIR + dividendesNets;
         
+        // Log supplémentaire pour débugger
+        console.log("SAS - Composantes du revenu net:");
+        console.log(`- Salaire net après IR: ${resultSASU.salaireNetApresIR}`);
+        console.log(`- Dividendes nets: ${dividendesNets}`);
+        console.log(`= TOTAL NET EN POCHE: ${revenuNetTotal}`);
+        
         return {
             ...resultSASU,
             typeEntreprise: 'SAS',
@@ -682,6 +700,12 @@ class SimulationsFiscales {
         
         // Recalculer le revenu net total
         const revenuNetTotal = resultSAS.salaireNetApresIR + dividendesNets;
+        
+        // Log supplémentaire pour débugger
+        console.log("SA - Composantes du revenu net:");
+        console.log(`- Salaire net après IR: ${resultSAS.salaireNetApresIR}`);
+        console.log(`- Dividendes nets: ${dividendesNets}`);
+        console.log(`= TOTAL NET EN POCHE: ${revenuNetTotal}`);
         
         return {
             ...resultSAS,
