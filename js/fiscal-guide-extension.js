@@ -30,6 +30,11 @@ document.addEventListener('DOMContentLoaded', function() {
 function initGuideFiscalExtension() {
     console.log("fiscal-guide-extension.js: Initialisation des extensions du guide fiscal");
     
+    // Neutraliser complètement la fonction setupSectorOptions de fiscal-guide.js
+    window.setupSectorOptions = function() {
+        console.log("fiscal-guide-extension.js: Fonction setupSectorOptions neutralisée");
+    };
+    
     // Vérifier si le simulateur existe dans le DOM
     if (!document.getElementById('fiscal-simulator')) {
         console.log("fiscal-guide-extension.js: Simulateur fiscal non trouvé dans le DOM");
@@ -44,6 +49,9 @@ function initGuideFiscalExtension() {
 
 // Ajouter les options sectorielles pour SASU/SAS
 function addSectorOptions() {
+    // Pour éviter que setupSectorOptions de fiscal-guide.js ne s'exécute à nouveau plus tard
+    window.sectorOptionsInitialized = true;
+    
     // Trouver l'endroit où insérer les options sectorielles
     const optionsContainer = document.getElementById('sim-options-container');
     if (!optionsContainer) {
