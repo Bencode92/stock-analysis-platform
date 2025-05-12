@@ -1,5 +1,5 @@
 // fiscal-guide-extension.js - Extension des fonctionnalités du guide fiscal
-// Version 1.3 - Mai 2025 - Amélioration de la compatibilité et correction des bugs sectoriels
+// Version 1.4 - Mai 2025 - Correction des erreurs d'insertion DOM
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log("fiscal-guide-extension.js: Initialisation...");
@@ -107,14 +107,9 @@ function addSectorOptions() {
         </div>
     `;
     
-    // Trouver où insérer le conteneur d'options sectorielles
-    // Idéalement après les options existantes et avant les options micro-entreprise
-    const microTypeContainer = optionsContainer.querySelector('div.mt-4');
-    if (microTypeContainer) {
-        optionsContainer.insertBefore(sectorOptions, microTypeContainer);
-    } else {
-        optionsContainer.appendChild(sectorOptions);
-    }
+    // Méthode d'insertion corrigée pour éviter les erreurs DOM
+    // Ajouter simplement à la fin du conteneur d'options
+    optionsContainer.appendChild(sectorOptions);
     
     // Créer l'objet sectorOptions global s'il n'existe pas
     if (!window.sectorOptions) {
