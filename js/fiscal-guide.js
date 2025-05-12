@@ -1420,13 +1420,20 @@ function runComparison() {
                     impots = sim.impotRevenu;
                     net = sim.revenuNetApresImpot;
                 } else {
-                    // Cas général pour les statuts à l'IS (SASU, EURL-IS, SAS, SARL, etc.)
-                    brut = sim.remuneration || sim.resultatEntreprise * (useOptimalRatio ? sim.ratioOptimise : ratioSalaire);
-                    charges = sim.cotisationsSociales || (sim.chargesPatronales + sim.chargesSalariales);
-                    impots = (sim.impotRevenu || 0) + (sim.is || 0) + (sim.prelevementForfaitaire || 0);
+                      // Cas général pour les statuts à l'IS (SASU, EURL-IS, SAS, SARL, etc.)
+                  brut = sim.remuneration || sim.resultatEntreprise * (useOptimalRatio ? sim.ratioOptimise : ratioSalaire);
+                  charges = sim.cotisationsSociales || (sim.chargesPatronales + sim.chargesSalariales);
+                 impots = (sim.impotRevenu || 0) + (sim.is || 0) + (sim.prelevementForfaitaire || 0);
                     if (sim.cotTNSDiv) impots += sim.cotTNSDiv; // Ajout des cotisations TNS sur dividendes
-                    net = sim.revenuNetTotal || sim.revenuNetApresImpot;
-                }
+    
+                 // Recalculer explicitement le net en tenant compte des charges mises à jour
+                const revenuNetSalaire = sim.salaireNetApresIR || sim.revenuNetSalaire || 0;
+                   const dividendesNets = sim.dividendesNets || 0;
+               net = revenuNetSalaire + dividendesNets;
+    
+                  // Log de debug pour vérifier les valeurs
+                     console.log(`[FIX] ${statutId} - Charges: ${charges}, Salaire net: ${revenuNetSalaire}, Dividendes: ${dividendesNets}, NET: ${net}`);
+}
                 
                 // Calcul du score avec prise en compte de la progressivité fiscale
                 const scoreNet = 100 * (net / ca); // Score standard
