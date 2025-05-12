@@ -1,10 +1,26 @@
 // fiscal-utils.js - Utilitaires pour les calculs fiscaux
-// Version 1.5 - Mai 2025 - Correction de la prise en compte des options sectorielles dans l'optimisation
+// Version 1.6 - Mai 2025 - Correction des problèmes de secteur "Tous"
 
 const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS = 2,9%
 
 // SMIC annuel 2025 pour les calculs de plages
 const SMIC_ANNUEL_2025 = 21060;
+
+// NOUVEAU: Debug flag pour contrôler les logs
+const DEBUG = false;
+function log(...args) {
+    if (DEBUG) console.log(...args);
+}
+
+// NOUVEAU: Normalisation des valeurs sectorielles
+function normalize(value) {
+    if (!value) return "Tous";
+    return value.trim()
+        .replace(/^</,"<")     // garde "<50"
+        .replace(/^>=/,">=")   // garde ">=50"
+        .toLowerCase()
+        .replace(/^\w/, c => c.toUpperCase());
+}
 
 // Table paramétrable des charges sociales SASU (2025)
 // Mise à jour avec des taux plus différenciés par secteur pour une meilleure visibilité de l'impact
@@ -64,32 +80,38 @@ class FiscalUtils {
         return Math.round(impot);
     }
     
-    // Optimisation du ratio rémunération/dividendes - CORRECTION MAJEURE
+    // Optimisation du ratio rémunération/dividendes - AMÉLIORATION MAJEURE
     static optimiserRatioRemuneration(params, simulationFunc) {
+        // Mémoriser les meilleurs résultats
         let meilleurRatio = 0.5;
         let meilleurNet = 0;
         
-        // CORRECTION MAJEURE: S'assurer que les options sectorielles sont directement récupérées
-        // depuis l'objet global window.sectorOptions au moment de l'optimisation
+        // S'assurer que les options sectorielles sont préservées
         const secteurOptions = {
             secteur: window.sectorOptions?.secteur || "Tous",
             taille: window.sectorOptions?.taille || "<50"
         };
         
-        console.log("FiscalUtils: Optimisation avec options sectorielles: ", secteurOptions);
+        // Normaliser le secteur
+        const secteur = normalize(secteurOptions.secteur);
+        const taille = secteurOptions.taille.trim();
         
-        // IMPORTANT: Forcez les options sectorielles à chaque test
+        log("FiscalUtils: Optimisation avec secteur:", secteur, taille);
+        
         // Sauvegarde des paramètres originaux
         const paramsBase = {...params};
         
-        // Tester différents ratios de 0% à 100% par pas de 5%
-        for(let ratio = 0.0; ratio <= 1.0; ratio += 0.05) {
-            // CORRECTION: S'assurer que chaque test utilise les options sectorielles actuelles
+        // AMÉLIORATION: Utiliser une approche logarithmique pour réduire les calculs
+        // 1. Commencer par un découpage grossier
+        const grid = [0, 0.1, 0.25, 0.5, 0.75, 0.9, 1];
+        
+        // Tester les valeurs de la grille grossière
+        for(const ratio of grid) {
             const paramsTest = {
                 ...paramsBase,
                 tauxRemuneration: ratio,
-                secteur: secteurOptions.secteur,
-                taille: secteurOptions.taille
+                secteur: secteur,
+                taille: taille
             };
             
             const resultat = simulationFunc(paramsTest);
@@ -100,17 +122,16 @@ class FiscalUtils {
             }
         }
         
-        // Affiner autour du meilleur résultat
-        for(let ratio = Math.max(0.01, meilleurRatio-0.04); 
-            ratio <= Math.min(0.99, meilleurRatio+0.04); 
-            ratio += 0.01) {
-            
-            // CORRECTION: Garantir que chaque test d'affinement utilise les options sectorielles
+        // 2. Affiner autour du meilleur résultat (±0.05)
+        const min = Math.max(0.01, meilleurRatio - 0.05);
+        const max = Math.min(0.99, meilleurRatio + 0.05);
+        
+        for(let ratio = min; ratio <= max; ratio += 0.01) {
             const paramsTest = {
                 ...paramsBase,
                 tauxRemuneration: ratio,
-                secteur: secteurOptions.secteur,
-                taille: secteurOptions.taille
+                secteur: secteur,
+                taille: taille
             };
             
             const resultat = simulationFunc(paramsTest);
@@ -122,21 +143,19 @@ class FiscalUtils {
         }
         
         // Calculer le résultat final avec le ratio optimal
-        // CORRECTION: Garantir que les options sectorielles sont incluses dans le calcul final
         const paramsFinaux = {
             ...paramsBase,
             tauxRemuneration: meilleurRatio,
-            secteur: secteurOptions.secteur,
-            taille: secteurOptions.taille
+            secteur: secteur,
+            taille: taille
         };
         
-        console.log("FiscalUtils: Calcul final avec paramètres sectoriels:", paramsFinaux);
+        log("FiscalUtils: Calcul final avec paramètres sectoriels:", paramsFinaux);
         
         const resultatFinal = simulationFunc(paramsFinaux);
         resultatFinal.ratioOptimise = meilleurRatio;
         
-        console.log("FiscalUtils: Ratio optimal trouvé:", meilleurRatio, "avec revenu net:", meilleurNet);
-        console.log("FiscalUtils: Résultat inclut secteur:", resultatFinal.secteur, "taille:", resultatFinal.taille);
+        log("FiscalUtils: Ratio optimal trouvé:", meilleurRatio, "avec revenu net:", meilleurNet);
         
         return {
             ratio: meilleurRatio,
@@ -171,14 +190,13 @@ class FiscalUtils {
         return Math.round(partA + partB);
     }
     
-    // Calcul des charges salariales avec table paramétrable - CORRECTION
+    // Calcul des charges salariales avec table paramétrable - CORRECTION MAJEURE
     static calculChargesSalariales(remuneration, params = {}) {
-        // CORRECTION: Toujours récupérer les options sectorielles depuis l'objet global si non fournies
-        // Garantir des paramètres valides
-        const secteur = params?.secteur || window.sectorOptions?.secteur || "Tous";
-        const taille = params?.taille || window.sectorOptions?.taille || "<50";
+        // Normaliser le secteur et la taille
+        const secteur = normalize(params.secteur || window.sectorOptions?.secteur || "Tous");
+        const taille = (params.taille || window.sectorOptions?.taille || "<50").trim();
         
-        console.log(`FiscalUtils: Calcul des charges avec secteur: ${secteur}, taille: ${taille}, rémunération: ${remuneration}`);
+        log(`FiscalUtils: Calcul des charges - secteur=${secteur}, taille=${taille}, remuneration=${remuneration}`);
         
         // Déterminer la plage de salaire par rapport au SMIC
         const ratio = remuneration / SMIC_ANNUEL_2025;
@@ -214,6 +232,20 @@ class FiscalUtils {
             }
         }
         
+        // CORRECTION CRITIQUE: Si toujours rien trouvé et qu'on était déjà en mode "Tous",
+        // créer une ligne par défaut pour éviter de rester bloqué
+        if (!ligneCorrespondante && secteur === "Tous") {
+            ligneCorrespondante = { 
+                tauxPatronal: 0.45, 
+                tauxSalarial: 0.22, 
+                description: "Taux génériques par défaut", 
+                secteur: "Tous", 
+                taille: taille, 
+                plage: plage 
+            };
+            log(`FiscalUtils: ATTENTION - Aucune ligne correspondante trouvée pour Tous/${taille}/${plage}, utilisation des valeurs par défaut`);
+        }
+        
         // Si trouvé, utiliser ces valeurs
         if (ligneCorrespondante) {
             tauxPatronal = ligneCorrespondante.tauxPatronal;
@@ -222,8 +254,7 @@ class FiscalUtils {
         }
         
         // Logging pour le débogage
-        console.log(`[FiscalUtils] Calcul des charges - Secteur: ${secteur}, Taille: ${taille}, Plage salariale: ${plage}`);
-        console.log(`[FiscalUtils] Taux appliqués - Patronal: ${(tauxPatronal*100).toFixed(1)}%, Salarial: ${(tauxSalarial*100).toFixed(1)}%, Description: ${description}`);
+        log(`[FiscalUtils] Taux appliqués - Patronal: ${(tauxPatronal*100).toFixed(1)}%, Salarial: ${(tauxSalarial*100).toFixed(1)}%, Description: ${description}`);
         
         const patronales = Math.round(remuneration * tauxPatronal);
         const salariales = Math.round(remuneration * tauxSalarial);
@@ -235,7 +266,7 @@ class FiscalUtils {
             tauxPatronal: tauxPatronal,
             tauxSalarial: tauxSalarial,
             description: description,
-            secteur: secteur,    // Ajouter ces valeurs au résultat pour la vérification
+            secteur: secteur,
             taille: taille
         };
     }
@@ -257,19 +288,17 @@ class FiscalUtils {
     
     // Création de données pour le graphique d'optimisation
     static genererDonneesGraphiqueOptimisation(params, simulationFunc) {
-        // S'assurer que les options sectorielles sont incluses
-        const secteurOptions = {
-            secteur: window.sectorOptions?.secteur || "Tous",
-            taille: window.sectorOptions?.taille || "<50"
-        };
+        // S'assurer que les options sectorielles sont incluses et normalisées
+        const secteur = normalize(window.sectorOptions?.secteur || "Tous");
+        const taille = (window.sectorOptions?.taille || "<50").trim();
         
         const donnees = [];
         for(let ratio = 0.05; ratio <= 1; ratio += 0.05) {
             const paramsTest = {
                 ...params,
                 tauxRemuneration: ratio,
-                secteur: secteurOptions.secteur,
-                taille: secteurOptions.taille
+                secteur: secteur,
+                taille: taille
             };
             const resultat = simulationFunc(paramsTest);
             donnees.push({
@@ -334,9 +363,12 @@ class FiscalUtils {
 // Exposer la classe au niveau global
 window.FiscalUtils = FiscalUtils;
 
+// Exposer la fonction normalize au niveau global
+window.normalizeSecteur = normalize;
+
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("Module FiscalUtils chargé et disponible globalement");
+    log("Module FiscalUtils chargé et disponible globalement");
     
     // CORRECTION: Initialiser l'objet sectorOptions avec un objet vide pour éviter les erreurs
     if (!window.sectorOptions) {
@@ -344,17 +376,7 @@ document.addEventListener('DOMContentLoaded', function() {
             secteur: "Tous",
             taille: "<50"
         };
-        console.log("FiscalUtils: Création de l'objet sectorOptions global par défaut");
-    }
-    
-    // Exécuter immédiatement une analyse d'impact pour tester la fonctionnalité
-    if (window.FiscalUtils) {
-        const testSalaire = 36000;
-        console.log(`[FiscalUtils] Test d'impact sectoriel sur un salaire de ${testSalaire}€:`);
-        const resultats = window.FiscalUtils.analyserImpactSectoriel(testSalaire);
-        resultats.forEach(res => {
-            console.log(`[FiscalUtils] Secteur ${res.secteur}, Taille ${res.taille}: Charges patronales ${res.patronales}€ (${(res.tauxPatronal*100).toFixed(1)}%), Salariales ${res.salariales}€ (${(res.tauxSalarial*100).toFixed(1)}%)`);
-        });
+        log("FiscalUtils: Création de l'objet sectorOptions global par défaut");
     }
     
     document.dispatchEvent(new CustomEvent('fiscalUtilsReady'));
