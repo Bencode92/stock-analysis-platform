@@ -1,18 +1,43 @@
 // fiscal-guide-extension.js - Extension des fonctionnalités du guide fiscal
-// Version 1.0 - Mai 2025
+// Version 1.1 - Mai 2025
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Vérifier que les dépendances sont chargées avant d'initialiser
-    const checkDependencies = setInterval(() => {
-        if (window.SimulationsFiscales && window.FiscalUtils) {
-            clearInterval(checkDependencies);
-            console.log("Extension du guide fiscal initialisée avec succès");
+    console.log("fiscal-guide-extension.js: Initialisation...");
+    
+    // Attendre explicitement que l'événement du simulateur fiscal soit déclenché
+    document.addEventListener('simulationsFiscalesReady', function() {
+        console.log("fiscal-guide-extension.js: SimulationsFiscales détecté, initialisation...");
+        
+        // Attendre encore un peu que l'interface soit générée par fiscal-guide.js
+        setTimeout(function() {
+            console.log("fiscal-guide-extension.js: Tentative d'initialisation des extensions...");
             initGuideFiscalExtension();
-        }
-    }, 200);
+        }, 1000);
+    });
+    
+    // Attendre également l'événement de l'onglet Guide fiscal
+    const guideTab = document.querySelector('.tab-item:nth-child(3)');
+    if (guideTab) {
+        guideTab.addEventListener('click', function() {
+            console.log("fiscal-guide-extension.js: Onglet Guide fiscal cliqué");
+            setTimeout(function() {
+                initGuideFiscalExtension();
+            }, 500);
+        });
+    }
 });
 
 function initGuideFiscalExtension() {
+    console.log("fiscal-guide-extension.js: Initialisation des extensions du guide fiscal");
+    
+    // Vérifier si le simulateur existe dans le DOM
+    if (!document.getElementById('fiscal-simulator')) {
+        console.log("fiscal-guide-extension.js: Simulateur fiscal non trouvé dans le DOM");
+        return;
+    }
+    
+    console.log("fiscal-guide-extension.js: Simulateur fiscal trouvé, initialisation des extensions");
+    
     // Ajouter des fonctionnalités avancées au simulateur
     enhanceSimulator();
     
@@ -25,6 +50,8 @@ function initGuideFiscalExtension() {
 
 // Améliorer le simulateur avec des fonctionnalités supplémentaires
 function enhanceSimulator() {
+    console.log("fiscal-guide-extension.js: Amélioration de l'interface du simulateur");
+    
     // Ajouter un bouton pour générer des rapports PDF
     addPdfReportButton();
     
@@ -39,14 +66,22 @@ function enhanceSimulator() {
 function addPdfReportButton() {
     // Vérifier si le conteneur du simulateur existe
     const simulatorContainer = document.getElementById('fiscal-simulator');
-    if (!simulatorContainer) return;
+    if (!simulatorContainer) {
+        console.log("fiscal-guide-extension.js: Conteneur du simulateur non trouvé");
+        return;
+    }
     
     // Vérifier si le bouton existe déjà
     if (document.getElementById('generate-pdf-btn')) return;
     
     // Trouver l'emplacement du bouton de comparaison
     const compareBtn = document.getElementById('sim-compare-btn');
-    if (!compareBtn) return;
+    if (!compareBtn) {
+        console.log("fiscal-guide-extension.js: Bouton de comparaison non trouvé");
+        return;
+    }
+    
+    console.log("fiscal-guide-extension.js: Ajout du bouton d'export PDF");
     
     // Créer le bouton de génération PDF
     const pdfBtn = document.createElement('button');
@@ -80,6 +115,8 @@ function addSaveSimulationButton() {
     // Trouver l'emplacement du bouton de comparaison
     const compareBtn = document.getElementById('sim-compare-btn');
     if (!compareBtn) return;
+    
+    console.log("fiscal-guide-extension.js: Ajout du bouton de sauvegarde");
     
     // Créer le bouton de sauvegarde
     const saveBtn = document.createElement('button');
@@ -154,6 +191,8 @@ function getSimulationResults() {
 
 // Améliorer l'interface utilisateur
 function enhanceUserInterface() {
+    console.log("fiscal-guide-extension.js: Amélioration de l'interface utilisateur");
+    
     // Ajouter un mode sombre/clair
     addDarkModeToggle();
     
@@ -169,6 +208,8 @@ function addDarkModeToggle() {
     // Trouver l'emplacement pour ajouter le switch
     const headerContainer = document.querySelector('.header-container') || document.querySelector('header');
     if (!headerContainer) return;
+    
+    console.log("fiscal-guide-extension.js: Ajout du toggle mode sombre/clair");
     
     // Créer le switch
     const darkModeToggle = document.createElement('div');
@@ -208,12 +249,17 @@ function toggleDarkMode() {
 
 // Ajouter une option pour masquer/afficher les colonnes
 function addColumnToggle() {
+    // Vérifier si le conteneur de résultats existe
+    const resultsContainer = document.getElementById('sim-results-container');
+    if (!resultsContainer) {
+        console.log("fiscal-guide-extension.js: Conteneur de résultats non trouvé");
+        return;
+    }
+    
     // Vérifier si l'option existe déjà
     if (document.getElementById('column-toggle')) return;
     
-    // Trouver l'emplacement pour ajouter l'option
-    const resultsContainer = document.getElementById('sim-results-container');
-    if (!resultsContainer) return;
+    console.log("fiscal-guide-extension.js: Ajout du toggle de colonnes");
     
     // Créer le toggle
     const columnToggle = document.createElement('div');
@@ -268,9 +314,14 @@ function toggleColumn(event) {
 
 // Configurer les graphiques de comparaison
 function setupComparisonCharts() {
+    console.log("fiscal-guide-extension.js: Configuration des graphiques de comparaison");
+    
     // Trouver l'emplacement pour ajouter les graphiques
     const resultsContainer = document.getElementById('sim-results-container');
-    if (!resultsContainer) return;
+    if (!resultsContainer) {
+        console.log("fiscal-guide-extension.js: Conteneur de résultats non trouvé pour graphiques");
+        return;
+    }
     
     // Vérifier si le conteneur de graphiques existe déjà
     if (document.getElementById('charts-container')) return;
@@ -294,19 +345,15 @@ function setupComparisonCharts() {
     `;
     
     // Ajouter après le tableau de résultats
-    const nextElement = document.querySelector('#sim-results-container + *');
-    if (nextElement) {
-        nextElement.parentNode.insertBefore(chartsContainer, nextElement);
-    } else {
-        resultsContainer.parentNode.appendChild(chartsContainer);
-    }
+    resultsContainer.parentNode.insertBefore(chartsContainer, resultsContainer.nextSibling);
     
     // Ajouter un gestionnaire d'événement pour mettre à jour les graphiques après la comparaison
     const compareBtn = document.getElementById('sim-compare-btn');
     if (compareBtn) {
+        console.log("fiscal-guide-extension.js: Bouton de comparaison trouvé pour les graphiques");
         compareBtn.addEventListener('click', function() {
             // Attendre que les résultats soient mis à jour
-            setTimeout(updateCharts, 500);
+            setTimeout(updateCharts, 1000);
         });
     }
     
@@ -316,8 +363,11 @@ function setupComparisonCharts() {
 
 // Initialiser les graphiques
 function initCharts() {
+    console.log("fiscal-guide-extension.js: Initialisation des graphiques");
+    
     // Vérifier si la bibliothèque Chart.js est disponible
     if (typeof Chart === 'undefined') {
+        console.log("fiscal-guide-extension.js: Chart.js non disponible, tentative de chargement");
         // Charger Chart.js dynamiquement
         const script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
@@ -327,6 +377,7 @@ function initCharts() {
         };
         document.head.appendChild(script);
     } else {
+        console.log("fiscal-guide-extension.js: Chart.js disponible, création des graphiques");
         createInitialCharts();
     }
 }
@@ -336,6 +387,7 @@ function createInitialCharts() {
     // Graphique des revenus nets
     const netIncomeCtx = document.getElementById('net-income-chart');
     if (netIncomeCtx) {
+        console.log("fiscal-guide-extension.js: Création du graphique de revenus nets");
         window.netIncomeChart = new Chart(netIncomeCtx, {
             type: 'bar',
             data: {
@@ -379,11 +431,14 @@ function createInitialCharts() {
                 }
             }
         });
+    } else {
+        console.log("fiscal-guide-extension.js: Élément pour graphique de revenus nets non trouvé");
     }
     
     // Graphique des charges et impôts
     const expensesCtx = document.getElementById('expenses-chart');
     if (expensesCtx) {
+        console.log("fiscal-guide-extension.js: Création du graphique de charges et impôts");
         window.expensesChart = new Chart(expensesCtx, {
             type: 'doughnut',
             data: {
@@ -416,14 +471,21 @@ function createInitialCharts() {
                 }
             }
         });
+    } else {
+        console.log("fiscal-guide-extension.js: Élément pour graphique de charges non trouvé");
     }
 }
 
 // Mettre à jour les graphiques avec les données actuelles
 function updateCharts() {
+    console.log("fiscal-guide-extension.js: Mise à jour des graphiques");
+    
     // Récupérer les données des résultats
     const rows = document.querySelectorAll('#sim-results-body tr:not(.ratio-row):not([class*="bg-blue-900"])');
-    if (rows.length === 0) return;
+    if (rows.length === 0) {
+        console.log("fiscal-guide-extension.js: Aucune ligne de résultat trouvée pour les graphiques");
+        return;
+    }
     
     const chartData = {
         labels: [],
@@ -434,6 +496,7 @@ function updateCharts() {
     
     // Limiter à 5-7 résultats pour la lisibilité
     const maxRows = Math.min(7, rows.length);
+    console.log(`fiscal-guide-extension.js: Utilisation de ${maxRows} lignes pour les graphiques`);
     
     for (let i = 0; i < maxRows; i++) {
         const cells = rows[i].querySelectorAll('td');
@@ -453,11 +516,16 @@ function updateCharts() {
         }
     }
     
+    console.log("fiscal-guide-extension.js: Données extraites pour les graphiques", chartData);
+    
     // Mettre à jour le graphique des revenus nets
     if (window.netIncomeChart) {
         window.netIncomeChart.data.labels = chartData.labels;
         window.netIncomeChart.data.datasets[0].data = chartData.nets;
         window.netIncomeChart.update();
+        console.log("fiscal-guide-extension.js: Graphique des revenus nets mis à jour");
+    } else {
+        console.log("fiscal-guide-extension.js: Graphique des revenus nets non disponible");
     }
     
     // Mettre à jour le graphique des charges et impôts
@@ -476,15 +544,23 @@ function updateCharts() {
             
             window.expensesChart.data.datasets[0].data = [netPercent, chargesPercent, impotsPercent];
             window.expensesChart.update();
+            console.log("fiscal-guide-extension.js: Graphique des charges et impôts mis à jour");
         }
+    } else {
+        console.log("fiscal-guide-extension.js: Graphique des charges et impôts non disponible");
     }
 }
 
 // Configurer les conseils personnalisés
 function setupPersonalizedAdvice() {
+    console.log("fiscal-guide-extension.js: Configuration des conseils personnalisés");
+    
     // Trouver l'emplacement pour ajouter les conseils
     const resultsContainer = document.getElementById('sim-results-container');
-    if (!resultsContainer) return;
+    if (!resultsContainer) {
+        console.log("fiscal-guide-extension.js: Conteneur de résultats non trouvé pour conseils");
+        return;
+    }
     
     // Vérifier si la section de conseils existe déjà
     if (document.getElementById('advice-container')) return;
@@ -505,12 +581,7 @@ function setupPersonalizedAdvice() {
     if (chartsContainer) {
         chartsContainer.parentNode.insertBefore(adviceContainer, chartsContainer.nextSibling);
     } else {
-        const nextElement = document.querySelector('#sim-results-container + *');
-        if (nextElement) {
-            nextElement.parentNode.insertBefore(adviceContainer, nextElement);
-        } else {
-            resultsContainer.parentNode.appendChild(adviceContainer);
-        }
+        resultsContainer.parentNode.appendChild(adviceContainer);
     }
     
     // Ajouter un gestionnaire d'événement pour mettre à jour les conseils après la comparaison
@@ -518,19 +589,27 @@ function setupPersonalizedAdvice() {
     if (compareBtn) {
         compareBtn.addEventListener('click', function() {
             // Attendre que les résultats soient mis à jour
-            setTimeout(updateAdvice, 500);
+            setTimeout(updateAdvice, 1000);
         });
     }
 }
 
 // Mettre à jour les conseils personnalisés
 function updateAdvice() {
+    console.log("fiscal-guide-extension.js: Mise à jour des conseils personnalisés");
+    
     const adviceContent = document.getElementById('advice-content');
-    if (!adviceContent) return;
+    if (!adviceContent) {
+        console.log("fiscal-guide-extension.js: Conteneur de conseils non trouvé");
+        return;
+    }
     
     // Récupérer les données des résultats
     const rows = document.querySelectorAll('#sim-results-body tr:not(.ratio-row):not([class*="bg-blue-900"])');
-    if (rows.length === 0) return;
+    if (rows.length === 0) {
+        console.log("fiscal-guide-extension.js: Aucune ligne de résultat trouvée pour les conseils");
+        return;
+    }
     
     // Récupérer les paramètres de simulation
     const ca = parseFloat(document.getElementById('sim-ca').value) || 0;
@@ -540,10 +619,15 @@ function updateAdvice() {
     // Récupérer le meilleur statut (premier rang)
     const topRow = rows[0];
     const topCells = topRow.querySelectorAll('td');
-    if (topCells.length < 7) return;
+    if (topCells.length < 7) {
+        console.log("fiscal-guide-extension.js: Structure de ligne de résultat incorrecte");
+        return;
+    }
     
     const topStatut = topCells[0].textContent.trim().replace(/^\s*[^\w]+\s*/, '');
     const topNet = topCells[6].textContent.trim();
+    
+    console.log(`fiscal-guide-extension.js: Meilleur statut: ${topStatut}, Net: ${topNet}`);
     
     // Générer des conseils adaptés
     let adviceHtml = '';
@@ -610,6 +694,7 @@ function updateAdvice() {
     
     // Mettre à jour le contenu
     adviceContent.innerHTML = adviceHtml;
+    console.log("fiscal-guide-extension.js: Conseils personnalisés mis à jour");
 }
 
 // Fonction utilitaire pour afficher des notifications
@@ -659,7 +744,9 @@ function showNotification(message, type = 'info') {
     setTimeout(() => {
         notification.classList.add('opacity-0', 'translate-x-4');
         setTimeout(() => {
-            notificationContainer.removeChild(notification);
+            if (notification.parentNode) {
+                notificationContainer.removeChild(notification);
+            }
         }, 300);
     }, 5000);
 }
