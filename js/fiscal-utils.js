@@ -1,5 +1,5 @@
 // fiscal-utils.js - Utilitaires pour les calculs fiscaux
-// Version 1.4 - Mai 2025 - Correction de la prise en compte des options sectorielles dans l'optimisation
+// Version 1.5 - Mai 2025 - Correction de la prise en compte des options sectorielles dans l'optimisation
 
 const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS = 2,9%
 
@@ -64,27 +64,27 @@ class FiscalUtils {
         return Math.round(impot);
     }
     
-    // Optimisation du ratio rémunération/dividendes - CORRIGÉ
+    // Optimisation du ratio rémunération/dividendes - CORRECTION MAJEURE
     static optimiserRatioRemuneration(params, simulationFunc) {
         let meilleurRatio = 0.5;
         let meilleurNet = 0;
         
-        // CORRECTION: S'assurer que les options sectorielles sont directement récupérées
+        // CORRECTION MAJEURE: S'assurer que les options sectorielles sont directement récupérées
         // depuis l'objet global window.sectorOptions au moment de l'optimisation
         const secteurOptions = {
             secteur: window.sectorOptions?.secteur || "Tous",
             taille: window.sectorOptions?.taille || "<50"
         };
         
-        console.log("FiscalUtils: Optimisation avec options sectorielles récupérées en temps réel:", secteurOptions);
+        console.log("FiscalUtils: Optimisation avec options sectorielles: ", secteurOptions);
         
         // IMPORTANT: Forcez les options sectorielles à chaque test
+        // Sauvegarde des paramètres originaux
         const paramsBase = {...params};
-        delete paramsBase.secteur;
-        delete paramsBase.taille;
         
         // Tester différents ratios de 0% à 100% par pas de 5%
         for(let ratio = 0.0; ratio <= 1.0; ratio += 0.05) {
+            // CORRECTION: S'assurer que chaque test utilise les options sectorielles actuelles
             const paramsTest = {
                 ...paramsBase,
                 tauxRemuneration: ratio,
@@ -105,6 +105,7 @@ class FiscalUtils {
             ratio <= Math.min(0.99, meilleurRatio+0.04); 
             ratio += 0.01) {
             
+            // CORRECTION: Garantir que chaque test d'affinement utilise les options sectorielles
             const paramsTest = {
                 ...paramsBase,
                 tauxRemuneration: ratio,
@@ -121,6 +122,7 @@ class FiscalUtils {
         }
         
         // Calculer le résultat final avec le ratio optimal
+        // CORRECTION: Garantir que les options sectorielles sont incluses dans le calcul final
         const paramsFinaux = {
             ...paramsBase,
             tauxRemuneration: meilleurRatio,
@@ -128,13 +130,13 @@ class FiscalUtils {
             taille: secteurOptions.taille
         };
         
-        console.log("FiscalUtils: Calcul final avec paramètres:", paramsFinaux);
+        console.log("FiscalUtils: Calcul final avec paramètres sectoriels:", paramsFinaux);
         
         const resultatFinal = simulationFunc(paramsFinaux);
         resultatFinal.ratioOptimise = meilleurRatio;
         
         console.log("FiscalUtils: Ratio optimal trouvé:", meilleurRatio, "avec revenu net:", meilleurNet);
-        console.log("FiscalUtils: Résultat inclut le secteur:", resultatFinal.secteur, "et taille:", resultatFinal.taille);
+        console.log("FiscalUtils: Résultat inclut secteur:", resultatFinal.secteur, "taille:", resultatFinal.taille);
         
         return {
             ratio: meilleurRatio,
@@ -169,7 +171,7 @@ class FiscalUtils {
         return Math.round(partA + partB);
     }
     
-    // Calcul des charges salariales avec table paramétrable
+    // Calcul des charges salariales avec table paramétrable - CORRECTION
     static calculChargesSalariales(remuneration, params = {}) {
         // CORRECTION: Toujours récupérer les options sectorielles depuis l'objet global si non fournies
         // Garantir des paramètres valides
