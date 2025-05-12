@@ -8,18 +8,36 @@ const SMIC_ANNUEL_2025 = 21060;
 
 // Table paramétrable des charges sociales SASU (2025)
 const CHARGES_SASU_2025 = [
-    { secteur: "Tous", taille: "<50", plage: "<1.6", tauxPatronal: 0.28, tauxSalarial: 0.21 },
-    { secteur: "Tous", taille: "<50", plage: "1.6-2.5", tauxPatronal: 0.33, tauxSalarial: 0.21 },
-    { secteur: "Tous", taille: "<50", plage: ">2.5", tauxPatronal: 0.41, tauxSalarial: 0.21 },
-    { secteur: "Tous", taille: ">=50", plage: "<1.6", tauxPatronal: 0.32, tauxSalarial: 0.21 },
-    { secteur: "Tous", taille: ">=50", plage: "1.6-2.5", tauxPatronal: 0.36, tauxSalarial: 0.21 },
-    { secteur: "Tous", taille: ">=50", plage: ">2.5", tauxPatronal: 0.43, tauxSalarial: 0.21 },
-    { secteur: "Commerce", taille: "<50", plage: "<1.6", tauxPatronal: 0.28, tauxSalarial: 0.21 },
-    { secteur: "Commerce", taille: "<50", plage: ">2.5", tauxPatronal: 0.41, tauxSalarial: 0.22 },
-    { secteur: "Industrie", taille: "<50", plage: "<1.6", tauxPatronal: 0.30, tauxSalarial: 0.21 },
-    { secteur: "Industrie", taille: ">=50", plage: ">2.5", tauxPatronal: 0.45, tauxSalarial: 0.22 },
-    { secteur: "Services", taille: "<50", plage: "<1.6", tauxPatronal: 0.29, tauxSalarial: 0.21 },
-    { secteur: "Services", taille: ">=50", plage: ">2.5", tauxPatronal: 0.43, tauxSalarial: 0.22 }
+    // Tous secteurs, différentes tailles
+    { secteur: "Tous", taille: "<50", plage: "<1.6", tauxPatronal: 0.28, tauxSalarial: 0.21, description: "Réduction générale maximale" },
+    { secteur: "Tous", taille: "<50", plage: "1.6-2.5", tauxPatronal: 0.33, tauxSalarial: 0.21, description: "Réduction partielle" },
+    { secteur: "Tous", taille: "<50", plage: ">2.5", tauxPatronal: 0.41, tauxSalarial: 0.21, description: "Taux pleins" },
+    { secteur: "Tous", taille: ">=50", plage: "<1.6", tauxPatronal: 0.32, tauxSalarial: 0.21, description: "FNAL majoré, réduction max" },
+    { secteur: "Tous", taille: ">=50", plage: "1.6-2.5", tauxPatronal: 0.36, tauxSalarial: 0.21, description: "FNAL majoré, réduction part." },
+    { secteur: "Tous", taille: ">=50", plage: ">2.5", tauxPatronal: 0.43, tauxSalarial: 0.21, description: "FNAL majoré, taux pleins" },
+    
+    // Commerce
+    { secteur: "Commerce", taille: "<50", plage: "<1.6", tauxPatronal: 0.28, tauxSalarial: 0.21, description: "AT faible, famille réduit" },
+    { secteur: "Commerce", taille: "<50", plage: "1.6-2.5", tauxPatronal: 0.33, tauxSalarial: 0.21, description: "Réduction partielle" },
+    { secteur: "Commerce", taille: "<50", plage: ">2.5", tauxPatronal: 0.41, tauxSalarial: 0.22, description: "Taux pleins" },
+    { secteur: "Commerce", taille: ">=50", plage: "<1.6", tauxPatronal: 0.32, tauxSalarial: 0.21, description: "FNAL majoré" },
+    { secteur: "Commerce", taille: ">=50", plage: "1.6-2.5", tauxPatronal: 0.36, tauxSalarial: 0.21, description: "Réduction partielle" },
+    { secteur: "Commerce", taille: ">=50", plage: ">2.5", tauxPatronal: 0.43, tauxSalarial: 0.22, description: "Taux pleins" },
+    
+    // Industrie
+    { secteur: "Industrie", taille: "<50", plage: "<1.6", tauxPatronal: 0.30, tauxSalarial: 0.21, description: "AT moyen, famille réduit" },
+    { secteur: "Industrie", taille: "<50", plage: "1.6-2.5", tauxPatronal: 0.35, tauxSalarial: 0.21, description: "Réduction partielle" },
+    { secteur: "Industrie", taille: ">=50", plage: "<1.6", tauxPatronal: 0.34, tauxSalarial: 0.21, description: "FNAL majoré" },
+    { secteur: "Industrie", taille: ">=50", plage: "1.6-2.5", tauxPatronal: 0.38, tauxSalarial: 0.21, description: "Réduction partielle" },
+    { secteur: "Industrie", taille: ">=50", plage: ">2.5", tauxPatronal: 0.45, tauxSalarial: 0.22, description: "FNAL majoré, taux pleins" },
+    
+    // Services
+    { secteur: "Services", taille: "<50", plage: "<1.6", tauxPatronal: 0.29, tauxSalarial: 0.21, description: "AT très faible" },
+    { secteur: "Services", taille: "<50", plage: "1.6-2.5", tauxPatronal: 0.33, tauxSalarial: 0.21, description: "Réduction partielle" },
+    { secteur: "Services", taille: "<50", plage: ">2.5", tauxPatronal: 0.41, tauxSalarial: 0.21, description: "Taux pleins" },
+    { secteur: "Services", taille: ">=50", plage: "<1.6", tauxPatronal: 0.32, tauxSalarial: 0.21, description: "FNAL majoré" },
+    { secteur: "Services", taille: ">=50", plage: "1.6-2.5", tauxPatronal: 0.36, tauxSalarial: 0.21, description: "Réduction partielle" },
+    { secteur: "Services", taille: ">=50", plage: ">2.5", tauxPatronal: 0.43, tauxSalarial: 0.22, description: "FNAL majoré, taux pleins" }
 ];
 
 class FiscalUtils {
