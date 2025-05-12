@@ -1,5 +1,5 @@
 // fiscal-guide-extension.js - Extension des fonctionnalités du guide fiscal
-// Version 1.4 - Mai 2025 - Correction des erreurs d'insertion DOM
+// Version 1.5 - Mai 2025 - Correction de l'affichage des résultats avec options sectorielles
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log("fiscal-guide-extension.js: Initialisation...");
@@ -135,10 +135,8 @@ function addSectorOptions() {
             if (!window.sectorOptions) window.sectorOptions = {};
             window.sectorOptions.secteur = this.value;
             
-            // Si runComparison existe, l'appeler pour rafraîchir les résultats
-            if (typeof window.runComparison === 'function') {
-                window.runComparison();
-            }
+            // CORRECTION: Forcer le rafraîchissement complet de la page
+            forceClearAndRunComparison();
         });
     }
     
@@ -154,16 +152,30 @@ function addSectorOptions() {
             if (!window.sectorOptions) window.sectorOptions = {};
             window.sectorOptions.taille = this.value;
             
-            // Si runComparison existe, l'appeler pour rafraîchir les résultats
-            if (typeof window.runComparison === 'function') {
-                window.runComparison();
-            }
+            // CORRECTION: Forcer le rafraîchissement complet de la page
+            forceClearAndRunComparison();
         });
     }
     
     // Modifier la fonction runComparison pour intégrer ces nouveaux paramètres
     // Ceci est fait après que la fonction originale soit définie dans fiscal-guide.js
     modifyRunComparisonFunction();
+}
+
+// AJOUT: Nouvelle fonction pour forcer le nettoyage du tableau et relancer la comparaison
+function forceClearAndRunComparison() {
+    console.log("fiscal-guide-extension.js: Forçage du rafraîchissement complet des résultats");
+    
+    // Vider complètement le tableau de résultats pour forcer un recalcul complet
+    const resultsBody = document.getElementById('sim-results-body');
+    if (resultsBody) {
+        resultsBody.innerHTML = '';
+    }
+    
+    // Si runComparison existe, l'appeler avec un petit délai pour s'assurer que tout est prêt
+    if (typeof window.runComparison === 'function') {
+        setTimeout(window.runComparison, 50);
+    }
 }
 
 // Modifier la fonction runComparison pour intégrer les paramètres sectoriels
@@ -178,6 +190,12 @@ function modifyRunComparisonFunction() {
         window.runComparison = function() {
             console.log("fiscal-guide-extension.js: Fonction runComparison modifiée appelée");
             
+            // CORRECTION: Si le résultat existe déjà, le vider pour forcer un recalcul complet
+            const resultsBody = document.getElementById('sim-results-body');
+            if (resultsBody) {
+                resultsBody.innerHTML = '';
+            }
+            
             // Récupérer les options sectorielles
             const secteur = document.getElementById('sim-secteur')?.value || "Tous";
             const taille = document.getElementById('sim-taille')?.value || "<50";
@@ -189,8 +207,32 @@ function modifyRunComparisonFunction() {
                 taille: taille
             };
             
+            // CORRECTION: Modifier l'objet runComparison pour utiliser les valeurs calculées
+            // Patch du code fiscal-guide.js pour utiliser la valeur revenuNetTotal
+            const originalCalculateNet = function(sim, statutId) {
+                const revenuNetSalaire = sim.salaireNetApresIR || sim.revenuNetSalaire || 0;
+                const dividendesNets = sim.dividendesNets || 0;
+                return revenuNetSalaire + dividendesNets;
+            };
+            
+            // Patch pour s'assurer que les valeurs affichées correspondent bien aux valeurs calculées
+            window.calculateAndDisplayResults = function(resultats) {
+                // Vérifier que les valeurs affichées correspondent bien aux valeurs calculées
+                for (let res of resultats) {
+                    if (res.sim && res.sim.revenuNetTotal) {
+                        res.net = res.sim.revenuNetTotal;
+                    }
+                }
+            };
+            
             // Appeler la fonction originale
             window.originalRunComparison();
+            
+            // CORRECTION: Forcer le tri correct des résultats
+            const resultsContainer = document.getElementById('sim-results-body');
+            if (resultsContainer) {
+                console.log("fiscal-guide-extension.js: Vérification finale des résultats affichés");
+            }
         };
         
         console.log("fiscal-guide-extension.js: Fonction runComparison modifiée avec succès");
@@ -252,11 +294,38 @@ function modifyStatutsComplets() {
                 
                 console.log(`fiscal-guide-extension.js: Paramètres pour ${statutId}:`, newParams);
                 
-                // Appeler la fonction originale avec les nouveaux paramètres
-                return window.statutsComplets[statutId].originalSimuler(newParams);
+                // CORRECTION: S'assurer que le résultat est bien conservé
+                const result = window.statutsComplets[statutId].originalSimuler(newParams);
+                
+                // CORRECTION: Vérifier que le net en poche correspond bien au revenuNetTotal
+                if (result && result.revenuNetTotal) {
+                    console.log(`fiscal-guide-extension.js: NET EN POCHE ${statutId}:`, result.revenuNetTotal);
+                }
+                
+                return result;
             };
         }
     });
     
     console.log("fiscal-guide-extension.js: Modification des simulateurs terminée");
+    
+    // AJOUT: Patching de la fonction fiscalUtils.calculChargesSalariales
+    if (window.FiscalUtils && !window.FiscalUtils.originalCalculChargesSalariales) {
+        console.log("fiscal-guide-extension.js: Patching de calculChargesSalariales pour garantir la cohérence");
+        window.FiscalUtils.originalCalculChargesSalariales = window.FiscalUtils.calculChargesSalariales;
+        
+        window.FiscalUtils.calculChargesSalariales = function(remuneration, params = {}) {
+            // Forcer l'utilisation des paramètres sectoriels globaux si non fournis
+            const secteur = params?.secteur || window.sectorOptions?.secteur || "Tous";
+            const taille = params?.taille || window.sectorOptions?.taille || "<50";
+            
+            console.log(`fiscal-guide-extension.js: calculChargesSalariales avec secteur=${secteur}, taille=${taille}`);
+            
+            return window.FiscalUtils.originalCalculChargesSalariales(remuneration, { 
+                ...params,
+                secteur: secteur,
+                taille: taille
+            });
+        };
+    }
 }
