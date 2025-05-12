@@ -1,5 +1,5 @@
 // fiscal-utils.js - Utilitaires pour les calculs fiscaux
-// Version 1.1 - Mai 2025 - Mise à jour des taux 2025
+// Version 1.2 - Mai 2025 - Amélioration des options sectorielles
 
 const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS = 2,9%
 
@@ -7,6 +7,7 @@ const CSG_CRDS_IMPOSABLE = 0.029;    // 2,4% CSG non déductible + 0,5% CRDS = 2
 const SMIC_ANNUEL_2025 = 21060;
 
 // Table paramétrable des charges sociales SASU (2025)
+// Mise à jour avec des taux plus différenciés par secteur pour une meilleure visibilité de l'impact
 const CHARGES_SASU_2025 = [
     // Tous secteurs, différentes tailles
     { secteur: "Tous", taille: "<50", plage: "<1.6", tauxPatronal: 0.28, tauxSalarial: 0.21, description: "Réduction générale maximale" },
@@ -16,28 +17,29 @@ const CHARGES_SASU_2025 = [
     { secteur: "Tous", taille: ">=50", plage: "1.6-2.5", tauxPatronal: 0.36, tauxSalarial: 0.21, description: "FNAL majoré, réduction part." },
     { secteur: "Tous", taille: ">=50", plage: ">2.5", tauxPatronal: 0.43, tauxSalarial: 0.21, description: "FNAL majoré, taux pleins" },
     
-    // Commerce
-    { secteur: "Commerce", taille: "<50", plage: "<1.6", tauxPatronal: 0.28, tauxSalarial: 0.21, description: "AT faible, famille réduit" },
-    { secteur: "Commerce", taille: "<50", plage: "1.6-2.5", tauxPatronal: 0.33, tauxSalarial: 0.21, description: "Réduction partielle" },
-    { secteur: "Commerce", taille: "<50", plage: ">2.5", tauxPatronal: 0.41, tauxSalarial: 0.22, description: "Taux pleins" },
-    { secteur: "Commerce", taille: ">=50", plage: "<1.6", tauxPatronal: 0.32, tauxSalarial: 0.21, description: "FNAL majoré" },
-    { secteur: "Commerce", taille: ">=50", plage: "1.6-2.5", tauxPatronal: 0.36, tauxSalarial: 0.21, description: "Réduction partielle" },
-    { secteur: "Commerce", taille: ">=50", plage: ">2.5", tauxPatronal: 0.43, tauxSalarial: 0.22, description: "Taux pleins" },
+    // Commerce - taux légèrement réduits pour AT faible
+    { secteur: "Commerce", taille: "<50", plage: "<1.6", tauxPatronal: 0.26, tauxSalarial: 0.21, description: "AT faible, famille réduit" },
+    { secteur: "Commerce", taille: "<50", plage: "1.6-2.5", tauxPatronal: 0.31, tauxSalarial: 0.21, description: "Réduction partielle" },
+    { secteur: "Commerce", taille: "<50", plage: ">2.5", tauxPatronal: 0.39, tauxSalarial: 0.22, description: "Taux pleins" },
+    { secteur: "Commerce", taille: ">=50", plage: "<1.6", tauxPatronal: 0.30, tauxSalarial: 0.21, description: "FNAL majoré" },
+    { secteur: "Commerce", taille: ">=50", plage: "1.6-2.5", tauxPatronal: 0.34, tauxSalarial: 0.21, description: "Réduction partielle" },
+    { secteur: "Commerce", taille: ">=50", plage: ">2.5", tauxPatronal: 0.41, tauxSalarial: 0.22, description: "Taux pleins" },
     
-    // Industrie
-    { secteur: "Industrie", taille: "<50", plage: "<1.6", tauxPatronal: 0.30, tauxSalarial: 0.21, description: "AT moyen, famille réduit" },
-    { secteur: "Industrie", taille: "<50", plage: "1.6-2.5", tauxPatronal: 0.35, tauxSalarial: 0.21, description: "Réduction partielle" },
-    { secteur: "Industrie", taille: ">=50", plage: "<1.6", tauxPatronal: 0.34, tauxSalarial: 0.21, description: "FNAL majoré" },
-    { secteur: "Industrie", taille: ">=50", plage: "1.6-2.5", tauxPatronal: 0.38, tauxSalarial: 0.21, description: "Réduction partielle" },
-    { secteur: "Industrie", taille: ">=50", plage: ">2.5", tauxPatronal: 0.45, tauxSalarial: 0.22, description: "FNAL majoré, taux pleins" },
+    // Industrie - taux majorés pour AT élevé
+    { secteur: "Industrie", taille: "<50", plage: "<1.6", tauxPatronal: 0.32, tauxSalarial: 0.21, description: "AT élevé, famille réduit" },
+    { secteur: "Industrie", taille: "<50", plage: "1.6-2.5", tauxPatronal: 0.37, tauxSalarial: 0.21, description: "Réduction partielle" },
+    { secteur: "Industrie", taille: "<50", plage: ">2.5", tauxPatronal: 0.45, tauxSalarial: 0.21, description: "Taux pleins" },
+    { secteur: "Industrie", taille: ">=50", plage: "<1.6", tauxPatronal: 0.36, tauxSalarial: 0.21, description: "FNAL majoré" },
+    { secteur: "Industrie", taille: ">=50", plage: "1.6-2.5", tauxPatronal: 0.40, tauxSalarial: 0.21, description: "Réduction partielle" },
+    { secteur: "Industrie", taille: ">=50", plage: ">2.5", tauxPatronal: 0.47, tauxSalarial: 0.22, description: "FNAL majoré, taux pleins" },
     
-    // Services
-    { secteur: "Services", taille: "<50", plage: "<1.6", tauxPatronal: 0.29, tauxSalarial: 0.21, description: "AT très faible" },
-    { secteur: "Services", taille: "<50", plage: "1.6-2.5", tauxPatronal: 0.33, tauxSalarial: 0.21, description: "Réduction partielle" },
-    { secteur: "Services", taille: "<50", plage: ">2.5", tauxPatronal: 0.41, tauxSalarial: 0.21, description: "Taux pleins" },
-    { secteur: "Services", taille: ">=50", plage: "<1.6", tauxPatronal: 0.32, tauxSalarial: 0.21, description: "FNAL majoré" },
-    { secteur: "Services", taille: ">=50", plage: "1.6-2.5", tauxPatronal: 0.36, tauxSalarial: 0.21, description: "Réduction partielle" },
-    { secteur: "Services", taille: ">=50", plage: ">2.5", tauxPatronal: 0.43, tauxSalarial: 0.22, description: "FNAL majoré, taux pleins" }
+    // Services - taux réduits pour AT très faible
+    { secteur: "Services", taille: "<50", plage: "<1.6", tauxPatronal: 0.27, tauxSalarial: 0.21, description: "AT très faible" },
+    { secteur: "Services", taille: "<50", plage: "1.6-2.5", tauxPatronal: 0.31, tauxSalarial: 0.21, description: "Réduction partielle" },
+    { secteur: "Services", taille: "<50", plage: ">2.5", tauxPatronal: 0.39, tauxSalarial: 0.21, description: "Taux pleins" },
+    { secteur: "Services", taille: ">=50", plage: "<1.6", tauxPatronal: 0.30, tauxSalarial: 0.21, description: "FNAL majoré" },
+    { secteur: "Services", taille: ">=50", plage: "1.6-2.5", tauxPatronal: 0.34, tauxSalarial: 0.21, description: "Réduction partielle" },
+    { secteur: "Services", taille: ">=50", plage: ">2.5", tauxPatronal: 0.41, tauxSalarial: 0.21, description: "FNAL majoré, taux pleins" }
 ];
 
 class FiscalUtils {
@@ -141,22 +143,54 @@ class FiscalUtils {
         // Rechercher les taux dans la table
         let tauxPatronal = 0.45; // Valeur par défaut
         let tauxSalarial = 0.22; // Valeur par défaut
+        let description = "Valeurs par défaut";
         
         // Recherche du taux le plus spécifique possible
+        let ligneCorrespondante = null;
+        
+        // D'abord chercher un taux spécifique au secteur et à la taille
         for (const ligne of CHARGES_SASU_2025) {
-            if ((ligne.secteur === secteur || ligne.secteur === "Tous") &&
-                (ligne.taille === taille) &&
+            if (ligne.secteur === secteur && 
+                ligne.taille === taille && 
                 ligne.plage === plage) {
-                tauxPatronal = ligne.tauxPatronal;
-                tauxSalarial = ligne.tauxSalarial;
+                ligneCorrespondante = ligne;
                 break;
             }
         }
         
+        // Si aucun taux spécifique trouvé, chercher un taux pour "Tous" secteurs avec cette taille
+        if (!ligneCorrespondante) {
+            for (const ligne of CHARGES_SASU_2025) {
+                if (ligne.secteur === "Tous" && 
+                    ligne.taille === taille && 
+                    ligne.plage === plage) {
+                    ligneCorrespondante = ligne;
+                    break;
+                }
+            }
+        }
+        
+        // Si trouvé, utiliser ces valeurs
+        if (ligneCorrespondante) {
+            tauxPatronal = ligneCorrespondante.tauxPatronal;
+            tauxSalarial = ligneCorrespondante.tauxSalarial;
+            description = ligneCorrespondante.description;
+        }
+        
+        // Logging pour le débogage
+        console.log(`[FiscalUtils] Calcul des charges - Secteur: ${secteur}, Taille: ${taille}, Plage salariale: ${plage}`);
+        console.log(`[FiscalUtils] Taux appliqués - Patronal: ${(tauxPatronal*100).toFixed(1)}%, Salarial: ${(tauxSalarial*100).toFixed(1)}%, Description: ${description}`);
+        
+        const patronales = Math.round(remuneration * tauxPatronal);
+        const salariales = Math.round(remuneration * tauxSalarial);
+        
         return {
-            patronales: Math.round(remuneration * tauxPatronal),
-            salariales: Math.round(remuneration * tauxSalarial),
-            total: Math.round(remuneration * (tauxPatronal + tauxSalarial))
+            patronales: patronales,
+            salariales: salariales,
+            total: patronales + salariales,
+            tauxPatronal: tauxPatronal,
+            tauxSalarial: tauxSalarial,
+            description: description
         };
     }
     
@@ -192,6 +226,32 @@ class FiscalUtils {
         }
         return donnees;
     }
+    
+    // Afficher l'impact sectoriel - nouvelle fonction pour l'analyse
+    static analyserImpactSectoriel(remuneration) {
+        const secteurs = ["Tous", "Commerce", "Industrie", "Services"];
+        const tailles = ["<50", ">=50"];
+        
+        const resultats = [];
+        
+        secteurs.forEach(secteur => {
+            tailles.forEach(taille => {
+                const charges = this.calculChargesSalariales(remuneration, { secteur, taille });
+                
+                resultats.push({
+                    secteur: secteur,
+                    taille: taille,
+                    patronales: charges.patronales,
+                    salariales: charges.salariales,
+                    total: charges.total,
+                    tauxPatronal: charges.tauxPatronal,
+                    tauxSalarial: charges.tauxSalarial
+                });
+            });
+        });
+        
+        return resultats;
+    }
 }
 
 // Exposer la classe au niveau global
@@ -200,5 +260,16 @@ window.FiscalUtils = FiscalUtils;
 // Notifier que le module est chargé
 document.addEventListener('DOMContentLoaded', function() {
     console.log("Module FiscalUtils chargé et disponible globalement");
+    
+    // Exécuter immédiatement une analyse d'impact pour tester la fonctionnalité
+    if (window.FiscalUtils) {
+        const testSalaire = 36000;
+        console.log(`[FiscalUtils] Test d'impact sectoriel sur un salaire de ${testSalaire}€:`);
+        const resultats = window.FiscalUtils.analyserImpactSectoriel(testSalaire);
+        resultats.forEach(res => {
+            console.log(`[FiscalUtils] Secteur ${res.secteur}, Taille ${res.taille}: Charges patronales ${res.patronales}€ (${(res.tauxPatronal*100).toFixed(1)}%), Salariales ${res.salariales}€ (${(res.tauxSalarial*100).toFixed(1)}%)`);
+        });
+    }
+    
     document.dispatchEvent(new CustomEvent('fiscalUtilsReady'));
 });
