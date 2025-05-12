@@ -78,7 +78,7 @@ function addSectorOptions() {
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="block text-gray-300 mb-2">Secteur d'activité</label>
-                <select id="sim-secteur" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
+                <select id="secteur-select" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
                     <option value="Tous">Tous secteurs</option>
                     <option value="Commerce">Commerce</option>
                     <option value="Industrie">Industrie</option>
@@ -88,7 +88,7 @@ function addSectorOptions() {
             </div>
             <div>
                 <label class="block text-gray-300 mb-2">Taille d'entreprise</label>
-                <select id="sim-taille" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
+                <select id="taille-select" class="w-full bg-blue-900 bg-opacity-50 border border-gray-700 rounded-lg px-4 py-2 text-white">
                     <option value="<50">Moins de 50 salariés</option>
                     <option value=">=50">50 salariés ou plus</option>
                 </select>
@@ -120,8 +120,8 @@ function addSectorOptions() {
     }
     
     // Ajouter les écouteurs d'événements
-    const secteurSelect = document.getElementById('sim-secteur');
-    const tailleSelect = document.getElementById('sim-taille');
+    const secteurSelect = document.getElementById('secteur-select');
+    const tailleSelect = document.getElementById('taille-select');
     
     if (secteurSelect) {
         // Définir la valeur par défaut basée sur le stockage global
@@ -197,8 +197,8 @@ function modifyRunComparisonFunction() {
             }
             
             // Récupérer les options sectorielles
-            const secteur = document.getElementById('sim-secteur')?.value || "Tous";
-            const taille = document.getElementById('sim-taille')?.value || "<50";
+            const secteur = document.getElementById('secteur-select')?.value || "Tous";
+            const taille = document.getElementById('taille-select')?.value || "<50";
             console.log("fiscal-guide-extension.js: Options sectorielles -", secteur, taille);
             
             // Stocker les valeurs dans l'objet window pour le simulateur
