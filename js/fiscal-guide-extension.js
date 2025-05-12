@@ -1,5 +1,5 @@
 // fiscal-guide-extension.js - Extension des fonctionnalités du guide fiscal
-// Version 1.7 - Mai 2025 - Cohérence entre tableau et calculs détaillés
+// Version 1.8 - Mai 2025 - Correction complète des options sectorielles
 
 document.addEventListener('DOMContentLoaded', function() {
     console.log("fiscal-guide-extension.js: Initialisation...");
@@ -30,10 +30,8 @@ document.addEventListener('DOMContentLoaded', function() {
 function initGuideFiscalExtension() {
     console.log("fiscal-guide-extension.js: Initialisation des extensions du guide fiscal");
     
-    // Neutraliser complètement la fonction setupSectorOptions de fiscal-guide.js
-    window.setupSectorOptions = function() {
-        console.log("fiscal-guide-extension.js: Fonction setupSectorOptions neutralisée");
-    };
+    // NE PAS neutraliser la fonction setupSectorOptions de fiscal-guide.js
+    // Nous voulons maintenant qu'elle fonctionne correctement
     
     // Vérifier si le simulateur existe dans le DOM
     if (!document.getElementById('fiscal-simulator')) {
@@ -53,6 +51,7 @@ function initGuideFiscalExtension() {
 // Ajouter les options sectorielles pour SASU/SAS
 function addSectorOptions() {
     // Pour éviter que setupSectorOptions de fiscal-guide.js ne s'exécute à nouveau plus tard
+    // Mais sans neutraliser sa fonctionnalité
     window.sectorOptionsInitialized = true;
     
     // Trouver l'endroit où insérer les options sectorielles
@@ -146,8 +145,8 @@ function addSectorOptions() {
             if (!window.sectorOptions) window.sectorOptions = {};
             window.sectorOptions.secteur = this.value;
             
-            // CORRECTION: Forcer le rafraîchissement complet de la page
-            forceClearAndRunComparison();
+            // CORRECTION: Forcer un nettoyage complet du cache et recalcul total
+            clearCacheAndRunComparison();
         });
     }
     
@@ -163,257 +162,228 @@ function addSectorOptions() {
             if (!window.sectorOptions) window.sectorOptions = {};
             window.sectorOptions.taille = this.value;
             
-            // CORRECTION: Forcer le rafraîchissement complet de la page
-            forceClearAndRunComparison();
+            // CORRECTION: Forcer un nettoyage complet du cache et recalcul total
+            clearCacheAndRunComparison();
         });
     }
     
-    // Modifier la fonction runComparison pour intégrer ces nouveaux paramètres
-    // Ceci est fait après que la fonction originale soit définie dans fiscal-guide.js
-    modifyRunComparisonFunction();
+    // CORRECTION: Ne pas modifier runComparison, mais plutôt observer les changements dans le DOM
+    setupMutationObserver();
 }
 
-// AJOUT: Nouvelle fonction pour forcer le nettoyage du tableau et relancer la comparaison
-function forceClearAndRunComparison() {
-    console.log("fiscal-guide-extension.js: Forçage du rafraîchissement complet des résultats");
+// NOUVEAU: Nettoyage complet du cache et recalcul
+function clearCacheAndRunComparison() {
+    console.log("fiscal-guide-extension.js: Nettoyage complet du cache et recalcul");
     
-    // Vider complètement le tableau de résultats pour forcer un recalcul complet
+    // Vider le cache des résultats
+    window.simulationResults = {};
+    
+    // Vider complètement le tableau de résultats
     const resultsBody = document.getElementById('sim-results-body');
     if (resultsBody) {
         resultsBody.innerHTML = '';
     }
     
-    // Si runComparison existe, l'appeler avec un petit délai pour s'assurer que tout est prêt
+    // Vider tous les caches potentiels
+    if (window.FiscalUtils) {
+        if (window.FiscalUtils._cache) window.FiscalUtils._cache = {};
+        if (window.FiscalUtils._chargesCache) window.FiscalUtils._chargesCache = {};
+    }
+    
+    // Exécuter la simulation
     if (typeof window.runComparison === 'function') {
-        setTimeout(window.runComparison, 50);
+        // Petit délai pour s'assurer que tout est prêt
+        setTimeout(() => {
+            try {
+                window.runComparison();
+                console.log("fiscal-guide-extension.js: Comparaison relancée avec succès");
+            } catch (error) {
+                console.error("fiscal-guide-extension.js: Erreur lors du recalcul:", error);
+            }
+        }, 100);
     }
 }
 
-// Modifier la fonction runComparison pour intégrer les paramètres sectoriels
-function modifyRunComparisonFunction() {
-    console.log("fiscal-guide-extension.js: Tentative de modification de la fonction runComparison");
+// NOUVEAU: Configuration d'un observateur de mutations pour détecter les changements dans le tableau
+function setupMutationObserver() {
+    console.log("fiscal-guide-extension.js: Configuration de l'observateur de mutations");
     
-    // Sauvegarder la fonction originale
-    if (typeof window.originalRunComparison !== 'function' && typeof window.runComparison === 'function') {
-        window.originalRunComparison = window.runComparison;
-        
-        // Redéfinir la fonction avec les nouveaux paramètres
-        window.runComparison = function() {
-            console.log("fiscal-guide-extension.js: Fonction runComparison modifiée appelée");
-            
-            // CORRECTION: Si le résultat existe déjà, le vider pour forcer un recalcul complet
-            const resultsBody = document.getElementById('sim-results-body');
-            if (resultsBody) {
-                resultsBody.innerHTML = '';
-            }
-            
-            // Récupérer les options sectorielles
-            const secteur = document.getElementById('secteur-select')?.value || "Tous";
-            const taille = document.getElementById('taille-select')?.value || "<50";
-            console.log("fiscal-guide-extension.js: Options sectorielles -", secteur, taille);
-            
-            // Stocker les valeurs dans l'objet window pour le simulateur
-            window.sectorOptions = {
-                secteur: secteur,
-                taille: taille
-            };
-            
-            // CORRECTION: Variables pour capturer les résultats calculés
-            window.simulationResults = {};
-            
-            // Appeler la fonction originale pour calculer les résultats
-            const resultats = window.originalRunComparison();
-            
-            // Nouveau: Forcer la mise à jour des résultats dans le DOM après un délai
-            setTimeout(() => {
-                captureAndUpdateResults();
-            }, 200);
-            
-            return resultats;
-        };
-        
-        console.log("fiscal-guide-extension.js: Fonction runComparison modifiée avec succès");
-    } else if (typeof window.originalRunComparison === 'function') {
-        console.log("fiscal-guide-extension.js: La fonction runComparison a déjà été modifiée");
-    } else {
-        console.log("fiscal-guide-extension.js: Impossible de trouver la fonction runComparison à modifier");
-        
-        // Si nous n'avons pas pu modifier la fonction immédiatement, attendre et réessayer
-        setTimeout(modifyRunComparisonFunction, 1000);
-    }
-    
-    // Également modifier la fonction statutsComplets.sasu.simuler si elle existe
-    modifyStatutsComplets();
-}
-
-// NOUVELLE FONCTION: Capture les résultats calculés et met à jour le tableau
-function captureAndUpdateResults() {
-    console.log("fiscal-guide-extension.js: Capture et mise à jour des résultats");
-    
-    // Liste des statuts qui utilisent des charges salariales qui dépendent du secteur
-    const statutsCibles = ['sasu', 'sas', 'sa', 'selas'];
-    
-    // Formatter pour les montants
-    const formatter = new Intl.NumberFormat('fr-FR', {
-        style: 'currency',
-        currency: 'EUR',
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0
-    });
-    
-    // Pour chaque statut cible, lancer une simulation et stocker le résultat
-    statutsCibles.forEach(statutId => {
-        try {
-            if (window.statutsComplets && window.statutsComplets[statutId]) {
-                // Exécuter la simulation avec les paramètres sectoriels actuels
-                const result = window.statutsComplets[statutId].simuler();
-                
-                if (result && result.revenuNetTotal) {
-                    // Stocker le résultat
-                    window.simulationResults[statutId] = result;
-                    
-                    // Trouver et mettre à jour la cellule dans le tableau
-                    const cellules = document.querySelectorAll(`.show-detail-btn[data-statut="${statutId}"]`);
-                    if (cellules.length > 0) {
-                        cellules.forEach(cell => {
-                            // Mettre à jour avec la valeur calculée
-                            cell.textContent = formatter.format(result.revenuNetTotal);
-                            console.log(`fiscal-guide-extension.js: Mise à jour dynamique de ${statutId} à ${result.revenuNetTotal}`);
-                        });
-                    }
-                }
-            }
-        } catch (error) {
-            console.error(`fiscal-guide-extension.js: Erreur lors de la capture des résultats pour ${statutId}:`, error);
-        }
-    });
-}
-
-// Modifier statutsComplets pour intégrer les paramètres sectoriels
-function modifyStatutsComplets() {
-    // Attendre que statutsComplets soit défini
-    if (typeof window.statutsComplets === 'undefined') {
-        console.log("fiscal-guide-extension.js: Attente de statutsComplets...");
-        setTimeout(modifyStatutsComplets, 500);
+    // Cibler le tableau des résultats
+    const resultsTable = document.getElementById('sim-results');
+    if (!resultsTable) {
+        console.log("fiscal-guide-extension.js: Tableau des résultats non trouvé, nouvel essai plus tard");
+        setTimeout(setupMutationObserver, 1000);
         return;
     }
     
-    console.log("fiscal-guide-extension.js: Modification des simulateurs de statutsComplets");
-    
-    // Liste des statuts à modifier (tous ceux qui utilisent les charges d'assimilé salarié)
-    const statutsToModify = ['sasu', 'sas', 'sa', 'selas'];
-    
-    statutsToModify.forEach(statutId => {
-        if (window.statutsComplets[statutId] && typeof window.statutsComplets[statutId].originalSimuler === 'undefined') {
-            console.log(`fiscal-guide-extension.js: Modification du simulateur pour ${statutId}`);
-            
-            // Sauvegarder la fonction originale
-            window.statutsComplets[statutId].originalSimuler = window.statutsComplets[statutId].simuler;
-            
-            // Remplacer par une nouvelle fonction qui inclut les options sectorielles
-            window.statutsComplets[statutId].simuler = function() {
-                console.log(`fiscal-guide-extension.js: Simulation ${statutId} avec options sectorielles`);
-                
-                // Récupérer les paramètres sectoriels
-                const secteurOptions = window.sectorOptions || {
-                    secteur: "Tous",
-                    taille: "<50"
-                };
-                
-                console.log(`fiscal-guide-extension.js: Options sectorielles utilisées pour ${statutId}:`, secteurOptions);
-                
-                // Récupérer les paramètres originaux
-                const originalParams = { ...arguments[0] };
-                
-                // Ajouter les paramètres sectoriels
-                const newParams = {
-                    ...originalParams,
-                    secteur: secteurOptions.secteur,
-                    taille: secteurOptions.taille
-                };
-                
-                console.log(`fiscal-guide-extension.js: Paramètres pour ${statutId}:`, newParams);
-                
-                // CORRECTION: S'assurer que le résultat est bien conservé
-                const result = window.statutsComplets[statutId].originalSimuler(newParams);
-                
-                // CORRECTION: Vérifier que le net en poche correspond bien au revenuNetTotal
-                if (result && result.revenuNetTotal) {
-                    console.log(`fiscal-guide-extension.js: NET EN POCHE ${statutId}:`, result.revenuNetTotal);
-                    
-                    // Stocker le résultat pour référence
-                    window.simulationResults[statutId] = result;
-                }
-                
-                return result;
-            };
-        }
+    // Créer un observateur de mutations pour détecter les changements dans le tableau
+    const observer = new MutationObserver((mutations) => {
+        console.log("fiscal-guide-extension.js: Mutation détectée dans le tableau");
+        
+        // Pour chaque mutation
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                // Si de nouvelles lignes ont été ajoutées, actualiser les détails sectoriels
+                updateSectorDetails();
+            }
+        });
     });
     
-    console.log("fiscal-guide-extension.js: Modification des simulateurs terminée");
+    // Options de l'observateur (observer les changements dans les enfants)
+    const config = { childList: true, subtree: true };
     
-    // AJOUT: Patching de la fonction fiscalUtils.calculChargesSalariales
-    if (window.FiscalUtils && !window.FiscalUtils.originalCalculChargesSalariales) {
-        console.log("fiscal-guide-extension.js: Patching de calculChargesSalariales pour garantir la cohérence");
-        window.FiscalUtils.originalCalculChargesSalariales = window.FiscalUtils.calculChargesSalariales;
-        
-        window.FiscalUtils.calculChargesSalariales = function(remuneration, params = {}) {
-            // Forcer l'utilisation des paramètres sectoriels globaux si non fournis
-            const secteur = params?.secteur || window.sectorOptions?.secteur || "Tous";
-            const taille = params?.taille || window.sectorOptions?.taille || "<50";
-            
-            console.log(`fiscal-guide-extension.js: calculChargesSalariales avec secteur=${secteur}, taille=${taille}`);
-            
-            const resultat = window.FiscalUtils.originalCalculChargesSalariales(remuneration, { 
-                ...params,
-                secteur: secteur,
-                taille: taille
-            });
-            
-            // Log supplémentaire pour débugger les taux appliqués
-            console.log(`fiscal-guide-extension.js: Taux appliqués: patronal=${resultat.tauxPatronal}, salarial=${resultat.tauxSalarial}`);
-            
-            return resultat;
-        };
-    }
-    
-    // AJOUT: Modifier la fonction showCalculationDetails pour utiliser les résultats calculés avec secteur
-    modifyShowCalculationDetails();
+    // Démarrer l'observation
+    observer.observe(resultsTable, config);
+    console.log("fiscal-guide-extension.js: Observateur de mutations configuré pour le tableau");
 }
 
-// NOUVELLE FONCTION: Modifie showCalculationDetails pour utiliser les résultats calculés
-function modifyShowCalculationDetails() {
-    if (typeof window.showCalculationDetails === 'function' && typeof window.originalShowCalculationDetails === 'undefined') {
-        console.log("fiscal-guide-extension.js: Modification de showCalculationDetails");
-        
-        window.originalShowCalculationDetails = window.showCalculationDetails;
-        
-        window.showCalculationDetails = function(statutId, simulationResults) {
-            console.log(`fiscal-guide-extension.js: showCalculationDetails appelé pour ${statutId}`);
+// NOUVEAU: Mise à jour des détails sectoriels dans le tableau
+function updateSectorDetails() {
+    console.log("fiscal-guide-extension.js: Mise à jour des détails sectoriels");
+    
+    // Attendre un peu que le tableau soit complètement chargé
+    setTimeout(() => {
+        try {
+            // Liste des statuts affectés par les options sectorielles
+            const statutsImpactes = ['sasu', 'sas', 'sa', 'selas'];
             
-            // Pour les statuts dépendant du secteur, essayer d'utiliser les résultats de simulation directement
-            if (['sasu', 'sas', 'sa', 'selas'].includes(statutId) && window.simulationResults && window.simulationResults[statutId]) {
-                console.log(`fiscal-guide-extension.js: Utilisation des résultats sectoriels pour ${statutId}`);
+            // Pour chaque statut impacté
+            statutsImpactes.forEach(statutId => {
+                // Récupérer la cellule "Net en poche"
+                const cellules = document.querySelectorAll(`.show-detail-btn[data-statut="${statutId}"]`);
                 
-                // Créer un tableau simulationResults avec un seul élément
-                const newSimulationResults = [
-                    {
-                        statutId: statutId,
-                        sim: window.simulationResults[statutId]
+                // S'il y a des cellules
+                if (cellules.length > 0) {
+                    // Récupérer le statut complet si disponible
+                    if (window.statutsComplets && window.statutsComplets[statutId]) {
+                        // Forcer une nouvelle simulation complète avec les paramètres sectoriels actuels
+                        try {
+                            // Simuler avec les options sectorielles actuelles
+                            const result = window.SimulationsFiscales[`simuler${statutId.charAt(0).toUpperCase() + statutId.slice(1)}`]({
+                                ca: parseFloat(document.getElementById('sim-ca').value) || 50000,
+                                tauxMarge: parseFloat(document.getElementById('sim-marge').value) / 100 || 0.3,
+                                tauxRemuneration: parseFloat(document.getElementById('sim-salaire').value) / 100 || 0.7,
+                                tmiActuel: parseFloat(document.getElementById('sim-tmi').value) || 30,
+                                secteur: window.sectorOptions?.secteur || "Tous",
+                                taille: window.sectorOptions?.taille || "<50"
+                            });
+                            
+                            // Si la simulation a réussi
+                            if (result && result.revenuNetTotal) {
+                                // Formatter le montant
+                                const formatter = new Intl.NumberFormat('fr-FR', {
+                                    style: 'currency',
+                                    currency: 'EUR',
+                                    minimumFractionDigits: 0,
+                                    maximumFractionDigits: 0
+                                });
+                                
+                                // Mettre à jour la cellule
+                                cellules.forEach(cell => {
+                                    // PARTIE CRITIQUE: Mise à jour directe de la valeur et du texte
+                                    const formattedValue = formatter.format(result.revenuNetTotal);
+                                    cell.innerHTML = formattedValue;
+                                    cell.parentElement.querySelector('.text-xs')?.remove(); // Supprimer les anciennes infos si présentes
+                                    
+                                    // Ajouter une indication du secteur appliqué
+                                    const sectorInfo = document.createElement('div');
+                                    sectorInfo.className = 'text-xs text-blue-400 mt-1';
+                                    sectorInfo.innerHTML = `<i class="fas fa-industry mr-1"></i>Secteur: ${result.secteur || window.sectorOptions?.secteur}, Taille: ${result.taille || window.sectorOptions?.taille}`;
+                                    cell.parentElement.appendChild(sectorInfo);
+                                    
+                                    console.log(`fiscal-guide-extension.js: Mise à jour directe de ${statutId} à ${result.revenuNetTotal}`);
+                                });
+                            }
+                        } catch (error) {
+                            console.error(`fiscal-guide-extension.js: Erreur lors de la mise à jour de ${statutId}:`, error);
+                        }
                     }
-                ];
-                
-                // Appeler la fonction originale avec ces résultats
-                return window.originalShowCalculationDetails(statutId, newSimulationResults);
-            }
-            
-            // Pour les autres statuts, utiliser la fonction originale
-            return window.originalShowCalculationDetails(statutId, simulationResults);
-        };
-    } else if (typeof window.originalShowCalculationDetails === 'function') {
-        console.log("fiscal-guide-extension.js: showCalculationDetails déjà modifié");
-    } else {
-        console.log("fiscal-guide-extension.js: Fonction showCalculationDetails non trouvée, nouvel essai plus tard");
-        setTimeout(modifyShowCalculationDetails, 1000);
-    }
+                }
+            });
+        } catch (error) {
+            console.error("fiscal-guide-extension.js: Erreur lors de la mise à jour des détails sectoriels:", error);
+        }
+    }, 200);
 }
+
+// NOUVEAU: Patch direct de FiscalUtils pour garantir l'application correcte des paramètres sectoriels
+document.addEventListener('fiscalUtilsReady', function() {
+    console.log("fiscal-guide-extension.js: fiscalUtilsReady - Patching de FiscalUtils");
+    
+    // Patcher optimiserRatioRemuneration pour garantir l'utilisation des secteurs
+    if (window.FiscalUtils && !window.FiscalUtils._optimiserPatched) {
+        window.FiscalUtils._optimiserPatched = true;
+        
+        const originalOptimiser = window.FiscalUtils.optimiserRatioRemuneration;
+        window.FiscalUtils.optimiserRatioRemuneration = function(params, simulationFunc) {
+            // S'assurer que les options sectorielles sont préservées
+            const secteurOptions = {
+                secteur: window.sectorOptions?.secteur || "Tous",
+                taille: window.sectorOptions?.taille || "<50"
+            };
+            
+            // Fusionner avec les paramètres fournis
+            const paramsComplets = {
+                ...params,
+                secteur: params.secteur || secteurOptions.secteur,
+                taille: params.taille || secteurOptions.taille
+            };
+            
+            console.log("fiscal-guide-extension.js: optimiserRatioRemuneration avec secteur:", paramsComplets.secteur, paramsComplets.taille);
+            
+            // Appeler la fonction originale avec les paramètres complétés
+            return originalOptimiser.call(window.FiscalUtils, paramsComplets, simulationFunc);
+        };
+        
+        console.log("fiscal-guide-extension.js: optimiserRatioRemuneration patché");
+    }
+});
+
+// NOUVEAU: Installation de hooks pour s'assurer que showCalculationDetails utilise les bons résultats
+document.addEventListener('fiscalUtilsReady', function() {
+    // Attendre un peu pour laisser fiscal-guide.js définir toutes ses fonctions
+    setTimeout(() => {
+        if (typeof window.showCalculationDetails === 'function' && !window._showCalculationDetailsPatched) {
+            window._showCalculationDetailsPatched = true;
+            
+            const originalShowDetails = window.showCalculationDetails;
+            window.showCalculationDetails = function(statutId, simulationResults) {
+                console.log(`fiscal-guide-extension.js: showCalculationDetails pour ${statutId}`);
+                
+                // Pour les statuts impactés par le secteur
+                if (['sasu', 'sas', 'sa', 'selas'].includes(statutId)) {
+                    try {
+                        // Lancer une simulation fraîche
+                        const result = window.SimulationsFiscales[`simuler${statutId.charAt(0).toUpperCase() + statutId.slice(1)}`]({
+                            ca: parseFloat(document.getElementById('sim-ca').value) || 50000,
+                            tauxMarge: parseFloat(document.getElementById('sim-marge').value) / 100 || 0.3,
+                            tauxRemuneration: parseFloat(document.getElementById('sim-salaire').value) / 100 || 0.7,
+                            tmiActuel: parseFloat(document.getElementById('sim-tmi').value) || 30,
+                            secteur: window.sectorOptions?.secteur || "Tous",
+                            taille: window.sectorOptions?.taille || "<50",
+                            modeExpert: true
+                        });
+                        
+                        if (result) {
+                            // Créer un nouveau tableau de résultats avec cette simulation
+                            const newResults = [{
+                                statutId: statutId,
+                                statut: statutId.toUpperCase(),  // Sera amélioré par la fonction
+                                sim: result
+                            }];
+                            
+                            return originalShowDetails(statutId, newResults);
+                        }
+                    } catch (error) {
+                        console.error(`fiscal-guide-extension.js: Erreur lors du recalcul pour ${statutId}:`, error);
+                    }
+                }
+                
+                // Pour les autres statuts ou en cas d'erreur, utiliser la fonction originale
+                return originalShowDetails(statutId, simulationResults);
+            };
+            
+            console.log("fiscal-guide-extension.js: showCalculationDetails patché");
+        }
+    }, 2000);
+});
