@@ -8,22 +8,21 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #4F46E5;
-            --primary-light: #818CF8;
-            --primary-dark: #3730A3;
+            --primary-color: #00FF87;
+            --primary-dark: #00CC6A;
             --accent-color: #F59E0B;
             --success-color: #10B981;
             --warning-color: #F59E0B;
             --danger-color: #EF4444;
-            --background-dark: #111827;
-            --card-background: rgba(31, 41, 55, 0.8);
-            --header-background: rgba(17, 24, 39, 0.9);
+            --background-dark: #011627;
+            --card-background: rgba(1, 42, 74, 0.8);
+            --header-background: rgba(1, 22, 39, 0.8);
         }
         
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--background-dark);
-            color: #E5E7EB;
+            color: #E6E6E6;
             margin: 0;
             padding: 0;
             line-height: 1.6;
@@ -44,7 +43,7 @@
             top: 0;
             bottom: 0;
             width: 60px;
-            background-color: rgba(31, 41, 55, 0.8);
+            background-color: rgba(1, 42, 74, 0.5);
             backdrop-filter: blur(10px);
             border-right: 1px solid rgba(255, 255, 255, 0.1);
             z-index: 100;
@@ -79,7 +78,7 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            color: #E5E7EB;
+            color: #E6E6E6;
             transition: background-color 0.2s;
             position: relative;
             margin-bottom: 5px;
@@ -87,12 +86,12 @@
         }
 
         .nav-item:hover {
-            background-color: rgba(79, 70, 229, 0.2);
+            background-color: rgba(0, 255, 135, 0.1);
             color: var(--primary-color);
         }
 
         .nav-item.active {
-            background-color: rgba(79, 70, 229, 0.3);
+            background-color: rgba(0, 255, 135, 0.15);
             color: var(--primary-color);
             border-left: 3px solid var(--primary-color);
         }
@@ -149,7 +148,7 @@
             left: -4px;
             width: 16px;
             height: 16px;
-            background-color: rgba(79, 70, 229, 0.3);
+            background-color: rgba(0, 255, 135, 0.3);
             border-radius: 50%;
             animation: pulse 2s infinite;
         }
@@ -164,7 +163,7 @@
             padding: 0 15px;
             display: flex;
             align-items: center;
-            color: #E5E7EB;
+            color: #E6E6E6;
             font-weight: 500;
             transition: all 0.2s;
             position: relative;
@@ -210,8 +209,8 @@
         }
 
         .market-indicator.green {
-            background-color: #10B981;
-            box-shadow: 0 0 10px rgba(16, 185, 129, 0.7);
+            background-color: #00CC6A;
+            box-shadow: 0 0 10px rgba(0, 204, 106, 0.7);
         }
 
         .market-time {
@@ -222,9 +221,9 @@
 
         /* Search button */
         .search-button {
-            background-color: rgba(79, 70, 229, 0.15);
+            background-color: rgba(0, 255, 135, 0.15);
             color: var(--primary-color);
-            border: 1px solid rgba(79, 70, 229, 0.3);
+            border: 1px solid rgba(0, 255, 135, 0.3);
             border-radius: 8px;
             padding: 8px 15px;
             display: flex;
@@ -236,7 +235,7 @@
         }
 
         .search-button:hover {
-            background-color: rgba(79, 70, 229, 0.25);
+            background-color: rgba(0, 255, 135, 0.25);
         }
 
         .search-button i {
@@ -259,37 +258,6 @@
             }
         }
         
-        header {
-            background-color: var(--header-background);
-            padding: 1.5rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-        }
-        
-        .header-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 1rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: white;
-            display: flex;
-            align-items: center;
-        }
-        
-        .logo i {
-            color: var(--accent-color);
-            margin-right: 0.5rem;
-        }
-        
         .page-title {
             text-align: center;
             margin-bottom: 2rem;
@@ -300,17 +268,18 @@
             font-weight: 800;
             margin-bottom: 0.5rem;
             color: white;
+            text-transform: uppercase;
         }
         
         .subtitle {
             font-size: 1.2rem;
-            color: #9CA3AF;
+            color: rgba(255, 255, 255, 0.7);
             margin-bottom: 2rem;
         }
         
         .card {
             background-color: var(--card-background);
-            border-radius: 0.75rem;
+            border-radius: 12px;
             padding: 1.5rem;
             margin-bottom: 2rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -326,8 +295,8 @@
         }
         
         .card-icon {
-            background-color: rgba(79, 70, 229, 0.2);
-            color: var(--primary-light);
+            background-color: rgba(0, 255, 135, 0.15);
+            color: var(--primary-color);
             width: 2.5rem;
             height: 2.5rem;
             border-radius: 50%;
@@ -351,6 +320,8 @@
             display: block;
             margin-bottom: 0.5rem;
             font-weight: 500;
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.9);
         }
         
         .form-input {
@@ -358,7 +329,7 @@
             padding: 0.75rem;
             border-radius: 0.5rem;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            background-color: rgba(17, 24, 39, 0.8);
+            background-color: rgba(1, 42, 74, 0.6);
             color: white;
             font-size: 1rem;
             transition: border-color 0.15s ease-in-out;
@@ -366,15 +337,15 @@
         
         .form-input:focus {
             outline: none;
-            border-color: var(--primary-light);
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(0, 255, 135, 0.2);
         }
         
         .form-help {
             display: block;
             margin-top: 0.25rem;
             font-size: 0.875rem;
-            color: #9CA3AF;
+            color: rgba(255, 255, 255, 0.6);
         }
         
         .form-addon {
@@ -390,11 +361,12 @@
             right: 1rem;
             top: 50%;
             transform: translateY(-50%);
-            color: #9CA3AF;
+            color: rgba(255, 255, 255, 0.7);
         }
         
         .btn {
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
             font-weight: 500;
             padding: 0.75rem 1.5rem;
             border-radius: 0.5rem;
@@ -406,11 +378,13 @@
         
         .btn-primary {
             background-color: var(--primary-color);
-            color: white;
+            color: #011627;
+            font-weight: 600;
         }
         
         .btn-primary:hover {
             background-color: var(--primary-dark);
+            transform: translateY(-2px);
         }
         
         .btn-accent {
@@ -420,21 +394,26 @@
         
         .btn-accent:hover {
             background-color: #D97706;
+            transform: translateY(-2px);
         }
         
         .btn-outline {
             background-color: transparent;
             border: 1px solid var(--primary-color);
-            color: var(--primary-light);
+            color: var(--primary-color);
         }
         
         .btn-outline:hover {
-            background-color: rgba(79, 70, 229, 0.1);
+            background-color: rgba(0, 255, 135, 0.1);
         }
         
         .btn-sm {
             padding: 0.5rem 1rem;
             font-size: 0.875rem;
+        }
+        
+        .btn i {
+            margin-right: 0.5rem;
         }
         
         .grid {
@@ -495,8 +474,8 @@
         }
         
         .badge-primary {
-            background-color: rgba(79, 70, 229, 0.2);
-            color: var(--primary-light);
+            background-color: rgba(0, 255, 135, 0.15);
+            color: var(--primary-color);
         }
         
         .badge-accent {
@@ -518,17 +497,17 @@
             padding: 0.75rem 1.5rem;
             cursor: pointer;
             font-weight: 500;
-            color: #9CA3AF;
+            color: rgba(255, 255, 255, 0.7);
             border-bottom: 2px solid transparent;
             transition: all 0.2s ease;
         }
         
         .tab:hover {
-            color: #E5E7EB;
+            color: #E6E6E6;
         }
         
         .tab.active {
-            color: var(--primary-light);
+            color: var(--primary-color);
             border-bottom-color: var(--primary-color);
         }
         
@@ -593,6 +572,7 @@
             width: 100%;
             border-collapse: collapse;
             margin-top: 1rem;
+            font-size: 0.95rem;
         }
         
         .comparison-table th, .comparison-table td {
@@ -602,18 +582,19 @@
         }
         
         .comparison-table th {
-            background-color: rgba(31, 41, 55, 0.5);
+            background-color: rgba(1, 42, 74, 0.5);
             font-weight: 600;
+            color: rgba(255, 255, 255, 0.9);
         }
         
         .comparison-table td.highlight {
-            color: var(--primary-light);
+            color: var(--primary-color);
             font-weight: 600;
         }
         
         .comparison-header {
             padding: 0.5rem 1rem;
-            background-color: rgba(79, 70, 229, 0.1);
+            background-color: rgba(0, 255, 135, 0.1);
             border-radius: 0.5rem;
             margin-bottom: 1rem;
         }
@@ -623,10 +604,11 @@
             border-radius: 0.75rem;
             overflow: hidden;
             margin-bottom: 2rem;
+            background-color: var(--card-background);
         }
         
         .results-header {
-            background-color: rgba(79, 70, 229, 0.2);
+            background-color: rgba(0, 255, 135, 0.1);
             padding: 1rem 1.5rem;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
@@ -636,7 +618,7 @@
         }
         
         .results-footer {
-            background-color: rgba(31, 41, 55, 0.5);
+            background-color: rgba(1, 42, 74, 0.5);
             padding: 1rem 1.5rem;
             border-top: 1px solid rgba(255, 255, 255, 0.1);
         }
@@ -650,7 +632,7 @@
         
         .results-label {
             font-size: 0.875rem;
-            color: #9CA3AF;
+            color: rgba(255, 255, 255, 0.7);
         }
         
         .tag {
@@ -659,7 +641,7 @@
             padding: 0.25rem 0.75rem;
             border-radius: 9999px;
             font-size: 0.75rem;
-            font-weight: 500;
+            font-weight: 600;
             margin-right: 0.5rem;
         }
         
@@ -687,7 +669,7 @@
         .tooltip .tooltip-text {
             visibility: hidden;
             width: 200px;
-            background-color: #374151;
+            background-color: rgba(1, 42, 74, 0.95);
             color: #F3F4F6;
             text-align: center;
             border-radius: 0.5rem;
@@ -714,7 +696,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background-color: rgba(17, 24, 39, 0.8);
+            background-color: rgba(1, 22, 39, 0.8);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -724,7 +706,7 @@
         .loading-spinner {
             width: 50px;
             height: 50px;
-            border: 5px solid rgba(79, 70, 229, 0.3);
+            border: 5px solid rgba(0, 255, 135, 0.3);
             border-radius: 50%;
             border-top-color: var(--primary-color);
             animation: spin 1s ease-in-out infinite;
@@ -752,7 +734,7 @@
         }
         
         .accordion-header {
-            background-color: rgba(31, 41, 55, 0.5);
+            background-color: rgba(1, 42, 74, 0.5);
             padding: 1rem 1.5rem;
             cursor: pointer;
             display: flex;
@@ -761,7 +743,7 @@
         }
         
         .accordion-header:hover {
-            background-color: rgba(31, 41, 55, 0.7);
+            background-color: rgba(1, 42, 74, 0.7);
         }
         
         .accordion-body {
@@ -927,7 +909,7 @@
             </div>
             
             <div class="flex justify-between items-center mt-4">
-                <button id="btn-simulate" class="btn btn-accent">
+                <button id="btn-simulate" class="btn btn-primary">
                     <i class="fas fa-calculator"></i> Simuler
                 </button>
             </div>
