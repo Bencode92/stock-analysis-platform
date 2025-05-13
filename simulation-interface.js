@@ -35,6 +35,71 @@ document.addEventListener('DOMContentLoaded', function() {
     let costPieChartClassique = null;
     let costPieChartEncheres = null;
 
+    // Ajouter un bouton pour le mode optimisation auto
+    const btnAutoCalc = document.createElement('button');
+    btnAutoCalc.className = 'btn btn-outline';
+    btnAutoCalc.innerHTML = '<i class="fas fa-magic"></i> Optimiser automatiquement';
+    btnAutoCalc.style.marginRight = '10px';
+
+    // Insérer avant le bouton Mode Avancé
+    if (btnAdvancedToggle) {
+        btnAdvancedToggle.parentNode.insertBefore(
+            btnAutoCalc, 
+            btnAdvancedToggle
+        );
+    }
+
+    // Écouteur pour l'optimisation auto
+    btnAutoCalc.addEventListener('click', function() {
+        try {
+            const params = simulateur.calculerParametresOptimaux();
+            
+            // Mettre à jour les champs
+            document.getElementById('surface').value = params.surface;
+            document.getElementById('montant-emprunt-max').value = Math.round(params.montantEmprunt);
+            
+            // Ajouter des styles pour la mise en évidence (si pas déjà présents)
+            if (!document.getElementById('highlight-styles')) {
+                const styleEl = document.createElement('style');
+                styleEl.id = 'highlight-styles';
+                styleEl.textContent = `
+                    .highlight-field {
+                        border-color: var(--primary-color) !important;
+                        box-shadow: 0 0 0 3px rgba(0, 255, 135, 0.2) !important;
+                        animation: pulse-border 1.5s infinite;
+                    }
+                    
+                    @keyframes pulse-border {
+                        0% { border-color: var(--primary-color); }
+                        50% { border-color: rgba(0, 255, 135, 0.5); }
+                        100% { border-color: var(--primary-color); }
+                    }
+                `;
+                document.head.appendChild(styleEl);
+            }
+            
+            // Mettre en évidence les champs modifiés
+            document.getElementById('surface').classList.add('highlight-field');
+            document.getElementById('montant-emprunt-max').classList.add('highlight-field');
+            
+            // Animation pour indiquer que le calcul est terminé
+            this.innerHTML = '<i class="fas fa-check"></i> Paramètres optimisés';
+            setTimeout(() => {
+                this.innerHTML = '<i class="fas fa-magic"></i> Optimiser automatiquement';
+                
+                // Retirer la mise en évidence
+                document.getElementById('surface').classList.remove('highlight-field');
+                document.getElementById('montant-emprunt-max').classList.remove('highlight-field');
+            }, 2000);
+            
+            // Afficher un toast de confirmation
+            afficherToast('Paramètres optimisés en fonction de votre apport et du rendement souhaité', 'success');
+        } catch (error) {
+            console.error('Erreur lors de l\'optimisation:', error);
+            afficherToast('Une erreur est survenue lors de l\'optimisation des paramètres', 'error');
+        }
+    });
+
     // Écouteurs d'événements
     // --------------------
 
