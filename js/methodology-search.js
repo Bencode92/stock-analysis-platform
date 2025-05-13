@@ -91,6 +91,11 @@ function createSearchInterface() {
         </div>
       </div>
       
+      <!-- Conteneur pour la définition du terme sélectionné -->
+      <div id="term-detail" class="mt-6 bg-blue-900 bg-opacity-30 p-6 rounded-xl mb-8 hidden">
+        <!-- La définition sera affichée ici -->
+      </div>
+      
       <!-- Conteneur de résultats -->
       <div id="terms-results" class="mt-6" aria-live="polite">
         <div class="text-center text-gray-400">
@@ -262,14 +267,107 @@ function renderSuggestions(terms, query) {
       // Cacher les suggestions
       document.getElementById('search-suggestions').classList.add('hidden');
       
-      // Afficher le détail du terme (optionnel - actuellement désactivé)
-      // displayTermDetail(terms[index]);
+      // Afficher le détail du terme
+      displayTermDetail(terms[index]);
     });
   });
 }
 
-// Fonction désactivée pour le moment - serait utilisée pour afficher le détail d'un terme
+// Fonction pour afficher le détail d'un terme
 function displayTermDetail(term) {
-  // Cette fonction n'est pas utilisée actuellement car vous voulez garder l'espace sous la recherche vide
-  // Mais elle pourrait être réactivée si nécessaire
+  const detailContainer = document.getElementById('term-detail');
+  
+  // Définir la couleur en fonction de la catégorie
+  let categoryColor = 'text-green-400';
+  let categoryBg = 'bg-green-900 bg-opacity-20';
+  let categoryIcon = 'fa-balance-scale';
+  
+  if (term.categorie === 'fiscal') {
+    categoryColor = 'text-blue-400';
+    categoryBg = 'bg-blue-900 bg-opacity-20';
+    categoryIcon = 'fa-file-invoice-dollar';
+  } else if (term.categorie === 'social') {
+    categoryColor = 'text-purple-400';
+    categoryBg = 'bg-purple-900 bg-opacity-20';
+    categoryIcon = 'fa-users';
+  }
+  
+  // Construire le HTML
+  let html = `
+    <div class="flex items-start">
+      <div class="mr-4">
+        <div class="h-12 w-12 ${categoryBg} rounded-lg flex items-center justify-center">
+          <i class="fas ${categoryIcon} text-xl ${categoryColor}"></i>
+        </div>
+      </div>
+      <div class="flex-1">
+        <div class="flex items-center mb-2">
+          <h3 class="text-2xl font-bold ${categoryColor}">${term.terme}</h3>
+          <span class="ml-3 px-2 py-1 text-xs font-medium rounded ${categoryBg} ${categoryColor} uppercase">${term.categorie}</span>
+        </div>
+        <div class="text-lg mb-4">${term.definition || "Aucune définition disponible"}</div>
+  `;
+  
+  // Ajouter les détails/exemples si disponibles
+  if (term.detail) {
+    html += `
+      <div class="mt-3">
+        <h4 class="text-sm font-semibold uppercase text-gray-400 mb-2">Précisions et exemples</h4>
+        <div class="p-4 bg-blue-900 bg-opacity-20 rounded-lg text-gray-300">
+          ${term.detail}
+        </div>
+      </div>
+    `;
+  }
+  
+  // Ajouter les termes liés si disponibles
+  if (term.related && term.related.length > 0) {
+    html += `
+      <div class="mt-4">
+        <h4 class="text-sm font-semibold uppercase text-gray-400 mb-2">Termes liés</h4>
+        <div class="flex flex-wrap gap-2">
+    `;
+    
+    term.related.forEach(relatedTerm => {
+      const formattedTerm = relatedTerm.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+      html += `
+        <a href="#" class="related-term px-3 py-1 bg-blue-800 bg-opacity-40 rounded-full text-sm hover:bg-blue-700 transition">${formattedTerm}</a>
+      `;
+    });
+    
+    html += `
+        </div>
+      </div>
+    `;
+  }
+  
+  html += `
+      </div>
+    </div>
+  `;
+  
+  // Injecter le HTML et afficher le conteneur
+  detailContainer.innerHTML = html;
+  detailContainer.classList.remove('hidden');
+  
+  // Ajouter des événements de clic pour les termes liés
+  document.querySelectorAll('.related-term').forEach(item => {
+    item.addEventListener('click', function(e) {
+      e.preventDefault();
+      const relatedTermText = this.textContent;
+      
+      // Chercher le terme correspondant dans les données
+      const foundTerm = window.legalTermsData.find(t => 
+        t.terme.toLowerCase() === relatedTermText.toLowerCase()
+      );
+      
+      if (foundTerm) {
+        // Mettre à jour l'input de recherche
+        document.getElementById('terms-search').value = foundTerm.terme;
+        
+        // Afficher le détail du terme lié
+        displayTermDetail(foundTerm);
+      }
+    });
+  });
 }
