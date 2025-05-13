@@ -24,7 +24,10 @@ class SimulateurImmo {
                 taxeFonciere: 1, // % du prix
                 vacanceLocative: 8, // % des loyers
                 loyerM2: 12, // €/m²/mois
-                travauxM2: 400 // €/m²
+                travauxM2: 400, // €/m²
+                entretienAnnuel: 0.5, // % du prix d'achat
+                assurancePNO: 250, // € par an
+                chargesNonRecuperables: 10 // % des loyers
             },
             classique: {
                 publiciteFonciere: 0.72, // % du prix
@@ -51,12 +54,20 @@ class SimulateurImmo {
                 cautionPourcent: 5, // % du prix de mise à prix
                 cautionRestituee: true
             },
+            fiscalite: {
+                tauxPrelevementsSociaux: 17.2, // %
+                tauxMarginalImpot: 30, // %
+                deficitFoncier: true
+            },
             // Pour stocker les résultats
             resultats: {
                 classique: {},
                 encheres: {}
             }
         };
+        
+        // Historique des simulations pour comparaisons
+        this.historiqueSimulations = [];
     }
 
     /**
@@ -87,6 +98,12 @@ class SimulateurImmo {
             this.params.communs.loyerM2 = parseFloat(formData.loyerM2);
         if (formData.travauxM2 !== undefined) 
             this.params.communs.travauxM2 = parseFloat(formData.travauxM2);
+        if (formData.entretienAnnuel !== undefined)
+            this.params.communs.entretienAnnuel = parseFloat(formData.entretienAnnuel);
+        if (formData.assurancePNO !== undefined)
+            this.params.communs.assurancePNO = parseFloat(formData.assurancePNO);
+        if (formData.chargesNonRecuperables !== undefined)
+            this.params.communs.chargesNonRecuperables = parseFloat(formData.chargesNonRecuperables);
 
         // Paramètres achat classique
         if (formData.publiciteFonciere !== undefined) 
@@ -110,13 +127,13 @@ class SimulateurImmo {
         if (formData.coefMutation !== undefined) 
             this.params.encheres.coefMutation = parseFloat(formData.coefMutation);
         if (formData.emolumentsPoursuivant1 !== undefined) 
-            this.params.encheres.emolumentsPoursuivant1 = parseFloat(formData.emolumentsPoursuivant1);
+            this.params.encheres.emolementsPoursuivant1 = parseFloat(formData.emolumentsPoursuivant1);
         if (formData.emolumentsPoursuivant2 !== undefined) 
-            this.params.encheres.emolumentsPoursuivant2 = parseFloat(formData.emolumentsPoursuivant2);
+            this.params.encheres.emolementsPoursuivant2 = parseFloat(formData.emolumentsPoursuivant2);
         if (formData.emolumentsPoursuivant3 !== undefined) 
-            this.params.encheres.emolumentsPoursuivant3 = parseFloat(formData.emolumentsPoursuivant3);
+            this.params.encheres.emolementsPoursuivant3 = parseFloat(formData.emolumentsPoursuivant3);
         if (formData.emolumentsPoursuivant4 !== undefined) 
-            this.params.encheres.emolumentsPoursuivant4 = parseFloat(formData.emolumentsPoursuivant4);
+            this.params.encheres.emolementsPoursuivant4 = parseFloat(formData.emolumentsPoursuivant4);
         if (formData.honorairesAvocatCoef !== undefined) 
             this.params.encheres.honorairesAvocatCoef = parseFloat(formData.honorairesAvocatCoef);
         if (formData.honorairesAvocatTVA !== undefined) 
@@ -133,6 +150,60 @@ class SimulateurImmo {
             this.params.encheres.cautionPourcent = parseFloat(formData.cautionPourcent);
         if (formData.cautionRestituee !== undefined) 
             this.params.encheres.cautionRestituee = formData.cautionRestituee;
+            
+        // Paramètres fiscalité
+        if (formData.tauxPrelevementsSociaux !== undefined)
+            this.params.fiscalite.tauxPrelevementsSociaux = parseFloat(formData.tauxPrelevementsSociaux);
+        if (formData.tauxMarginalImpot !== undefined)
+            this.params.fiscalite.tauxMarginalImpot = parseFloat(formData.tauxMarginalImpot);
+        if (formData.deficitFoncier !== undefined)
+            this.params.fiscalite.deficitFoncier = formData.deficitFoncier;
+    }
+
+    /**
+     * Sauvegarde les résultats de la simulation actuelle dans l'historique
+     * @param {string} nom - Nom de la simulation
+     * @param {Object} resultats - Résultats de la simulation
+     */
+    sauvegarderSimulation(nom) {
+        // Vérifier si des résultats existent
+        if (!this.params.resultats.classique || !this.params.resultats.encheres) {
+            return false;
+        }
+        
+        // Créer une copie des résultats et paramètres actuels
+        const copieResultats = JSON.parse(JSON.stringify(this.params.resultats));
+        const copieParams = {
+            base: {...this.params.base},
+            communs: {...this.params.communs},
+            classique: {...this.params.classique},
+            encheres: {...this.params.encheres},
+            fiscalite: {...this.params.fiscalite}
+        };
+        
+        // Ajouter à l'historique
+        this.historiqueSimulations.push({
+            id: Date.now(),
+            nom: nom || `Simulation du ${new Date().toLocaleDateString()}`,
+            date: new Date(),
+            params: copieParams,
+            resultats: copieResultats
+        });
+        
+        // Limiter l'historique à 10 simulations
+        if (this.historiqueSimulations.length > 10) {
+            this.historiqueSimulations.shift();
+        }
+        
+        return true;
+    }
+
+    /**
+     * Récupère l'historique des simulations
+     * @returns {Array} - Historique des simulations
+     */
+    getHistoriqueSimulations() {
+        return this.historiqueSimulations;
     }
 
     /**
@@ -170,9 +241,9 @@ class SimulateurImmo {
             emoluments += (prix - 23500) * this.params.encheres.emolumentsPoursuivant3 / 100;
         } else {
             emoluments = 6500 * this.params.encheres.emolumentsPoursuivant1 / 100;
-            emoluments += (23500 - 6500) * this.params.encheres.emolumentsPoursuivant2 / 100;
-            emoluments += (83500 - 23500) * this.params.encheres.emolumentsPoursuivant3 / 100;
-            emoluments += (prix - 83500) * this.params.encheres.emolumentsPoursuivant4 / 100;
+            emoluments += (23500 - 6500) * this.params.encheres.emolementsPoursuivant2 / 100;
+            emoluments += (83500 - 23500) * this.params.encheres.emolementsPoursuivant3 / 100;
+            emoluments += (prix - 83500) * this.params.encheres.emolementsPoursuivant4 / 100;
         }
         
         return emoluments;
@@ -240,24 +311,115 @@ class SimulateurImmo {
     }
 
     /**
+     * Calcule le montant des charges non récupérables
+     * @param {number} loyerBrut - Loyer mensuel brut
+     * @returns {number} - Montant mensuel des charges non récupérables
+     */
+    calculerChargesNonRecuperables(loyerBrut) {
+        return loyerBrut * (this.params.communs.chargesNonRecuperables / 100);
+    }
+
+    /**
+     * Calcule le montant de l'entretien annuel
+     * @param {number} prixAchat - Prix d'achat
+     * @returns {number} - Montant mensuel de l'entretien
+     */
+    calculerEntretienMensuel(prixAchat) {
+        return (prixAchat * (this.params.communs.entretienAnnuel / 100)) / 12;
+    }
+
+    /**
      * Calcule le cash-flow mensuel
      * @param {number} loyerNet - Loyer mensuel net
      * @param {number} mensualite - Mensualité du prêt
      * @param {number} taxeFonciere - Montant annuel de la taxe foncière
+     * @param {number} chargesNonRecuperables - Charges non récupérables mensuelles
+     * @param {number} entretienMensuel - Coût d'entretien mensuel
+     * @param {number} assurancePNO - Coût annuel de l'assurance PNO
      * @returns {number} - Cash-flow mensuel
      */
-    calculerCashFlow(loyerNet, mensualite, taxeFonciere) {
-        return loyerNet - mensualite - (taxeFonciere / 12);
+    calculerCashFlow(loyerNet, mensualite, taxeFonciere, chargesNonRecuperables, entretienMensuel, assurancePNO) {
+        return loyerNet - mensualite - (taxeFonciere / 12) - chargesNonRecuperables - entretienMensuel - (assurancePNO / 12);
+    }
+
+    /**
+     * Calcule l'impact fiscal
+     * @param {number} revenuFoncier - Revenu foncier annuel avant impôts
+     * @param {number} interetsEmprunt - Intérêts d'emprunt annuels
+     * @returns {number} - Impact fiscal annuel
+     */
+    calculerImpactFiscal(revenuFoncier, interetsEmprunt) {
+        // Si le revenu foncier est négatif et le déficit foncier est déductible
+        if (revenuFoncier < 0 && this.params.fiscalite.deficitFoncier) {
+            // Impact fiscal positif (économie d'impôt)
+            const tauxImposition = (this.params.fiscalite.tauxMarginalImpot + this.params.fiscalite.tauxPrelevementsSociaux) / 100;
+            return Math.abs(revenuFoncier) * tauxImposition;
+        } 
+        // Si le revenu foncier est positif
+        else if (revenuFoncier > 0) {
+            // Impact fiscal négatif (impôt à payer)
+            const tauxImposition = (this.params.fiscalite.tauxMarginalImpot + this.params.fiscalite.tauxPrelevementsSociaux) / 100;
+            return -revenuFoncier * tauxImposition;
+        }
+        
+        return 0;
     }
 
     /**
      * Calcule le rendement net
      * @param {number} loyerAnnuelNet - Loyer annuel net
+     * @param {number} chargesAnnuelles - Charges annuelles (taxe foncière, entretien, etc.)
+     * @param {number} impactFiscal - Impact fiscal annuel
      * @param {number} prixTotal - Prix total de l'investissement
      * @returns {number} - Rendement net en %
      */
-    calculerRendementNet(loyerAnnuelNet, prixTotal) {
-        return (loyerAnnuelNet / prixTotal) * 100;
+    calculerRendementNet(loyerAnnuelNet, chargesAnnuelles, impactFiscal, prixTotal) {
+        const revenuNetApresImpot = loyerAnnuelNet - chargesAnnuelles + impactFiscal;
+        return (revenuNetApresImpot / prixTotal) * 100;
+    }
+
+    /**
+     * Calcule le taux d'endettement
+     * @param {number} mensualite - Mensualité du prêt
+     * @param {number} revenuMensuel - Revenu mensuel de l'emprunteur
+     * @returns {number} - Taux d'endettement en %
+     */
+    calculerTauxEndettement(mensualite, revenuMensuel) {
+        if (!revenuMensuel || revenuMensuel <= 0) return 0;
+        return (mensualite / revenuMensuel) * 100;
+    }
+
+    /**
+     * Calcule le tableau d'amortissement du prêt
+     * @param {number} montantPret - Montant du prêt
+     * @param {number} taux - Taux d'intérêt annuel en %
+     * @param {number} dureeAnnees - Durée du prêt en années
+     * @returns {Array} - Tableau d'amortissement
+     */
+    calculerTableauAmortissement(montantPret, taux, dureeAnnees) {
+        const tauxMensuel = taux / 100 / 12;
+        const nombreMensualites = dureeAnnees * 12;
+        const mensualite = this.calculerMensualite(montantPret, taux, dureeAnnees);
+        
+        let capitalRestant = montantPret;
+        const tableau = [];
+        
+        for (let i = 1; i <= nombreMensualites; i++) {
+            const interets = capitalRestant * tauxMensuel;
+            const amortissementCapital = mensualite - interets;
+            
+            capitalRestant -= amortissementCapital;
+            
+            tableau.push({
+                periode: i,
+                mensualite: mensualite,
+                interets: interets,
+                amortissementCapital: amortissementCapital,
+                capitalRestant: Math.max(0, capitalRestant) // Éviter les valeurs négatives dues aux arrondis
+            });
+        }
+        
+        return tableau;
     }
 
     /**
@@ -308,17 +470,42 @@ class SimulateurImmo {
             const mensualite = this.calculerMensualite(montantPret + fraisBancaires, taux, duree);
             
             // Loyer net
+            const loyerBrut = surface * loyerM2;
             const loyerNet = this.calculerLoyerNet(surface, loyerM2, vacanceLocative);
             
             // Taxe foncière
             const taxeFonciere = prixTest * this.params.communs.taxeFonciere / 100;
             
+            // Charges non récupérables
+            const chargesNonRecuperables = this.calculerChargesNonRecuperables(loyerBrut);
+            
+            // Entretien
+            const entretienMensuel = this.calculerEntretienMensuel(prixTest);
+            
+            // Assurance PNO
+            const assurancePNO = this.params.communs.assurancePNO;
+            
             // Cash-flow
-            const cashFlow = this.calculerCashFlow(loyerNet, mensualite, taxeFonciere);
+            const cashFlow = this.calculerCashFlow(
+                loyerNet, mensualite, taxeFonciere, 
+                chargesNonRecuperables, entretienMensuel, assurancePNO
+            );
+            
+            // Calcul des intérêts pour la première année
+            const tableauAmortissement = this.calculerTableauAmortissement(montantPret + fraisBancaires, taux, duree);
+            const interetsPremierAnnee = tableauAmortissement.slice(0, 12).reduce((sum, m) => sum + m.interets, 0);
+            
+            // Revenu foncier avant impôt
+            const chargesDeductibles = taxeFonciere + (assurancePNO) + (chargesNonRecuperables * 12) + (entretienMensuel * 12);
+            const revenuFoncier = (loyerNet * 12) - chargesDeductibles - interetsPremierAnnee;
+            
+            // Impact fiscal
+            const impactFiscal = this.calculerImpactFiscal(revenuFoncier, interetsPremierAnnee);
             
             // Rendement net
-            const loyerAnnuelNet = loyerNet * 12 - taxeFonciere;
-            const rendementNet = this.calculerRendementNet(loyerAnnuelNet, coutTotal);
+            const rendementNet = this.calculerRendementNet(
+                loyerNet * 12, chargesDeductibles, impactFiscal, coutTotal + fraisBancaires
+            );
             
             // Vérifier si les critères sont respectés
             let criteresRespectes = false;
@@ -343,10 +530,19 @@ class SimulateurImmo {
                     montantPret: montantPret + fraisBancaires,
                     mensualite: mensualite,
                     loyerNet: loyerNet,
-                    loyerBrut: surface * loyerM2,
+                    loyerBrut: loyerBrut,
                     taxeFonciere: taxeFonciere,
+                    chargesNonRecuperables: chargesNonRecuperables * 12,
+                    entretienAnnuel: entretienMensuel * 12,
+                    assurancePNO: assurancePNO,
+                    interetsAnnee1: interetsPremierAnnee,
+                    revenuFoncier: revenuFoncier,
+                    impactFiscal: impactFiscal,
                     cashFlow: cashFlow,
-                    rendementNet: rendementNet
+                    cashFlowAnnuel: cashFlow * 12,
+                    rendementNet: rendementNet,
+                    prixM2: prixTest / surface,
+                    tableauAmortissement: tableauAmortissement
                 };
             } else {
                 prixMax = prixTest;
@@ -418,18 +614,43 @@ class SimulateurImmo {
             // Mensualité
             const mensualite = this.calculerMensualite(montantPret + fraisBancaires, taux, duree);
             
-            // Loyer net
+            // Loyer
+            const loyerBrut = surface * loyerM2;
             const loyerNet = this.calculerLoyerNet(surface, loyerM2, vacanceLocative);
             
             // Taxe foncière
             const taxeFonciere = prixTest * this.params.communs.taxeFonciere / 100;
             
+            // Charges non récupérables
+            const chargesNonRecuperables = this.calculerChargesNonRecuperables(loyerBrut);
+            
+            // Entretien
+            const entretienMensuel = this.calculerEntretienMensuel(prixTest);
+            
+            // Assurance PNO
+            const assurancePNO = this.params.communs.assurancePNO;
+            
             // Cash-flow
-            const cashFlow = this.calculerCashFlow(loyerNet, mensualite, taxeFonciere);
+            const cashFlow = this.calculerCashFlow(
+                loyerNet, mensualite, taxeFonciere,
+                chargesNonRecuperables, entretienMensuel, assurancePNO
+            );
+            
+            // Calcul des intérêts pour la première année
+            const tableauAmortissement = this.calculerTableauAmortissement(montantPret + fraisBancaires, taux, duree);
+            const interetsPremierAnnee = tableauAmortissement.slice(0, 12).reduce((sum, m) => sum + m.interets, 0);
+            
+            // Revenu foncier avant impôt
+            const chargesDeductibles = taxeFonciere + (assurancePNO) + (chargesNonRecuperables * 12) + (entretienMensuel * 12);
+            const revenuFoncier = (loyerNet * 12) - chargesDeductibles - interetsPremierAnnee;
+            
+            // Impact fiscal
+            const impactFiscal = this.calculerImpactFiscal(revenuFoncier, interetsPremierAnnee);
             
             // Rendement net
-            const loyerAnnuelNet = loyerNet * 12 - taxeFonciere;
-            const rendementNet = this.calculerRendementNet(loyerAnnuelNet, coutTotal + fraisBancaires);
+            const rendementNet = this.calculerRendementNet(
+                loyerNet * 12, chargesDeductibles, impactFiscal, coutTotal + fraisBancaires
+            );
             
             // Vérifier si les critères sont respectés
             let criteresRespectes = false;
@@ -458,10 +679,19 @@ class SimulateurImmo {
                     montantPret: montantPret + fraisBancaires,
                     mensualite: mensualite,
                     loyerNet: loyerNet,
-                    loyerBrut: surface * loyerM2,
+                    loyerBrut: loyerBrut,
                     taxeFonciere: taxeFonciere,
+                    chargesNonRecuperables: chargesNonRecuperables * 12,
+                    entretienAnnuel: entretienMensuel * 12,
+                    assurancePNO: assurancePNO,
+                    interetsAnnee1: interetsPremierAnnee,
+                    revenuFoncier: revenuFoncier,
+                    impactFiscal: impactFiscal,
                     cashFlow: cashFlow,
-                    rendementNet: rendementNet
+                    cashFlowAnnuel: cashFlow * 12,
+                    rendementNet: rendementNet,
+                    prixM2: prixTest / surface,
+                    tableauAmortissement: tableauAmortissement
                 };
             } else {
                 prixMax = prixTest;
@@ -485,6 +715,269 @@ class SimulateurImmo {
         return {
             classique: resultatsClassique,
             encheres: resultatsEncheres
+        };
+    }
+
+    /**
+     * Fournit les données pour les graphiques de comparaison
+     * @returns {Object} - Données formatées pour Chart.js
+     */
+    getComparisonChartData() {
+        if (!this.params.resultats.classique || !this.params.resultats.encheres) {
+            return null;
+        }
+
+        const resultats = this.params.resultats;
+        return {
+            labels: ['Prix d\'achat', 'Coût total', 'Rentabilité (%)', 'Cash-flow mensuel'],
+            datasets: [
+                {
+                    label: 'Achat Classique',
+                    data: [
+                        resultats.classique.prixAchat,
+                        resultats.classique.coutTotal,
+                        resultats.classique.rendementNet,
+                        resultats.classique.cashFlow
+                    ],
+                    backgroundColor: 'rgba(0, 255, 135, 0.2)',
+                    borderColor: 'rgba(0, 255, 135, 1)',
+                    borderWidth: 2,
+                    borderRadius: 5,
+                },
+                {
+                    label: 'Vente aux Enchères',
+                    data: [
+                        resultats.encheres.prixAchat,
+                        resultats.encheres.coutTotal,
+                        resultats.encheres.rendementNet,
+                        resultats.encheres.cashFlow
+                    ],
+                    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                    borderColor: 'rgba(245, 158, 11, 1)',
+                    borderWidth: 2,
+                    borderRadius: 5,
+                }
+            ]
+        };
+    }
+
+    /**
+     * Calcule les données d'amortissement sur la durée du prêt
+     * @returns {Object} - Données formatées pour Chart.js
+     */
+    getAmortissementData() {
+        if (!this.params.resultats.classique || !this.params.resultats.encheres) {
+            return null;
+        }
+
+        const resultats = this.params.resultats;
+        const duree = this.params.base.duree;
+        const labels = Array.from({length: duree}, (_, i) => `Année ${i+1}`);
+        
+        // Calcul des cash-flows cumulés sur la durée du prêt
+        const cashFlowsClassique = [];
+        const cashFlowsEncheres = [];
+        
+        let cumulClassique = 0;
+        let cumulEncheres = 0;
+        
+        for (let i = 0; i < duree; i++) {
+            // Cash-flow annuel
+            const annualClassique = resultats.classique.cashFlow * 12;
+            const annualEncheres = resultats.encheres.cashFlow * 12;
+            
+            cumulClassique += annualClassique;
+            cumulEncheres += annualEncheres;
+            
+            cashFlowsClassique.push(cumulClassique);
+            cashFlowsEncheres.push(cumulEncheres);
+        }
+        
+        return {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Cash-flow cumulé - Achat Classique',
+                    data: cashFlowsClassique,
+                    fill: true,
+                    backgroundColor: 'rgba(0, 255, 135, 0.1)',
+                    borderColor: 'rgba(0, 255, 135, 1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointBackgroundColor: 'rgba(0, 255, 135, 1)',
+                },
+                {
+                    label: 'Cash-flow cumulé - Vente aux Enchères',
+                    data: cashFlowsEncheres,
+                    fill: true,
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    borderColor: 'rgba(245, 158, 11, 1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointBackgroundColor: 'rgba(245, 158, 11, 1)',
+                }
+            ]
+        };
+    }
+
+    /**
+     * Calcule la répartition des coûts pour les graphiques en camembert
+     * @returns {Object} - Données formatées pour Chart.js
+     */
+    getCoutsPieChartData() {
+        if (!this.params.resultats.classique || !this.params.resultats.encheres) {
+            return null;
+        }
+        
+        const resultats = this.params.resultats;
+        
+        // Répartition des coûts pour l'achat classique
+        const classique = {
+            labels: ['Prix d\'achat', 'Frais de notaire', 'Commission', 'Travaux', 'Frais bancaires'],
+            datasets: [{
+                data: [
+                    resultats.classique.prixAchat,
+                    resultats.classique.fraisNotaire,
+                    resultats.classique.commission,
+                    resultats.classique.travaux,
+                    resultats.classique.fraisBancaires
+                ],
+                backgroundColor: [
+                    'rgba(0, 255, 135, 0.7)',
+                    'rgba(0, 200, 100, 0.7)',
+                    'rgba(0, 150, 80, 0.7)',
+                    'rgba(0, 100, 60, 0.7)',
+                    'rgba(0, 50, 40, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        };
+        
+        // Répartition des coûts pour la vente aux enchères
+        const encheres = {
+            labels: ['Prix d\'achat', 'Droits d\'enregistrement', 'Émoluments', 'Honoraires avocat', 'Travaux', 'Frais divers', 'Frais bancaires'],
+            datasets: [{
+                data: [
+                    resultats.encheres.prixAchat,
+                    resultats.encheres.droitsEnregistrement,
+                    resultats.encheres.emolumentsPoursuivant,
+                    resultats.encheres.honorairesAvocat,
+                    resultats.encheres.travaux,
+                    resultats.encheres.fraisDivers,
+                    resultats.encheres.fraisBancaires
+                ],
+                backgroundColor: [
+                    'rgba(245, 158, 11, 0.7)',
+                    'rgba(220, 140, 10, 0.7)',
+                    'rgba(200, 120, 10, 0.7)',
+                    'rgba(180, 100, 10, 0.7)',
+                    'rgba(160, 80, 10, 0.7)',
+                    'rgba(140, 60, 10, 0.7)',
+                    'rgba(120, 40, 10, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        };
+        
+        return {
+            classique: classique,
+            encheres: encheres
+        };
+    }
+    
+    /**
+     * Calcule les données pour le graphique d'évolution de la valeur du bien
+     * @param {number} tauxAppreciation - Taux d'appréciation annuel en %
+     * @returns {Object} - Données formatées pour Chart.js
+     */
+    getEvolutionValeurData(tauxAppreciation = 2) {
+        if (!this.params.resultats.classique || !this.params.resultats.encheres) {
+            return null;
+        }
+        
+        const resultats = this.params.resultats;
+        const duree = this.params.base.duree;
+        const labels = Array.from({length: duree + 1}, (_, i) => i === 0 ? 'Achat' : `Année ${i}`);
+        
+        // Évolution de la valeur du bien
+        const valeursClassique = [resultats.classique.prixAchat];
+        const valeursEncheres = [resultats.encheres.prixAchat];
+        
+        // Évolution de la valeur patrimoniale (valeur du bien - capital restant dû)
+        const patrimoineClassique = [resultats.classique.prixAchat - resultats.classique.montantPret];
+        const patrimoineEncheres = [resultats.encheres.prixAchat - resultats.encheres.montantPret];
+        
+        let valeurClassique = resultats.classique.prixAchat;
+        let valeurEncheres = resultats.encheres.prixAchat;
+        
+        for (let i = 1; i <= duree; i++) {
+            // Appréciation de la valeur du bien
+            valeurClassique *= (1 + tauxAppreciation / 100);
+            valeurEncheres *= (1 + tauxAppreciation / 100);
+            
+            valeursClassique.push(valeurClassique);
+            valeursEncheres.push(valeurEncheres);
+            
+            // Capital restant dû à l'année i
+            const capitalRestantClassique = i * 12 < resultats.classique.tableauAmortissement.length 
+                ? resultats.classique.tableauAmortissement[i * 12 - 1].capitalRestant 
+                : 0;
+                
+            const capitalRestantEncheres = i * 12 < resultats.encheres.tableauAmortissement.length 
+                ? resultats.encheres.tableauAmortissement[i * 12 - 1].capitalRestant 
+                : 0;
+            
+            // Calcul de la valeur patrimoniale
+            patrimoineClassique.push(valeurClassique - capitalRestantClassique);
+            patrimoineEncheres.push(valeurEncheres - capitalRestantEncheres);
+        }
+        
+        return {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Valeur du bien - Achat Classique',
+                    data: valeursClassique,
+                    borderColor: 'rgba(0, 255, 135, 1)',
+                    backgroundColor: 'rgba(0, 255, 135, 0.05)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 2,
+                },
+                {
+                    label: 'Valeur du bien - Vente aux Enchères',
+                    data: valeursEncheres,
+                    borderColor: 'rgba(245, 158, 11, 1)',
+                    backgroundColor: 'rgba(245, 158, 11, 0.05)',
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.1,
+                    pointRadius: 2,
+                },
+                {
+                    label: 'Patrimoine net - Achat Classique',
+                    data: patrimoineClassique,
+                    borderColor: 'rgba(0, 200, 100, 1)',
+                    backgroundColor: 'rgba(0, 200, 100, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1,
+                    pointRadius: 2,
+                },
+                {
+                    label: 'Patrimoine net - Vente aux Enchères',
+                    data: patrimoineEncheres,
+                    borderColor: 'rgba(220, 140, 10, 1)',
+                    backgroundColor: 'rgba(220, 140, 10, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.1,
+                    pointRadius: 2,
+                }
+            ]
         };
     }
 }
