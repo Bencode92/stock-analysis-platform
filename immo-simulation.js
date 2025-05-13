@@ -487,6 +487,175 @@ class SimulateurImmo {
             encheres: resultatsEncheres
         };
     }
+
+    /**
+     * Fournit les données pour les graphiques de comparaison
+     * @returns {Object} - Données formatées pour Chart.js
+     */
+    getComparisonChartData() {
+        if (!this.params.resultats.classique || !this.params.resultats.encheres) {
+            return null;
+        }
+
+        const resultats = this.params.resultats;
+        return {
+            labels: ['Prix d\'achat', 'Coût total', 'Rentabilité (%)', 'Cash-flow mensuel'],
+            datasets: [
+                {
+                    label: 'Achat Classique',
+                    data: [
+                        resultats.classique.prixAchat,
+                        resultats.classique.coutTotal,
+                        resultats.classique.rendementNet,
+                        resultats.classique.cashFlow
+                    ],
+                    backgroundColor: 'rgba(0, 255, 135, 0.2)',
+                    borderColor: 'rgba(0, 255, 135, 1)',
+                    borderWidth: 2,
+                    borderRadius: 5,
+                },
+                {
+                    label: 'Vente aux Enchères',
+                    data: [
+                        resultats.encheres.prixAchat,
+                        resultats.encheres.coutTotal,
+                        resultats.encheres.rendementNet,
+                        resultats.encheres.cashFlow
+                    ],
+                    backgroundColor: 'rgba(245, 158, 11, 0.2)',
+                    borderColor: 'rgba(245, 158, 11, 1)',
+                    borderWidth: 2,
+                    borderRadius: 5,
+                }
+            ]
+        };
+    }
+
+    /**
+     * Calcule les données d'amortissement sur la durée du prêt
+     * @returns {Object} - Données formatées pour Chart.js
+     */
+    getAmortissementData() {
+        if (!this.params.resultats.classique || !this.params.resultats.encheres) {
+            return null;
+        }
+
+        const resultats = this.params.resultats;
+        const duree = this.params.base.duree;
+        const labels = Array.from({length: duree}, (_, i) => `Année ${i+1}`);
+        
+        // Calcul des cash-flows cumulés sur la durée du prêt
+        const cashFlowsClassique = [];
+        const cashFlowsEncheres = [];
+        
+        let cumulClassique = 0;
+        let cumulEncheres = 0;
+        
+        for (let i = 0; i < duree; i++) {
+            // Cash-flow annuel
+            const annualClassique = resultats.classique.cashFlow * 12;
+            const annualEncheres = resultats.encheres.cashFlow * 12;
+            
+            cumulClassique += annualClassique;
+            cumulEncheres += annualEncheres;
+            
+            cashFlowsClassique.push(cumulClassique);
+            cashFlowsEncheres.push(cumulEncheres);
+        }
+        
+        return {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Cash-flow cumulé - Achat Classique',
+                    data: cashFlowsClassique,
+                    fill: true,
+                    backgroundColor: 'rgba(0, 255, 135, 0.1)',
+                    borderColor: 'rgba(0, 255, 135, 1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointBackgroundColor: 'rgba(0, 255, 135, 1)',
+                },
+                {
+                    label: 'Cash-flow cumulé - Vente aux Enchères',
+                    data: cashFlowsEncheres,
+                    fill: true,
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    borderColor: 'rgba(245, 158, 11, 1)',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    pointRadius: 3,
+                    pointBackgroundColor: 'rgba(245, 158, 11, 1)',
+                }
+            ]
+        };
+    }
+
+    /**
+     * Calcule la répartition des coûts pour les graphiques en camembert
+     * @returns {Object} - Données formatées pour Chart.js
+     */
+    getCoutsPieChartData() {
+        if (!this.params.resultats.classique || !this.params.resultats.encheres) {
+            return null;
+        }
+        
+        const resultats = this.params.resultats;
+        
+        // Répartition des coûts pour l'achat classique
+        const classique = {
+            labels: ['Prix d\'achat', 'Frais de notaire', 'Commission', 'Travaux', 'Frais bancaires'],
+            datasets: [{
+                data: [
+                    resultats.classique.prixAchat,
+                    resultats.classique.fraisNotaire,
+                    resultats.classique.commission,
+                    resultats.classique.travaux,
+                    resultats.classique.fraisBancaires
+                ],
+                backgroundColor: [
+                    'rgba(0, 255, 135, 0.7)',
+                    'rgba(0, 200, 100, 0.7)',
+                    'rgba(0, 150, 80, 0.7)',
+                    'rgba(0, 100, 60, 0.7)',
+                    'rgba(0, 50, 40, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        };
+        
+        // Répartition des coûts pour la vente aux enchères
+        const encheres = {
+            labels: ['Prix d\'achat', 'Droits d\'enregistrement', 'Émoluments', 'Honoraires avocat', 'Travaux', 'Frais divers', 'Frais bancaires'],
+            datasets: [{
+                data: [
+                    resultats.encheres.prixAchat,
+                    resultats.encheres.droitsEnregistrement,
+                    resultats.encheres.emolumentsPoursuivant,
+                    resultats.encheres.honorairesAvocat,
+                    resultats.encheres.travaux,
+                    resultats.encheres.fraisDivers,
+                    resultats.encheres.fraisBancaires
+                ],
+                backgroundColor: [
+                    'rgba(245, 158, 11, 0.7)',
+                    'rgba(220, 140, 10, 0.7)',
+                    'rgba(200, 120, 10, 0.7)',
+                    'rgba(180, 100, 10, 0.7)',
+                    'rgba(160, 80, 10, 0.7)',
+                    'rgba(140, 60, 10, 0.7)',
+                    'rgba(120, 40, 10, 0.7)'
+                ],
+                borderWidth: 1
+            }]
+        };
+        
+        return {
+            classique: classique,
+            encheres: encheres
+        };
+    }
 }
 
 // Export pour la compatibilité avec différents environnements
