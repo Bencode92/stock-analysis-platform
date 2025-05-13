@@ -21,6 +21,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const historiqueContainer = document.getElementById('historique-container');
     const historiqueList = document.getElementById('historique-list');
 
+    // Masquer les champs non nécessaires
+    if (montantEmpruntMaxGroup) {
+        montantEmpruntMaxGroup.style.display = 'none';
+    }
+    
+    if (cashFlowMinGroup) {
+        cashFlowMinGroup.style.display = 'none';
+    }
+    
     // Masquer le champ surface visée
     const surfaceField = document.getElementById('surface');
     if (surfaceField && surfaceField.parentNode) {
@@ -115,7 +124,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Lancement de la simulation avec surface optimale calculée automatiquement
+    // Lancement de la simulation
     btnSimulate.addEventListener('click', function() {
         // Afficher l'indicateur de chargement
         document.querySelector('.loading').style.display = 'flex';
@@ -124,13 +133,6 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {
             // Récupérer les données du formulaire
             const formData = collecterDonneesFormulaire();
-            
-            // Calculer la surface optimale
-            const paramsOptimaux = simulateur.calculerParametresOptimaux();
-            formData.surface = paramsOptimaux.surface;
-            
-            // Mettre à jour le champ caché
-            document.getElementById('surface').value = paramsOptimaux.surface;
             
             // Charger les paramètres dans le simulateur
             simulateur.chargerParametres(formData);
@@ -141,6 +143,12 @@ document.addEventListener('DOMContentLoaded', function() {
             // Masquer l'indicateur de chargement
             document.querySelector('.loading').style.display = 'none';
             
+            // Vérifier si des résultats ont été trouvés
+            if (!resultats.classique || !resultats.encheres) {
+                afficherToast('Impossible de trouver une solution viable avec les paramètres actuels.', 'error');
+                return;
+            }
+            
             // Afficher les résultats avec animation
             resultsContainer.classList.remove('hidden');
             resultsContainer.classList.add('fade-in');
@@ -148,7 +156,10 @@ document.addEventListener('DOMContentLoaded', function() {
             // Ajouter la notification de surface calculée
             const notification = document.createElement('div');
             notification.className = 'info-message fade-in';
-            notification.innerHTML = `<i class="fas fa-ruler-combined"></i> Surface optimale calculée: <strong>${paramsOptimaux.surface} m²</strong> pour un rendement de <strong>${formData.rendementMin}%</strong>`;
+            notification.innerHTML = `<i class="fas fa-ruler-combined"></i> Surface optimale calculée: <strong>${resultats.classique.surface} m²</strong> pour un rendement de <strong>${formData.rendementMin}%</strong>`;
+            
+            // Mettre à jour le champ caché de surface
+            document.getElementById('surface').value = resultats.classique.surface;
             
             // Ajouter la notification avant les résultats
             resultsContainer.insertBefore(notification, resultsContainer.firstChild);
@@ -286,7 +297,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="grid grid-2">
                         <div>
                             <p><strong>Apport:</strong> ${formaterMontant(simulation.params.base.apport)}</p>
-                            <p><strong>Emprunt Max:</strong> ${formaterMontant(simulation.params.base.montantEmpruntMax || 0)}</p>
                             <p><strong>Surface:</strong> ${simulation.params.base.surface} m²</p>
                             <p><strong>Taux:</strong> ${simulation.params.base.taux}%</p>
                             <p><strong>Durée:</strong> ${simulation.params.base.duree} ans</p>
@@ -295,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <p><strong>Loyer m²:</strong> ${simulation.params.communs.loyerM2} €/m²</p>
                             <p><strong>Vacance:</strong> ${simulation.params.communs.vacanceLocative}%</p>
                             <p><strong>Travaux:</strong> ${simulation.params.communs.travauxM2} €/m²</p>
-                            <p><strong>Cash-flow min:</strong> ${formaterMontant(simulation.params.base.cashFlowMin || 1)}/mois</p>
+                            <p><strong>Rendement min:</strong> ${simulation.params.base.rendementMin}%</p>
                         </div>
                     </div>
                     
@@ -305,6 +315,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <h4>Achat Classique</h4>
                             <p><strong>Prix d'achat:</strong> ${formaterMontant(simulation.resultats.classique.prixAchat)}</p>
                             <p><strong>Coût total:</strong> ${formaterMontant(simulation.resultats.classique.coutTotal)}</p>
+                            <p><strong>Emprunt:</strong> ${formaterMontant(simulation.resultats.classique.emprunt)}</p>
                             <p><strong>Mensualité:</strong> ${formaterMontantMensuel(simulation.resultats.classique.mensualite)}</p>
                             <p><strong>Cash-flow:</strong> ${formaterMontantMensuel(simulation.resultats.classique.cashFlow)}</p>
                             <p><strong>Rentabilité:</strong> ${formaterPourcentage(simulation.resultats.classique.rendementNet)}</p>
@@ -313,6 +324,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <h4>Vente aux Enchères</h4>
                             <p><strong>Prix d'achat:</strong> ${formaterMontant(simulation.resultats.encheres.prixAchat)}</p>
                             <p><strong>Coût total:</strong> ${formaterMontant(simulation.resultats.encheres.coutTotal)}</p>
+                            <p><strong>Emprunt:</strong> ${formaterMontant(simulation.resultats.encheres.emprunt)}</p>
                             <p><strong>Mensualité:</strong> ${formaterMontantMensuel(simulation.resultats.encheres.mensualite)}</p>
                             <p><strong>Cash-flow:</strong> ${formaterMontantMensuel(simulation.resultats.encheres.cashFlow)}</p>
                             <p><strong>Rentabilité:</strong> ${formaterPourcentage(simulation.resultats.encheres.rendementNet)}</p>
@@ -363,21 +375,10 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Remplir le formulaire avec les paramètres de la simulation
         document.getElementById('apport').value = simulation.params.base.apport;
-        
-        // Gestion du montant d'emprunt maximum
-        if (document.getElementById('montant-emprunt-max')) {
-            document.getElementById('montant-emprunt-max').value = simulation.params.base.montantEmpruntMax || 150000;
-        }
-        
         document.getElementById('surface').value = simulation.params.base.surface;
         document.getElementById('taux').value = simulation.params.base.taux;
         document.getElementById('duree').value = simulation.params.base.duree;
         document.getElementById('rendement-min').value = simulation.params.base.rendementMin;
-        
-        // Gestion du cash-flow minimum
-        if (document.getElementById('cashflow-min')) {
-            document.getElementById('cashflow-min').value = simulation.params.base.cashFlowMin || 1;
-        }
         
         // Paramètres communs
         document.getElementById('frais-bancaires-dossier').value = simulation.params.communs.fraisBancairesDossier;
@@ -886,14 +887,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const formData = {
             // Paramètres de base
             apport: document.getElementById('apport').value,
-            montantEmpruntMax: document.getElementById('montant-emprunt-max').value,
             surface: document.getElementById('surface').value,
             taux: document.getElementById('taux').value,
             duree: document.getElementById('duree').value,
             // Forcer le mode rendement
             objectif: 'rendement',
             rendementMin: document.getElementById('rendement-min').value,
-            cashFlowMin: document.getElementById('cashflow-min')?.value || 1,
             
             // Paramètres communs
             fraisBancairesDossier: document.getElementById('frais-bancaires-dossier').value,
@@ -996,23 +995,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
-     * Exécute la simulation et affiche les résultats
-     */
-    function executerSimulation() {
-        // Récupérer les données du formulaire
-        const formData = collecterDonneesFormulaire();
-        
-        // Charger les paramètres dans le simulateur
-        simulateur.chargerParametres(formData);
-        
-        // Exécuter la simulation
-        const resultats = simulateur.simuler();
-        
-        // Afficher les résultats
-        afficherResultats(resultats);
-    }
-
-    /**
      * Affiche les résultats de la simulation
      * @param {Object} resultats - Résultats de la simulation
      */
@@ -1033,6 +1015,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('classique-travaux').textContent = formaterMontant(classique.travaux);
         document.getElementById('classique-frais-bancaires').textContent = formaterMontant(classique.fraisBancaires);
         document.getElementById('classique-total').textContent = formaterMontant(classique.coutTotal);
+        document.getElementById('classique-emprunt').textContent = formaterMontant(classique.emprunt);
         document.getElementById('classique-mensualite').textContent = formaterMontantMensuel(classique.mensualite);
         document.getElementById('classique-loyer-net').textContent = formaterMontantMensuel(classique.loyerNet);
         
@@ -1069,6 +1052,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('encheres-travaux').textContent = formaterMontant(encheres.travaux);
         document.getElementById('encheres-frais-bancaires').textContent = formaterMontant(encheres.fraisBancaires);
         document.getElementById('encheres-total').textContent = formaterMontant(encheres.coutTotal);
+        document.getElementById('encheres-emprunt').textContent = formaterMontant(encheres.emprunt);
         document.getElementById('encheres-mensualite').textContent = formaterMontantMensuel(encheres.mensualite);
         document.getElementById('encheres-loyer-net').textContent = formaterMontantMensuel(encheres.loyerNet);
         
