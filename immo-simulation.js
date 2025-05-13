@@ -3,6 +3,9 @@
  * 
  * Ce script contient toutes les fonctions de calcul nécessaires pour la simulation
  * d'investissement immobilier, comparant l'achat classique et la vente aux enchères.
+ * 
+ * Version 2.0 - Optimisée pour calculer le prix maximum possible selon l'apport
+ * et le prêt disponible, en maintenant un cash-flow minimum.
  */
 
 class SimulateurImmo {
@@ -10,53 +13,55 @@ class SimulateurImmo {
         // Paramètres initialisés par défaut
         this.params = {
             base: {
-                apport: 20000,
-                surface: 50,
-                taux: 3.5,
-                duree: 20,
-                objectif: 'cashflow',
-                rendementMin: 5
+                apport: 20000,                // Apport disponible
+                montantEmpruntMax: 150000,    // Montant maximum d'emprunt disponible
+                surface: 50,                  // Surface en m²
+                taux: 3.5,                    // Taux d'emprunt
+                duree: 20,                    // Durée du prêt
+                objectif: 'cashflow',         // Objectif: cashflow ou rendement
+                rendementMin: 5,              // Rendement minimum souhaité
+                cashFlowMin: 1                // Cash-flow minimum souhaité (1€)
             },
             communs: {
                 fraisBancairesDossier: 2000,
                 fraisBancairesCompte: 710,
-                fraisGarantie: 1.3709, // % du capital emprunté
-                taxeFonciere: 1, // % du prix
-                vacanceLocative: 8, // % des loyers
-                loyerM2: 12, // €/m²/mois
-                travauxM2: 400, // €/m²
-                entretienAnnuel: 0.5, // % du prix d'achat
-                assurancePNO: 250, // € par an
-                chargesNonRecuperables: 10 // % des loyers
+                fraisGarantie: 1.3709,        // % du capital emprunté
+                taxeFonciere: 1,              // % du prix
+                vacanceLocative: 8,           // % des loyers
+                loyerM2: 12,                  // €/m²/mois
+                travauxM2: 400,               // €/m²
+                entretienAnnuel: 0.5,         // % du prix d'achat
+                assurancePNO: 250,            // € par an
+                chargesNonRecuperables: 10    // % des loyers
             },
             classique: {
-                publiciteFonciere: 0.72, // % du prix
-                droitsMutation: 5.81, // % du prix
-                securiteImmobiliere: 0.10, // % du prix
-                emolumentsVente: 1.12, // % du prix
-                formalites: 0.28, // % du prix
-                debours: 0.13, // % du prix
-                commissionImmo: 5 // % du prix
+                publiciteFonciere: 0.72,      // % du prix
+                droitsMutation: 5.81,         // % du prix
+                securiteImmobiliere: 0.10,    // % du prix
+                emolumentsVente: 1.12,        // % du prix
+                formalites: 0.28,             // % du prix
+                debours: 0.13,                // % du prix
+                commissionImmo: 5             // % du prix
             },
             encheres: {
-                droitsEnregistrement: 5.70, // % du prix
-                coefMutation: 2.37, // Coefficient
-                emolumentsPoursuivant1: 7, // % (0-6500€)
-                emolumentsPoursuivant2: 3, // % (6500-23500€)
-                emolumentsPoursuivant3: 2, // % (23500-83500€)
-                emolumentsPoursuivant4: 1, // % (au-delà de 83500€)
-                honorairesAvocatCoef: 0.25, // x émoluments
-                honorairesAvocatTVA: 20, // %
+                droitsEnregistrement: 5.70,   // % du prix
+                coefMutation: 2.37,           // Coefficient
+                emolumentsPoursuivant1: 7,    // % (0-6500€)
+                emolumentsPoursuivant2: 3,    // % (6500-23500€)
+                emolumentsPoursuivant3: 2,    // % (23500-83500€)
+                emolumentsPoursuivant4: 1,    // % (au-delà de 83500€)
+                honorairesAvocatCoef: 0.25,   // x émoluments
+                honorairesAvocatTVA: 20,      // %
                 publiciteFonciereEncheres: 0.10, // % du prix
-                fraisFixes: 50, // €
-                avocatEnchere: 300, // €
-                suiviDossier: 1200, // €
-                cautionPourcent: 5, // % du prix de mise à prix
+                fraisFixes: 50,               // €
+                avocatEnchere: 300,           // €
+                suiviDossier: 1200,           // €
+                cautionPourcent: 5,           // % du prix de mise à prix
                 cautionRestituee: true
             },
             fiscalite: {
                 tauxPrelevementsSociaux: 17.2, // %
-                tauxMarginalImpot: 30, // %
+                tauxMarginalImpot: 30,        // %
                 deficitFoncier: true
             },
             // Pour stocker les résultats
@@ -77,11 +82,13 @@ class SimulateurImmo {
     chargerParametres(formData) {
         // Paramètres de base
         this.params.base.apport = parseFloat(formData.apport) || 20000;
+        this.params.base.montantEmpruntMax = parseFloat(formData.montantEmpruntMax) || 150000;
         this.params.base.surface = parseFloat(formData.surface) || 50;
         this.params.base.taux = parseFloat(formData.taux) || 3.5;
         this.params.base.duree = parseFloat(formData.duree) || 20;
         this.params.base.objectif = formData.objectif || 'cashflow';
         this.params.base.rendementMin = parseFloat(formData.rendementMin) || 5;
+        this.params.base.cashFlowMin = parseFloat(formData.cashFlowMin) || 1;
 
         // Paramètres communs
         if (formData.fraisBancairesDossier !== undefined) 
@@ -127,13 +134,13 @@ class SimulateurImmo {
         if (formData.coefMutation !== undefined) 
             this.params.encheres.coefMutation = parseFloat(formData.coefMutation);
         if (formData.emolumentsPoursuivant1 !== undefined) 
-            this.params.encheres.emolementsPoursuivant1 = parseFloat(formData.emolumentsPoursuivant1);
+            this.params.encheres.emolumentsPoursuivant1 = parseFloat(formData.emolumentsPoursuivant1);
         if (formData.emolumentsPoursuivant2 !== undefined) 
-            this.params.encheres.emolementsPoursuivant2 = parseFloat(formData.emolumentsPoursuivant2);
+            this.params.encheres.emolumentsPoursuivant2 = parseFloat(formData.emolumentsPoursuivant2);
         if (formData.emolumentsPoursuivant3 !== undefined) 
-            this.params.encheres.emolementsPoursuivant3 = parseFloat(formData.emolumentsPoursuivant3);
+            this.params.encheres.emolumentsPoursuivant3 = parseFloat(formData.emolumentsPoursuivant3);
         if (formData.emolumentsPoursuivant4 !== undefined) 
-            this.params.encheres.emolementsPoursuivant4 = parseFloat(formData.emolumentsPoursuivant4);
+            this.params.encheres.emolumentsPoursuivant4 = parseFloat(formData.emolumentsPoursuivant4);
         if (formData.honorairesAvocatCoef !== undefined) 
             this.params.encheres.honorairesAvocatCoef = parseFloat(formData.honorairesAvocatCoef);
         if (formData.honorairesAvocatTVA !== undefined) 
@@ -163,7 +170,7 @@ class SimulateurImmo {
     /**
      * Sauvegarde les résultats de la simulation actuelle dans l'historique
      * @param {string} nom - Nom de la simulation
-     * @param {Object} resultats - Résultats de la simulation
+     * @returns {boolean} - Succès de la sauvegarde
      */
     sauvegarderSimulation(nom) {
         // Vérifier si des résultats existent
@@ -241,9 +248,9 @@ class SimulateurImmo {
             emoluments += (prix - 23500) * this.params.encheres.emolumentsPoursuivant3 / 100;
         } else {
             emoluments = 6500 * this.params.encheres.emolumentsPoursuivant1 / 100;
-            emoluments += (23500 - 6500) * this.params.encheres.emolementsPoursuivant2 / 100;
-            emoluments += (83500 - 23500) * this.params.encheres.emolementsPoursuivant3 / 100;
-            emoluments += (prix - 83500) * this.params.encheres.emolementsPoursuivant4 / 100;
+            emoluments += (23500 - 6500) * this.params.encheres.emolumentsPoursuivant2 / 100;
+            emoluments += (83500 - 23500) * this.params.encheres.emolumentsPoursuivant3 / 100;
+            emoluments += (prix - 83500) * this.params.encheres.emolumentsPoursuivant4 / 100;
         }
         
         return emoluments;
@@ -379,17 +386,6 @@ class SimulateurImmo {
     }
 
     /**
-     * Calcule le taux d'endettement
-     * @param {number} mensualite - Mensualité du prêt
-     * @param {number} revenuMensuel - Revenu mensuel de l'emprunteur
-     * @returns {number} - Taux d'endettement en %
-     */
-    calculerTauxEndettement(mensualite, revenuMensuel) {
-        if (!revenuMensuel || revenuMensuel <= 0) return 0;
-        return (mensualite / revenuMensuel) * 100;
-    }
-
-    /**
      * Calcule le tableau d'amortissement du prêt
      * @param {number} montantPret - Montant du prêt
      * @param {number} taux - Taux d'intérêt annuel en %
@@ -424,16 +420,19 @@ class SimulateurImmo {
 
     /**
      * Calcule le prix maximum pour l'achat classique selon les critères
+     * en respectant la contrainte du montant d'emprunt maximum
      * @returns {Object} - Résultats de la simulation pour l'achat classique
      */
     simulerAchatClassique() {
         // Paramètres
         const apport = this.params.base.apport;
+        const montantEmpruntMax = this.params.base.montantEmpruntMax;
         const surface = this.params.base.surface;
         const taux = this.params.base.taux;
         const duree = this.params.base.duree;
         const objectif = this.params.base.objectif;
         const rendementMin = this.params.base.rendementMin;
+        const cashFlowMin = this.params.base.cashFlowMin;
         const loyerM2 = this.params.communs.loyerM2;
         const vacanceLocative = this.params.communs.vacanceLocative;
         
@@ -457,9 +456,13 @@ class SimulateurImmo {
             // Montant à emprunter
             const montantPret = coutTotal - apport;
             
-            // Vérifier si l'apport est suffisant
-            if (montantPret <= 0) {
-                prixMin = prixTest;
+            // Vérifier si l'apport est suffisant ET si le montant d'emprunt ne dépasse pas le maximum
+            if (montantPret <= 0 || montantPret > montantEmpruntMax) {
+                if (montantPret <= 0) {
+                    prixMin = prixTest; // Si l'apport couvre tout, on peut tester un prix plus élevé
+                } else {
+                    prixMax = prixTest; // Si l'emprunt est trop élevé, on doit réduire le prix
+                }
                 continue;
             }
             
@@ -511,9 +514,9 @@ class SimulateurImmo {
             let criteresRespectes = false;
             
             if (objectif === 'cashflow') {
-                criteresRespectes = cashFlow >= 1;
+                criteresRespectes = cashFlow >= cashFlowMin;
             } else {
-                criteresRespectes = rendementNet >= rendementMin && cashFlow >= 1;
+                criteresRespectes = rendementNet >= rendementMin && cashFlow >= cashFlowMin;
             }
             
             if (criteresRespectes) {
@@ -557,16 +560,19 @@ class SimulateurImmo {
 
     /**
      * Calcule le prix maximum pour la vente aux enchères selon les critères
+     * en respectant la contrainte du montant d'emprunt maximum
      * @returns {Object} - Résultats de la simulation pour la vente aux enchères
      */
     simulerVenteEncheres() {
         // Paramètres
         const apport = this.params.base.apport;
+        const montantEmpruntMax = this.params.base.montantEmpruntMax;
         const surface = this.params.base.surface;
         const taux = this.params.base.taux;
         const duree = this.params.base.duree;
         const objectif = this.params.base.objectif;
         const rendementMin = this.params.base.rendementMin;
+        const cashFlowMin = this.params.base.cashFlowMin;
         const loyerM2 = this.params.communs.loyerM2;
         const vacanceLocative = this.params.communs.vacanceLocative;
         
@@ -602,9 +608,13 @@ class SimulateurImmo {
             // Montant à emprunter
             const montantPret = coutTotal - apport;
             
-            // Vérifier si l'apport est suffisant
-            if (montantPret <= 0) {
-                prixMin = prixTest;
+            // Vérifier si l'apport est suffisant ET si le montant d'emprunt ne dépasse pas le maximum
+            if (montantPret <= 0 || montantPret > montantEmpruntMax) {
+                if (montantPret <= 0) {
+                    prixMin = prixTest; // Si l'apport couvre tout, on peut tester un prix plus élevé
+                } else {
+                    prixMax = prixTest; // Si l'emprunt est trop élevé, on doit réduire le prix
+                }
                 continue;
             }
             
@@ -656,9 +666,9 @@ class SimulateurImmo {
             let criteresRespectes = false;
             
             if (objectif === 'cashflow') {
-                criteresRespectes = cashFlow >= 1;
+                criteresRespectes = cashFlow >= cashFlowMin;
             } else {
-                criteresRespectes = rendementNet >= rendementMin && cashFlow >= 1;
+                criteresRespectes = rendementNet >= rendementMin && cashFlow >= cashFlowMin;
             }
             
             if (criteresRespectes) {
@@ -952,7 +962,8 @@ class SimulateurImmo {
                     data: valeursEncheres,
                     borderColor: 'rgba(245, 158, 11, 1)',
                     backgroundColor: 'rgba(245, 158, 11, 0.05)',
-                    borderWidth: 2,
+                    borderWidth: the
+                    2,
                     fill: false,
                     tension: 0.1,
                     pointRadius: 2,
